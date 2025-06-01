@@ -12,7 +12,7 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 pub const microzig_options = microzig.Options{
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = rp2xxx.uart.log,
 };
 
 pub fn main() !void {

@@ -22,7 +22,7 @@ const config = I2c.Config{
 };
 
 pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.logFn,
+    .logFn = stm32.uart.log,
 };
 
 pub fn main() !void {

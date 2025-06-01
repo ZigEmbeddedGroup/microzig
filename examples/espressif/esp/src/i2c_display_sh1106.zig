@@ -15,7 +15,7 @@ const i2c0 = i2c.instance.num(0);
 const usb_serial_jtag = esp.usb_serial_jtag;
 
 pub const microzig_options = microzig.Options{
-    .logFn = usb_serial_jtag.logger.logFn,
+    .logFn = usb_serial_jtag.logger.log,
 };
 
 pub fn main() !void {

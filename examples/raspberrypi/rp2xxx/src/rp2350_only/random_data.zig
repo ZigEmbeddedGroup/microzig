@@ -20,7 +20,7 @@ const baud_rate = 115200;
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = uart.logFn,
+    .logFn = uart.log,
 };
 
 pub fn main() !void {

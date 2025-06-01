@@ -15,7 +15,7 @@ const spi = rp2xxx.spi.instance.SPI0;
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = rp2xxx.uart.log,
 };
 
 pub fn main() !void {

@@ -20,7 +20,8 @@ pub fn tx_fifo_write(byte: u8) void {
     });
 }
 
-/// USB Serial JTAG logger. To use this, add `.logFn = logger.logFn` to your `microzig_options`.
+/// USB Serial JTAG logger. To use this, add `.logFn = logger.log` to your
+/// `microzig_options`.
 pub const logger = struct {
     pub const Error = error{
         Timeout,
@@ -70,7 +71,7 @@ pub const logger = struct {
         }
     }
 
-    pub fn log_fn(
+    pub fn log(
         comptime level: std.log.Level,
         comptime scope: @TypeOf(.EnumLiteral),
         comptime format: []const u8,

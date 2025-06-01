@@ -21,7 +21,7 @@ pub fn num(n: u1) UART {
 ///
 /// Allows system logging over uart via:
 /// pub const microzig_options = microzig.Options{
-///     .logFn = hal.uart.logFn,
+///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: UART) void {
     uart_logger = uart.writer();
@@ -32,7 +32,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
-pub fn log_fn(
+pub fn log(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,

@@ -17,13 +17,13 @@ const timer_irq = if (chip == .RP2040) .TIMER_IRQ_0 else .TIMER0_IRQ_0;
 
 pub const rp2040_options: microzig.Options = .{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = rp2xxx.uart.log,
     .interrupts = .{ .TIMER_IRQ_0 = .{ .c = timer_interrupt } },
 };
 
 pub const rp2350_options: microzig.Options = .{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = rp2xxx.uart.log,
     .interrupts = .{ .TIMER0_IRQ_0 = .{ .c = timer_interrupt } },
 };
 

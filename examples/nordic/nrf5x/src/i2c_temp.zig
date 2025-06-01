@@ -20,7 +20,7 @@ const sleep_ms = nrf.time.sleep_ms;
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = nrf.uart.logFn,
+    .logFn = nrf.uart.log,
 };
 
 pub fn main() !void {

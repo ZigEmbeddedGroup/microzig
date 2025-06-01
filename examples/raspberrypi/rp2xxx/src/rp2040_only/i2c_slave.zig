@@ -24,7 +24,7 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
 };
 
 pub const microzig_options = microzig.Options{
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = rp2xxx.uart.log,
     .interrupts = .{ .I2C0_IRQ = .{ .c = i2c.slave.isr1 } },
 };
 

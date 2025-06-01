@@ -11,7 +11,7 @@ const ULN2003 = microzig.drivers.stepper.ULN2003;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
 pub const microzig_options = microzig.Options{
-    .logFn = usb_serial_jtag.logger.logFn,
+    .logFn = usb_serial_jtag.logger.log,
 };
 
 pub fn main() !void {
