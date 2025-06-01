@@ -9,15 +9,15 @@
 //! The calculations were copied from https://github.com/netzbasteln/MLX90640-Thermocam
 //!
 const std = @import("std");
-const mdf = @import("../framework.zig");
+const base = @import("../framework.zig").base;
 
 const Mlx90649Error = error{
     BadPixels,
 };
 
 pub const MLX90640_Config = struct {
-    i2c: mdf.base.Datagram_Device,
-    clock: mdf.base.Clock_Device,
+    i2c: base.Datagram_Device,
+    clock: base.Clock_Device,
     open_air_shift: f32 = 8,
     emissivity: f32 = 0.95,
 };
@@ -71,8 +71,8 @@ pub const MLX90640 = struct {
     frame: [834]u16 = undefined,
     frame_data: [834 * 2]u8 = undefined,
     scratch_data: [768]f32 = undefined,
-    i2c: mdf.base.Datagram_Device,
-    clock_device: mdf.base.Clock_Device,
+    i2c: base.Datagram_Device,
+    clock_device: base.Clock_Device,
     params: parameters,
     emissivity: f32,
     open_air_shift: f32,
@@ -879,9 +879,9 @@ pub const MLX90640 = struct {
     }
 };
 
-test "refresh rate" {
-    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
-    const Test_Clock = mdf.base.Clock_Device.Test_Device;
+test "refresh-rate" {
+    const Test_Datagram = base.Datagram_Device.Test_Device;
+    const Test_Clock = base.Clock_Device.Test_Device;
     const control_register_data = [1][1]u8{
         [1]u8{ 0, 0b11000000 },
     };
