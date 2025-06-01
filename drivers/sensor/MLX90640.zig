@@ -9,15 +9,15 @@
 //! The calculations were copied from https://github.com/netzbasteln/MLX90640-Thermocam
 //!
 const std = @import("std");
-const base = @import("../framework.zig").base;
+const mdf = @import("../framework.zig");
 
 const Mlx90649Error = error{
     BadPixels,
 };
 
 pub const MLX90640_Config = struct {
-    i2c: base.Datagram_Device,
-    clock: base.Clock_Device,
+    i2c: mdf.base.Datagram_Device,
+    clock: mdf.base.Clock_Device,
     open_air_shift: f32 = 8,
     emissivity: f32 = 0.95,
 };
@@ -71,11 +71,12 @@ pub const MLX90640 = struct {
     frame: [834]u16 = undefined,
     frame_data: [834 * 2]u8 = undefined,
     scratch_data: [768]f32 = undefined,
-    i2c: base.Datagram_Device,
-    clock_device: base.Clock_Device,
+    i2c: mdf.base.Datagram_Device,
+    clock_device: mdf.base.Clock_Device,
     params: parameters,
     emissivity: f32,
     open_air_shift: f32,
+    initial_frame_load: bool = false,
 
     scale_alpha: f32 = 0.000001,
     control_register_address: u16 = 0x800D,
@@ -88,21 +89,16 @@ pub const MLX90640 = struct {
     refresh_rate_mask: u16 = 0b111 << 7,
 
     pub fn init(cfg: MLX90640_Config) !Self {
-        var obj = Self{
+        return Self{
             .i2c = cfg.i2c,
             .clock_device = cfg.clock,
             .open_air_shift = cfg.open_air_shift,
             .emissivity = cfg.emissivity,
             .params = parameters{},
         };
-
-        // the temperatures are all wack on first read
-        try obj.load_frame();
-
-        return obj;
     }
 
-    fn write(self: *Self, address: u16, val: u48) !void {
+    fn write(self: *Self, address: u16, val: u16) !void {
         var req = [4]u8{
             @as(u8, @truncate(address >> 8)),
             @as(u8, @truncate(address & 0xFF)),
@@ -111,8 +107,6 @@ pub const MLX90640 = struct {
         };
 
         try self.i2c.write(&req);
-        self.clock_device.sleep_ms(100);
-        try self.extract_parameters();
         self.clock_device.sleep_ms(100);
     }
 
@@ -124,6 +118,12 @@ pub const MLX90640 = struct {
         }
     }
 
+    fn read_control_register(self: *Self) !control_register {
+        try self.write_then_read(self.control_register_address, self.frame[0..1]);
+        const val: control_register = @bitCast(self.frame[0]);
+        return val;
+    }
+
     pub fn serial_number(self: *Self) !u48 {
         try self.write_then_read(self.device_id_1_address, self.frame[0..3]);
         return @as(u48, self.frame[0]) << 32 |
@@ -131,25 +131,30 @@ pub const MLX90640 = struct {
             @as(u48, self.frame[2]);
     }
 
-    pub fn set_refresh_rate(self: *Self, rate: u16) !void {
-        try self.write_then_read(self.control_register_address, self.frame[0..1]);
-        const val: u16 = (self.frame[0] & ~self.refresh_rate_mask) | ((rate << 7) & self.refresh_rate_mask);
-        try self.write(self.control_register_address, val);
+    pub fn set_refresh_rate(self: *Self, rate: u3) !void {
+        var val = try self.read_control_register();
+        val.refresh_rate = rate;
+        const bytes: u16 = @bitCast(val);
+        try self.write(self.control_register_address, bytes);
     }
 
     pub fn refresh_rate(self: *Self) !u3 {
-        try self.write_then_read(self.control_register_address, self.frame[0..1]);
-        const val: control_register = @bitCast(self.frame[0]);
+        const val = try self.read_control_register();
         return val.refresh_rate;
     }
 
     pub fn resolution(self: *Self) !u2 {
-        try self.write_then_read(self.control_register_address, self.frame[0..1]);
-        const val = self.frame[0] >> 10 & 0b11;
-        return @as(u2, @truncate(val));
+        const val = try self.read_control_register();
+        return val.resolution;
     }
 
     pub fn temperature(self: *Self, result: []f32) !void {
+        if (!self.initial_frame_load) {
+            // the initial frame load results in bad data upon restart, so get that bad data out of the way
+            try self.load_frame();
+            self.initial_frame_load = true;
+        }
+
         try self.load_frame();
 
         const subPage: u16 = self.frame[833] & 0x0001;
@@ -879,18 +884,34 @@ pub const MLX90640 = struct {
     }
 };
 
-test "refresh-rate" {
-    const Test_Datagram = base.Datagram_Device.Test_Device;
-    const Test_Clock = base.Clock_Device.Test_Device;
-    const control_register_data = [1][1]u8{
-        [1]u8{ 0, 0b11000000 },
+test "control_register_values" {
+    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Clock = mdf.base.Clock_Device.Test_Device;
+    const control_register_data = [_][]const u8{
+        &.{ 0b00000010, 0b10000000 }, //refresh rate data
+        &.{ 0b00000010, 0b10000000 }, //refresh rate data that is fetched before set_refresh_rate
+        &.{ 0b00001100, 0b00000000 }, //resolution data
     };
 
-    var td = Test_Datagram.init(control_register_data);
-    var tc = Test_Clock.init();
+    var td = Test_Datagram.init(&control_register_data, true);
     defer td.deinit();
+    td.connected = true;
 
-    var camera = MLX90640().init(.{ .i2c = td.datagram_device(), .clock = tc.clock_device() });
+    var tc = Test_Clock.init();
+
+    var camera = try MLX90640.init(.{ .i2c = td.datagram_device(), .clock = tc.clock_device() });
+
     const rr = try camera.refresh_rate();
-    try std.testing.expectEqual(3, rr);
+    try std.testing.expectEqual(5, rr);
+
+    try camera.set_refresh_rate(3);
+    const refresh_rate_sent = [_][]const u8{
+        &.{ 0x80, 0x0D }, // control register from first refresh_rate() call
+        &.{ 0x80, 0x0D }, // control register from set_refresh_rate() calling refresh_rate()
+        &.{ 0x80, 0x0D, 0b00000001, 0b10000000 },
+    };
+    try td.expect_sent(&refresh_rate_sent);
+
+    const rez = try camera.resolution();
+    try std.testing.expectEqual(3, rez);
 }
