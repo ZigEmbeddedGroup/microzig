@@ -101,7 +101,6 @@ pub const OutputSignal = enum(u8) {
 
     i2cext0_scl = 53,
     i2cext0_sda = 54,
-    spics1 = 126,
     gpio = 128,
 };
 
