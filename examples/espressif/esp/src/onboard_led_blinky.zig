@@ -1,5 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const WS2812 = microzig.drivers.led.WS2812;
+const Color = microzig.drivers.led.ws2812.Color;
 const SPI = microzig.chip.peripherals.SPI2;
 const RMT = microzig.chip.peripherals.RMT;
 const hal = microzig.hal;
@@ -12,15 +14,13 @@ pub const microzig_options: microzig.Options = .{
     .logFn = hal.usb_serial_jtag.logger.logFn,
 };
 
-pub fn main() void {
+pub fn main() !void {
     const mosi_pin = gpio.num(0);
     const miso_pin = gpio.num(1);
     const clk_pin = gpio.num(2);
     const cs_pin = gpio.num(3);
 
     mosi_pin.connect_peripheral_to_output(.fspid);
-    mosi_pin.connect_input_to_peripheral(.fspid);
-    miso_pin.connect_peripheral_to_output(.fspiq);
     miso_pin.connect_input_to_peripheral(.fspiq);
     clk_pin.connect_peripheral_to_output(.fspiclk);
     cs_pin.connect_peripheral_to_output(.fspics0);
@@ -29,57 +29,28 @@ pub fn main() void {
     led_pin.connect_peripheral_to_output(.fspid);
     led_pin.connect_input_to_peripheral(.fspid);
 
-    const bus: spi.SPI = .spi2;
-    bus.apply(.{
+    const spi_bus: spi.SPI_Bus = .init(.spi2);
+    spi_bus.apply(.{
         .clock_config = hal.clock_config,
         .baud_rate = 3_000_000,
         .bit_order = .msb_first,
     });
 
-    const on_data: [12]u8 = comptime blk: {
-        const payload: []const u8 = &.{ 10, 10, 10 };
+    const spi_dev: hal.drivers.SPI_Device = .init(spi_bus, .single_one_wire, null);
+    var clock_dev: hal.drivers.ClockDevice = .{};
 
-        const patterns: [4]u8 = .{ 0b1000_1000, 0b1000_1110, 0b1110_1000, 0b1110_1110 };
-        var output_buffer: [12]u8 = undefined;
-        var i: usize = 0;
-        for (payload) |byte| {
-            var remaining = byte;
-            for (0..4) |_| {
-                const bits: u2 = @intCast((remaining & 0b1100_0000) >> 6);
-                output_buffer[i] = patterns[bits];
-                i += 1;
-                remaining <<= 2;
-            }
-        }
-
-        break :blk output_buffer;
-    };
-
-    const off_data: [12]u8 = comptime blk: {
-        const payload: []const u8 = &.{ 0, 0, 0 };
-
-        const patterns: [4]u8 = .{ 0b1000_1000, 0b1000_1110, 0b1110_1000, 0b1110_1110 };
-        var output_buffer: [12]u8 = undefined;
-        var i: usize = 0;
-        for (payload) |byte| {
-            var remaining = byte;
-            for (0..4) |_| {
-                const bits: u2 = @intCast((remaining & 0b1100_0000) >> 6);
-                output_buffer[i] = patterns[bits];
-                i += 1;
-                remaining <<= 2;
-            }
-        }
-
-        break :blk output_buffer;
-    };
+    var ws2812: WS2812(.{
+        .max_led_count = 1,
+        .Datagram_Device = hal.drivers.SPI_Device,
+    }) = .init(
+        spi_dev,
+        clock_dev.clock_device(),
+    );
 
     while (true) {
-        std.log.info("on", .{});
-        bus.half_duplex_write_blocking(&on_data, .single_two_wires);
+        try ws2812.write(&.{.{ .r = 10, .g = 0, .b = 0 }});
         hal.time.sleep_ms(1_000);
-        std.log.info("off", .{});
-        bus.half_duplex_write_blocking(&off_data, .single_two_wires);
+        try ws2812.write(&.{.{ .r = 0, .g = 0, .b = 10 }});
         hal.time.sleep_ms(1_000);
     }
 

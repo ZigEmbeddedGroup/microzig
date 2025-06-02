@@ -55,8 +55,8 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     if (@import("builtin").mode == .Debug) {
         // attach a breakpoint, this might trigger another
         // panic internally, so only do that in debug mode.
-        std.log.info("triggering breakpoint...", .{});
-        @breakpoint();
+        // std.log.info("triggering breakpoint...", .{});
+        // @breakpoint();
     }
     hang();
 }

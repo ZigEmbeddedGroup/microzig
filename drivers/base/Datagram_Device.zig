@@ -45,7 +45,7 @@ pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
     return try dd.writev(&.{datagram});
 }
 
-/// Writes a single `datagram` to the device.
+/// Writes multiple `datagrams` to the device.
 pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!void {
     const writev_fn = dd.vtable.writev_fn orelse return error.Unsupported;
     return writev_fn(dd.ptr, datagrams);

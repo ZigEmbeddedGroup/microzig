@@ -111,6 +111,97 @@ pub const I2C_Device = struct {
 };
 
 ///
+/// A datagram device attached to an SPI half duplex connection.
+///
+pub const SPI_Device = struct {
+    pub const ConnectError = Datagram_Device.ConnectError;
+
+    pub const WriteError = Datagram_Device.WriteError;
+    pub const ReadError = Datagram_Device.ReadError;
+
+    pub const ChipSelect = struct {
+        pin: hal.gpio.Pin,
+        active_level: hal.gpio.Level,
+    };
+
+    bus: hal.spi.SPI_Bus,
+    bit_mode: hal.spi.BitMode,
+    chip_select: ?ChipSelect = null,
+
+    pub fn init(bus: hal.spi.SPI_Bus, bit_mode: hal.spi.BitMode, chip_select: ?ChipSelect) SPI_Device {
+        return .{
+            .bus = bus,
+            .bit_mode = bit_mode,
+            .chip_select = chip_select,
+        };
+    }
+
+    pub fn datagram_device(dev: *SPI_Device) Datagram_Device {
+        return .{
+            .ptr = dev,
+            .vtable = &vtable,
+        };
+    }
+
+    pub fn connect(dev: SPI_Device) ConnectError!void {
+        if (dev.chip_select) |chip_select| {
+            chip_select.pin.write(chip_select.active_level);
+        }
+    }
+
+    pub fn disconnect(dev: SPI_Device) void {
+        if (dev.chip_select) |chip_select| {
+            chip_select.pin.write(if (chip_select.active_level == .high) .low else .high);
+        }
+    }
+
+    pub fn write(dev: SPI_Device, datagram: []const u8) WriteError!void {
+        dev.bus.write_blocking(datagram, dev.bit_mode);
+    }
+
+    pub fn writev(dev: SPI_Device, datagrams: []const []const u8) WriteError!void {
+        dev.bus.writev_blocking(datagrams, dev.bit_mode);
+    }
+
+    pub fn read(dev: SPI_Device, datagram: []u8) ReadError!usize {
+        dev.bus.read_blocking(datagram, dev.bit_mode);
+        return datagram.len;
+    }
+
+    pub fn readv(dev: SPI_Device, datagrams: []const []u8) ReadError!usize {
+        dev.bus.readv_blocking(datagrams, dev.bit_mode);
+        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+    }
+
+    const vtable = Datagram_Device.VTable{
+        .connect_fn = connect_fn,
+        .disconnect_fn = disconnect_fn,
+        .writev_fn = writev_fn,
+        .readv_fn = readv_fn,
+    };
+
+    fn connect_fn(dd: *anyopaque) ConnectError!void {
+        _ = dd;
+        return;
+    }
+
+    fn disconnect_fn(dd: *anyopaque) void {
+        _ = dd;
+        return;
+    }
+
+    fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.writev(chunks);
+    }
+
+    fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.readv(chunks);
+    }
+};
+
+///
 /// Implementation of a digital i/o device.
 ///
 pub const GPIO_Device = struct {
