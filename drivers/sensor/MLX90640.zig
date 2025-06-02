@@ -126,7 +126,7 @@ pub const MLX90640 = struct {
     }
 
     pub fn serial_number(self: *Self) !u48 {
-        try self.write_then_read(Self.registers.control, self.frame[0..3]);
+        try self.write_then_read(Self.registers.device_id, self.frame[0..3]);
         return @as(u48, self.frame[0]) << 32 |
             @as(u48, self.frame[1]) << 16 |
             @as(u48, self.frame[2]);
