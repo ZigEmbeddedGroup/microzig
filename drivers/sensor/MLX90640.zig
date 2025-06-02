@@ -96,12 +96,12 @@ pub const MLX90640 = struct {
     refresh_rate_mask: u16 = 0b111 << 7,
 
     pub fn init(cfg: MLX90640_Config) !Self {
-        return Self{
+        return .{
             .i2c = cfg.i2c,
             .clock_device = cfg.clock,
             .open_air_shift = cfg.open_air_shift,
             .emissivity = cfg.emissivity,
-            .params = parameters{},
+            .params = .{},
         };
     }
 
