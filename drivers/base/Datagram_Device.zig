@@ -81,7 +81,7 @@ pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
     return try dd.readv(&.{datagram});
 }
 
-/// Reads a single `datagram` from the device.
+/// Reads multiple `datagrams` from the device.
 /// Function returns the number of bytes written in `datagrams`.
 ///
 /// If `error.BufferOverrun` is returned, the `datagrams` will still be fully filled with the data
