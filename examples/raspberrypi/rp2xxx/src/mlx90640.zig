@@ -50,7 +50,11 @@ pub fn main() !void {
     var x: [24][32]f32 = undefined;
 
     while (true) {
-        try camera.temperature(&temperature);
+        camera.temperature(&temperature) catch |err| {
+            std.log.err("unable to read temperature: {}", .{err});
+            time.sleep_ms(100);
+            continue;
+        };
 
         for (0..24) |i| {
             for (0..32) |j| {
