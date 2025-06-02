@@ -22,7 +22,7 @@ const pin_config = rpxxxx.pins.GlobalConfiguration{
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = rpxxxx.uart.logFn,
+    .logFn = rpxxxx.uart.log,
 };
 
 pub fn main() !void {
