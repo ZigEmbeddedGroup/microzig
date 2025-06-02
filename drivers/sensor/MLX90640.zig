@@ -82,6 +82,8 @@ pub const MLX90640 = struct {
     const scale_alpha: f32 = 0.000001;
     const pixel_count: u10 = 768;
     const frame_loop: [2]u1 = .{ 0, 1 };
+    const columns: u6 = 32;
+    const rows: u5 = 24;
 
     eeprom: [832]u16 = undefined,
     frame: [834]u16 = undefined,
@@ -509,7 +511,7 @@ pub const MLX90640 = struct {
             accRow[p + 3] = @intCast((self.eeprom[34 + i] & 0xF000) >> 12);
         }
 
-        for (0..24) |i| {
+        for (0..rows) |i| {
             if (accRow[i] > 7) {
                 accRow[i] = accRow[i] - 16;
             }
@@ -523,14 +525,14 @@ pub const MLX90640 = struct {
             accColumn[p + 3] = @intCast((self.eeprom[40 + i] & 0xF000) >> 12);
         }
 
-        for (0..32) |i| {
+        for (0..columns) |i| {
             if (accColumn[i] > 7) {
                 accColumn[i] = accColumn[i] - 16;
             }
         }
 
-        for (0..24) |i| {
-            for (0..32) |j| {
+        for (0..rows) |i| {
+            for (0..columns) |j| {
                 const p = 32 * i + j;
                 self.scratch_data[p] = @floatFromInt((self.eeprom[64 + p] & 0x03F0) >> 4);
                 if (self.scratch_data[p] > 31) {
@@ -587,7 +589,7 @@ pub const MLX90640 = struct {
             occRow[p + 3] = @intCast((self.eeprom[18 + i] & 0xF000) >> 12);
         }
 
-        for (0..24) |i| {
+        for (0..rows) |i| {
             if (occRow[i] > 7) {
                 occRow[i] -= 16;
             }
@@ -601,14 +603,14 @@ pub const MLX90640 = struct {
             occColumn[p + 3] = @intCast((self.eeprom[24 + i] & 0xF000) >> 12);
         }
 
-        for (0..32) |i| {
+        for (0..columns) |i| {
             if (occColumn[i] > 7) {
                 occColumn[i] = occColumn[i] - 16;
             }
         }
 
-        for (0..24) |i| {
-            for (0..32) |j| {
+        for (0..rows) |i| {
+            for (0..columns) |j| {
                 const p = 32 * i + j;
                 self.params.offset[p] = @intCast((self.eeprom[64 + p] & 0xFC00) >> 10);
                 if (self.params.offset[p] > 31) {
@@ -653,8 +655,8 @@ pub const MLX90640 = struct {
         var ktaScale1: u8 = @intCast(((self.eeprom[56] & 0x00F0) >> 4) + 8);
         const ktaScale2: u3 = @intCast(self.eeprom[56] & 0x000F);
 
-        for (0..24) |i| {
-            for (0..32) |j| {
+        for (0..rows) |i| {
+            for (0..columns) |j| {
                 const p = 32 * i + j;
                 const split = 2 * (p / 32 - (p / 64) * 2) + p % 2;
                 self.scratch_data[p] = @floatFromInt((self.eeprom[64 + p] & 0x000E) >> 1);
@@ -723,8 +725,8 @@ pub const MLX90640 = struct {
 
         var kvScale: u8 = @intCast((self.eeprom[56] & 0x0F00) >> 8);
 
-        for (0..24) |i| {
-            for (0..32) |j| {
+        for (0..rows) |i| {
+            for (0..columns) |j| {
                 const p = 32 * i + j;
                 const split = 2 * (p / 32 - (p / 64) * 2) + p % 2;
                 self.scratch_data[p] = @floatFromInt(KvT[split]);
