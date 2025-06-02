@@ -7,7 +7,6 @@ const gpio = hal.gpio;
 
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
-    .logFn = hal.usb_serial_jtag.logger.logFn,
 };
 
 pub fn main() !void {
@@ -32,11 +31,18 @@ pub fn main() !void {
     );
 
     const red: Color = .{ .r = 10, .g = 0, .b = 0 };
+    const green: Color = .{ .r = 0, .g = 10, .b = 0 };
     const blue: Color = .{ .r = 0, .g = 0, .b = 10 };
+
     while (true) {
         try ws2812.write(&.{red});
+        std.log.info("red", .{});
+        hal.time.sleep_ms(1_000);
+        try ws2812.write(&.{green});
+        std.log.info("green", .{});
         hal.time.sleep_ms(1_000);
         try ws2812.write(&.{blue});
+        std.log.info("blue", .{});
         hal.time.sleep_ms(1_000);
     }
 }
