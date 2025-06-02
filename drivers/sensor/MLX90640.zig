@@ -102,10 +102,10 @@ pub const MLX90640 = struct {
 
     fn write(self: *Self, reg: Self.registers, val: u16) !void {
         const addr: u16 = @intFromEnum(reg);
-        var req = struct{addr_be: u16, val_be: u16}{
-           .addr_be = std.mem.nativeToBig(addr),
-           .var_be = std.mem.nativeToBig(val),
-       };
+        var req = struct { addr_be: u16, val_be: u16 }{
+            .addr_be = std.mem.nativeToBig(addr),
+            .var_be = std.mem.nativeToBig(val),
+        };
 
         try self.i2c.write(&req);
         self.clock_device.sleep_ms(100);
