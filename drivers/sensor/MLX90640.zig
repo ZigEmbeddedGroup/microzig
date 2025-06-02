@@ -124,8 +124,7 @@ pub const MLX90640 = struct {
 
     fn read_control_register(self: *Self) !control_register {
         try self.write_then_read(Self.registers.control, self.frame[0..1]);
-        const val: control_register = @bitCast(self.frame[0]);
-        return val;
+        return @bitCast(self.frame[0]);
     }
 
     pub fn serial_number(self: *Self) !u48 {
