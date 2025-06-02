@@ -86,6 +86,7 @@ pub const MLX90640 = struct {
     open_air_shift: f32,
 
     scale_alpha: f32 = 0.000001,
+    pixel_count: u10 = 768,
 
     frame_loop: [2]u1 = .{ 0, 1 },
     refresh_rate_mask: u16 = 0b111 << 7,
@@ -220,7 +221,7 @@ pub const MLX90640 = struct {
         var range: u8 = 0;
         var pattern: i32 = 0;
         var pixelNumber: i32 = 0;
-        for (0..768) |i| {
+        for (0..self.pixel_count) |i| {
             pixelNumber = @intCast(i);
             const ilPattern: i32 = @divTrunc(pixelNumber, 32) - @divTrunc(pixelNumber, 64) * 2;
             const chessPattern: i32 = ilPattern ^ (pixelNumber - @divTrunc(pixelNumber, 2) * 2);
@@ -544,7 +545,7 @@ pub const MLX90640 = struct {
         }
 
         var temp = self.scratch_data[0];
-        for (1..768) |i| {
+        for (1..self.pixel_count) |i| {
             if (self.scratch_data[i] > temp) {
                 temp = self.scratch_data[i];
             }
@@ -556,7 +557,7 @@ pub const MLX90640 = struct {
             alphaScale += alphaScale;
         }
 
-        for (0..768) |i| {
+        for (0..self.pixel_count) |i| {
             temp = self.scratch_data[i] * std.math.pow(f32, 2, alphaScale);
             self.params.alpha[i] = @intFromFloat(temp + 0.5);
         }
@@ -668,7 +669,7 @@ pub const MLX90640 = struct {
         }
 
         var temp: f32 = @abs(self.scratch_data[0]);
-        for (1..768) |i| {
+        for (1..self.pixel_count) |i| {
             if (@abs(self.scratch_data[i]) > temp) {
                 temp = @abs(self.scratch_data[i]);
             }
@@ -680,7 +681,7 @@ pub const MLX90640 = struct {
             ktaScale1 = ktaScale1 + 1;
         }
 
-        for (0..768) |i| {
+        for (0..self.pixel_count) |i| {
             temp = self.scratch_data[i] * std.math.pow(f32, 2, @floatFromInt(ktaScale1));
             if (temp < 0) {
                 self.params.kta[i] = @intFromFloat(temp - 0.5);
@@ -731,7 +732,7 @@ pub const MLX90640 = struct {
         }
 
         var temp: f32 = @abs(self.scratch_data[0]);
-        for (1..768) |i| {
+        for (1..self.pixel_count) |i| {
             if (@abs(self.scratch_data[i]) > temp) {
                 temp = @abs(self.scratch_data[i]);
             }
@@ -743,7 +744,7 @@ pub const MLX90640 = struct {
             kvScale = kvScale + 1;
         }
 
-        for (0..768) |i| {
+        for (0..self.pixel_count) |i| {
             temp = self.scratch_data[i] * std.math.pow(f32, 2, @floatFromInt(kvScale));
             if (temp < 0) {
                 self.params.kv[i] = @intFromFloat(temp - 0.5);
@@ -814,7 +815,7 @@ pub const MLX90640 = struct {
         var brokenPixCnt: u16 = 0;
         var outlierPixCnt: u16 = 0;
         pixCnt = 0;
-        while (pixCnt < 768 and brokenPixCnt < 5 and outlierPixCnt < 5) {
+        while (pixCnt < self.pixel_count and brokenPixCnt < 5 and outlierPixCnt < 5) {
             if (self.eeprom[pixCnt + 64] == 0) {
                 self.params.brokenPixels[brokenPixCnt] = @intCast(pixCnt);
                 brokenPixCnt = brokenPixCnt + 1;
