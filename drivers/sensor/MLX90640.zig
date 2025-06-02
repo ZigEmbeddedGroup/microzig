@@ -87,7 +87,7 @@ pub const MLX90640 = struct {
 
     scale_alpha: f32 = 0.000001,
 
-    frame_loop: [2]u1 = [2]u1{ 0, 1 },
+    frame_loop: [2]u1 = .{ 0, 1 },
     refresh_rate_mask: u16 = 0b111 << 7,
 
     pub fn init(cfg: MLX90640_Config) !Self {
