@@ -13,6 +13,10 @@ const mdf = @import("../framework.zig");
 
 const Mlx90649Error = error{
     BadPixels,
+    TooManyBrokenPixels,
+    TooManyOutlierPixels,
+    TooManyOutlierAndBrokenPixels,
+    LargeAdjacentPixelDifference,
 };
 
 pub const MLX90640_Config = struct {
@@ -186,6 +190,9 @@ pub const MLX90640 = struct {
         alphaCorrR[3] = alphaCorrR[2] * (1 + self.params.ksTo[2] * (ct));
 
         var gain: f32 = @floatFromInt(self.frame[778]);
+        // This check/correction might suggest that a signed integer type is more appropriate
+        // but this logic is straight from the datasheet.  Due to the considerable complexity
+        // of these calculations it feels best to implement them as the datasheet specifies.
         if (gain > 32767) {
             gain = gain - 65536;
         }
@@ -351,10 +358,7 @@ pub const MLX90640 = struct {
         self.extract_kta_pixel();
         self.extract_ky_pixel();
         self.extract_cilc();
-        const err: i16 = self.extract_deviating_pixels();
-        if (err > 0) {
-            return Mlx90649Error.BadPixels;
-        }
+        try self.extract_deviating_pixels();
     }
 
     fn extract_vdd(self: *Self) void {
@@ -804,7 +808,7 @@ pub const MLX90640 = struct {
         self.params.cpOffset[1] = offsetSP[1];
     }
 
-    fn extract_deviating_pixels(self: *Self) i16 {
+    fn extract_deviating_pixels(self: *Self) !void {
         var pixCnt: u32 = 0;
         for (0..5) |i| {
             pixCnt = @intCast(i);
@@ -827,63 +831,49 @@ pub const MLX90640 = struct {
             pixCnt = pixCnt + 1;
         }
 
-        var warn: i16 = 0;
         if (brokenPixCnt > 4) {
-            warn = -3;
+            return Mlx90649Error.TooManyBrokenPixels;
         } else if (outlierPixCnt > 4) {
-            warn = -4;
+            return Mlx90649Error.TooManyOutlierPixels;
         } else if ((brokenPixCnt + outlierPixCnt) > 4) {
-            warn = -5;
+            return Mlx90649Error.TooManyOutlierAndBrokenPixels;
         } else {
             for (0..brokenPixCnt) |x| {
                 pixCnt = @intCast(x);
                 for (pixCnt + 1..brokenPixCnt) |i| {
-                    warn = self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.brokenPixels[i]);
-                    if (warn != 0) {
-                        return warn;
-                    }
+                    try self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.brokenPixels[i]);
                 }
             }
 
             for (0..outlierPixCnt) |x| {
                 pixCnt = @intCast(x);
                 for (pixCnt + 1..outlierPixCnt) |i| {
-                    warn = self.check_adjacent_pixels(self.params.outlierPixels[pixCnt], self.params.outlierPixels[i]);
-                    if (warn != 0) {
-                        return warn;
-                    }
+                    try self.check_adjacent_pixels(self.params.outlierPixels[pixCnt], self.params.outlierPixels[i]);
                 }
             }
 
             for (0..brokenPixCnt) |x| {
                 pixCnt = @intCast(x);
                 for (0..outlierPixCnt) |i| {
-                    warn = self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.outlierPixels[i]);
-                    if (warn != 0) {
-                        return warn;
-                    }
+                    try self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.outlierPixels[i]);
                 }
             }
         }
-
-        return warn;
     }
 
-    fn check_adjacent_pixels(_: *Self, pix1: u16, pix2: u16) i16 {
+    fn check_adjacent_pixels(_: *Self, pix1: u16, pix2: u16) !void {
         var pixPosDif: i32 = 0;
 
         pixPosDif = pix1 - pix2;
         if (pixPosDif > -34 and pixPosDif < -30) {
-            return -6;
+            return Mlx90649Error.LargeAdjacentPixelDifference;
         }
         if (pixPosDif > -2 and pixPosDif < 2) {
-            return -6;
+            return Mlx90649Error.LargeAdjacentPixelDifference;
         }
         if (pixPosDif > 30 and pixPosDif < 34) {
-            return -6;
+            return Mlx90649Error.LargeAdjacentPixelDifference;
         }
-
-        return 0;
     }
 };
 
