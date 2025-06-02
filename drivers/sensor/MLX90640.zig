@@ -160,8 +160,8 @@ pub const MLX90640 = struct {
         try self.load_frame();
 
         const subPage: u16 = self.frame[833] & 0x0001;
-        const vdd = self.getVdd();
-        const ta = self.getTa(vdd);
+        const vdd = self.get_vdd();
+        const ta = self.get_ta(vdd);
         const tr = ta - self.open_air_shift;
 
         var ta4: f32 = (ta + 273.15);
@@ -296,7 +296,7 @@ pub const MLX90640 = struct {
         try self.write_then_read(Self.registers.control, self.frame[832..833]);
     }
 
-    fn getVdd(self: *Self) f32 {
+    fn get_vdd(self: *Self) f32 {
         var vdd: f32 = @floatFromInt(self.frame[810]);
         if (vdd > 32767) {
             vdd -= 65536;
@@ -311,7 +311,7 @@ pub const MLX90640 = struct {
         return vdd;
     }
 
-    fn getTa(self: *Self, vdd: f32) f32 {
+    fn get_ta(self: *Self, vdd: f32) f32 {
         var ptat: f32 = @floatFromInt(self.frame[800]);
         if (ptat > 32767) {
             ptat = ptat - 65536;
