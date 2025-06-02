@@ -79,6 +79,11 @@ pub const MLX90640 = struct {
         device_id = 0x2407,
     };
 
+    const scale_alpha: f32 = 0.000001;
+    const pixel_count: u10 = 768;
+    const frame_loop: [2]u1 = .{ 0, 1 };
+    const refresh_rate_mask: u16 = 0b111 << 7;
+
     eeprom: [832]u16 = undefined,
     frame: [834]u16 = undefined,
     frame_data: [834 * 2]u8 = undefined,
@@ -88,12 +93,6 @@ pub const MLX90640 = struct {
     params: parameters,
     emissivity: f32,
     open_air_shift: f32,
-
-    scale_alpha: f32 = 0.000001,
-    pixel_count: u10 = 768,
-
-    frame_loop: [2]u1 = .{ 0, 1 },
-    refresh_rate_mask: u16 = 0b111 << 7,
 
     pub fn init(cfg: MLX90640_Config) !Self {
         return .{
