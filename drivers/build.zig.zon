@@ -10,6 +10,7 @@
         "display",
         "input",
         "io_expander",
+        "led",
         "sensor",
         "stepper",
         "wireless",

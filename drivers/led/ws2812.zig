@@ -29,7 +29,8 @@ pub fn WS2812(options: struct {
             };
         }
 
-        /// Writes the given colors in order to the device. The slice len **must** be less than the maximum led count.
+        /// Writes the given colors in order to the device. The slice len **must** be less than the
+        /// maximum led count.
         pub fn write(self: *Self, colors: []const Color) !void {
             std.debug.assert(colors.len <= options.max_led_count);
 

@@ -81,6 +81,7 @@ pub const SPI_Bus = struct {
         };
     }
 
+    /// Configures the SPI bus.
     pub fn apply(self: SPI_Bus, comptime config: Config) void {
         comptime config.validate() catch @compileError("invalid baud rate");
 
@@ -133,25 +134,10 @@ pub const SPI_Bus = struct {
         var iter = vec.iterator();
 
         var remaining = vec.size();
-        if (remaining == 0) {
-            return;
-        }
-
-        var transfer_len = @min(remaining, fifo_byte_len);
-        self.fill_fifo(&iter, transfer_len);
-
-        self.start_transfer_generic(
-            true,
-            false,
-            transfer_len * 8,
-            bit_mode,
-        );
-        self.wait_for_transfer_blocking();
-
-        remaining -= transfer_len;
 
         while (remaining > 0) {
-            transfer_len = @min(remaining, fifo_byte_len);
+            const transfer_len = @min(remaining, fifo_byte_len);
+
             self.fill_fifo(&iter, transfer_len);
 
             self.start_transfer_generic(
@@ -186,26 +172,9 @@ pub const SPI_Bus = struct {
         var iter = vec.iterator();
 
         var remaining = vec.size();
-        if (remaining == 0) {
-            return;
-        }
-
-        var transfer_len = @min(remaining, fifo_byte_len);
-
-        self.start_transfer_generic(
-            false,
-            true,
-            transfer_len * 8,
-            bit_mode,
-        );
-        self.wait_for_transfer_blocking();
-
-        self.read_fifo(&iter, transfer_len);
-
-        remaining -= transfer_len;
 
         while (remaining > 0) {
-            transfer_len = @min(remaining, fifo_byte_len);
+            const transfer_len = @min(remaining, fifo_byte_len);
 
             self.start_transfer_generic(
                 false,
@@ -232,6 +201,7 @@ pub const SPI_Bus = struct {
         );
     }
 
+    /// Implies `.single_two_wires` bit mode for a full duplex transaction.
     pub fn transceivev_blocking(
         self: SPI_Bus,
         write_buffer_vec: []const []const u8,
@@ -264,6 +234,7 @@ pub const SPI_Bus = struct {
         }
     }
 
+    /// Implies `.single_two_wires` bit mode for a full duplex transaction.
     pub fn transceive_blocking(
         self: SPI_Bus,
         write_buffer: []const u8,
@@ -375,8 +346,24 @@ pub const SPI_Bus = struct {
 };
 
 pub const BitMode = enum {
+    ///        | MSB                     | LSB
+    /// fspid  | B7→B6→B5→B4→B3→B2→B1→B0 | B0→B1→B2→B3→B4→B5→B6→B7
     single_one_wire,
+
+    ///                | MSB                     | LSB
+    /// fspid or fspiq | B7→B6→B5→B4→B3→B2→B1→B0 | B0→B1→B2→B3→B4→B5→B6→B7
+    /// (out)    (in)
     single_two_wires,
+
+    ///        | MSB         | LSB
+    /// fspiq  | B6→B4→B2→B0 | B0→B2→B4→B6
+    /// fspid  | B7→B5→B3→B1 | B1→B3→B5→B7
     dual,
+
+    ///        | MSB   | LSB
+    /// fspihd | B7→B3 | B3→B7
+    /// fspiwp | B6→B2 | B2→B6
+    /// fspiq  | B5→B1 | B1→B5
+    /// fspid  | B4→B0 | B0→B4
     quad,
 };
