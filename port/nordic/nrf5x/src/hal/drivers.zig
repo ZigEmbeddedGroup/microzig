@@ -208,18 +208,11 @@ pub const SPI_Device = struct {
         };
     }
 
-    pub fn connect(dev: SPI_Device) !void {
-        const actual_level = dev.chip_select.read();
-
-        const target_level: u1 = switch (dev.active_level) {
+    pub fn connect(dev: SPI_Device) void {
+        dev.chip_select.put(switch (dev.active_level) {
             .low => 0,
             .high => 1,
-        };
-
-        if (target_level == actual_level)
-            return error.DeviceBusy;
-
-        dev.chip_select.put(target_level);
+        });
     }
 
     pub fn disconnect(dev: SPI_Device) void {
@@ -256,7 +249,7 @@ pub const SPI_Device = struct {
 
     fn connect_fn(dd: *anyopaque) ConnectError!void {
         const dev: *SPI_Device = @ptrCast(@alignCast(dd));
-        try dev.connect();
+        dev.connect();
     }
 
     fn disconnect_fn(dd: *anyopaque) void {

@@ -7,7 +7,7 @@ const nrf = microzig.hal;
 const gpio = nrf.gpio;
 const spi = nrf.spim;
 
-const BUF_LEN = 0x100;
+const BUF_LEN = 0x40;
 
 const uart = nrf.uart.num(0);
 const spi0 = spi.num(0);
@@ -52,12 +52,39 @@ pub fn main() !void {
 
     while (true) {
         std.log.info("Sending some data", .{});
+        // Write
+        csn.put(0);
+        try spi0.write_blocking(&out_buf, null);
+        csn.put(1);
+        sleep_ms(200);
+        // Writev
+        csn.put(0);
+        try spi0.writev_blocking(&.{&out_buf}, null);
+        csn.put(1);
+        sleep_ms(200);
+        // Read
+        csn.put(0);
+        try spi0.read_blocking(&in_buf, null);
+        csn.put(1);
+        sleep_ms(200);
+        // Readv
+        csn.put(0);
+        try spi0.readv_blocking(&.{&in_buf}, null);
+        csn.put(1);
+        sleep_ms(200);
+        // Transceive
         csn.put(0);
         try spi0.transceive_blocking(&out_buf, &in_buf, null);
-        // try spi0.write_blocking(&out_buf, null);
         csn.put(1);
         std.log.info("Got: {s}", .{in_buf});
-        sleep_ms(1000);
+        sleep_ms(200);
+        // Transceivev
+        csn.put(0);
+        // TODO: How are we supposed to do this?
+        try spi0.transceivev_blocking(&.{ &.{ 'h', 'i' }, &.{ 'H', 'I' } }, &.{&in_buf}, null);
+        csn.put(1);
+        std.log.info("Got: {s}", .{in_buf});
+        sleep_ms(200);
         break;
     }
 
@@ -66,6 +93,8 @@ pub fn main() !void {
     var spi_device = SPI_Device.init(spi0, csn, .{});
 
     const dd = spi_device.datagram_device();
+    try dd.connect();
     try dd.write(&out_buf);
+    dd.disconnect();
     std.log.info("Done!", .{});
 }

@@ -210,6 +210,8 @@ pub const SPIM = enum(u1) {
     }
 
     fn inner_tx_rx_chunk(spi: SPIM, write_data: []const u8, read_data: []u8, deadline: mdf.time.Deadline) TransactionError!void {
+        if (deadline.is_reached_by(time.get_time_since_boot())) return TransactionError.Timeout;
+
         const regs = spi.get_regs();
         try spi.prepare_dma_transfer(write_data, read_data);
 
@@ -230,9 +232,21 @@ pub const SPIM = enum(u1) {
     }
 
     pub fn writev_blocking(spi: SPIM, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        // TODO: Adjust duration after each iteration
-        for (chunks) |chunk| {
-            try spi.write_blocking(chunk, timeout);
+        if (timeout) |initial_timeout| {
+            var remaining_timeout = initial_timeout;
+            var start_time = time.get_time_since_boot();
+
+            for (chunks) |chunk| {
+                const elapsed_time = time.get_time_since_boot().diff(start_time);
+                remaining_timeout = remaining_timeout.minus(elapsed_time);
+
+                try spi.write_blocking(chunk, remaining_timeout);
+                start_time = time.get_time_since_boot();
+            }
+        } else {
+            for (chunks) |chunk| {
+                try spi.write_blocking(chunk, null);
+            }
         }
     }
 
@@ -242,17 +256,75 @@ pub const SPIM = enum(u1) {
     }
 
     pub fn readv_blocking(spi: SPIM, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        // TODO: Adjust duration after each iteration
-        for (chunks) |chunk| {
-            try spi.read_blocking(chunk, timeout);
+        if (timeout) |initial_timeout| {
+            var remaining_timeout = initial_timeout;
+            var start_time = time.get_time_since_boot();
+
+            for (chunks) |chunk| {
+                const elapsed_time = time.get_time_since_boot().diff(start_time);
+                remaining_timeout = remaining_timeout.minus(elapsed_time);
+
+                try spi.read_blocking(chunk, remaining_timeout);
+                start_time = time.get_time_since_boot();
+            }
+        } else {
+            for (chunks) |chunk| {
+                try spi.read_blocking(chunk, null);
+            }
         }
     }
 
     pub fn transceivev_blocking(spi: SPIM, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        // TODO: Adjust duration after each iteration
-        // TODO: Make sure different num of chunks for tx/rx works
-        for (write_chunks, read_chunks) |tx_chunk, rx_chunk| {
-            try spi.transceive_blocking(tx_chunk, rx_chunk, timeout);
+        if (timeout) |initial_timeout| {
+            var remaining_timeout = initial_timeout;
+            var start_time = time.get_time_since_boot();
+
+            var tx_index: usize = 0;
+            var rx_index: usize = 0;
+
+            while (tx_index < write_chunks.len or rx_index < read_chunks.len) {
+                const elapsed_time = time.get_time_since_boot().diff(start_time);
+                remaining_timeout = remaining_timeout.minus(elapsed_time);
+
+                if (tx_index < write_chunks.len) {
+                    const tx_chunk = write_chunks[tx_index];
+                    if (rx_index < read_chunks.len) {
+                        const rx_chunk = read_chunks[rx_index];
+                        try spi.transceive_blocking(tx_chunk, rx_chunk, remaining_timeout);
+                        rx_index += 1;
+                    } else {
+                        try spi.write_blocking(tx_chunk, remaining_timeout);
+                    }
+                    tx_index += 1;
+                } else {
+                    const rx_chunk = read_chunks[rx_index];
+                    try spi.read_blocking(rx_chunk, remaining_timeout);
+                    rx_index += 1;
+                }
+
+                start_time = time.get_time_since_boot();
+            }
+        } else {
+            var tx_index: usize = 0;
+            var rx_index: usize = 0;
+
+            while (tx_index < write_chunks.len or rx_index < read_chunks.len) {
+                if (tx_index < write_chunks.len) {
+                    const tx_chunk = write_chunks[tx_index];
+                    if (rx_index < read_chunks.len) {
+                        const rx_chunk = read_chunks[rx_index];
+                        try spi.transceive_blocking(tx_chunk, rx_chunk, null);
+                        rx_index += 1;
+                    } else {
+                        try spi.write_blocking(tx_chunk, null);
+                    }
+                    tx_index += 1;
+                } else {
+                    const rx_chunk = read_chunks[rx_index];
+                    try spi.read_blocking(rx_chunk, null);
+                    rx_index += 1;
+                }
+            }
         }
     }
 
