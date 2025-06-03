@@ -668,7 +668,6 @@ pub const MLX90640 = struct {
                 const y: f32 = @floatFromInt(ktaRC[split]);
                 self.scratch_data[p] = y + self.scratch_data[p];
                 self.scratch_data[p] = self.scratch_data[p] / std.math.pow(f32, 2, @floatFromInt(ktaScale1));
-                //self.scratch_data[p] = self.scratch_data[p] * self.params.offset[p];
             }
         }
 
@@ -731,7 +730,6 @@ pub const MLX90640 = struct {
                 const split = 2 * (p / 32 - (p / 64) * 2) + p % 2;
                 self.scratch_data[p] = @floatFromInt(KvT[split]);
                 self.scratch_data[p] = self.scratch_data[p] / std.math.pow(f32, 2, @floatFromInt(kvScale));
-                //self.scratch_data[p] = self.scratch_data[p] * mlx90640->offset[p];
             }
         }
 
