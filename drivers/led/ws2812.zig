@@ -13,7 +13,7 @@ pub fn WS2812(options: struct {
     return struct {
         const Self = @This();
 
-        // we can fit two bytes into one bit
+        // we can fit two bits into one byte
         const buffer_size = options.max_led_count * 24 / 2;
 
         dev: options.Datagram_Device,
