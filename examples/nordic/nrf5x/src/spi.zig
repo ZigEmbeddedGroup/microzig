@@ -78,13 +78,6 @@ pub fn main() !void {
         csn.put(1);
         std.log.info("Got: {s}", .{in_buf});
         sleep_ms(200);
-        // Transceivev
-        csn.put(0);
-        // TODO: How are we supposed to do this?
-        try spi0.transceivev_blocking(&.{ &.{ 'h', 'i' }, &.{ 'H', 'I' } }, &.{&in_buf}, null);
-        csn.put(1);
-        std.log.info("Got: {s}", .{in_buf});
-        sleep_ms(200);
         break;
     }
 

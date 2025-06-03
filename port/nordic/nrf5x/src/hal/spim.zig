@@ -210,60 +210,6 @@ pub const SPIM = enum(u1) {
         }
     }
 
-    pub fn transceivev_blocking(spi: SPIM, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (timeout) |initial_timeout| {
-            var remaining_timeout = initial_timeout;
-            var start_time = time.get_time_since_boot();
-
-            var tx_index: usize = 0;
-            var rx_index: usize = 0;
-
-            while (tx_index < write_chunks.len or rx_index < read_chunks.len) {
-                const elapsed_time = time.get_time_since_boot().diff(start_time);
-                remaining_timeout = remaining_timeout.minus(elapsed_time);
-
-                if (tx_index < write_chunks.len) {
-                    const tx_chunk = write_chunks[tx_index];
-                    if (rx_index < read_chunks.len) {
-                        const rx_chunk = read_chunks[rx_index];
-                        try spi.transceive_blocking(tx_chunk, rx_chunk, remaining_timeout);
-                        rx_index += 1;
-                    } else {
-                        try spi.write_blocking(tx_chunk, remaining_timeout);
-                    }
-                    tx_index += 1;
-                } else {
-                    const rx_chunk = read_chunks[rx_index];
-                    try spi.read_blocking(rx_chunk, remaining_timeout);
-                    rx_index += 1;
-                }
-
-                start_time = time.get_time_since_boot();
-            }
-        } else {
-            var tx_index: usize = 0;
-            var rx_index: usize = 0;
-
-            while (tx_index < write_chunks.len or rx_index < read_chunks.len) {
-                if (tx_index < write_chunks.len) {
-                    const tx_chunk = write_chunks[tx_index];
-                    if (rx_index < read_chunks.len) {
-                        const rx_chunk = read_chunks[rx_index];
-                        try spi.transceive_blocking(tx_chunk, rx_chunk, null);
-                        rx_index += 1;
-                    } else {
-                        try spi.write_blocking(tx_chunk, null);
-                    }
-                    tx_index += 1;
-                } else {
-                    const rx_chunk = read_chunks[rx_index];
-                    try spi.read_blocking(rx_chunk, null);
-                    rx_index += 1;
-                }
-            }
-        }
-    }
-
     pub fn transceive_blocking(spi: SPIM, tx: []const u8, rx: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
         try spi.inner_tx_rx(tx, rx, deadline);
