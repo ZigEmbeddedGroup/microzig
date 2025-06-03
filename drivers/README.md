@@ -16,6 +16,8 @@ A collection of device drivers for the use with MicroZig.
   - [x] SSD1306 (I²C works, [3-wire SPI](https://github.com/ZigEmbeddedGroup/microzig/issues/251) and [4-wire SPI](https://github.com/ZigEmbeddedGroup/microzig/issues/252) are missing)
   - [ ] [ST7735](https://github.com/ZigEmbeddedGroup/microzig/issues/250) (WIP)
   - [ ] [ILI9488](https://github.com/ZigEmbeddedGroup/microzig/issues/249)
+- Led
+  - [x] WS2812
 - Wireless
   - [ ] CYW43 (WIP)
   - [ ] [SX1276, SX1278](https://github.com/ZigEmbeddedGroup/microzig/issues/248)
