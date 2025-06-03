@@ -24,7 +24,7 @@ fn adc_to_temp(val: usize) f32 {
 }
 
 pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.logFn,
+    .logFn = stm32.uart.log,
 };
 
 fn DMA_init(arr_addr: u32, adc_addr: u32) void {
