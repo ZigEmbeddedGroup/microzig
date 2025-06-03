@@ -9,13 +9,18 @@ const SPI_Regs = microzig.chip.types.peripherals.SPI2;
 pub const fifo_word_len = 16;
 pub const fifo_byte_len = fifo_word_len * @sizeOf(u32);
 
+pub const BitMode = enum {
+    single_one_wire,
+    single_two_wires,
+    dual,
+    quad,
+};
+
 pub const SPI_Instance = enum {
     spi2,
 };
 
 pub const SPI_Bus = struct {
-    regs: *volatile SPI_Regs,
-
     pub const Config = struct {
         clock_config: hal.clocks.Config,
         baud_rate: u32,
@@ -94,6 +99,13 @@ pub const SPI_Bus = struct {
             }));
         }
     };
+
+    pub const BitOrder = enum(u1) {
+        msb_first = 0,
+        lsb_first = 1,
+    };
+
+    regs: *volatile SPI_Regs,
 
     pub fn init(instance: SPI_Instance) SPI_Bus {
         return .{
@@ -236,7 +248,7 @@ pub const SPI_Bus = struct {
         var read_iter = read_vec.iterator();
 
         var remaining = write_vec.size();
-        std.debug.assert(remaining != read_vec.size()); // write amount and read amount don't coincide
+        std.debug.assert(remaining == read_vec.size()); // the length of the written data must equal the length of the read data
 
         while (remaining > 0) {
             const transfer_len = @min(remaining, fifo_byte_len);
@@ -264,11 +276,6 @@ pub const SPI_Bus = struct {
     ) void {
         self.transceivev_blocking(&.{write_buffer}, &.{read_buffer});
     }
-
-    pub const BitOrder = enum(u1) {
-        msb_first = 0,
-        lsb_first = 1,
-    };
 
     fn set_bit_order(self: SPI_Bus, bit_order: BitOrder) void {
         self.regs.CTRL.modify(.{
@@ -365,11 +372,4 @@ pub const SPI_Bus = struct {
     fn wait_for_transfer_blocking(self: SPI_Bus) void {
         while (self.regs.DMA_INT_RAW.read().TRANS_DONE_INT_RAW != 1) {}
     }
-};
-
-pub const BitMode = enum {
-    single_one_wire,
-    single_two_wires,
-    dual,
-    quad,
 };

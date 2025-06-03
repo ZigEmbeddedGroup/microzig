@@ -13,7 +13,7 @@ pub fn WS2812(options: struct {
     return struct {
         const Self = @This();
 
-        // we can fit two bits into one byte
+        // we can fit 2 bits (out of 24 bits per color) into 1 byte
         const buffer_size = options.max_led_count * 24 / 2;
 
         dev: options.Datagram_Device,
