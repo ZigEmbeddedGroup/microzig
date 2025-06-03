@@ -174,27 +174,23 @@ pub const SPI_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
     pub const WriteError = Datagram_Device.WriteError;
     pub const ReadError = Datagram_Device.ReadError;
-
-    bus: hal.spim.SPIM,
-    chip_select: hal.gpio.Pin,
-    active_level: Digital_IO.State,
-
-    pub const InitOptions = struct {
-        /// The active level for the chip select pin
+    pub const ChipSelect = struct {
+        pin: hal.gpio.Pin,
         active_level: Digital_IO.State = .low,
     };
 
-    pub fn init(
-        bus: hal.spim.SPIM,
-        chip_select: hal.gpio.Pin,
-        options: InitOptions,
-    ) SPI_Device {
-        chip_select.set_direction(.out);
+    bus: hal.spim.SPIM,
+    chip_select: ?ChipSelect = null,
+
+    pub fn init(bus: hal.spim.SPIM, chip_select: ?ChipSelect) SPI_Device {
+        // TODO: rpi does this here, other HALs make the client do it. We should choose one and be
+        // consistent.
+        if (chip_select) |cs|
+            cs.pin.set_direction(.out);
 
         var dev: SPI_Device = .{
             .bus = bus,
             .chip_select = chip_select,
-            .active_level = options.active_level,
         };
         // set the chip select to "deselect" the device
         dev.disconnect();
@@ -209,17 +205,19 @@ pub const SPI_Device = struct {
     }
 
     pub fn connect(dev: SPI_Device) void {
-        dev.chip_select.put(switch (dev.active_level) {
-            .low => 0,
-            .high => 1,
-        });
+        if (dev.chip_select) |cs|
+            cs.pin.put(switch (cs.active_level) {
+                .low => 0,
+                .high => 1,
+            });
     }
 
     pub fn disconnect(dev: SPI_Device) void {
-        dev.chip_select.put(switch (dev.active_level) {
-            .low => 1,
-            .high => 0,
-        });
+        if (dev.chip_select) |cs|
+            cs.pin.put(switch (cs.active_level) {
+                .low => 1,
+                .high => 0,
+            });
     }
 
     pub fn write(dev: SPI_Device, tx: []const u8) !void {

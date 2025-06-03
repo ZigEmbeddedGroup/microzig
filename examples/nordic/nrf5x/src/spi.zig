@@ -90,7 +90,7 @@ pub fn main() !void {
 
     // Create spi datagram device
     out_buf = .{ 'H', 'E', 'Y', ' ', 'Y', 'O', 'U', '!' } ** (BUF_LEN / 8);
-    var spi_device = SPI_Device.init(spi0, csn, .{});
+    var spi_device = SPI_Device.init(spi0, .{ .pin = csn });
 
     const dd = spi_device.datagram_device();
     try dd.connect();
