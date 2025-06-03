@@ -48,7 +48,7 @@ pub const Archive = struct {
             file_offset: u32,
             size: u32,
 
-            fn lessThan(_: void, lhs: @This(), rhs: @This()) bool {
+            fn less_than(_: void, lhs: @This(), rhs: @This()) bool {
                 return lhs.addr < rhs.addr;
             }
         };
@@ -71,7 +71,7 @@ pub const Archive = struct {
         if (segments.items.len == 0)
             return error.NoSegments;
 
-        std.sort.insertion(Segment, segments.items, {}, Segment.lessThan);
+        std.sort.insertion(Segment, segments.items, {}, Segment.less_than);
         // TODO: check for overlaps, assert no zero sized segments
 
         var first = true;
@@ -276,7 +276,7 @@ pub const Block = extern struct {
     }
 };
 
-fn expectEqualBlock(expected: Block, actual: Block) !void {
+fn expect_equal_block(expected: Block, actual: Block) !void {
     try testing.expectEqual(@as(u32, first_magic), actual.magic_start1);
     try testing.expectEqual(expected.magic_start1, actual.magic_start1);
     try testing.expectEqual(@as(u32, second_magic), actual.magic_start2);
@@ -322,7 +322,7 @@ test "Block loopback" {
     fbs.reset();
     const actual = try Block.from_reader(fbs.reader());
 
-    try expectEqualBlock(expected, actual);
+    try expect_equal_block(expected, actual);
 }
 
 pub const FamilyId = enum(u32) {

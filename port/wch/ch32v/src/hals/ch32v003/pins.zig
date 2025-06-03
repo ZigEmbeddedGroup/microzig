@@ -77,7 +77,7 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
     };
 }
 
-fn getTagNameByIndex(comptime T: type, comptime index: usize) []const u8 {
+fn get_tag_name_by_index(comptime T: type, comptime index: usize) []const u8 {
     const fields = @typeInfo(T).@"enum".fields;
     if (index >= fields.len) {
         @compileError("Index is out of enum members.");
@@ -102,7 +102,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
                             .alignment = undefined,
                         };
 
-                        pin_field.name = pin_config.name orelse getTagNameByIndex(PortName, @intFromEnum(@field(Port, port_field.name))) ++ @tagName(@field(Pin, field.name))[3..];
+                        pin_field.name = pin_config.name orelse get_tag_name_by_index(PortName, @intFromEnum(@field(Port, port_field.name))) ++ @tagName(@field(Pin, field.name))[3..];
                         pin_field.type = GPIO(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)), pin_config.mode orelse .{ .input = .{.floating} });
                         pin_field.alignment = @alignOf(field.type);
 

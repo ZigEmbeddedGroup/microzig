@@ -11,7 +11,7 @@ const A4988 = microzig.drivers.stepper.A4988;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
 pub const microzig_options = microzig.Options{
-    .logFn = usb_serial_jtag.logger.logFn,
+    .logFn = usb_serial_jtag.logger.log,
 };
 
 pub fn main() !void {

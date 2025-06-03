@@ -201,7 +201,7 @@ const TestDevice = struct {
     in4: TestGPIO,
     clock: TestTime,
 };
-fn createTestDevice() TestDevice {
+fn create_test_device() TestDevice {
     return .{
         .in1 = TestGPIO.init(.output, .high),
         .in2 = TestGPIO.init(.output, .high),
@@ -212,7 +212,7 @@ fn createTestDevice() TestDevice {
 }
 
 test "begin" {
-    var td = createTestDevice();
+    var td = create_test_device();
     var stepper = ULN2003.init(.{
         .in1_pin = td.in1.digital_io(),
         .in2_pin = td.in2.digital_io(),
@@ -227,7 +227,7 @@ test "begin" {
 }
 
 test "set microsteps/rpm" {
-    var td = createTestDevice();
+    var td = create_test_device();
     var stepper = ULN2003.init(.{
         .in1_pin = td.in1.digital_io(),
         .in2_pin = td.in2.digital_io(),
@@ -246,7 +246,7 @@ test "set microsteps/rpm" {
 }
 
 test "step" {
-    var td = createTestDevice();
+    var td = create_test_device();
     var stepper = ULN2003.init(.{
         .in1_pin = td.in1.digital_io(),
         .in2_pin = td.in2.digital_io(),

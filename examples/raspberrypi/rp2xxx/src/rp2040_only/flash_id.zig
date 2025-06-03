@@ -18,7 +18,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const std_options = struct {
     pub const log_level = .debug;
-    pub const logFn = rp2xxx.uart.logFn;
+    pub const logFn = rp2xxx.uart.log;
 };
 
 pub fn main() !void {

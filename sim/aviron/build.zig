@@ -46,7 +46,7 @@ pub fn build(b: *Build) !void {
         .root_source_file = b.path("src/shared/isa.zig"),
     });
     const isa_tables_module = b.createModule(.{
-        .root_source_file = generateIsaTables(b, isa_module),
+        .root_source_file = generate_isa_tables(b, isa_module),
         .imports = &.{
             .{ .name = "isa", .module = isa_module },
         },
@@ -104,12 +104,12 @@ pub fn build(b: *Build) !void {
 
     // Test suite:
 
-    try addTestSuite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
+    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
 
-    try addTestSuiteUpdate(b, update_testsuite_step);
+    try add_test_suite_update(b, update_testsuite_step);
 }
 
-fn addTestSuite(
+fn add_test_suite(
     b: *Build,
     test_step: *Build.Step,
     debug_step: *Build.Step,
@@ -197,7 +197,7 @@ fn addTestSuite(
                     var file = try entry.dir.openFile(entry.basename, .{});
                     defer file.close();
 
-                    const config = try parseTestSuiteConfig(b, file);
+                    const config = try parse_test_suite_config(b, file);
 
                     const custom_target = if (config.cpu) |cpu|
                         b.resolveTargetQuery(std.Target.Query.parse(.{
@@ -280,7 +280,7 @@ fn addTestSuite(
                 },
             };
 
-            const write_file = b.addWriteFile("config.json", cae.config.toString(b));
+            const write_file = b.addWriteFile("config.json", cae.config.to_string(b));
 
             const test_run = b.addRunArtifact(testrunner_exe);
             test_run.addArg("--config");
@@ -297,7 +297,7 @@ fn addTestSuite(
     }
 }
 
-fn addTestSuiteUpdate(
+fn add_test_suite_update(
     b: *Build,
     invoke_step: *Build.Step,
 ) !void {
@@ -352,7 +352,7 @@ fn addTestSuiteUpdate(
                     var file = try entry.dir.openFile(entry.basename, .{});
                     defer file.close();
 
-                    const config = try parseTestSuiteConfig(b, file);
+                    const config = try parse_test_suite_config(b, file);
 
                     const gcc_invocation = Build.Step.Run.create(b, "run avr-gcc");
                     gcc_invocation.addFileArg(avr_gcc);
@@ -367,7 +367,7 @@ fn addTestSuiteUpdate(
                     gcc_invocation.addArg("testsuite");
                     gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
 
-                    const write_file = b.addWriteFile("config.json", config.toString(b));
+                    const write_file = b.addWriteFile("config.json", config.to_string(b));
 
                     const copy_file = b.addSystemCommand(&.{"cp"}); // todo make this cross-platform!
                     copy_file.addFileArg(write_file.getDirectory().path(b, "config.json"));
@@ -381,7 +381,7 @@ fn addTestSuiteUpdate(
     }
 }
 
-fn parseTestSuiteConfig(b: *Build, file: std.fs.File) !TestSuiteConfig {
+fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
     var code = std.ArrayList(u8).init(b.allocator);
     defer code.deinit();
 
@@ -415,7 +415,7 @@ fn parseTestSuiteConfig(b: *Build, file: std.fs.File) !TestSuiteConfig {
     );
 }
 
-fn generateIsaTables(b: *Build, isa_mod: *Build.Module) LazyPath {
+fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
     const generate_tables_exe = b.addExecutable(.{
         .name = "aviron-generate-tables",
         .root_source_file = b.path("tools/generate-tables.zig"),

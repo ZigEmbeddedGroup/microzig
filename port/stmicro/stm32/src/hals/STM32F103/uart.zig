@@ -318,7 +318,7 @@ var uart_logger: ?UART.Writer = null;
 ///
 /// Allows system logging over uart via:
 /// pub const microzig_options = .{
-///     .logFn = hal.uart.logFn,
+///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: *const UART) void {
     uart_logger = uart.writer();
@@ -332,7 +332,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
-pub fn logFn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
+pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
     const prefix = comptime level.asText() ++ switch (scope) {
         .default => ": ",
         else => " (" ++ @tagName(scope) ++ "): ",

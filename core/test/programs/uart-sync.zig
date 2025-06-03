@@ -49,7 +49,7 @@ pub fn main() !void {
         .parity = null,
         .data_bits = .eight,
     }) catch |err| {
-        blinkError(led, err);
+        blink_error(led, err);
 
         microzig.hang();
     };
@@ -64,7 +64,7 @@ pub fn main() !void {
     }
 }
 
-fn blinkError(led: anytype, err: microzig.uart.InitError) void {
+fn blink_error(led: anytype, err: microzig.uart.InitError) void {
     var blinks: u3 =
         switch (err) {
             error.UnsupportedBaudRate => 1,

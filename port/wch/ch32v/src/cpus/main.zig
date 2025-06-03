@@ -59,10 +59,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         const v = switch (num) {
-            0 => getBit(PFIC.ISR1, pos),
-            1 => getBit(PFIC.ISR2, pos),
-            2 => getBit(PFIC.ISR3, pos),
-            3 => getBit(PFIC.ISR4, pos),
+            0 => get_bit(PFIC.ISR1, pos),
+            1 => get_bit(PFIC.ISR2, pos),
+            2 => get_bit(PFIC.ISR3, pos),
+            3 => get_bit(PFIC.ISR4, pos),
             else => @compileError("Invalid interrupt number!"),
         };
         return v != 0;
@@ -114,10 +114,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         const v = switch (num) {
-            0 => getBit(PFIC.IPR1, pos),
-            1 => getBit(PFIC.IPR2, pos),
-            2 => getBit(PFIC.IPR3, pos),
-            3 => getBit(PFIC.IPR4, pos),
+            0 => get_bit(PFIC.IPR1, pos),
+            1 => get_bit(PFIC.IPR2, pos),
+            2 => get_bit(PFIC.IPR3, pos),
+            3 => get_bit(PFIC.IPR4, pos),
             else => @compileError("Invalid interrupt number!"),
         };
         return v != 0;
@@ -154,10 +154,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         const v = switch (num) {
-            0 => getBit(PFIC.IACTR1, pos),
-            1 => getBit(PFIC.IACTR2, pos),
-            2 => getBit(PFIC.IACTR3, pos),
-            3 => getBit(PFIC.IACTR4, pos),
+            0 => get_bit(PFIC.IACTR1, pos),
+            1 => get_bit(PFIC.IACTR2, pos),
+            2 => get_bit(PFIC.IACTR3, pos),
+            3 => get_bit(PFIC.IACTR4, pos),
             else => @compileError("Invalid interrupt number!"),
         };
         return v != 0;
@@ -180,7 +180,7 @@ pub const interrupt = struct {
         return @field(PFIC, "IPRIOR" ++ irq_num_str);
     }
 
-    inline fn getBit(self: anytype, pos: u5) u1 {
+    inline fn get_bit(self: anytype, pos: u5) u1 {
         return @truncate(self.raw >> pos);
     }
 };

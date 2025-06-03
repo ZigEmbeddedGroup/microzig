@@ -662,7 +662,7 @@ const BufferReader = struct {
 
 pub const UsbUtils = struct {
     /// Convert an utf8 into an utf16 (little endian) string
-    pub fn utf8ToUtf16Le(comptime s: []const u8) [s.len << 1]u8 {
+    pub fn utf8_to_utf16_le(comptime s: []const u8) [s.len << 1]u8 {
         const l = s.len << 1;
         var ret: [l]u8 = @splat(0);
         var i: usize = 0;
@@ -678,6 +678,6 @@ test "tests" {
 }
 
 test "utf8 to utf16" {
-    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &UsbUtils.utf8ToUtf16Le("My Vendor"));
-    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &UsbUtils.utf8ToUtf16Le("Raspberry Pi"));
+    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &UsbUtils.utf8_to_utf16_le("My Vendor"));
+    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &UsbUtils.utf8_to_utf16_le("Raspberry Pi"));
 }
