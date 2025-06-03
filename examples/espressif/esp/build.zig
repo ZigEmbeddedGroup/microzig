@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "systimer", .file = "src/systimer.zig" },
+        .{ .name = "ws2812_blinky", .file = "src/ws2812_blinky.zig" },
     };
 
     for (available_examples) |example| {

@@ -4,14 +4,6 @@ const system = microzig.hal.system;
 
 const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
 
-/// Already called internally.
-// TODO: Not sure how this should be called. We should pick a name for functions that enable the peripheral
-// clock and then reset the peripheral (in other cases).
-pub fn initialize() void {
-    // Make sure it's enabled. Don't reset it to keep time consistent.
-    system.clocks_enable_set(.{ .systimer = true });
-}
-
 pub fn ticks_per_us() u64 {
     return 16;
 }
@@ -37,6 +29,10 @@ pub const Unit = enum(u1) {
 
     // TODO: Not sure how this should be called.
     pub fn apply(self: Unit, config: Config) void {
+        system.enable_clocks_and_release_reset(.{
+            .systimer = true,
+        });
+
         switch (config) {
             .disabled => switch (self) {
                 .unit0 => SYSTIMER.CONF.modify(.{

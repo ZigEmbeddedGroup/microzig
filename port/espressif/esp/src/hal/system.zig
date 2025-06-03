@@ -75,6 +75,12 @@ pub const PeripheralMask = packed struct(u43) {
     }
 };
 
+/// Disables most peripheral clocks and puts peripherals in the reset state to bring them to a known state.
+pub fn init() void {
+    clocks_enable_clear(.all_but_keep_enabled);
+    peripheral_reset_set(.all_but_keep_enabled);
+}
+
 /// Sets the bits in the mask of the PERIP_CLK_ENx registers.
 pub fn clocks_enable_set(mask: PeripheralMask) void {
     var current_mask: u64 = @bitCast(@as(u64, SYSTEM.PERIP_CLK_EN0.raw) | ((@as(u64, SYSTEM.PERIP_CLK_EN1.raw) << 32)));
@@ -111,4 +117,10 @@ pub fn peripheral_reset_clear(mask: PeripheralMask) void {
     current_mask &= ~@as(u43, @bitCast(mask));
     SYSTEM.PERIP_RST_EN0.write_raw(@intCast(current_mask & 0xffff_ffff));
     SYSTEM.PERIP_RST_EN1.write_raw(@intCast(current_mask >> 32));
+}
+
+/// Enable clocks and release peripherals from reset.
+pub fn enable_clocks_and_release_reset(mask: PeripheralMask) void {
+    clocks_enable_set(mask);
+    peripheral_reset_clear(mask);
 }

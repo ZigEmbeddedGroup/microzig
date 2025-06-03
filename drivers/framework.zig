@@ -36,6 +36,12 @@ pub const input = struct {
     };
 };
 
+pub const led = struct {
+    pub const ws2812 = @import("led/ws2812.zig");
+
+    pub const WS2812 = ws2812.WS2812;
+};
+
 pub const sensor = struct {
     pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
     pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
