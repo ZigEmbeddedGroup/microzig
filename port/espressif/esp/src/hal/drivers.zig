@@ -164,13 +164,29 @@ pub const SPI_Device = struct {
     }
 
     pub fn read(dev: SPI_Device, datagram: []u8) ReadError!usize {
-        dev.bus.read_blocking(datagram, dev.bit_mode);
-        return datagram.len;
+        return dev.bus.read_blocking(datagram, dev.bit_mode);
     }
 
     pub fn readv(dev: SPI_Device, datagrams: []const []u8) ReadError!usize {
-        dev.bus.readv_blocking(datagrams, dev.bit_mode);
-        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+        return dev.bus.readv_blocking(datagrams, dev.bit_mode);
+    }
+
+    pub fn write_then_read(
+        dev: SPI_Device,
+        src: []const u8,
+        dst: []u8,
+    ) (WriteError || ReadError)!void {
+        try dev.write(src);
+        _ = try dev.read(dst);
+    }
+
+    pub fn writev_then_readv(
+        dev: SPI_Device,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) (WriteError || ReadError)!void {
+        try dev.writev(write_chunks);
+        _ = try dev.readv(read_chunks);
     }
 
     const vtable = Datagram_Device.VTable{
@@ -178,6 +194,7 @@ pub const SPI_Device = struct {
         .disconnect_fn = disconnect_fn,
         .writev_fn = writev_fn,
         .readv_fn = readv_fn,
+        .writev_then_readv_fn = writev_then_readv_fn,
     };
 
     fn connect_fn(dd: *anyopaque) ConnectError!void {
@@ -198,6 +215,15 @@ pub const SPI_Device = struct {
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
         const dev: *SPI_Device = @ptrCast(@alignCast(dd));
         return dev.readv(chunks);
+    }
+
+    fn writev_then_readv_fn(
+        dd: *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) (WriteError || ReadError)!void {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.writev_then_readv(write_chunks, read_chunks);
     }
 };
 

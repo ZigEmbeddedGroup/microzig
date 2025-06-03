@@ -33,11 +33,28 @@ pub const SPI_Bus = struct {
 
         // translated from esp-hal in rust
         fn get_clock_config(self: Config) u32 {
+            // TODO: we can return directly the packed type if we add some patches
+            // to regz (not possible rn).
+            const Reg = packed struct(u32) {
+                CLKCNT_L: u6,
+                CLKCNT_H: u6,
+                CLKCNT_N: u6,
+                CLKDIV_PRE: u4,
+                reserved: u9 = 0,
+                CLK_EQU_SYSCLK: u1,
+            };
+
             const source_freq = self.clock_config.apb_clk_freq;
 
             // Use APB directly if target frequency is high enough
             if (self.baud_rate > ((source_freq / 4) * 3)) {
-                return 1 << 31;
+                return @bitCast(@as(Reg, .{
+                    .CLKCNT_L = 0,
+                    .CLKCNT_H = 0,
+                    .CLKCNT_N = 0,
+                    .CLKDIV_PRE = 0,
+                    .CLK_EQU_SYSCLK = 1,
+                }));
             }
 
             var bestn: i32 = -1;
@@ -68,8 +85,13 @@ pub const SPI_Bus = struct {
             var h: i32 = @divFloor(128 * bestn + 127, 256);
             if (h <= 0) h = 1;
 
-            return @as(u32, @intCast(l - 1)) | (@as(u32, @intCast(h - 1)) << 6) |
-                (@as(u32, @intCast(bestn - 1)) << 12) | (@as(u32, @intCast(bestpre - 1)) << 18);
+            return @bitCast(@as(Reg, .{
+                .CLKCNT_L = @intCast(l - 1),
+                .CLKCNT_H = @intCast(h - 1),
+                .CLKCNT_N = @intCast(bestn - 1),
+                .CLKDIV_PRE = @intCast(bestpre - 1),
+                .CLK_EQU_SYSCLK = 0,
+            }));
         }
     };
 
@@ -81,7 +103,6 @@ pub const SPI_Bus = struct {
         };
     }
 
-    /// Configures the SPI bus.
     pub fn apply(self: SPI_Bus, comptime config: Config) void {
         comptime config.validate() catch @compileError("invalid baud rate");
 
@@ -137,7 +158,6 @@ pub const SPI_Bus = struct {
 
         while (remaining > 0) {
             const transfer_len = @min(remaining, fifo_byte_len);
-
             self.fill_fifo(&iter, transfer_len);
 
             self.start_transfer_generic(
@@ -167,11 +187,13 @@ pub const SPI_Bus = struct {
         self: SPI_Bus,
         buffer_vec: []const []u8,
         bit_mode: BitMode,
-    ) void {
-        const vec: Slice_Vector([]const u8) = .init(buffer_vec);
+    ) usize {
+        const vec: Slice_Vector([]u8) = .init(buffer_vec);
         var iter = vec.iterator();
 
-        var remaining = vec.size();
+        const total_len = vec.size();
+
+        var remaining = total_len;
 
         while (remaining > 0) {
             const transfer_len = @min(remaining, fifo_byte_len);
@@ -188,20 +210,21 @@ pub const SPI_Bus = struct {
 
             remaining -= transfer_len;
         }
+
+        return total_len;
     }
 
     pub fn read_blocking(
         self: SPI_Bus,
         buffer: []u8,
         bit_mode: BitMode,
-    ) void {
-        self.readv_blocking(
+    ) usize {
+        return self.readv_blocking(
             &.{buffer},
             bit_mode,
         );
     }
 
-    /// Implies `.single_two_wires` bit mode for a full duplex transaction.
     pub fn transceivev_blocking(
         self: SPI_Bus,
         write_buffer_vec: []const []const u8,
@@ -234,7 +257,6 @@ pub const SPI_Bus = struct {
         }
     }
 
-    /// Implies `.single_two_wires` bit mode for a full duplex transaction.
     pub fn transceive_blocking(
         self: SPI_Bus,
         write_buffer: []const u8,
@@ -346,24 +368,8 @@ pub const SPI_Bus = struct {
 };
 
 pub const BitMode = enum {
-    ///        | MSB                     | LSB
-    /// fspid  | B7→B6→B5→B4→B3→B2→B1→B0 | B0→B1→B2→B3→B4→B5→B6→B7
     single_one_wire,
-
-    ///                | MSB                     | LSB
-    /// fspid or fspiq | B7→B6→B5→B4→B3→B2→B1→B0 | B0→B1→B2→B3→B4→B5→B6→B7
-    /// (out)    (in)
     single_two_wires,
-
-    ///        | MSB         | LSB
-    /// fspiq  | B6→B4→B2→B0 | B0→B2→B4→B6
-    /// fspid  | B7→B5→B3→B1 | B1→B3→B5→B7
     dual,
-
-    ///        | MSB   | LSB
-    /// fspihd | B7→B3 | B3→B7
-    /// fspiwp | B6→B2 | B2→B6
-    /// fspiq  | B5→B1 | B1→B5
-    /// fspid  | B4→B0 | B0→B4
     quad,
 };

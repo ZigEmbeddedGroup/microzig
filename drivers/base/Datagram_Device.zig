@@ -94,12 +94,12 @@ pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!usize {
 pub const VTable = struct {
     connect_fn: ?*const fn (*anyopaque) ConnectError!void,
     disconnect_fn: ?*const fn (*anyopaque) void,
-    writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
-    readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
+    writev_fn: ?*const fn (*anyopaque, chunks: []const []const u8) WriteError!void,
+    readv_fn: ?*const fn (*anyopaque, chunks: []const []u8) ReadError!usize,
     writev_then_readv_fn: ?*const fn (
         *anyopaque,
-        datagrams: []const []const u8,
-        datagrams: []const []u8,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
     ) (WriteError || ReadError)!void = null,
 };
 
