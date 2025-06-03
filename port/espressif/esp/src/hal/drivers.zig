@@ -121,7 +121,7 @@ pub const SPI_Device = struct {
 
     pub const ChipSelect = struct {
         pin: hal.gpio.Pin,
-        active_level: hal.gpio.Level,
+        active_level: Digital_IO.State,
     };
 
     bus: hal.spi.SPI_Bus,
@@ -155,13 +155,19 @@ pub const SPI_Device = struct {
 
     pub fn connect(dev: SPI_Device) ConnectError!void {
         if (dev.maybe_chip_select) |chip_select| {
-            chip_select.pin.write(chip_select.active_level);
+            chip_select.pin.write(switch (chip_select.active_level) {
+                .low => .low,
+                .high => .high,
+            });
         }
     }
 
     pub fn disconnect(dev: SPI_Device) void {
         if (dev.maybe_chip_select) |chip_select| {
-            chip_select.pin.write(if (chip_select.active_level == .high) .low else .high);
+            chip_select.pin.write(switch (chip_select.active_level) {
+                .low => .high,
+                .high => .low,
+            });
         }
     }
 
