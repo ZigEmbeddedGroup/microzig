@@ -23,14 +23,6 @@ fn adc_to_temp(val: usize) f32 {
     return ((v25 - temp_mv) / avg_slope) + 25; //convert to celsius
 }
 
-fn maen(t: anytype, val: []const t) usize {
-    var sum: usize = 0;
-    for (val) |v| {
-        sum += @as(usize, v);
-    }
-    return sum / val.len;
-}
-
 pub const microzig_options = microzig.Options{
     .logFn = stm32.uart.logFn,
 };
