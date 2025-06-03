@@ -22,12 +22,17 @@ const Config = struct {
     sck_pin: gpio.Pin,
     miso_pin: ?gpio.Pin,
     mosi_pin: ?gpio.Pin,
-    frequency: enum { K125, K250, K500, M16, M1, M2, M4, M8, M32 },
+    frequency: Frequency,
     mode: enum { mode0, mode1, mode2, mode3 } = .mode0,
     bit_order: enum(u1) { msbFirst = 0, lsbFirst = 1 } = .msbFirst,
     overread_char: u8 = 0x00,
     sck_drive: gpio.DriveStrength = .SOS1,
     mosi_drive: gpio.DriveStrength = .SOS1,
+};
+
+const Frequency = switch (compatibility.chip) {
+    .nrf52 => enum { K125, K250, K500, M1, M2, M4, M8 },
+    .nrf52840 => enum { K125, K250, K500, M1, M2, M4, M8, M16, M32 },
 };
 
 pub const TransactionError = error{
@@ -56,22 +61,34 @@ pub const SPIM = enum(u1) {
         // TODO: Chip-specific
         if (config.miso_pin) |miso| {
             miso.set_direction(.in);
-            regs.PSEL.MISO.write(.{
-                .PIN = miso.index(),
-                .PORT = miso.port(),
-                .CONNECT = .Connected,
-            });
+            switch (compatibility.chip) {
+                .nrf52 => regs.PSEL.MISO.write(.{
+                    .PIN = miso.index(),
+                    .CONNECT = .Connected,
+                }),
+                .nrf52840 => regs.PSEL.MISO.write(.{
+                    .PIN = miso.index(),
+                    .PORT = miso.port(),
+                    .CONNECT = .Connected,
+                }),
+            }
         } else regs.PSEL.MISO.modify(.{
             .CONNECT = .Disconnected,
         });
         if (config.mosi_pin) |mosi| {
             mosi.set_direction(.out);
             mosi.set_drive_strength(config.mosi_drive);
-            regs.PSEL.MOSI.write(.{
-                .PIN = mosi.index(),
-                .PORT = mosi.port(),
-                .CONNECT = .Connected,
-            });
+            switch (compatibility.chip) {
+                .nrf52 => regs.PSEL.MOSI.write(.{
+                    .PIN = mosi.index(),
+                    .CONNECT = .Connected,
+                }),
+                .nrf52840 => regs.PSEL.MOSI.write(.{
+                    .PIN = mosi.index(),
+                    .PORT = mosi.port(),
+                    .CONNECT = .Connected,
+                }),
+            }
         } else regs.PSEL.MOSI.modify(.{
             .CONNECT = .Disconnected,
         });
@@ -101,28 +118,44 @@ pub const SPIM = enum(u1) {
             }),
         }
 
-        // TODO: Could export the type in a patch to avoid this mapping
-        regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
-            .K125 => .K125,
-            .K250 => .K250,
-            .K500 => .K500,
-            .M1 => .M1,
-            .M2 => .M2,
-            .M4 => .M4,
-            .M8 => .M8,
-            .M16 => .M16,
-            .M32 => .M32,
-        } });
+        switch (compatibility.chip) {
+            .nrf52 => regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
+                .K125 => .K125,
+                .K250 => .K250,
+                .K500 => .K500,
+                .M1 => .M1,
+                .M2 => .M2,
+                .M4 => .M4,
+                .M8 => .M8,
+            } }),
+            .nrf52840 => regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
+                .K125 => .K125,
+                .K250 => .K250,
+                .K500 => .K500,
+                .M1 => .M1,
+                .M2 => .M2,
+                .M4 => .M4,
+                .M8 => .M8,
+                .M16 => .M16,
+                .M32 => .M32,
+            } }),
+        }
 
         regs.ORC.write(.{ .ORC = config.overread_char });
 
         config.sck_pin.set_direction(.out);
         config.sck_pin.set_drive_strength(config.sck_drive);
-        regs.PSEL.SCK.write(.{
-            .PIN = config.sck_pin.index(),
-            .PORT = config.sck_pin.port(),
-            .CONNECT = .Connected,
-        });
+        switch (compatibility.chip) {
+            .nrf52 => regs.PSEL.SCK.write(.{
+                .PIN = config.sck_pin.index(),
+                .CONNECT = .Connected,
+            }),
+            .nrf52840 => regs.PSEL.SCK.write(.{
+                .PIN = config.sck_pin.index(),
+                .PORT = config.sck_pin.port(),
+                .CONNECT = .Connected,
+            }),
+        }
 
         regs.ENABLE.write(.{ .ENABLE = .Enabled });
         regs.INTENCLR.write_raw(0xFFFFFFFF);
