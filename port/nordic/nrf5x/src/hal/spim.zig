@@ -25,9 +25,9 @@ const EASY_DMA_SIZE = std.math.maxInt(
 
 const Config = struct {
     sck_pin: gpio.Pin,
-    miso_pin: ?gpio.Pin,
-    mosi_pin: ?gpio.Pin,
-    frequency: Frequency,
+    miso_pin: ?gpio.Pin = null,
+    mosi_pin: ?gpio.Pin = null,
+    frequency: Frequency = .K500,
     mode: enum { mode0, mode1, mode2, mode3 } = .mode0,
     bit_order: enum(u1) { msbFirst = 0, lsbFirst = 1 } = .msbFirst,
     overread_char: u8 = 0x00,
