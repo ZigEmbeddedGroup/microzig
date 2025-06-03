@@ -202,8 +202,9 @@ pub const RegularSingleSequence = struct {
 };
 
 pub const RegularDiscontinuous = struct {
-    channels: []const RegularSingleChannel,
-    length: u3 = 0, //default length is 0, which means 1 read per trigger
+    channels: RegularSingleSequence,
+    ///number of conversions per trigger,in this API length starts from 1 instead of 0
+    length: u3 = 1, //default length is 1
 };
 
 pub const RegularModes = union(enum) {
@@ -324,9 +325,8 @@ pub const AdvancedADC = struct {
             .ContinuousSeq => |seq| {
                 try self.set_regular_seq(seq, false);
             },
-            .Discontinuous => |_| {
-                //TODO: implement discontinuous mode
-                return RegularConfigError.InvalidMode;
+            .Discontinuous => |disc| {
+                try self.set_regular_discontinuous(disc);
             },
         }
 
@@ -344,7 +344,7 @@ pub const AdvancedADC = struct {
         if (single.channel > 17) return RegularConfigError.InvalidChannel;
         const regs = self.regs;
         regs.CR1.modify(.{
-            .SCAN = 0, //disable scan mode
+            .SCAN = 1, //keep scan mode enabled, scan mode maybe be used in injected mode
             .DISCEN = 0, //disable discontinuous mode
         });
 
@@ -373,6 +373,35 @@ pub const AdvancedADC = struct {
         }
 
         regs.CR2.modify(.{ .CONT = @as(u1, if (single_mode) 0 else 1) }); //set conversion mode
+    }
+
+    pub fn set_regular_discontinuous(self: *const AdvancedADC, disc: RegularDiscontinuous) RegularConfigError!void {
+        const regs = self.regs;
+        //in this API length starts from 1 instead of 0
+        if (disc.length == 0) {
+            return RegularConfigError.InvalidLength;
+        } else if (disc.length > 8) {
+            return RegularConfigError.InvalidLength; //max length is 8
+        }
+
+        if (regs.CR1.read().JDISCEN == 1) {
+            return RegularConfigError.InvalidMode; //discontinuous mode is already enabled for injected
+        }
+
+        regs.CR2.modify(.{ .CONT = 0 }); //set conversion mode
+        regs.CR1.modify(.{
+            .SCAN = 1, //enable scan mode
+            .DISCEN = 1, //enable discontinuous mode
+            .DISCNUM = @as(u3, disc.length - 1),
+        });
+
+        self.load_sequence(disc.channels.seq);
+        if (disc.channels.channels_conf) |channels| {
+            for (channels) |ch| {
+                if (ch.channel > 17) return RegularConfigError.InvalidChannel;
+                self.set_channel_sample_rate(ch.channel, ch.sample_rate);
+            }
+        }
     }
 
     pub fn set_channel_sample_rate(self: *const AdvancedADC, channel: u5, sample_rate: SampleRate) void {
