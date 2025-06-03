@@ -20,8 +20,9 @@ ptr: *anyopaque,
 vtable: *const VTable,
 
 const BaseError = error{ IoError, Timeout };
-
 pub const ConnectError = BaseError || error{DeviceBusy};
+pub const WriteError = BaseError || error{ Unsupported, NotConnected };
+pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
 
 /// Establishes a connection to the device (like activating a chip-select lane or similar).
 /// NOTE: Call `.disconnect()` when the usage of the device is done to release it.
@@ -38,8 +39,6 @@ pub fn disconnect(dd: Datagram_Device) void {
     }
 }
 
-pub const WriteError = BaseError || error{ Unsupported, NotConnected };
-
 /// Writes a single `datagram` to the device.
 pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
     return try dd.writev(&.{datagram});
@@ -50,8 +49,6 @@ pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!voi
     const writev_fn = dd.vtable.writev_fn orelse return error.Unsupported;
     return writev_fn(dd.ptr, datagrams);
 }
-
-pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
 
 /// Writes then reads a single `datagram` to the device.
 pub fn write_then_read(

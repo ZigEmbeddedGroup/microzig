@@ -70,9 +70,7 @@ const Config = struct {
 };
 
 pub const TransactionError = error{
-    NoAcknowledge,
     Timeout,
-    TargetAddressReserved,
     NoData,
     Overrun,
     UnknownAbort,
@@ -191,12 +189,6 @@ pub const SPIM = enum(u1) {
             }
         }
     }
-
-    pub fn write_blocking(spi: SPIM, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        try spi.inner_tx_rx(data, &.{}, deadline);
-    }
-
     fn inner_tx_rx(spi: SPIM, write_data: []const u8, read_data: []u8, deadline: mdf.time.Deadline) TransactionError!void {
         // TODO: DMA won't work if they are trying to copy from Flash (e.g. program memory). In that
         // case we'd have to copy it to RAM before doing this, buf it that's the case, maybe they
@@ -232,18 +224,41 @@ pub const SPIM = enum(u1) {
         }
     }
 
-    // pub fn writev_blocking(spi: SPIM, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {}
+    pub fn write_blocking(spi: SPIM, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+        try spi.inner_tx_rx(data, &.{}, deadline);
+    }
+
+    pub fn writev_blocking(spi: SPIM, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+        // TODO: Adjust duration after each iteration
+        for (chunks) |chunk| {
+            try spi.write_blocking(chunk, timeout);
+        }
+    }
 
     pub fn read_blocking(spi: SPIM, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
         try spi.inner_tx_rx(&.{}, dst, deadline);
     }
 
-    // pub fn readv_blocking(spi: SPIM, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {}
+    pub fn readv_blocking(spi: SPIM, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
+        // TODO: Adjust duration after each iteration
+        for (chunks) |chunk| {
+            try spi.read_blocking(chunk, timeout);
+        }
+    }
 
     pub fn transceivev_blocking(spi: SPIM, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
+        // TODO: Adjust duration after each iteration
+        // TODO: Make sure different num of chunks for tx/rx works
+        for (write_chunks, read_chunks) |tx_chunk, rx_chunk| {
+            try spi.transceive_blocking(tx_chunk, rx_chunk, timeout);
+        }
+    }
+
+    pub fn transceive_blocking(spi: SPIM, tx: []const u8, rx: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        try spi.inner_tx_rx(write_chunks, read_chunks, deadline);
+        try spi.inner_tx_rx(tx, rx, deadline);
     }
 
     fn prepare_dma_transfer(spi: SPIM, tx: []const u8, rx: []u8) TransactionError!void {

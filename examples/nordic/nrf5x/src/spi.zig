@@ -12,6 +12,8 @@ const BUF_LEN = 0x100;
 const uart = nrf.uart.num(0);
 const spi0 = spi.num(0);
 
+const SPI_Device = nrf.drivers.SPI_Device;
+
 const sleep_ms = nrf.time.sleep_ms;
 
 pub const microzig_options = microzig.Options{
@@ -46,13 +48,24 @@ pub fn main() !void {
     });
 
     var out_buf: [BUF_LEN]u8 = .{ 'h', 'e', 'y', ' ', 'y', 'o', 'u', '!' } ** (BUF_LEN / 8);
+    var in_buf: [BUF_LEN]u8 = undefined;
 
     while (true) {
-        std.log.info("Sending some data\n", .{});
+        std.log.info("Sending some data", .{});
         csn.put(0);
-        try spi0.write_blocking(&out_buf, null);
+        try spi0.transceive_blocking(&out_buf, &in_buf, null);
+        // try spi0.write_blocking(&out_buf, null);
         csn.put(1);
+        std.log.info("Got: {s}", .{in_buf});
         sleep_ms(1000);
+        break;
     }
+
+    // Create spi datagram device
+    out_buf = .{ 'H', 'E', 'Y', ' ', 'Y', 'O', 'U', '!' } ** (BUF_LEN / 8);
+    var spi_device = SPI_Device.init(spi0, csn, .{});
+
+    const dd = spi_device.datagram_device();
+    try dd.write(&out_buf);
     std.log.info("Done!", .{});
 }
