@@ -126,14 +126,24 @@ pub const SPI_Device = struct {
 
     bus: hal.spi.SPI_Bus,
     bit_mode: hal.spi.BitMode,
-    chip_select: ?ChipSelect = null,
+    maybe_chip_select: ?ChipSelect = null,
 
-    pub fn init(bus: hal.spi.SPI_Bus, bit_mode: hal.spi.BitMode, chip_select: ?ChipSelect) SPI_Device {
-        return .{
+    pub fn init(bus: hal.spi.SPI_Bus, bit_mode: hal.spi.BitMode, maybe_chip_select: ?ChipSelect) SPI_Device {
+        if (maybe_chip_select) |chip_select| {
+            chip_select.pin.apply(.{
+                .output_enable = true,
+            });
+        }
+
+        const dev: SPI_Device = .{
             .bus = bus,
             .bit_mode = bit_mode,
-            .chip_select = chip_select,
+            .maybe_chip_select = maybe_chip_select,
         };
+
+        dev.disconnect();
+
+        return dev;
     }
 
     pub fn datagram_device(dev: *SPI_Device) Datagram_Device {
@@ -144,13 +154,13 @@ pub const SPI_Device = struct {
     }
 
     pub fn connect(dev: SPI_Device) ConnectError!void {
-        if (dev.chip_select) |chip_select| {
+        if (dev.maybe_chip_select) |chip_select| {
             chip_select.pin.write(chip_select.active_level);
         }
     }
 
     pub fn disconnect(dev: SPI_Device) void {
-        if (dev.chip_select) |chip_select| {
+        if (dev.maybe_chip_select) |chip_select| {
             chip_select.pin.write(if (chip_select.active_level == .high) .low else .high);
         }
     }
