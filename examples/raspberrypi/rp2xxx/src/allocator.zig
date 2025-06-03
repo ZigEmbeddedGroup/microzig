@@ -39,7 +39,7 @@ const baud_rate = 115200;
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     //.logFn      = hal.uart.logFn,
-    .logFn = hal.uart.logFnThreadsafe,
+    .logFn = hal.uart.log_threadsafe,
 };
 
 pub fn main() !void {
