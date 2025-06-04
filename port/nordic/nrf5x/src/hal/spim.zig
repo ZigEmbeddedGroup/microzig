@@ -15,10 +15,6 @@ const SPIM3 = peripherals.SPIM3;
 
 const SpimRegs = microzig.chip.types.peripherals.SPIM0;
 
-// const EASY_DMA_SIZE = switch (compatibility.chip) {
-//     .nrf52 => std.math.maxInt(u8),
-//     .nrf52840 => std.math.maxInt(u16),
-// };
 const EASY_DMA_SIZE = std.math.maxInt(
     @FieldType(@FieldType(@FieldType(SpimRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT"),
 );
