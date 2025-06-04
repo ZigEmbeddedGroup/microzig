@@ -175,15 +175,19 @@ pub const SPIM = enum(u1) {
 
     pub fn writev_blocking(spi: SPIM, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (timeout) |initial_timeout| {
+            const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), initial_timeout);
             var remaining_timeout = initial_timeout;
-            var start_time = time.get_time_since_boot();
 
+            var last = time.get_time_since_boot();
             for (chunks) |chunk| {
-                const elapsed_time = time.get_time_since_boot().diff(start_time);
-                remaining_timeout = remaining_timeout.minus(elapsed_time);
+                const now = time.get_time_since_boot();
+                if (deadline.is_reached_by(now))
+                    return error.Timeout;
+                const elapsed = now.diff(last);
+                remaining_timeout = remaining_timeout.minus(elapsed);
 
                 try spi.write_blocking(chunk, remaining_timeout);
-                start_time = time.get_time_since_boot();
+                last = now;
             }
         } else {
             for (chunks) |chunk| {
@@ -199,15 +203,19 @@ pub const SPIM = enum(u1) {
 
     pub fn readv_blocking(spi: SPIM, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (timeout) |initial_timeout| {
+            const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), initial_timeout);
             var remaining_timeout = initial_timeout;
-            var start_time = time.get_time_since_boot();
 
+            var last = time.get_time_since_boot();
             for (chunks) |chunk| {
-                const elapsed_time = time.get_time_since_boot().diff(start_time);
-                remaining_timeout = remaining_timeout.minus(elapsed_time);
+                const now = time.get_time_since_boot();
+                if (deadline.is_reached_by(now))
+                    return error.Timeout;
+                const elapsed = now.diff(last);
+                remaining_timeout = remaining_timeout.minus(elapsed);
 
                 try spi.read_blocking(chunk, remaining_timeout);
-                start_time = time.get_time_since_boot();
+                last = now;
             }
         } else {
             for (chunks) |chunk| {
