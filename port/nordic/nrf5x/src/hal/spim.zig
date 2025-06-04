@@ -28,7 +28,12 @@ const Config = struct {
     miso_pin: ?gpio.Pin = null,
     mosi_pin: ?gpio.Pin = null,
     frequency: Frequency = .@"500KHz",
-    mode: enum { mode0, mode1, mode2, mode3 } = .mode0,
+    mode: enum {
+        mode0, // CPOL 0, CPHA 0
+        mode1, // CPOL 0, CPHA 1
+        mode2, // CPOL 1, CPHA 0
+        mode3, // CPOL 1, CPHA 1
+    } = .mode0,
     bit_order: enum(u1) { msbFirst = 0, lsbFirst = 1 } = .msbFirst,
     overread_char: u8 = 0x00,
     sck_drive: gpio.DriveStrength = .SOS1,
