@@ -30,7 +30,7 @@ const Config = struct {
         mode2, // CPOL 1, CPHA 0
         mode3, // CPOL 1, CPHA 1
     } = .mode0,
-    bit_order: enum(u1) { msbFirst = 0, lsbFirst = 1 } = .msbFirst,
+    bit_order: enum(u1) { msb_first = 0, lsb_first = 1 } = .msb_first,
     overread_char: u8 = 0x00,
     sck_drive: gpio.DriveStrength = .SOS1,
     mosi_drive: gpio.DriveStrength = .SOS1,
@@ -101,24 +101,24 @@ pub const SPIM = enum(u1) {
         // TODO: Does MOSI idle change here?
         switch (config.mode) {
             .mode0 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsbFirst)),
+                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveHigh,
             }),
             .mode1 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsbFirst)),
+                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
                 .CPOL = .ActiveHigh,
             }),
 
             .mode2 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsbFirst)),
+                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveLow,
             }),
 
             .mode3 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsbFirst)),
+                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
                 .CPOL = .ActiveLow,
             }),
