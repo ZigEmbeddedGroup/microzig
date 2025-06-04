@@ -27,7 +27,7 @@ const Config = struct {
     sck_pin: gpio.Pin,
     miso_pin: ?gpio.Pin = null,
     mosi_pin: ?gpio.Pin = null,
-    frequency: Frequency = .K500,
+    frequency: Frequency = .@"500KHz",
     mode: enum { mode0, mode1, mode2, mode3 } = .mode0,
     bit_order: enum(u1) { msbFirst = 0, lsbFirst = 1 } = .msbFirst,
     overread_char: u8 = 0x00,
@@ -36,8 +36,8 @@ const Config = struct {
 };
 
 const Frequency = switch (compatibility.chip) {
-    .nrf52 => enum { K125, K250, K500, M1, M2, M4, M8 },
-    .nrf52840 => enum { K125, K250, K500, M1, M2, M4, M8, M16, M32 },
+    .nrf52 => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz" },
+    .nrf52840 => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz", @"16MHz", @"32MHz" },
 };
 
 pub const TransactionError = error{
@@ -125,24 +125,24 @@ pub const SPIM = enum(u1) {
 
         switch (compatibility.chip) {
             .nrf52 => regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
-                .K125 => .K125,
-                .K250 => .K250,
-                .K500 => .K500,
-                .M1 => .M1,
-                .M2 => .M2,
-                .M4 => .M4,
-                .M8 => .M8,
+                .@"125KHz" => .K125,
+                .@"250KHz" => .K250,
+                .@"500KHz" => .K500,
+                .@"1MHz" => .M1,
+                .@"2MHz" => .M2,
+                .@"4MHz" => .M4,
+                .@"8MHz" => .M8,
             } }),
             .nrf52840 => regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
-                .K125 => .K125,
-                .K250 => .K250,
-                .K500 => .K500,
-                .M1 => .M1,
-                .M2 => .M2,
-                .M4 => .M4,
-                .M8 => .M8,
-                .M16 => .M16,
-                .M32 => .M32,
+                .@"125KHz" => .K125,
+                .@"250KHz" => .K250,
+                .@"500KHz" => .K500,
+                .@"1MHz" => .M1,
+                .@"2MHz" => .M2,
+                .@"4MHz" => .M4,
+                .@"8MHz" => .M8,
+                .@"16MHz" => .M16,
+                .@"32MHz" => .M32,
             } }),
         }
 

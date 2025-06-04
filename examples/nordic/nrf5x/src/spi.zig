@@ -43,7 +43,6 @@ pub fn main() !void {
         .sck_pin = gpio.num(0, 8),
         .miso_pin = gpio.num(0, 9),
         .mosi_pin = gpio.num(0, 10),
-        .frequency = .K125,
         .mode = .mode0,
     });
 
