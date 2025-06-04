@@ -180,17 +180,15 @@ pub const SPI_Device = struct {
     };
 
     bus: hal.spim.SPIM,
-    chip_select: ?ChipSelect = null,
+    maybe_chip_select: ?ChipSelect = null,
 
-    pub fn init(bus: hal.spim.SPIM, chip_select: ?ChipSelect) SPI_Device {
-        // TODO: rpi does this here, other HALs make the client do it. We should choose one and be
-        // consistent.
-        if (chip_select) |cs|
+    pub fn init(bus: hal.spim.SPIM, maybe_chip_select: ?ChipSelect) SPI_Device {
+        if (maybe_chip_select) |cs|
             cs.pin.set_direction(.out);
 
         var dev: SPI_Device = .{
             .bus = bus,
-            .chip_select = chip_select,
+            .maybe_chip_select = maybe_chip_select,
         };
         // set the chip select to "deselect" the device
         dev.disconnect();
@@ -205,7 +203,7 @@ pub const SPI_Device = struct {
     }
 
     pub fn connect(dev: SPI_Device) void {
-        if (dev.chip_select) |cs|
+        if (dev.maybe_chip_select) |cs|
             cs.pin.put(switch (cs.active_level) {
                 .low => 0,
                 .high => 1,
@@ -213,7 +211,7 @@ pub const SPI_Device = struct {
     }
 
     pub fn disconnect(dev: SPI_Device) void {
-        if (dev.chip_select) |cs|
+        if (dev.maybe_chip_select) |cs|
             cs.pin.put(switch (cs.active_level) {
                 .low => 1,
                 .high => 0,
@@ -221,15 +219,16 @@ pub const SPI_Device = struct {
     }
 
     pub fn write(dev: SPI_Device, tx: []const u8) !void {
-        dev.bus.write_blocking(u8, tx);
+        return dev.bus.write_blocking(u8, tx);
     }
 
     pub fn writev(dev: SPI_Device, datagrams: []const []const u8) !void {
-        dev.bus.writev_blocking(u8, datagrams);
+        return dev.bus.writev_blocking(u8, datagrams);
     }
 
-    pub fn read(dev: SPI_Device, rx: []u8) !void {
+    pub fn read(dev: SPI_Device, rx: []u8) !usize {
         dev.bus.read_blocking(u8, rx);
+        return rx.len;
     }
 
     pub fn readv(dev: SPI_Device, datagrams: []const []const u8) !usize {
@@ -269,7 +268,6 @@ pub const SPI_Device = struct {
             error.Timeout => return ReadError.Timeout,
             else => return ReadError.Unsupported,
         };
-
         return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
     }
 };
