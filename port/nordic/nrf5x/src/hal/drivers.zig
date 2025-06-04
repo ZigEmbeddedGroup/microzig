@@ -247,12 +247,12 @@ pub const SPI_Device = struct {
 
     fn connect_fn(dd: *anyopaque) ConnectError!void {
         const dev: *SPI_Device = @ptrCast(@alignCast(dd));
-        dev.connect();
+        return dev.connect();
     }
 
     fn disconnect_fn(dd: *anyopaque) void {
         const dev: *SPI_Device = @ptrCast(@alignCast(dd));
-        dev.disconnect();
+        return dev.disconnect();
     }
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
