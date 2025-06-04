@@ -110,13 +110,11 @@ pub const SPIM = enum(u1) {
                 .CPHA = .Trailing,
                 .CPOL = .ActiveHigh,
             }),
-
             .mode2 => regs.CONFIG.write(.{
                 .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveLow,
             }),
-
             .mode3 => regs.CONFIG.write(.{
                 .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
@@ -165,7 +163,6 @@ pub const SPIM = enum(u1) {
 
         regs.ENABLE.write(.{ .ENABLE = .Enabled });
         regs.INTENCLR.write_raw(0xFFFFFFFF);
-        // TODO: Enable interrupts
     }
 
     pub fn write_blocking(spi: SPIM, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
@@ -230,7 +227,6 @@ pub const SPIM = enum(u1) {
     }
 
     fn prepare_dma_transfer(spi: SPIM, tx: []const u8, rx: []u8) TransactionError!void {
-        std.log.info("Transfering {} out and {} in", .{ tx.len, rx.len }); // DELETEME
         const regs = spi.get_regs();
         regs.RXD.PTR.write_raw(@intFromPtr(rx.ptr));
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(rx.len) });
