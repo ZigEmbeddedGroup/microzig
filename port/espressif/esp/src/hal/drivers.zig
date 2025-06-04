@@ -172,11 +172,11 @@ pub const SPI_Device = struct {
     }
 
     pub fn write(dev: SPI_Device, datagram: []const u8) WriteError!void {
-        dev.bus.write_blocking(datagram, dev.bit_mode);
+        return dev.bus.write_blocking(datagram, dev.bit_mode);
     }
 
     pub fn writev(dev: SPI_Device, datagrams: []const []const u8) WriteError!void {
-        dev.bus.writev_blocking(datagrams, dev.bit_mode);
+        return dev.bus.writev_blocking(datagrams, dev.bit_mode);
     }
 
     pub fn read(dev: SPI_Device, datagram: []u8) ReadError!usize {
