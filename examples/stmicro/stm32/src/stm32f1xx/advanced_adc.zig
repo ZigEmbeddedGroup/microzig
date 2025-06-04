@@ -14,6 +14,7 @@ const TX = gpio.Pin.from_port(.A, 9);
 const AdvancedADC = microzig.hal.adc.AdvancedADC;
 const ADC_pin1 = gpio.Pin.from_port(.A, 1);
 const ADC_pin2 = gpio.Pin.from_port(.A, 2);
+const ADC_pin3 = gpio.Pin.from_port(.A, 3);
 
 const v25 = 1.43;
 const avg_slope = 0.0043; //4.3mV/°C
@@ -70,6 +71,7 @@ pub fn main() !void {
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     ADC_pin1.set_input_mode(.analog);
     ADC_pin2.set_input_mode(.analog);
+    ADC_pin3.set_input_mode(.analog);
 
     uart.apply(.{
         .baud_rate = 115200,
@@ -80,17 +82,34 @@ pub fn main() !void {
 
     adc.enable(true, &counter);
     adc.enable_refint(&counter);
+    adc.set_data_alignment(.Right);
+
+    //regular group configuration
     try adc.configure_regular_conversion(.{
         .DMA = true,
         .trigger = .SWSTART,
         .mode = .{
             .SingleSeq = .{
-                .seq = &.{ 16, 17, 1, 2 },
+                .seq = &.{ 16, 17, 1, 3 },
                 .channels_conf = &.{
                     .{ .channel = 17, .sample_rate = .@"239.5" }, //Vrefint
                     .{ .channel = 16, .sample_rate = .@"239.5" }, //temperature sensor
                     .{ .channel = 1, .sample_rate = .@"13.5" }, //ADC1 channel 1
-                    .{ .channel = 2, .sample_rate = .@"13.5" }, //ADC1 channel 2
+                    .{ .channel = 3, .sample_rate = .@"13.5" }, //ADC1 channel 2
+                },
+            },
+        },
+    });
+
+    //injected group configuration
+    try adc.set_injected_config(.{
+        //subtract 10 from the first injected channel of the sequence
+        .offsets = .{ .SEQ1 = 10 },
+        .mode = .{
+            .auto_injected = .{
+                .seq = &.{2},
+                .channels_conf = &.{
+                    .{ .channel = 2, .sample_rate = .@"13.5" }, //ADC1 channel 3
                 },
             },
         },
@@ -105,5 +124,6 @@ pub fn main() !void {
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});
         std.log.info("CH2 {d}", .{adc_buf[3]});
+        std.log.info("Injected: {d}", .{adc.read_injected_data(0)});
     }
 }

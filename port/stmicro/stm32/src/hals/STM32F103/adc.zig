@@ -19,6 +19,10 @@ pub const SampleRate = enum(u3) {
     @"71.5" = 6,
     @"239.5" = 7,
 };
+pub const Alignment = enum(u1) {
+    Right = 0,
+    Left = 1,
+};
 
 pub const ReadError = error{
     InvalidChannel,
@@ -120,7 +124,7 @@ pub const ADC = struct {
     /// only the first 16 sequence elements are used, the rest are ignored.
     pub fn load_sequence(self: *const ADC, sequence: []const u5) void {
         const regs = self.regs;
-        const len = @min(16, sequence.len);
+        const len = @min(17, sequence.len);
         const to_load = sequence[0..len];
         for (to_load, 0..len) |sq, index| {
             const bit_index: u5 = @intCast((index % 6) * 5); //each channel takes 5 bits
@@ -191,34 +195,67 @@ pub const RegularTrigger = enum(u3) {
     SWSTART = 7,
 };
 
-pub const RegularSingleChannel = struct {
+pub const InjectedTrigger = enum(u3) {
+    TIM1_TRGO = 0,
+    TIM1_CC4 = 1,
+    TIM2_TRGO = 2,
+    TIM2_CC1 = 3,
+    TIM3_CC4 = 4,
+    TIM4_TRGO = 5,
+    EXTI15_TIM8_CC4 = 6, // TIM8_CC4 is available only in high-density and XL-density devices
+    SWSTART = 7,
+};
+
+pub const Channel = struct {
     channel: u5,
     sample_rate: SampleRate = .@"13.5", //default sample rate
 };
 
-pub const RegularSingleSequence = struct {
+pub const Sequence = struct {
     seq: []const u5, //sequence of channels to read, max 17 channels
-    channels_conf: ?[]const RegularSingleChannel, //optional channel configuration, if not provided, the sample rate will be not modified
+    channels_conf: ?[]const Channel, //optional channel configuration, if not provided, the sample rate will be not modified
 };
 
-pub const RegularDiscontinuous = struct {
-    channels: RegularSingleSequence,
+pub const Discontinuous = struct {
+    channels: Sequence,
     ///number of conversions per trigger,in this API length starts from 1 instead of 0
     length: u3 = 1, //default length is 1
 };
 
 pub const RegularModes = union(enum) {
-    SingleCh: RegularSingleChannel,
-    SingleSeq: RegularSingleSequence,
-    ContinuousCh: RegularSingleChannel,
-    ContinuousSeq: RegularSingleSequence,
-    Discontinuous: RegularDiscontinuous,
+    SingleCh: Channel,
+    SingleSeq: Sequence,
+    ContinuousCh: Channel,
+    ContinuousSeq: Sequence,
+    Discontinuous: Discontinuous,
 };
 pub const RegularConfig = struct {
     mode: RegularModes,
     trigger: RegularTrigger = .SWSTART,
     DMA: bool = false,
     Interrupt: bool = false,
+};
+
+pub const InjectedModes = union(enum) {
+    auto_injected: Sequence,
+    SingleCh: Channel,
+    SingleSeq: Sequence,
+    Discontinuous: Discontinuous,
+};
+
+///define the offset to be subtracted from the raw converted data when converting injected channels.
+pub const InjectedOffsets = struct {
+    SEQ1: u11 = 0,
+    SEQ2: u11 = 0,
+    SEQ3: u11 = 0,
+    SEQ4: u11 = 0,
+};
+
+pub const InjectedConfig = struct {
+    trigger: InjectedTrigger = .SWSTART,
+    Interrupt: bool = false,
+    offsets: InjectedOffsets = InjectedOffsets{},
+    mode: InjectedModes,
 };
 
 pub const RegularConfigError = error{
@@ -228,6 +265,7 @@ pub const RegularConfigError = error{
     InvalidChannel,
     InvalidSampleRate,
     InvalidLength,
+    InvalidSequence,
 };
 
 pub const AdvancedADC = struct {
@@ -308,6 +346,11 @@ pub const AdvancedADC = struct {
         Counter.sleep_us(STAB_VREFE_TIME);
     }
 
+    pub fn set_data_alignment(self: *const AdvancedADC, aling: Alignment) void {
+        const regs = self.regs;
+        regs.CR2.modify(.{ .ALIGN = @intFromEnum(aling) }); //set data alignment
+    }
+
     //========== ADC Regular conversion functions ===========
 
     pub fn configure_regular_conversion(self: *const AdvancedADC, config: RegularConfig) RegularConfigError!void {
@@ -340,7 +383,7 @@ pub const AdvancedADC = struct {
         });
     }
 
-    pub fn set_regular_ch(self: *const AdvancedADC, single: RegularSingleChannel, single_mode: bool) RegularConfigError!void {
+    pub fn set_regular_ch(self: *const AdvancedADC, single: Channel, single_mode: bool) RegularConfigError!void {
         if (single.channel > 17) return RegularConfigError.InvalidChannel;
         const regs = self.regs;
         regs.CR1.modify(.{
@@ -355,10 +398,14 @@ pub const AdvancedADC = struct {
         regs.CR2.modify(.{ .CONT = @as(u1, if (single_mode) 0 else 1) }); //set conversion mode
     }
 
-    pub fn set_regular_seq(self: *const AdvancedADC, seq: RegularSingleSequence, single_mode: bool) RegularConfigError!void {
+    pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, single_mode: bool) RegularConfigError!void {
         const regs = self.regs;
-        const len = @min(seq.seq.len, 17);
-        if (len == 0) return RegularConfigError.InvalidChannel;
+        const len = seq.seq.len;
+        if (len == 0) {
+            return RegularConfigError.InvalidSequence;
+        } else if (len > 17) {
+            return RegularConfigError.InvalidSequence; //max length is 18 [0..16]
+        }
 
         regs.CR1.modify(.{
             .SCAN = 1, //enable scan mode
@@ -375,7 +422,7 @@ pub const AdvancedADC = struct {
         regs.CR2.modify(.{ .CONT = @as(u1, if (single_mode) 0 else 1) }); //set conversion mode
     }
 
-    pub fn set_regular_discontinuous(self: *const AdvancedADC, disc: RegularDiscontinuous) RegularConfigError!void {
+    pub fn set_regular_discontinuous(self: *const AdvancedADC, disc: Discontinuous) RegularConfigError!void {
         const regs = self.regs;
         //in this API length starts from 1 instead of 0
         if (disc.length == 0) {
@@ -472,7 +519,161 @@ pub const AdvancedADC = struct {
     }
 
     //========== ADC Injected conversion read functions ===========
-    //TODO: implement injected conversion read functions
+
+    ///start conversion for the injected group, if software trigger is not enabled, this will do nothing
+    pub fn software_injected_trigger(self: *const AdvancedADC) void {
+        const regs = self.regs;
+        regs.CR2.modify(.{ .JSWSTART = 1 });
+    }
+
+    pub fn read_injected_data(self: *const AdvancedADC, index: u2) u16 {
+        const regs = self.regs;
+        return regs.JDR[index].read().JDATA;
+    }
+
+    pub fn set_injected_offsets(self: *const AdvancedADC, offsets: InjectedOffsets) void {
+        const regs = self.regs;
+        regs.JOFR[0].modify(.{ .JOFFSET = offsets.SEQ1 });
+        regs.JOFR[1].modify(.{ .JOFFSET = offsets.SEQ2 });
+        regs.JOFR[2].modify(.{ .JOFFSET = offsets.SEQ3 });
+        regs.JOFR[3].modify(.{ .JOFFSET = offsets.SEQ4 });
+    }
+
+    pub fn set_injected_config(self: *const AdvancedADC, config: InjectedConfig) RegularConfigError!void {
+        const regs = self.regs;
+        var trig: u1 = 1;
+        switch (config.mode) {
+            .auto_injected => |seq| {
+                try self.set_injected_auto(seq);
+                trig = 0; //auto injected mode must disable the trigger
+            },
+            .SingleCh => |single| {
+                try self.set_injected_seq(.{
+                    .seq = &.{single.channel},
+                    .channels_conf = &.{
+                        .{ .channel = single.channel, .sample_rate = single.sample_rate },
+                    },
+                });
+            },
+            .SingleSeq => |seq| {
+                try self.set_injected_seq(seq);
+            },
+            .Discontinuous => |disc| {
+                try self.set_injected_discontinuous(disc);
+            },
+        }
+
+        self.set_injected_offsets(config.offsets);
+        regs.CR2.modify(.{
+            .JEXTSEL = @as(u3, @intFromEnum(config.trigger)),
+            .JEXTTRIG = trig,
+        });
+        regs.CR1.modify(.{ .JEOCIE = @as(u1, if (config.Interrupt) 1 else 0) });
+    }
+
+    pub fn set_injected_auto(self: *const AdvancedADC, seq: Sequence) RegularConfigError!void {
+        const regs = self.regs;
+        if (seq.seq.len == 0) {
+            return RegularConfigError.InvalidSequence;
+        } else if (seq.seq.len > 4) {
+            return RegularConfigError.InvalidSequence; //max length is 4 [0..3]
+        }
+
+        regs.CR1.modify(.{
+            .SCAN = 1, //enable scan mode
+            .JDISCEN = 0, //disable discontinuous mode
+        });
+        self.load_injected_sequence(seq.seq);
+        if (seq.channels_conf) |channels| {
+            for (channels) |ch| {
+                if (ch.channel > 17) return RegularConfigError.InvalidChannel;
+                self.set_channel_sample_rate(ch.channel, ch.sample_rate);
+            }
+        }
+        regs.CR1.modify(.{ .JAUTO = 1 }); //enable auto injected mode
+    }
+
+    pub fn set_injected_seq(self: *const AdvancedADC, seq: Sequence) RegularConfigError!void {
+        const regs = self.regs;
+        if (seq.seq.len == 0) {
+            return RegularConfigError.InvalidSequence;
+        } else if (seq.seq.len > 4) {
+            return RegularConfigError.InvalidSequence; //max length is 4 [0..3]
+        }
+
+        regs.CR1.modify(.{
+            .SCAN = 1, //enable scan mode
+            .JDISCEN = 0, //disable discontinuous mode
+            .JAUTO = 0, //disable auto injected mode
+        });
+        self.load_injected_sequence(seq.seq);
+        if (seq.channels_conf) |channels| {
+            for (channels) |ch| {
+                if (ch.channel > 17) return RegularConfigError.InvalidChannel;
+                self.set_channel_sample_rate(ch.channel, ch.sample_rate);
+            }
+        }
+    }
+
+    pub fn set_injected_discontinuous(self: *const AdvancedADC, disc: Discontinuous) RegularConfigError!void {
+        const regs = self.regs;
+        //in this API length starts from 1 instead of 0
+        if (disc.length == 0) {
+            return RegularConfigError.InvalidLength;
+        } else if (disc.length > 4) {
+            return RegularConfigError.InvalidLength; //max length is 4
+        }
+
+        if (regs.CR1.read().DISCEN == 1) {
+            return RegularConfigError.InvalidMode; //discontinuous mode is already enabled for regular
+        }
+        regs.CR1.modify(.{
+            .SCAN = 1, //enable scan mode
+            .JDISCEN = 1, //enable discontinuous mode
+            .JAUTO = 0, //disable auto injected mode
+            .DISCNUM = disc.length - 1,
+        });
+
+        self.load_injected_sequence(disc.channels.seq);
+        if (disc.channels.channels_conf) |channels| {
+            for (channels) |ch| {
+                if (ch.channel > 17) return RegularConfigError.InvalidChannel;
+                self.set_channel_sample_rate(ch.channel, ch.sample_rate);
+            }
+        }
+    }
+
+    pub fn load_injected_sequence(self: *const AdvancedADC, sequence: []const u5) void {
+        const regs = self.regs;
+        if (sequence.len == 0) return; //do nothing
+        const len = @min(4, sequence.len);
+
+        //injected sequence is loaded from seq_max - len
+        //ex:
+        //len 1 = load start from SQ4
+        //len 2 = load start from SQ3
+        //len 3 = load start from SQ2....
+
+        const sti: usize = 4 - len;
+
+        for (sequence[0..len], sti..4) |sq, index| {
+            const bit_index: usize = index * 5; //each channel takes 5 bits
+            const mask = @as(u32, sq) << @as(u5, @truncate(bit_index));
+            regs.JSQR.raw |= mask; //load into JSQR
+        }
+
+        regs.JSQR.modify(.{ .JL = @as(u2, @intCast(len - 1)) }); //set number of conversions
+    }
+    ///DO NOT USE THIS FUNCTION IF AUTO INJECTED MODE IS ENABLED!
+    ///
+    /// auto injected mode uses internal trigger, so this function will block the auto injected mode.
+    pub fn set_injected_trigger(self: *const AdvancedADC, trigger: InjectedTrigger) void {
+        const regs = self.regs;
+        regs.CR2.modify(.{
+            .JEXTSEL = @as(u3, @intFromEnum(trigger)),
+            .JEXTTRIG = 1,
+        });
+    }
 
     pub fn init(adc: ADC_inst) AdvancedADC {
         return .{
