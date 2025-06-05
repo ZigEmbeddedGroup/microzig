@@ -1,3 +1,5 @@
+//TODO: add support for ADC1 dual mode
+
 const std = @import("std");
 const microzig = @import("microzig");
 const drivers = @import("drivers.zig");
@@ -526,9 +528,11 @@ pub const AdvancedADC = struct {
         regs.CR2.modify(.{ .JSWSTART = 1 });
     }
 
-    pub fn read_injected_data(self: *const AdvancedADC, index: u2) u16 {
+    ///read the injected group conversion data.
+    /// this value can be negative if offssets are set.
+    pub fn read_injected_data(self: *const AdvancedADC, index: u2) i16 {
         const regs = self.regs;
-        return regs.JDR[index].read().JDATA;
+        return @bitCast(regs.JDR[index].read().JDATA);
     }
 
     pub fn set_injected_offsets(self: *const AdvancedADC, offsets: InjectedOffsets) void {
