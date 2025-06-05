@@ -21,6 +21,7 @@ const port_list: []const struct {
 } = &.{
     .{ .name = "esp", .dep_name = "port/espressif/esp" },
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
+    .{ .name = "hc32l110", .dep_name = "port/hdsc/hc32l110" },
     .{ .name = "atsam", .dep_name = "port/microchip/atsam" },
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
