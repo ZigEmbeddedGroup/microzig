@@ -5,6 +5,9 @@ const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
 const compatibility = @import("compatibility.zig");
 
+const Deadline = mdf.time.Deadline;
+const Duration = mdf.time.Duration;
+
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
@@ -165,14 +168,14 @@ pub const SPIM = enum(u1) {
         regs.INTENCLR.write_raw(0xFFFFFFFF);
     }
 
-    pub fn write_blocking(spi: SPIM, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+    pub fn write_blocking(spi: SPIM, data: []const u8, timeout: ?Duration) TransactionError!void {
+        const deadline: Deadline = .init_relative(time.get_time_since_boot(), timeout);
         try spi.inner_tx_rx(data, &.{}, deadline);
     }
 
-    pub fn writev_blocking(spi: SPIM, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn writev_blocking(spi: SPIM, chunks: []const []const u8, timeout: ?Duration) TransactionError!void {
         if (timeout) |initial_timeout| {
-            const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), initial_timeout);
+            const deadline: Deadline = .init_relative(time.get_time_since_boot(), initial_timeout);
             var remaining_timeout = initial_timeout;
 
             var last = time.get_time_since_boot();
@@ -193,14 +196,14 @@ pub const SPIM = enum(u1) {
         }
     }
 
-    pub fn read_blocking(spi: SPIM, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+    pub fn read_blocking(spi: SPIM, dst: []u8, timeout: ?Duration) TransactionError!void {
+        const deadline: Deadline = .init_relative(time.get_time_since_boot(), timeout);
         try spi.inner_tx_rx(&.{}, dst, deadline);
     }
 
-    pub fn readv_blocking(spi: SPIM, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn readv_blocking(spi: SPIM, chunks: []const []u8, timeout: ?Duration) TransactionError!void {
         if (timeout) |initial_timeout| {
-            const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), initial_timeout);
+            const deadline: Deadline = .init_relative(time.get_time_since_boot(), initial_timeout);
             var remaining_timeout = initial_timeout;
 
             var last = time.get_time_since_boot();
@@ -221,8 +224,8 @@ pub const SPIM = enum(u1) {
         }
     }
 
-    pub fn transceive_blocking(spi: SPIM, tx: []const u8, rx: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+    pub fn transceive_blocking(spi: SPIM, tx: []const u8, rx: []u8, timeout: ?Duration) TransactionError!void {
+        const deadline: Deadline = .init_relative(time.get_time_since_boot(), timeout);
         try spi.inner_tx_rx(tx, rx, deadline);
     }
 
@@ -240,7 +243,7 @@ pub const SPIM = enum(u1) {
         regs.TASKS_START.write(.{ .TASKS_START = .Trigger });
     }
 
-    fn inner_tx_rx(spi: SPIM, write_data: []const u8, read_data: []u8, deadline: mdf.time.Deadline) TransactionError!void {
+    fn inner_tx_rx(spi: SPIM, write_data: []const u8, read_data: []u8, deadline: Deadline) TransactionError!void {
         // TODO: DMA won't work if they are trying to copy from Flash (e.g. program memory). In that
         // case we'd have to copy it to RAM before doing this, buf it that's the case, maybe they
         // should just use the non-DMA peripheral? We could return an error in that case.
@@ -260,7 +263,7 @@ pub const SPIM = enum(u1) {
         }
     }
 
-    fn inner_tx_rx_chunk(spi: SPIM, write_data: []const u8, read_data: []u8, deadline: mdf.time.Deadline) TransactionError!void {
+    fn inner_tx_rx_chunk(spi: SPIM, write_data: []const u8, read_data: []u8, deadline: Deadline) TransactionError!void {
         if (deadline.is_reached_by(time.get_time_since_boot())) return TransactionError.Timeout;
 
         const regs = spi.get_regs();
