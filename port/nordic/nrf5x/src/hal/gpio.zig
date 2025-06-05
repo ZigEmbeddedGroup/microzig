@@ -112,7 +112,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn read(pin: Pin) u1 {
         const regs = pin.get_regs();
-        return @truncate(regs.in.raw >> @intFromEnum(pin));
+        return @truncate(regs.IN.raw >> pin.index());
     }
 
     pub fn set_drive_strength(pin: Pin, drive_strength: DriveStrength) void {

@@ -166,3 +166,108 @@ pub const ClockDevice = struct {
         return @enumFromInt(t);
     }
 };
+
+///
+/// A datagram device attached to an SPI bus.
+///
+pub const SPI_Device = struct {
+    pub const ConnectError = Datagram_Device.ConnectError;
+    pub const WriteError = Datagram_Device.WriteError;
+    pub const ReadError = Datagram_Device.ReadError;
+    pub const ChipSelect = struct {
+        pin: hal.gpio.Pin,
+        active_level: Digital_IO.State = .low,
+    };
+
+    bus: hal.spim.SPIM,
+    maybe_chip_select: ?ChipSelect = null,
+
+    pub fn init(bus: hal.spim.SPIM, maybe_chip_select: ?ChipSelect) SPI_Device {
+        if (maybe_chip_select) |cs|
+            cs.pin.set_direction(.out);
+
+        var dev: SPI_Device = .{
+            .bus = bus,
+            .maybe_chip_select = maybe_chip_select,
+        };
+        // set the chip select to "deselect" the device
+        dev.disconnect();
+        return dev;
+    }
+
+    pub fn datagram_device(dev: *SPI_Device) Datagram_Device {
+        return .{
+            .ptr = dev,
+            .vtable = &vtable,
+        };
+    }
+
+    pub fn connect(dev: SPI_Device) void {
+        if (dev.maybe_chip_select) |cs|
+            cs.pin.put(switch (cs.active_level) {
+                .low => 0,
+                .high => 1,
+            });
+    }
+
+    pub fn disconnect(dev: SPI_Device) void {
+        if (dev.maybe_chip_select) |cs|
+            cs.pin.put(switch (cs.active_level) {
+                .low => 1,
+                .high => 0,
+            });
+    }
+
+    pub fn write(dev: SPI_Device, tx: []const u8) !void {
+        return dev.bus.write_blocking(u8, tx);
+    }
+
+    pub fn writev(dev: SPI_Device, datagrams: []const []const u8) !void {
+        return dev.bus.writev_blocking(u8, datagrams);
+    }
+
+    pub fn read(dev: SPI_Device, rx: []u8) !usize {
+        dev.bus.read_blocking(u8, rx);
+        return rx.len;
+    }
+
+    pub fn readv(dev: SPI_Device, datagrams: []const []const u8) !usize {
+        dev.bus.readv_blocking(u8, datagrams);
+        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+    }
+
+    const vtable = Datagram_Device.VTable{
+        .connect_fn = connect_fn,
+        .disconnect_fn = disconnect_fn,
+        .writev_fn = writev_fn,
+        .readv_fn = readv_fn,
+        .writev_then_readv_fn = null,
+    };
+
+    fn connect_fn(dd: *anyopaque) ConnectError!void {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.connect();
+    }
+
+    fn disconnect_fn(dd: *anyopaque) void {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.disconnect();
+    }
+
+    fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.bus.writev_blocking(chunks, null) catch |err| switch (err) {
+            error.Timeout => WriteError.Timeout,
+            else => WriteError.Unsupported,
+        };
+    }
+
+    fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        dev.bus.readv_blocking(chunks, null) catch |err| switch (err) {
+            error.Timeout => return ReadError.Timeout,
+            else => return ReadError.Unsupported,
+        };
+        return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
+    }
+};
