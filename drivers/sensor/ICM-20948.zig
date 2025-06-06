@@ -24,7 +24,7 @@
 //! ```
 //!
 //! TODO:
-//! * Allow configuring the unit of the readings (Gs vs m/s^2, degrees vs. radians, C vs F)
+//! * Allow configuring the unit of the readings (Gs vs m/s², degrees vs. radians, C vs F)
 //! * Test/ensure support for SPI datagram devices (need to set r/w bit in register address)
 //! * Add support for calibration/bias correction
 //!   * In the accelerometer
@@ -265,8 +265,10 @@ pub const ICM_20948 = struct {
 
         // ODR (output data rate) is computed as: 1125Hz / (1 + ACCEL_SMPLRT_DIV)
         accel_odr_div: u12 = 0,
-        // ODR = 1100 / (1 + GYRO_SMPLRT_DIV)
+        // ODR = 1100Hz / (1 + GYRO_SMPLRT_DIV)
         gyro_odr_div: u8 = 0,
+        // ODR = 1.1kHz/2^(I2C_MST_ODR_CONFIG)
+        mag_i2c_mst_odr_config: u8 = 2,
     };
 
     const user_ctrl = packed struct(u8) {
@@ -500,7 +502,8 @@ pub const ICM_20948 = struct {
         try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
             // Use I2C_MST_ODR_CONFIG, unless gyro or accel set their own data rate
             .I2C_MST_CYCLE = 1,
-            .ACCEL_CYCLE = 1, // Duty cycle mode, use ACCEL_SMPLRT_DIV
+            // NOTE: We seem to need this set to 0?
+            .ACCEL_CYCLE = 0, // Duty cycle mode, use ACCEL_SMPLRT_DIV
             .GYRO_CYCLE = 1, // Duty cycle mode, use GYRO_SMPLTR_DIV
         });
     }
@@ -680,6 +683,7 @@ pub const ICM_20948 = struct {
     const NineDofData = struct { accel: Accel_data, gyro: Gyro_data, temp: f32, mag: Mag_data };
 
     pub fn get_accel_gyro_mag_data(self: *Self) Error!NineDofData {
+        try self.mag_set_sensor_read();
         var raw_data = packed struct {
             accel: Accel_data_unscaled = .{},
             gyro: Gyro_data_unscaled = .{},
@@ -733,12 +737,8 @@ pub const ICM_20948 = struct {
     }
 
     pub fn configure_magnetometer(self: *Self, config: Config) Error!void {
-        _ = config;
-
         // Set master odr: 1.1kHz/2^(config)
-        // TODO: Add config, but if it's too high we need to wait longer for the device to fill the
-        // read registers
-        try self.write_byte(.{ .bank3 = .i2c_mst_odr_config }, 3);
+        try self.write_byte(.{ .bank3 = .i2c_mst_odr_config }, config.mag_i2c_mst_odr_config);
 
         // Enable I2C master on this device
         try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
@@ -839,9 +839,7 @@ pub const ICM_20948 = struct {
         status2: u8 = 0,
     };
 
-    pub fn get_mag_data_unscaled(self: *Self) Error!Mag_data_unscaled {
-        var raw_data: Mag_data_unscaled = .{};
-
+    fn mag_set_sensor_read(self: *Self) Error!void {
         // NOTE: We set the address to the byte before hxl, and set the length to 9 bytes so
         // that we read status1 which we can check, but more importantly, we read out
         // status2, which MUST BE READ between reads otherwise the values won't get updated.
@@ -853,6 +851,11 @@ pub const ICM_20948 = struct {
 
         // Sleep long enough to give our device time to read from the mag
         self.clock.sleep_us(MAG_READ_DELAY_US);
+    }
+
+    pub fn get_mag_data_unscaled(self: *Self) Error!Mag_data_unscaled {
+        try self.mag_set_sensor_read();
+        var raw_data: Mag_data_unscaled = .{};
 
         self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read magnetometer data: {}", .{err});
