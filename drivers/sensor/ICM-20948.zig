@@ -57,6 +57,10 @@ pub const ICM_20948 = struct {
     const REGISTER_READ_DELAY_US = 2;
     const RESET_DELAY_US = 100_000;
 
+    const MAG_ADDRESS = 0x0C;
+    const MAG_WRITE_DELAY_US = 10_000;
+    const MAG_RESET_DELAY_US = 100_000;
+
     dev: mdf.base.Datagram_Device,
     clock: mdf.base.Clock_Device,
     config: Config,
@@ -114,6 +118,8 @@ pub const ICM_20948 = struct {
             gyro_zout_l = 0x38,
             temp_out_h = 0x39,
             temp_out_l = 0x3A,
+            // 24 of these
+            ext_slv_sens_data_00 = 0x3B,
 
             reg_bank_sel = 0x7F,
         },
@@ -172,7 +178,21 @@ pub const ICM_20948 = struct {
         }
     };
 
+    const MAG_WHOAMI = 0x09;
+    const MagRegister = enum(u8) {
+        device_id = 0x01,
+        status_1 = 0x10,
+        // xl, xh, yl, yh, zl, zh
+        hxl = 0x11,
+        status_2 = 0x18,
+        control_2 = 0x31,
+        control_3 = 0x32,
+        test_1 = 0x33,
+        test_2 = 0x34,
+    };
+
     const Config = struct {
+        // TODO: Fields to enable each part and only configure what we need. Put the rest in low power mode
         accel_range: enum(u2) {
             gs2 = 0,
             gs4 = 1,
@@ -246,6 +266,17 @@ pub const ICM_20948 = struct {
         gyro_odr_div: u8 = 0,
     };
 
+    const user_ctrl = packed struct(u8) {
+        reserved_0: u1,
+        I2C_MST_RST: u1,
+        SRAM_RST: u1,
+        DMP_RST: u1,
+        I2C_IF_DIS: u1,
+        I2C_MST_EN: u1,
+        FIFO_EN: u1,
+        DMP_EN: u1,
+    };
+
     const pwr_mgmt_1 = packed struct(u8) {
         CLKSEL: u3 = 0,
         TEMP_DIS: u1 = 0,
@@ -269,6 +300,22 @@ pub const ICM_20948 = struct {
         reserved_7: u1,
     };
 
+    // TODO: We probably don't need this defined right now, we only set the clock
+    const i2c_mst_ctrl = packed struct(u8) {
+        i2c_mst_clk: u4 = 0,
+        i2c_mst_p_nsr: u1 = 0,
+        reserved_5: u2 = 0,
+        mulst_mst_en: u1 = 0,
+    };
+
+    const i2c_slv0_ctrl = packed struct(u8) {
+        i2c_slv0_leng: u4 = 0,
+        i2c_slv0_grp: u1 = 0,
+        i2c_slv0_reg_dis: u1 = 0,
+        i2c_lsv0_byte_sw: u1 = 0,
+        i2c_slv0_en: u1 = 0,
+    };
+
     pub fn init(dev: mdf.base.Datagram_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
         return Self{ .dev = dev, .clock = clock, .config = config };
     }
@@ -285,8 +332,8 @@ pub const ICM_20948 = struct {
             return Error.DeviceNotFound;
         };
 
-        if (id != Self.WHOAMI) {
-            log.err("Unexpected device ID: expected 0x{X:02}, got 0x{X:02}", .{ Self.WHOAMI, id });
+        if (id != WHOAMI) {
+            log.err("Unexpected device ID: expected 0x{X:02}, got 0x{X:02}", .{ WHOAMI, id });
             return Error.UnexpectedDeviceId;
         }
 
@@ -317,12 +364,17 @@ pub const ICM_20948 = struct {
             log.err("Failed to configure gyroscope: {}", .{err});
             return Error.SetupFailed;
         };
+
+        self.configure_magnetometer(self.config) catch |err| {
+            log.err("Failed to configure magnetometer: {}", .{err});
+            return Error.SetupFailed;
+        };
     }
 
     /// Check if the device is responsive by reading the WHO_AM_I register
     pub fn is_device_responsive(self: *Self) bool {
         const id = self.read_byte(.{ .bank0 = .who_am_i }) catch return false;
-        return id == Self.WHOAMI;
+        return id == WHOAMI;
     }
 
     /// Perform a basic device health check
@@ -487,9 +539,8 @@ pub const ICM_20948 = struct {
 
     pub fn get_accel_data_unscaled(self: *Self) Error!Accel_data_unscaled {
         var raw_data: Accel_data_unscaled = .{};
-        const bytes_to_read = @sizeOf(Accel_data_unscaled);
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read accelerometer data: {}", .{err});
             return err;
         };
@@ -552,9 +603,8 @@ pub const ICM_20948 = struct {
 
     pub fn get_gyro_data_unscaled(self: *Self) Error!Gyro_data_unscaled {
         var raw_data: Gyro_data_unscaled = .{};
-        const bytes_to_read = @sizeOf(Gyro_data_unscaled);
 
-        self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+        self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read gyroscope data: {}", .{err});
             return err;
         };
@@ -602,9 +652,7 @@ pub const ICM_20948 = struct {
             gz: i16 = 0,
         }{};
 
-        const bytes_to_read = @sizeOf(@TypeOf(raw_data));
-
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read combined accel/gyro data: {}", .{err});
             return err;
         };
@@ -625,9 +673,8 @@ pub const ICM_20948 = struct {
 
     pub fn get_temp(self: *Self) Error!f32 {
         var raw_data: i16 = undefined;
-        const bytes_to_read = @sizeOf(i16);
 
-        self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+        self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read temperature data: {}", .{err});
             return err;
         };
@@ -639,6 +686,132 @@ pub const ICM_20948 = struct {
         const temp_celsius = @as(f32, @floatFromInt(temp_raw)) / 333.87 + 21.0;
 
         return temp_celsius;
+    }
+
+    pub fn configure_magnetometer(self: *Self, config: Config) Error!void {
+        _ = config;
+
+        // Set slave address to address of the magnetometer
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS);
+
+        // Enable I2C master on this device
+        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
+
+        // Set to known-good state
+        try self.mag_reset();
+
+        // Setup this device's I2C master speed at recommended 345.60kHZ
+        const reg = i2c_mst_ctrl{ .i2c_mst_clk = 7 };
+        try self.write_byte(.{ .bank3 = .i2c_mst_ctrl }, @bitCast(reg));
+
+        // Ensure we can read from the magnetometer
+        const mag_id = try self.mag_read_byte(.device_id);
+        if (mag_id != MAG_WHOAMI) {
+            log.err("Unexpected magnetometer device ID: expected 0x{X:02}, got 0x{X:02}", .{ MAG_WHOAMI, mag_id });
+            return error.SetupFailed;
+        }
+
+        try self.mag_reset();
+
+        // Set to continuous mode
+        try self.mag_write_byte(.control_2, 0b01000);
+
+        // Set read address as xl so we can read all 6 bytes
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(MagRegister.hxl));
+
+        // Set expected read size
+        try self.write_byte(
+            .{ .bank3 = .i2c_slv0_ctrl },
+            @bitCast(i2c_slv0_ctrl{
+                .i2c_slv0_en = 1,
+                .i2c_slv0_leng = 8,
+            }),
+        );
+    }
+
+    // TODO: Could cache the slave address like we do with banks
+    inline fn set_mag_write(self: *Self) !void {
+        var reg = try self.read_byte(.{ .bank3 = .i2c_slv0_addr });
+        // Clear the read bit
+        reg &= 0b0111_1111;
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, reg);
+    }
+
+    inline fn set_mag_read(self: *Self) !void {
+        var reg = try self.read_byte(.{ .bank3 = .i2c_slv0_addr });
+        // Set the read bit
+        reg |= 0b1000_0000;
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, reg);
+    }
+
+    pub inline fn mag_read_register(self: *Self, reg: MagRegister, buf: []u8) Error!void {
+        if (buf.len == 0) return Error.InvalidParameter;
+        if (buf.len > std.math.maxInt(u4)) return Error.InvalidParameter;
+
+        try self.set_mag_read();
+        self.clock.sleep_us(MAG_WRITE_DELAY_US);
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
+        try self.write_byte(
+            .{ .bank3 = .i2c_slv0_ctrl },
+            @bitCast(i2c_slv0_ctrl{
+                .i2c_slv0_leng = @truncate(buf.len),
+                .i2c_slv0_en = 1,
+            }),
+        );
+        self.clock.sleep_us(MAG_WRITE_DELAY_US);
+        return self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
+    }
+
+    pub inline fn mag_read_byte(self: *Self, reg: MagRegister) Error!u8 {
+        var buf: [1]u8 = undefined;
+        try self.mag_read_register(reg, &buf);
+        return buf[0];
+    }
+
+    pub inline fn mag_write_byte(self: *Self, reg: MagRegister, val: u8) Error!void {
+        try self.set_mag_write();
+        self.clock.sleep_us(MAG_WRITE_DELAY_US);
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
+        try self.write_byte(.{ .bank3 = .i2c_slv0_do }, val);
+        try self.write_byte(
+            .{ .bank3 = .i2c_slv0_ctrl },
+            @bitCast(i2c_slv0_ctrl{
+                .i2c_slv0_leng = 1,
+                .i2c_slv0_en = 1,
+            }),
+        );
+        self.clock.sleep_us(MAG_WRITE_DELAY_US);
+        try self.set_mag_read();
+    }
+
+    pub fn mag_reset(self: *Self) Error!void {
+        // Control 3 only has 1 bit, which initiates soft reset
+        try self.mag_write_byte(.control_3, 1);
+        self.clock.sleep_us(MAG_RESET_DELAY_US);
+
+        // Reset I2C master on device
+        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
+    }
+
+    const Mag_data_unscaled = struct {
+        x: i16 = 0,
+        y: i16 = 0,
+        z: i16 = 0,
+    };
+
+    pub fn get_mag_data_unscaled(self: *Self) Error!Mag_data_unscaled {
+        var raw_data: Mag_data_unscaled = .{};
+
+        self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
+            log.err("Failed to read magnetometer data: {}", .{err});
+            return err;
+        };
+
+        return .{
+            .x = std.mem.bigToNative(i16, raw_data.x),
+            .y = std.mem.bigToNative(i16, raw_data.y),
+            .z = std.mem.bigToNative(i16, raw_data.z),
+        };
     }
 };
 

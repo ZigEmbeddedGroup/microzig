@@ -67,6 +67,12 @@ pub fn main() !void {
         const temp_c = try dev.get_temp();
         std.log.info("temp: {d: >5.2}°C", .{temp_c});
 
+        const mag_data = try dev.get_mag_data_unscaled();
+        std.log.info(
+            "mag: x {d: >8.2} y {d: >8.2} z {d: >8.2} ",
+            .{ mag_data.x, mag_data.y, mag_data.z },
+        );
+
         sleep_ms(200);
     }
 }
