@@ -214,13 +214,13 @@ pub const SPI_Device = struct {
     };
 
     fn connect_fn(dd: *anyopaque) ConnectError!void {
-        _ = dd;
-        return;
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.connect();
     }
 
     fn disconnect_fn(dd: *anyopaque) void {
-        _ = dd;
-        return;
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        dev.disconnect();
     }
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
