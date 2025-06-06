@@ -1,5 +1,3 @@
-//TODO: add support for ADC1 dual mode
-
 const std = @import("std");
 const microzig = @import("microzig");
 const drivers = @import("drivers.zig");
@@ -256,8 +254,64 @@ pub const InjectedOffsets = struct {
 pub const InjectedConfig = struct {
     trigger: InjectedTrigger = .SWSTART,
     Interrupt: bool = false,
-    offsets: InjectedOffsets = InjectedOffsets{},
+    offsets: InjectedOffsets = .{},
     mode: InjectedModes,
+};
+
+pub const SimultaneousInjected = struct {
+    trigger: InjectedTrigger = .SWSTART,
+
+    master_seq: []const u5, //sequence of channels to read for master ADC, max 4 channels
+    master_offsets: InjectedOffsets = .{},
+    master_interrupt: bool = false,
+
+    slave_seq: []const u5, //sequence of channels to read for slave ADC, max 4 channels
+    slave_offsets: InjectedOffsets = .{},
+    slave_interrupt: bool = false,
+
+    ///in dual mode both ADCs must have the same sample rates for the channels.
+    ///if not provided, the sample rates will be set to the master ADC sample rates values
+    rate_seq: ?[]const SampleRate = null,
+};
+
+pub const SimultaneousRegular = struct {
+    trigger: RegularTrigger = .SWSTART,
+    master_seq: []const u5, //sequence of channels to read for master ADC, max 17 channels
+    slave_seq: []const u5, //sequence of channels to read for slave ADC, max 17 channels
+    ///in dual mode both ADCs must have the same sample rates for the channels.
+    ///if not provided, the sample rates will be set to the master ADC sample rates values
+    rate_seq: ?[]const SampleRate = null,
+};
+
+pub const SimultaneousCombined = struct {
+    ///simultaneous regular and injected conversion
+    SimulInj: SimultaneousInjected,
+    ///simultaneous regular conversion
+    SimulReg: SimultaneousRegular,
+};
+
+pub const DualModeSelection = union(enum) {
+    independent: void,
+    CombinedRegularSimulInjSimul: void,
+    CombinedRegularSimulAltTrig: void,
+    CombinedInjSimulFastInterleaved: void,
+    CombinedInjSimulSlowInterleaved: void,
+    injected_simultaneous: SimultaneousInjected,
+    regular_simultaneous: SimultaneousRegular,
+    fast_interleaved: SimultaneousRegular,
+    slow_interleaved: SimultaneousRegular,
+    alternate_trigger: SimultaneousInjected,
+};
+
+/// Dual mode configuration
+pub const DualModeConfig = struct {
+    ///note that without DMA the slave data cannot be read by the master ADC
+    /// so you need to read the slave ADC data directly from the slave ADC registers
+    ///
+    /// the slave ADC cannot generate DMA requests, so the master ADC must be configured to use DMA
+    dma: bool = false, //enable DMA for dual mode
+
+    mode: DualModeSelection,
 };
 
 pub const RegularConfigError = error{
@@ -269,6 +323,12 @@ pub const RegularConfigError = error{
     InvalidLength,
     InvalidSequence,
 };
+
+pub const DualConfigError = error{
+    invalidSequence,
+    ADC2NotEnabled,
+    ADC2NotSupported,
+} || RegularConfigError;
 
 pub const AdvancedADC = struct {
     regs: *volatile adc_regs,
@@ -355,6 +415,9 @@ pub const AdvancedADC = struct {
 
     //========== ADC Regular conversion functions ===========
 
+    ///set the regular group configuration.
+    ///
+    /// NOTE: DO NOT CALL THIS FUNCTION IF DUALMODE IS ENABLED!
     pub fn configure_regular_conversion(self: *const AdvancedADC, config: RegularConfig) RegularConfigError!void {
         const regs = self.regs;
         switch (config.mode) {
@@ -453,6 +516,9 @@ pub const AdvancedADC = struct {
         }
     }
 
+    ///set sample rate for a specific channel.
+    ///
+    /// NOTE: DO NOT USE THIS FUNCTION IF DUAL MODE IS ENABLED!
     pub fn set_channel_sample_rate(self: *const AdvancedADC, channel: u5, sample_rate: SampleRate) void {
         if (channel > 18) return; //invalid channel, do nothing
         const regs = self.regs;
@@ -466,6 +532,9 @@ pub const AdvancedADC = struct {
         }
     }
 
+    ///set sample rate for a specific channels.
+    ///
+    /// NOTE: DO NOT USE THIS FUNCTION IF DUAL MODE IS ENABLED!
     pub fn set_multiple_channels_sample_rate(self: *const AdvancedADC, sample_rates: []const SampleRate) void {
         const len = @min(sample_rates.len, 18);
         for (0..len, sample_rates) |i, rate| {
@@ -476,6 +545,8 @@ pub const AdvancedADC = struct {
     ///load a sequence of channels to be converted by `read_multiple_channels` function.
     /// the read sequence is determined by the order of the channels in the sequence array.
     /// only the first 16 sequence elements are used, the rest are ignored.
+    ///
+    /// NOTE: DO NOT USE THIS FUNCTION IF DUAL MODE IS ENABLED!
     pub fn load_sequence(self: *const AdvancedADC, sequence: []const u5) void {
         const regs = self.regs;
         const len = @min(16, sequence.len);
@@ -530,6 +601,8 @@ pub const AdvancedADC = struct {
 
     ///read the injected group conversion data.
     /// this value can be negative if offssets are set.
+    ///
+    ///NOTE: in dual mode the slave data is read from the slave ADC registers
     pub fn read_injected_data(self: *const AdvancedADC, index: u2) i16 {
         const regs = self.regs;
         return @bitCast(regs.JDR[index].read().JDATA);
@@ -543,6 +616,9 @@ pub const AdvancedADC = struct {
         regs.JOFR[3].modify(.{ .JOFFSET = offsets.SEQ4 });
     }
 
+    ///set the injected group configuration.
+    ///
+    /// NOTE: DO NOT CALL THIS FUNCTION IF DUALMODE IS ENABLED!
     pub fn set_injected_config(self: *const AdvancedADC, config: InjectedConfig) RegularConfigError!void {
         const regs = self.regs;
         var trig: u1 = 1;
@@ -677,6 +753,105 @@ pub const AdvancedADC = struct {
             .JEXTSEL = @as(u3, @intFromEnum(trigger)),
             .JEXTTRIG = 1,
         });
+    }
+
+    //========== ADC Dual mode functions ===========
+
+    ///configure the ADC for dual mode. this function can only be called for ADC1
+    ///
+    /// NOTE: This function will not enable the ADC slave, you need to call `enable` function before this.
+    pub fn set_dual_mode(self: *const AdvancedADC, config: DualModeSelection) DualConfigError!void {
+        if (self.adc_num == 2 or !@hasDecl(periferals, "ADC2")) {
+            return DualConfigError.ADC2NotSupported;
+        }
+        if (self.adc_num == 3) {
+            return DualConfigError.InvalidADC; //only ADC1 and ADC2 can be used in dual mode
+        }
+        const adc1 = self;
+        const adc2 = AdvancedADC.init(.ADC2);
+        if (adc2.regs.CR2.read().ADON == 0) {
+            return DualConfigError.ADC2NotEnabled; //ADC2 must be enabled before configuring dual mode
+        }
+
+        adc1.set_indedpended(); //dual mode need to be set to independent mode before any configuration
+        switch (config) {
+            .independent => return, //just set independent mode, nothing to do
+            .injected_simultaneous => |inj| {
+                try set_injected_simultaneous(adc1, &adc2, inj);
+                adc1.regs.CR1.modify(.{ .DUALMOD = .Injected }); //set injected simultaneous mode
+            },
+            else => {}, //TODO: implement other dual modes
+        }
+    }
+
+    ///disable the dual mode. This function can only be called for ADC1 and will do nothing for other ADCs.
+    ///
+    /// NOTE: this function will not disable the Master/slave ADC or clear configuration.
+    pub fn set_indedpended(adc1: *const AdvancedADC) void {
+        adc1.regs.CR1.modify(.{ .DUALMOD = .Independent }); //set independent mode
+    }
+
+    pub fn set_injected_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousInjected) DualConfigError!void {
+        try check_injected_simultaneous(adc1, adc2, config);
+        const master_seq = config.master_seq;
+        const slave_seq = config.slave_seq;
+        adc1.set_injected_config(.{
+            .trigger = config.trigger,
+            .offsets = config.master_offsets,
+            .Interrupt = config.master_interrupt,
+            .mode = .{
+                .SingleSeq = .{
+                    .seq = master_seq,
+                    .channels_conf = null, //no channels configuration for master
+                },
+            },
+        }) catch unreachable;
+
+        adc2.set_injected_config(.{
+            .trigger = .SWSTART,
+            .offsets = config.slave_offsets,
+            .Interrupt = config.slave_interrupt,
+            .mode = .{
+                .SingleSeq = .{
+                    .seq = slave_seq,
+                    .channels_conf = null, //no channels configuration for master
+                },
+            },
+        }) catch unreachable;
+
+        if (config.rate_seq) |rates| {
+            for (rates, master_seq, slave_seq) |rate, mseq, ssque| {
+                adc1.set_channel_sample_rate(mseq, rate);
+                adc2.set_channel_sample_rate(ssque, rate);
+            }
+        }
+    }
+
+    fn check_injected_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousInjected) DualConfigError!void {
+        if (adc1.adc_num != 1 or adc2.adc_num != 2) {
+            return DualConfigError.InvalidADC; //only ADC1 and ADC2 can be used in dual mode
+        }
+        const master_len = config.master_seq.len;
+        const slave_len = config.slave_seq.len;
+        if (master_len != slave_len) {
+            return DualConfigError.invalidSequence; //master and slave sequences must have the same length
+        } else if (master_len == 0 or slave_len == 0) {
+            return DualConfigError.invalidSequence; //sequence cannot be empty
+        } else if (master_len > 4 or slave_len > 4) {
+            return DualConfigError.invalidSequence; //max length is 4 [0..3]
+        }
+
+        for (config.master_seq, config.slave_seq) |mch, sch| {
+            if (mch == sch) {
+                return DualConfigError.invalidSequence; //master and slave channels must be different
+            }
+        }
+
+        if (config.rate_seq) |rates| {
+            if (rates.len != master_len) {
+                return DualConfigError.InvalidSequence; //sample rates must match the master sequence length
+            }
+        }
     }
 
     pub fn init(adc: ADC_inst) AdvancedADC {
