@@ -106,9 +106,13 @@ pub const Exception = blk: {
 };
 
 pub const interrupt = struct {
+    /// The priority of an interrupt.
+    /// Coretex-M uses a reversed priority scheme so the lowest priority is 15 and the highest is 0.
+    /// 
+    /// Note:Some platforms may only use the most significant bits of the priority register.
     pub const Priority = enum(u8) {
-        lowest = 0,
-        highest = 15,
+        lowest = 15,
+        highest = 0,
         _,
     };
 
@@ -319,7 +323,7 @@ pub const interrupt = struct {
         ///       only use the most significant bits.
         pub fn set_priority(comptime excpt: Exception, priority: Priority) void {
             const num: u2 = @intCast(@intFromEnum(excpt) / 4);
-            const shift: u5 = @intCast(@intFromEnum(excpt) % 4 * 8);
+            const shift: u5 = @as(u5, @intCast(@intFromEnum(excpt))) % 4 * 8;
 
             // The code below is safe since the switch is compile-time resolved.
             // The any SHPRn register which is unavailable on a platform will
@@ -346,7 +350,7 @@ pub const interrupt = struct {
 
         pub fn get_priority(comptime excpt: Exception) Priority {
             const num: u2 = @intCast(@intFromEnum(excpt) / 4);
-            const shift: u5 = @intCast(@intFromEnum(excpt) % 4 * 8);
+            const shift: u5 = @as(u5, @intCast(@intFromEnum(excpt))) % 4 * 8;
 
             const raw: u8 = (switch (num) {
                 0 => @compileError("Cannot get the priority for the exception"),
