@@ -108,7 +108,7 @@ pub const Exception = blk: {
 pub const interrupt = struct {
     /// The priority of an interrupt.
     /// Coretex-M uses a reversed priority scheme so the lowest priority is 15 and the highest is 0.
-    /// 
+    ///
     /// Note:Some platforms may only use the most significant bits of the priority register.
     pub const Priority = enum(u8) {
         lowest = 15,
