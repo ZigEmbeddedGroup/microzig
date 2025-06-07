@@ -6,6 +6,7 @@ const periferals = microzig.chip.peripherals;
 const adc_regs = microzig.chip.types.peripherals.adc_f1.ADC;
 const CounterDevice = drivers.CounterDevice;
 const timeout = drivers.Timeout;
+const DUALMOD = microzig.chip.types.peripherals.adc_f1.DUALMOD;
 
 const ADC_inst = utils.create_peripheral_enum("ADC", "adc_f1");
 
@@ -223,10 +224,8 @@ pub const Discontinuous = struct {
 };
 
 pub const RegularModes = union(enum) {
-    SingleCh: Channel,
-    SingleSeq: Sequence,
-    ContinuousCh: Channel,
-    ContinuousSeq: Sequence,
+    Single: Sequence,
+    Continuous: Sequence,
     Discontinuous: Discontinuous,
 };
 pub const RegularConfig = struct {
@@ -238,8 +237,7 @@ pub const RegularConfig = struct {
 
 pub const InjectedModes = union(enum) {
     auto_injected: Sequence,
-    SingleCh: Channel,
-    SingleSeq: Sequence,
+    Single: Sequence,
     Discontinuous: Discontinuous,
 };
 
@@ -301,17 +299,6 @@ pub const DualModeSelection = union(enum) {
     fast_interleaved: SimultaneousRegular,
     slow_interleaved: SimultaneousRegular,
     alternate_trigger: SimultaneousInjected,
-};
-
-/// Dual mode configuration
-pub const DualModeConfig = struct {
-    ///note that without DMA the slave data cannot be read by the master ADC
-    /// so you need to read the slave ADC data directly from the slave ADC registers
-    ///
-    /// the slave ADC cannot generate DMA requests, so the master ADC must be configured to use DMA
-    dma: bool = false, //enable DMA for dual mode
-
-    mode: DualModeSelection,
 };
 
 pub const RegularConfigError = error{
@@ -421,16 +408,10 @@ pub const AdvancedADC = struct {
     pub fn configure_regular_conversion(self: *const AdvancedADC, config: RegularConfig) RegularConfigError!void {
         const regs = self.regs;
         switch (config.mode) {
-            .SingleCh => |single| {
-                try self.set_regular_ch(single, true);
-            },
-            .SingleSeq => |seq| {
+            .Single => |seq| {
                 try self.set_regular_seq(seq, true);
             },
-            .ContinuousCh => |single| {
-                try self.set_regular_ch(single, false);
-            },
-            .ContinuousSeq => |seq| {
+            .Continuous => |seq| {
                 try self.set_regular_seq(seq, false);
             },
             .Discontinuous => |disc| {
@@ -627,15 +608,7 @@ pub const AdvancedADC = struct {
                 try self.set_injected_auto(seq);
                 trig = 0; //auto injected mode must disable the trigger
             },
-            .SingleCh => |single| {
-                try self.set_injected_seq(.{
-                    .seq = &.{single.channel},
-                    .channels_conf = &.{
-                        .{ .channel = single.channel, .sample_rate = single.sample_rate },
-                    },
-                });
-            },
-            .SingleSeq => |seq| {
+            .Single => |seq| {
                 try self.set_injected_seq(seq);
             },
             .Discontinuous => |disc| {
@@ -780,6 +753,10 @@ pub const AdvancedADC = struct {
                 try set_injected_simultaneous(adc1, &adc2, inj);
                 adc1.regs.CR1.modify(.{ .DUALMOD = .Injected }); //set injected simultaneous mode
             },
+            .alternate_trigger => |inj| {
+                try set_injected_simultaneous(adc1, &adc2, inj);
+                adc1.regs.CR1.modify(.{ .DUALMOD = .AlternateTrigger }); //set injected simultaneous mode
+            },
             else => {}, //TODO: implement other dual modes
         }
     }
@@ -800,7 +777,7 @@ pub const AdvancedADC = struct {
             .offsets = config.master_offsets,
             .Interrupt = config.master_interrupt,
             .mode = .{
-                .SingleSeq = .{
+                .Single = .{
                     .seq = master_seq,
                     .channels_conf = null, //no channels configuration for master
                 },
@@ -812,7 +789,7 @@ pub const AdvancedADC = struct {
             .offsets = config.slave_offsets,
             .Interrupt = config.slave_interrupt,
             .mode = .{
-                .SingleSeq = .{
+                .Single = .{
                     .seq = slave_seq,
                     .channels_conf = null, //no channels configuration for master
                 },

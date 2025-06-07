@@ -89,7 +89,7 @@ pub fn main() !void {
         .DMA = true,
         .trigger = .SWSTART,
         .mode = .{
-            .SingleSeq = .{
+            .Single = .{
                 .seq = &.{ 16, 17, 1, 3 },
                 .channels_conf = &.{
                     .{ .channel = 17, .sample_rate = .@"239.5" }, //Vrefint
