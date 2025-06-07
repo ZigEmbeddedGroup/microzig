@@ -42,7 +42,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu = .{
             .name = "esp_riscv",
             .root_source_file = b.path("src/cpus/esp_riscv.zig"),
-            .imports = b.allocator.dupe(Import, &.{
+            .imports = microzig.utils.dupe_imports(b, &.{
                 .{
                     .name = "cpu-config",
                     .module = get_cpu_config(b, .image),
@@ -51,26 +51,42 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .name = "riscv32-common",
                     .module = riscv32_common_mod,
                 },
-            }) catch @panic("OOM"),
+            }),
         },
         .chip = .{
             .name = "ESP32-C3",
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
-                // external memory, ibus
-                .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
-                // sram 1, data bus
-                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 },
+                // irom
+                .{ .kind = .flash, .offset = 0x4200_0000 + 0x20, .length = 0x0080_0000 - 0x20 },
+                // drom
+                .{ .kind = .{ .custom = .{
+                    .name = "data_flash",
+                    .readable = true,
+                    .writeable = false,
+                    .executable = false,
+                } }, .offset = 0x3C00_0000 + 0x20, .length = 0x0080_0000 - 0x20 },
+                // iram
+                .{ .kind = .{ .custom = .{
+                    .name = "instruction_ram",
+                    .readable = true,
+                    .writeable = true,
+                    .executable = true,
+                } }, .offset = 0x4037C000 + 0x4000, .length = 313 * 1024 },
+                // dram
+                .{ .kind = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024 },
             },
         },
         .hal = hal,
-        .linker_script = generate_linker_script(
-            dep,
-            "esp32_c3.ld",
-            b.path("ld/esp32_c3/esp32_c3.ld.base"),
-            b.path("ld/esp32_c3/rom_functions.ld"),
-        ),
+        .linker_script = .{ .generate = .{
+            .entry_name = "_start",
+            .auto_generated_sections_index = null,
+            .files = microzig.utils.dupe_paths(b, &.{
+                b.path("ld/esp32_c3/sections.ld"),
+                b.path("ld/esp32_c3/rom_functions.ld"),
+            }),
+        } },
     };
 
     return .{
@@ -81,7 +97,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .cpu = .{
                     .name = "esp_riscv",
                     .root_source_file = b.path("src/cpus/esp_riscv.zig"),
-                    .imports = b.allocator.dupe(Import, &.{
+                    .imports = microzig.utils.dupe_imports(b, &.{
                         .{
                             .name = "cpu-config",
                             .module = get_cpu_config(b, .direct),
@@ -90,14 +106,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
                             .name = "riscv32-common",
                             .module = riscv32_common_mod,
                         },
-                    }) catch @panic("OOM"),
+                    }),
                 },
-                .linker_script = generate_linker_script(
-                    dep,
-                    "esp32_c3_direct_boot.ld",
-                    b.path("ld/esp32_c3/esp32_c3_direct_boot.ld.base"),
+                .linker_script = .{ .generate = .{ .files = microzig.utils.dupe_paths(b, &.{
                     b.path("ld/esp32_c3/rom_functions.ld"),
-                ),
+                }) } },
             }),
         },
         .boards = .{},

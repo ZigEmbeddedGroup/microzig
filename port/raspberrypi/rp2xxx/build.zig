@@ -57,7 +57,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .patches = @import("patches/rp2040.zig").patches,
         },
         .hal = hal,
-        .linker_script = b.path("rp2040.ld"),
+        .linker_script = .{ .custom = b.path("rp2040.ld") },
     };
 
     const chip_rp2350_arm: microzig.Target = .{
@@ -79,7 +79,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .patches = @import("patches/rp2350.zig").patches,
         },
         .hal = hal,
-        .linker_script = b.path("rp2350_arm.ld"),
+        .linker_script = .{ .custom = b.path("rp2350_arm.ld") },
     };
 
     const chip_rp2350_riscv: microzig.Target = .{
@@ -131,7 +131,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = b.path("rp2350_riscv.ld"),
+        .linker_script = .{ .custom = b.path("rp2350_riscv.ld") },
     };
 
     const bootrom_rp2040 = get_bootrom(b, &chip_rp2040, .w25q080);

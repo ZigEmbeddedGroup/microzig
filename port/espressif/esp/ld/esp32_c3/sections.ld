@@ -1,15 +1,3 @@
-ENTRY(_start);
-
-MEMORY
-{
-    irom (rx) : ORIGIN = 0x42000020, LENGTH = 0x800000 - 0x20
-    drom (r) : ORIGIN = 0x3C000020, LENGTH = 0x800000 - 0x20
-
-    /* Offset by ICache size which is fixed to 16KB on ESP32-C3 */
-    iram (rwx) : ORIGIN = 0x4037C000 + 0x4000, LENGTH = 313K
-    dram (rw) : ORIGIN = 0x3FC7C000 + 0x4000, LENGTH = 313K
-}
-
 SECTIONS
 {
     .irom.text :
@@ -28,15 +16,15 @@ SECTIONS
          * dummy bytes to ensure this
          */
         . += 16;
-    } > irom
+    } > flash0
 
     .drom.dummy (NOLOAD) :
     {
-        . = ORIGIN(drom) + (microzig_text_end - microzig_text_start);
+        . = ORIGIN(data_flash) + (microzig_text_end - microzig_text_start);
 
         /* Add alignment of MMU page size + 0x20 bytes for the mapping header. */
         . = ALIGN(0x10000) + 0x20;
-    } > drom
+    } > data_flash
 
     .drom.rodata :
     {
@@ -46,7 +34,7 @@ SECTIONS
         *(.rodata*)
 
         microzig_rodata_end = .;
-    } > drom
+    } > data_flash
 
     .iram.text :
     {
@@ -59,12 +47,12 @@ SECTIONS
 
         /* TODO: in the case of memory protection there should be some alignment
          * and offset done here (NOLOAD) */
-    } > iram
+    } > instruction_ram
 
     .dram.dummy (NOLOAD) :
     {
-        . = ORIGIN(dram) + (microzig_rwtext_end - microzig_rwtext_start);
-    } > dram
+        . = ORIGIN(ram0) + (microzig_rwtext_end - microzig_rwtext_start);
+    } > ram0
 
     .dram.data :
     {
@@ -72,7 +60,7 @@ SECTIONS
         *(.sdata*)
         *(.data*)
         microzig_data_end = .;
-    } > dram
+    } > ram0
 
     .dram.bss (NOLOAD) :
     {
@@ -80,7 +68,7 @@ SECTIONS
         *(.bss*)
         *(.sbss*)
         microzig_bss_end = .;
-    } > dram
+    } > ram0
 
     PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
 }

@@ -59,8 +59,8 @@ pub const Target = struct {
     /// if present.
     board: ?Board = null,
 
-    /// (optional) Provide a custom linker script for the hardware or define a custom generation.
-    linker_script: ?LazyPath = null,
+    /// (optional) Linker script generation options.
+    linker_script: LinkerScriptOptions = .default,
 
     /// (Optional) Explicitly set the entry point
     entry: ?Build.Step.Compile.Entry = null,
@@ -79,7 +79,7 @@ pub const Target = struct {
         ram_image: ?bool = null,
         hal: ?HardwareAbstractionLayer = null,
         board: ?Board = null,
-        linker_script: ?LazyPath = null,
+        linker_script: ?LinkerScriptOptions = null,
         entry: ?Build.Step.Compile.Entry = null,
         patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
     };
@@ -225,6 +225,25 @@ pub const BinaryFormat = union(enum) {
     };
 };
 
+pub const LinkerScriptOptions = union(enum) {
+    pub const default: LinkerScriptOptions = .{ .generate = .{
+        .auto_generated_sections_index = 0,
+        .files = &.{},
+    } };
+
+    generate: struct {
+        /// Entry point name.
+        entry_name: []const u8 = "microzig_main",
+        /// The index at which to insert the auto-generated sections. Don't add the auto-generated
+        /// sections if null.
+        auto_generated_sections_index: ?usize = 0,
+        /// Files to concatinate in the generated linker script. **Needs to be heap allocated. Use
+        /// `utils.dupe_paths`.**
+        files: []const LazyPath = &.{},
+    },
+    custom: LazyPath,
+};
+
 /// A descriptor for memory regions in a microcontroller.
 pub const MemoryRegion = struct {
     /// The type of the memory region for generating a proper linker script.
@@ -246,7 +265,7 @@ pub const MemoryRegion = struct {
         reserved,
 
         /// This is a memory region used for internal linking tasks required by the board support package.
-        private: PrivateRegion,
+        custom: PrivateRegion,
     };
 
     pub const PrivateRegion = struct {
@@ -262,4 +281,17 @@ pub const MemoryRegion = struct {
         /// Is the memory region writable?
         writeable: bool,
     };
+};
+
+pub const utils = struct {
+    pub const dupe_paths = dupe(LazyPath);
+    pub const dupe_imports = dupe(Module.Import);
+
+    fn dupe(comptime T: type) fn(b: *Build, []const T) []T {
+        return struct {
+            pub fn inner(b: *Build, stuff: []const T) []T {
+                return b.allocator.dupe(T, stuff) catch @panic("OOM");
+            }
+        }.inner;
+    }
 };
