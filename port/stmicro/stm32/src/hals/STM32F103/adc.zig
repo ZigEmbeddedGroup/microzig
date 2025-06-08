@@ -214,7 +214,7 @@ pub const Channel = struct {
 
 pub const Sequence = struct {
     seq: []const u5, //sequence of channels to read, max 17 channels
-    channels_conf: ?[]const Channel, //optional channel configuration, if not provided, the sample rate will be not modified
+    channels_conf: ?[]const Channel = null, //optional channel configuration, if not provided, the sample rate will be not modified
 };
 
 pub const Discontinuous = struct {
@@ -272,33 +272,68 @@ pub const SimultaneousInjected = struct {
     rate_seq: ?[]const SampleRate = null,
 };
 
+pub const SimRegModes = union(enum) {
+    Single: void,
+    Continuous: void,
+    Discontinuous: u3,
+};
+
 pub const SimultaneousRegular = struct {
+    ///even though DMA is an optional feature, it is highly recommended to use it.
+    /// especially in applications that require high sampling rates.
+    ///
+    /// NOTE: without DMA the ADC slave value cannot be read from the master ADC registers,
+    /// NOTE: in Dualmode DMA request are 32bits wide.
+    dma: bool = false,
+    mode: SimRegModes,
     trigger: RegularTrigger = .SWSTART,
     master_seq: []const u5, //sequence of channels to read for master ADC, max 17 channels
+    master_interrupt: bool = false,
     slave_seq: []const u5, //sequence of channels to read for slave ADC, max 17 channels
+    slave_interrupt: bool = false,
     ///in dual mode both ADCs must have the same sample rates for the channels.
-    ///if not provided, the sample rates will be set to the master ADC sample rates values
+    ///if not provided, the sample rates will not be modified.
+    /// Ignore only if the sample rates are already set for the channels.
     rate_seq: ?[]const SampleRate = null,
 };
 
-pub const SimultaneousCombined = struct {
-    ///simultaneous regular and injected conversion
-    SimulInj: SimultaneousInjected,
-    ///simultaneous regular conversion
-    SimulReg: SimultaneousRegular,
+pub const Interleaved = struct {
+    interrupt: bool = false, //in this mode only the master ADC can generate an interrupt
+    ///same as in `SimultaneousRegular`
+    dma: bool = false,
+    ///NOTE: this config only have effect if the ADC is in Fast interleaved.
+    continuos: bool = false,
+    trigger: RegularTrigger = .SWSTART,
+    channel: Channel, //channel to read in interleaved mode
+
 };
 
-pub const DualModeSelection = union(enum) {
-    independent: void,
-    CombinedRegularSimulInjSimul: void,
-    CombinedRegularSimulAltTrig: void,
-    CombinedInjSimulFastInterleaved: void,
-    CombinedInjSimulSlowInterleaved: void,
-    injected_simultaneous: SimultaneousInjected,
-    regular_simultaneous: SimultaneousRegular,
-    fast_interleaved: SimultaneousRegular,
-    slow_interleaved: SimultaneousRegular,
-    alternate_trigger: SimultaneousInjected,
+/// `RegularInjected` and `RegularAlternateTrigger` modes
+///
+/// these modes use the same configuration but with different behavior.
+pub const RegularInjetedCombined = struct {
+    Injected: SimultaneousInjected,
+    Regular: SimultaneousRegular,
+};
+
+/// `FastInterleaved` and `SlowInterleaved` modes
+///
+/// these modes use the same configuration but with different behavior.
+pub const InterleavedInjectedCombined = struct {
+    Injected: SimultaneousInjected,
+    Regular: Interleaved,
+};
+pub const DualModeSelection = union(DUALMOD) {
+    Independent: void,
+    RegularInjected: RegularInjetedCombined,
+    RegularAlternateTrigger: RegularInjetedCombined,
+    InjectedFastInterleaved: InterleavedInjectedCombined,
+    InjectedSlowInterleaved: InterleavedInjectedCombined,
+    Injected: SimultaneousInjected,
+    Regular: SimultaneousRegular,
+    FastInterleaved: Interleaved,
+    SlowInterleaved: Interleaved,
+    AlternateTrigger: SimultaneousInjected,
 };
 
 pub const RegularConfigError = error{
@@ -326,14 +361,16 @@ pub const AdvancedADC = struct {
     ///enable the ADC and optionally calibrate it.
     pub fn enable(self: *const AdvancedADC, calib: bool, Counter: *const CounterDevice) void {
         const regs = self.regs;
-        regs.CR2.modify(.{ .ADON = 1 }); //enable ADC
+        if (regs.CR2.read().ADON == 0) {
+            regs.CR2.modify(.{ .ADON = 1 }); //enable ADC
 
-        //wait for ADC stabilization time
-        Counter.sleep_us(STAB_TIME);
+            //wait for ADC stabilization time
+            Counter.sleep_us(STAB_TIME);
+        }
+
         if (calib) {
             _ = self.calibrate();
         }
-        regs.SR.raw = 0; //clear all status flags
     }
 
     ///disable the ADC.
@@ -369,7 +406,8 @@ pub const AdvancedADC = struct {
         while (regs.CR2.read().CAL == 1) {
             asm volatile ("" ::: "memory");
         }
-        return regs.DR.read().DATA; //read the calibration data
+        const data = regs.DR.read().DATA;
+        return data;
     }
 
     ///re-calibrate the ADC and return the calibration data.
@@ -388,7 +426,7 @@ pub const AdvancedADC = struct {
 
     ///enable the temperature sensor and Vrefint.
     ///NOTE: This function should be called after the ADC is enabled.
-    pub fn enable_refint(self: *const AdvancedADC, Counter: *const CounterDevice) void {
+    pub fn enable_reftemp(self: *const AdvancedADC, Counter: *const CounterDevice) void {
         const regs = self.regs;
         regs.CR2.modify(.{ .TSVREFE = 1 }); //enable temperature sensor and Vrefint
         //wait for Vrefint and temperature sensor to stabilize
@@ -400,13 +438,30 @@ pub const AdvancedADC = struct {
         regs.CR2.modify(.{ .ALIGN = @intFromEnum(aling) }); //set data alignment
     }
 
+    pub fn clear_flags(self: *const AdvancedADC) void {
+        self.regs.SR.raw = 0;
+    }
+
     //========== ADC Regular conversion functions ===========
 
     ///set the regular group configuration.
     ///
     /// NOTE: DO NOT CALL THIS FUNCTION IF DUALMODE IS ENABLED!
-    pub fn configure_regular_conversion(self: *const AdvancedADC, config: RegularConfig) RegularConfigError!void {
+    pub fn configure_regular(self: *const AdvancedADC, config: RegularConfig) RegularConfigError!void {
         const regs = self.regs;
+
+        //disable all corrent configs to avoid erros
+        regs.CR2.modify(.{
+            .DMA = 0,
+            .CONT = 0,
+            .EXTTRIG = 0,
+        });
+
+        regs.CR1.modify(.{
+            .EOCIE = 0,
+            .DISCEN = 0,
+        });
+
         switch (config.mode) {
             .Single => |seq| {
                 try self.set_regular_seq(seq, true);
@@ -423,25 +478,10 @@ pub const AdvancedADC = struct {
 
         regs.CR1.modify(.{ .EOCIE = @as(u1, if (config.Interrupt) 1 else 0) });
         regs.CR2.modify(.{
-            .DMA = @as(u1, if (config.DMA) 1 else 0),
             .EXTSEL = @as(u3, @intFromEnum(config.trigger)),
             .EXTTRIG = 1,
+            .DMA = @as(u1, if (config.DMA) 1 else 0),
         });
-    }
-
-    pub fn set_regular_ch(self: *const AdvancedADC, single: Channel, single_mode: bool) RegularConfigError!void {
-        if (single.channel > 17) return RegularConfigError.InvalidChannel;
-        const regs = self.regs;
-        regs.CR1.modify(.{
-            .SCAN = 1, //keep scan mode enabled, scan mode maybe be used in injected mode
-            .DISCEN = 0, //disable discontinuous mode
-        });
-
-        self.set_channel_sample_rate(single.channel, single.sample_rate);
-        regs.SQR1.modify(.{ .L = 0 }); //set number of conversions to 1
-        regs.SQR3.modify(.{ .@"SQ[0]" = single.channel }); //set the channel to read
-
-        regs.CR2.modify(.{ .CONT = @as(u1, if (single_mode) 0 else 1) }); //set conversion mode
     }
 
     pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, single_mode: bool) RegularConfigError!void {
@@ -551,6 +591,10 @@ pub const AdvancedADC = struct {
     ///start conversion, if software trigger is not enabled, this will do nothing
     pub fn software_trigger(self: *const AdvancedADC) void {
         const regs = self.regs;
+        regs.SR.modify(.{
+            .EOC = 0,
+            .STRT = 0,
+        });
         regs.CR2.modify(.{ .SWSTART = 1 });
     }
 
@@ -577,6 +621,10 @@ pub const AdvancedADC = struct {
     ///start conversion for the injected group, if software trigger is not enabled, this will do nothing
     pub fn software_injected_trigger(self: *const AdvancedADC) void {
         const regs = self.regs;
+        regs.SR.modify(.{
+            .JEOC = 0,
+            .JSTRT = 0,
+        });
         regs.CR2.modify(.{ .JSWSTART = 1 });
     }
 
@@ -600,9 +648,20 @@ pub const AdvancedADC = struct {
     ///set the injected group configuration.
     ///
     /// NOTE: DO NOT CALL THIS FUNCTION IF DUALMODE IS ENABLED!
-    pub fn set_injected_config(self: *const AdvancedADC, config: InjectedConfig) RegularConfigError!void {
+    pub fn configure_injected(self: *const AdvancedADC, config: InjectedConfig) RegularConfigError!void {
         const regs = self.regs;
         var trig: u1 = 1;
+
+        //disable all corrent configs to avoid erros
+        regs.CR2.modify(.{
+            .JEXTTRIG = 0,
+        });
+
+        regs.CR1.modify(.{
+            .JEOCIE = 0,
+            .JDISCEN = 0,
+            .JAUTO = 0,
+        });
         switch (config.mode) {
             .auto_injected => |seq| {
                 try self.set_injected_auto(seq);
@@ -732,8 +791,8 @@ pub const AdvancedADC = struct {
 
     ///configure the ADC for dual mode. this function can only be called for ADC1
     ///
-    /// NOTE: This function will not enable the ADC slave, you need to call `enable` function before this.
-    pub fn set_dual_mode(self: *const AdvancedADC, config: DualModeSelection) DualConfigError!void {
+    /// NOTE: This function will not enable the ADC slave, you need to call the `enable` function manually.
+    pub fn configure_dual_mode(self: *const AdvancedADC, config: DualModeSelection) DualConfigError!void {
         if (self.adc_num == 2 or !@hasDecl(periferals, "ADC2")) {
             return DualConfigError.ADC2NotSupported;
         }
@@ -742,23 +801,26 @@ pub const AdvancedADC = struct {
         }
         const adc1 = self;
         const adc2 = AdvancedADC.init(.ADC2);
-        if (adc2.regs.CR2.read().ADON == 0) {
-            return DualConfigError.ADC2NotEnabled; //ADC2 must be enabled before configuring dual mode
-        }
 
         adc1.set_indedpended(); //dual mode need to be set to independent mode before any configuration
         switch (config) {
-            .independent => return, //just set independent mode, nothing to do
-            .injected_simultaneous => |inj| {
-                try set_injected_simultaneous(adc1, &adc2, inj);
-                adc1.regs.CR1.modify(.{ .DUALMOD = .Injected }); //set injected simultaneous mode
+            .Independent => return, //just set independent mode, nothing to do
+
+            .Regular => |reg| {
+                try set_regular_simultaneous(adc1, &adc2, reg);
             },
-            .alternate_trigger => |inj| {
+
+            //same config, diferent behavior
+            .FastInterleaved, .SlowInterleaved => |_| {},
+
+            //same config, diferent behavior
+            .Injected, .AlternateTrigger => |inj| {
                 try set_injected_simultaneous(adc1, &adc2, inj);
-                adc1.regs.CR1.modify(.{ .DUALMOD = .AlternateTrigger }); //set injected simultaneous mode
             },
             else => {}, //TODO: implement other dual modes
         }
+
+        adc1.regs.CR1.modify(.{ .DUALMOD = config });
     }
 
     ///disable the dual mode. This function can only be called for ADC1 and will do nothing for other ADCs.
@@ -768,11 +830,61 @@ pub const AdvancedADC = struct {
         adc1.regs.CR1.modify(.{ .DUALMOD = .Independent }); //set independent mode
     }
 
+    pub fn set_regular_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousRegular) DualConfigError!void {
+        try check_regular_simultaneous(adc1, adc2, config);
+        const master_seq = config.master_seq;
+        const slave_seq = config.slave_seq;
+        const m_seq = Sequence{ .seq = master_seq };
+        const s_seq = Sequence{ .seq = slave_seq };
+        const m_mode: RegularModes = switch (config.mode) {
+            .Single => RegularModes{ .Single = m_seq },
+            .Continuous => RegularModes{ .Continuous = m_seq },
+            .Discontinuous => |len| RegularModes{
+                .Discontinuous = .{
+                    .channels = m_seq,
+                    .length = len,
+                },
+            },
+        };
+
+        const s_mode: RegularModes = switch (config.mode) {
+            .Single => RegularModes{ .Single = s_seq },
+            .Continuous => RegularModes{ .Continuous = s_seq },
+            .Discontinuous => |len| RegularModes{
+                .Discontinuous = .{
+                    .channels = s_seq,
+                    .length = len,
+                },
+            },
+        };
+
+        adc1.configure_regular(.{
+            .mode = m_mode,
+            .trigger = config.trigger,
+            .DMA = config.dma,
+            .Interrupt = config.master_interrupt,
+        }) catch unreachable;
+
+        adc2.configure_regular(.{
+            .mode = s_mode,
+            .trigger = .SWSTART, //slave ADC must use software trigger
+            .DMA = false, //slave ADC does not support DMA.
+            .Interrupt = config.slave_interrupt,
+        }) catch unreachable;
+
+        if (config.rate_seq) |rates| {
+            for (rates, master_seq, slave_seq) |rate, mseq, ssque| {
+                adc1.set_channel_sample_rate(mseq, rate);
+                adc2.set_channel_sample_rate(ssque, rate);
+            }
+        }
+    }
+
     pub fn set_injected_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousInjected) DualConfigError!void {
         try check_injected_simultaneous(adc1, adc2, config);
         const master_seq = config.master_seq;
         const slave_seq = config.slave_seq;
-        adc1.set_injected_config(.{
+        adc1.configure_injected(.{
             .trigger = config.trigger,
             .offsets = config.master_offsets,
             .Interrupt = config.master_interrupt,
@@ -784,7 +896,7 @@ pub const AdvancedADC = struct {
             },
         }) catch unreachable;
 
-        adc2.set_injected_config(.{
+        adc2.configure_injected(.{
             .trigger = .SWSTART,
             .offsets = config.slave_offsets,
             .Interrupt = config.slave_interrupt,
@@ -800,6 +912,33 @@ pub const AdvancedADC = struct {
             for (rates, master_seq, slave_seq) |rate, mseq, ssque| {
                 adc1.set_channel_sample_rate(mseq, rate);
                 adc2.set_channel_sample_rate(ssque, rate);
+            }
+        }
+    }
+
+    fn check_regular_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousRegular) DualConfigError!void {
+        if (adc1.adc_num != 1 or adc2.adc_num != 2) {
+            return DualConfigError.InvalidADC; //only ADC1 and ADC2 can be used in dual mode
+        }
+        const master_len = config.master_seq.len;
+        const slave_len = config.slave_seq.len;
+        if (master_len != slave_len) {
+            return DualConfigError.invalidSequence; //master and slave sequences must have the same length
+        } else if (master_len == 0 or slave_len == 0) {
+            return DualConfigError.invalidSequence; //sequence cannot be empty
+        } else if (master_len > 17 or slave_len > 17) {
+            return DualConfigError.invalidSequence; //max length is 17 [0..16]
+        }
+
+        for (config.master_seq, config.slave_seq) |mch, sch| {
+            if (mch == sch) {
+                return DualConfigError.invalidSequence; //master and slave channels must be different
+            }
+        }
+
+        if (config.rate_seq) |rates| {
+            if (rates.len != master_len) {
+                return DualConfigError.InvalidSequence; //sample rates must match the master sequence length
             }
         }
     }

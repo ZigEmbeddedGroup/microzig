@@ -1,3 +1,10 @@
+//before creating a program using ADC from older ST families, such as in this case STM32F1
+//be aware of possible hardware bugs and limitations
+//for example:
+// temperature sensor/VREF cannot be read in interleaved mode as it requires a sample time greater than 17
+// readings after 1ms from the previous reading may contain more noise than expected
+//Voltage glitch on ADC input 0
+
 const std = @import("std");
 const microzig = @import("microzig");
 
@@ -10,6 +17,10 @@ const timer = microzig.hal.timer.GPTimer.init(.TIM2);
 const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
 const TX = gpio.Pin.from_port(.A, 9);
+
+pub const microzig_options = microzig.Options{
+    .logFn = stm32.uart.log,
+};
 
 const AdvancedADC = microzig.hal.adc.AdvancedADC;
 const ADC_pin1 = gpio.Pin.from_port(.A, 1);
@@ -24,13 +35,10 @@ fn adc_to_temp(val: usize) f32 {
     return ((v25 - temp_mv) / avg_slope) + 25; //convert to celsius
 }
 
-pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.log,
-};
-
 fn DMA_init(arr_addr: u32, adc_addr: u32) void {
     const CH1: *volatile DMA_t.CH = @ptrCast(&DMA.CH);
-    CH1.CR.modify(.{ .EN = 0 }); //disable channel
+    CH1.CR.raw = 0; //disable channel
+    CH1.NDTR.raw = 0;
     CH1.CR.modify(.{
         .DIR = DMA_t.DIR.FromPeripheral,
         .CIRC = 1, //disable circular mode
@@ -63,10 +71,8 @@ pub fn main() !void {
     const counter = timer.into_counter(8_000_000);
     const adc = AdvancedADC.init(.ADC1);
     const adc_data_addr: u32 = @intFromPtr(&adc.regs.DR);
-    var adc_buf: [10]u16 = undefined;
+    var adc_buf: [10]u16 = .{0} ** 10;
     const adc_buf_addr: u32 = @intFromPtr(&adc_buf);
-
-    DMA_init(adc_buf_addr, adc_data_addr);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     ADC_pin1.set_input_mode(.analog);
@@ -80,12 +86,11 @@ pub fn main() !void {
 
     stm32.uart.init_logger(&uart);
 
-    adc.enable(true, &counter);
-    adc.enable_refint(&counter);
-    adc.set_data_alignment(.Right);
+    //Force disable ADC before any config
+    adc.disable();
 
     //regular group configuration
-    try adc.configure_regular_conversion(.{
+    try adc.configure_regular(.{
         .DMA = true,
         .trigger = .SWSTART,
         .mode = .{
@@ -101,21 +106,23 @@ pub fn main() !void {
         },
     });
 
-    //injected group configuration
-    try adc.set_injected_config(.{
-        //subtract 10 from the first injected channel of the sequence
-        .offsets = .{ .SEQ1 = 10 },
+    //injected group configuration, AUTO INJECTED mode does not require external trigger
+    try adc.configure_injected(.{
         .mode = .{
             .auto_injected = .{
                 .seq = &.{2},
-                .channels_conf = &.{
-                    .{ .channel = 2, .sample_rate = .@"13.5" }, //ADC1 channel 3
-                },
             },
         },
     });
 
     std.log.info("start Advanced ADC scan", .{});
+
+    //enable ADC and VREF/tempsensor
+    adc.enable(true, &counter);
+    adc.enable_reftemp(&counter);
+
+    DMA_init(adc_buf_addr, adc_data_addr);
+
     while (true) {
         adc.software_trigger(); //start conversion
         counter.sleep_ms(100);
@@ -123,7 +130,7 @@ pub fn main() !void {
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(adc_buf[0])});
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});
-        std.log.info("CH2 {d}", .{adc_buf[3]});
+        std.log.info("CH3 {d}", .{adc_buf[3]});
         std.log.info("Injected: {d}", .{adc.read_injected_data(0)});
     }
 }

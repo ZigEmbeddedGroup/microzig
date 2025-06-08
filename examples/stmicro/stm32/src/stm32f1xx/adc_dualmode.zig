@@ -14,7 +14,15 @@ const TX = gpio.Pin.from_port(.A, 9);
 const AdvancedADC = microzig.hal.adc.AdvancedADC;
 const ADC_pin1 = gpio.Pin.from_port(.A, 1);
 const ADC_pin2 = gpio.Pin.from_port(.A, 2);
-const ADC_pin3 = gpio.Pin.from_port(.A, 3);
+
+pub const microzig_options = microzig.Options{
+    .logFn = stm32.uart.log,
+};
+
+const AdcData = packed struct(u32) {
+    adc1: u16,
+    adc2: u16,
+};
 
 const v25 = 1.43;
 const avg_slope = 0.0043; //4.3mV/°C
@@ -24,24 +32,21 @@ fn adc_to_temp(val: usize) f32 {
     return ((v25 - temp_mv) / avg_slope) + 25; //convert to celsius
 }
 
-pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.log,
-};
-
 fn DMA_init(arr_addr: u32, adc_addr: u32) void {
     const CH1: *volatile DMA_t.CH = @ptrCast(&DMA.CH);
-    CH1.CR.modify(.{ .EN = 0 }); //disable channel
+    CH1.CR.raw = 0; //disable channel
+    CH1.NDTR.raw = 0;
     CH1.CR.modify(.{
         .DIR = DMA_t.DIR.FromPeripheral,
         .CIRC = 1, //disable circular mode
         .PL = DMA_t.PL.High, //high priority
-        .MSIZE = DMA_t.SIZE.Bits16,
-        .PSIZE = DMA_t.SIZE.Bits16,
+        .MSIZE = DMA_t.SIZE.Bits32,
+        .PSIZE = DMA_t.SIZE.Bits32,
         .MINC = 1, //memory increment mode
         .PINC = 0, //peripheral not incremented
     });
 
-    CH1.NDTR.modify(.{ .NDT = 4 }); //number of data to transfer, 4 samples
+    CH1.NDTR.modify(.{ .NDT = 2 }); //number of data to transfer, 2 samples
     CH1.PAR = adc_addr; //peripheral address
     CH1.MAR = arr_addr; //memory address
     CH1.CR.modify(.{ .EN = 1 }); //enable channel
@@ -65,16 +70,13 @@ pub fn main() !void {
     const adc1 = AdvancedADC.init(.ADC1);
     const adc2 = AdvancedADC.init(.ADC2);
 
-    //const adc_data_addr: u32 = @intFromPtr(&adc.regs.DR);
-    //var adc_buf: [10]u16 = undefined;
-    //const adc_buf_addr: u32 = @intFromPtr(&adc_buf);
-
-    //DMA_init(adc_buf_addr, adc_data_addr);
+    const adc_data_addr: u32 = @intFromPtr(&adc1.regs.DR);
+    var adc_buf: [2]AdcData = undefined;
+    const adc_buf_addr: u32 = @intFromPtr(&adc_buf[0]);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     ADC_pin1.set_input_mode(.analog);
     ADC_pin2.set_input_mode(.analog);
-    ADC_pin3.set_input_mode(.analog);
 
     uart.apply(.{
         .baud_rate = 115200,
@@ -83,26 +85,31 @@ pub fn main() !void {
 
     stm32.uart.init_logger(&uart);
 
+    try adc1.configure_dual_mode(.{ .Regular = .{
+        .dma = true,
+        .master_seq = &.{ 16, 17 },
+        .slave_seq = &.{ 1, 2 },
+        .rate_seq = &.{ .@"239.5", .@"239.5" },
+        .trigger = .SWSTART,
+        .mode = .{ .Continuous = {} },
+    } });
+
+    std.log.info("start Dual ADC scan", .{});
     adc1.enable(true, &counter);
-    adc1.enable_refint(&counter);
-    adc2.enable(true, &counter);
-
-    try adc1.set_dual_mode(.{
-        .injected_simultaneous = .{
-            .master_seq = &.{ 16, 17 },
-            .slave_seq = &.{ 1, 2 },
-            .rate_seq = &.{ .@"239.5", .@"239.5" },
-        },
-    });
-
-    std.log.info("start Advanced ADC scan", .{});
+    adc1.enable_reftemp(&counter);
+    adc2.enable(false, &counter);
+    DMA_init(adc_buf_addr, adc_data_addr);
+    adc1.software_trigger(); //start conversion
     while (true) {
-        adc1.software_injected_trigger(); //start conversion
-        counter.sleep_ms(100);
+        counter.sleep_ms(250);
+        const temp = adc_buf[0].adc1;
+        const vref = adc_buf[1].adc1;
+        const ch1 = adc_buf[0].adc2;
+        const ch2 = adc_buf[1].adc2;
         std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
-        std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(@intCast(adc1.read_injected_data(0)))});
-        std.log.info("Vref: {d}", .{adc1.read_injected_data(1)});
-        std.log.info("CH1: {d}", .{adc2.read_injected_data(0)});
-        std.log.info("CH2 {d}", .{adc2.read_injected_data(1)});
+        std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(temp)});
+        std.log.info("Vref: {d}", .{vref});
+        std.log.info("CH1: {d}", .{ch1});
+        std.log.info("CH2 {d}", .{ch2});
     }
 }
