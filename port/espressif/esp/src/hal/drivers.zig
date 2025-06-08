@@ -172,11 +172,11 @@ pub const SPI_Device = struct {
     }
 
     pub fn write(dev: SPI_Device, datagram: []const u8) WriteError!void {
-        dev.bus.write_blocking(datagram, dev.bit_mode);
+        return dev.bus.write_blocking(datagram, dev.bit_mode);
     }
 
     pub fn writev(dev: SPI_Device, datagrams: []const []const u8) WriteError!void {
-        dev.bus.writev_blocking(datagrams, dev.bit_mode);
+        return dev.bus.writev_blocking(datagrams, dev.bit_mode);
     }
 
     pub fn read(dev: SPI_Device, datagram: []u8) ReadError!usize {
@@ -214,13 +214,13 @@ pub const SPI_Device = struct {
     };
 
     fn connect_fn(dd: *anyopaque) ConnectError!void {
-        _ = dd;
-        return;
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        return dev.connect();
     }
 
     fn disconnect_fn(dd: *anyopaque) void {
-        _ = dd;
-        return;
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        dev.disconnect();
     }
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {

@@ -27,6 +27,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = nrf52840_mdk, .name = "i2c_accel", .file = "src/i2c_accel.zig" },
         .{ .target = pca10040, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
         .{ .target = nrf52840_mdk, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
+        .{ .target = nrf52840_mdk, .name = "spi_master", .file = "src/spi_master.zig" },
+        .{ .target = pca10040, .name = "spi_master", .file = "src/spi_master.zig" },
     };
 
     for (available_examples) |example| {

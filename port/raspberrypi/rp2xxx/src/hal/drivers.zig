@@ -148,10 +148,13 @@ pub const SPI_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
     pub const WriteError = Datagram_Device.WriteError;
     pub const ReadError = Datagram_Device.ReadError;
+    pub const ChipSelect = struct {
+        pin: hal.gpio.Pin,
+        active_level: Digital_IO.State = .low,
+    };
 
     bus: hal.spi.SPI,
-    chip_select: hal.gpio.Pin,
-    active_level: Digital_IO.State,
+    chip_select: ?ChipSelect = null,
     rx_dummy_data: u8,
 
     pub const InitOptions = struct {
@@ -162,19 +165,16 @@ pub const SPI_Device = struct {
         rx_dummy_data: u8 = 0x00,
     };
 
-    pub fn init(
-        bus: hal.spi.SPI,
-        chip_select: hal.gpio.Pin,
-        options: InitOptions,
-    ) SPI_Device {
-        chip_select.set_function(.sio);
-        chip_select.set_direction(.out);
+    pub fn init(bus: hal.spi.SPI, chip_select: ChipSelect, rx_dummy_data: u8) SPI_Device {
+        if (chip_select) |cs| {
+            cs.pin.set_function(.sio);
+            cs.pin.set_direction(.out);
+        }
 
         var dev: SPI_Device = .{
             .bus = bus,
             .chip_select = chip_select,
-            .active_level = options.active_level,
-            .rx_dummy_data = options.rx_dummy_data,
+            .rx_dummy_data = rx_dummy_data,
         };
         // set the chip select to "deselect" the device
         dev.disconnect();
@@ -189,24 +189,27 @@ pub const SPI_Device = struct {
     }
 
     pub fn connect(dev: SPI_Device) !void {
-        const actual_level = dev.chip_select.read();
+        if (dev.chip_select) |cs| {
+            const actual_level = cs.pin.read();
 
-        const target_level: u1 = switch (dev.active_level) {
-            .low => 0,
-            .high => 1,
-        };
+            const target_level: u1 = switch (cs.active_level) {
+                .low => 0,
+                .high => 1,
+            };
 
-        if (target_level == actual_level)
-            return error.DeviceBusy;
+            if (target_level == actual_level)
+                return error.DeviceBusy;
 
-        dev.chip_select.put(target_level);
+            cs.pin.put(target_level);
+        }
     }
 
     pub fn disconnect(dev: SPI_Device) void {
-        dev.chip_select.put(switch (dev.active_level) {
-            .low => 1,
-            .high => 0,
-        });
+        if (dev.chip_select) |cs|
+            cs.pin.put(switch (cs.active_level) {
+                .low => 1,
+                .high => 0,
+            });
     }
 
     pub fn write(dev: SPI_Device, datagrams: []const u8) !void {
