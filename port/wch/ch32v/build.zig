@@ -60,35 +60,35 @@ const BaseChip = struct {
             .hal = .{
                 .root_source_file = self.hal_file,
             },
-            .linker_script = blk: {
-                const GenerateLinkerScriptArgs = @import("generate_linker_script.zig").Args;
-
-                const generate_linker_script_exe = b.addExecutable(.{
-                    .name = "generate_linker_script",
-                    .root_source_file = b.path("generate_linker_script.zig"),
-                    .target = b.graph.host,
-                    .optimize = .ReleaseSafe,
-                });
-
-                const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                    .cpu_name = @tagName(self.cpu_name),
-                    .chip_name = self.name,
-                    .flash_size = flash_size,
-                    .ram_size = ram_size,
-                };
-
-                const args_str = std.json.stringifyAlloc(
-                    b.allocator,
-                    generate_linker_script_args,
-                    .{},
-                ) catch @panic("out of memory");
-
-                const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
-                generate_linker_script_run.addArg(args_str);
-                break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
-            },
+            .linker_script = .{ .mode = .{ .include_sections = .{
+                .rodata_in_flash = true,
+            } } },
         };
 
+        // NOTE: generating a custom linker script doesn't really seem necessary
+        // blk: {
+        //     const GenerateLinkerScriptArgs = @import("generate_linker_script.zig").Args;
+        //     const generate_linker_script_exe = b.addExecutable(.{
+        //         .name = "generate_linker_script",
+        //         .root_source_file = b.path("generate_linker_script.zig"),
+        //         .target = b.graph.host,
+        //         .optimize = .ReleaseSafe,
+        //     });
+        //     const generate_linker_script_args: GenerateLinkerScriptArgs = .{
+        //         .cpu_name = @tagName(self.cpu_name),
+        //         .chip_name = self.name,
+        //         .flash_size = flash_size,
+        //         .ram_size = ram_size,
+        //     };
+        //     const args_str = std.json.stringifyAlloc(
+        //         b.allocator,
+        //         generate_linker_script_args,
+        //         .{},
+        //     ) catch @panic("out of memory");
+        //     const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
+        //     generate_linker_script_run.addArg(args_str);
+        //     break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
+        // },
         return ret;
     }
 };

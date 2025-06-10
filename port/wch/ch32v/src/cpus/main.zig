@@ -226,7 +226,8 @@ pub const startup_logic = struct {
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
 
-        @call(.always_inline, &startup_logic.initialize_system_memories, .{});
+        // NOTE: this can only be called once. Otherwise, we get a linker error for duplicate symbols
+        startup_logic.initialize_system_memories();
 
         // Configure the CPU.
         switch (cpu_name) {
@@ -273,7 +274,7 @@ pub const startup_logic = struct {
         asm volatile ("mret");
     }
 
-    fn initialize_system_memories() void {
+    inline fn initialize_system_memories() void {
         // Clear .bss section.
         asm volatile (
             \\    li a0, 0
