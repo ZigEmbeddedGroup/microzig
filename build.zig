@@ -549,35 +549,31 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.root_module.addImport("app", app_mod);
 
             const linker_script_options = options.linker_script orelse target.linker_script;
-            const linker_script = switch (linker_script_options) {
-                .generate => |generate_options| blk: {
-                    const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
+            const linker_script = blk: {
+                const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
 
-                    const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
+                const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
 
-                    const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                        .cpu_name = cpu.name,
-                        .cpu_arch = zig_resolved_target.result.cpu.arch,
-                        .chip_name = target.chip.name,
-                        .entry_name = generate_options.entry_name,
-                        .memory_regions = target.chip.memory_regions,
-                        .auto_generated_sections_index = generate_options.auto_generated_sections_index,
-                    };
+                const generate_linker_script_args: GenerateLinkerScriptArgs = .{
+                    .cpu_name = cpu.name,
+                    .cpu_arch = zig_resolved_target.result.cpu.arch,
+                    .chip_name = target.chip.name,
+                    .memory_regions = target.chip.memory_regions,
+                    .mode = linker_script_options.mode,
+                };
 
-                    const args_str = std.json.stringifyAlloc(
-                        b.allocator,
-                        generate_linker_script_args,
-                        .{},
-                    ) catch @panic("out of memory");
+                const args_str = std.json.stringifyAlloc(
+                    b.allocator,
+                    generate_linker_script_args,
+                    .{},
+                ) catch @panic("out of memory");
 
-                    const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
-                    generate_linker_script_run.addArg(args_str);
-                    for (generate_options.files) |ld_file| {
-                        generate_linker_script_run.addFileArg(ld_file);
-                    }
-                    break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
-                },
-                .custom => |ld_path| ld_path,
+                const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
+                generate_linker_script_run.addArg(args_str);
+                for (linker_script_options.files) |ld_file| {
+                    generate_linker_script_run.addFileArg(ld_file);
+                }
+                break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
             };
             fw.artifact.setLinkerScript(linker_script);
 

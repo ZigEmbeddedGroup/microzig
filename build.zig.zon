@@ -37,12 +37,6 @@
             .url = "git+https://github.com/mattnite/boxzer.git#d50d7916b1f850048b2ad7e63a7abf05bd73c0e6",
             .hash = "boxzer-0.1.0--ed-MLzlAADinFJMGZncIcYAE07MoAbAr8a2R7Cr-xln",
         },
-
-        // used in generate_linker_script to parse cli arguments
-        .clap = .{
-            .url = "git+https://github.com/Hejsil/zig-clap.git#e47028deaefc2fb396d3d9e9f7bd776ae0b2a43a",
-            .hash = "clap-0.10.0-oBajB434AQBDh-Ei3YtoKIRxZacVPF1iSwp3IX_ZB8f0",
-        },
     },
     .paths = .{
         "README.md",

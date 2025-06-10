@@ -23,6 +23,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
+        .entry = .{ .symbol_name = "_start" },
         .preferred_binary_format = .{ .esp = .{
             .chip_id = .esp32_c3,
             .flash_mode = .dio,
@@ -79,14 +80,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = .{ .generate = .{
-            .entry_name = "_start",
-            .auto_generated_sections_index = null,
+        .linker_script = .{
+            .mode = .only_memory,
             .files = microzig.utils.dupe_paths(b, &.{
-                b.path("ld/esp32_c3/sections.ld"),
+                b.path("ld/esp32_c3/image_boot_linker.ld"),
                 b.path("ld/esp32_c3/rom_functions.ld"),
             }),
-        } },
+        },
     };
 
     return .{
@@ -108,9 +108,24 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         },
                     }),
                 },
-                .linker_script = .{ .generate = .{ .files = microzig.utils.dupe_paths(b, &.{
-                    b.path("ld/esp32_c3/rom_functions.ld"),
-                }) } },
+                .chip = .{
+                    .name = "ESP32-C3",
+                    .url = "https://www.espressif.com/en/products/socs/esp32-c3",
+                    .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
+                    .memory_regions = &.{
+                        // irom
+                        .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
+                        // dram
+                        .{ .kind = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024 },
+                    },
+                },
+                .linker_script = .{
+                    .mode = .only_memory,
+                    .files = microzig.utils.dupe_paths(b, &.{
+                        b.path("ld/esp32_c3/direct_boot_linker.ld"),
+                        b.path("ld/esp32_c3/rom_functions.ld"),
+                    }),
+                },
             }),
         },
         .boards = .{},

@@ -395,7 +395,7 @@ pub const TrapFrame = extern struct {
     mtval: usize,
 };
 
-fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
+fn _vector_table() align(256) linksection("microzig_time_critical") callconv(.naked) void {
     comptime {
         // TODO: make a better default exception handler
         @export(
@@ -685,7 +685,7 @@ fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
     );
 }
 
-fn unhandled(_: *TrapFrame) linksection(".trap") callconv(.c) void {
+fn unhandled(_: *TrapFrame) linksection("microzig_time_critical") callconv(.c) void {
     const mcause = csr.mcause.read();
 
     if (mcause.is_interrupt != 0) {
@@ -698,7 +698,7 @@ fn unhandled(_: *TrapFrame) linksection(".trap") callconv(.c) void {
     @panic("unhandled trap");
 }
 
-fn _update_priority() linksection(".trap") callconv(.c) u32 {
+fn _update_priority() linksection("microzig_time_critical") callconv(.c) u32 {
     const mcause = csr.mcause.read();
 
     const prev_priority = interrupt.get_priority_threshold();
@@ -719,7 +719,7 @@ fn _update_priority() linksection(".trap") callconv(.c) u32 {
     return @intFromEnum(prev_priority);
 }
 
-fn _restore_priority(priority_raw: u32) linksection(".trap") callconv(.c) void {
+fn _restore_priority(priority_raw: u32) linksection("microzig_time_critical") callconv(.c) void {
     interrupt.disable_interrupts();
     interrupt.set_priority_threshold(@enumFromInt(priority_raw));
 }

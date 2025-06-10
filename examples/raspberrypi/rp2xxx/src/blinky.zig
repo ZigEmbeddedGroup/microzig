@@ -4,7 +4,7 @@ const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 
 const pin_config = rp2xxx.pins.GlobalConfiguration{
-    .GPIO25 = .{
+    .GPIO0 = .{
         .name = "led",
         .direction = .out,
     },

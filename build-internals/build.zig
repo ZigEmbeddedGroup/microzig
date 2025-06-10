@@ -59,10 +59,10 @@ pub const Target = struct {
     /// if present.
     board: ?Board = null,
 
-    /// (optional) Linker script generation options.
-    linker_script: LinkerScriptOptions = .default,
+    /// Linker script generation options.
+    linker_script: LinkerScriptOptions = .{},
 
-    /// (Optional) Explicitly set the entry point
+    /// (optional) Explicitly set the entry point.
     entry: ?Build.Step.Compile.Entry = null,
 
     /// (optional) Post processing step that will patch up and modify the elf file if necessary.
@@ -225,23 +225,19 @@ pub const BinaryFormat = union(enum) {
     };
 };
 
-pub const LinkerScriptOptions = union(enum) {
-    pub const default: LinkerScriptOptions = .{ .generate = .{
-        .auto_generated_sections_index = 0,
-        .files = &.{},
-    } };
+pub const LinkerScriptOptions = struct {
+    pub const Mode = union(enum) {
+        none,
+        only_memory,
+        include_sections: struct {
+            rodata_in_flash: bool = false,
+        },
+    };
 
-    generate: struct {
-        /// Entry point name.
-        entry_name: []const u8 = "microzig_main",
-        /// The index at which to insert the auto-generated sections. Don't add the auto-generated
-        /// sections if null.
-        auto_generated_sections_index: ?usize = 0,
-        /// Files to concatinate in the generated linker script. **Needs to be heap allocated. Use
-        /// `utils.dupe_paths`.**
-        files: []const LazyPath = &.{},
-    },
-    custom: LazyPath,
+    mode: Mode = .{ .include_sections = .{} },
+    /// Files to concatinate in the generated linker script. **Needs to be heap
+    /// allocated. Use `utils.dupe_paths`.**
+    files: []const LazyPath = &.{},
 };
 
 /// A descriptor for memory regions in a microcontroller.
@@ -265,10 +261,10 @@ pub const MemoryRegion = struct {
         reserved,
 
         /// This is a memory region used for internal linking tasks required by the board support package.
-        custom: PrivateRegion,
+        custom: CustomRegion,
     };
 
-    pub const PrivateRegion = struct {
+    pub const CustomRegion = struct {
         /// The name of the memory region. Will not have an automatic numeric counter and must be unique.
         name: []const u8,
 
@@ -287,7 +283,7 @@ pub const utils = struct {
     pub const dupe_paths = dupe(LazyPath);
     pub const dupe_imports = dupe(Module.Import);
 
-    fn dupe(comptime T: type) fn(b: *Build, []const T) []T {
+    fn dupe(comptime T: type) fn (b: *Build, []const T) []T {
         return struct {
             pub fn inner(b: *Build, stuff: []const T) []T {
                 return b.allocator.dupe(T, stuff) catch @panic("OOM");

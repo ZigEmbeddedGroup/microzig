@@ -43,7 +43,7 @@ pub const boot2 = struct {
     ///
     /// This is required by `_range_erase` and `_range_program` so we can later setup
     /// XIP via the second stage bootloader.
-    pub export fn flash_init() linksection(".time_critical") void {
+    pub export fn flash_init() linksection("microzig_time_critical") void {
         if (copyout_valid) return;
         const bootloader = @as([*]u32, @ptrFromInt(XIP_BASE));
         var i: usize = 0;
@@ -55,7 +55,7 @@ pub const boot2 = struct {
 
     /// Configure the SSI and the external flash for XIP by calling the second stage
     /// bootloader that was copied out to `copyout`.
-    pub export fn flash_enable_xip() linksection(".time_critical") void {
+    pub export fn flash_enable_xip() linksection("microzig_time_critical") void {
         // The bootloader is in thumb mode
         asm volatile (
             \\adds r0, #1
@@ -76,7 +76,7 @@ pub inline fn range_erase(offset: u32, count: u32) void {
     @call(.never_inline, _range_erase, .{ offset, count });
 }
 
-export fn _range_erase(offset: u32, count: u32) linksection(".time_critical") void {
+export fn _range_erase(offset: u32, count: u32) linksection("microzig_time_critical") void {
     // TODO: add sanity checks, e.g., offset + count < flash size
 
     asm volatile ("" ::: "memory"); // memory barrier
@@ -100,7 +100,7 @@ pub inline fn range_program(offset: u32, data: []const u8) void {
     @call(.never_inline, _range_program, .{ offset, data.ptr, data.len });
 }
 
-export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection(".time_critical") void {
+export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection("microzig_time_critical") void {
     // TODO: add sanity checks, e.g., offset + count < flash size
 
     asm volatile ("" ::: "memory"); // memory barrier
@@ -121,7 +121,7 @@ pub inline fn force_cs(high: bool) void {
     @call(.never_inline, _force_cs, .{high});
 }
 
-fn _force_cs(high: bool) linksection(".time_critical") void {
+fn _force_cs(high: bool) linksection("microzig_time_critical") void {
     const value = v: {
         var value: u32 = 0x2;
         if (high) {
@@ -142,7 +142,7 @@ pub inline fn cmd(tx_buf: []const u8, rx_buf: []u8) void {
     @call(.never_inline, _cmd, .{ tx_buf, rx_buf });
 }
 
-fn _cmd(tx_buf: []const u8, rx_buf: []u8) linksection(".time_critical") void {
+fn _cmd(tx_buf: []const u8, rx_buf: []u8) linksection("microzig_time_critical") void {
     boot2.flash_init();
     asm volatile ("" ::: "memory"); // memory barrier
     rom.connect_internal_flash()();

@@ -1,13 +1,14 @@
 const std = @import("std");
-const MemoryRegion = @import("build-internals").MemoryRegion;
+const microzig = @import("build-internals");
+const Mode = microzig.LinkerScriptOptions.Mode;
+const MemoryRegion = microzig.MemoryRegion;
 
 pub const Args = struct {
     cpu_name: []const u8,
     cpu_arch: std.Target.Cpu.Arch,
     chip_name: []const u8,
-    entry_name: []const u8,
     memory_regions: []const MemoryRegion,
-    auto_generate_sections_index: ?usize,
+    mode: Mode,
 };
 
 pub fn main() !void {
@@ -40,140 +41,113 @@ pub fn main() !void {
         \\ * Target Chip: {[chip]s}
         \\ */
         \\
-        \\ENTRY({[entry_name]s});
-        \\
         \\
     , .{
-        .entry_name = parsed_args.entry_name,
         .cpu = parsed_args.cpu_name,
         .chip = parsed_args.chip_name,
     });
 
-    try writer.writeAll("MEMORY\n{\n");
-    {
-        var counters = [4]usize{ 0, 0, 0, 0 };
-        for (parsed_args.memory_regions) |region| {
-            // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
+    if (parsed_args.mode != .none) {
+        try writer.writeAll("MEMORY\n{\n");
+        {
+            var counters = [4]usize{ 0, 0, 0, 0 };
+            for (parsed_args.memory_regions) |region| {
+                // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
 
-            switch (region.kind) {
-                .flash => {
-                    try writer.print("  flash{d}    (rx!w)", .{counters[0]});
-                    counters[0] += 1;
-                },
+                switch (region.kind) {
+                    .flash => {
+                        try writer.print("  flash{d}    (rx!w)", .{counters[0]});
+                        counters[0] += 1;
+                    },
 
-                .ram => {
-                    try writer.print("  ram{d}      (rw!x)", .{counters[1]});
-                    counters[1] += 1;
-                },
+                    .ram => {
+                        try writer.print("  ram{d}      (rw!x)", .{counters[1]});
+                        counters[1] += 1;
+                    },
 
-                .io => {
-                    try writer.print("  io{d}       (rw!x)", .{counters[2]});
-                    counters[2] += 1;
-                },
+                    .io => {
+                        try writer.print("  io{d}       (rw!x)", .{counters[2]});
+                        counters[2] += 1;
+                    },
 
-                .reserved => {
-                    try writer.print("  reserved{d} (rw!x)", .{counters[3]});
-                    counters[3] += 1;
-                },
+                    .reserved => {
+                        try writer.print("  reserved{d} (rw!x)", .{counters[3]});
+                        counters[3] += 1;
+                    },
 
-                .custom => |custom| {
-                    try writer.print("  {s} (", .{custom.name});
-                    if (custom.readable) try writer.writeAll("r");
-                    if (custom.writeable) try writer.writeAll("w");
-                    if (custom.executable) try writer.writeAll("x");
+                    .custom => |custom| {
+                        try writer.print("  {s} (", .{custom.name});
+                        if (custom.readable) try writer.writeAll("r");
+                        if (custom.writeable) try writer.writeAll("w");
+                        if (custom.executable) try writer.writeAll("x");
 
-                    if (!custom.readable or !custom.writeable or !custom.executable) {
-                        try writer.writeAll("!");
-                        if (!custom.readable) try writer.writeAll("r");
-                        if (!custom.writeable) try writer.writeAll("w");
-                        if (!custom.executable) try writer.writeAll("x");
-                    }
-                    try writer.writeAll(")");
-                },
+                        if (!custom.readable or !custom.writeable or !custom.executable) {
+                            try writer.writeAll("!");
+                            if (!custom.readable) try writer.writeAll("r");
+                            if (!custom.writeable) try writer.writeAll("w");
+                            if (!custom.executable) try writer.writeAll("x");
+                        }
+                        try writer.writeAll(")");
+                    },
+                }
+                try writer.print(" : ORIGIN = 0x{X:0>8}, LENGTH = 0x{X:0>8}\n", .{ region.offset, region.length });
             }
-            try writer.print(" : ORIGIN = 0x{X:0>8}, LENGTH = 0x{X:0>8}\n", .{ region.offset, region.length });
-        }
-    }
-
-    try writer.writeAll("}\n\n");
-
-    if (parsed_args.auto_generated_sections_index != null) {
-        try writer.writeAll(
-            \\SECTIONS
-            \\{
-            \\    .text :
-            \\    {
-            \\       KEEP(*(microzig_flash_start))
-            \\    } > flash0
-            \\}
-            \\
-        );
-    }
-
-    for (user_ld_files, 0..) |file_path, i| {
-        try writer.writeAll("\n");
-
-        if (parsed_args.auto_generated_sections_index == i) {
-            try add_auto_generated_sections(writer, parsed_args.cpu_arch);
         }
 
+        try writer.writeAll("}\n");
+    }
+
+    if (parsed_args.mode == .include_sections) {
+        try writer.writeAll("\n/* auto-generated sections */\n");
+        try generate_sections(writer, parsed_args.cpu_arch, parsed_args.mode.include_sections.rodata_in_flash);
+    }
+
+    for (user_ld_files) |file_path| {
         const ld_file = try std.fs.cwd().openFile(file_path, .{});
         const ld_file_data = try ld_file.readToEndAlloc(allocator, 1_000_000);
 
+        try writer.print("\n/* file: {s} */\n", .{file_path});
         try writer.writeAll(ld_file_data);
     }
+}
 
-    // add the autogenerated sections even if no ld files were provided or if they come last and
-    // don't add them if `auto_generated_sections_index` is null
-    if (parsed_args.auto_generated_sections_index == user_ld_files.len) {
-        try writer.writeAll("\n");
-        try add_auto_generated_sections(writer, parsed_args.cpu_arch);
-    }
+pub fn generate_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch, rodata_in_flash: bool) !void {
+    try writer.writeAll(
+        \\SECTIONS
+        \\{
+        \\  .flash_start :
+        \\  {
+        \\    KEEP(*(microzig_flash_start))
+        \\  }
+        \\
+        \\  .text :
+        \\  {
+        \\    *(.text*)
+        \\
+    );
 
-    if (parsed_args.auto_generated_sections_index != null) {
+    if (rodata_in_flash) {
         try writer.writeAll(
-            \\
-            \\SECTIONS
-            \\{
-            \\    .flash_end :
-            \\    {
-            \\        microzig_flash_end = .;
-            \\    } > flash0
-            \\}
+            \\    *(.rodata*)
             \\
         );
     }
 
-    // TODO: Assert that the flash can actually hold all data!
-    // try writer.writeAll(
-    //     \\
-    //     \\  ASSERT( (SIZEOF(.text) + SIZEOF(.data) > LENGTH(flash0)), "Error: .text + .data is too large for flash!" );
-    //     \\
-    // );
-}
-
-pub fn add_auto_generated_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch) !void {
     try writer.writeAll(
-        \\SECTIONS
-        \\{
-        \\    .text :
-        \\    {
-        \\        KEEP(*(microzig_flash_start))
-        \\        *(.text*)
-        \\    } > flash0
+        \\  } > flash0
         \\
         \\
     );
 
     switch (cpu_arch) {
         .arm, .thumb => try writer.writeAll(
-            \\    .ARM.extab : {
-            \\        *(.ARM.extab* .gnu.linkonce.armextab.*)
-            \\    } >flash0
+            \\  .ARM.extab : {
+            \\    *(.ARM.extab* .gnu.linkonce.armextab.*)
+            \\  } > flash0
             \\
-            \\    .ARM.exidx : {
-            \\        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-            \\    } >flash0
+            \\  .ARM.exidx : {
+            \\    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+            \\  } > flash0
             \\
             \\
         ),
@@ -181,30 +155,46 @@ pub fn add_auto_generated_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arc
     }
 
     try writer.writeAll(
-        \\    .data :
-        \\    {
-        \\        microzig_data_start = .;
-        \\        *(.sdata*)
-        \\        *(.data*)
-        \\        *(.rodata*)
-        \\        microzig_data_end = .;
-        \\    } > ram0 AT> flash0
+        \\  .data :
+        \\  {
+        \\    microzig_data_start = .;
+        \\    KEEP(*(microzig_time_critical))
+        \\    *(.sdata*)
+        \\    *(.data*)
         \\
-        \\    .bss (NOLOAD) :
-        \\    {
-        \\        microzig_bss_start = .;
-        \\        *(.bss*)
-        \\        *(.sbss*)
-        \\        microzig_bss_end = .;
-        \\    } > ram0
+    );
+
+    if (!rodata_in_flash) {
+        try writer.writeAll(
+            \\    *(.rodata*)
+            \\
+        );
+    }
+
+    try writer.writeAll(
+        \\    microzig_data_end = .;
+        \\  } > ram0 AT> flash0
         \\
-        \\    microzig_data_load_start = LOADADDR(.data);
+        \\  .bss (NOLOAD) :
+        \\  {
+        \\    microzig_bss_start = .;
+        \\    *(.bss*)
+        \\    *(.sbss*)
+        \\    microzig_bss_end = .;
+        \\  } > ram0
+        \\
+        \\  .flash_end :
+        \\  {
+        \\    microzig_flash_end = .;
+        \\  } > flash0
+        \\
+        \\  microzig_data_load_start = LOADADDR(.data);
         \\
     );
 
     switch (cpu_arch) {
         .riscv32, .riscv64 => try writer.writeAll(
-            \\    PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
+            \\  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
             \\
         ),
         else => {},
