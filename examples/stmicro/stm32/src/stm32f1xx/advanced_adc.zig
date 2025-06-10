@@ -86,8 +86,9 @@ pub fn main() !void {
 
     stm32.uart.init_logger(&uart);
 
-    //Force disable ADC before any config
-    adc.disable();
+    //enable ADC and VREF/tempsensor
+    adc.enable(true, &counter);
+    adc.enable_reftemp(&counter);
 
     //regular group configuration
     try adc.configure_regular(.{
@@ -116,10 +117,6 @@ pub fn main() !void {
     });
 
     std.log.info("start Advanced ADC scan", .{});
-
-    //enable ADC and VREF/tempsensor
-    adc.enable(true, &counter);
-    adc.enable_reftemp(&counter);
 
     DMA_init(adc_buf_addr, adc_data_addr);
 

@@ -85,6 +85,10 @@ pub fn main() !void {
 
     stm32.uart.init_logger(&uart);
 
+    adc1.enable(true, &counter);
+    adc1.enable_reftemp(&counter);
+    adc2.enable(false, &counter);
+
     try adc1.configure_dual_mode(.{ .Regular = .{
         .dma = true,
         .master_seq = &.{ 16, 17 },
@@ -95,9 +99,6 @@ pub fn main() !void {
     } });
 
     std.log.info("start Dual ADC scan", .{});
-    adc1.enable(true, &counter);
-    adc1.enable_reftemp(&counter);
-    adc2.enable(false, &counter);
     DMA_init(adc_buf_addr, adc_data_addr);
     adc1.software_trigger(); //start conversion
     while (true) {

@@ -352,6 +352,8 @@ pub const DualConfigError = error{
     ADC2NotSupported,
 } || RegularConfigError;
 
+//NOTE: before making any write to the CR2 bit, it is necessary to check if the write will change the current value of the register
+//otherwise, it will result in an accidental trigger
 pub const AdvancedADC = struct {
     regs: *volatile adc_regs,
     adc_num: usize,
@@ -450,18 +452,6 @@ pub const AdvancedADC = struct {
     pub fn configure_regular(self: *const AdvancedADC, config: RegularConfig) RegularConfigError!void {
         const regs = self.regs;
 
-        //disable all corrent configs to avoid erros
-        regs.CR2.modify(.{
-            .DMA = 0,
-            .CONT = 0,
-            .EXTTRIG = 0,
-        });
-
-        regs.CR1.modify(.{
-            .EOCIE = 0,
-            .DISCEN = 0,
-        });
-
         switch (config.mode) {
             .Single => |seq| {
                 try self.set_regular_seq(seq, true);
@@ -477,16 +467,23 @@ pub const AdvancedADC = struct {
         if (self.adc_num == 2 and config.DMA) return RegularConfigError.InvalidADC; //only ADC1 and ADC3 can use DMA
 
         regs.CR1.modify(.{ .EOCIE = @as(u1, if (config.Interrupt) 1 else 0) });
-        regs.CR2.modify(.{
-            .EXTSEL = @as(u3, @intFromEnum(config.trigger)),
-            .EXTTRIG = 1,
-            .DMA = @as(u1, if (config.DMA) 1 else 0),
-        });
+
+        const cr2_read = regs.CR2.read();
+        const trig_sel: u3 = @intFromEnum(config.trigger);
+        const dma: u1 = if (config.DMA) 1 else 0;
+        if ((cr2_read.DMA != dma) or (cr2_read.EXTTRIG != trig_sel))
+            regs.CR2.modify(.{
+                .EXTSEL = trig_sel,
+                .EXTTRIG = 1,
+                .DMA = dma,
+            });
     }
 
     pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, single_mode: bool) RegularConfigError!void {
         const regs = self.regs;
         const len = seq.seq.len;
+        const cr2_state = regs.CR2.read();
+        const val: u1 = @as(u1, if (single_mode) 0 else 1);
         if (len == 0) {
             return RegularConfigError.InvalidSequence;
         } else if (len > 17) {
@@ -505,7 +502,9 @@ pub const AdvancedADC = struct {
             }
         }
 
-        regs.CR2.modify(.{ .CONT = @as(u1, if (single_mode) 0 else 1) }); //set conversion mode
+        if (val != cr2_state.CONT) {
+            regs.CR2.modify(.{ .CONT = val }); //set conversion mode
+        }
     }
 
     pub fn set_regular_discontinuous(self: *const AdvancedADC, disc: Discontinuous) RegularConfigError!void {
@@ -521,7 +520,10 @@ pub const AdvancedADC = struct {
             return RegularConfigError.InvalidMode; //discontinuous mode is already enabled for injected
         }
 
-        regs.CR2.modify(.{ .CONT = 0 }); //set conversion mode
+        if (regs.CR2.read().CONT == 1) {
+            regs.CR2.modify(.{ .CONT = 0 }); //clear conversion mode
+        }
+
         regs.CR1.modify(.{
             .SCAN = 1, //enable scan mode
             .DISCEN = 1, //enable discontinuous mode
@@ -600,7 +602,10 @@ pub const AdvancedADC = struct {
 
     pub fn set_DMA(self: *const AdvancedADC, set: bool) void {
         const regs = self.regs;
-        regs.CR2.modify(.{ .DMA = if (set) 1 else 0 });
+        const val = if (set) 1 else 0;
+        if (regs.CR2.read().DMA != val) {
+            regs.CR2.modify(.{ .DMA = val });
+        }
     }
 
     pub fn set_interrupt(self: *const AdvancedADC, set: bool) void {
@@ -610,10 +615,14 @@ pub const AdvancedADC = struct {
 
     pub fn set_trigger(self: *const AdvancedADC, trigger: RegularTrigger) void {
         const regs = self.regs;
-        regs.CR2.modify(.{
-            .EXTSEL = @as(u3, @intFromEnum(trigger)),
-            .EXTTRIG = 1,
-        });
+        const trig_sel: u3 = @intFromEnum(trigger);
+        const cr2 = regs.CR2.read();
+        if (cr2.EXTSEL != trig_sel) {
+            regs.CR2.modify(.{
+                .EXTSEL = trig_sel,
+                .EXTTRIG = 1,
+            });
+        }
     }
 
     //========== ADC Injected conversion read functions ===========
@@ -653,10 +662,6 @@ pub const AdvancedADC = struct {
         var trig: u1 = 1;
 
         //disable all corrent configs to avoid erros
-        regs.CR2.modify(.{
-            .JEXTTRIG = 0,
-        });
-
         regs.CR1.modify(.{
             .JEOCIE = 0,
             .JDISCEN = 0,
@@ -781,10 +786,13 @@ pub const AdvancedADC = struct {
     /// auto injected mode uses internal trigger, so this function will block the auto injected mode.
     pub fn set_injected_trigger(self: *const AdvancedADC, trigger: InjectedTrigger) void {
         const regs = self.regs;
-        regs.CR2.modify(.{
-            .JEXTSEL = @as(u3, @intFromEnum(trigger)),
-            .JEXTTRIG = 1,
-        });
+        const trig_sel: u3 = @intFromEnum(trigger);
+        if (regs.CR2.read().JEXTSEL != trig_sel) {
+            regs.CR2.modify(.{
+                .JEXTSEL = trig_sel,
+                .JEXTTRIG = 1,
+            });
+        }
     }
 
     //========== ADC Dual mode functions ===========
