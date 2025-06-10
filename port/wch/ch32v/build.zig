@@ -60,9 +60,6 @@ const BaseChip = struct {
             .hal = .{
                 .root_source_file = self.hal_file,
             },
-            .linker_script = .{ .mode = .{ .include_sections = .{
-                .rodata_in_flash = true,
-            } } },
         };
 
         // NOTE: generating a custom linker script doesn't really seem necessary

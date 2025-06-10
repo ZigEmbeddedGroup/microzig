@@ -230,7 +230,7 @@ pub const LinkerScriptOptions = struct {
         none,
         only_memory,
         include_sections: struct {
-            rodata_in_flash: bool = false,
+            rodata_in_ram: bool = false,
         },
     };
 

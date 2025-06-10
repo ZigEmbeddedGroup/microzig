@@ -99,7 +99,7 @@ pub fn main() !void {
 
     if (parsed_args.mode == .include_sections) {
         try writer.writeAll("\n/* auto-generated sections */\n");
-        try generate_sections(writer, parsed_args.cpu_arch, parsed_args.mode.include_sections.rodata_in_flash);
+        try generate_sections(writer, parsed_args.cpu_arch, parsed_args.mode.include_sections.rodata_in_ram);
     }
 
     for (user_ld_files) |file_path| {
@@ -111,7 +111,7 @@ pub fn main() !void {
     }
 }
 
-pub fn generate_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch, rodata_in_flash: bool) !void {
+pub fn generate_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch, rodata_in_ram: bool) !void {
     try writer.writeAll(
         \\SECTIONS
         \\{
@@ -126,8 +126,9 @@ pub fn generate_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch, rodata_
         \\
     );
 
-    if (rodata_in_flash) {
+    if (!rodata_in_ram) {
         try writer.writeAll(
+            \\    *(.srodata*)
             \\    *(.rodata*)
             \\
         );
@@ -164,8 +165,9 @@ pub fn generate_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch, rodata_
         \\
     );
 
-    if (!rodata_in_flash) {
+    if (rodata_in_ram) {
         try writer.writeAll(
+            \\    *(.srodata*)
             \\    *(.rodata*)
             \\
         );
