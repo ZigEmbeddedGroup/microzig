@@ -66,6 +66,7 @@ pub const ICM_20948 = struct {
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
+    slave_address: u8 = 0,
 
     pub const Error = error{
         // Device identification errors
@@ -463,6 +464,8 @@ pub const ICM_20948 = struct {
 
         // Reset the current bank cache since we're resetting the device
         self.current_bank = null;
+        // Reset the slave address as well
+        self.slave_address = 0;
 
         self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true }) catch
             return Error.ResetFailed;
@@ -762,25 +765,27 @@ pub const ICM_20948 = struct {
             // TODO: 6 right? 3 i16s
             .i2c_slv0_leng = 6,
         }));
+
+        // Sleep to give master time to fill sens data with data from new register
+        self.clock.sleep_ms(MAG_READ_DELAY_US);
     }
 
-    // TODO: Could cache the slave address like we do with banks
     /// Clear the read bit in the sensor's master controller for the next transaction. This
     /// preserves the i2c slave address, so it must be set correctly in the first place.
     inline fn set_mag_write(self: *Self) !void {
-        var reg = try self.read_byte(.{ .bank3 = .i2c_slv0_addr });
-        // Clear the read bit
-        reg &= 0b0111_1111;
-        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, reg);
+        if (self.slave_address == 0x80 | MAG_ADDRESS) return;
+
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS);
+        self.slave_address = MAG_ADDRESS;
     }
 
     /// Set the read bit in the sensor's master controller for the next transaction This preserves
     /// the i2c slave address, so it must be set correctly in the first place.
     fn set_mag_read(self: *Self) !void {
-        var reg = try self.read_byte(.{ .bank3 = .i2c_slv0_addr });
-        // Set the read bit
-        reg |= 0b1000_0000;
-        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, reg);
+        if (self.slave_address == 0x80 | MAG_ADDRESS) return;
+
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, 0x80 | MAG_ADDRESS);
+        self.slave_address = 0x80 | MAG_ADDRESS;
     }
 
     pub fn mag_read_register(self: *Self, reg: MagRegister, buf: []u8) Error!void {
