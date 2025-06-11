@@ -20,8 +20,9 @@ pub fn main() !void {
 
     const allocator = arena.allocator();
     const args = try std.process.argsAlloc(allocator);
-
-    std.debug.assert(args.len >= 3);
+    if (args.len < 3) {
+        return error.UsageError;
+    }
 
     const json_args = args[1];
     const user_ld_files = args[2 .. args.len - 1];
