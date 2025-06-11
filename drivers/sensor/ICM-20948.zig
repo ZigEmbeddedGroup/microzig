@@ -182,11 +182,13 @@ pub const ICM_20948 = struct {
 
     const MagRegister = enum(u8) {
         device_id = 0x01,
+        // DRDY (data ready). Set to zero when data is read
         status1 = 0x10,
         // xl, xh, yl, yh, zl, zh
         hxl = 0x11,
+        // HOFL check if overflowed. Necessary to read after reading measurement data?
         status_2 = 0x18,
-        // Continuous mode?
+        // Operating mode/power down
         control2 = 0x31,
         // Reset control
         control3 = 0x32,
@@ -315,7 +317,7 @@ pub const ICM_20948 = struct {
         i2c_slv0_leng: u4 = 0,
         i2c_slv0_grp: u1 = 0,
         i2c_slv0_reg_dis: u1 = 0,
-        i2c_lsv0_byte_sw: u1 = 0,
+        i2c_slv0_byte_sw: u1 = 0,
         i2c_slv0_en: u1 = 0,
     };
 
@@ -719,6 +721,10 @@ pub const ICM_20948 = struct {
         // Reset to known-good state
         try self.mag_reset();
 
+        // Set to continuous sampling mode (100Hz). This determines how often the magnetometer
+        // latches the data, not how often our device requests it.
+        try self.mag_write_byte(.control2, 0b01000);
+
         // Ensure we can read from the magnetometer
         const mag_id = try self.mag_read_byte(.device_id);
         if (mag_id != MAG_WHOAMI) {
@@ -727,11 +733,7 @@ pub const ICM_20948 = struct {
         }
 
         // TODO: Needed?
-        // try self.mag_reset();
-
-        // Set to continuous sampling mode (100Hz). This determines how often the magnetometer
-        // latches the data, not how often our device requests it.
-        try self.mag_write_byte(.control2, 0b01000);
+        try self.mag_reset();
 
         // Set read address as xl so we can read all 6 bytes
         try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(MagRegister.hxl));
