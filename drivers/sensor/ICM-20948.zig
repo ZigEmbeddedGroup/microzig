@@ -187,7 +187,7 @@ pub const ICM_20948 = struct {
         // xl, xh, yl, yh, zl, zh
         hxl = 0x11,
         // HOFL check if overflowed. Necessary to read after reading measurement data?
-        status_2 = 0x18,
+        status2 = 0x18,
         // Operating mode/power down
         control2 = 0x31,
         // Reset control
@@ -540,7 +540,7 @@ pub const ICM_20948 = struct {
         });
     }
 
-    const Accel_data_unscaled = struct {
+    const Accel_data_unscaled = packed struct {
         x: i16 = 0,
         y: i16 = 0,
         z: i16 = 0,
@@ -604,7 +604,7 @@ pub const ICM_20948 = struct {
         });
     }
 
-    const Gyro_data_unscaled = struct {
+    const Gyro_data_unscaled = packed struct {
         x: i16 = 0,
         y: i16 = 0,
         z: i16 = 0,
@@ -734,21 +734,6 @@ pub const ICM_20948 = struct {
 
         // TODO: Needed?
         try self.mag_reset();
-
-        // Set read address as xl so we can read all 6 bytes
-        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(MagRegister.hxl));
-
-        // Enable auto-reading
-        // TODO: Enable byte swapping and set GRP correctly so we can avoid swapping from BigEndian
-        // hxl is 0x11 (odd)
-        try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
-            .i2c_slv0_en = 1,
-            // Read 6 i16s
-            .i2c_slv0_leng = 6,
-        }));
-
-        // Sleep to give master time to fill sens data with data from new register
-        self.clock.sleep_us(MAG_READ_DELAY_US);
     }
 
     /// Clear the read bit in the sensor's master controller for the next transaction. This
@@ -818,24 +803,40 @@ pub const ICM_20948 = struct {
         try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
     }
 
-    const Mag_data_unscaled = struct {
+    const Mag_data_unscaled = packed struct {
+        status1: u8 = 0,
         x: i16 = 0,
         y: i16 = 0,
         z: i16 = 0,
+        dummy: u8 = 0,
+        status2: u8 = 0,
     };
 
     pub fn get_mag_data_unscaled(self: *Self) Error!Mag_data_unscaled {
         var raw_data: Mag_data_unscaled = .{};
+
+        // NOTE: We set the address to the byte before hxl, and set the length to 9 bytes so
+        // that we read status1 which we can check, but more importantly, we read out
+        // status2, which MUST BE READ between reads otherwise the values won't get updated.
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(MagRegister.status1));
+        try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
+            .i2c_slv0_en = 1,
+            .i2c_slv0_leng = 9,
+        }));
+
+        // Sleep long enough to give our device time to read from the mag
+        self.clock.sleep_us(MAG_READ_DELAY_US);
 
         self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read magnetometer data: {}", .{err});
             return err;
         };
 
+        // We don't need to byte swap here
         return .{
-            .x = std.mem.bigToNative(i16, raw_data.x),
-            .y = std.mem.bigToNative(i16, raw_data.y),
-            .z = std.mem.bigToNative(i16, raw_data.z),
+            .x = raw_data.x,
+            .y = raw_data.y,
+            .z = raw_data.z,
         };
     }
 };
