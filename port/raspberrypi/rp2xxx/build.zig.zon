@@ -18,8 +18,5 @@
         "ld",
         "patches",
         "tools",
-        "rp2040.ld",
-        "rp2350_arm.ld",
-        "rp2350_riscv.ld",
     },
 }

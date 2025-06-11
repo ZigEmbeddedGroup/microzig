@@ -9,7 +9,7 @@ pub const Chip = internals.Chip;
 pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
-pub const LinkerScriptOptions = internals.LinkerScriptOptions;
+pub const LinkerScript = internals.LinkerScript;
 pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
@@ -331,7 +331,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             board: ?Board = null,
 
             /// If set, overrides the `linker_script` property of the target.
-            linker_script: ?LinkerScriptOptions = null,
+            linker_script: ?LinkerScript = null,
 
             /// If set, overrides the default `entry` property of the arget.
             entry: ?Build.Step.Compile.Entry = null,
@@ -548,32 +548,34 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.root_module.addImport("microzig", core_mod);
             fw.artifact.root_module.addImport("app", app_mod);
 
-            const linker_script_options = options.linker_script orelse target.linker_script;
-            const linker_script = blk: {
-                const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
+            const linker_script = switch (options.linker_script orelse target.linker_script) {
+                .generate => |generate_options| blk: {
+                    const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
 
-                const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
+                    const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
 
-                const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                    .cpu_name = cpu.name,
-                    .cpu_arch = zig_resolved_target.result.cpu.arch,
-                    .chip_name = target.chip.name,
-                    .memory_regions = target.chip.memory_regions,
-                    .mode = linker_script_options.mode,
-                };
+                    const generate_linker_script_args: GenerateLinkerScriptArgs = .{
+                        .cpu_name = cpu.name,
+                        .cpu_arch = zig_resolved_target.result.cpu.arch,
+                        .chip_name = target.chip.name,
+                        .memory_regions = target.chip.memory_regions,
+                        .mode = generate_options.mode,
+                    };
 
-                const args_str = std.json.stringifyAlloc(
-                    b.allocator,
-                    generate_linker_script_args,
-                    .{},
-                ) catch @panic("out of memory");
+                    const args_str = std.json.stringifyAlloc(
+                        b.allocator,
+                        generate_linker_script_args,
+                        .{},
+                    ) catch @panic("out of memory");
 
-                const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
-                generate_linker_script_run.addArg(args_str);
-                for (linker_script_options.files) |ld_file| {
-                    generate_linker_script_run.addFileArg(ld_file);
-                }
-                break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
+                    const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
+                    generate_linker_script_run.addArg(args_str);
+                    for (generate_options.files) |ld_file| {
+                        generate_linker_script_run.addFileArg(ld_file);
+                    }
+                    break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
+                },
+                .custom => |path| path,
             };
             fw.artifact.setLinkerScript(linker_script);
 

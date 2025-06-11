@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("build-internals");
-const Mode = microzig.LinkerScriptOptions.Mode;
+const Mode = microzig.LinkerScript.GenerateOptions.Mode;
 const MemoryRegion = microzig.MemoryRegion;
 
 pub const Args = struct {
