@@ -348,24 +348,24 @@ pub const ICM_20948 = struct {
             return Error.SetupFailed;
         };
 
-        // self.set_sample_mode() catch |err| {
-        //     log.err("Failed to set sample mode: {}", .{err});
-        //     return Error.SetupFailed;
-        // };
-
         // This sets DLPF as well as full scale and enables the devices
-        // self.configure_accelerometer(self.config) catch |err| {
-        //     log.err("Failed to configure accelerometer: {}", .{err});
-        //     return Error.SetupFailed;
-        // };
-        //
-        // self.configure_gyroscope(self.config) catch |err| {
-        //     log.err("Failed to configure gyroscope: {}", .{err});
-        //     return Error.SetupFailed;
-        // };
+        self.configure_accelerometer(self.config) catch |err| {
+            log.err("Failed to configure accelerometer: {}", .{err});
+            return Error.SetupFailed;
+        };
+
+        self.configure_gyroscope(self.config) catch |err| {
+            log.err("Failed to configure gyroscope: {}", .{err});
+            return Error.SetupFailed;
+        };
 
         self.configure_magnetometer(self.config) catch |err| {
             log.err("Failed to configure magnetometer: {}", .{err});
+            return Error.SetupFailed;
+        };
+
+        self.set_sample_mode() catch |err| {
+            log.err("Failed to set sample mode: {}", .{err});
             return Error.SetupFailed;
         };
     }
