@@ -57,6 +57,7 @@ pub const ICM_20948 = struct {
     const REGISTER_READ_DELAY_US = 2;
     const RESET_DELAY_US = 100_000;
 
+    const MAG_WHOAMI = 0x09;
     const MAG_ADDRESS = 0x0C;
     const MAG_WRITE_DELAY_US = 10_000;
     const MAG_RESET_DELAY_US = 100_000;
@@ -178,15 +179,15 @@ pub const ICM_20948 = struct {
         }
     };
 
-    const MAG_WHOAMI = 0x09;
     const MagRegister = enum(u8) {
+        comp_id = 0x00, // DELETEME
         device_id = 0x01,
-        status_1 = 0x10,
+        status1 = 0x10,
         // xl, xh, yl, yh, zl, zh
         hxl = 0x11,
         status_2 = 0x18,
-        control_2 = 0x31,
-        control_3 = 0x32,
+        control2 = 0x31,
+        control3 = 0x32,
         test_1 = 0x33,
         test_2 = 0x34,
     };
@@ -305,7 +306,7 @@ pub const ICM_20948 = struct {
         i2c_mst_clk: u4 = 0,
         i2c_mst_p_nsr: u1 = 0,
         reserved_5: u2 = 0,
-        mulst_mst_en: u1 = 0,
+        mult_mst_en: u1 = 0,
     };
 
     const i2c_slv0_ctrl = packed struct(u8) {
@@ -337,7 +338,6 @@ pub const ICM_20948 = struct {
             return Error.UnexpectedDeviceId;
         }
 
-        // Configure device step by step with error handling
         self.set_clocks() catch |err| {
             log.err("Failed to set clocks: {}", .{err});
             return Error.SetupFailed;
@@ -348,22 +348,21 @@ pub const ICM_20948 = struct {
             return Error.SetupFailed;
         };
 
-        // set sample mode
-        self.set_sample_mode() catch |err| {
-            log.err("Failed to set sample mode: {}", .{err});
-            return Error.SetupFailed;
-        };
+        // self.set_sample_mode() catch |err| {
+        //     log.err("Failed to set sample mode: {}", .{err});
+        //     return Error.SetupFailed;
+        // };
 
         // This sets DLPF as well as full scale and enables the devices
-        self.configure_accelerometer(self.config) catch |err| {
-            log.err("Failed to configure accelerometer: {}", .{err});
-            return Error.SetupFailed;
-        };
-
-        self.configure_gyroscope(self.config) catch |err| {
-            log.err("Failed to configure gyroscope: {}", .{err});
-            return Error.SetupFailed;
-        };
+        // self.configure_accelerometer(self.config) catch |err| {
+        //     log.err("Failed to configure accelerometer: {}", .{err});
+        //     return Error.SetupFailed;
+        // };
+        //
+        // self.configure_gyroscope(self.config) catch |err| {
+        //     log.err("Failed to configure gyroscope: {}", .{err});
+        //     return Error.SetupFailed;
+        // };
 
         self.configure_magnetometer(self.config) catch |err| {
             log.err("Failed to configure magnetometer: {}", .{err});
@@ -485,6 +484,7 @@ pub const ICM_20948 = struct {
 
     pub fn set_clocks(self: *Self) Error!void {
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
+            // 1 = Auto select
             .CLKSEL = 1,
             .SLEEP = false,
             .DEVICE_RESET = false,
@@ -494,8 +494,10 @@ pub const ICM_20948 = struct {
     pub fn set_sample_mode(self: *Self) Error!void {
         // TODO: Support setting these individually. Could set based on if ODR fields are set (make
         // optional?)
+        // TODO: Apparently the mst_odr_config does not matter when accel or gyro are enabled, it
+        // just uses gyro or accel (in that order)
         try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
-            .I2C_MST_CYCLE = 0, // Disable i2c master duty cycle
+            .I2C_MST_CYCLE = 1, // ENABLE? i2c master duty cycle
             .ACCEL_CYCLE = 1, // Duty cycle mode, use ACCEL_SMPLRT_DIV
             .GYRO_CYCLE = 1, // Duty cycle mode, use GYRO_SMPLTR_DIV
         });
@@ -690,19 +692,51 @@ pub const ICM_20948 = struct {
 
     pub fn configure_magnetometer(self: *Self, config: Config) Error!void {
         _ = config;
-
-        // Set slave address to address of the magnetometer
-        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS);
+        // const mag_id = try self.mag_read_byte(.device_id);
+        // if (mag_id != MAG_WHOAMI) {
+        //     log.err("Unexpected magnetometer device ID: expected 0x{X:02}, got 0x{X:02}", .{ MAG_WHOAMI, mag_id });
+        //     return error.SetupFailed;
+        // }
+        // NOTE: Trying to set odr align for some reason
+        try self.write_byte(.{ .bank2 = .odr_align_en }, 1);
+        // Setup this device's I2C master speed at recommended 345.60kHz
+        // Disable passthrough
+        //
+        // TODO: I just tried nsr for shits n giggles.
+        // Enable slave delay for slave 0
+        try self.write_byte(.{ .bank3 = .i2c_mst_delay_ctrl }, 1);
+        // Set master odr? Probably isn't used unless the other sensors are disabled
+        // 1.1kHz/2^(config)
+        try self.write_byte(
+            .{ .bank3 = .i2c_mst_odr_config },
+            0,
+        );
 
         // Enable I2C master on this device
         try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
+        // Read it back // DELETEME
+        const usr_ctrl = try self.read_byte(.{ .bank0 = .user_ctrl }); // DELETEME
+        log.err("User ctrl {x}", .{usr_ctrl}); // DELETEME
 
-        // Set to known-good state
+        // Set slave address to address of the magnetometer
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS | 0x80); // set read should do
+        // it
+        const reg = i2c_mst_ctrl{ .i2c_mst_p_nsr = 1, .i2c_mst_clk = 7, .mult_mst_en = 1 };
+        try self.write_byte(.{ .bank3 = .i2c_mst_ctrl }, @bitCast(reg));
+        // try self.write_byte(.{ .bank3 = .i2c_mst_ctrl }, 0x4D);
+
+        // Reset to known-good state
         try self.mag_reset();
 
-        // Setup this device's I2C master speed at recommended 345.60kHZ
-        const reg = i2c_mst_ctrl{ .i2c_mst_clk = 7 };
-        try self.write_byte(.{ .bank3 = .i2c_mst_ctrl }, @bitCast(reg));
+        // Check master status
+        //   DELETEME>>
+        const v = try self.read_byte(.{ .bank0 = .i2c_mst_status });
+        log.err("Master status {x}", .{v});
+        const ctrl = try self.read_byte(.{ .bank3 = .i2c_mst_ctrl });
+        log.err("Master ctrl {x}", .{ctrl});
+        const status = try self.mag_read_byte(.status1);
+        log.err("Mag status {x}", .{status});
+        //   DELETEME<<
 
         // Ensure we can read from the magnetometer
         const mag_id = try self.mag_read_byte(.device_id);
@@ -711,25 +745,28 @@ pub const ICM_20948 = struct {
             return error.SetupFailed;
         }
 
+        // TODO: Needed?
         try self.mag_reset();
 
-        // Set to continuous mode
-        try self.mag_write_byte(.control_2, 0b01000);
+        // Set to continuous mode (100Hz)
+        try self.mag_write_byte(.control2, 0b01000);
 
         // Set read address as xl so we can read all 6 bytes
         try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(MagRegister.hxl));
 
-        // Set expected read size
-        try self.write_byte(
-            .{ .bank3 = .i2c_slv0_ctrl },
-            @bitCast(i2c_slv0_ctrl{
-                .i2c_slv0_en = 1,
-                .i2c_slv0_leng = 8,
-            }),
-        );
+        // Enable auto-reading
+        // TODO: Enable byte swapping and set GRP correctly so we can avoid swapping from BigEndian
+        // hxl is 0x11 (odd)
+        try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
+            .i2c_slv0_en = 1,
+            // TODO: 6 right? 3 i16s
+            .i2c_slv0_leng = 6,
+        }));
     }
 
     // TODO: Could cache the slave address like we do with banks
+    /// Clear the read bit in the sensor's master controller for the next transaction. This
+    /// preserves the i2c slave address, so it must be set correctly in the first place.
     inline fn set_mag_write(self: *Self) !void {
         var reg = try self.read_byte(.{ .bank3 = .i2c_slv0_addr });
         // Clear the read bit
@@ -737,29 +774,32 @@ pub const ICM_20948 = struct {
         try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, reg);
     }
 
-    inline fn set_mag_read(self: *Self) !void {
+    /// Set the read bit in the sensor's master controller for the next transaction This preserves
+    /// the i2c slave address, so it must be set correctly in the first place.
+    fn set_mag_read(self: *Self) !void {
         var reg = try self.read_byte(.{ .bank3 = .i2c_slv0_addr });
         // Set the read bit
         reg |= 0b1000_0000;
         try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, reg);
     }
 
-    pub inline fn mag_read_register(self: *Self, reg: MagRegister, buf: []u8) Error!void {
+    pub fn mag_read_register(self: *Self, reg: MagRegister, buf: []u8) Error!void {
         if (buf.len == 0) return Error.InvalidParameter;
         if (buf.len > std.math.maxInt(u4)) return Error.InvalidParameter;
 
+        // Set (read) address
         try self.set_mag_read();
         self.clock.sleep_us(MAG_WRITE_DELAY_US);
+        // Set register to read from
         try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
-        try self.write_byte(
-            .{ .bank3 = .i2c_slv0_ctrl },
-            @bitCast(i2c_slv0_ctrl{
-                .i2c_slv0_leng = @truncate(buf.len),
-                .i2c_slv0_en = 1,
-            }),
-        );
-        self.clock.sleep_us(MAG_WRITE_DELAY_US);
-        return self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
+        // Configure master to auto-read into SENS_DATA regs
+        // try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, 0xff);
+        try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
+            .i2c_slv0_leng = @truncate(buf.len),
+            .i2c_slv0_en = 1,
+        }));
+        // Read the data the master read in
+        return try self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
     }
 
     pub inline fn mag_read_byte(self: *Self, reg: MagRegister) Error!u8 {
@@ -773,24 +813,21 @@ pub const ICM_20948 = struct {
         self.clock.sleep_us(MAG_WRITE_DELAY_US);
         try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
         try self.write_byte(.{ .bank3 = .i2c_slv0_do }, val);
-        try self.write_byte(
-            .{ .bank3 = .i2c_slv0_ctrl },
-            @bitCast(i2c_slv0_ctrl{
-                .i2c_slv0_leng = 1,
-                .i2c_slv0_en = 1,
-            }),
-        );
+        try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
+            .i2c_slv0_leng = 1,
+            .i2c_slv0_en = 1,
+        }));
         self.clock.sleep_us(MAG_WRITE_DELAY_US);
-        try self.set_mag_read();
+        // try self.set_mag_read();
     }
 
     pub fn mag_reset(self: *Self) Error!void {
         // Control 3 only has 1 bit, which initiates soft reset
-        try self.mag_write_byte(.control_3, 1);
+        try self.mag_write_byte(.control3, 1);
         self.clock.sleep_us(MAG_RESET_DELAY_US);
 
         // Reset I2C master on device
-        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
+        // try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
     }
 
     const Mag_data_unscaled = struct {
