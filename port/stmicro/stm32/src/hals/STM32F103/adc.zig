@@ -830,7 +830,21 @@ pub const AdvancedADC = struct {
             .Injected, .AlternateTrigger => |inj| {
                 try set_injected_simultaneous(adc1, &adc2, inj);
             },
-            else => {}, //TODO: implement other dual modes
+
+            //combined modes
+            .RegularAlternateTrigger, .RegularInjected => |dual| {
+                try set_injected_simultaneous(adc1, &adc2, dual.Injected);
+                try set_regular_simultaneous(adc1, &adc2, dual.Regular);
+            },
+
+            .InjectedSlowInterleaved => |dual| {
+                try set_injected_simultaneous(adc1, &adc2, dual.Injected);
+                try set_interleaved(adc1, &adc2, dual.Regular, false);
+            },
+            .InjectedFastInterleaved => |dual| {
+                try set_injected_simultaneous(adc1, &adc2, dual.Injected);
+                try set_interleaved(adc1, &adc2, dual.Regular, true);
+            },
         }
 
         adc1.regs.CR1.modify(.{ .DUALMOD = config });
