@@ -1,3 +1,6 @@
+//this example is an extension of advanced_adc.zig
+//here it shows how to configure and use the Dual ADC mode using the advanced ADC API
+
 const std = @import("std");
 const microzig = @import("microzig");
 

@@ -1,3 +1,7 @@
+//example for the advanced ADC API, this API is recommended for those already familiar with the ADC of STM32s
+//this example configures a regular group with software trigger, an injected group configured as auto injected,
+//and an analog comparator (ADC watchdog)
+
 //before creating a program using ADC from older ST families, such as in this case STM32F1
 //be aware of possible hardware bugs and limitations
 //for example:
@@ -7,6 +11,7 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
+const interrupt = microzig.interrupt;
 
 const RCC = microzig.chip.peripherals.RCC;
 const DMA = microzig.chip.peripherals.DMA1;
@@ -20,15 +25,23 @@ const TX = gpio.Pin.from_port(.A, 9);
 
 pub const microzig_options = microzig.Options{
     .logFn = stm32.uart.log,
+    .interrupts = .{ .ADC1_2 = .{ .c = watchdog_handler } },
 };
 
 const AdvancedADC = microzig.hal.adc.AdvancedADC;
+const adc = AdvancedADC.init(.ADC1);
 const ADC_pin1 = gpio.Pin.from_port(.A, 1);
 const ADC_pin2 = gpio.Pin.from_port(.A, 2);
 const ADC_pin3 = gpio.Pin.from_port(.A, 3);
 
 const v25 = 1.43;
 const avg_slope = 0.0043; //4.3mV/°C
+
+var ovf_flag: bool = false;
+pub fn watchdog_handler() callconv(.C) void {
+    ovf_flag = true;
+    adc.clear_flags(adc.read_flags()); //clear all active flags
+}
 
 fn adc_to_temp(val: usize) f32 {
     const temp_mv: f32 = (@as(f32, @floatFromInt(val)) / 4096) * 3.3; //convert to voltage
@@ -68,23 +81,28 @@ pub fn main() !void {
         .GPIOAEN = 1,
         .ADC1EN = 1,
     });
+
     const counter = timer.into_counter(8_000_000);
-    const adc = AdvancedADC.init(.ADC1);
+
     const adc_data_addr: u32 = @intFromPtr(&adc.regs.DR);
     var adc_buf: [10]u16 = .{0} ** 10;
     const adc_buf_addr: u32 = @intFromPtr(&adc_buf);
+    const ref_ovf_flag: *volatile bool = &ovf_flag;
+
+    //configure UART log
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
-    ADC_pin1.set_input_mode(.analog);
-    ADC_pin2.set_input_mode(.analog);
-    ADC_pin3.set_input_mode(.analog);
-
     uart.apply(.{
         .baud_rate = 115200,
         .clock_speed = 8_000_000,
     });
-
     stm32.uart.init_logger(&uart);
+
+    //configure adc
+    interrupt.enable(.ADC1_2); //enalbe ADC1 interrupt
+    ADC_pin1.set_input_mode(.analog);
+    ADC_pin2.set_input_mode(.analog);
+    ADC_pin3.set_input_mode(.analog);
 
     //enable ADC and VREF/tempsensor
     adc.enable(true, &counter);
@@ -96,7 +114,7 @@ pub fn main() !void {
         .trigger = .SWSTART,
         .mode = .{
             .Single = .{
-                .seq = &.{ 16, 17, 1, 3 },
+                .seq = &.{ 16, 17, 2, 3 },
                 .channels_conf = &.{
                     .{ .channel = 17, .sample_rate = .@"239.5" }, //Vrefint
                     .{ .channel = 16, .sample_rate = .@"239.5" }, //temperature sensor
@@ -107,14 +125,24 @@ pub fn main() !void {
         },
     });
 
-    //injected group configuration, AUTO INJECTED mode does not require external trigger
+    //injected group configuration, AUTO INJECTED mode starts right after the regular group and therefore does not require an external trigger
     try adc.configure_injected(.{
         .mode = .{
             .auto_injected = .{
-                .seq = &.{2},
+                .seq = &.{1},
             },
         },
     });
+
+    //despite the name, this is just an analog comparator
+    adc.configure_watchdog(
+        .{
+            .guard_mode = .{ .single_injected = 1 },
+            .interrupt = true,
+            .high_treshold = 4095,
+            .low_treshold = 800,
+        },
+    );
 
     std.log.info("start Advanced ADC scan", .{});
 
@@ -128,6 +156,11 @@ pub fn main() !void {
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});
         std.log.info("CH3 {d}", .{adc_buf[3]});
+        if (ref_ovf_flag.*) {
+            std.log.info("Injected: OVERFLOW", .{});
+            ref_ovf_flag.* = false;
+            continue;
+        }
         std.log.info("Injected: {d}", .{adc.read_injected_data(0)});
     }
 }

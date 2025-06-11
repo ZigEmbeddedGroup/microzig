@@ -223,6 +223,14 @@ pub const Discontinuous = struct {
     length: u3 = 1, //default length is 1
 };
 
+pub const Flags = packed struct(u5) {
+    watchdog: bool = false,
+    regular_eoc: bool = false,
+    injected_eoc: bool = false,
+    injected_start: bool = false,
+    regular_start: bool = false,
+};
+
 pub const RegularModes = union(enum) {
     Single: Sequence,
     Continuous: Sequence,
@@ -352,6 +360,23 @@ pub const DualConfigError = error{
     ADC2NotSupported,
 } || RegularConfigError;
 
+pub const WatchdogGuards = union(enum) {
+    disable: void,
+    all_regular: void,
+    all_injected: void,
+    all: void,
+    single_regular: u5,
+    single_injected: u5,
+    single: u5,
+};
+
+pub const Watchdog = struct {
+    guard_mode: WatchdogGuards,
+    high_treshold: u12,
+    low_treshold: u12,
+    interrupt: bool = true,
+};
+
 //NOTE: before making any write to the CR2 bit, it is necessary to check if the write will change the current value of the register
 //otherwise, it will result in an accidental trigger
 pub const AdvancedADC = struct {
@@ -440,8 +465,14 @@ pub const AdvancedADC = struct {
         regs.CR2.modify(.{ .ALIGN = @intFromEnum(aling) }); //set data alignment
     }
 
-    pub fn clear_flags(self: *const AdvancedADC) void {
-        self.regs.SR.raw = 0;
+    pub fn read_flags(self: *const AdvancedADC) Flags {
+        const val: u5 = @truncate(self.regs.SR.raw);
+        return @bitCast(val);
+    }
+
+    pub fn clear_flags(self: *const AdvancedADC, flags: Flags) void {
+        const val: u5 = @bitCast(flags);
+        self.regs.SR.raw &= ~val;
     }
 
     //========== ADC Regular conversion functions ===========
@@ -1041,6 +1072,56 @@ pub const AdvancedADC = struct {
         //max for fast is 7, max for slow is 14
         const rate: usize = @intFromEnum(config.channel.sample_rate);
         if (rate > max_sample) return DualConfigError.InvalidSampleRate;
+    }
+
+    //========== WTG funcitions =============
+
+    pub fn configure_watchdog(self: *const AdvancedADC, config: Watchdog) void {
+        const regs = self.regs;
+        const int_bit: u1 = @intFromBool(config.interrupt);
+        var single: u1 = 0;
+        var regular: u1 = 0;
+        var injected: u1 = 0;
+        var channel: u5 = 0;
+
+        regs.CR1.modify(.{
+            .AWDEN = 0,
+            .JAWDEN = 0,
+            .AWDSGL = 0,
+            .AWDIE = 0,
+        });
+
+        switch (config.guard_mode) {
+            .single, .single_regular, .single_injected => |ch| {
+                channel = ch;
+                single = 1;
+            },
+            else => {},
+        }
+        switch (config.guard_mode) {
+            .all, .single => {
+                regular = 1;
+                injected = 1;
+            },
+            .all_injected, .single_injected => {
+                injected = 1;
+            },
+            .all_regular, .single_regular => {
+                regular = 1;
+            },
+            else => {},
+        }
+
+        regs.CR1.modify(.{
+            .AWDEN = regular,
+            .JAWDEN = injected,
+            .AWDSGL = single,
+            .AWDIE = int_bit,
+            .AWDCH = channel,
+        });
+
+        regs.HTR.modify(.{ .HT = config.high_treshold });
+        regs.LTR.modify(.{ .LT = config.low_treshold });
     }
 
     pub fn init(adc: ADC_inst) AdvancedADC {
