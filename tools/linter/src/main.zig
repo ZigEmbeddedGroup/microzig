@@ -20,15 +20,9 @@ pub fn main() !void {
     defer issues.deinit();
 
     for (args[1..]) |path| {
-        const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, 1, 0) catch |err| switch (err) {
-            error.FileNotFound => {
-                std.log.warn("File deleted '{s}'. Skipping...", .{path});
-                continue;
-            },
-            else => {
-                std.log.err("Failed to read file '{s}': {}", .{ path, err });
-                return err;
-            },
+        const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, 1, 0) catch |err| {
+            std.log.err("Failed to read file '{s}': {}", .{ path, err });
+            return err;
         };
         defer allocator.free(source);
 

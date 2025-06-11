@@ -27,7 +27,7 @@ jobs:
 
       - name: Run linter
         run: |
-          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.zig$')
+          FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.zig$')
           echo changed files: $FILES
           ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
 
