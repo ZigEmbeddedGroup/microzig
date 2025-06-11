@@ -501,6 +501,7 @@ pub const ICM_20948 = struct {
         // TODO: Apparently the mst_odr_config does not matter when accel or gyro are enabled, it
         // just uses gyro or accel (in that order)
         try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
+            // Apparently this must be set if the other sensors are not configured?
             .I2C_MST_CYCLE = 1,
             .ACCEL_CYCLE = 1, // Duty cycle mode, use ACCEL_SMPLRT_DIV
             .GYRO_CYCLE = 1, // Duty cycle mode, use GYRO_SMPLTR_DIV
@@ -696,25 +697,13 @@ pub const ICM_20948 = struct {
 
     pub fn configure_magnetometer(self: *Self, config: Config) Error!void {
         _ = config;
-        // const mag_id = try self.mag_read_byte(.device_id);
-        // if (mag_id != MAG_WHOAMI) {
-        //     log.err("Unexpected magnetometer device ID: expected 0x{X:02}, got 0x{X:02}", .{ MAG_WHOAMI, mag_id });
-        //     return error.SetupFailed;
-        // }
-        // NOTE: Trying to set odr align for some reason
-        try self.write_byte(.{ .bank2 = .odr_align_en }, 1);
-        // Setup this device's I2C master speed at recommended 345.60kHz
-        // Disable passthrough
-        //
-        // TODO: I just tried nsr for shits n giggles.
         // Enable slave delay for slave 0
         try self.write_byte(.{ .bank3 = .i2c_mst_delay_ctrl }, 1);
-        // Set master odr? Probably isn't used unless the other sensors are disabled
-        // 1.1kHz/2^(config)
-        try self.write_byte(
-            .{ .bank3 = .i2c_mst_odr_config },
-            0,
-        );
+        // Set master odr: 1.1kHz/2^(config)
+        // NOTE: This isn't supposed used unless the other sensors are disabled, but it seems to be?
+        // TODO: Add config, but if it's too high we need to wait longer for the device to fill the
+        // read registers
+        try self.write_byte(.{ .bank3 = .i2c_mst_odr_config }, 3);
 
         // Enable I2C master on this device
         try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
@@ -722,24 +711,13 @@ pub const ICM_20948 = struct {
         self.clock.sleep_ms(10);
 
         // Set slave address to address of the magnetometer
-        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS | 0x80); // set read should do
-        // it
-        const reg = i2c_mst_ctrl{ .i2c_mst_p_nsr = 1, .i2c_mst_clk = 7, .mult_mst_en = 1 };
+        try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS);
+        // Setup this device's I2C master speed at recommended 345.60kHz
+        const reg = i2c_mst_ctrl{ .i2c_mst_clk = 7, .mult_mst_en = 1 };
         try self.write_byte(.{ .bank3 = .i2c_mst_ctrl }, @bitCast(reg));
-        // try self.write_byte(.{ .bank3 = .i2c_mst_ctrl }, 0x4D);
 
         // Reset to known-good state
         try self.mag_reset();
-
-        // Check master status
-        //   DELETEME>>
-        const v = try self.read_byte(.{ .bank0 = .i2c_mst_status });
-        log.err("Master status {x}", .{v});
-        const ctrl = try self.read_byte(.{ .bank3 = .i2c_mst_ctrl });
-        log.err("Master ctrl {x}", .{ctrl});
-        const status = try self.mag_read_byte(.status1);
-        log.err("Mag status {x}", .{status});
-        //   DELETEME<<
 
         // Ensure we can read from the magnetometer
         const mag_id = try self.mag_read_byte(.device_id);
@@ -749,9 +727,10 @@ pub const ICM_20948 = struct {
         }
 
         // TODO: Needed?
-        try self.mag_reset();
+        // try self.mag_reset();
 
-        // Set to continuous mode (100Hz)
+        // Set to continuous sampling mode (100Hz). This determines how often the magnetometer
+        // latches the data, not how often our device requests it.
         try self.mag_write_byte(.control2, 0b01000);
 
         // Set read address as xl so we can read all 6 bytes
@@ -762,7 +741,7 @@ pub const ICM_20948 = struct {
         // hxl is 0x11 (odd)
         try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
             .i2c_slv0_en = 1,
-            // TODO: 6 right? 3 i16s
+            // Read 6 i16s
             .i2c_slv0_leng = 6,
         }));
 
@@ -834,7 +813,7 @@ pub const ICM_20948 = struct {
         self.clock.sleep_us(MAG_RESET_DELAY_US);
 
         // Reset I2C master on device
-        // try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
+        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
     }
 
     const Mag_data_unscaled = struct {
