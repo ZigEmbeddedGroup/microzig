@@ -231,8 +231,8 @@ pub const RegularModes = union(enum) {
 pub const RegularConfig = struct {
     mode: RegularModes,
     trigger: RegularTrigger = .SWSTART,
-    DMA: bool = false,
-    Interrupt: bool = false,
+    dma: bool = false,
+    interrupt: bool = false,
 };
 
 pub const InjectedModes = union(enum) {
@@ -251,7 +251,7 @@ pub const InjectedOffsets = struct {
 
 pub const InjectedConfig = struct {
     trigger: InjectedTrigger = .SWSTART,
-    Interrupt: bool = false,
+    interrupt: bool = false,
     offsets: InjectedOffsets = .{},
     mode: InjectedModes,
 };
@@ -454,23 +454,23 @@ pub const AdvancedADC = struct {
 
         switch (config.mode) {
             .Single => |seq| {
-                try self.set_regular_seq(seq, true);
+                try self.set_regular_seq(seq, false);
             },
             .Continuous => |seq| {
-                try self.set_regular_seq(seq, false);
+                try self.set_regular_seq(seq, true);
             },
             .Discontinuous => |disc| {
                 try self.set_regular_discontinuous(disc);
             },
         }
 
-        if (self.adc_num == 2 and config.DMA) return RegularConfigError.InvalidADC; //only ADC1 and ADC3 can use DMA
+        if (self.adc_num == 2 and config.dma) return RegularConfigError.InvalidADC; //only ADC1 and ADC3 can use DMA
 
-        regs.CR1.modify(.{ .EOCIE = @as(u1, if (config.Interrupt) 1 else 0) });
+        regs.CR1.modify(.{ .EOCIE = @as(u1, if (config.interrupt) 1 else 0) });
 
         const cr2_read = regs.CR2.read();
         const trig_sel: u3 = @intFromEnum(config.trigger);
-        const dma: u1 = if (config.DMA) 1 else 0;
+        const dma: u1 = @intFromBool(config.dma);
         if ((cr2_read.DMA != dma) or (cr2_read.EXTTRIG != trig_sel))
             regs.CR2.modify(.{
                 .EXTSEL = trig_sel,
@@ -479,11 +479,11 @@ pub const AdvancedADC = struct {
             });
     }
 
-    pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, single_mode: bool) RegularConfigError!void {
+    pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, continuos: bool) RegularConfigError!void {
         const regs = self.regs;
         const len = seq.seq.len;
         const cr2_state = regs.CR2.read();
-        const val: u1 = @as(u1, if (single_mode) 0 else 1);
+        const val: u1 = @intFromBool(continuos);
         if (len == 0) {
             return RegularConfigError.InvalidSequence;
         } else if (len > 17) {
@@ -602,7 +602,7 @@ pub const AdvancedADC = struct {
 
     pub fn set_DMA(self: *const AdvancedADC, set: bool) void {
         const regs = self.regs;
-        const val = if (set) 1 else 0;
+        const val: u1 = @intFromBool(set);
         if (regs.CR2.read().DMA != val) {
             regs.CR2.modify(.{ .DMA = val });
         }
@@ -610,7 +610,7 @@ pub const AdvancedADC = struct {
 
     pub fn set_interrupt(self: *const AdvancedADC, set: bool) void {
         const regs = self.regs;
-        regs.CR1.modify(.{ .EOCIE = if (set) 1 else 0 });
+        regs.CR1.modify(.{ .EOCIE = @as(u1, @intFromBool(set)) });
     }
 
     pub fn set_trigger(self: *const AdvancedADC, trigger: RegularTrigger) void {
@@ -685,7 +685,7 @@ pub const AdvancedADC = struct {
             .JEXTSEL = @as(u3, @intFromEnum(config.trigger)),
             .JEXTTRIG = trig,
         });
-        regs.CR1.modify(.{ .JEOCIE = @as(u1, if (config.Interrupt) 1 else 0) });
+        regs.CR1.modify(.{ .JEOCIE = @as(u1, if (config.interrupt) 1 else 0) });
     }
 
     pub fn set_injected_auto(self: *const AdvancedADC, seq: Sequence) RegularConfigError!void {
@@ -819,7 +819,12 @@ pub const AdvancedADC = struct {
             },
 
             //same config, diferent behavior
-            .FastInterleaved, .SlowInterleaved => |_| {},
+            .FastInterleaved => |inter| {
+                try set_interleaved(adc1, &adc2, inter, true);
+            },
+            .SlowInterleaved => |inter| {
+                try set_interleaved(adc1, &adc2, inter, false);
+            },
 
             //same config, diferent behavior
             .Injected, .AlternateTrigger => |inj| {
@@ -869,15 +874,15 @@ pub const AdvancedADC = struct {
         adc1.configure_regular(.{
             .mode = m_mode,
             .trigger = config.trigger,
-            .DMA = config.dma,
-            .Interrupt = config.master_interrupt,
+            .dma = config.dma,
+            .interrupt = config.master_interrupt,
         }) catch unreachable;
 
         adc2.configure_regular(.{
             .mode = s_mode,
             .trigger = .SWSTART, //slave ADC must use software trigger
-            .DMA = false, //slave ADC does not support DMA.
-            .Interrupt = config.slave_interrupt,
+            .dma = false, //slave ADC does not support DMA.
+            .interrupt = config.slave_interrupt,
         }) catch unreachable;
 
         if (config.rate_seq) |rates| {
@@ -895,7 +900,7 @@ pub const AdvancedADC = struct {
         adc1.configure_injected(.{
             .trigger = config.trigger,
             .offsets = config.master_offsets,
-            .Interrupt = config.master_interrupt,
+            .interrupt = config.master_interrupt,
             .mode = .{
                 .Single = .{
                     .seq = master_seq,
@@ -907,7 +912,7 @@ pub const AdvancedADC = struct {
         adc2.configure_injected(.{
             .trigger = .SWSTART,
             .offsets = config.slave_offsets,
-            .Interrupt = config.slave_interrupt,
+            .interrupt = config.slave_interrupt,
             .mode = .{
                 .Single = .{
                     .seq = slave_seq,
@@ -922,6 +927,41 @@ pub const AdvancedADC = struct {
                 adc2.set_channel_sample_rate(ssque, rate);
             }
         }
+    }
+
+    pub fn set_interleaved(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: Interleaved, fast: bool) DualConfigError!void {
+        try check_interleaved(adc1, adc2, config, fast);
+        const mode = blk: {
+            if (config.continuos and fast) {
+                break :blk RegularModes{
+                    .Continuous = .{
+                        .seq = &.{config.channel.channel},
+                        .channels_conf = &.{config.channel},
+                    },
+                };
+            } else {
+                break :blk RegularModes{
+                    .Single = .{
+                        .seq = &.{config.channel.channel},
+                        .channels_conf = &.{config.channel},
+                    },
+                };
+            }
+        };
+
+        adc1.configure_regular(.{
+            .mode = mode,
+            .dma = config.dma,
+            .trigger = config.trigger,
+            .interrupt = config.interrupt,
+        }) catch unreachable;
+
+        adc2.configure_regular(.{
+            .mode = mode,
+            .dma = false,
+            .trigger = .SWSTART,
+            .interrupt = false,
+        }) catch unreachable;
     }
 
     fn check_regular_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousRegular) DualConfigError!void {
@@ -976,6 +1016,17 @@ pub const AdvancedADC = struct {
                 return DualConfigError.InvalidSequence; //sample rates must match the master sequence length
             }
         }
+    }
+
+    fn check_interleaved(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: Interleaved, fast: bool) DualConfigError!void {
+        if (adc1.adc_num != 1 or adc2.adc_num != 2) {
+            return DualConfigError.InvalidADC; //only ADC1 and ADC2 can be used in dual mode
+        }
+        const max_sample: usize = if (fast) 0 else 2; // 0 == 1.5, 2 == 13.5
+
+        //max for fast is 7, max for slow is 14
+        const rate: usize = @intFromEnum(config.channel.sample_rate);
+        if (rate > max_sample) return DualConfigError.InvalidSampleRate;
     }
 
     pub fn init(adc: ADC_inst) AdvancedADC {

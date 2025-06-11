@@ -92,7 +92,7 @@ pub fn main() !void {
 
     //regular group configuration
     try adc.configure_regular(.{
-        .DMA = true,
+        .dma = true,
         .trigger = .SWSTART,
         .mode = .{
             .Single = .{
