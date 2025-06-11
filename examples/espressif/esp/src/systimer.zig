@@ -16,7 +16,7 @@ pub const microzig_options: microzig.Options = .{
 
 const alarm = systimer.alarm(0);
 
-// `microzig_time_critical` section must be placed in ram.
+// the `microzig_time_critical` section should be placed in ram.
 fn timer_interrupt(_: *microzig.cpu.TrapFrame) linksection("microzig_time_critical") callconv(.c) void {
     std.log.info("timer interrupt!", .{});
 

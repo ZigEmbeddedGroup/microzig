@@ -59,7 +59,7 @@ pub const Target = struct {
     /// if present.
     board: ?Board = null,
 
-    /// Linker script generation options.
+    /// Provide a custom linker script for the hardware or define a custom generation.
     linker_script: LinkerScript = .default_generation,
 
     /// (optional) Explicitly set the entry point.
