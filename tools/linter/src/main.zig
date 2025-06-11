@@ -5,7 +5,7 @@ const Issue = struct {
 };
 
 pub fn main() !void {
-    var debug_allocator = std.heap.DebugAllocator(.{}){};
+    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
     defer _ = debug_allocator.deinit();
 
     var arena = std.heap.ArenaAllocator.init(debug_allocator.allocator());
