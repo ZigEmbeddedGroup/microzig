@@ -500,10 +500,8 @@ pub const ICM_20948 = struct {
     pub fn set_sample_mode(self: *Self) Error!void {
         // TODO: Support setting these individually. Could set based on if ODR fields are set (make
         // optional?)
-        // TODO: Apparently the mst_odr_config does not matter when accel or gyro are enabled, it
-        // just uses gyro or accel (in that order)
         try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
-            // Apparently this must be set if the other sensors are not configured?
+            // Use I2C_MST_ODR_CONFIG, unless gyro or accel set their own data rate
             .I2C_MST_CYCLE = 1,
             .ACCEL_CYCLE = 1, // Duty cycle mode, use ACCEL_SMPLRT_DIV
             .GYRO_CYCLE = 1, // Duty cycle mode, use GYRO_SMPLTR_DIV
@@ -699,10 +697,8 @@ pub const ICM_20948 = struct {
 
     pub fn configure_magnetometer(self: *Self, config: Config) Error!void {
         _ = config;
-        // Enable slave delay for slave 0
-        try self.write_byte(.{ .bank3 = .i2c_mst_delay_ctrl }, 1);
+
         // Set master odr: 1.1kHz/2^(config)
-        // NOTE: This isn't supposed used unless the other sensors are disabled, but it seems to be?
         // TODO: Add config, but if it's too high we need to wait longer for the device to fill the
         // read registers
         try self.write_byte(.{ .bank3 = .i2c_mst_odr_config }, 3);
@@ -731,13 +727,9 @@ pub const ICM_20948 = struct {
             log.err("Unexpected magnetometer device ID: expected 0x{X:02}, got 0x{X:02}", .{ MAG_WHOAMI, mag_id });
             return error.SetupFailed;
         }
-
-        // TODO: Needed?
-        try self.mag_reset();
     }
 
-    /// Clear the read bit in the sensor's master controller for the next transaction. This
-    /// preserves the i2c slave address, so it must be set correctly in the first place.
+    /// Set the sensor's slave address to the magnetometer with the read bit cleared
     inline fn set_mag_write(self: *Self) !void {
         if (self.slave_address == 0x80 | MAG_ADDRESS) return;
 
@@ -745,8 +737,7 @@ pub const ICM_20948 = struct {
         self.slave_address = MAG_ADDRESS;
     }
 
-    /// Set the read bit in the sensor's master controller for the next transaction This preserves
-    /// the i2c slave address, so it must be set correctly in the first place.
+    /// Set the sensor's slave address to the magnetometer with the read bit set
     fn set_mag_read(self: *Self) !void {
         if (self.slave_address == 0x80 | MAG_ADDRESS) return;
 
@@ -791,9 +782,9 @@ pub const ICM_20948 = struct {
             .i2c_slv0_en = 1,
         }));
         self.clock.sleep_us(MAG_WRITE_DELAY_US);
-        // try self.set_mag_read();
     }
 
+    /// Reset the magnetometer and reset the I2C master.
     pub fn mag_reset(self: *Self) Error!void {
         // Control 3 only has 1 bit, which initiates soft reset
         try self.mag_write_byte(.control3, 1);
