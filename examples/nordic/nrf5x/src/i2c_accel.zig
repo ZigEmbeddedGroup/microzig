@@ -55,14 +55,6 @@ pub fn main() !void {
     );
 
     try dev.setup();
-    // try dev.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, 0);
-    // try dev.write_byte(.{ .bank0 = .int_pin_cfg }, 0b10); // bypass_en
-    // // read device id
-    // try i2c0.write_blocking(@enumFromInt(0x0C), &.{0x01}, null);
-    // var buf: [32]u8 = undefined;
-    // try i2c0.read_blocking(@enumFromInt(0x0C), &buf, null);
-    // std.log.info("Got: {x}", .{buf});
-    // try dev.health_check();
 
     while (true) {
         const data = try dev.get_accel_gyro_data();
@@ -75,12 +67,12 @@ pub fn main() !void {
         const temp_c = try dev.get_temp();
         std.log.info("temp: {d: >5.2}°C", .{temp_c});
 
-        const mag_data = try dev.get_mag_data_unscaled();
+        const mag_data = try dev.get_mag_data();
         std.log.info(
-            "mag: x {d: >8.2} y {d: >8.2} z {d: >8.2} ",
+            "mag: x {d: >8.2}µT y {d: >8.2}µT z {d: >8.2}µT ",
             .{ mag_data.x, mag_data.y, mag_data.z },
         );
 
-        sleep_ms(200);
+        sleep_ms(500);
     }
 }
