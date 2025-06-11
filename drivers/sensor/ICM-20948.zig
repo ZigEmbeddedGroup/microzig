@@ -24,7 +24,6 @@
 //! ```
 //!
 //! TODO:
-//! * Add support for magnetometer
 //! * Allow configuring the unit of the readings (Gs vs m/s^2, degrees vs. radians, C vs F)
 //! * Test/ensure support for SPI datagram devices (need to set r/w bit in register address)
 //! * Add support for calibration/bias correction
@@ -182,13 +181,14 @@ pub const ICM_20948 = struct {
     };
 
     const MagRegister = enum(u8) {
-        comp_id = 0x00, // DELETEME
         device_id = 0x01,
         status1 = 0x10,
         // xl, xh, yl, yh, zl, zh
         hxl = 0x11,
         status_2 = 0x18,
+        // Continuous mode?
         control2 = 0x31,
+        // Reset control
         control3 = 0x32,
         test_1 = 0x33,
         test_2 = 0x34,
@@ -296,10 +296,10 @@ pub const ICM_20948 = struct {
     };
 
     const lp_config = packed struct(u8) {
-        reserved_0: u3,
+        reserved_0: u4,
         GYRO_CYCLE: u1,
         ACCEL_CYCLE: u1,
-        I2C_MST_CYCLE: u2,
+        I2C_MST_CYCLE: u1,
         reserved_7: u1,
     };
 
@@ -501,7 +501,7 @@ pub const ICM_20948 = struct {
         // TODO: Apparently the mst_odr_config does not matter when accel or gyro are enabled, it
         // just uses gyro or accel (in that order)
         try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
-            .I2C_MST_CYCLE = 1, // ENABLE? i2c master duty cycle
+            .I2C_MST_CYCLE = 1,
             .ACCEL_CYCLE = 1, // Duty cycle mode, use ACCEL_SMPLRT_DIV
             .GYRO_CYCLE = 1, // Duty cycle mode, use GYRO_SMPLTR_DIV
         });
