@@ -60,6 +60,7 @@ pub const ICM_20948 = struct {
     const MAG_WHOAMI = 0x09;
     const MAG_ADDRESS = 0x0C;
     const MAG_WRITE_DELAY_US = 10_000;
+    const MAG_READ_DELAY_US = 10_000;
     const MAG_RESET_DELAY_US = 100_000;
 
     dev: mdf.base.Datagram_Device,
@@ -717,9 +718,8 @@ pub const ICM_20948 = struct {
 
         // Enable I2C master on this device
         try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
-        // Read it back // DELETEME
-        const usr_ctrl = try self.read_byte(.{ .bank0 = .user_ctrl }); // DELETEME
-        log.err("User ctrl {x}", .{usr_ctrl}); // DELETEME
+        // We need to sleep here
+        self.clock.sleep_ms(10);
 
         // Set slave address to address of the magnetometer
         try self.write_byte(.{ .bank3 = .i2c_slv0_addr }, MAG_ADDRESS | 0x80); // set read should do
@@ -767,7 +767,7 @@ pub const ICM_20948 = struct {
         }));
 
         // Sleep to give master time to fill sens data with data from new register
-        self.clock.sleep_ms(MAG_READ_DELAY_US);
+        self.clock.sleep_us(MAG_READ_DELAY_US);
     }
 
     /// Clear the read bit in the sensor's master controller for the next transaction. This
@@ -803,6 +803,8 @@ pub const ICM_20948 = struct {
             .i2c_slv0_leng = @truncate(buf.len),
             .i2c_slv0_en = 1,
         }));
+        // Give the device time to hit the magnetometer
+        self.clock.sleep_us(MAG_READ_DELAY_US);
         // Read the data the master read in
         return try self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
     }
