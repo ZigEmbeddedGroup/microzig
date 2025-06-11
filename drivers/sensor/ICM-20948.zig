@@ -186,14 +186,12 @@ pub const ICM_20948 = struct {
         status1 = 0x10,
         // xl, xh, yl, yh, zl, zh
         hxl = 0x11,
-        // HOFL check if overflowed. Necessary to read after reading measurement data?
+        // Must be read after reading sensor
         status2 = 0x18,
         // Operating mode/power down
         control2 = 0x31,
         // Reset control
         control3 = 0x32,
-        test_1 = 0x33,
-        test_2 = 0x34,
     };
 
     const Config = struct {
@@ -305,7 +303,6 @@ pub const ICM_20948 = struct {
         reserved_7: u1,
     };
 
-    // TODO: We probably don't need this defined right now, we only set the clock
     const i2c_mst_ctrl = packed struct(u8) {
         i2c_mst_clk: u4 = 0,
         i2c_mst_p_nsr: u1 = 0,
@@ -755,7 +752,6 @@ pub const ICM_20948 = struct {
         // Set register to read from
         try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
         // Configure master to auto-read into SENS_DATA regs
-        // try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, 0xff);
         try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
             .i2c_slv0_leng = @truncate(buf.len),
             .i2c_slv0_en = 1,
