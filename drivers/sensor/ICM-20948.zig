@@ -839,6 +839,23 @@ pub const ICM_20948 = struct {
             .z = raw_data.z,
         };
     }
+
+    // Unit: µT
+    const Mag_data = struct {
+        x: f32 = 0,
+        y: f32 = 0,
+        z: f32 = 0,
+    };
+
+    pub fn get_mag_data(self: *Self) Error!Mag_data {
+        const unscaled_data = try self.get_mag_data_unscaled();
+
+        return .{
+            .x = @as(f32, @floatFromInt(unscaled_data.x)) * 0.15,
+            .y = @as(f32, @floatFromInt(unscaled_data.y)) * 0.15,
+            .z = @as(f32, @floatFromInt(unscaled_data.z)) * 0.15,
+        };
+    }
 };
 
 // Testing
