@@ -62,6 +62,16 @@ pub const Target = struct {
     /// Provide a custom linker script for the hardware or define a custom generation.
     linker_script: LinkerScript = .{},
 
+    /// Provides the stack end for the target.
+    stack_end: union(enum) {
+        /// Place the stack end at a fixed address.
+        address: usize,
+        /// Place the stack at the end of the n-th ram memory region.
+        ram_region_index: usize,
+        /// Place the stack end at a symbol address.
+        symbol_name: []const u8,
+    } = .{ .ram_region_index = 0 },
+
     /// (optional) Explicitly set the entry point.
     entry: ?Build.Step.Compile.Entry = null,
 
