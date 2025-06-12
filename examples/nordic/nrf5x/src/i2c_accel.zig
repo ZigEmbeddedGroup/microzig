@@ -69,8 +69,17 @@ pub fn main() !void {
 
         const mag_data = try dev.get_mag_data();
         std.log.info(
-            "mag: x {d: >8.2}µT y {d: >8.2}µT z {d: >8.2}µT ",
+            "mag: x {d: >8.2}µT y {d: >8.2}µT z {d: >8.2}µT",
             .{ mag_data.x, mag_data.y, mag_data.z },
+        );
+
+        const adata = try dev.get_accel_gyro_mag_data();
+        std.log.info(
+            "accel: x {d: >6.2} y {d: >6.2} z {d: >6.2} " ++
+                "gyro: x {d: >6.2} y {d: >6.2} z {d: >6.2} " ++
+                "temp: {d: >5.2}°C" ++
+                "mag: x {d: >6.2}µT y {d: >6.2}µT z {d: >6.2}µT",
+            .{ adata.accel.x, adata.accel.y, adata.accel.z, adata.gyro.x, adata.gyro.y, adata.gyro.z, adata.temp, adata.mag.x, adata.mag.y, adata.mag.z },
         );
 
         sleep_ms(500);
