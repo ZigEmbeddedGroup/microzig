@@ -644,16 +644,14 @@ pub const ICM_20948 = struct {
     const SixDofData = struct {
         accel: Accel_data,
         gyro: Gyro_data,
+        temp: f32,
     };
 
     pub fn get_accel_gyro_data(self: *Self) Error!SixDofData {
         var raw_data = packed struct {
-            ax: i16 = 0,
-            ay: i16 = 0,
-            az: i16 = 0,
-            gx: i16 = 0,
-            gy: i16 = 0,
-            gz: i16 = 0,
+            accel: Accel_data_unscaled = .{},
+            gyro: Gyro_data_unscaled = .{},
+            temp: i16 = 0,
         }{};
 
         self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
@@ -664,15 +662,57 @@ pub const ICM_20948 = struct {
         const accel_scalar_val = self.accel_scalar();
         const gyro_scalar_val = self.gyro_scalar();
 
-        return .{ .accel = .{
-            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ax))) * accel_scalar_val,
-            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ay))) * accel_scalar_val,
-            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.az))) * accel_scalar_val,
-        }, .gyro = .{
-            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gx))) * gyro_scalar_val,
-            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gy))) * gyro_scalar_val,
-            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gz))) * gyro_scalar_val,
-        } };
+        return .{
+            .accel = .{
+                .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.accel.x))) * accel_scalar_val,
+                .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.accel.y))) * accel_scalar_val,
+                .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.accel.z))) * accel_scalar_val,
+            },
+            .gyro = .{
+                .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gyro.x))) * gyro_scalar_val,
+                .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gyro.y))) * gyro_scalar_val,
+                .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gyro.z))) * gyro_scalar_val,
+            },
+            .temp = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.temp))) / 333.87 + 21.0,
+        };
+    }
+
+    const NineDofData = struct { accel: Accel_data, gyro: Gyro_data, temp: f32, mag: Mag_data };
+
+    pub fn get_accel_gyro_mag_data(self: *Self) Error!NineDofData {
+        var raw_data = packed struct {
+            accel: Accel_data_unscaled = .{},
+            gyro: Gyro_data_unscaled = .{},
+            temp: i16 = 0,
+            mag: Mag_data_unscaled = .{},
+        }{};
+
+        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+            log.err("Failed to read combined accel/gyro/mag data: {}", .{err});
+            return err;
+        };
+
+        const accel_scalar_val = self.accel_scalar();
+        const gyro_scalar_val = self.gyro_scalar();
+
+        return .{
+            .accel = .{
+                .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.accel.x))) * accel_scalar_val,
+                .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.accel.y))) * accel_scalar_val,
+                .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.accel.z))) * accel_scalar_val,
+            },
+            .gyro = .{
+                .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gyro.x))) * gyro_scalar_val,
+                .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gyro.y))) * gyro_scalar_val,
+                .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gyro.z))) * gyro_scalar_val,
+            },
+            .temp = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.temp))) / 333.87 + 21.0,
+            .mag = .{
+                .x = @as(f32, @floatFromInt(raw_data.mag.x)) * 0.15,
+                .y = @as(f32, @floatFromInt(raw_data.mag.y)) * 0.15,
+                .z = @as(f32, @floatFromInt(raw_data.mag.z)) * 0.15,
+            },
+        };
     }
 
     pub fn get_temp(self: *Self) Error!f32 {
