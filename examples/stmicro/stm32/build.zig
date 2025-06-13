@@ -24,6 +24,9 @@ pub fn build(b: *std.Build) void {
         // .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_blink", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1xx_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_adc", .file = "src/stm32f1xx/adc.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_adv_adc", .file = "src/stm32f1xx/advanced_adc.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_dual_adc", .file = "src/stm32f1xx/adc_dualmode.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_gpio", .file = "src/stm32f1xx/gpio.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_echo", .file = "src/stm32f1xx/uart_echo.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_log", .file = "src/stm32f1xx/uart_log.zig" },
