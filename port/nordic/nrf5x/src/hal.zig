@@ -24,3 +24,5 @@ test "hal tests" {
 
     _ = drivers;
 }
+
+pub fn myFunc() void {}
