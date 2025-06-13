@@ -1,7 +1,7 @@
 name: Code Linting
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize]
 
 jobs:
@@ -27,27 +27,49 @@ jobs:
 
       - name: Run linter
         run: |
-          FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.zig$')
-          echo changed files: $FILES
-          ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
+          FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.zig$' || true)
+          echo "changed files: $FILES"
+          if [ -n "$FILES" ]; then
+            ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
+          else
+            echo "[]" > lint_results.json
+          fi
 
       - name: Post comments
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const issues = JSON.parse(fs.readFileSync('lint_results.json', 'utf8'));
 
-            for (const issue of issues) {
-              await github.rest.pulls.createReviewComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number,
-                commit_id: context.payload.pull_request.head.sha,
-                path: issue.file,
-                line: issue.line,
-                body: issue.message
-              });
+            // Check if lint results file exists and has content
+            if (!fs.existsSync('lint_results.json')) {
+              console.log('No lint results file found');
+              return;
             }
 
+            const content = fs.readFileSync('lint_results.json', 'utf8').trim();
+            if (!content || content === '[]') {
+              console.log('No lint issues found');
+              return;
+            }
+
+            const issues = JSON.parse(content);
+            console.log(`Found ${issues.length} lint issues`);
+
+            for (const issue of issues) {
+              try {
+                await github.rest.pulls.createReviewComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number,
+                  commit_id: context.payload.pull_request.head.sha,
+                  path: issue.file,
+                  line: issue.line,
+                  body: issue.message
+                });
+                console.log(`Posted comment for ${issue.file}:${issue.line}`);
+              } catch (error) {
+                console.error(`Failed to post comment for ${issue.file}:${issue.line}:`, error.message);
+              }
+            }
