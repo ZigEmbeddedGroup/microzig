@@ -55,18 +55,35 @@ pub fn main() !void {
     );
 
     try dev.setup();
-    try dev.health_check();
 
     while (true) {
-        const data = try dev.get_accel_gyro_data();
+        //   DELETEME>>
+        const ag_data = try dev.get_accel_gyro_data();
         std.log.info(
             "accel: x {d: >8.2} y {d: >8.2} z {d: >8.2} " ++
                 "gyro: x {d: >8.2} y {d: >8.2} z {d: >8.2}",
-            .{ data.accel.x, data.accel.y, data.accel.z, data.gyro.x, data.gyro.y, data.gyro.z },
+            .{ ag_data.accel.x, ag_data.accel.y, ag_data.accel.z, ag_data.gyro.x, ag_data.gyro.y, ag_data.gyro.z },
         );
+
         const temp_c = try dev.get_temp();
         std.log.info("temp: {d: >5.2}°C", .{temp_c});
 
-        sleep_ms(200);
+        const mag_data = try dev.get_mag_data();
+        std.log.info(
+            "mag: x {d: >8.2}µT y {d: >8.2}µT z {d: >8.2}µT",
+            .{ mag_data.x, mag_data.y, mag_data.z },
+        );
+
+        //   DELETEME<<
+        const data = try dev.get_accel_gyro_mag_data();
+        std.log.info(
+            "accel: x {d: >6.2} y {d: >6.2} z {d: >6.2} " ++
+                "gyro: x {d: >6.2} y {d: >6.2} z {d: >6.2} " ++
+                "temp: {d: >5.2}°C" ++
+                "mag: x {d: >6.2}µT y {d: >6.2}µT z {d: >6.2}µT",
+            .{ data.accel.x, data.accel.y, data.accel.z, data.gyro.x, data.gyro.y, data.gyro.z, data.temp, data.mag.x, data.mag.y, data.mag.z },
+        );
+
+        sleep_ms(500);
     }
 }
