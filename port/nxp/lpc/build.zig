@@ -30,9 +30,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             // Downloaded from http://ds.arm.com/media/resources/db/chip/nxp/lpc1768/LPC176x5x.svd
             .register_definition = .{ .svd = b.path("src/chips/LPC176x5x.svd") },
             .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
-                .{ .offset = 0x10000000, .length = 32 * 1024, .kind = .ram },
-                .{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x00000000, .length = 512 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x10000000, .length = 32 * 1024, .access = .rw },
+                .{ .tag = .ram, .offset = 0x2007C000, .length = 32 * 1024, .access = .rw },
             },
         },
         .hal = .{

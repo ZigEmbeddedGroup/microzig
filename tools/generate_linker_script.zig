@@ -12,10 +12,10 @@ pub const Args = struct {
 };
 
 pub fn main() !void {
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = gpa.deinit();
+    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+    defer _ = debug_allocator.deinit();
 
-    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
+    var arena = std.heap.ArenaAllocator.init(debug_allocator.allocator());
     defer arena.deinit();
 
     const allocator = arena.allocator();
@@ -48,59 +48,195 @@ pub fn main() !void {
         .chip = parsed_args.chip_name,
     });
 
+    // name all unnamed regions
+    const region_names: [][]const u8 = try allocator.alloc([]const u8, parsed_args.memory_regions.len);
+    {
+        var counters: [5]usize = @splat(0);
+        for (region_names, parsed_args.memory_regions) |*region_name, region| {
+            if (region.name) |name| {
+                region_name.* = try allocator.dupe(u8, name);
+            } else {
+                region_name.* = try std.fmt.allocPrint(allocator, "{s}{}", .{
+                    @tagName(region.tag),
+                    counters[@intFromEnum(region.tag)],
+                });
+            }
+            counters[@intFromEnum(region.tag)] += 1;
+        }
+    }
+
     if (parsed_args.mode != .none) {
         try writer.writeAll("MEMORY\n{\n");
-        {
-            var counters = [4]usize{ 0, 0, 0, 0 };
-            for (parsed_args.memory_regions) |region| {
-                // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
 
-                switch (region.kind) {
-                    .flash => {
-                        try writer.print("  flash{d}    (rx!w)", .{counters[0]});
-                        counters[0] += 1;
-                    },
+        for (parsed_args.memory_regions, region_names) |region, region_name| {
+            // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
 
-                    .ram => {
-                        try writer.print("  ram{d}      (rw!x)", .{counters[1]});
-                        counters[1] += 1;
-                    },
+            try writer.print("  {s} (", .{region_name});
 
-                    .io => {
-                        try writer.print("  io{d}       (rw!x)", .{counters[2]});
-                        counters[2] += 1;
-                    },
+            if (region.access.read) try writer.writeAll("r");
+            if (region.access.write) try writer.writeAll("w");
+            if (region.access.execute) try writer.writeAll("x");
 
-                    .reserved => {
-                        try writer.print("  reserved{d} (rw!x)", .{counters[3]});
-                        counters[3] += 1;
-                    },
-
-                    .custom => |custom| {
-                        try writer.print("  {s} (", .{custom.name});
-                        if (custom.readable) try writer.writeAll("r");
-                        if (custom.writeable) try writer.writeAll("w");
-                        if (custom.executable) try writer.writeAll("x");
-
-                        if (!custom.readable or !custom.writeable or !custom.executable) {
-                            try writer.writeAll("!");
-                            if (!custom.readable) try writer.writeAll("r");
-                            if (!custom.writeable) try writer.writeAll("w");
-                            if (!custom.executable) try writer.writeAll("x");
-                        }
-                        try writer.writeAll(")");
-                    },
-                }
-                try writer.print(" : ORIGIN = 0x{X:0>8}, LENGTH = 0x{X:0>8}\n", .{ region.offset, region.length });
+            if (!region.access.read or !region.access.write or !region.access.execute) {
+                try writer.writeAll("!");
+                if (!region.access.read) try writer.writeAll("r");
+                if (!region.access.write) try writer.writeAll("w");
+                if (!region.access.execute) try writer.writeAll("x");
             }
+            try writer.writeAll(")");
+
+            try writer.print(" : ORIGIN = 0x{X:0>8}, LENGTH = 0x{X:0>8}\n", .{ region.offset, region.length });
         }
 
         try writer.writeAll("}\n");
     }
 
-    if (parsed_args.mode == .include_sections) {
-        try writer.writeAll("\n/* auto-generated sections */\n");
-        try generate_sections(writer, parsed_args.cpu_arch, parsed_args.mode.include_sections.rodata_in_ram);
+    if (parsed_args.mode == .memory_regions_and_sections) {
+        const flash_region_name = for (region_names, parsed_args.memory_regions) |region_name, region| {
+            if (region.tag == .flash) {
+                break region_name;
+            }
+        } else return error.NoFlashRegion;
+
+        const ram_region_name, const ram_region = for (region_names, parsed_args.memory_regions) |region_name, region| {
+            if (region.tag == .ram) {
+                break .{ region_name, region };
+            }
+        } else return error.NoRamRegion;
+
+        const options = parsed_args.mode.memory_regions_and_sections;
+
+        const Location = enum {
+            omit,
+            flash,
+            ram,
+        };
+
+        const rodata_location: Location = switch (options.rodata_location) {
+            .flash => .flash,
+            .ram => .ram,
+            .omit => .omit,
+        };
+
+        const time_critical_location: Location = switch (options.time_critical_location) {
+            .auto => if (ram_region.access.execute) .ram else .flash,
+            .flash => .flash,
+            .ram => if (ram_region.access.execute)
+                .ram
+            else
+                return error.InvalidTimeCriticalLocation,
+            .omit => .omit,
+        };
+
+        try writer.print(
+            \\
+            \\/* auto-generated sections */
+            \\SECTIONS
+            \\{{
+            \\  .flash_start :
+            \\  {{
+            \\    KEEP(*(microzig_flash_start))
+            \\  }} > {s}
+            \\
+            \\  .text :
+            \\  {{
+            \\    *(.text*)
+            \\
+        , .{flash_region_name});
+
+        if (time_critical_location == .flash) {
+            try writer.writeAll(
+                \\    KEEP(*(microzig_time_critical))
+                \\
+            );
+        }
+
+        if (rodata_location == .flash) {
+            try writer.writeAll(
+                \\    *(.srodata*)
+                \\    *(.rodata*)
+                \\
+            );
+        }
+
+        try writer.print(
+            \\  }} > {s}
+            \\
+            \\
+        , .{flash_region_name});
+
+        switch (parsed_args.cpu_arch) {
+            .arm, .thumb => try writer.print(
+                \\  .ARM.extab : {{
+                \\    *(.ARM.extab* .gnu.linkonce.armextab.*)
+                \\  }} > {[flash]s}
+                \\
+                \\  .ARM.exidx : {{
+                \\    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+                \\  }} > {[flash]s}
+                \\
+                \\
+            , .{ .flash = flash_region_name }),
+            else => {},
+        }
+
+        try writer.writeAll(
+            \\  .data :
+            \\  {
+            \\    microzig_data_start = .;
+            \\    *(.sdata*)
+            \\    *(.data*)
+            \\
+        );
+
+        if (rodata_location == .ram) {
+            try writer.writeAll(
+                \\    *(.srodata*)
+                \\    *(.rodata*)
+                \\
+            );
+        }
+
+        if (time_critical_location == .ram) {
+            try writer.writeAll(
+                \\    KEEP(*(microzig_time_critical))
+                \\
+            );
+        }
+
+        try writer.print(
+            \\    microzig_data_end = .;
+            \\  }} > {[ram]s} AT> {[flash]s}
+            \\
+            \\  .bss (NOLOAD) :
+            \\  {{
+            \\    microzig_bss_start = .;
+            \\    *(.sbss*)
+            \\    *(.bss*)
+            \\    microzig_bss_end = .;
+            \\  }} > {[ram]s}
+            \\
+            \\  .flash_end :
+            \\  {{
+            \\    microzig_flash_end = .;
+            \\  }} > {[flash]s}
+            \\
+            \\  microzig_data_load_start = LOADADDR(.data);
+            \\
+        , .{
+            .flash = flash_region_name,
+            .ram = ram_region_name,
+        });
+
+        switch (parsed_args.cpu_arch) {
+            .riscv32, .riscv64 => try writer.writeAll(
+                \\  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
+                \\
+            ),
+            else => {},
+        }
+
+        try writer.writeAll("}\n");
     }
 
     for (user_ld_files) |file_path| {
@@ -110,98 +246,4 @@ pub fn main() !void {
         try writer.print("\n/* file: {s} */\n", .{file_path});
         try writer.writeAll(ld_file_data);
     }
-}
-
-pub fn generate_sections(writer: anytype, cpu_arch: std.Target.Cpu.Arch, rodata_in_ram: bool) !void {
-    try writer.writeAll(
-        \\SECTIONS
-        \\{
-        \\  .flash_start :
-        \\  {
-        \\    KEEP(*(microzig_flash_start))
-        \\  }
-        \\
-        \\  .text :
-        \\  {
-        \\    *(.text*)
-        \\
-    );
-
-    if (!rodata_in_ram) {
-        try writer.writeAll(
-            \\    *(.srodata*)
-            \\    *(.rodata*)
-            \\
-        );
-    }
-
-    try writer.writeAll(
-        \\  } > flash0
-        \\
-        \\
-    );
-
-    switch (cpu_arch) {
-        .arm, .thumb => try writer.writeAll(
-            \\  .ARM.extab : {
-            \\    *(.ARM.extab* .gnu.linkonce.armextab.*)
-            \\  } > flash0
-            \\
-            \\  .ARM.exidx : {
-            \\    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-            \\  } > flash0
-            \\
-            \\
-        ),
-        else => {},
-    }
-
-    try writer.writeAll(
-        \\  .data :
-        \\  {
-        \\    microzig_data_start = .;
-        \\    KEEP(*(microzig_time_critical))
-        \\    *(.sdata*)
-        \\    *(.data*)
-        \\
-    );
-
-    if (rodata_in_ram) {
-        try writer.writeAll(
-            \\    *(.srodata*)
-            \\    *(.rodata*)
-            \\
-        );
-    }
-
-    try writer.writeAll(
-        \\    microzig_data_end = .;
-        \\  } > ram0 AT> flash0
-        \\
-        \\  .bss (NOLOAD) :
-        \\  {
-        \\    microzig_bss_start = .;
-        \\    *(.bss*)
-        \\    *(.sbss*)
-        \\    microzig_bss_end = .;
-        \\  } > ram0
-        \\
-        \\  .flash_end :
-        \\  {
-        \\    microzig_flash_end = .;
-        \\  } > flash0
-        \\
-        \\  microzig_data_load_start = LOADADDR(.data);
-        \\
-    );
-
-    switch (cpu_arch) {
-        .riscv32, .riscv64 => try writer.writeAll(
-            \\  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
-            \\
-        ),
-        else => {},
-    }
-
-    try writer.writeAll("}\n");
 }

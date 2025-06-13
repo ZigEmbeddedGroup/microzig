@@ -371,11 +371,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const target = options.target;
 
+            // validate that tagged memory regions meet the requirements
+            for (target.chip.memory_regions) |region| {
+                region.validate_tag();
+            }
+
             // TODO: let the user override which ram section to use the stack on,
             // for now just using the first ram section in the memory region list
             const first_ram = blk: {
                 for (target.chip.memory_regions) |region| {
-                    if (region.kind == .ram)
+                    if (region.tag == .ram)
                         break :blk region;
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };

@@ -1,13 +1,9 @@
 SECTIONS
 {
-  .irom.text :
+  .text :
   {
-    microzig_text_start = .;
-
     KEEP(*(microzig_flash_start))
     *(.text*)
-
-    microzig_text_end = .;
 
     /**
      * CPU will try to prefetch up to 16 bytes of of instructions.
@@ -16,42 +12,34 @@ SECTIONS
      * dummy bytes to ensure this
      */
     . += 16;
-  } > flash0
+  } > IROM
 
   .drom.dummy (NOLOAD) :
   {
-    . = ORIGIN(data_flash) + (microzig_text_end - microzig_text_start);
+    . = ORIGIN(DROM) + SIZEOF(.text);
 
     /* Add alignment of MMU page size + 0x20 bytes for the mapping header. */
     . = ALIGN(0x10000) + 0x20;
-  } > data_flash
+  } > DROM
 
   .drom.rodata :
   {
-    microzig_rodata_start = .;
-
     KEEP(*(.app_desc))
     *(.rodata*)
+  } > DROM
 
-    microzig_rodata_end = .;
-  } > data_flash
-
-  .iram.text :
+  .rwtext :
   {
-    microzig_iram_text_start = .;
-
     KEEP(*(microzig_time_critical))
-
-    microzig_iram_text_end = .;
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
-  } > instruction_ram
+  } > IRAM
 
   .dram.dummy (NOLOAD) :
   {
-    . = ORIGIN(ram0) + (microzig_iram_text_end - microzig_iram_text_start);
-  } > ram0
+    . = ORIGIN(DRAM) + SIZEOF(.rwtext);
+  } > DRAM
 
   .dram.data :
   {
@@ -59,15 +47,15 @@ SECTIONS
     *(.sdata*)
     *(.data*)
     microzig_data_end = .;
-  } > ram0
+  } > DRAM
 
   .dram.bss (NOLOAD) :
   {
     microzig_bss_start = .;
-    *(.bss*)
     *(.sbss*)
+    *(.bss*)
     microzig_bss_end = .;
-  } > ram0
+  } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
 }

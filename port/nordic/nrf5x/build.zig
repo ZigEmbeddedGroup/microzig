@@ -42,8 +42,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = nrfx.path("mdk/nrf52.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x00000000, .length = 0x80000, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 0x10000, .access = .rw },
             },
             .patches = @import("patches/nrf52832.zig").patches,
         },
@@ -66,14 +66,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = nrfx.path("mdk/nrf52840.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 0x100000, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x00000000, .length = 0x100000, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 0x40000, .access = .rw },
 
                 // EXTFLASH
-                .{ .offset = 0x12000000, .length = 0x8000000, .kind = .flash },
+                .{ .tag = .flash, .offset = 0x12000000, .length = 0x8000000, .access = .rx },
 
                 // CODE_RAM
-                .{ .offset = 0x800000, .length = 0x40000, .kind = .ram },
+                .{ .offset = 0x800000, .length = 0x40000, .access = .rwx },
             },
             .patches = @import("patches/nrf52840.zig").patches,
         },

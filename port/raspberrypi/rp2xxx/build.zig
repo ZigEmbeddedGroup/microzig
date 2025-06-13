@@ -50,8 +50,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2040",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2040/hardware_regs/RP2040.svd") },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
-                .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
             },
             .patches = @import("patches/rp2040.zig").patches,
         },
@@ -76,10 +76,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
-                .{ .kind = .ram, .offset = 0x20000000, .length = 512 * 1024 },
-                .{ .kind = .ram, .offset = 0x20080000, .length = 4 * 1024 },
-                .{ .kind = .ram, .offset = 0x20081000, .length = 4 * 1024 },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+                // TODO: maybe these can be used for stacks
+                .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+                .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
             },
             .patches = @import("patches/rp2350.zig").patches,
         },
@@ -126,10 +127,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
-                .{ .kind = .ram, .offset = 0x20000000, .length = 512 * 1024 },
-                .{ .kind = .ram, .offset = 0x20080000, .length = 4 * 1024 },
-                .{ .kind = .ram, .offset = 0x20081000, .length = 4 * 1024 },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+                // TODO: maybe these can be used for stacks
+                .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+                .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
             },
             .patches = @import("patches/rp2350.zig").patches ++ [_]microzig.Patch{
                 .{
@@ -180,7 +182,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 }),
                 .pico_flashless = chip_rp2040.derive(.{
                     .entry = .{ .symbol_name = "_entry_point" },
-                    .linker_script = .{ .custom = b.path("ld/rp2040/ram_image.ld") },
+                    .linker_script = .{ .custom = b.path("ld/rp2040/ram_image_linker.ld") },
                     .ram_image = true,
                     .board = .{
                         .name = "RaspberryPi Pico (ram image)",

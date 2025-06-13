@@ -59,29 +59,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
-                // irom
-                .{ .kind = .flash, .offset = 0x4200_0000 + 0x20, .length = 0x0080_0000 - 0x20 },
-                // drom
-                .{ .kind = .{ .custom = .{
-                    .name = "data_flash",
-                    .readable = true,
-                    .writeable = false,
-                    .executable = false,
-                } }, .offset = 0x3C00_0000 + 0x20, .length = 0x0080_0000 - 0x20 },
-                // iram
-                .{ .kind = .{ .custom = .{
-                    .name = "instruction_ram",
-                    .readable = true,
-                    .writeable = true,
-                    .executable = true,
-                } }, .offset = 0x4037C000 + 0x4000, .length = 313 * 1024 },
-                // dram
-                .{ .kind = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024 },
+                .{ .name = "IROM", .offset = 0x4200_0000 + 0x20, .length = 0x0080_0000 - 0x20, .access = .rx },
+                .{ .name = "DROM", .offset = 0x3C00_0000 + 0x20, .length = 0x0080_0000 - 0x20, .access = .r },
+                .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .access = .rx },
+                 // tag for stack
+                .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
             },
         },
         .hal = hal,
         .linker_script = .{ .generate = .{
-            .mode = .only_memory,
+            .mode = .only_memory_regions,
             .files = microzig.utils.dupe_paths(b, &.{
                 b.path("ld/esp32_c3/image_boot_sections.ld"),
                 b.path("ld/esp32_c3/rom_functions.ld"),
@@ -113,16 +100,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .url = "https://www.espressif.com/en/products/socs/esp32-c3",
                     .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
                     .memory_regions = &.{
-                        // irom
-                        .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
-                        // dram
-                        .{ .kind = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024 },
+                        // TODO: place rodata in DROM and `microzig_time_critical` in ram.
+                        .{ .name = "IROM", .tag = .flash, .offset = 0x4200_0000, .length = 0x0080_0000, .access = .rx },
+                        // .{ .name = "DROM", .offset = 0x3C00_0000, .length = 0x0080_0000, .flags = .r },
+                        // .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .flags = .x },
+                        .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
                     },
                 },
                 .linker_script = .{ .generate = .{
-                    .mode = .only_memory,
+                    .mode = .{ .memory_regions_and_sections = .{
+                        .rodata_location = .ram,
+                    } },
                     .files = microzig.utils.dupe_paths(b, &.{
-                        b.path("ld/esp32_c3/direct_boot_sections.ld"),
                         b.path("ld/esp32_c3/rom_functions.ld"),
                     }),
                 } },

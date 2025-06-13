@@ -3,6 +3,7 @@
  * Target Chip: RP2040
  */
 
+/* TODO: maybe memory regions can be auto-generated */
 MEMORY
 {
   entry  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
@@ -20,6 +21,7 @@ SECTIONS
   {
      KEEP(*(microzig_flash_start))
      *(.text*)
+     KEEP(*(microzig_time_critical))
      *(.rodata*)
   } > ram0
 

@@ -41,8 +41,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .atdf = atpack.path("atdf/ATmega328P.atdf"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },
-                .{ .offset = 0x800100, .length = 2048, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x000000, .length = 32 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x800100, .length = 2048, .access = .rw },
             },
         },
         .hal = .{
@@ -61,8 +61,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .atdf = atpack.path("atdf/ATmega32U4.atdf"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },
-                .{ .offset = 0x800100, .length = 2560, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x000000, .length = 32 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x800100, .length = 2560, .access = .rw },
             },
         },
         .hal = .{

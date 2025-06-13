@@ -31,10 +31,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .atdf = atpack_dep.path("samd51a/atdf/ATSAMD51J19A.atdf"),
             },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x00000000, .length = 512 * 1024 }, // Embedded Flash
-                .{ .kind = .ram, .offset = 0x20000000, .length = 192 * 1024 }, // Embedded SRAM
-                .{ .kind = .ram, .offset = 0x47000000, .length = 8 * 1024 }, // Backup SRAM
-                .{ .kind = .flash, .offset = 0x00804000, .length = 512 }, // NVM User Row
+                .{ .tag = .flash, .offset = 0x00000000, .length = 512 * 1024, .access = .rx }, // Embedded Flash
+                .{ .tag = .ram, .offset = 0x20000000, .length = 192 * 1024, .access = .rwx }, // Embedded SRAM
+                .{ .tag = .ram, .offset = 0x47000000, .length = 8 * 1024, .access = .rwx }, // Backup SRAM
+                .{ .name = "NVM_USER_ROW", .offset = 0x00804000, .length = 512, .access = .r }, // NVM User Row
             },
         },
     };
