@@ -62,7 +62,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .name = "IROM", .offset = 0x4200_0000 + 0x20, .length = 0x0080_0000 - 0x20, .access = .rx },
                 .{ .name = "DROM", .offset = 0x3C00_0000 + 0x20, .length = 0x0080_0000 - 0x20, .access = .r },
                 .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .access = .rx },
-                 // tag for stack
+                // tag for stack
                 .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
             },
         },
