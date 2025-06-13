@@ -42,7 +42,6 @@ jobs:
           script: |
             const fs = require('fs');
 
-            // Check if lint results file exists and has content
             if (!fs.existsSync('lint_results.json')) {
               console.log('No lint results file found');
               return;
@@ -57,7 +56,32 @@ jobs:
             const issues = JSON.parse(content);
             console.log(`Found ${issues.length} lint issues`);
 
+            // Get existing review comments
+            const existingComments = await github.rest.pulls.listReviewComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            // Create a set of existing comment signatures for fast lookup
+            const existingSignatures = new Set(
+              existingComments.data
+                .filter(comment => comment.user.login === 'github-actions[bot]')
+                .map(comment => `${comment.path}:${comment.body}`)
+            );
+
+            let postedCount = 0;
+            let skippedCount = 0;
+
             for (const issue of issues) {
+              const signature = `${issue.file}:${issue.message}`;
+
+              if (existingSignatures.has(signature)) {
+                console.log(`Skipping duplicate comment for ${issue.file}: ${issue.message}`);
+                skippedCount++;
+                continue;
+              }
+
               try {
                 await github.rest.pulls.createReviewComment({
                   owner: context.repo.owner,
@@ -69,7 +93,10 @@ jobs:
                   body: issue.message
                 });
                 console.log(`Posted comment for ${issue.file}:${issue.line}`);
+                postedCount++;
               } catch (error) {
                 console.error(`Failed to post comment for ${issue.file}:${issue.line}:`, error.message);
               }
             }
+
+            console.log(`Summary: ${postedCount} new comments posted, ${skippedCount} duplicates skipped`);
