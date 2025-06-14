@@ -16,7 +16,7 @@ SECTIONS
   {
      KEEP(*(microzig_flash_start))
      *(.text*)
-     KEEP(*(microzig_time_critical))
+     KEEP(*(.ram_text))
      *(.rodata*)
   } > ram0
 

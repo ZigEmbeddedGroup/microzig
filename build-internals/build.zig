@@ -206,11 +206,10 @@ pub const BinaryFormat = union(enum) {
     pub fn get_extension(format: BinaryFormat) []const u8 {
         return switch (format) {
             .elf => ".elf",
-            .bin => ".bin",
+            .bin, .esp => ".bin",
             .hex => ".hex",
             .dfu => ".dfu",
             .uf2 => ".uf2",
-            .esp => ".bin",
 
             .custom => |c| c.extension,
         };

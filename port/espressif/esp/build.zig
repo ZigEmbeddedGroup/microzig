@@ -101,7 +101,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .url = "https://www.espressif.com/en/products/socs/esp32-c3",
                     .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
                     .memory_regions = &.{
-                        // TODO: place rodata in DROM and `microzig_time_critical` in ram.
+                        // TODO: place rodata in DROM and `.ram_text` in ram.
                         .{ .name = "IROM", .tag = .flash, .offset = 0x4200_0000, .length = 0x0080_0000, .access = .rx },
                         // .{ .name = "DROM", .offset = 0x3C00_0000, .length = 0x0080_0000, .flags = .r },
                         // .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .flags = .x },

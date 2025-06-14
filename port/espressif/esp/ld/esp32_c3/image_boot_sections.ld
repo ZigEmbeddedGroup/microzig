@@ -22,15 +22,15 @@ SECTIONS
     . = ALIGN(0x10000) + 0x20;
   } > DROM
 
-  .drom.rodata :
+  .rodata :
   {
     KEEP(*(.app_desc))
     *(.rodata*)
   } > DROM
 
-  .rwtext :
+  .ram_text :
   {
-    KEEP(*(microzig_time_critical))
+    KEEP(*(.ram_text))
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
@@ -38,10 +38,10 @@ SECTIONS
 
   .dram.dummy (NOLOAD) :
   {
-    . = ORIGIN(DRAM) + SIZEOF(.rwtext);
+    . = ORIGIN(DRAM) + SIZEOF(.ram_text);
   } > DRAM
 
-  .dram.data :
+  .data :
   {
     microzig_data_start = .;
     *(.sdata*)
@@ -49,7 +49,7 @@ SECTIONS
     microzig_data_end = .;
   } > DRAM
 
-  .dram.bss (NOLOAD) :
+  .bss (NOLOAD) :
   {
     microzig_bss_start = .;
     *(.sbss*)
