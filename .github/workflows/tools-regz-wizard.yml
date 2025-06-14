@@ -1,5 +1,4 @@
 name: tools/regz-wizard
-name: sim/aviron
 on:
   push:
     branches: [main]
