@@ -102,19 +102,21 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
                     .memory_regions = &.{
                         // TODO: place rodata in DROM and `.ram_text` in ram.
-                        .{ .name = "IROM", .tag = .flash, .offset = 0x4200_0000, .length = 0x0080_0000, .access = .rx },
-                        // .{ .name = "DROM", .offset = 0x3C00_0000, .length = 0x0080_0000, .flags = .r },
-                        // .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .flags = .x },
+                        .{ .name = "IROM", .offset = 0x4200_0000, .length = 0x0080_0000, .access = .rx },
+                        .{ .name = "DROM", .offset = 0x3C00_0000, .length = 0x0080_0000, .access = .r },
+                        .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .access = .x },
                         .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
                     },
                 },
                 .linker_script = .{
-                    .generate = .{
-                        .memory_regions_and_sections = .{
-                            .rodata_location = .ram,
-                        },
-                    },
-                    .file = b.path("ld/esp32_c3/rom_functions.ld"),
+                    .generate = .memory_regions,
+                    .file = generate_linker_script(
+                        dep,
+                        "final.ld",
+                        b.path("ld/esp32_c3/direct_boot_sections.ld"),
+                        b.path("ld/esp32_c3/rom_functions.ld"),
+                    ),
+                    // .file = b.path("ld/esp32_c3/rom_functions.ld"),
                 },
             }),
         },
