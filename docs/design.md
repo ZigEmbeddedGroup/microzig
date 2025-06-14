@@ -173,6 +173,11 @@ SECTIONS
 INSERT BEFORE .flash_start;
 ```
 
+### Things to know
+- if the ram memory region used by the linker script generator (the first one)
+is executable, a `.ram_text` section will be included for code that should
+be placed in ram.
+
 ## JSON register schema
 
 TODO
