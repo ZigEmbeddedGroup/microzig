@@ -558,7 +558,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
 
                 if (linker_script_options.file == null and linker_script_options.generate != .memory_regions_and_sections) {
-                    @panic("sections file missing");
+                    @panic("linker script: no file provided and no sections are auto-generated");
                 }
 
                 const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");

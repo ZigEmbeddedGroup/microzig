@@ -10,3 +10,4 @@ SECTIONS
     "ERROR: Pico second stage bootloader must be 256 bytes in size")
 }
 INSERT BEFORE .flash_start;
+

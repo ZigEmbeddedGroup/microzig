@@ -77,7 +77,7 @@ pub fn main() !void {
             \\
         );
 
-        for (parsed_args.memory_regions, region_names) |region, region_name| {
+        for (region_names, parsed_args.memory_regions) |region_name, region| {
             // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
 
             try writer.print("  {s} (", .{region_name});

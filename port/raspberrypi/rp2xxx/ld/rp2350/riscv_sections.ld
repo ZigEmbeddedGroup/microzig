@@ -21,3 +21,4 @@ SECTIONS {
   } > ram0
 }
 INSERT AFTER .bss;
+
