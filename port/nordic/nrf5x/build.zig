@@ -67,13 +67,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .memory_regions = &.{
                 .{ .tag = .flash, .offset = 0x00000000, .length = 0x100000, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 0x40000, .access = .rw },
+                // TODO: use code ram for `.ram_text`
+                .{ .tag = .ram, .offset = 0x20000000, .length = 0x40000, .access = .rwx },
 
                 // EXTFLASH
                 .{ .tag = .flash, .offset = 0x12000000, .length = 0x8000000, .access = .rx },
 
                 // CODE_RAM
-                .{ .offset = 0x800000, .length = 0x40000, .access = .rwx },
+                .{ .name = "code_ram", .offset = 0x800000, .length = 0x40000, .access = .x },
             },
             .patches = @import("patches/nrf52840.zig").patches,
         },

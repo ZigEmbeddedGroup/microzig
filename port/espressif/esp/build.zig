@@ -42,7 +42,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu = .{
             .name = "esp_riscv",
             .root_source_file = b.path("src/cpus/esp_riscv.zig"),
-            .imports = microzig.utils.dupe_imports(b, &.{
+            .imports = b.allocator.dupe(Import, &.{
                 .{
                     .name = "cpu-config",
                     .module = get_cpu_config(b, .image),
@@ -51,7 +51,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .name = "riscv32-common",
                     .module = riscv32_common_mod,
                 },
-            }),
+            }) catch @panic("OOM"),
         },
         .chip = .{
             .name = "ESP32-C3",
@@ -66,13 +66,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = .{ .generate = .{
-            .mode = .only_memory_regions,
-            .files = microzig.utils.dupe_paths(b, &.{
+        .linker_script = .{
+            .generate = .memory_regions,
+            .file = generate_linker_script(
+                dep,
+                "final.ld",
                 b.path("ld/esp32_c3/image_boot_sections.ld"),
                 b.path("ld/esp32_c3/rom_functions.ld"),
-            }),
-        } },
+            ),
+        },
     };
 
     return .{
@@ -83,7 +85,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .cpu = .{
                     .name = "esp_riscv",
                     .root_source_file = b.path("src/cpus/esp_riscv.zig"),
-                    .imports = microzig.utils.dupe_imports(b, &.{
+                    .imports = b.allocator.dupe(Import, &.{
                         .{
                             .name = "cpu-config",
                             .module = get_cpu_config(b, .direct),
@@ -92,7 +94,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                             .name = "riscv32-common",
                             .module = riscv32_common_mod,
                         },
-                    }),
+                    }) catch @panic("OOM"),
                 },
                 .chip = .{
                     .name = "ESP32-C3",
@@ -106,14 +108,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
                     },
                 },
-                .linker_script = .{ .generate = .{
-                    .mode = .{ .memory_regions_and_sections = .{
-                        .rodata_location = .ram,
-                    } },
-                    .files = microzig.utils.dupe_paths(b, &.{
-                        b.path("ld/esp32_c3/rom_functions.ld"),
-                    }),
-                } },
+                .linker_script = .{
+                    .generate = .{
+                        .memory_regions_and_sections = .{
+                            .rodata_location = .ram,
+                        },
+                    },
+                    .file = b.path("ld/esp32_c3/rom_functions.ld"),
+                },
             }),
         },
         .boards = .{},
@@ -131,6 +133,16 @@ pub fn build(b: *std.Build) void {
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
     test_step.dependOn(&unit_tests_run.step);
+
+    const cat_exe = b.addExecutable(.{
+        .name = "cat",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tools/cat.zig"),
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+        }),
+    });
+    b.installArtifact(cat_exe);
 }
 
 const BootMode = enum {
@@ -144,4 +156,19 @@ fn get_cpu_config(b: *std.Build, boot_mode: BootMode) *std.Build.Module {
     return b.createModule(.{
         .root_source_file = options.getOutput(),
     });
+}
+
+fn generate_linker_script(
+    dep: *std.Build.Dependency,
+    output_name: []const u8,
+    base_path: std.Build.LazyPath,
+    rom_functions_path: std.Build.LazyPath,
+) std.Build.LazyPath {
+    const b = dep.builder;
+    const cat_exe = dep.artifact("cat");
+
+    const run = b.addRunArtifact(cat_exe);
+    run.addFileArg(base_path);
+    run.addFileArg(rom_functions_path);
+    return run.addOutputFileArg(output_name);
 }
