@@ -230,11 +230,14 @@ fn generate_chips_file(
 
             for (chip_memory.items) |memory| {
                 try writer.print(
-                    \\                .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
+                    \\                .{{ .tag = .{s}, .offset = 0x{X}, .length = 0x{X}, .access = .{s} }},
                     \\
-                , .{ memory.address, memory.size, switch (memory.kind) {
+                , .{ switch (memory.kind) {
                     .flash => "flash",
                     .ram => "ram",
+                }, memory.address, memory.size, switch (memory.kind) {
+                    .flash => "rx",
+                    .ram => "rwx",
                 } });
             }
         }

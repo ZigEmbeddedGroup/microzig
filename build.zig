@@ -9,6 +9,7 @@ pub const Chip = internals.Chip;
 pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
+pub const LinkerScript = internals.LinkerScript;
 pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
@@ -330,7 +331,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             board: ?Board = null,
 
             /// If set, overrides the `linker_script` property of the target.
-            linker_script: ?LazyPath = null,
+            linker_script: ?LinkerScript = null,
 
             /// If set, overrides the default `entry` property of the arget.
             entry: ?Build.Step.Compile.Entry = null,
@@ -370,11 +371,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const target = options.target;
 
+            // validate that tagged memory regions meet the requirements
+            for (target.chip.memory_regions) |region| {
+                region.validate_tag();
+            }
+
             // TODO: let the user override which ram section to use the stack on,
             // for now just using the first ram section in the memory region list
             const first_ram = blk: {
                 for (target.chip.memory_regions) |region| {
-                    if (region.kind == .ram)
+                    if (region.tag == .ram)
                         break :blk region;
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };
@@ -547,17 +553,22 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.root_module.addImport("microzig", core_mod);
             fw.artifact.root_module.addImport("app", app_mod);
 
-            // If not specified then generate the linker script
-            const linker_script = options.linker_script orelse target.linker_script orelse blk: {
+            const linker_script_options = options.linker_script orelse target.linker_script;
+            const linker_script = blk: {
                 const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
+
+                if (linker_script_options.file == null and linker_script_options.generate != .memory_regions_and_sections) {
+                    @panic("linker script: no file provided and no sections are auto-generated");
+                }
 
                 const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
 
                 const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                    .cpu_name = zig_resolved_target.result.cpu.model.name,
+                    .cpu_name = cpu.name,
                     .cpu_arch = zig_resolved_target.result.cpu.arch,
                     .chip_name = target.chip.name,
                     .memory_regions = target.chip.memory_regions,
+                    .generate = linker_script_options.generate,
                 };
 
                 const args_str = std.json.stringifyAlloc(
@@ -568,7 +579,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
                 const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
                 generate_linker_script_run.addArg(args_str);
-                break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
+                const output = generate_linker_script_run.addOutputFileArg("linker.ld");
+                if (linker_script_options.file) |file| {
+                    generate_linker_script_run.addFileArg(file);
+                }
+                break :blk output;
             };
             fw.artifact.setLinkerScript(linker_script);
 

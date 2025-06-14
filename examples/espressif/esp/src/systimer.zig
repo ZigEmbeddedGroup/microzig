@@ -16,8 +16,7 @@ pub const microzig_options: microzig.Options = .{
 
 const alarm = systimer.alarm(0);
 
-// the `.trap` link section is placed in iram in image boot mode or irom in direct boot mode.
-fn timer_interrupt(_: *microzig.cpu.TrapFrame) linksection(".trap") callconv(.c) void {
+fn timer_interrupt(_: *microzig.cpu.TrapFrame) linksection(".ram_text") callconv(.c) void {
     std.log.info("timer interrupt!", .{});
 
     alarm.clear_interrupt();
