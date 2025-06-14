@@ -23,7 +23,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
-        .entry = .{ .symbol_name = "_start" },
         .preferred_binary_format = .{ .esp = .{
             .chip_id = .esp32_c3,
             .flash_mode = .dio,

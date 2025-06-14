@@ -56,11 +56,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .patches = @import("patches/rp2040.zig").patches,
         },
         .hal = hal,
-        .linker_script = .{ .generate = .{
-            .files = microzig.utils.dupe_paths(b, &.{
-                b.path("ld/rp2040/sections.ld"),
-            }),
-        } },
+        .linker_script = .{
+            .file = b.path("ld/rp2040/sections.ld"),
+        },
     };
 
     const chip_rp2350_arm: microzig.Target = .{
@@ -85,11 +83,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .patches = @import("patches/rp2350.zig").patches,
         },
         .hal = hal,
-        .linker_script = .{ .generate = .{
-            .files = microzig.utils.dupe_paths(b, &.{
-                b.path("ld/rp2350/arm_sections.ld"),
-            }),
-        } },
+        .linker_script = .{
+            .file = b.path("ld/rp2350/arm_sections.ld"),
+        },
     };
 
     const chip_rp2350_riscv: microzig.Target = .{
@@ -143,11 +139,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = .{ .generate = .{
-            .files = microzig.utils.dupe_paths(b, &.{
-                b.path("ld/rp2350/riscv_sections.ld"),
-            }),
-        } },
+        .linker_script = .{
+            .file = b.path("ld/rp2350/riscv_sections.ld"),
+        },
     };
 
     const bootrom_rp2040 = get_bootrom(b, &chip_rp2040, .w25q080);
@@ -182,7 +176,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 }),
                 .pico_flashless = chip_rp2040.derive(.{
                     .entry = .{ .symbol_name = "_entry_point" },
-                    .linker_script = .{ .custom = b.path("ld/rp2040/ram_image_linker.ld") },
+                    .linker_script = .{ .generate = .none, .file = b.path("ld/rp2040/ram_image_linker.ld") },
                     .ram_image = true,
                     .board = .{
                         .name = "RaspberryPi Pico (ram image)",

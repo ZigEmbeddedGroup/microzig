@@ -1,8 +1,3 @@
-/*
- * Target CPU:  ARM Cortex-M0+
- * Target Chip: RP2040
- */
-
 /* TODO: maybe memory regions can be auto-generated */
 MEMORY
 {
