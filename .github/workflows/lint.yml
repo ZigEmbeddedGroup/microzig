@@ -27,6 +27,7 @@ jobs:
 
       - name: Run linter
         run: |
+          echo starting
           echo base=${{ github.event.pull_request.base.sha }}
           echo head=${{ github.event.pull_request.head.sha }}
           FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | $(grep '\.zig$' || true))
