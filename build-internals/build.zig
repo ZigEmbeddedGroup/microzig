@@ -243,8 +243,6 @@ pub const LinkerScript = struct {
                 flash,
                 /// Place rodata in the first region tagged as ram.
                 ram,
-                /// Don't place rodata in the auto-generated sections.
-                omit,
             } = .flash,
         },
     };
