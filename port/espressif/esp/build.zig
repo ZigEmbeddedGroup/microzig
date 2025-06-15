@@ -58,19 +58,23 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
-                // external memory, ibus
-                .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
-                // sram 1, data bus
-                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 },
+                .{ .name = "IROM", .offset = 0x4200_0000, .length = 0x0080_0000, .access = .rx },
+                .{ .name = "DROM", .offset = 0x3C00_0000, .length = 0x0080_0000, .access = .r },
+                .{ .name = "IRAM", .offset = 0x4037C000 + 0x4000, .length = 313 * 1024, .access = .x },
+                // tag for stack
+                .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
             },
         },
         .hal = hal,
-        .linker_script = generate_linker_script(
-            dep,
-            "esp32_c3.ld",
-            b.path("ld/esp32_c3/esp32_c3.ld.base"),
-            b.path("ld/esp32_c3/rom_functions.ld"),
-        ),
+        .linker_script = .{
+            .generate = .memory_regions,
+            .file = generate_linker_script(
+                dep,
+                "final.ld",
+                b.path("ld/esp32_c3/image_boot_sections.ld"),
+                b.path("ld/esp32_c3/rom_functions.ld"),
+            ),
+        },
     };
 
     return .{
@@ -92,12 +96,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         },
                     }) catch @panic("OOM"),
                 },
-                .linker_script = generate_linker_script(
-                    dep,
-                    "esp32_c3_direct_boot.ld",
-                    b.path("ld/esp32_c3/esp32_c3_direct_boot.ld.base"),
-                    b.path("ld/esp32_c3/rom_functions.ld"),
-                ),
+                .linker_script = .{
+                    .generate = .memory_regions,
+                    .file = generate_linker_script(
+                        dep,
+                        "final.ld",
+                        b.path("ld/esp32_c3/direct_boot_sections.ld"),
+                        b.path("ld/esp32_c3/rom_functions.ld"),
+                    ),
+                },
             }),
         },
         .boards = .{},

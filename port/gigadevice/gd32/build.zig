@@ -38,8 +38,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = b.path("src/chips/GD32VF103.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 128 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 32 * 1024, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x08000000, .length = 128 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 32 * 1024, .access = .rw },
             },
         },
         .hal = hal_f103,
@@ -55,8 +55,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = b.path("src/chips/GD32VF103.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x08000000, .length = 64 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 20 * 1024, .access = .rw },
             },
         },
         .hal = hal_f103,
