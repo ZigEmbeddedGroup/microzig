@@ -143,7 +143,7 @@ pub const LinkerScript = struct {
 ```
 
 For an example let's look at the target definition of rp2040. In this case we
-need a linker script that should also place the bootrom at the beggining of
+need a linker script that should also place the bootrom at the beginning of
 flash. Fortunately, we can still mostly auto-generate one and just patch it up
 a bit.
 
