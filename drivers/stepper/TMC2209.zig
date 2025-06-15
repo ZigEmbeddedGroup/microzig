@@ -1,3 +1,10 @@
+//!
+//! Driver for TMC2209 stepper motor driver
+//!
+//! Datasheet:
+//! * TMC2209: https://www.analog.com/media/en/technical-documentation/data-sheets/tmc2209_datasheet_rev1.09.pdf
+//!
+
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
