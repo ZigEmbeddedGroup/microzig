@@ -143,9 +143,8 @@ pub const LinkerScript = struct {
 ```
 
 For an example of how it is used let's look at rp2040. In this case, we need a
-more complex linker script is needed as the firmware must start with the
-bootrom. Fortunately, we don't need a very complicated linker script and it can
-be mostly auto-generated and just a bit patched.
+more complex linker script as the firmware must start with the bootrom.
+Fortunately, we can still mostly auto-generate one and just patch it up a bit.
 
 ```zig
 // port/raspberrypi/rp2xxx/build.zig
@@ -265,9 +264,9 @@ INSERT BEFORE .flash_start;
 ```
 
 ### Things to know
-- if the ram memory region used by the linker script generator (the first one)
+- If the ram memory region used by the linker script generator (the first one)
 is executable, a `.ram_text` section will be included for code that should
-be placed in ram. For instance, this applies for the rp2040 port where the
+be placed in ram. For instance, this applies to the rp2040 port where the
 section tagged as ram is executable.
 
 ## JSON register schema

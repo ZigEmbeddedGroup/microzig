@@ -1,5 +1,11 @@
 SECTIONS
 {
+  .irom.skip (NOLOAD) :
+  {
+    /* Skip 0x20 bytes for the esp image format mapping header. */
+    . += 0x20;
+  } > IROM
+
   .text :
   {
     KEEP(*(microzig_flash_start))
@@ -16,7 +22,7 @@ SECTIONS
 
   .drom.dummy (NOLOAD) :
   {
-    . = ORIGIN(DROM) + SIZEOF(.text);
+    . = ORIGIN(DROM) + 0x20 + SIZEOF(.text);
 
     /* Add alignment of MMU page size + 0x20 bytes for the mapping header. */
     . = ALIGN(0x10000) + 0x20;
