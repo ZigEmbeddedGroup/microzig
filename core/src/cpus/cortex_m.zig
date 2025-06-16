@@ -2,6 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
+const VectorTable = microzig.chip.VectorTable;
 
 const Core = enum {
     cortex_m0,
@@ -362,23 +363,6 @@ pub const interrupt = struct {
 
             return @enumFromInt(raw);
         }
-
-        pub fn set_handler(comptime excpt: Exception, handler: Handler) Handler {
-            if (@intFromEnum(excpt) == 0) {
-                @compileError("Cannot set handler for slot 0 (initial stack pointer)");
-            }
-
-            if (!interrupt.has_ram_vectors()) {
-                @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
-            }
-
-            var vector_table: *volatile [vector_count]Handler = @ptrFromInt(peripherals.scb.VTOR);
-
-            // The Exception enum value is the vector table slot number.
-            const old_handler = vector_table[@intFromEnum(excpt)];
-            vector_table[@intFromEnum(excpt)] = handler;
-            return old_handler;
-        }
     };
 
     const nvic = peripherals.nvic;
@@ -517,27 +501,6 @@ pub const interrupt = struct {
     pub fn get_priority(comptime int: ExternalInterrupt) Priority {
         return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
     }
-
-    pub inline fn has_ram_vectors() bool {
-        return @hasField(@TypeOf(microzig.options.cpu), "ram_vectors") and microzig.options.cpu.ram_vectors;
-    }
-
-    pub inline fn has_ram_vectors_section() bool {
-        return @hasField(@TypeOf(microzig.options.cpu), "has_ram_vectors_section") and microzig.options.cpu.has_ram_vectors_section;
-    }
-
-    pub fn set_handler(int: ExternalInterrupt, handler: ?Handler) ?Handler {
-        if (!has_ram_vectors()) {
-            @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
-        }
-
-        var vector_table: *volatile [vector_count]Handler = @ptrFromInt(peripherals.scb.VTOR);
-
-        // ExternalInterrupt vectors start at table slot number 16.
-        const old_handler = vector_table[@intFromEnum(int) + 16];
-        vector_table[@intFromEnum(int) + 16] = handler orelse microzig.interrupt.unhandled;
-        return if (old_handler.c == microzig.interrupt.unhandled.c) null else old_handler;
-    }
 };
 
 pub fn executing_isr() bool {
@@ -576,9 +539,11 @@ pub fn clrex() void {
     asm volatile ("clrex");
 }
 
-const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
-
-var ram_vectors: [vector_count]usize align(256) = undefined;
+/// The RAM vector table used. You can update/swap handlers at runtime here.
+pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table() or is_ramimage())
+    startup_logic.generate_vector_table()
+else
+    @compileError("RAM vector table is disabled. Consider adding .cpu = .{ .ram_vector_table = true } to your microzig_options or using a RAM image");
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
@@ -604,8 +569,8 @@ pub const startup_logic = struct {
             \\msr msp, r1
             \\bx r2
             :
-            : [_vector_table] "r" (&startup_logic._vector_table),
-              [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
+            : [_vector_table] "r" (&_vector_table),
+              [_VTOR_ADDRESS] "r" (&ram_vector_table),
             : "memory", "r0", "r1", "r2"
         );
     }
@@ -631,28 +596,8 @@ pub const startup_logic = struct {
                 @memcpy(data_start[0..data_len], data_src[0..data_len]);
             }
 
-            // Move vector table to RAM if requested
-            if (interrupt.has_ram_vectors()) {
-                // Copy vector table to RAM and set VTOR to point to it
-
-                if (comptime interrupt.has_ram_vectors_section()) {
-                    @export(&ram_vectors, .{
-                        .name = "_ram_vectors",
-                        .section = "ram_vectors",
-                        .linkage = .strong,
-                    });
-                } else {
-                    @export(&ram_vectors, .{
-                        .name = "_ram_vectors",
-                        .linkage = .strong,
-                    });
-                }
-
-                const flash_vector: [*]const usize = @ptrCast(&_vector_table);
-
-                @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
-
-                const vtor_addr: u32 = @intFromPtr(&ram_vectors);
+            if (using_ram_vector_table()) {
+                const vtor_addr: u32 = @intFromPtr(&ram_vector_table);
                 std.debug.assert(std.mem.isAligned(vtor_addr, 256));
                 peripherals.scb.VTOR = vtor_addr;
             }
@@ -661,11 +606,27 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    const VectorTable = microzig.chip.VectorTable;
+    const DummyVectorTable = extern struct {
+        initial_stack_pointer: usize,
+        Reset: Handler,
+    };
+
+    const InitialVectorTable = if (using_ram_vector_table())
+        DummyVectorTable
+    else
+        VectorTable;
 
     // will be imported by microzig.zig to allow system startup.
     // must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
-    pub const _vector_table: VectorTable align(256) = blk: {
+    const _vector_table: InitialVectorTable align(256) = if (using_ram_vector_table())
+        .{
+            .initial_stack_pointer = microzig.config.end_of_stack,
+            .Reset = .{ .c = microzig.cpu.startup_logic._start },
+        }
+    else
+        generate_vector_table();
+
+    fn generate_vector_table() VectorTable {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.utilities.get_end_of_stack(),
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
@@ -678,26 +639,31 @@ pub const startup_logic = struct {
             }
         }
 
-        break :blk tmp;
-    };
+        return tmp;
+    }
 };
 
-fn is_ramimage() bool {
+inline fn is_ramimage() bool {
     return microzig.config.ram_image;
 }
 
+inline fn using_ram_vector_table() bool {
+    return microzig.options.cpu.ram_vector_table;
+}
+
 pub fn export_startup_logic() void {
-    if (is_ramimage())
+    if (is_ramimage()) {
         @export(&startup_logic.ram_image_entry_point, .{
             .name = "_entry_point",
             .linkage = .strong,
-        })
-    else
+        });
+    } else {
         @export(&startup_logic._vector_table, .{
             .name = "_vector_table",
             .section = "microzig_flash_start",
             .linkage = .strong,
         });
+    }
 
     @export(&startup_logic._start, .{
         .name = "_start",
