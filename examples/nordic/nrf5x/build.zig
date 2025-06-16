@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
     const nrf52840_dongle = mb.ports.nrf5x.boards.nordic.nrf52840_dongle;
     const nrf52840_mdk = mb.ports.nrf5x.boards.nordic.nrf52840_mdk;
     const pca10040 = mb.ports.nrf5x.boards.nordic.pca10040;
+    const microbit_v1 = mb.ports.nrf5x.boards.bbc.microbit_v1;
 
     const available_examples = [_]Example{
         .{ .target = pca10040, .name = "blinky", .file = "src/blinky.zig" },
@@ -29,6 +30,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = nrf52840_mdk, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
         .{ .target = nrf52840_mdk, .name = "spi_master", .file = "src/spi_master.zig" },
         .{ .target = pca10040, .name = "spi_master", .file = "src/spi_master.zig" },
+        .{ .target = microbit_v1, .name = "microbit_display", .file = "src/microbit_display.zig" },
     };
 
     for (available_examples) |example| {
