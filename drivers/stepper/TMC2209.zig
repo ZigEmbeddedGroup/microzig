@@ -19,34 +19,6 @@ pub const TMC2209 = struct {
 
     const control_register = packed struct {};
 
-    const chopconf = struct {
-        register: u8 = 0x6C,
-        val: packed struct {
-            toff: u4 = 0,
-            hstrt: u3 = 0,
-            hend: u4 = 0,
-            reserved: u4 = 0,
-            tbl: u2 = 0,
-            vsense: u1 = 0,
-            reserved2: u6 = 0,
-            mres: u4 = 0,
-            intpol: u1 = 0,
-            dedge: u1 = 0,
-            diss2g: u1 = 0,
-            diss2vs: u1 = 0,
-        },
-    };
-
-    const vactual = struct {
-        register: u8 = 0x22,
-        val: packed struct {
-            velocity: u32 = 0,
-        },
-    };
-
-    const rows: u5 = 24;
-
-    buf: [8]u8 = undefined,
     ramp: [20]f32 = undefined,
     microsteps: u32 = 1,
     steps: u32 = 200, // number of steps per revolution of the motor
@@ -163,6 +135,199 @@ pub const TMC2209 = struct {
         }
         return result;
     }
+
+    const gconf = struct {
+        register: u8 = 0x00,
+        val: packed struct(u32) {
+            iScaleAnalog: u1 = 0,
+            internalRsense: u1 = 0,
+            enSpreadcycle: u1 = 0,
+            shaft: u1 = 0,
+            indexOtpw: u1 = 0,
+            indexStep: u1 = 0,
+            pdnDisable: u1 = 0,
+            mstepRegSelect: u1 = 0,
+            multistepFilt: u1 = 0,
+            _reserved: u23 = 0,
+        },
+    };
+
+    const gstat = struct {
+        register: u8 = 0x01,
+        val: packed struct(u32) {
+            reset: u1 = 0,
+            drvErr: u1 = 0,
+            uvCp: u1 = 0,
+            _reserved: u29 = 0,
+        },
+    };
+
+    const ifcnt = struct {
+        register: u8 = 0x02,
+        val: packed struct(u32) {
+            ifcnt: u8 = 0,
+            _reserved: u24 = 0,
+        },
+    };
+
+    const nodeConf = struct {
+        register: u8 = 0x03,
+        val: packed struct(u32) {
+            sendDelay: u32 = 0,
+        },
+    };
+
+    const ioin = struct {
+        register: u8 = 0x06,
+        val: packed struct(u32) {
+            enn: u1 = 0,
+            reserved0: u1 = 0,
+            ms1: u1 = 0,
+            ms2: u1 = 0,
+            diag: u1 = 0,
+            reserved1: u1 = 0,
+            pdnSerial: u1 = 0,
+            step: u1 = 0,
+            spreadEn: u1 = 0,
+            dir: u1 = 0,
+            reserved2: u14 = 0,
+            version: u8 = 0,
+        },
+    };
+
+    const iholdRun = struct {
+        register: u8 = 0x10,
+        val: packed struct(u32) {
+            ihold: u5 = 0,
+            irun: u5 = 0,
+            iholddelay: u4 = 0,
+            _reserved: u23 = 0,
+        },
+    };
+
+    const tPowerDown = struct {
+        register: u8 = 0x11,
+        val: packed struct(u32) {
+            delayTime: u8 = 0,
+            _reserved: u24 = 0,
+        },
+    };
+
+    const tStep = struct {
+        register: u8 = 0x12,
+        val: packed struct(u32) {
+            stepTime: u20 = 0,
+            _reserved: u12 = 0,
+        },
+    };
+
+    const tpwmthrs = struct {
+        register: u8 = 0x13,
+        val: packed struct(u32) {
+            threshold: u32 = 0,
+        },
+    };
+
+    const tcoolthrs = struct {
+        register: u8 = 0x14,
+        val: packed struct(u32) {
+            velocity: u32 = 0,
+        },
+    };
+
+    const vactual = struct {
+        register: u8 = 0x22,
+        val: packed struct(u32) {
+            velocity: u32 = 0,
+        },
+    };
+
+    const sgthrs = struct {
+        register: u8 = 0x40,
+        val: packed struct(u32) {
+            threshold: u32 = 0,
+        },
+    };
+
+    const sgresult = struct {
+        register: u8 = 0x41,
+        val: packed struct(u32) {
+            threshold: u10 = 0,
+            _reserved: u22 = 0,
+        },
+    };
+
+    const coolconf = struct {
+        register: u8 = 0x42,
+        val: packed struct(u32) {
+            semin: u1 = 0,
+            sedn: u2 = 0,
+            semax: u4 = 0,
+            seup: u3 = 0,
+            semin2: u6 = 0,
+            coolStepEnable: u1 = 0,
+            _reserved: u15 = 0,
+        },
+    };
+
+    const mscnt = struct {
+        register: u8 = 0x6a,
+        val: packed struct(u32) {
+            position: u10 = 0,
+            _reserved: u22 = 0,
+        },
+    };
+
+    const mscuract = struct {
+        register: u8 = 0x6b,
+        val: packed struct(u32) {
+            curB: u8 = 0,
+            curA: u8 = 0,
+            _reserved: u16 = 0,
+        },
+    };
+
+    const chopconf = struct {
+        register: u8 = 0x6C,
+        val: packed struct(u32) {
+            toff: u4 = 0,
+            hstrt: u3 = 0,
+            hend: u4 = 0,
+            reserved: u4 = 0,
+            tbl: u2 = 0,
+            vsense: u1 = 0,
+            reserved2: u6 = 0,
+            mres: u4 = 0,
+            intpol: u1 = 0,
+            dedge: u1 = 0,
+            diss2g: u1 = 0,
+            diss2vs: u1 = 0,
+        },
+    };
+
+    const drvStatus = struct {
+        register: u8 = 0x6F,
+        val: packed struct(u32) {
+            stst: u1 = 0,
+            stealth: u1 = 0,
+            reserved: u6 = 0,
+            reserved2: u3 = 0,
+            csActual: u5 = 0,
+            reserved3: u4 = 0,
+            t157: u1 = 0,
+            t150: u1 = 0,
+            t143: u1 = 0,
+            t120: u1 = 0,
+            olb: u1 = 0,
+            ola: u1 = 0,
+            s2vsb: u1 = 0,
+            s2vsa: u1 = 0,
+            s2gb: u1 = 0,
+            s2ga: u1 = 0,
+            ot: u1 = 0,
+            otpw: u1 = 0,
+        },
+    };
 };
 
 test "set microsteps" {
