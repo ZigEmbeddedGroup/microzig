@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const riscv32_common = @import("riscv32-common");
 
 pub const CPU_Options = struct {
-    ram_vector_table: bool,
+    ram_vector_table: bool = false,
 };
 
 pub const Exception = enum(u32) {
@@ -266,7 +266,17 @@ inline fn using_ram_vector_table() bool {
 }
 
 pub fn export_startup_logic() void {
-    std.testing.refAllDecls(startup_logic);
+    @export(&startup_logic._start, .{
+        .name = "_start",
+    });
+
+    @export(&startup_logic._start_c, .{
+        .name = "_start_c",
+    });
+
+    @export(&startup_logic._vector_table, .{
+        .name = "_vector_table",
+    });
 
     @export(&startup_logic.external_interrupt_table, .{
         .name = "_external_interrupt_table",
@@ -274,7 +284,6 @@ pub fn export_startup_logic() void {
             ".data"
         else
             ".rodata",
-        .linkage = .strong,
     });
 }
 
