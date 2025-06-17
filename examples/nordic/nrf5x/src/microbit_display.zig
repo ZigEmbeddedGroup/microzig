@@ -4,23 +4,19 @@ const nrf = microzig.hal;
 const time = nrf.time;
 const microbit = microzig.board;
 
-pub fn main() !void {
-    const col_1 = nrf.gpio.num(0, 4);
-    const row_1 = nrf.gpio.num(0, 13);
+pub const heart: [5][5]u3 = .{
+    .{0, 1, 0, 1, 0},
+    .{1, 0, 1, 0, 1},
+    .{1, 0, 0, 0, 1},
+    .{0, 1, 0, 1, 0},
+    .{0, 0, 1, 0, 0},
+};
 
-    inline for (&.{ col_1, row_1 }) |pin| {
-        pin.set_direction(.out);
-    }
+pub fn main() !void {
+    microbit.display.init();
 
     while (true) {
-        col_1.put(0);
-        row_1.put(1);
-
-        time.sleep_ms(1000);
-
-        col_1.put(1);
-        row_1.put(0);
-
-        time.sleep_ms(1000);
+        microbit.display.render(heart, .from_ms(1_000));
+        time.sleep_ms(1_000);
     }
 }
