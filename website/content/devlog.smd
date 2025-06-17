@@ -21,6 +21,18 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ## Changes
 
+[]($section.id('regz-wizard').data('date','2025-04-28'))
+
+### Regz Wizard
+
+![]($image.asset('devlog/regz-wizard-01.png'))
+
+Regz is the program responsible for generating
+
+#### Roadmap
+
+- Apply Regz patches to the parsed file to fully reproduce generated code.
+
 []($section.id('start').data('date','2025-04-28'))
 
 ### Devlog Begins!
