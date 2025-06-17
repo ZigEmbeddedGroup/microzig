@@ -342,6 +342,38 @@ pub const TMC2209 = struct {
             otpw: u1 = 0,
         },
     };
+
+    const pwmConf = struct {
+        register: u8 = 0x70,
+        val: packed struct(u32) {
+            pwmOfs: u8 = 0,
+            pwmGrad: u8 = 0,
+            pwmFreq: u3 = 0,
+            pwmAutoscale: u1 = 0,
+            pwmAutograd: u1 = 0,
+            freewheel: u3 = 0,
+            pwmReg: u4 = 0,
+            pwmLim: u4 = 0,
+        },
+    };
+
+    const pwmScale = struct {
+        register: u8 = 0x71,
+        val: packed struct(u32) {
+            pwmScaleSum: u8 = 0,
+            pwmScaleAuto: i9 = 0,
+            _reserved: u15 = 0,
+        },
+    };
+
+    const pwmAuto = struct {
+        register: u8 = 0x72,
+        val: packed struct(u32) {
+            pwmOfsAuto: i8 = 0,
+            pwmGradAuto: i8 = 0,
+            _reserved: u16 = 0,
+        },
+    };
 };
 
 test "set microsteps" {
