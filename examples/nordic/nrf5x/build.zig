@@ -12,25 +12,25 @@ pub fn build(b: *std.Build) void {
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
-    const nrf52840_dongle = mb.ports.nrf5x.boards.nordic.nrf52840_dongle;
-    const nrf52840_mdk = mb.ports.nrf5x.boards.nordic.nrf52840_mdk;
-    const pca10040 = mb.ports.nrf5x.boards.nordic.pca10040;
+    // const nrf52840_dongle = mb.ports.nrf5x.boards.nordic.nrf52840_dongle;
+    // const nrf52840_mdk = mb.ports.nrf5x.boards.nordic.nrf52840_mdk;
+    // const pca10040 = mb.ports.nrf5x.boards.nordic.pca10040;
     const microbit_v1 = mb.ports.nrf5x.boards.bbc.microbit_v1;
 
     const available_examples = [_]Example{
-        .{ .target = pca10040, .name = "blinky", .file = "src/blinky.zig" },
-        .{ .target = nrf52840_dongle, .name = "blinky", .file = "src/blinky.zig" },
-        .{ .target = nrf52840_mdk, .name = "blinky", .file = "src/blinky.zig" },
-        .{ .target = pca10040, .name = "uart", .file = "src/uart.zig" },
-        .{ .target = nrf52840_mdk, .name = "uart", .file = "src/uart.zig" },
-        .{ .target = pca10040, .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = nrf52840_mdk, .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = nrf52840_mdk, .name = "i2c_accel", .file = "src/i2c_accel.zig" },
-        .{ .target = pca10040, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
-        .{ .target = nrf52840_mdk, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
-        .{ .target = nrf52840_mdk, .name = "spi_master", .file = "src/spi_master.zig" },
-        .{ .target = pca10040, .name = "spi_master", .file = "src/spi_master.zig" },
-        .{ .target = microbit_v1, .name = "microbit_display", .file = "src/microbit_display.zig" },
+        // .{ .target = pca10040, .name = "blinky", .file = "src/blinky.zig" },
+        // .{ .target = nrf52840_dongle, .name = "blinky", .file = "src/blinky.zig" },
+        // .{ .target = nrf52840_mdk, .name = "blinky", .file = "src/blinky.zig" },
+        // .{ .target = pca10040, .name = "uart", .file = "src/uart.zig" },
+        // .{ .target = nrf52840_mdk, .name = "uart", .file = "src/uart.zig" },
+        // .{ .target = pca10040, .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
+        // .{ .target = nrf52840_mdk, .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
+        // .{ .target = nrf52840_mdk, .name = "i2c_accel", .file = "src/i2c_accel.zig" },
+        // .{ .target = pca10040, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
+        // .{ .target = nrf52840_mdk, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
+        // .{ .target = nrf52840_mdk, .name = "spi_master", .file = "src/spi_master.zig" },
+        // .{ .target = pca10040, .name = "spi_master", .file = "src/spi_master.zig" },
+        .{ .target = microbit_v1, .name = "display", .file = "src/microbit_display.zig" },
     };
 
     for (available_examples) |example| {

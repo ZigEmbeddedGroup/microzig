@@ -141,6 +141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .bbc = .{
                 .microbit_v1 = chip_nrf51822.derive(.{
+                    .preferred_binary_format = .hex,
                     .board = .{
                         .name = "MicroBit V1",
                         .url = "https://tech.microbit.org/hardware/1-5-revision",

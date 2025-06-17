@@ -6,6 +6,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+const compatibility = microzig.hal.compatibility;
 
 const timer = microzig.chip.peripherals.TIMER0;
 const READ_INDEX = 1;
@@ -14,21 +15,45 @@ var overflow_count: u32 = 0;
 
 pub fn init() void {
     // Stop timer while we set it up
-    timer.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
-    defer timer.TASKS_START.write(.{ .TASKS_START = .Trigger });
+    switch (compatibility.chip) {
+        .nrf51 => {
+            timer.TASKS_STOP = 1;
+            defer timer.TASKS_START = 1;
 
-    // Clear the time
-    timer.TASKS_CLEAR.write(.{ .TASKS_CLEAR = .Trigger });
+            // Clear the time
+            timer.TASKS_CLEAR = 1;
 
-    timer.MODE.write(.{ .MODE = .Timer });
-    timer.BITMODE.write(.{ .BITMODE = .@"32Bit" });
-    // 16Mhz / 2^4 = 1MHz: us resolution
-    timer.PRESCALER.write(.{ .PRESCALER = 4 });
+            timer.MODE.write(.{ .MODE = .Timer });
+            timer.BITMODE.write(.{ .BITMODE = .@"32Bit" });
+            // 16Mhz / 2^4 = 1MHz: us resolution
+            timer.PRESCALER.write(.{ .PRESCALER = 4 });
+        },
+        .nrf52, .nrf52840 => {
+            timer.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
+            defer timer.TASKS_START.write(.{ .TASKS_START = .Trigger });
+
+            // Clear the time
+            timer.TASKS_CLEAR.write(.{ .TASKS_CLEAR = .Trigger });
+
+            timer.MODE.write(.{ .MODE = .Timer });
+            timer.BITMODE.write(.{ .BITMODE = .@"32Bit" });
+            // 16Mhz / 2^4 = 1MHz: us resolution
+            timer.PRESCALER.write(.{ .PRESCALER = 4 });
+        },
+    }
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    timer.TASKS_CAPTURE[READ_INDEX].write(.{ .TASKS_CAPTURE = .Trigger });
-    return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX].raw);
+    switch (compatibility.chip) {
+        .nrf51 => {
+            timer.TASKS_CAPTURE[READ_INDEX] = 1;
+            return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX]);
+        },
+        .nrf52, .nrf52840 => {
+            timer.TASKS_CAPTURE[READ_INDEX].write(.{ .TASKS_CAPTURE = .Trigger });
+            return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX].raw);
+        },
+    }
 }
 
 pub fn sleep_ms(time_ms: u32) void {
