@@ -87,7 +87,7 @@ pub fn Tokenizer(chip: Chip) type {
             , .{self.index});
 
             var printed_cursor = false;
-            var line_it = std.mem.tokenize(u8, self.source, "\n\r");
+            var line_it = std.mem.tokenizeAny(u8, self.source, "\n\r");
             while (line_it.next()) |line| {
                 try writer.print("{s}\n", .{line});
                 if (!printed_cursor and line_it.index > self.index) {
