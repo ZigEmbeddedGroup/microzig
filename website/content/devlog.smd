@@ -21,6 +21,15 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ## Changes
 
+[]($section.id('regz-wizard').data('date','2025-04-28'))
+
+### Regz Wizard
+
+![]($image.asset('devlog/regz-wizard-01.png'))
+
+Regz is the program responsible for generating
+
+
 []($section.id('initial-microbit-support').data('date','2025-04-28'))
 
 ### Initial micro:bit support
