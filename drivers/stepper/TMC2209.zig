@@ -27,6 +27,13 @@ pub const TMC2209 = struct {
         crc: u8 = 0,
     };
 
+    const read_request = packed struct {
+        sync: u8 = 0x5,
+        addr: u8,
+        register: u8,
+        crc: u8 = 0,
+    };
+
     ramp: [40]f32 = undefined,
     microsteps: u32 = 1,
     current_freq: f32 = 0,
@@ -88,7 +95,7 @@ pub const TMC2209 = struct {
         try self.write(cf.register, @bitCast(cf.val));
     }
 
-    fn write(self: *Self, register: u8, data: u32) !void {
+    pub fn write(self: *Self, register: u8, data: u32) !void {
         const req = write_request{
             .addr = self.address,
             .register = register | 0x80,
@@ -98,6 +105,43 @@ pub const TMC2209 = struct {
         var buf = std.mem.toBytes(req);
         buf[7] = self.crc(buf[0..7]);
         try self.uart.write(&buf);
+    }
+
+    pub fn read(self: *Self, register: anytype) !void {
+        const req = read_request{
+            .addr = self.address,
+            .register = register.register & 0x7f,
+        };
+
+        var buf = std.mem.toBytes(req);
+        buf[3] = self.crc(buf[0..3]);
+        try self.uart.write(&buf);
+
+        self.clock_device.sleep_ms(10);
+
+        // the read request will be in the rx buffer since the tx and rx pins are physically connected
+        _ = try self.uart.read(&buf);
+
+        var resp: [8]u8 = undefined;
+        const n = try self.uart.read(&resp);
+
+        if (n != 8) {
+            return error.InvalidRead;
+        }
+
+        if (!(resp[0] == 0x5 and resp[1] == 0xff)) {
+            return error.InvalidRead;
+        }
+
+        const checksum = self.crc(resp[0..7]);
+        if (checksum != resp[7]) {
+            return error.InvalidRead;
+        }
+
+        const i: u32 = std.mem.readInt(u32, resp[3..7], .big);
+        register.val = @bitCast(i);
+
+        self.clock_device.sleep_ms(10);
     }
 
     fn get_ramp(self: *Self, target_freq: f32) []f32 {
@@ -171,7 +215,7 @@ pub const TMC2209 = struct {
             mStepRegSelect: u1 = 0,
             multistepFilt: u1 = 0,
             _reserved: u23 = 0,
-        },
+        } = undefined,
     };
 
     const gstat = struct {
@@ -181,7 +225,7 @@ pub const TMC2209 = struct {
             drvErr: u1 = 0,
             uvCp: u1 = 0,
             _reserved: u29 = 0,
-        },
+        } = undefined,
     };
 
     const ifcnt = struct {
@@ -189,14 +233,14 @@ pub const TMC2209 = struct {
         val: packed struct(u32) {
             ifcnt: u8 = 0,
             _reserved: u24 = 0,
-        },
+        } = undefined,
     };
 
     const nodeConf = struct {
         register: u8 = 0x03,
         val: packed struct(u32) {
             sendDelay: u32 = 0,
-        },
+        } = undefined,
     };
 
     const ioin = struct {
@@ -214,7 +258,7 @@ pub const TMC2209 = struct {
             dir: u1 = 0,
             reserved2: u14 = 0,
             version: u8 = 0,
-        },
+        } = undefined,
     };
 
     const iholdRun = struct {
@@ -224,7 +268,7 @@ pub const TMC2209 = struct {
             irun: u5 = 0,
             iholddelay: u4 = 0,
             _reserved: u23 = 0,
-        },
+        } = undefined,
     };
 
     const tPowerDown = struct {
@@ -232,7 +276,7 @@ pub const TMC2209 = struct {
         val: packed struct(u32) {
             delayTime: u8 = 0,
             _reserved: u24 = 0,
-        },
+        } = undefined,
     };
 
     const tStep = struct {
@@ -240,35 +284,35 @@ pub const TMC2209 = struct {
         val: packed struct(u32) {
             stepTime: u20 = 0,
             _reserved: u12 = 0,
-        },
+        } = undefined,
     };
 
     const tpwmthrs = struct {
         register: u8 = 0x13,
         val: packed struct(u32) {
             threshold: u32 = 0,
-        },
+        } = undefined,
     };
 
     const tcoolthrs = struct {
         register: u8 = 0x14,
         val: packed struct(u32) {
             velocity: u32 = 0,
-        },
+        } = undefined,
     };
 
     const vactual = struct {
         register: u8 = 0x22,
         val: packed struct(u32) {
             velocity: i32 = 0,
-        },
+        } = undefined,
     };
 
     const sgthrs = struct {
         register: u8 = 0x40,
         val: packed struct(u32) {
             threshold: u32 = 0,
-        },
+        } = undefined,
     };
 
     const sgresult = struct {
@@ -276,7 +320,7 @@ pub const TMC2209 = struct {
         val: packed struct(u32) {
             threshold: u10 = 0,
             _reserved: u22 = 0,
-        },
+        } = undefined,
     };
 
     const coolconf = struct {
@@ -289,7 +333,7 @@ pub const TMC2209 = struct {
             semin2: u6 = 0,
             coolStepEnable: u1 = 0,
             _reserved: u15 = 0,
-        },
+        } = undefined,
     };
 
     const mscnt = struct {
@@ -297,7 +341,7 @@ pub const TMC2209 = struct {
         val: packed struct(u32) {
             position: u10 = 0,
             _reserved: u22 = 0,
-        },
+        } = undefined,
     };
 
     const mscuract = struct {
@@ -306,7 +350,7 @@ pub const TMC2209 = struct {
             curB: u8 = 0,
             curA: u8 = 0,
             _reserved: u16 = 0,
-        },
+        } = undefined,
     };
 
     const chopconf = struct {
@@ -324,7 +368,7 @@ pub const TMC2209 = struct {
             dedge: u1 = 0,
             diss2g: u1 = 0,
             diss2vs: u1 = 0,
-        },
+        } = undefined,
     };
 
     const drvStatus = struct {
@@ -348,7 +392,7 @@ pub const TMC2209 = struct {
             s2ga: u1 = 0,
             ot: u1 = 0,
             otpw: u1 = 0,
-        },
+        } = undefined,
     };
 
     const pwmConf = struct {
@@ -362,7 +406,7 @@ pub const TMC2209 = struct {
             freewheel: u3 = 0,
             pwmReg: u4 = 0,
             pwmLim: u4 = 0,
-        },
+        } = undefined,
     };
 
     const pwmScale = struct {
@@ -371,7 +415,7 @@ pub const TMC2209 = struct {
             pwmScaleSum: u8 = 0,
             pwmScaleAuto: i9 = 0,
             _reserved: u15 = 0,
-        },
+        } = undefined,
     };
 
     const pwmAuto = struct {
@@ -380,7 +424,7 @@ pub const TMC2209 = struct {
             pwmOfsAuto: i8 = 0,
             pwmGradAuto: i8 = 0,
             _reserved: u16 = 0,
-        },
+        } = undefined,
     };
 };
 
@@ -424,6 +468,37 @@ test "write" {
 
     const sent = [_][]const u8{
         &.{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 },
+    };
+    try td.expect_sent(&sent);
+}
+
+test "read" {
+    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Clock = mdf.base.Clock_Device.Test_Device;
+
+    const data = [_][]const u8{
+        &.{ 0x00, 0x00, 0x00, 0x00 },
+        &.{ 0x05, 0xff, 0xec, 0x14, 0x00, 0x00, 0x05, 0xec },
+    };
+
+    var td = Test_Datagram.init(&data, true);
+    defer td.deinit();
+    td.connected = true;
+
+    var tc = Test_Clock.init();
+
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.datagram_device(), .clock = tc.clock_device() });
+
+    var cf = TMC2209.chopconf{};
+    try stepper.read(&cf);
+
+    try std.testing.expectEqual(5, cf.val.toff);
+    try std.testing.expectEqual(4, cf.val.mres);
+    try std.testing.expectEqual(1, cf.val.intpol);
+    try std.testing.expectEqual(0, cf.val.dedge);
+
+    const sent = [_][]const u8{
+        &.{ 0x05, 0x00, 0x6c, 0xca },
     };
     try td.expect_sent(&sent);
 }
