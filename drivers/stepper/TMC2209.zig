@@ -29,7 +29,7 @@ pub const TMC2209 = struct {
 
     ramp: [40]f32 = undefined,
     microsteps: u32 = 1,
-    hz: f32 = 0,
+    current_freq: f32 = 0,
     pulse_frequency: f32,
     steps: u32,
     uart: mdf.base.Datagram_Device,
@@ -46,15 +46,25 @@ pub const TMC2209 = struct {
         };
     }
 
+    pub fn set_spreadcycle(self: *Self) !void {
+        const nc = nodeConf{ .val = .{ .sendDelay = 2 } };
+        try self.write(nc.register, @bitCast(nc.val));
+        const gc = gconf{ .val = .{ .enSpreadcycle = 1, .pdnDisable = 1, .mStepRegSelect = 1, .indexStep = 1 } };
+        try self.write(gc.register, @bitCast(gc.val));
+        const ir = iholdRun{ .val = .{ .ihold = 1, .irun = 31 } };
+        try self.write(ir.register, @bitCast(ir.val));
+        const pw = pwmConf{ .val = .{ .pwmAutoscale = 1, .pwmAutoGrad = 1, .pwmReg = 8 } };
+        try self.write(pw.register, @bitCast(pw.val));
+    }
+
     // velocity = hz / 0.715 * steps * microsteps
-    // 0.715 is the built in pulse generator
     pub fn move(self: *Self, hz: f32) !void {
         if (hz > 20 or hz < -20) {
             return error.InvalidMoveFrequency;
         }
 
         var steps: f32 = 0;
-        for (self.calculate_ramp(hz)[0..]) |val| {
+        for (self.get_ramp(hz)[0..]) |val| {
             steps = @floatFromInt(self.steps * self.microsteps);
             const v = vactual{
                 .val = .{ .velocity = @intFromFloat(val / self.pulse_frequency * steps) },
@@ -63,7 +73,7 @@ pub const TMC2209 = struct {
             try self.write(v.register, @bitCast(v.val));
             self.clock_device.sleep_ms(50);
         }
-        self.hz = hz;
+        self.current_freq = hz;
     }
 
     pub fn set_microsteps(self: *Self, microsteps: u32) !void {
@@ -90,26 +100,24 @@ pub const TMC2209 = struct {
         try self.uart.write(&buf);
     }
 
-    fn calculate_ramp(self: *Self, hz: f32) []f32 {
-        var val: f32 = 0;
-        var i: usize = 0;
-        if (hz > self.hz) {
-            val = self.hz + 1;
-            while (val < hz) {
-                self.ramp[i] = val;
-                val += 1;
-                i += 1;
-            }
-        } else {
-            val = self.hz - 1;
-            while (val > hz) {
-                self.ramp[i] = val;
-                val -= 1;
-                i += 1;
-            }
+    fn get_ramp(self: *Self, target_freq: f32) []f32 {
+        if (self.current_freq == target_freq) {
+            self.ramp[0] = target_freq;
+            return self.ramp[0..1];
         }
 
-        self.ramp[i] = hz;
+        const step: f32 = if (target_freq > self.current_freq) 1 else -1;
+        var i: usize = 0;
+        var val = self.current_freq + step;
+
+        while ((step > 0 and val < target_freq) or (step < 0 and val > target_freq)) {
+            self.ramp[i] = val;
+            val += step;
+            i += 1;
+        }
+
+        self.ramp[i] = target_freq;
+
         return self.ramp[0 .. i + 1];
     }
 
@@ -160,7 +168,7 @@ pub const TMC2209 = struct {
             indexOtpw: u1 = 0,
             indexStep: u1 = 0,
             pdnDisable: u1 = 0,
-            mstepRegSelect: u1 = 0,
+            mStepRegSelect: u1 = 0,
             multistepFilt: u1 = 0,
             _reserved: u23 = 0,
         },
@@ -390,6 +398,29 @@ test "set microsteps" {
     var stepper = try TMC2209.init(.{ .address = 0, .uart = td.datagram_device(), .clock = tc.clock_device() });
 
     try stepper.set_microsteps(16);
+
+    const sent = [_][]const u8{
+        &.{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 },
+    };
+    try td.expect_sent(&sent);
+}
+
+// illustrate the use of the TMS2209 register structs, thus exposing all the UART functionality of the driver
+test "write" {
+    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Clock = mdf.base.Clock_Device.Test_Device;
+    const data = [_][]const u8{};
+
+    var td = Test_Datagram.init(&data, true);
+    defer td.deinit();
+    td.connected = true;
+
+    var tc = Test_Clock.init();
+
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.datagram_device(), .clock = tc.clock_device() });
+
+    const cf = TMC2209.chopconf{ .val = .{ .toff = 5, .mres = 4, .intpol = 1 } };
+    try stepper.write(cf.register, @bitCast(cf.val));
 
     const sent = [_][]const u8{
         &.{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 },
