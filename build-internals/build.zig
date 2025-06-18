@@ -59,10 +59,10 @@ pub const Target = struct {
     /// if present.
     board: ?Board = null,
 
-    /// (optional) Provide a custom linker script for the hardware or define a custom generation.
-    linker_script: ?LazyPath = null,
+    /// Provide a custom linker script for the hardware or define a custom generation.
+    linker_script: LinkerScript = .{},
 
-    /// (Optional) Explicitly set the entry point
+    /// (optional) Explicitly set the entry point.
     entry: ?Build.Step.Compile.Entry = null,
 
     /// (optional) Post processing step that will patch up and modify the elf file if necessary.
@@ -79,7 +79,7 @@ pub const Target = struct {
         ram_image: ?bool = null,
         hal: ?HardwareAbstractionLayer = null,
         board: ?Board = null,
-        linker_script: ?LazyPath = null,
+        linker_script: ?LinkerScript = null,
         entry: ?Build.Step.Compile.Entry = null,
         patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
     };
@@ -206,11 +206,10 @@ pub const BinaryFormat = union(enum) {
     pub fn get_extension(format: BinaryFormat) []const u8 {
         return switch (format) {
             .elf => ".elf",
-            .bin => ".bin",
+            .bin, .esp => ".bin",
             .hex => ".hex",
             .dfu => ".dfu",
             .uf2 => ".uf2",
-            .esp => ".bin",
 
             .custom => |c| c.extension,
         };
@@ -225,41 +224,74 @@ pub const BinaryFormat = union(enum) {
     };
 };
 
+pub const LinkerScript = struct {
+    /// Will anything be auto-generated for this linker script?
+    generate: GenerateOptions = .{ .memory_regions_and_sections = .{} },
+    /// Linker script path. Will be appended after what is auto-generated if it's not null.
+    file: ?LazyPath = null,
+
+    pub const GenerateOptions = union(enum) {
+        /// Only generates a comment with target info.
+        none,
+        /// Only generates memory regions.
+        memory_regions,
+        /// Generates memory regions and default sections based on the provided options.
+        memory_regions_and_sections: struct {
+            /// Where should rodata go?
+            rodata_location: enum {
+                /// Place rodata in the first region tagged as flash.
+                flash,
+                /// Place rodata in the first region tagged as ram.
+                ram,
+            } = .flash,
+        },
+    };
+};
+
 /// A descriptor for memory regions in a microcontroller.
 pub const MemoryRegion = struct {
-    /// The type of the memory region for generating a proper linker script.
-    kind: Kind,
+    name: ?[]const u8 = null,
+    tag: Tag = .none,
     offset: u64,
     length: u64,
+    access: Access,
 
-    pub const Kind = union(enum) {
+    pub fn validate_tag(region: MemoryRegion) void {
+        switch (region.tag) {
+            .flash => if (!region.access.read or !region.access.execute)
+                @panic("memory regions tagged as `flash` must be executable"),
+            .ram => if (!region.access.read or !region.access.write)
+                @panic("memory regions tagged as `ram` must be both readable and writable"),
+            else => {},
+        }
+    }
+
+    pub const Tag = enum {
         /// This is a (normally) immutable memory region where the code is stored.
         flash,
 
         /// This is a mutable memory region for data storage.
         ram,
 
-        /// This is a memory region that maps MMIO devices.
-        io,
-
-        /// This is a memory region that exists, but is reserved and must not be used.
-        reserved,
-
-        /// This is a memory region used for internal linking tasks required by the board support package.
-        private: PrivateRegion,
+        /// No tag.
+        none,
     };
 
-    pub const PrivateRegion = struct {
-        /// The name of the memory region. Will not have an automatic numeric counter and must be unique.
-        name: []const u8,
-
-        /// Is the memory region executable?
-        executable: bool,
+    pub const Access = struct {
+        pub const r: Access = .{ .read = true };
+        pub const w: Access = .{ .write = true };
+        pub const x: Access = .{ .execute = true };
+        pub const rw: Access = .{ .read = true, .write = true };
+        pub const rx: Access = .{ .read = true, .execute = true };
+        pub const rwx: Access = .{ .read = true, .write = true, .execute = true };
 
         /// Is the memory region readable?
-        readable: bool,
+        read: bool = false,
 
         /// Is the memory region writable?
-        writeable: bool,
+        write: bool = false,
+
+        /// Is the memory region executable?
+        execute: bool = false,
     };
 };

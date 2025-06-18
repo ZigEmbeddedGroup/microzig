@@ -29,8 +29,8 @@ const BaseChip = struct {
         }) catch @panic("out of memory");
 
         const mem: []const microzig.MemoryRegion = &.{
-            .{ .offset = 0x08000000, .length = flash_size, .kind = .flash },
-            .{ .offset = 0x20000000, .length = ram_size, .kind = .ram },
+            .{ .tag = .flash, .offset = 0x08000000, .length = flash_size, .access = .rx },
+            .{ .tag = .ram, .offset = 0x20000000, .length = ram_size, .access = .rw },
         };
         const mem_alloc = b.allocator.dupe(microzig.MemoryRegion, mem) catch @panic("out of memory");
 
@@ -59,33 +59,6 @@ const BaseChip = struct {
             },
             .hal = .{
                 .root_source_file = self.hal_file,
-            },
-            .linker_script = blk: {
-                const GenerateLinkerScriptArgs = @import("generate_linker_script.zig").Args;
-
-                const generate_linker_script_exe = b.addExecutable(.{
-                    .name = "generate_linker_script",
-                    .root_source_file = b.path("generate_linker_script.zig"),
-                    .target = b.graph.host,
-                    .optimize = .ReleaseSafe,
-                });
-
-                const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                    .cpu_name = @tagName(self.cpu_name),
-                    .chip_name = self.name,
-                    .flash_size = flash_size,
-                    .ram_size = ram_size,
-                };
-
-                const args_str = std.json.stringifyAlloc(
-                    b.allocator,
-                    generate_linker_script_args,
-                    .{},
-                ) catch @panic("out of memory");
-
-                const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
-                generate_linker_script_run.addArg(args_str);
-                break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
             },
         };
 
