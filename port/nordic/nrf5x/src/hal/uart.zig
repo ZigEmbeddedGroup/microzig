@@ -11,6 +11,15 @@ const UART_Regs = types.peripherals.UART0;
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
+const version: enum {
+    nrf5283x,
+    nrf52840,
+} = switch (compatibility.chip) {
+    .nrf52832, .nrf52833 => .nrf5283x,
+    .nrf52840 => .nrf52840,
+    else => compatibility.unsupported_chip("UART"),
+};
+
 var uart_logger: ?UART.Writer = null;
 
 pub fn num(n: u1) UART {
@@ -143,53 +152,49 @@ pub const UART = enum(u1) {
 
     fn set_txd(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSELTXD.raw = @intFromEnum(pin),
+        switch (version) {
+            .nrf5283x => regs.PSELTXD.raw = @intFromEnum(pin),
             .nrf52840 => regs.PSEL.TXD.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
                 .CONNECT = .Connected,
             }),
-            else => @compileError("chip not supported"),
         }
     }
 
     fn set_rxd(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSELRXD.raw = @intFromEnum(pin),
+        switch (version) {
+            .nrf5283x => regs.PSELRXD.raw = @intFromEnum(pin),
             .nrf52840 => regs.PSEL.RXD.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
                 .CONNECT = .Connected,
             }),
-            else => @compileError("chip not supported"),
         }
     }
 
     fn set_cts(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSELCTS.raw = @intFromEnum(pin),
+        switch (version) {
+            .nrf5283x => regs.PSELCTS.raw = @intFromEnum(pin),
             .nrf52840 => regs.PSEL.CTS.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
                 .CONNECT = @enumFromInt(0), // 0 means connected lol
             }),
-            else => @compileError("chip not supported"),
         }
     }
 
     fn set_rts(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSELRTS.raw = @intFromEnum(pin),
+        switch (version) {
+            .nrf5283x => regs.PSELRTS.raw = @intFromEnum(pin),
             .nrf52840 => regs.PSEL.RTS.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
                 .CONNECT = @enumFromInt(0), // 0 means connected lol
             }),
-            else => @compileError("chip not supported"),
         }
     }
 

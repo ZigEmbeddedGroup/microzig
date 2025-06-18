@@ -8,6 +8,15 @@ const compatibility = @import("compatibility.zig");
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
+const version: enum {
+    nrf5283x,
+    nrf52840,
+} = switch (compatibility.chip) {
+    .nrf52832, .nrf52833 => .nrf5283x,
+    .nrf52840 => .nrf52840,
+    else => compatibility.unsupported_chip("DMA I2C"),
+};
+
 // "Two Wire Interface Master"
 const I2C0 = peripherals.TWIM0;
 const I2C1 = peripherals.TWIM1;
@@ -105,8 +114,8 @@ pub const I2C = enum(u1) {
         // Pins must be setup as INPUT with SOD1 drive strength
         config.scl_pin.set_direction(.in);
         config.scl_pin.set_drive_strength(.SOD1);
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSEL.SCL.write(.{
+        switch (version) {
+            .nrf5283x => regs.PSEL.SCL.write(.{
                 .PIN = config.scl_pin.index(),
                 .CONNECT = .Connected,
             }),
@@ -115,13 +124,12 @@ pub const I2C = enum(u1) {
                 .PORT = config.scl_pin.port(),
                 .CONNECT = .Connected,
             }),
-            else => @compileError("chip not supported"),
         }
 
         config.sda_pin.set_direction(.in);
         config.sda_pin.set_drive_strength(.SOD1);
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSEL.SDA.write(.{
+        switch (version) {
+            .nrf5283x => regs.PSEL.SDA.write(.{
                 .PIN = config.sda_pin.index(),
                 .CONNECT = .Connected,
             }),
@@ -130,7 +138,6 @@ pub const I2C = enum(u1) {
                 .PORT = config.sda_pin.port(),
                 .CONNECT = .Connected,
             }),
-            else => @compileError("chip not supported"),
         }
 
         regs.FREQUENCY.write(.{

@@ -8,6 +8,15 @@ const microzig = @import("microzig");
 const time = microzig.drivers.time;
 const compatibility = microzig.hal.compatibility;
 
+const version: enum {
+    nrf51,
+    nrf52,
+} = switch (compatibility.chip) {
+    .nrf51 => .nrf51,
+    .nrf52832, .nrf52833, .nrf52840 => .nrf52,
+    else => compatibility.unsupported_chip("time"),
+};
+
 const timer = microzig.chip.peripherals.TIMER0;
 const READ_INDEX = 1;
 
@@ -15,7 +24,7 @@ var overflow_count: u32 = 0;
 
 pub fn init() void {
     // Stop timer while we set it up
-    switch (compatibility.chip) {
+    switch (version) {
         .nrf51 => {
             timer.TASKS_STOP = 1;
             defer timer.TASKS_START = 1;
@@ -28,7 +37,7 @@ pub fn init() void {
             // 16Mhz / 2^4 = 1MHz: us resolution
             timer.PRESCALER.write(.{ .PRESCALER = 4 });
         },
-        .nrf52, .nrf52833, .nrf52840 => {
+        .nrf52 => {
             timer.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             defer timer.TASKS_START.write(.{ .TASKS_START = .Trigger });
 
@@ -44,12 +53,12 @@ pub fn init() void {
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    switch (compatibility.chip) {
+    switch (version) {
         .nrf51 => {
             timer.TASKS_CAPTURE[READ_INDEX] = 1;
             return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX]);
         },
-        .nrf52, .nrf52833, .nrf52840 => {
+        .nrf52 => {
             timer.TASKS_CAPTURE[READ_INDEX].write(.{ .TASKS_CAPTURE = .Trigger });
             return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX].raw);
         },

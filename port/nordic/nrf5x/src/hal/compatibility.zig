@@ -2,16 +2,21 @@ const std = @import("std");
 const microzig = @import("microzig");
 const Chip = @import("chip.zig").Chip;
 
-pub const chip: Chip = blk: {
-    if (std.mem.eql(u8, microzig.config.chip_name, "nrf51")) {
-        break :blk .nrf51;
-    } else if (std.mem.eql(u8, microzig.config.chip_name, "nrf52")) {
-        break :blk .nrf52;
-    } else if (std.mem.eql(u8, microzig.config.chip_name, "nrf52833")) {
-        break :blk .nrf52833;
-    } else if (std.mem.eql(u8, microzig.config.chip_name, "nrf52840")) {
-        break :blk .nrf52840;
-    } else {
-        @compileError(std.fmt.comptimePrint("Unsupported chip for nRF5x HAL: \"{s}\"", .{microzig.config.chip_name}));
-    }
-};
+pub const chip: Chip =
+    if (std.mem.eql(u8, microzig.config.chip_name, "nrf51"))
+        .nrf51
+    else if (std.mem.eql(u8, microzig.config.chip_name, "nrf52"))
+        .nrf52832
+    else if (std.mem.eql(u8, microzig.config.chip_name, "nrf52833"))
+        .nrf52833
+    else if (std.mem.eql(u8, microzig.config.chip_name, "nrf52840"))
+        .nrf52840
+    else
+        unsupported_chip("");
+
+pub inline fn unsupported_chip(for_what: []const u8) void {
+    @compileError(std.fmt.comptimePrint("unsupported chip for nRF5x {s}HAL: \"{s}\"", .{
+        for_what ++ " ",
+        microzig.config.chip_name,
+    }));
+}

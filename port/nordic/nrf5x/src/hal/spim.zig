@@ -11,6 +11,15 @@ const Duration = mdf.time.Duration;
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
+const version: enum {
+    nrf5283x,
+    nrf52840,
+} = switch (compatibility.chip) {
+    .nrf52832, .nrf52833 => .nrf5283x,
+    .nrf52840 => .nrf52840,
+    else => compatibility.unsupported_chip("SPIM"),
+};
+
 const SPIM0 = peripherals.SPIM0;
 const SPIM1 = peripherals.SPIM1;
 const SPIM2 = peripherals.SPIM2;
@@ -39,10 +48,9 @@ const Config = struct {
     mosi_drive: gpio.DriveStrength = .SOS1,
 };
 
-const Frequency = switch (compatibility.chip) {
-    .nrf52 => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz" },
+const Frequency = switch (version) {
+    .nrf5283x => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz" },
     .nrf52840 => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz", @"16MHz", @"32MHz" },
-    else => @compileError("chip not supported"),
 };
 
 pub const TransactionError = error{
@@ -71,8 +79,8 @@ pub const SPIM = enum(u1) {
         // TODO: Chip-specific
         if (config.miso_pin) |miso| {
             miso.set_direction(.in);
-            switch (compatibility.chip) {
-                .nrf52 => regs.PSEL.MISO.write(.{
+            switch (version) {
+                .nrf5283x => regs.PSEL.MISO.write(.{
                     .PIN = miso.index(),
                     .CONNECT = .Connected,
                 }),
@@ -81,7 +89,6 @@ pub const SPIM = enum(u1) {
                     .PORT = miso.port(),
                     .CONNECT = .Connected,
                 }),
-                else => @compileError("chip not supported"),
             }
         } else regs.PSEL.MISO.modify(.{
             .CONNECT = .Disconnected,
@@ -89,8 +96,8 @@ pub const SPIM = enum(u1) {
         if (config.mosi_pin) |mosi| {
             mosi.set_direction(.out);
             mosi.set_drive_strength(config.mosi_drive);
-            switch (compatibility.chip) {
-                .nrf52 => regs.PSEL.MOSI.write(.{
+            switch (version) {
+                .nrf5283x => regs.PSEL.MOSI.write(.{
                     .PIN = mosi.index(),
                     .CONNECT = .Connected,
                 }),
@@ -99,7 +106,6 @@ pub const SPIM = enum(u1) {
                     .PORT = mosi.port(),
                     .CONNECT = .Connected,
                 }),
-                else => @compileError("chip not supported"),
             }
         } else regs.PSEL.MOSI.modify(.{
             .CONNECT = .Disconnected,
@@ -128,8 +134,8 @@ pub const SPIM = enum(u1) {
             }),
         }
 
-        switch (compatibility.chip) {
-            .nrf52 => regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
+        switch (version) {
+            .nrf5283x => regs.FREQUENCY.write(.{ .FREQUENCY = switch (config.frequency) {
                 .@"125KHz" => .K125,
                 .@"250KHz" => .K250,
                 .@"500KHz" => .K500,
@@ -149,15 +155,14 @@ pub const SPIM = enum(u1) {
                 .@"16MHz" => .M16,
                 .@"32MHz" => .M32,
             } }),
-            else => @compileError("chip not supported"),
         }
 
         regs.ORC.write(.{ .ORC = config.overread_char });
 
         config.sck_pin.set_direction(.out);
         config.sck_pin.set_drive_strength(config.sck_drive);
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSEL.SCK.write(.{
+        switch (version) {
+            .nrf5283x => regs.PSEL.SCK.write(.{
                 .PIN = config.sck_pin.index(),
                 .CONNECT = .Connected,
             }),
@@ -166,7 +171,6 @@ pub const SPIM = enum(u1) {
                 .PORT = config.sck_pin.port(),
                 .CONNECT = .Connected,
             }),
-            else => @compileError("chip not supported"),
         }
 
         regs.ENABLE.write(.{ .ENABLE = .Enabled });
