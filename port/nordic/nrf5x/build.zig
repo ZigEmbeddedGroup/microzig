@@ -68,7 +68,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "nrf52",
             .url = "https://www.nordicsemi.com/products/nrf52832",
             .register_definition = .{
-                // TODO: does this determine the name of the chips/x.zig?
                 .svd = nrfx.path("mdk/nrf52.svd"),
             },
             .memory_regions = &.{
