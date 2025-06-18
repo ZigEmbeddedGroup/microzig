@@ -140,3 +140,26 @@ test "tokenizer and encoder" {
 test "comparison" {
     std.testing.refAllDecls(@import("assembler/comparison_tests.zig"));
 }
+
+test "assemble" {
+    // Test that the assembler can compile a simple program
+    // this also verifies that the assemble function can be compiled
+    _ = comptime assemble(.RP2040, ".program testprog", .{})
+        .get_program_by_name("testprog");
+}
+
+test "format compile error" {
+    const result = comptime format_compile_error(
+        "invalid instruction",
+        ".program testprog\n bad",
+        19,
+    );
+    try std.testing.expectEqualStrings(
+        \\failed to assemble PIO code:
+        \\
+        \\ bad
+        \\ ^
+        \\ invalid instruction
+        \\
+    , result);
+}
