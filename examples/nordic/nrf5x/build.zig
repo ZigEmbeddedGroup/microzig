@@ -18,6 +18,8 @@ pub fn build(b: *std.Build) void {
     const microbit_v1 = mb.ports.nrf5x.boards.bbc.microbit_v1;
     const microbit_v2 = mb.ports.nrf5x.boards.bbc.microbit_v2;
 
+    // TODO: better system for examples
+
     const available_examples = [_]Example{
         .{ .target = nrf52840_dongle, .name = "nrf52840_dongle_blinky", .file = "src/blinky.zig" },
 
@@ -67,7 +69,7 @@ pub fn build(b: *std.Build) void {
     }
 }
 
-pub const Example = struct {
+const Example = struct {
     target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
