@@ -47,8 +47,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = nrfx.path("mdk/nrf51.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 128 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 16 * 1024, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x00000000, .length = 128 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 16 * 1024, .access = .rwx },
             },
             .patches = @import("patches/nrf51.zig").patches,
         },
@@ -72,9 +72,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .memory_regions = &.{
                 .{ .tag = .flash, .offset = 0x00000000, .length = 0x80000, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 0x10000, .access = .rw },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 0x10000, .access = .rwx },
             },
-            .patches = @import("patches/nrf52832.zig").patches,
+            .patches = @import("patches/nrf528xx.zig").patches,
         },
         .hal = .{ .root_source_file = b.path("src/hal.zig") },
     };
@@ -92,14 +92,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "nrf52833",
             .url = "https://www.nordicsemi.com/products/nrf52833",
             .register_definition = .{
-                // TODO: does this determine the name of the chips/x.zig?
                 .svd = nrfx.path("mdk/nrf52833.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 128 * 1024, .kind = .ram },
+                .{ .tag = .flash, .offset = 0x00000000, .length = 512 * 1024, .access = .rx },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 128 * 1024, .access = .rwx },
             },
-            .patches = @import("patches/nrf52832.zig").patches,
+            .patches = @import("patches/nrf528xx.zig").patches,
         },
         .hal = .{ .root_source_file = b.path("src/hal.zig") },
     };
@@ -130,7 +129,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 // CODE_RAM
                 .{ .name = "code_ram", .offset = 0x800000, .length = 0x40000, .access = .x },
             },
-            .patches = @import("patches/nrf52840.zig").patches,
+            .patches = @import("patches/nrf528xx.zig").patches,
         },
         .hal = hal,
     };

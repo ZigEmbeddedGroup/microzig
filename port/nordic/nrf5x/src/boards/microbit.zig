@@ -73,6 +73,51 @@ pub const display = struct {
     pub const width = 5;
     pub const height = 5;
 
+    const matrix_height = pins.display.rows.len;
+    const matrix_width = pins.display.cols.len;
+
+    // Used for microbit v1. Maps x and y coordinates of the image to the row and column of the led matrix.
+    const led_layout: [height][width]struct {
+        row: usize,
+        col: usize,
+    } = .{
+        .{
+            .{ .row = 0, .col = 0 },
+            .{ .row = 1, .col = 3 },
+            .{ .row = 0, .col = 1 },
+            .{ .row = 1, .col = 4 },
+            .{ .row = 0, .col = 2 },
+        },
+        .{
+            .{ .row = 2, .col = 3 },
+            .{ .row = 2, .col = 4 },
+            .{ .row = 2, .col = 5 },
+            .{ .row = 2, .col = 6 },
+            .{ .row = 2, .col = 7 },
+        },
+        .{
+            .{ .row = 1, .col = 1 },
+            .{ .row = 0, .col = 8 },
+            .{ .row = 1, .col = 2 },
+            .{ .row = 2, .col = 8 },
+            .{ .row = 1, .col = 0 },
+        },
+        .{
+            .{ .row = 0, .col = 7 },
+            .{ .row = 0, .col = 6 },
+            .{ .row = 0, .col = 5 },
+            .{ .row = 0, .col = 4 },
+            .{ .row = 0, .col = 3 },
+        },
+        .{
+            .{ .row = 2, .col = 2 },
+            .{ .row = 1, .col = 6 },
+            .{ .row = 2, .col = 0 },
+            .{ .row = 1, .col = 5 },
+            .{ .row = 2, .col = 1 },
+        },
+    };
+
     pub fn init() void {
         for (&pins.display.rows) |pin| {
             pin.set_direction(.out);
@@ -120,49 +165,4 @@ pub const display = struct {
             }
         }
     }
-
-    const matrix_height = pins.display.rows.len;
-    const matrix_width = pins.display.cols.len;
-
-    // used for microbit v1
-    const led_layout: [height][width]struct {
-        row: usize,
-        col: usize,
-    } = .{
-        .{
-            .{ .row = 0, .col = 0 },
-            .{ .row = 1, .col = 3 },
-            .{ .row = 0, .col = 1 },
-            .{ .row = 1, .col = 4 },
-            .{ .row = 0, .col = 2 },
-        },
-        .{
-            .{ .row = 2, .col = 3 },
-            .{ .row = 2, .col = 4 },
-            .{ .row = 2, .col = 5 },
-            .{ .row = 2, .col = 6 },
-            .{ .row = 2, .col = 7 },
-        },
-        .{
-            .{ .row = 1, .col = 1 },
-            .{ .row = 0, .col = 8 },
-            .{ .row = 1, .col = 2 },
-            .{ .row = 2, .col = 8 },
-            .{ .row = 1, .col = 0 },
-        },
-        .{
-            .{ .row = 0, .col = 7 },
-            .{ .row = 0, .col = 6 },
-            .{ .row = 0, .col = 5 },
-            .{ .row = 0, .col = 4 },
-            .{ .row = 0, .col = 3 },
-        },
-        .{
-            .{ .row = 2, .col = 2 },
-            .{ .row = 1, .col = 6 },
-            .{ .row = 2, .col = 0 },
-            .{ .row = 1, .col = 5 },
-            .{ .row = 2, .col = 1 },
-        },
-    };
 };
