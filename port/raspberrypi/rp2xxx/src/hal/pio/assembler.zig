@@ -97,7 +97,7 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     var line_str: []const u8 = "";
     var line_num: u32 = 1;
     var column: u32 = 0;
-    var line_it = std.mem.tokenize(u8, source, "\n\r");
+    var line_it = std.mem.tokenizeAny(u8, source, "\n\r");
     while (line_it.next()) |line| : (line_num += 1) {
         line_str = line_str ++ "\n" ++ line;
         if (line_it.index >= index) {
@@ -139,4 +139,27 @@ test "tokenizer and encoder" {
 
 test "comparison" {
     std.testing.refAllDecls(@import("assembler/comparison_tests.zig"));
+}
+
+test "assemble" {
+    // Test that the assembler can compile a simple program
+    // this also verifies that the assemble function can be compiled
+    _ = comptime assemble(.RP2040, ".program testprog", .{})
+        .get_program_by_name("testprog");
+}
+
+test "format compile error" {
+    const result = comptime format_compile_error(
+        "invalid instruction",
+        ".program testprog\n bad",
+        19,
+    );
+    try std.testing.expectEqualStrings(
+        \\failed to assemble PIO code:
+        \\
+        \\ bad
+        \\ ^
+        \\ invalid instruction
+        \\
+    , result);
 }
