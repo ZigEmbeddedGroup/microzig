@@ -2283,7 +2283,7 @@ test "format tokenizer" {
     const test_tokenizer = Tokenizer(.RP2040).init("out 1");
     const string = try std.fmt.allocPrint(std.testing.allocator, "{}", .{test_tokenizer});
     defer std.testing.allocator.free(string);
-    try std.testing.expectEqualStrings(
+    try expectEqualStrings(
         \\parser:
         \\  index: 0
         \\
