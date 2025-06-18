@@ -3,5 +3,5 @@ pub const Chip = enum(u32) {
     nrf52832,
     nrf52833,
     nrf52840,
-    _
+    _,
 };
