@@ -486,22 +486,25 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
         fn encode_instruction_body(self: *Self, program: *BoundedProgram, diags: *?Diagnostics) !void {
             // first scan through body for labels
-            var instr_index: u5 = program.origin orelse 0;
+            var instr_index: ?u5 = program.origin orelse 0;
             for (self.tokens[self.index..]) |token| {
                 switch (token.data) {
                     .label => |label| try program.labels.append(.{
                         .name = label.name,
                         .public = label.public,
-                        .index = instr_index,
+                        .index = instr_index.?,
                     }),
-                    .instruction, .word => instr_index += 1,
+                    .instruction, .word => {
+                        const result, const ov = @addWithOverflow(instr_index.?, 1);
+                        instr_index = if (ov != 0) null else result;
+                    },
                     .wrap_target => {
                         if (program.wrap_target != null) {
                             diags.* = Diagnostics.init(token.index, "wrap_target already set for this program", .{});
                             return error.WrapTargetAlreadySet;
                         }
 
-                        program.wrap_target = instr_index;
+                        program.wrap_target = instr_index.?;
                     },
                     .wrap => {
                         if (program.wrap != null) {
@@ -509,7 +512,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                             return error.WrapAlreadySet;
                         }
 
-                        program.wrap = instr_index - 1;
+                        program.wrap = if (instr_index) |idx| idx - 1 else 31;
                     },
                     .program => break,
                     else => unreachable, // invalid
