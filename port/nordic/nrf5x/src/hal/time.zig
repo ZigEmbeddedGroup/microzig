@@ -28,7 +28,7 @@ pub fn init() void {
             // 16Mhz / 2^4 = 1MHz: us resolution
             timer.PRESCALER.write(.{ .PRESCALER = 4 });
         },
-        .nrf52, .nrf52840 => {
+        .nrf52, .nrf52833, .nrf52840 => {
             timer.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             defer timer.TASKS_START.write(.{ .TASKS_START = .Trigger });
 
@@ -49,7 +49,7 @@ pub fn get_time_since_boot() time.Absolute {
             timer.TASKS_CAPTURE[READ_INDEX] = 1;
             return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX]);
         },
-        .nrf52, .nrf52840 => {
+        .nrf52, .nrf52833, .nrf52840 => {
             timer.TASKS_CAPTURE[READ_INDEX].write(.{ .TASKS_CAPTURE = .Trigger });
             return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX].raw);
         },

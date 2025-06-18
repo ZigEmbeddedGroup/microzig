@@ -4,7 +4,7 @@ const nrf = microzig.hal;
 const time = nrf.time;
 const microbit = microzig.board;
 
-pub const heart: [5][5]u3 = .{
+pub const heart: [5][5]u1 = .{
     .{0, 1, 0, 1, 0},
     .{1, 0, 1, 0, 1},
     .{1, 0, 0, 0, 1},

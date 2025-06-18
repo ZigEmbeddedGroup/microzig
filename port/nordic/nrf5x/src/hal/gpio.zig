@@ -22,7 +22,7 @@ pub const InputBuffer = enum(u1) {
 
 const Regs = switch (compatibility.chip) {
     .nrf51 => microzig.chip.types.peripherals.GPIO,
-    .nrf52, .nrf52840 => microzig.chip.types.peripherals.P0,
+    .nrf52, .nrf52833, .nrf52840 => microzig.chip.types.peripherals.P0,
 };
 
 pub const Pull = Regs.Pull;
@@ -41,7 +41,7 @@ pub const Pin = enum(u6) {
     fn get_regs(pin: Pin) *volatile Regs {
         return switch (compatibility.chip) {
             .nrf51 => peripherals.GPIO,
-            .nrf52 => peripherals.P0,
+            .nrf52, .nrf52833 => peripherals.P0,
             .nrf52840 => if (@intFromEnum(pin) <= 31)
                 peripherals.P0
             else

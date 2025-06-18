@@ -115,6 +115,7 @@ pub const I2C = enum(u1) {
                 .PORT = config.scl_pin.port(),
                 .CONNECT = .Connected,
             }),
+            else => @compileError("chip not supported"),
         }
 
         config.sda_pin.set_direction(.in);
@@ -129,6 +130,7 @@ pub const I2C = enum(u1) {
                 .PORT = config.sda_pin.port(),
                 .CONNECT = .Connected,
             }),
+            else => @compileError("chip not supported"),
         }
 
         regs.FREQUENCY.write(.{

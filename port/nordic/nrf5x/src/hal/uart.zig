@@ -150,6 +150,7 @@ pub const UART = enum(u1) {
                 .PORT = pin.port(),
                 .CONNECT = .Connected,
             }),
+            else => @compileError("chip not supported"),
         }
     }
 
@@ -162,6 +163,7 @@ pub const UART = enum(u1) {
                 .PORT = pin.port(),
                 .CONNECT = .Connected,
             }),
+            else => @compileError("chip not supported"),
         }
     }
 
@@ -174,6 +176,7 @@ pub const UART = enum(u1) {
                 .PORT = pin.port(),
                 .CONNECT = @enumFromInt(0), // 0 means connected lol
             }),
+            else => @compileError("chip not supported"),
         }
     }
 
@@ -186,6 +189,7 @@ pub const UART = enum(u1) {
                 .PORT = pin.port(),
                 .CONNECT = @enumFromInt(0), // 0 means connected lol
             }),
+            else => @compileError("chip not supported"),
         }
     }
 

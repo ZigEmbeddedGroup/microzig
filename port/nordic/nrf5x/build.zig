@@ -6,6 +6,7 @@ const Self = @This();
 chips: struct {
     nrf51822: *const microzig.Target,
     nrf52832: *const microzig.Target,
+    nrf52833: *const microzig.Target,
     nrf52840: *const microzig.Target,
 },
 
@@ -17,6 +18,7 @@ boards: struct {
     },
     bbc: struct {
         microbit_v1: *const microzig.Target,
+        microbit_v2: *const microzig.Target,
     },
 },
 
@@ -78,6 +80,31 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = .{ .root_source_file = b.path("src/hal.zig") },
     };
 
+    const chip_nrf52833: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .elf,
+        .zig_target = .{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
+        .chip = .{
+            .name = "nrf52833",
+            .url = "https://www.nordicsemi.com/products/nrf52833",
+            .register_definition = .{
+                // TODO: does this determine the name of the chips/x.zig?
+                .svd = nrfx.path("mdk/nrf52833.svd"),
+            },
+            .memory_regions = &.{
+                .{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 128 * 1024, .kind = .ram },
+            },
+            .patches = @import("patches/nrf52832.zig").patches,
+        },
+        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+    };
+
     const chip_nrf52840: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
@@ -113,6 +140,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chips = .{
             .nrf51822 = chip_nrf51822.derive(.{}),
             .nrf52832 = chip_nrf52832.derive(.{}),
+            .nrf52833 = chip_nrf52833.derive(.{}),
             .nrf52840 = chip_nrf52840.derive(.{}),
         },
         .boards = .{
@@ -145,6 +173,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .board = .{
                         .name = "micro:bit v1",
                         .url = "https://tech.microbit.org/hardware/1-5-revision",
+                        .root_source_file = b.path("src/boards/microbit.zig"),
+                    },
+                }),
+                .microbit_v2 = chip_nrf52833.derive(.{
+                    .preferred_binary_format = .hex,
+                    .board = .{
+                        .name = "micro:bit v2",
+                        .url = "https://tech.microbit.org/hardware/2-2-revision",
                         .root_source_file = b.path("src/boards/microbit.zig"),
                     },
                 }),

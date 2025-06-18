@@ -42,6 +42,7 @@ const Config = struct {
 const Frequency = switch (compatibility.chip) {
     .nrf52 => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz" },
     .nrf52840 => enum { @"125KHz", @"250KHz", @"500KHz", @"1MHz", @"2MHz", @"4MHz", @"8MHz", @"16MHz", @"32MHz" },
+    else => @compileError("chip not supported"),
 };
 
 pub const TransactionError = error{
@@ -80,6 +81,7 @@ pub const SPIM = enum(u1) {
                     .PORT = miso.port(),
                     .CONNECT = .Connected,
                 }),
+                else => @compileError("chip not supported"),
             }
         } else regs.PSEL.MISO.modify(.{
             .CONNECT = .Disconnected,
@@ -97,6 +99,7 @@ pub const SPIM = enum(u1) {
                     .PORT = mosi.port(),
                     .CONNECT = .Connected,
                 }),
+                else => @compileError("chip not supported"),
             }
         } else regs.PSEL.MOSI.modify(.{
             .CONNECT = .Disconnected,
@@ -146,6 +149,7 @@ pub const SPIM = enum(u1) {
                 .@"16MHz" => .M16,
                 .@"32MHz" => .M32,
             } }),
+            else => @compileError("chip not supported"),
         }
 
         regs.ORC.write(.{ .ORC = config.overread_char });
@@ -162,6 +166,7 @@ pub const SPIM = enum(u1) {
                 .PORT = config.sck_pin.port(),
                 .CONNECT = .Connected,
             }),
+            else => @compileError("chip not supported"),
         }
 
         regs.ENABLE.write(.{ .ENABLE = .Enabled });
