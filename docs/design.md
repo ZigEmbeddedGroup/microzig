@@ -150,26 +150,23 @@ a bit.
 ```zig
 // port/raspberrypi/rp2xxx/build.zig
 
-...
-    const chip_rp2040: microzig.Target = .{
-        ...
-        .chip = .{
-            ...
-            .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
-            },
-            ...
+const chip_rp2040: microzig.Target = .{
+    // ...
+    .chip = .{
+        // ...
+        .memory_regions = &.{
+            .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+            .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
         },
-        .linker_script = .{
-            // The `generate` field defaults to `.memory_regions_and_sections`.
+    },
+    .linker_script = .{
+        // The `generate` field defaults to `.memory_regions_and_sections`.
 
-            // This will be appended at the end of the auto-generated linker
-            // script.
-            .file = b.path("ld/rp2040/sections.ld"),
-        },
-    };
-...
+        // This will be appended at the end of the auto-generated linker
+        // script.
+        .file = b.path("ld/rp2040/sections.ld"),
+    },
+};
 ```
 
 ```ld
@@ -268,7 +265,7 @@ SECTIONS
 INSERT BEFORE .flash_start;
 ```
 
-### Things to know
+### FYI
 - If the ram memory region used by the linker script generator is executable, a
 `.ram_text` section will be included for code that should be placed in ram.
 This applies to the rp2040 target where the section tagged as ram is
