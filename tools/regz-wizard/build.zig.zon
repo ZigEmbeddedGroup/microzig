@@ -1,0 +1,19 @@
+.{
+    .name = .tools_regzwizard,
+    .version = "0.0.0",
+    .fingerprint = 0xe9f2d03f97400569,
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{
+        .regz = .{ .path = "../regz" },
+        .dvui = .{
+            .url = "git+https://github.com/david-vanderson/dvui.git#2fd3c7fcd700ea9c0fd96d217d6ff878ba0d02d7",
+            .hash = "dvui-0.2.0-AQFJmTOVzgAbOn4QEgiYY-6CISQ25dLcsTsmYBWpSteB",
+        },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
