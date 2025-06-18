@@ -21,6 +21,14 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ## Changes
 
+[]($section.id('initial-microbit-support').data('date','2025-04-28'))
+
+### Initial micro:bit support
+
+Add support for the micro:bit 5x5 led display.
+
+[]($image.asset('microbit-display.jpeg'))
+
 []($section.id('linker-script-generation').data('date','2025-06-18'))
 
 ### Linker Script Generation

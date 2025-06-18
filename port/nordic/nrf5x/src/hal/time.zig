@@ -13,7 +13,7 @@ const version: enum {
     nrf52,
 } = switch (compatibility.chip) {
     .nrf51 => .nrf51,
-    .nrf52832, .nrf52833, .nrf52840 => .nrf52,
+    .nrf52, .nrf52833, .nrf52840 => .nrf52,
     else => compatibility.unsupported_chip("time"),
 };
 

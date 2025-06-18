@@ -15,7 +15,7 @@ const version: enum {
     nrf5283x,
     nrf52840,
 } = switch (compatibility.chip) {
-    .nrf52832, .nrf52833 => .nrf5283x,
+    .nrf52, .nrf52833 => .nrf5283x,
     .nrf52840 => .nrf52840,
     else => compatibility.unsupported_chip("SPIM"),
 };

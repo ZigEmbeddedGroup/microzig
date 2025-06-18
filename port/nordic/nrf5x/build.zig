@@ -47,7 +47,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = nrfx.path("mdk/nrf51.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 256 * 1024, .kind = .flash },
+                .{ .offset = 0x00000000, .length = 128 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 16 * 1024, .kind = .ram },
             },
             .patches = @import("patches/nrf51.zig").patches,
