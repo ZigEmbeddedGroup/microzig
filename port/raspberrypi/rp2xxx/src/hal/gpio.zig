@@ -318,22 +318,22 @@ pub const Pin = enum(u6) {
         .RP2350 => *volatile [48]PadsReg,
     };
 
-    fn get_regs(gpio: Pin) *volatile Regs {
+    inline fn get_regs(gpio: Pin) *volatile Regs {
         const regs = @as(RegsArray, @ptrCast(&IO_BANK0.GPIO0_STATUS));
         return &regs[@intFromEnum(gpio)];
     }
 
-    fn get_pads_reg(gpio: Pin) *volatile PadsReg {
+    inline fn get_pads_reg(gpio: Pin) *volatile PadsReg {
         const regs = @as(PadsRegArray, @ptrCast(&PADS_BANK0.GPIO0));
         return &regs[@intFromEnum(gpio)];
     }
 
     /// Only relevant for RP2350 which has 48 GPIOs
-    fn is_upper(gpio: Pin) bool {
+    inline fn is_upper(gpio: Pin) bool {
         return @intFromEnum(gpio) > 31;
     }
 
-    pub fn mask(gpio: Pin) u32 {
+    pub inline fn mask(gpio: Pin) u32 {
         const bitshift_val: u5 = switch (chip) {
             .RP2040 => @intCast(@intFromEnum(gpio)),
             .RP2350 =>

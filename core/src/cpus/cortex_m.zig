@@ -577,6 +577,7 @@ pub fn clrex() void {
 }
 
 const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
+const mregs = @import("m-profile.zig");
 
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
@@ -631,6 +632,15 @@ pub const startup_logic = struct {
                 @memcpy(data_start[0..data_len], data_src[0..data_len]);
             }
 
+            // We want the hardfault to be split into smaller parts:
+            mregs.registers.system_control_block.shcrs.modify(.{
+                .memfault_enabled = true,
+                .busfault_enabled = true,
+                .usagefault_enabled = true,
+            });
+
+            enable_fault_irq();
+
             // Move vector table to RAM if requested
             if (interrupt.has_ram_vectors()) {
                 // Copy vector table to RAM and set VTOR to point to it
@@ -639,7 +649,6 @@ pub const startup_logic = struct {
                     @export(&ram_vectors, .{
                         .name = "_ram_vectors",
                         .section = "ram_vectors",
-                        .linkage = .strong,
                     });
                 } else {
                     @export(&ram_vectors, .{
@@ -666,6 +675,12 @@ pub const startup_logic = struct {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
+
+            .NMI = panic_handler("NMI"),
+            .HardFault = panic_handler("HardFault"),
+            .MemManageFault = panic_handler("MemManageFault"),
+            .BusFault = make_fault_handler(default_bus_fault_handler), // Exception 5
+            .UsageFault = make_fault_handler(default_usage_fault_handler), // Exception 6
         };
 
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
@@ -677,6 +692,109 @@ pub const startup_logic = struct {
 
         break :blk tmp;
     };
+
+    fn panic_handler(comptime msg: []const u8) microzig.interrupt.Handler {
+        const T = struct {
+            fn do_panic() callconv(.C) noreturn {
+                @panic(msg);
+            }
+        };
+
+        return .{ .c = T.do_panic };
+    }
+
+    const ContextStateFrame = extern struct {
+        r0: u32,
+        r1: u32,
+        r2: u32,
+        r3: u32,
+        r12: u32,
+        lr: u32,
+        return_address: u32,
+        xpsr: u32,
+    };
+
+    fn make_fault_handler(comptime handler: *const fn (context: *ContextStateFrame) callconv(.C) void) microzig.interrupt.Handler {
+        const T = struct {
+            fn invoke() callconv(.C) void {
+                // See this article on how we use that:
+                // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
+                asm volatile (
+                    \\
+                    // Check 2th bit of LR.
+                    \\tst lr, #4
+                    // Do "if then else" equal
+                    \\ite eq
+                    // if equals, we use the MSP
+                    \\mrseq r0, msp
+                    // otherwise, we use the PSP
+                    \\mrsne r0, psp
+                    // Then we branch to our handler:
+                    \\b %[handler]
+                    :
+                    : [handler] "s" (handler),
+                );
+            }
+        };
+
+        return .{ .c = T.invoke };
+    }
+
+    const logger = std.log.scoped(.cortex_m);
+
+    fn default_bus_fault_handler(context: *ContextStateFrame) callconv(.C) void {
+        const bfsr = mregs.registers.system_control_block.bfsr.read();
+
+        logger.err("Bus Fault:", .{});
+        logger.err("  context                         =  r0:0x{X:0>8}  r1:0x{X:0>8}  r2:0x{X:0>8}    r3:0x{X:0>8}", .{
+            context.r0,
+            context.r1,
+            context.r2,
+            context.r3,
+        });
+        logger.err("                                    r12:0x{X:0>8}  lr:0x{X:0>8}  ra:0x{X:0>8}  xpsr:0x{X:0>8}", .{
+            context.r12,
+            context.lr,
+            context.return_address,
+            context.xpsr,
+        });
+        logger.err("  instruction bus error           = {}", .{bfsr.instruction_bus_error});
+        logger.err("  precice data bus error          = {}", .{bfsr.precice_data_bus_error});
+        logger.err("  imprecice data bus error        = {}", .{bfsr.imprecice_data_bus_error});
+        logger.err("  unstacking exception error      = {}", .{bfsr.unstacking_exception_error});
+        logger.err("  exception stacking error        = {}", .{bfsr.exception_stacking_error});
+        logger.err("  busfault address register valid = {}", .{bfsr.busfault_address_register_valid});
+        if (bfsr.busfault_address_register_valid) {
+            const address = mregs.registers.system_control_block.bfar.read().ADDRESS;
+            logger.err("    busfault address register = 0x{X:0>8}", .{address});
+        }
+    }
+
+    fn default_usage_fault_handler(context: *ContextStateFrame) callconv(.C) void {
+        const ufsr = mregs.registers.system_control_block.ufsr.read();
+
+        logger.err("Usage Fault:", .{});
+        logger.err("  context                         =  r0:0x{X:0>8}  r1:0x{X:0>8}  r2:0x{X:0>8}    r3:0x{X:0>8}", .{
+            context.r0,
+            context.r1,
+            context.r2,
+            context.r3,
+        });
+        logger.err("                                    r12:0x{X:0>8}  lr:0x{X:0>8}  ra:0x{X:0>8}  xpsr:0x{X:0>8}", .{
+            context.r12,
+            context.lr,
+            context.return_address,
+            context.xpsr,
+        });
+        logger.err("  undefined instruction     = {}", .{ufsr.undefined_instruction});
+        logger.err("  invalid state             = {}", .{ufsr.invalid_state});
+        logger.err("  invalid pc load           = {}", .{ufsr.invalid_pc_load});
+        logger.err("  missing coprocessor usage = {}", .{ufsr.missing_coprocessor_usage});
+        logger.err("  unaligned memory access   = {}", .{ufsr.unaligned_memory_access});
+        logger.err("  divide by zero            = {}", .{ufsr.divide_by_zero});
+
+        @panic("usage fault");
+    }
 };
 
 fn is_ramimage() bool {
