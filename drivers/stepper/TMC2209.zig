@@ -124,7 +124,6 @@ pub const TMC2209 = struct {
 
         var resp: [8]u8 = undefined;
         const n = try self.uart.read(&resp);
-
         if (n != 8) {
             return error.InvalidRead;
         }
@@ -138,9 +137,7 @@ pub const TMC2209 = struct {
             return error.InvalidRead;
         }
 
-        const i: u32 = std.mem.readInt(u32, resp[3..7], .big);
-        register.val = @bitCast(i);
-
+        register.val = @bitCast(std.mem.readInt(u32, resp[3..7], .big));
         self.clock_device.sleep_ms(10);
     }
 
