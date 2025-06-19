@@ -246,7 +246,7 @@ pub const I2C = enum(u1) {
     /// - TX_EMPTY_CTRL is always enabled for easy detection of TX finished
     /// - TX and RX FIFO detection thresholds set to 1, this makes polling for TX finished/RX ready much simpler
     /// - DREQ signalling is always enabled, harmless if DMA isn't configured to listen for this
-    pub fn apply(i2c: I2C, comptime config: Config) ConfigError!void {
+    pub fn apply(i2c: I2C, comptime config: Config) void {
         i2c.disable();
         const regs = i2c.get_regs();
         regs.IC_CON.write(.{
@@ -273,8 +273,11 @@ pub const I2C = enum(u1) {
         });
 
         const peripheral_block_freq = (comptime config.clock_config.get_frequency(.clk_sys)) orelse @compileError("clk_sys must be set for I²C");
+
+        const timings = comptime translate_baudrate(config.baud_rate, peripheral_block_freq) catch @compileError("baud_rate is not possible with the provided clock_config");
+
         // set_baudrate() enables I2C block before returning
-        try i2c.set_baudrate(config.baud_rate, peripheral_block_freq);
+        i2c.set_computed_baudrate(timings);
     }
 
     /// Disables I2C, returns peripheral registers to reset state.
@@ -289,13 +292,23 @@ pub const I2C = enum(u1) {
     /// pin rise/fall time as that is board specific, so actual baud rates may be
     /// slightly lower than specified.
     pub fn set_baudrate(i2c: I2C, baud_rate: u32, freq_in: u32) ConfigError!void {
-        const reg_vals = try translate_baudrate(baud_rate, freq_in);
+        const timings = try translate_baudrate(baud_rate, freq_in);
+        i2c.set_computed_baudrate(timings);
+    }
+
+    /// Configures I2C to run at a specified baud rate given a peripheral clock frequency.
+    ///
+    /// Validates configuration to ensure it's both within I2C spec, and the peripheral
+    /// block's configuration capabilities. Note that this does NOT take into account
+    /// pin rise/fall time as that is board specific, so actual baud rates may be
+    /// slightly lower than specified.
+    pub fn set_computed_baudrate(i2c: I2C, timings: TimingRegisterValues) void {
         i2c.disable();
         const regs = i2c.get_regs();
-        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt });
-        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt });
-        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen });
-        regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = reg_vals.sda_tx_hold_count });
+        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = timings.scl_hcnt });
+        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = timings.scl_lcnt });
+        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = timings.spklen });
+        regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = timings.sda_tx_hold_count });
         i2c.enable();
     }
 
