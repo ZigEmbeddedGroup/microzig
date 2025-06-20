@@ -17,6 +17,7 @@ boards: struct {
         pico: *const microzig.Target,
         pico_flashless: *const microzig.Target,
         pico2_arm: *const microzig.Target,
+        pico2_arm_flashless: *const microzig.Target,
         pico2_riscv: *const microzig.Target,
     },
     waveshare: struct {
@@ -67,6 +68,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .zig_target = .{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+            .cpu_features_sub = std.Target.arm.featureSet(&.{
+                .slowfpvfmx,
+                .slowfpvmlx,
+            }),
             .os_tag = .freestanding,
             .abi = .eabi,
         },
@@ -185,6 +190,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     },
                 }),
                 .pico2_arm = chip_rp2350_arm.derive(.{
+                    .board = .{
+                        .name = "RaspberryPi Pico 2",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
+                    },
+                }),
+                .pico2_arm_flashless = chip_rp2350_arm.derive(.{
+                    .ram_image = true,
                     .board = .{
                         .name = "RaspberryPi Pico 2",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
