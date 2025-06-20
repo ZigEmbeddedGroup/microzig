@@ -15,32 +15,35 @@ pub fn build(b: *std.Build) void {
     const nrf52840_dongle = mb.ports.nrf5x.boards.nordic.nrf52840_dongle;
     const nrf52840_mdk = mb.ports.nrf5x.boards.nordic.nrf52840_mdk;
     const pca10040 = mb.ports.nrf5x.boards.nordic.pca10040;
+    const microbit_v1 = mb.ports.nrf5x.boards.bbc.microbit_v1;
+    const microbit_v2 = mb.ports.nrf5x.boards.bbc.microbit_v2;
+
+    // TODO: better system for examples
 
     const available_examples = [_]Example{
-        .{ .target = pca10040, .name = "blinky", .file = "src/blinky.zig" },
-        .{ .target = nrf52840_dongle, .name = "blinky", .file = "src/blinky.zig" },
-        .{ .target = nrf52840_mdk, .name = "blinky", .file = "src/blinky.zig" },
-        .{ .target = pca10040, .name = "uart", .file = "src/uart.zig" },
-        .{ .target = nrf52840_mdk, .name = "uart", .file = "src/uart.zig" },
-        .{ .target = pca10040, .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = nrf52840_mdk, .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = nrf52840_mdk, .name = "i2c_accel", .file = "src/i2c_accel.zig" },
-        .{ .target = pca10040, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
-        .{ .target = nrf52840_mdk, .name = "i2c_temp", .file = "src/i2c_temp.zig" },
-        .{ .target = nrf52840_mdk, .name = "spi_master", .file = "src/spi_master.zig" },
-        .{ .target = pca10040, .name = "spi_master", .file = "src/spi_master.zig" },
+        .{ .target = nrf52840_dongle, .name = "nrf52840_dongle_blinky", .file = "src/blinky.zig" },
+
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_blinky", .file = "src/blinky.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_uart", .file = "src/uart.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_accel", .file = "src/i2c_accel.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_temp", .file = "src/i2c_temp.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_spi_master", .file = "src/spi_master.zig" },
+
+        .{ .target = pca10040, .name = "pca10040_blinky", .file = "src/blinky.zig" },
+        .{ .target = pca10040, .name = "pca10040_uart", .file = "src/uart.zig" },
+        .{ .target = pca10040, .name = "pca10040_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
+        .{ .target = pca10040, .name = "pca10040_i2c_temp", .file = "src/i2c_temp.zig" },
+        .{ .target = pca10040, .name = "pca10040_spi_master", .file = "src/spi_master.zig" },
+
+        .{ .target = microbit_v1, .name = "microbit_v1_display", .file = "src/microbit/display.zig" },
+        .{ .target = microbit_v2, .name = "microbit_v2_display", .file = "src/microbit/display.zig" },
     };
 
     for (available_examples) |example| {
-        const target = example.target;
-        const name = mb.builder.fmt("{s}_{s}", .{
-            if (target.board) |board| board.name else target.chip.name,
-            example.name,
-        });
-
         // If we specify example, only select the ones that match
         if (maybe_example) |selected_example|
-            if (!std.mem.containsAtLeast(u8, name, 1, selected_example))
+            if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example))
                 continue;
 
         // `add_firmware` basically works like addExecutable, but takes a
@@ -49,7 +52,7 @@ pub fn build(b: *std.Build) void {
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
         const fw = mb.add_firmware(.{
-            .name = name,
+            .name = example.name,
             .target = example.target,
             .optimize = optimize,
             .root_source_file = b.path(example.file),

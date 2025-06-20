@@ -8,6 +8,15 @@ const compatibility = @import("compatibility.zig");
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
+const version: enum {
+    nrf5283x,
+    nrf52840,
+} = switch (compatibility.chip) {
+    .nrf52, .nrf52833 => .nrf5283x,
+    .nrf52840 => .nrf52840,
+    else => compatibility.unsupported_chip("I2C"),
+};
+
 const I2C0 = peripherals.TWI0;
 const I2C1 = peripherals.TWI1;
 
@@ -101,8 +110,8 @@ pub const I2C = enum(u1) {
         // Pins must be setup as INPUT with SOD1 drive strength
         config.scl_pin.set_direction(.in);
         config.scl_pin.set_drive_strength(.SOD1);
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSELSCL.raw = @intFromEnum(config.scl_pin),
+        switch (version) {
+            .nrf5283x => regs.PSELSCL.raw = @intFromEnum(config.scl_pin),
             .nrf52840 => regs.PSEL.SCL.write(.{
                 .PIN = config.scl_pin.index(),
                 .PORT = config.scl_pin.port(),
@@ -112,8 +121,8 @@ pub const I2C = enum(u1) {
 
         config.sda_pin.set_direction(.in);
         config.sda_pin.set_drive_strength(.SOD1);
-        switch (compatibility.chip) {
-            .nrf52 => regs.PSELSDA.raw = @intFromEnum(config.sda_pin),
+        switch (version) {
+            .nrf5283x => regs.PSELSDA.raw = @intFromEnum(config.sda_pin),
             .nrf52840 => regs.PSEL.SDA.write(.{
                 .PIN = config.sda_pin.index(),
                 .PORT = config.sda_pin.port(),
@@ -137,8 +146,8 @@ pub const I2C = enum(u1) {
         regs.SHORTS.raw = 0x00000000;
         regs.INTENSET.raw = 0x00000000;
         regs.ERRORSRC.raw = 0xFFFFFFFF;
-        switch (compatibility.chip) {
-            .nrf52 => {
+        switch (version) {
+            .nrf5283x => {
                 regs.PSELSCL.raw = 0xFFFFFFFF;
                 regs.PSELSDA.raw = 0xFFFFFFFF;
             },

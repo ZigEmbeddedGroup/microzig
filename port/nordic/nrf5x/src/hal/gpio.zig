@@ -4,6 +4,17 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const compatibility = @import("compatibility.zig");
 
+const version: enum {
+    nrf51,
+    nrf5283x,
+    nrf52840,
+} = switch (compatibility.chip) {
+    .nrf51 => .nrf51,
+    .nrf52, .nrf52833 => .nrf5283x,
+    .nrf52840 => .nrf52840,
+    else => compatibility.unsupported_chip("GPIO"),
+};
+
 pub const Direction = enum(u1) {
     in,
     out,
@@ -20,8 +31,13 @@ pub const InputBuffer = enum(u1) {
     disconnect = 0x1,
 };
 
-pub const Pull = microzig.chip.types.peripherals.P0.Pull;
-pub const DriveStrength = microzig.chip.types.peripherals.P0.DriveStrength;
+const Regs = switch (version) {
+    .nrf51 => microzig.chip.types.peripherals.GPIO,
+    .nrf5283x, .nrf52840 => microzig.chip.types.peripherals.P0,
+};
+
+pub const Pull = Regs.Pull;
+pub const DriveStrength = Regs.DriveStrength;
 
 pub fn num(bank: u1, n: u5) Pin {
     return @enumFromInt(@as(u6, bank) * 32 + n);
@@ -33,9 +49,10 @@ pub const Pin = enum(u6) {
     _,
     // TODO: Add support for LATCH, DETECTMODE
 
-    fn get_regs(pin: Pin) @TypeOf(peripherals.P0) {
-        return switch (compatibility.chip) {
-            .nrf52 => peripherals.P0,
+    fn get_regs(pin: Pin) *volatile Regs {
+        return switch (version) {
+            .nrf51 => peripherals.GPIO,
+            .nrf5283x => peripherals.P0,
             .nrf52840 => if (@intFromEnum(pin) <= 31)
                 peripherals.P0
             else
