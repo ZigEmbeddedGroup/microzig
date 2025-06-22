@@ -30,7 +30,9 @@ jobs:
           echo starting
           echo base=${{ github.event.pull_request.base.sha }}
           echo head=${{ github.event.pull_request.head.sha }}
-          FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | $(grep '\.zig$' || true))
+          echo GITHUB_SHA=${{ GITHUB_SHA }}
+          echo GITHUB_SHA_ENV=$GITHUB_SHA
+          FILES=$(git diff --name-only --diff-filter=d ${{ GITHUB_SHA }} ${{ github.event.pull_request.head.sha }} | $(grep '\.zig$' || true))
           echo "changed files: $FILES"
           if [ -n "$FILES" ]; then
             ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
