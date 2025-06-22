@@ -10,7 +10,7 @@
    <ctx :if="$loop.first.not().and($loop.last.not())">
     <item>
      <pubDate
-      :text="$loop.it.data.get('date').parseDate().formatHTTP()"
+      :text="$loop.it.data.get('id').parseDate().formatHTTP()"
      ></pubDate>
      <link :text="$site.host_url.addPath($page.link()).suffix('#', $loop.it.id)"></link>
      <guid :text="$site.host_url.addPath($page.link()).suffix('#', $loop.it.id)"></guid>

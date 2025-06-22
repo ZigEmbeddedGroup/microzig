@@ -8,7 +8,7 @@
     >
       <div id="$loop.it.id">
         <h3><a :text="$loop.it.id" href="$loop.it.id.prefix('#')"></a></h3>
-        <h4 :text="$loop.it.data.get('date')"></h4>
+        <h4 :text="$loop.it.data.get('id')"></h4>
         <ctx :html="$loop.it.html()"></ctx>
       </div>
     </ctx>
