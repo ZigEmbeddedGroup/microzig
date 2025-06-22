@@ -11,6 +11,10 @@ a:hover {
   text-decoration: underline;
 }
 
+image {
+    max-width: 100%;
+}
+
 .upper-header {
     display: flex;
     flex-direction: row;

@@ -25,7 +25,7 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ### Regz Wizard
 
-![]($image.asset('devlog/regz-wizard-01.png'))
+[]($image.asset('regz-wizard-01.png'))
 
 Regz is the program responsible for generating code to access MMIO within
 MicroZig. We've started building a GUI for it called Regz Wizard. It's built on
@@ -35,9 +35,9 @@ displays the generated code for an ATDF or SVD file.
 In the future it will aid in patching files. Keeping track of changes to an
 original register schema is important for when that schema is updated, and
 reproducing changes on similar hardware. [Some projects
-exist](https://github.com/embassy-rs/stm32-data) just to provide consistently
-geneated code between MCUs. This consistency significantly reduces complexity
-of HALs.
+exist](https://github.com/embassy-rs/stm32-data) just to provide consistent
+data structure between MCUs. This consistency makes it easier to write HALs
+that are portable across multiple MCUs.
 
 []($section.id('initial-microbit-support').data('date','2025-04-28'))
 
