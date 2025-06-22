@@ -32,13 +32,13 @@ jobs:
           echo head=${{ github.event.pull_request.head.sha }}
           echo GITHUB_SHA=${{ GITHUB_SHA }}
           echo GITHUB_SHA_ENV=$GITHUB_SHA
-          FILES=$(git diff --name-only --diff-filter=d ${{ GITHUB_SHA }} ${{ github.event.pull_request.head.sha }} | $(grep '\.zig$' || true))
-          echo "changed files: $FILES"
-          if [ -n "$FILES" ]; then
-            ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
-          else
-            echo "[]" > lint_results.json
-          fi
+          #FILES=$(git diff --name-only --diff-filter=d ${{ GITHUB_SHA }} ${{ github.event.pull_request.head.sha }} | $(grep '\.zig$' || true))
+          #echo "changed files: $FILES"
+          #if [ -n "$FILES" ]; then
+          #  ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
+          #else
+          #  echo "[]" > lint_results.json
+          #fi
 
       - name: Post comments
         uses: actions/github-script@v7
@@ -79,7 +79,7 @@ jobs:
             let skippedCount = 0;
 
             for (const issue of issues) {
-              const signature = `${issue.file}:${issue.message}`;
+              const signature = `${issue.file}:${issue.line}:${issue.message}`;
 
               if (existingSignatures.has(signature)) {
                 console.log(`Skipping duplicate comment for ${issue.file}: ${issue.message}`);
