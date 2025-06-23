@@ -862,5 +862,3 @@ inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []
 
     @panic("dependency not found");
 }
-
-fn myFunc() void {}
