@@ -97,7 +97,7 @@ jobs:
                 continue;
               }
 
-              const commentBody = `${issue.message}\n\n<!-- lint-comment:${issueHash}-->\n`;
+              const commentBody = `${issue.message}\n\n<!-- lint-comment:${issueHash} -->\n`;
               console.log(`comment body:`, commentBody);
 
               try {
