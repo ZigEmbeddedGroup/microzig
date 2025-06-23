@@ -864,3 +864,7 @@ inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []
 }
 
 fn myFunc() void {}
+
+pub const TEST = struct {
+    pub fn myFunc() void {}
+};
