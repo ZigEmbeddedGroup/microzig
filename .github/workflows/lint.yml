@@ -28,18 +28,22 @@ jobs:
 
       - name: Run linter
         run: |
-          echo starting
-          echo base=${{ github.event.pull_request.base.sha }}
-          echo head=${{ github.event.pull_request.head.sha }}
-          echo GITHUB_SHA=${{ GITHUB_SHA }}
-          echo GITHUB_SHA_ENV=$GITHUB_SHA
-          #FILES=$(git diff --name-only --diff-filter=d ${{ GITHUB_SHA }} ${{ github.event.pull_request.head.sha }} | $(grep '\.zig$' || true))
-          #echo "changed files: $FILES"
-          #if [ -n "$FILES" ]; then
-          #  ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
-          #else
-          #  echo "[]" > lint_results.json
-          #fi
+          echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
+          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+
+          # Get changed .zig files
+          FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.zig$' || true)
+          echo "Changed files: $FILES"
+
+          if [ -n "$FILES" ]; then
+            echo "$FILES" | xargs ./tools/linter/zig-out/bin/linter > lint_results.json
+          else
+            echo "[]" > lint_results.json
+          fi
+
+          # Debug output
+          echo "Lint results:"
+          cat lint_results.json
 
       - name: Post comments
         uses: actions/github-script@v7
