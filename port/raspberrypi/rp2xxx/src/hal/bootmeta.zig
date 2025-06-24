@@ -12,7 +12,7 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
         .image_def = .{
             .image_type_flags = .{
                 .image_type = .exe,
-                .exe_security = root.microzig_options.hal.image_def_exe_security,
+                .exe_security = root.microzig_options.hal.bootmeta.image_def_exe_security,
                 .cpu = .arm,
                 .chip = .RP2350,
                 .try_before_you_buy = false,
@@ -21,11 +21,11 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
         // We must specify a custom entry point since by default RP2350 expects
         // the vector table at the start of the image.
         .entry_point = .{
-            .entry = &microzig.cpu.startup_logic.ram_image_entrypoint,
-            .sp = microzig.config.end_of_stack,
+            .entry = &microzig.cpu.startup_logic.ram_image_entry_point,
+            .sp = microzig.cpu.startup_logic._vector_table.initial_stack_pointer,
         },
     },
-    .link = root.microzig_options.hal.next_metadata_block,
+    .link = root.microzig_options.hal.bootmeta.next_block,
 } else Block(extern struct {
     image_def: ImageDef,
 }){
@@ -33,14 +33,14 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
         .image_def = .{
             .image_type_flags = .{
                 .image_type = .exe,
-                .exe_security = root.microzig_options.hal.image_def_exe_security,
+                .exe_security = root.microzig_options.hal.bootmeta.image_def_exe_security,
                 .cpu = std.meta.stringToEnum(ImageDef.ImageTypeFlags.Cpu, @tagName(arch)).?,
                 .chip = .RP2350,
                 .try_before_you_buy = false,
             },
         },
     },
-    .link = root.microzig_options.hal.next_metadata_block,
+    .link = root.microzig_options.hal.bootmeta.next_block,
 };
 
 comptime {

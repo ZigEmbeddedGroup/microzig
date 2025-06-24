@@ -49,12 +49,14 @@ comptime {
 pub const HAL_Options = switch (compatibility.chip) {
     .RP2040 => struct {},
     .RP2350 => struct {
-        image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
+        bootmeta: struct {
+            image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
 
-        /// Next metadata block to link after image_def. **Last block in the
-        /// chain must link back to the first one** (to
-        /// `bootmeta.image_def_block`).
-        next_metadata_block: ?*const anyopaque = null,
+            /// Next metadata block to link after image_def. **Last block in the
+            /// chain must link back to the first one** (to
+            /// `bootmeta.image_def_block`).
+            next_block: ?*const anyopaque = null,
+        } = .{},
     },
 };
 
