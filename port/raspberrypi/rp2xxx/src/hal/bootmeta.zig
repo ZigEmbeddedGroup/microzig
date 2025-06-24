@@ -4,10 +4,31 @@ const root = @import("root");
 const microzig = @import("microzig");
 const arch = @import("compatibility.zig").arch;
 
-pub const image_def_block: Block(extern struct {
+pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Block(extern struct {
     image_def: ImageDef,
     entry_point: EntryPoint(false),
-}) = .{
+}){
+    .items = .{
+        .image_def = .{
+            .image_type_flags = .{
+                .image_type = .exe,
+                .exe_security = root.microzig_options.hal.image_def_exe_security,
+                .cpu = .arm,
+                .chip = .RP2350,
+                .try_before_you_buy = false,
+            },
+        },
+        //We must specify a custom entry point since by default RP2350 expects
+        //the vector table at the start of the image.
+        .entry_point = .{
+            .entry = &microzig.cpu.startup_logic.ram_image_entrypoint,
+            .sp = microzig.config.end_of_stack,
+        },
+    },
+    .link = root.microzig_options.hal.next_metadata_block,
+} else Block(extern struct {
+    image_def: ImageDef,
+}){
     .items = .{
         .image_def = .{
             .image_type_flags = .{
@@ -17,13 +38,6 @@ pub const image_def_block: Block(extern struct {
                 .chip = .RP2350,
                 .try_before_you_buy = false,
             },
-        },
-        .entry_point = .{
-            .entry = if (microzig.config.ram_image and arch == .arm)
-                &microzig.cpu.startup_logic.ram_image_entrypoint
-            else
-                &microzig.cpu.startup_logic._start,
-            .sp = microzig.config.end_of_stack,
         },
     },
     .link = root.microzig_options.hal.next_metadata_block,
