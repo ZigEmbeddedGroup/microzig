@@ -569,6 +569,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .chip_name = target.chip.name,
                     .memory_regions = target.chip.memory_regions,
                     .generate = linker_script_options.generate,
+                    .ram_image = target.ram_image,
                 };
 
                 const args_str = std.json.stringifyAlloc(

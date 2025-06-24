@@ -196,9 +196,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     },
                 }),
                 .pico2_arm_flashless = chip_rp2350_arm.derive(.{
+                    .entry = .{ .symbol_name = "_entry_point" },
                     .ram_image = true,
                     .linker_script = .{
-                        .generate = .memory_regions,
                         .file = b.path("ld/rp2350/arm_ram_image_sections.ld"),
                     },
                     .board = .{

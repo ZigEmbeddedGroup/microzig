@@ -591,7 +591,7 @@ pub const startup_logic = struct {
     extern var microzig_bss_end: u8;
     extern const microzig_data_load_start: u8;
 
-    pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
+    pub fn ram_image_entrypoint() linksection("microzig_ram_start") callconv(.naked) void {
         asm volatile (
             \\
             // Set VTOR to point to ram table
@@ -687,16 +687,16 @@ pub fn export_startup_logic() void {
         @export(&startup_logic.ram_image_entrypoint, .{
             .name = "_entry_point",
             .linkage = .strong,
+        })
+    else
+        @export(&startup_logic._vector_table, .{
+            .name = "_vector_table",
+            .section = "microzig_flash_start",
+            .linkage = .strong,
         });
 
     @export(&startup_logic._start, .{
         .name = "_start",
-    });
-
-    @export(&startup_logic._vector_table, .{
-        .name = "_vector_table",
-        .section = "microzig_flash_start",
-        .linkage = .strong,
     });
 }
 
