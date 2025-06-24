@@ -149,6 +149,7 @@ pub fn main() !void {
         }
 
         try writer.writeAll(
+            \\
             \\  .text :
             \\  {
             \\    *(.text*)
@@ -177,6 +178,7 @@ pub fn main() !void {
 
         switch (parsed_args.cpu_arch) {
             .arm, .thumb => try writer.print(
+                \\
                 \\  .ARM.extab : {{
                 \\    *(.ARM.extab* .gnu.linkonce.armextab.*)
                 \\  }} > {[flash]s}
@@ -190,6 +192,7 @@ pub fn main() !void {
         }
 
         try writer.writeAll(
+            \\
             \\  .data :
             \\  {
             \\    microzig_data_start = .;
@@ -237,6 +240,7 @@ pub fn main() !void {
 
         if (!parsed_args.ram_image) {
             try writer.print(
+                \\
                 \\  .flash_end :
                 \\  {{
                 \\    microzig_flash_end = .;
@@ -246,6 +250,7 @@ pub fn main() !void {
         }
 
         try writer.writeAll(
+            \\
             \\  microzig_data_load_start = LOADADDR(.data);
             \\
         );
