@@ -173,7 +173,7 @@ pub fn main() !void {
         try writer.print(
             \\  }} > {s}
             \\
-        , .{if (parsed_args.ram_image) ram_region_name else flash_region_name});
+        , .{if (!parsed_args.ram_image) flash_region_name else ram_region_name});
 
         switch (parsed_args.cpu_arch) {
             .arm, .thumb => try writer.print(
@@ -185,7 +185,7 @@ pub fn main() !void {
                 \\    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
                 \\  }} > {[flash]s}
                 \\
-            , .{ .flash = if (parsed_args.ram_image) ram_region_name else flash_region_name }),
+            , .{ .flash = if (!parsed_args.ram_image) flash_region_name else ram_region_name }),
             else => {},
         }
 
