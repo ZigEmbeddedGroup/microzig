@@ -204,24 +204,24 @@ pub const startup_logic = struct {
     pub export fn _start_c() callconv(.c) noreturn {
         if (!microzig.config.ram_image) {
             root.initialize_system_memories();
+        }
 
-            // Move vector table to RAM if requested
-            if (interrupt.has_ram_vectors()) {
-                if (interrupt.has_ram_vectors_section()) {
-                    @export(&ram_vectors, .{
-                        .name = "_ram_vectors",
-                        .section = "ram_vectors",
-                        .linkage = .strong,
-                    });
-                } else {
-                    @export(&ram_vectors, .{
-                        .name = "_ram_vectors",
-                        .linkage = .strong,
-                    });
-                }
-
-                @memcpy(&ram_vectors, &startup_logic.external_interrupt_table);
+        // Move vector table to RAM if requested
+        if (interrupt.has_ram_vectors()) {
+            if (interrupt.has_ram_vectors_section()) {
+                @export(&ram_vectors, .{
+                    .name = "_ram_vectors",
+                    .section = "ram_vectors",
+                    .linkage = .strong,
+                });
+            } else {
+                @export(&ram_vectors, .{
+                    .name = "_ram_vectors",
+                    .linkage = .strong,
+                });
             }
+
+            @memcpy(&ram_vectors, &startup_logic.external_interrupt_table);
         }
 
         microzig_main();
@@ -321,7 +321,7 @@ pub fn export_startup_logic() void {
 
     @export(&startup_logic.external_interrupt_table, .{
         .name = "_external_interrupt_table",
-        .section = if (!microzig.config.ram_image) "flash_vectors" else ".data",
+        .section = if (!microzig.config.ram_image) "flash_vectors" else null,
         .linkage = .strong,
     });
 }

@@ -19,6 +19,7 @@ boards: struct {
         pico2_arm: *const microzig.Target,
         pico2_arm_flashless: *const microzig.Target,
         pico2_riscv: *const microzig.Target,
+        pico2_riscv_flashless: *const microzig.Target,
     },
     waveshare: struct {
         rp2040_plus_4m: *const microzig.Target,
@@ -210,17 +211,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
                     },
                 }),
-                // .pico2_riscv_flashless = chip_rp2350_riscv.derive(.{
-                //     .ram_image = true,
-                //     .linker_script = .{
-                //         .file = b.path("ld/rp2350/arm_ram_image_sections.ld"),
-                //     },
-                //     .board = .{
-                //         .name = "RaspberryPi Pico 2 (ram image)",
-                //         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
-                //         .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
-                //     },
-                // }),
+                .pico2_riscv_flashless = chip_rp2350_riscv.derive(.{
+                    .ram_image = true,
+                    .linker_script = .{
+                        .file = b.path("ld/rp2350/riscv_ram_image_sections.ld"),
+                    },
+                    .board = .{
+                        .name = "RaspberryPi Pico 2 (ram image)",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
+                    },
+                }),
             },
             .waveshare = .{
                 .rp2040_plus_4m = chip_rp2040.derive(.{

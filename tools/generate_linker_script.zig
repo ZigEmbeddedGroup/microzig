@@ -218,7 +218,7 @@ pub fn main() !void {
             \\    microzig_data_end = .;
             \\  }} > {s}
             \\
-            \\  .bss (NOLOAD) :
+            \\  .bss {s}:
             \\  {{
             \\    microzig_bss_start = .;
             \\    *(.sbss*)
@@ -227,10 +227,11 @@ pub fn main() !void {
             \\  }} > {s}
             \\
         , .{
-            if (parsed_args.ram_image)
-                ram_region_name
+            if (!parsed_args.ram_image)
+                try std.fmt.allocPrint(allocator, "{s} AT> {s}", .{ ram_region_name, flash_region_name })
             else
-                try std.fmt.allocPrint(allocator, "{s} AT> {s}", .{ ram_region_name, flash_region_name }),
+                ram_region_name,
+            if (!parsed_args.ram_image) "(NOLOAD) " else "",
             ram_region_name,
         });
 
