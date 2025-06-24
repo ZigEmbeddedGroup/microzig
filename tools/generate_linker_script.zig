@@ -126,17 +126,7 @@ pub fn main() !void {
             \\
         );
 
-        if (parsed_args.ram_image) {
-            try writer.print(
-                \\  .ram_start :
-                \\  {{
-                \\    KEEP(*(microzig_ram_start))
-                \\  }} > {s}
-                \\
-            ,
-                .{ram_region_name},
-            );
-        } else {
+        if (!parsed_args.ram_image) {
             try writer.print(
                 \\  .flash_start :
                 \\  {{
@@ -145,6 +135,16 @@ pub fn main() !void {
                 \\
             ,
                 .{flash_region_name},
+            );
+        } else {
+            try writer.print(
+                \\  .ram_start :
+                \\  {{
+                \\    KEEP(*(microzig_ram_start))
+                \\  }} > {s}
+                \\
+            ,
+                .{ram_region_name},
             );
         }
 
