@@ -38,3 +38,18 @@ pub fn create_peripheral_enum(comptime base_name: []const u8, match_type: ?[]con
     } };
     return @Type(peri_enum);
 }
+
+pub fn find_clock_tree(comptime name: []const u8) type {
+    //only basic peri
+    const FXX = @import("clocks/clock_stm32f10x.zig");
+    //USB
+    const F103 = @import("clocks/clock_stm32f103.zig");
+
+    //ALL F1 peri
+    const F105_7 = @import("clocks/clock_stm32f105.zig");
+
+    if (std.mem.indexOf(u8, name, "103")) |_| return F103;
+    if (std.mem.indexOf(u8, name, "105")) |_| return F105_7;
+    if (std.mem.indexOf(u8, name, "107")) |_| return F105_7;
+    return FXX;
+}
