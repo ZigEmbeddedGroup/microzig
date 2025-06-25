@@ -30,12 +30,12 @@ pub const watchdog = @import("hal/watchdog.zig");
 pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
-pub const image_def = @import("hal/image_def.zig");
+pub const bootmeta = @import("hal/bootmeta.zig");
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test and compatibility.chip == .RP2350) {
-        _ = image_def;
+        _ = bootmeta;
     }
 
     // On the RP2040, we need to import the `atomic.zig` file to export some global
@@ -46,8 +46,18 @@ comptime {
     }
 }
 
-pub const HAL_Options = struct {
-    image_def_security: image_def.Security = .secure,
+pub const HAL_Options = switch (compatibility.chip) {
+    .RP2040 => struct {},
+    .RP2350 => struct {
+        bootmeta: struct {
+            image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
+
+            /// Next metadata block to link after image_def. **Last block in the
+            /// chain must link back to the first one** (to
+            /// `bootmeta.image_def_block`).
+            next_block: ?*const anyopaque = null,
+        } = .{},
+    },
 };
 
 /// A default clock configuration with sensible defaults that will work

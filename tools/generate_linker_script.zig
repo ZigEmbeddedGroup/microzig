@@ -9,6 +9,7 @@ pub const Args = struct {
     chip_name: []const u8,
     memory_regions: []const MemoryRegion,
     generate: GenerateOptions,
+    ram_image: bool,
 };
 
 pub fn main() !void {
@@ -113,23 +114,56 @@ pub fn main() !void {
             }
         } else return error.NoRamRegion;
 
+        if (parsed_args.ram_image and !ram_region.access.execute) {
+            return error.RamRegionNotExecutableInRamImage;
+        }
+
         const options = parsed_args.generate.memory_regions_and_sections;
 
-        try writer.print(
+        try writer.writeAll(
             \\SECTIONS
-            \\{{
-            \\  .flash_start :
-            \\  {{
-            \\    KEEP(*(microzig_flash_start))
-            \\  }} > {s}
+            \\{
+            \\
+        );
+
+        if (!parsed_args.ram_image) {
+            try writer.print(
+                \\  .flash_start :
+                \\  {{
+                \\    KEEP(*(microzig_flash_start))
+                \\  }} > {s}
+                \\
+            ,
+                .{flash_region_name},
+            );
+        } else {
+            try writer.print(
+                \\  .ram_start :
+                \\  {{
+                \\    KEEP(*(microzig_ram_start))
+                \\  }} > {s}
+                \\
+            ,
+                .{ram_region_name},
+            );
+        }
+
+        try writer.writeAll(
             \\
             \\  .text :
-            \\  {{
+            \\  {
             \\    *(.text*)
             \\
-        , .{flash_region_name});
+        );
 
-        if (options.rodata_location == .flash) {
+        if (parsed_args.ram_image) {
+            try writer.writeAll(
+                \\    *(.ram_text*)
+                \\
+            );
+        }
+
+        if (options.rodata_location == .flash and !parsed_args.ram_image) {
             try writer.writeAll(
                 \\    *(.srodata*)
                 \\    *(.rodata*)
@@ -140,11 +174,11 @@ pub fn main() !void {
         try writer.print(
             \\  }} > {s}
             \\
-            \\
-        , .{flash_region_name});
+        , .{if (!parsed_args.ram_image) flash_region_name else ram_region_name});
 
         switch (parsed_args.cpu_arch) {
             .arm, .thumb => try writer.print(
+                \\
                 \\  .ARM.extab : {{
                 \\    *(.ARM.extab* .gnu.linkonce.armextab.*)
                 \\  }} > {[flash]s}
@@ -153,12 +187,12 @@ pub fn main() !void {
                 \\    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
                 \\  }} > {[flash]s}
                 \\
-                \\
-            , .{ .flash = flash_region_name }),
+            , .{ .flash = if (!parsed_args.ram_image) flash_region_name else ram_region_name }),
             else => {},
         }
 
         try writer.writeAll(
+            \\
             \\  .data :
             \\  {
             \\    microzig_data_start = .;
@@ -167,7 +201,7 @@ pub fn main() !void {
             \\
         );
 
-        if (options.rodata_location == .ram) {
+        if (options.rodata_location == .ram or parsed_args.ram_image) {
             try writer.writeAll(
                 \\    *(.srodata*)
                 \\    *(.rodata*)
@@ -175,7 +209,7 @@ pub fn main() !void {
             );
         }
 
-        if (ram_region.access.execute) {
+        if (ram_region.access.execute and !parsed_args.ram_image) {
             try writer.writeAll(
                 // NOTE: should this be `microzig_ram_text`?
                 \\    KEEP(*(.ram_text))
@@ -185,28 +219,41 @@ pub fn main() !void {
 
         try writer.print(
             \\    microzig_data_end = .;
-            \\  }} > {[ram]s} AT> {[flash]s}
+            \\  }} > {s}
             \\
-            \\  .bss (NOLOAD) :
+            \\  .bss {s}:
             \\  {{
             \\    microzig_bss_start = .;
             \\    *(.sbss*)
             \\    *(.bss*)
             \\    microzig_bss_end = .;
-            \\  }} > {[ram]s}
+            \\  }} > {s}
             \\
-            \\  .flash_end :
-            \\  {{
-            \\    microzig_flash_end = .;
-            \\  }} > {[flash]s}
+        , .{
+            if (!parsed_args.ram_image)
+                try std.fmt.allocPrint(allocator, "{s} AT> {s}", .{ ram_region_name, flash_region_name })
+            else
+                ram_region_name,
+            if (!parsed_args.ram_image) "(NOLOAD) " else "",
+            ram_region_name,
+        });
+
+        if (!parsed_args.ram_image) {
+            try writer.print(
+                \\
+                \\  .flash_end :
+                \\  {{
+                \\    microzig_flash_end = .;
+                \\  }} > {s}
+                \\
+            , .{flash_region_name});
+        }
+
+        try writer.writeAll(
             \\
             \\  microzig_data_load_start = LOADADDR(.data);
             \\
-        , .{
-            .flash = flash_region_name,
-            .ram = ram_region_name,
-        });
-
+        );
         switch (parsed_args.cpu_arch) {
             .riscv32, .riscv64 => try writer.writeAll(
                 \\  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
