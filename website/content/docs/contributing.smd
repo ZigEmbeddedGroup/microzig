@@ -32,6 +32,28 @@ of small repos, but we found it difficult to maintain all those separate
 components. The monorepo has shown a significant improvement in development
 velocity and confidence in changes.
 
+### Legend
+
+Here is an overview of the top level directories of the monorepo:
+
+- `build-internals`: Contents of the MicroZig build system.
+- `core`: The framework for building the MicroZig import structure. MCU
+  architecture specific code (ARM, AVR, RISCV, etc.).
+- `design`: Visual assets used by MicroZig.
+- `docs`: Documents that have not been moved to the website yet.
+- `drivers`: MCU agnostic drivers for external devices.
+- `examples`: Embedded application examples, these mirror the port directory
+  structure. We intentionally keep examples outside port packages, both to
+  simplify contents, and to demonstrate usage of the build system. This would
+  not be as obvious if we kept examples in their port packages.
+- `modules`: Packages that are useful for embedded applications, but are not
+  depended, or dependent on MicroZig.
+- `port`: MCU family specific code, HALs.
+- `sim`: Software simulators for different MCU architectures.
+- `tools`: Support software tools for generating register schemas, utilities
+  for flashing MCUs.
+- `website`: This website, which is built using [zine](https://zine-ssg.io).
+
 ### Packaging
 
 MicroZig does not force users to download the entire codebase if they use a
