@@ -47,7 +47,7 @@ Here is an overview of the top level directories of the monorepo:
   simplify contents, and to demonstrate usage of the build system. This would
   not be as obvious if we kept examples in their port packages.
 - `modules`: Packages that are useful for embedded applications, but are not
-  depended, or dependent on MicroZig.
+  dependent on MicroZig.
 - `port`: MCU family specific code, HALs.
 - `sim`: Software simulators for different MCU architectures.
 - `tools`: Support software tools for generating register schemas, utilities
