@@ -9,7 +9,7 @@ const std = @import("std");
 const mdf = @import("../framework.zig");
 
 pub const TMC2209_Config = struct {
-    uart: mdf.base.Datagram_Device,
+    uart: mdf.base.Stream_Device,
     clock: mdf.base.Clock_Device,
     address: u8,
     pulse_frequency: f32 = 0.715, // frequency of the built in pulse generator
@@ -39,7 +39,7 @@ pub const TMC2209 = struct {
     current_freq: f32 = 0,
     pulse_frequency: f32,
     steps: u32,
-    uart: mdf.base.Datagram_Device,
+    uart: mdf.base.Stream_Device,
     clock_device: mdf.base.Clock_Device,
     address: u8,
 
@@ -104,7 +104,10 @@ pub const TMC2209 = struct {
 
         var buf = std.mem.toBytes(req);
         buf[7] = self.crc(buf[0..7]);
-        try self.uart.write(&buf);
+        const n = try self.uart.write(&buf);
+        if (n != 8) {
+            return error.WriteError;
+        }
     }
 
     pub fn read(self: *Self, register: anytype) !void {
@@ -115,7 +118,10 @@ pub const TMC2209 = struct {
 
         var buf = std.mem.toBytes(req);
         buf[3] = self.crc(buf[0..3]);
-        try self.uart.write(&buf);
+        const w1 = try self.uart.write(&buf);
+        if (w1 != 4) {
+            return error.InvalidWrite;
+        }
 
         self.clock_device.sleep_ms(10);
 
@@ -123,8 +129,8 @@ pub const TMC2209 = struct {
         _ = try self.uart.read(&buf);
 
         var resp: [8]u8 = undefined;
-        const n = try self.uart.read(&resp);
-        if (n != 8) {
+        const r1 = try self.uart.read(&resp);
+        if (r1 != 8) {
             return error.InvalidRead;
         }
 
@@ -426,65 +432,62 @@ pub const TMC2209 = struct {
 };
 
 test "set microsteps" {
-    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Stream = mdf.base.Stream_Device.Test_Device;
     const Test_Clock = mdf.base.Clock_Device.Test_Device;
-    const data = [_][]const u8{};
+    const data = [_]u8{};
 
-    var td = Test_Datagram.init(&data, true);
+    var td = Test_Stream.init(&data, true);
     defer td.deinit();
     td.connected = true;
 
     var tc = Test_Clock.init();
 
-    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.datagram_device(), .clock = tc.clock_device() });
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.stream_device(), .clock = tc.clock_device() });
 
     try stepper.set_microsteps(16);
 
-    const sent = [_][]const u8{
-        &.{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 },
-    };
+    const sent = [_]u8{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 };
     try td.expect_sent(&sent);
 }
 
 // illustrate the use of the TMS2209 register structs, thus exposing all the UART functionality of the driver
 test "write" {
-    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Stream = mdf.base.Stream_Device.Test_Device;
     const Test_Clock = mdf.base.Clock_Device.Test_Device;
-    const data = [_][]const u8{};
+    const data = [_]u8{};
 
-    var td = Test_Datagram.init(&data, true);
+    var td = Test_Stream.init(&data, true);
     defer td.deinit();
     td.connected = true;
 
     var tc = Test_Clock.init();
 
-    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.datagram_device(), .clock = tc.clock_device() });
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.stream_device(), .clock = tc.clock_device() });
 
     const cf = TMC2209.chopconf{ .val = .{ .toff = 5, .mres = 4, .intpol = 1 } };
     try stepper.write(cf.register, @bitCast(cf.val));
 
-    const sent = [_][]const u8{
-        &.{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 },
-    };
+    const sent = [_]u8{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 };
     try td.expect_sent(&sent);
 }
 
 test "read" {
-    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Stream = mdf.base.Stream_Device.Test_Device;
     const Test_Clock = mdf.base.Clock_Device.Test_Device;
 
-    const data = [_][]const u8{
-        &.{ 0x00, 0x00, 0x00, 0x00 },
-        &.{ 0x05, 0xff, 0xec, 0x14, 0x00, 0x00, 0x05, 0xec },
+    const data = [_]u8{
+        0x00, 0x00, 0x00, 0x00,
+        0x05, 0xff, 0xec, 0x14,
+        0x00, 0x00, 0x05, 0xec,
     };
 
-    var td = Test_Datagram.init(&data, true);
+    var td = Test_Stream.init(&data, true);
     defer td.deinit();
     td.connected = true;
 
     var tc = Test_Clock.init();
 
-    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.datagram_device(), .clock = tc.clock_device() });
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.stream_device(), .clock = tc.clock_device() });
 
     var cf = TMC2209.chopconf{};
     try stepper.read(&cf);
@@ -494,24 +497,22 @@ test "read" {
     try std.testing.expectEqual(1, cf.val.intpol);
     try std.testing.expectEqual(0, cf.val.dedge);
 
-    const sent = [_][]const u8{
-        &.{ 0x05, 0x00, 0x6c, 0xca },
-    };
+    const sent = [_]u8{ 0x05, 0x00, 0x6c, 0xca };
     try td.expect_sent(&sent);
 }
 
 test "move" {
-    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Stream = mdf.base.Stream_Device.Test_Device;
     const Test_Clock = mdf.base.Clock_Device.Test_Device;
-    const data = [_][]const u8{};
+    const data = [_]u8{};
 
-    var td = Test_Datagram.init(&data, true);
+    var td = Test_Stream.init(&data, true);
     defer td.deinit();
     td.connected = true;
 
     var tc = Test_Clock.init();
 
-    var stepper = try TMC2209.init(.{ .address = 3, .uart = td.datagram_device(), .clock = tc.clock_device() });
+    var stepper = try TMC2209.init(.{ .address = 3, .uart = td.stream_device(), .clock = tc.clock_device() });
 
     // move frequency is -20 to 20 (my motor can get up to about 14 hz, but maybe there are better motors that handle more?)
     try std.testing.expectError(error.InvalidMoveFrequency, stepper.move(20.1));
@@ -521,23 +522,23 @@ test "move" {
     try stepper.move(5);
     try stepper.move(-5);
 
-    const sent = [_][]const u8{
-        &.{ 0x05, 0x03, 0xec, 0x14, 0x00, 0x00, 0x05, 0xd9 }, // set microsteps
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x11, 0x7b, 0x9e }, // ramp up to 5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x22, 0xf7, 0x18 }, // ramp up to 5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x34, 0x72, 0x2b }, // ramp up to 5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x45, 0xee, 0xe4 }, // ramp up to 5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x57, 0x69, 0xbe }, // ramp up to 5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x45, 0xee, 0xe4 }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x34, 0x72, 0x2b }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x22, 0xf7, 0x18 }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x11, 0x7b, 0x9e }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0x00, 0x00, 0x00, 0x00, 0x94 }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0xff, 0xff, 0xee, 0x85, 0xc9 }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0xff, 0xff, 0xdd, 0x09, 0x4f }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0xff, 0xff, 0xcb, 0x8e, 0xbb }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0xff, 0xff, 0xba, 0x12, 0x74 }, // ramp down to -5 hz
-        &.{ 0x05, 0x03, 0xa2, 0xff, 0xff, 0xa8, 0x97, 0xe9 }, // ramp down to -5 hz
+    const sent = [_]u8{
+        0x05, 0x03, 0xec, 0x14, 0x00, 0x00, 0x05, 0xd9, // set microsteps
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x11, 0x7b, 0x9e, // ramp up to 5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x22, 0xf7, 0x18, // ramp up to 5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x34, 0x72, 0x2b, // ramp up to 5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x45, 0xee, 0xe4, // ramp up to 5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x57, 0x69, 0xbe, // ramp up to 5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x45, 0xee, 0xe4, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x34, 0x72, 0x2b, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x22, 0xf7, 0x18, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x11, 0x7b, 0x9e, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0x00, 0x00, 0x00, 0x00, 0x94, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0xff, 0xff, 0xee, 0x85, 0xc9, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0xff, 0xff, 0xdd, 0x09, 0x4f, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0xff, 0xff, 0xcb, 0x8e, 0xbb, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0xff, 0xff, 0xba, 0x12, 0x74, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0xff, 0xff, 0xa8, 0x97, 0xe9, // ramp down to -5 hz
     };
     try td.expect_sent(&sent);
 }
