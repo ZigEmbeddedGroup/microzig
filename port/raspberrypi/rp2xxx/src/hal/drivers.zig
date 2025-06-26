@@ -259,6 +259,96 @@ pub const SPI_Device = struct {
 };
 
 ///
+/// A stream device attached to a uart bus.
+///
+pub const UART_Device = struct {
+    pub const ConnectError = Stream_Device.ConnectError;
+    pub const WriteError = Stream_Device.WriteError;
+    pub const ReadError = Stream_Device.ReadError;
+
+    /// Selects which UART bus should be used.
+    bus: hal.uart.UART,
+
+    /// Default timeout duration
+    timeout: ?time.Duration = null,
+
+    pub fn init(bus: hal.uart.UART, timeout: ?time.Duration) UART_Device {
+        return .{
+            .bus = bus,
+            .timeout = timeout,
+        };
+    }
+
+    pub fn stream_device(dev: *UART_Device) Stream_Device {
+        return .{
+            .ptr = dev,
+            .vtable = &vtable,
+        };
+    }
+
+    pub fn connect(dev: UART_Device) ConnectError!void {
+        _ = dev;
+    }
+
+    pub fn disconnect(dev: UART_Device) void {
+        _ = dev;
+    }
+
+    pub fn write(dev: UART_Device, bytes: []const u8) !usize {
+        try dev.bus.write_blocking(bytes, dev.timeout);
+        return bytes.len;
+    }
+
+    pub fn writev(dev: UART_Device, bytes_vec: []const []const u8) !usize {
+        try dev.bus.writev_blocking(bytes_vec, dev.timeout);
+        var size: usize = 0;
+        for (bytes_vec[0..]) |chunk| {
+            size += chunk.len;
+        }
+        return size;
+    }
+
+    pub fn read(dev: UART_Device, bytes: []u8) !usize {
+        try dev.bus.read_blocking(bytes, dev.timeout);
+        return bytes.len;
+    }
+
+    pub fn readv(dev: UART_Device, bytes_vec: []const []u8) !usize {
+        try dev.bus.readv_blocking(bytes_vec, dev.timeout);
+        var size: usize = 0;
+        for (bytes_vec[0..]) |chunk| {
+            size += chunk.len;
+        }
+        return size;
+    }
+
+    const vtable = Stream_Device.VTable{
+        .connect_fn = null,
+        .disconnect_fn = null,
+        .writev_fn = writev_fn,
+        .readv_fn = readv_fn,
+    };
+
+    fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!usize {
+        const dev: *UART_Device = @ptrCast(@alignCast(dd));
+        return dev.writev(chunks);
+    }
+
+    fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
+        const dev: *UART_Device = @ptrCast(@alignCast(dd));
+        return dev.readv(chunks) catch |err| switch (err) {
+            error.OverrunError,
+            error.BreakError,
+            error.ParityError,
+            error.FramingError,
+            => error.IoError,
+
+            error.Timeout => error.Timeout,
+        };
+    }
+};
+
+///
 /// Implementation of a digital i/o device.
 ///
 pub const GPIO_Device = struct {
