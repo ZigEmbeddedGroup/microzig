@@ -47,7 +47,7 @@ pub const RTCClockSelectionConf = enum {
         return @intFromEnum(self);
     }
 };
-pub const RCC_MCOSourceConf = enum {
+pub const MCOmultConf = enum {
     RCC_MCO1SOURCE_PLLCLK,
     RCC_MCO1SOURCE_HSI,
     RCC_MCO1SOURCE_HSE,
@@ -218,7 +218,7 @@ pub const Config = struct {
     HSEDivPLL: ?HSEDivPLLConf = null,
     SysClkSource: ?SYSCLKSourceConf = null,
     RTCClkSource: ?RTCClockSelectionConf = null,
-    MCOMult: ?RCC_MCOSourceConf = null,
+    MCOMult: ?MCOmultConf = null,
     AHBPrescaler: ?AHBCLKDividerConf = null,
     TimSysPresc: ?TimSys_DivConf = null,
     APB1Prescaler: ?APB1CLKDividerConf = null,
@@ -238,7 +238,7 @@ pub const ConfigWithRef = struct {
     HSEDivPLL: ?HSEDivPLLConf = null,
     SYSCLKSource: ?SYSCLKSourceConf = null,
     RTCClockSelection: ?RTCClockSelectionConf = null,
-    RCC_MCOSource: ?RCC_MCOSourceConf = null,
+    MCOmult: ?MCOmultConf = null,
     AHBCLKDivider: ?AHBCLKDividerConf = null,
     TimSys_Div: ?TimSys_DivConf = null,
     APB1CLKDivider: ?APB1CLKDividerConf = null,
@@ -257,7 +257,7 @@ pub const ConfigWithRef = struct {
             .HSEDivPLL = self.HSEDivPLL,
             .SysClkSource = self.SYSCLKSource,
             .RTCClkSource = self.RTCClockSelection,
-            .MCOMult = self.RCC_MCOSource,
+            .MCOMult = self.MCOmult,
             .AHBPrescaler = self.AHBCLKDivider,
             .TimSysPresc = self.TimSys_Div,
             .APB1Prescaler = self.APB1CLKDivider,

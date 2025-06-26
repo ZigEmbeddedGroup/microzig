@@ -13,6 +13,7 @@ const config = board.Config{
     .PLLMUL = .RCC_PLL_MUL9,
     .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
     .APB1Prescaler = .RCC_HCLK_DIV2,
+    .MCOMult = .RCC_MCO1SOURCE_HSI,
 };
 
 pub fn main() !void {
@@ -25,6 +26,9 @@ pub fn main() !void {
     RCC.APB1ENR.modify(.{
         .TIM2EN = 1,
     });
+
+    const reset_reason = stm32.RESET;
+    std.mem.doNotOptimizeAway(reset_reason);
 
     const led = gpio.Pin.from_port(.B, 0);
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
