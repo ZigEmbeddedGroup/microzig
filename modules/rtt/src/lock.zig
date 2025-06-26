@@ -4,36 +4,36 @@ const builtin = @import("builtin");
 /// A generic struct that provides exclusive access to the RTT control block
 pub fn GenericLock(
     comptime Context: type,
-    comptime lockFn: fn (context: Context) void,
-    comptime unlockFn: fn (context: Context) void,
+    comptime lock_fn: fn (context: Context) void,
+    comptime unlock_fn: fn (context: Context) void,
 ) type {
     return struct {
         const Self = @This();
         context: Context,
 
         pub inline fn lock(self: Self) void {
-            return lockFn(self.context);
+            return lock_fn(self.context);
         }
 
-        fn typeErasedLock(context: *anyopaque) void {
+        fn type_erased_lock(context: *anyopaque) void {
             const ptr: *const Context = @alignCast(@ptrCast(context));
-            return lockFn(ptr.*);
+            return lock_fn(ptr.*);
         }
 
         pub inline fn unlock(self: Self) void {
-            return unlockFn(self.context);
+            return unlock_fn(self.context);
         }
 
-        fn typeErasedUnlock(context: *anyopaque) void {
+        fn type_erased_unlock(context: *anyopaque) void {
             const ptr: *const Context = @alignCast(@ptrCast(context));
-            return unlockFn(ptr.*);
+            return unlock_fn(ptr.*);
         }
 
         pub inline fn any(self: *Self) AnyLock {
             return .{
                 .context = @ptrCast(&self.context),
-                .lockFn = typeErasedLock,
-                .unlockFn = typeErasedUnlock,
+                .lock_fn = type_erased_lock,
+                .unlock_fn = type_erased_unlock,
             };
         }
     };
@@ -42,8 +42,8 @@ pub fn GenericLock(
 /// A type erased version of GenericLock that serves as a concrete type to pass into Config
 pub const AnyLock = struct {
     context: *anyopaque,
-    lockFn: fn (context: *anyopaque) void,
-    unlockFn: fn (context: *anyopaque) void,
+    lock_fn: fn (context: *anyopaque) void,
+    unlock_fn: fn (context: *anyopaque) void,
 };
 
 /// Provides the same locking mechanism as included by the original RTT code.
@@ -54,7 +54,7 @@ pub const AnyLock = struct {
 pub const default = struct {
     const Context = struct { isr_reg_value: usize };
     var ctx: Context = undefined;
-    var generic_lock: resolveLockType() = .{ .context = &ctx };
+    var generic_lock: resolve_lock_type() = .{ .context = &ctx };
     const ArmV6mV8m = struct {
         fn lock(context: *Context) void {
             var val: usize = undefined;
@@ -141,7 +141,7 @@ pub const default = struct {
         }
     };
 
-    fn resolveLockType() type {
+    fn resolve_lock_type() type {
         const current_arch = builtin.cpu.arch;
         switch (current_arch) {
             .arm, .armeb, .thumb, .thumbeb => {},

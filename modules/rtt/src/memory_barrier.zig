@@ -3,22 +3,22 @@ const builtin = @import("builtin");
 
 pub const MemoryBarrierFn = fn () callconv(.Inline) void;
 
-pub inline fn emptyMemoryBarrier() void {}
+pub inline fn empty_memory_barrier() void {}
 
-inline fn armMemoryBarrier() void {
+inline fn arm_memory_barrier() void {
     asm volatile ("DMB" ::: "memory");
 }
 
-inline fn errorMemoryBarrier() void {
+inline fn error_memory_barrier() void {
     @compileError(std.fmt.comptimePrint("Unsupported architecture for built in memory barrier: {any}, please provide custom memory barrier support via Config.memory_barrier_fn field", .{builtin.cpu.arch}));
 }
 /// Resolves built in memory barrier support for a specific platform.
-pub fn resolveMemoryBarrier() struct { memory_barrier_fn: MemoryBarrierFn } {
+pub fn resolve_memory_barrier() struct { memory_barrier_fn: MemoryBarrierFn } {
     const current_arch = builtin.cpu.arch;
     switch (current_arch) {
         .arm, .armeb, .thumb, .thumbeb => {},
         // Nothing other than ARM has explicit memory barrier support yet
-        else => return .{ .memory_barrier_fn = errorMemoryBarrier },
+        else => return .{ .memory_barrier_fn = error_memory_barrier },
     }
 
     // All currently supported ARM chips
@@ -33,8 +33,8 @@ pub fn resolveMemoryBarrier() struct { memory_barrier_fn: MemoryBarrierFn } {
         // Something to note here is not all Cortex-M chips need a DMB instruction since some
         // don't support CPU reordering of instructions. However, these end up getting ignored
         // by the processor in this case so it's safe to provide it for all ARM chips for now.
-        return .{ .memory_barrier_fn = armMemoryBarrier };
+        return .{ .memory_barrier_fn = arm_memory_barrier };
     } else {
-        return .{ .memory_barrier_fn = errorMemoryBarrier };
+        return .{ .memory_barrier_fn = error_memory_barrier };
     }
 }

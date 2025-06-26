@@ -16,7 +16,7 @@ const Header = extern struct {
     max_up_channels: usize,
     max_down_channels: usize,
 
-    pub fn init(self: *Header, comptime max_up_channels: usize, comptime max_down_channels: usize, comptime barrierFn: MemoryBarrierFn) void {
+    pub fn init(self: *Header, comptime max_up_channels: usize, comptime max_down_channels: usize, comptime barrier_fn: MemoryBarrierFn) void {
         self.max_up_channels = max_up_channels;
         self.max_down_channels = max_down_channels;
 
@@ -25,11 +25,11 @@ const Header = extern struct {
         // Ensure no memory reordering can occur and all accesses are finished before
         // marking block "valid" and writing header string. This prevents the JLINK
         // from finding a "valid" block while offets/pointers aren't yet valid.
-        barrierFn();
+        barrier_fn();
         for (0..init_str.len) |i| {
             self.id[i] = init_str[init_str.len - i - 1];
         }
-        barrierFn();
+        barrier_fn();
     }
 };
 
@@ -53,7 +53,7 @@ pub const channel = struct {
     /// Implements a ring buffer of size - 1 bytes, as this implementation
     /// does not fill up the buffer in order to avoid the problem of being unable to
     /// distinguish between full and empty.
-    fn Up(comptime exclusive_access_: AnyLock, comptime barrierFn: MemoryBarrierFn) type {
+    fn Up(comptime exclusive_access_: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
         return extern struct {
             /// Name is optional and is not required by the spec. Standard names so far are:
             /// "Terminal", "SysView", "J-Scope_t4i4"
@@ -83,12 +83,12 @@ pub const channel = struct {
             ) void {
                 self.name = name;
                 self.size = buffer.len;
-                self.setMode(mode_);
+                self.set_mode(mode_);
                 self.write_offset = 0;
                 self.read_offset = 0;
 
                 // Ensure buffer pointer is set last and can't be reordered
-                barrierFn();
+                barrier_fn();
                 self.buffer = buffer.ptr;
             }
 
@@ -96,16 +96,16 @@ pub const channel = struct {
                 return std.meta.intToEnum(Mode, self.flags & 3) catch unreachable;
             }
 
-            fn setMode(self: *Self, mode_: Mode) void {
+            fn set_mode(self: *Self, mode_: Mode) void {
                 self.flags = (self.flags & ~@as(usize, 3)) | @intFromEnum(mode_);
             }
 
             const WriteError = error{};
-            const Writer = std.io.GenericWriter(*Self, WriteError, writeAllowDroppedData);
+            const Writer = std.io.GenericWriter(*Self, WriteError, write_allow_dropped_data);
 
             /// Writes up to available space left in buffer for reading by probe, returning number of bytes
             /// written.
-            fn writeAvailable(self: *Self, bytes: []const u8) WriteError!usize {
+            fn write_available(self: *Self, bytes: []const u8) WriteError!usize {
 
                 // The probe can change self.read_offset via memory modification at any time,
                 // so must perform a volatile read on this value.
@@ -144,17 +144,17 @@ pub const channel = struct {
 
                 // Force data write to be complete before writing the <WrOff>, in case CPU
                 // is allowed to change the order of memory accesses
-                barrierFn();
+                barrier_fn();
                 self.write_offset = write_offset;
                 return bytes_written;
             }
 
             /// Blocks until all bytes are written to buffer
-            fn writeBlocking(self: *Self, bytes: []const u8) WriteError!usize {
+            fn write_blocking(self: *Self, bytes: []const u8) WriteError!usize {
                 const count = bytes.len;
                 var written: usize = 0;
                 while (written != count) {
-                    written += try self.writeAvailable(bytes[written..]);
+                    written += try self.write_available(bytes[written..]);
                 }
                 return count;
             }
@@ -163,19 +163,19 @@ pub const channel = struct {
             /// bytes to the RTT control block, and returns how many it successfully wrote.
             /// Writing less than requested number of bytes is not an error.
             fn write(self: *Self, bytes: []const u8) WriteError!usize {
-                exclusive_access.lockFn(exclusive_access.context);
-                defer exclusive_access.unlockFn(exclusive_access.context);
+                exclusive_access.lock_fn(exclusive_access.context);
+                defer exclusive_access.unlock_fn(exclusive_access.context);
                 switch (self.mode()) {
                     .NoBlockSkip => {
-                        if (bytes.len <= self.availableSpace()) {
-                            return self.writeAvailable(bytes);
+                        if (bytes.len <= self.available_space()) {
+                            return self.write_available(bytes);
                         } else return 0;
                     },
                     .NoBlockTrim => {
-                        return self.writeAvailable(bytes);
+                        return self.write_available(bytes);
                     },
                     .BlockIfFull => {
-                        return self.writeBlocking(bytes);
+                        return self.write_blocking(bytes);
                     },
                     _ => unreachable,
                 }
@@ -185,20 +185,20 @@ pub const channel = struct {
             /// Same as write, but allows silently dropping data and always returns
             /// the length of bytes regardless of if all bytes were actually written. This
             /// is to keep a GenericWriter from blocking indefinitely when a probe isn't connected.
-            fn writeAllowDroppedData(self: *Self, bytes: []const u8) WriteError!usize {
-                exclusive_access.lockFn(exclusive_access.context);
-                defer exclusive_access.unlockFn(exclusive_access.context);
+            fn write_allow_dropped_data(self: *Self, bytes: []const u8) WriteError!usize {
+                exclusive_access.lock_fn(exclusive_access.context);
+                defer exclusive_access.unlock_fn(exclusive_access.context);
                 switch (self.mode()) {
                     .NoBlockSkip => {
-                        if (bytes.len <= self.availableSpace()) {
-                            _ = try self.writeAvailable(bytes);
+                        if (bytes.len <= self.available_space()) {
+                            _ = try self.write_available(bytes);
                         }
                     },
                     .NoBlockTrim => {
-                        _ = try self.writeAvailable(bytes);
+                        _ = try self.write_available(bytes);
                     },
                     .BlockIfFull => {
-                        _ = try self.writeBlocking(bytes);
+                        _ = try self.write_blocking(bytes);
                     },
                     _ => unreachable,
                 }
@@ -210,7 +210,7 @@ pub const channel = struct {
             }
 
             /// Available space in the ring buffer for writing, including wrap-around
-            fn availableSpace(self: *Self) usize {
+            fn available_space(self: *Self) usize {
 
                 // The probe can change self.read_offset via memory modification at any time,
                 // so must perform a volatile read on this value.
@@ -230,7 +230,7 @@ pub const channel = struct {
     /// Implements a ring buffer of size - 1 bytes, as this implementation
     /// does not fill up the buffer in order to avoid the problem of being unable to
     /// distinguish between full and empty.
-    fn Down(comptime exclusive_access_: AnyLock, comptime barrierFn: MemoryBarrierFn) type {
+    fn Down(comptime exclusive_access_: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
         return extern struct {
             /// Name is optional and is not required by the spec. Standard names so far are:
             /// "Terminal", "SysView", "J-Scope_t4i4"
@@ -259,12 +259,12 @@ pub const channel = struct {
             ) void {
                 self.name = name;
                 self.size = buffer.len;
-                self.setMode(mode_);
+                self.set_mode(mode_);
                 self.write_offset = 0;
                 self.read_offset = 0;
 
                 // Ensure buffer pointer is set last and can't be reordered
-                barrierFn();
+                barrier_fn();
                 self.buffer = buffer.ptr;
             }
 
@@ -272,20 +272,20 @@ pub const channel = struct {
                 return std.meta.intToEnum(Mode, self.mode & 3);
             }
 
-            pub fn setMode(self: *Self, mode_: Mode) void {
+            pub fn set_mode(self: *Self, mode_: Mode) void {
                 self.flags = (self.flags & ~@as(usize, 3)) | @intFromEnum(mode_);
             }
 
             pub const ReadError = error{};
-            pub const Reader = std.io.GenericReader(*Self, ReadError, readAvailable);
+            pub const Reader = std.io.GenericReader(*Self, ReadError, read_available);
 
             /// Reads up to a number of bytes from probe non-blocking. Reading less than the requested number of bytes
             /// is not an error.
             ///
             /// TODO: Does the channel's mode actually matter here?
-            pub fn readAvailable(self: *Self, bytes: []u8) ReadError!usize {
-                exclusive_access.lockFn(exclusive_access.context);
-                defer exclusive_access.unlockFn(exclusive_access.context);
+            pub fn read_available(self: *Self, bytes: []u8) ReadError!usize {
+                exclusive_access.lock_fn(exclusive_access.context);
+                defer exclusive_access.unlock_fn(exclusive_access.context);
 
                 // The probe can change self.write_offset via memory modification at any time,
                 // so must perform a volatile read on this value.
@@ -317,7 +317,7 @@ pub const channel = struct {
 
                 // Force data write to be complete before writing the read_offset, in case CPU
                 // is allowed to change the order of memory accesses
-                asm volatile ("DMB");
+                barrier_fn();
                 self.read_offset = read_offset;
 
                 return bytes_read;
@@ -328,7 +328,7 @@ pub const channel = struct {
             }
 
             /// Number of bytes written from probe in ring buffer.
-            pub fn bytesAvailable(self: *Self) usize {
+            pub fn bytes_available(self: *Self) usize {
 
                 // The probe can change self.write_offset via memory modification at any time,
                 // so must perform a volatile read on this value.
@@ -384,7 +384,7 @@ fn BuildBufferStorageType(comptime up_channels: []const channel.Config, comptime
 
 /// Creates a control block struct for the given channel configs. Buffer storage is also contained within this struct, although
 /// per the RTT spec it doesn't have to be.
-fn ControlBlock(comptime up_channels: []const channel.Config, comptime down_channels: []const channel.Config, comptime exclusive_access: AnyLock, comptime barrierFn: MemoryBarrierFn) type {
+fn ControlBlock(comptime up_channels: []const channel.Config, comptime down_channels: []const channel.Config, comptime exclusive_access: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
     if (up_channels.len == 0 or down_channels.len == 0) {
         @compileError("Must have at least 1 up and down channel configured");
     }
@@ -392,8 +392,8 @@ fn ControlBlock(comptime up_channels: []const channel.Config, comptime down_chan
     const BufferContainerType = BuildBufferStorageType(up_channels, down_channels);
     return extern struct {
         header: Header,
-        up_channels: [up_channels.len]channel.Up(exclusive_access, barrierFn),
-        down_channels: [down_channels.len]channel.Down(exclusive_access, barrierFn),
+        up_channels: [up_channels.len]channel.Up(exclusive_access, barrier_fn),
+        down_channels: [down_channels.len]channel.Down(exclusive_access, barrier_fn),
         buffers: BufferContainerType,
 
         pub fn init(self: *@This()) void {
@@ -415,8 +415,8 @@ fn ControlBlock(comptime up_channels: []const channel.Config, comptime down_chan
                 );
             }
             // Prevent compiler from re-ordering header init function as it must come last
-            barrierFn();
-            self.header.init(up_channels.len, down_channels.len, barrierFn);
+            barrier_fn();
+            self.header.init(up_channels.len, down_channels.len, barrier_fn);
         }
     };
 }
@@ -436,7 +436,7 @@ pub const Config = struct {
     /// when provided with null
     ///
     /// If trying to run RTT on a platform not yet supported by the "defaults" this must be provided or set to null
-    memory_barrier_fn: ?MemoryBarrierFn = memory_barrier.resolveMemoryBarrier().memory_barrier_fn,
+    memory_barrier_fn: ?MemoryBarrierFn = memory_barrier.resolve_memory_barrier().memory_barrier_fn,
     /// Optionally place the RTT control block (and buffers) in a specific linker section
     linker_section: ?[]const u8 = null,
 };
@@ -445,7 +445,7 @@ pub const Config = struct {
 pub fn RTT(comptime config: Config) type {
     return struct {
         const exclusive_access = config.exclusive_access orelse lock.empty.get();
-        const mb_fn = config.memory_barrier_fn orelse memory_barrier.emptyMemoryBarrier;
+        const mb_fn = config.memory_barrier_fn orelse memory_barrier.empty_memory_barrier;
         var control_block: ControlBlock(
             config.up_channels,
             config.down_channels,
@@ -491,7 +491,7 @@ pub fn RTT(comptime config: Config) type {
             comptime {
                 if (channel_number >= config.down_channels.len) @compileError(std.fmt.comptimePrint("Channel number {d} exceeds max down channel number of {d}", .{ channel_number, config.down_channels.len - 1 }));
             }
-            return control_block.down_channels[channel_number].readAvailable(bytes);
+            return control_block.down_channels[channel_number].read_available(bytes);
         }
 
         pub fn reader(comptime channel_number: usize) Reader {
