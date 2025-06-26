@@ -40,7 +40,6 @@ Here is an overview of the top level directories of the monorepo:
 - `core`: The framework for building the MicroZig import structure. MCU
   architecture specific code (ARM, AVR, RISCV, etc.).
 - `design`: Visual assets used by MicroZig.
-- `docs`: Documents that have not been moved to the website yet.
 - `drivers`: MCU agnostic drivers for external devices.
 - `examples`: Embedded application examples, these mirror the port directory
   structure. We intentionally keep examples outside port packages, both to
