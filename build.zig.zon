@@ -44,7 +44,6 @@
         "build.zig.zon",
         "LICENSE",
         "design",
-        "docs",
         "tools/generate_linker_script.zig",
         "tools",
         "port",
