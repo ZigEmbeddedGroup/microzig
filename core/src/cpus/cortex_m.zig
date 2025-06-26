@@ -18,6 +18,9 @@ const Core = enum {
 const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
     @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
 
+/// Segger's RTT support
+pub const rtt = @import("rtt");
+
 /// Complete list of interrupt values based on the chip's `interrupts` array.
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
 
