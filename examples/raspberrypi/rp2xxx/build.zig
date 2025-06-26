@@ -66,6 +66,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "dma", .file = "src/dma.zig" },
         .{ .name = "cyw43", .file = "src/cyw43.zig" },
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
+        .{ .name = "tmc2209", .file = "src/tmc2209.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);
