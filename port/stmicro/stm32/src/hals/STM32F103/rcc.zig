@@ -1,6 +1,5 @@
 //NOTE: this file is only valid for densities: Low, Medium, High, and XL. Connectivity line devices are not supported in this version.
-//TODO: Add support for 105/107, control to enable and disable peripheral clocks
-
+//TODO: Add support for 105/107
 const std = @import("std");
 const microzig = @import("microzig");
 const find_clocktree = @import("util.zig").find_clock_tree;
