@@ -5,7 +5,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
-const mdf = microzig.drivers;
 
 const drivers = microzig.drivers.base;
 const time = microzig.drivers.time;
@@ -30,9 +29,9 @@ pub const I2C_Device = struct {
     address: hal.i2c.Address,
 
     /// Default timeout duration
-    timeout: ?mdf.time.Duration = null,
+    timeout: ?time.Duration = null,
 
-    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_Device {
+    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?time.Duration) I2C_Device {
         return .{
             .bus = bus,
             .address = address,
