@@ -1,11 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-const timer = stm32.timer.GPTimer.init(.TIM2);
 
 const board = stm32.rcc.ClockTree;
 const config = board.Config{
@@ -18,14 +16,7 @@ const config = board.Config{
 
 pub fn main() !void {
     try rcc.clock_init(config);
-
-    RCC.APB2ENR.modify(.{
-        .GPIOBEN = 1,
-    });
-
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-    });
+    rcc.enable_clock(.GPIOB);
 
     const reset_reason = stm32.RESET;
     std.mem.doNotOptimizeAway(reset_reason);

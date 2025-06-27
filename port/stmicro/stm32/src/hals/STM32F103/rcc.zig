@@ -26,6 +26,53 @@ const rcc = microzig.chip.peripherals.RCC;
 
 pub const ClockTree = find_clocktree(microzig.config.chip_name);
 
+const RccPeriferals = enum {
+    DMA1,
+    DMA2,
+    SRAM,
+    FLASH,
+    CRC,
+    FSMC, //F103xE
+    SDIO, //F103xC/D/E
+
+    // APB2ENR (APB2 peripherals)
+    AFIO,
+    GPIOA,
+    GPIOB,
+    GPIOC,
+    GPIOD,
+    GPIOE,
+    GPIOF, //F103xE
+    GPIOG, //F103xE
+    ADC1,
+    ADC2,
+    TIM1,
+    SPI1,
+    USART1,
+
+    // APB1ENR (APB1 peripherals)
+    TIM2,
+    TIM3,
+    TIM4,
+    TIM5, //F103xE
+    TIM6, //F103xE
+    TIM7, //F103xE
+    WWDG,
+    SPI2,
+    SPI3, //F103xD/E
+    USART2,
+    USART3,
+    UART4, //F103xC/D/E
+    UART5, //F103xC/D/E
+    I2C1,
+    I2C2,
+    USB,
+    CAN,
+    BKP,
+    PWR,
+    DAC, //F103xE
+};
+
 pub const ResetReason = enum {
     low_power,
     window_watchdog,
@@ -311,4 +358,116 @@ pub fn get_reset_reason() ResetReason {
 
     rcc.CSR.modify(.{ .RMVF = 1 });
     return rst;
+}
+
+pub fn disable_clock(peri: RccPeriferals) void {
+    switch (peri) {
+        .DMA1 => rcc.AHBRSTR.modify(.{ .DMA1RST = 1 }),
+        .DMA2 => rcc.AHBRSTR.modify(.{ .DMA2RST = 1 }),
+        .SRAM => rcc.AHBRSTR.modify(.{ .SRAMRST = 1 }),
+        .FLASH => rcc.AHBRSTR.modify(.{ .FLASHRST = 1 }),
+        .CRC => rcc.AHBRSTR.modify(.{ .CRCRST = 1 }),
+        .FSMC => rcc.AHBRSTR.modify(.{ .FSMCRST = 1 }), //F103xE
+        .SDIO => rcc.AHBRSTR.modify(.{ .SDIORST = 1 }), //F103xC/D/E
+
+        // APB2RSTR (APB2 peripherals)
+        .AFIO => rcc.APB2RSTR.modify(.{ .AFIORST = 1 }),
+        .GPIOA => rcc.APB2RSTR.modify(.{ .GPIOARST = 1 }),
+        .GPIOB => rcc.APB2RSTR.modify(.{ .GPIOBRST = 1 }),
+        .GPIOC => rcc.APB2RSTR.modify(.{ .GPIOCRST = 1 }),
+        .GPIOD => rcc.APB2RSTR.modify(.{ .GPIODRST = 1 }),
+        .GPIOE => rcc.APB2RSTR.modify(.{ .GPIOERST = 1 }),
+        .GPIOF => rcc.APB2RSTR.modify(.{ .GPIOFRST = 1 }), //F103xE
+        .GPIOG => rcc.APB2RSTR.modify(.{ .GPIOGRST = 1 }), //F103xE
+        .ADC1 => rcc.APB2RSTR.modify(.{ .ADC1RST = 1 }),
+        .ADC2 => rcc.APB2RSTR.modify(.{ .ADC2RST = 1 }),
+        .TIM1 => rcc.APB2RSTR.modify(.{ .TIM1RST = 1 }),
+        .SPI1 => rcc.APB2RSTR.modify(.{ .SPI1RST = 1 }),
+        .USART1 => rcc.APB2RSTR.modify(.{ .USART1RST = 1 }),
+
+        // APB1RSTR (APB1 peripherals)
+        .TIM2 => rcc.APB1RSTR.modify(.{ .TIM2RST = 1 }),
+        .TIM3 => rcc.APB1RSTR.modify(.{ .TIM3RST = 1 }),
+        .TIM4 => rcc.APB1RSTR.modify(.{ .TIM4RST = 1 }),
+        .TIM5 => rcc.APB1RSTR.modify(.{ .TIM5RST = 1 }), //F103xE
+        .TIM6 => rcc.APB1RSTR.modify(.{ .TIM6RST = 1 }), //F103xE
+        .TIM7 => rcc.APB1RSTR.modify(.{ .TIM7RST = 1 }), //F103xE
+        .WWDG => rcc.APB1RSTR.modify(.{ .WWDGRST = 1 }),
+        .SPI2 => rcc.APB1RSTR.modify(.{ .SPI2RST = 1 }),
+        .SPI3 => rcc.APB1RSTR.modify(.{ .SPI3RST = 1 }), //F103xD/E
+        .USART2 => rcc.APB1RSTR.modify(.{ .USART2RST = 1 }),
+        .USART3 => rcc.APB1RSTR.modify(.{ .USART3RST = 1 }),
+        .UART4 => rcc.APB1RSTR.modify(.{ .UART4RST = 1 }), //F103xC/D/E
+        .UART5 => rcc.APB1RSTR.modify(.{ .UART5RST = 1 }), //F103xC/D/E
+        .I2C1 => rcc.APB1RSTR.modify(.{ .I2C1RST = 1 }),
+        .I2C2 => rcc.APB1RSTR.modify(.{ .I2C2RST = 1 }),
+        .USB => rcc.APB1RSTR.modify(.{ .USBRST = 1 }),
+        .CAN => rcc.APB1RSTR.modify(.{ .CANRST = 1 }),
+        .BKP => rcc.APB1RSTR.modify(.{ .BKPRST = 1 }),
+        .PWR => rcc.APB1RSTR.modify(.{ .PWRRST = 1 }),
+        .DAC => rcc.APB1RSTR.modify(.{ .DACRST = 1 }), //F103xE
+    }
+}
+
+pub fn enable_clock(peri: RccPeriferals) void {
+    switch (peri) {
+        .DMA1 => rcc.AHBENR.modify(.{ .DMA1EN = 1 }),
+        .DMA2 => rcc.AHBENR.modify(.{ .DMA2EN = 1 }),
+        .SRAM => rcc.AHBENR.modify(.{ .SRAMEN = 1 }),
+        .FLASH => rcc.AHBENR.modify(.{ .FLASHEN = 1 }),
+        .CRC => rcc.AHBENR.modify(.{ .CRCEN = 1 }),
+        .FSMC => rcc.AHBENR.modify(.{ .FSMCEN = 1 }), //F103xE
+        .SDIO => rcc.AHBENR.modify(.{ .SDIOEN = 1 }), //F103xC/D/E
+
+        // APB2ENR (APB2 peripherals)
+        .AFIO => rcc.APB2ENR.modify(.{ .AFIOEN = 1 }),
+        .GPIOA => rcc.APB2ENR.modify(.{ .GPIOAEN = 1 }),
+        .GPIOB => rcc.APB2ENR.modify(.{ .GPIOBEN = 1 }),
+        .GPIOC => rcc.APB2ENR.modify(.{ .GPIOCEN = 1 }),
+        .GPIOD => rcc.APB2ENR.modify(.{ .GPIODEN = 1 }),
+        .GPIOE => rcc.APB2ENR.modify(.{ .GPIOEEN = 1 }),
+        .GPIOF => rcc.APB2ENR.modify(.{ .GPIOFEN = 1 }), //F103xE
+        .GPIOG => rcc.APB2ENR.modify(.{ .GPIOGEN = 1 }), //F103xE
+        .ADC1 => rcc.APB2ENR.modify(.{ .ADC1EN = 1 }),
+        .ADC2 => rcc.APB2ENR.modify(.{ .ADC2EN = 1 }),
+        .TIM1 => rcc.APB2ENR.modify(.{ .TIM1EN = 1 }),
+        .SPI1 => rcc.APB2ENR.modify(.{ .SPI1EN = 1 }),
+        .USART1 => rcc.APB2ENR.modify(.{ .USART1EN = 1 }),
+
+        // APB1ENR (APB1 peripherals)
+        .TIM2 => rcc.APB1ENR.modify(.{ .TIM2EN = 1 }),
+        .TIM3 => rcc.APB1ENR.modify(.{ .TIM3EN = 1 }),
+        .TIM4 => rcc.APB1ENR.modify(.{ .TIM4EN = 1 }),
+        .TIM5 => rcc.APB1ENR.modify(.{ .TIM5EN = 1 }), //F103xE
+        .TIM6 => rcc.APB1ENR.modify(.{ .TIM6EN = 1 }), //F103xE
+        .TIM7 => rcc.APB1ENR.modify(.{ .TIM7EN = 1 }), //F103xE
+        .WWDG => rcc.APB1ENR.modify(.{ .WWDGEN = 1 }),
+        .SPI2 => rcc.APB1ENR.modify(.{ .SPI2EN = 1 }),
+        .SPI3 => rcc.APB1ENR.modify(.{ .SPI3EN = 1 }), //F103xD/E
+        .USART2 => rcc.APB1ENR.modify(.{ .USART2EN = 1 }),
+        .USART3 => rcc.APB1ENR.modify(.{ .USART3EN = 1 }),
+        .UART4 => rcc.APB1ENR.modify(.{ .UART4EN = 1 }), //F103xC/D/E
+        .UART5 => rcc.APB1ENR.modify(.{ .UART5EN = 1 }), //F103xC/D/E
+        .I2C1 => rcc.APB1ENR.modify(.{ .I2C1EN = 1 }),
+        .I2C2 => rcc.APB1ENR.modify(.{ .I2C2EN = 1 }),
+        .USB => rcc.APB1ENR.modify(.{ .USBEN = 1 }),
+        .CAN => rcc.APB1ENR.modify(.{ .CANEN = 1 }),
+        .BKP => rcc.APB1ENR.modify(.{ .BKPEN = 1 }),
+        .PWR => rcc.APB1ENR.modify(.{ .PWREN = 1 }),
+        .DAC => rcc.APB1ENR.modify(.{ .DACEN = 1 }), //F103xE
+    }
+}
+
+pub fn enable_all_clocks() void {
+    //enable all clocks
+    rcc.AHBENR.raw = std.math.maxInt(u32);
+    rcc.APB1ENR.raw = std.math.maxInt(u32);
+    rcc.APB2ENR.raw = std.math.maxInt(u32);
+}
+
+pub fn disable_all_clocks() void {
+    //disable all clocks
+    rcc.AHBENR.raw = 0;
+    rcc.APB1ENR.raw = 0;
+    rcc.APB2ENR.raw = 0;
 }
