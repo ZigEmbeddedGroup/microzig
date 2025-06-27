@@ -14,6 +14,7 @@ pub const TMC2209_Config = struct {
     address: u8,
     pulse_frequency: f32 = 0.715, // frequency of the built in pulse generator
     steps: u32 = 200, // number of steps per revolution of the motor
+    ramp_pause: u32 = 50,
 };
 
 pub const TMC2209 = struct {
@@ -42,6 +43,7 @@ pub const TMC2209 = struct {
     uart: mdf.base.Stream_Device,
     clock_device: mdf.base.Clock_Device,
     address: u8,
+    ramp_pause: u32,
 
     pub fn init(cfg: TMC2209_Config) !Self {
         return .{
@@ -50,17 +52,18 @@ pub const TMC2209 = struct {
             .address = cfg.address,
             .steps = cfg.steps,
             .pulse_frequency = cfg.pulse_frequency,
+            .ramp_pause = cfg.ramp_pause,
         };
     }
 
-    pub fn set_spreadcycle(self: *Self) !void {
+    pub fn spreadcycle(self: *Self) !void {
         const nc = nodeConf{ .val = .{ .sendDelay = 2 } };
         try self.write(nc.register, @bitCast(nc.val));
         const gc = gconf{ .val = .{ .enSpreadcycle = 1, .pdnDisable = 1, .mStepRegSelect = 1, .indexStep = 1 } };
         try self.write(gc.register, @bitCast(gc.val));
         const ir = iholdRun{ .val = .{ .ihold = 1, .irun = 31 } };
         try self.write(ir.register, @bitCast(ir.val));
-        const pw = pwmConf{ .val = .{ .pwmAutoscale = 1, .pwmAutoGrad = 1, .pwmReg = 8 } };
+        const pw = pwmConf{ .val = .{ .pwmAutoscale = 1, .pwmAutograd = 1, .pwmReg = 8 } };
         try self.write(pw.register, @bitCast(pw.val));
     }
 
@@ -70,15 +73,15 @@ pub const TMC2209 = struct {
             return error.InvalidMoveFrequency;
         }
 
-        var steps: f32 = 0;
+        //uint32((r / 0.715) * float64(m.steps) * float64(m.microsteps))
+        const x: f32 = @floatFromInt((self.steps * self.microsteps));
         for (self.get_ramp(hz)[0..]) |val| {
-            steps = @floatFromInt(self.steps * self.microsteps);
             const v = vactual{
-                .val = .{ .velocity = @intFromFloat(val / self.pulse_frequency * steps) },
+                .val = .{ .velocity = @intFromFloat(val * (x / self.pulse_frequency)) },
             };
 
             try self.write(v.register, @bitCast(v.val));
-            self.clock_device.sleep_ms(50);
+            self.clock_device.sleep_ms(self.ramp_pause);
         }
         self.current_freq = hz;
     }
@@ -108,6 +111,7 @@ pub const TMC2209 = struct {
         if (n != 8) {
             return error.WriteError;
         }
+        self.clock_device.sleep_ms(10);
     }
 
     pub fn read(self: *Self, register: anytype) !void {
@@ -123,13 +127,18 @@ pub const TMC2209 = struct {
             return error.InvalidWrite;
         }
 
+        std.log.debug("read request {x}", .{buf});
+
         self.clock_device.sleep_ms(10);
 
         // the read request will be in the rx buffer since the tx and rx pins are physically connected
         _ = try self.uart.read(&buf);
 
+        std.log.debug("read crud {x}", .{buf});
+
         var resp: [8]u8 = undefined;
         const r1 = try self.uart.read(&resp);
+        std.log.debug("read resp {x}", .{resp});
         if (r1 != 8) {
             return error.InvalidRead;
         }
@@ -164,6 +173,7 @@ pub const TMC2209 = struct {
         }
 
         self.ramp[i] = target_freq;
+        std.log.debug("ramp (i: {d}): {d}", .{ i, self.ramp[0 .. i + 1] });
 
         return self.ramp[0 .. i + 1];
     }
@@ -270,7 +280,7 @@ pub const TMC2209 = struct {
             ihold: u5 = 0,
             irun: u5 = 0,
             iholddelay: u4 = 0,
-            _reserved: u23 = 0,
+            _reserved: u18 = 0,
         } = undefined,
     };
 
@@ -442,11 +452,11 @@ test "set microsteps" {
 
     var tc = Test_Clock.init();
 
-    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.stream_device(), .clock = tc.clock_device() });
+    var stepper = try TMC2209.init(.{ .address = 3, .uart = td.stream_device(), .clock = tc.clock_device() });
 
     try stepper.set_microsteps(16);
 
-    const sent = [_]u8{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 };
+    const sent = [_]u8{ 0x05, 0x03, 0xec, 0x14, 0x00, 0x00, 0x05, 0xd9 };
     try td.expect_sent(&sent);
 }
 
@@ -468,6 +478,37 @@ test "write" {
     try stepper.write(cf.register, @bitCast(cf.val));
 
     const sent = [_]u8{ 0x05, 0x00, 0xec, 0x14, 0x00, 0x00, 0x05, 0x43 };
+    try td.expect_sent(&sent);
+}
+
+test "spreadcycle" {
+    const Test_Stream = mdf.base.Stream_Device.Test_Device;
+    const Test_Clock = mdf.base.Clock_Device.Test_Device;
+    const data = [_]u8{
+        0x05, 0x00, 0x02, 0x8f,
+        0x05, 0xff, 0x02, 0x00,
+        0x00, 0x00, 0x02, 0x8b,
+        0x05, 0x00, 0x02, 0x8f,
+        0x05, 0xff, 0x02, 0x00,
+        0x00, 0x00, 0x07, 0xe2,
+    };
+
+    var td = Test_Stream.init(&data, true);
+    defer td.deinit();
+    td.connected = true;
+
+    var tc = Test_Clock.init();
+
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.stream_device(), .clock = tc.clock_device() });
+
+    try stepper.spreadcycle();
+
+    const sent = [_]u8{
+        0x05, 0x00, 0x83, 0x00, 0x00, 0x00, 0x02, 0xD1,
+        0x05, 0x00, 0x80, 0x00, 0x00, 0x00, 0xE4, 0xBC,
+        0x05, 0x00, 0x90, 0x00, 0x00, 0x03, 0xE1, 0x21,
+        0x05, 0x00, 0xF0, 0x08, 0x18, 0x00, 0x00, 0x8F,
+    };
     try td.expect_sent(&sent);
 }
 
@@ -519,26 +560,18 @@ test "move" {
     try std.testing.expectError(error.InvalidMoveFrequency, stepper.move(-20.1));
 
     try stepper.set_microsteps(16);
+    try stepper.move(-1);
     try stepper.move(5);
-    try stepper.move(-5);
 
     const sent = [_]u8{
         0x05, 0x03, 0xec, 0x14, 0x00, 0x00, 0x05, 0xd9, // set microsteps
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x11, 0x7b, 0x9e, // ramp up to 5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x22, 0xf7, 0x18, // ramp up to 5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x34, 0x72, 0x2b, // ramp up to 5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x45, 0xee, 0xe4, // ramp up to 5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x57, 0x69, 0xbe, // ramp up to 5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x45, 0xee, 0xe4, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x34, 0x72, 0x2b, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x22, 0xf7, 0x18, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x11, 0x7b, 0x9e, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0x00, 0x00, 0x00, 0x00, 0x94, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0xff, 0xff, 0xee, 0x85, 0xc9, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0xff, 0xff, 0xdd, 0x09, 0x4f, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0xff, 0xff, 0xcb, 0x8e, 0xbb, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0xff, 0xff, 0xba, 0x12, 0x74, // ramp down to -5 hz
-        0x05, 0x03, 0xa2, 0xff, 0xff, 0xa8, 0x97, 0xe9, // ramp down to -5 hz
+        0x05, 0x03, 0xa2, 0xff, 0xff, 0xee, 0x85, 0xc9, // move -1
+        0x05, 0x03, 0xA2, 0x00, 0x00, 0x00, 0x00, 0x94, // move 0
+        0x05, 0x03, 0xA2, 0x00, 0x00, 0x11, 0x7B, 0x9E, // move 1
+        0x05, 0x03, 0xA2, 0x00, 0x00, 0x22, 0xF7, 0x18, // move 2
+        0x05, 0x03, 0xA2, 0x00, 0x00, 0x34, 0x72, 0x2B, // move 3
+        0x05, 0x03, 0xA2, 0x00, 0x00, 0x45, 0xEE, 0xE4, // move 4
+        0x05, 0x03, 0xA2, 0x00, 0x00, 0x57, 0x69, 0xBE, // move 5
     };
     try td.expect_sent(&sent);
 }

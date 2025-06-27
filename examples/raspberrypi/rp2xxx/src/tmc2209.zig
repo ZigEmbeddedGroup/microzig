@@ -1,14 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
+
 const stepper = microzig.drivers.stepper;
 const base = microzig.drivers.base;
 const rpxxxx = microzig.hal;
 const gpio = rpxxxx.gpio;
+const time = rpxxxx.time;
 const UART_Device = rpxxxx.drivers.UART_Device;
 const ClockDevice = rpxxxx.drivers.ClockDevice;
 const TMC2209 = stepper.TMC2209;
-
-const time = rpxxxx.time;
 
 const uart0 = rpxxxx.uart.instance.num(0);
 const uart1 = rpxxxx.uart.instance.num(1);
@@ -17,8 +17,8 @@ const uart_tx_pin = gpio.num(0);
 
 const pin_config = rpxxxx.pins.GlobalConfiguration{
     .GPIO0 = .{ .name = "gpio0", .function = .UART0_TX },
-    .GPIO4 = .{ .name = "gpio4", .function = .UART1_TX },
-    .GPIO5 = .{ .name = "gpio5", .function = .UART1_RX },
+    .GPIO8 = .{ .name = "gpio8", .function = .UART1_TX },
+    .GPIO9 = .{ .name = "gpio9", .function = .UART1_RX },
 };
 
 pub const microzig_options = microzig.Options{
@@ -38,10 +38,12 @@ pub fn main() !void {
         .address = 0,
     });
 
-    try driver.set_microsteps(128);
+    try driver.set_microsteps(4);
+    try driver.spreadcycle();
 
     var i: f32 = 1;
     while (true) {
+        std.log.debug("move {d}", .{5 * i});
         try driver.move(5 * i);
         i *= -1;
         time.sleep_ms(5000);
@@ -62,6 +64,4 @@ fn init() !void {
 
     rpxxxx.uart.init_logger(uart0);
     pin_config.apply();
-
-    std.log.info("Hello from mlx90640", .{});
 }
