@@ -91,10 +91,8 @@ pub fn clock_init(comptime config: ClockTree.Config) ClockInitError!void {
 
     //rest all clock configs
     secure_enable();
-    if (@hasField(@TypeOf(config), "HSICalibrationValue")) {
-        if (config.HSICalibrationValue) |val| {
-            config_HSI(@intFromEnum(val));
-        }
+    if (config.HSICalibrationValue) |val| {
+        config_HSI(@intFromEnum(val));
     }
 
     try config_PLL(config);
@@ -118,9 +116,12 @@ fn validate_clocks(comptime config: ClockTree.Config) usize {
         _ = tree_values.MCOoutput.get_comptime();
     }
 
-    if (@hasField(@TypeOf(config), "USBPrescaler")) {
-        if (config.USBPrescaler) |_| {
-            _ = tree_values.USBoutput.get_comptime();
+    if (config.USBPrescaler) |_| {
+        _ = tree_values.USBoutput.get_comptime();
+        if (config.PLLSource) |src| {
+            if (src == .RCC_PLLSOURCE_HSI_DIV2) {
+                @compileError("USB clock is not stable when PLL source is HSI");
+            }
         }
     }
 
@@ -257,12 +258,10 @@ fn config_peripherals(comptime config: ClockTree.Config) void {
         rcc.CFGR.modify(.{ .ADCPRE = val });
     }
 
-    if (@hasField(@TypeOf(config), "USBPrescaler")) {
-        if (config.USBPrescaler) |pre| {
-            const p: u32 = @intFromEnum(pre);
-            const val: USBPRE = @enumFromInt(p);
-            rcc.CFGR.modify(.{ .USBPRE = val });
-        }
+    if (config.USBPrescaler) |pre| {
+        const p: u32 = @intFromEnum(pre);
+        const val: USBPRE = @enumFromInt(p);
+        rcc.CFGR.modify(.{ .USBPRE = val });
     }
 }
 
