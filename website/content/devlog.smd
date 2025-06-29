@@ -20,6 +20,15 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ## Changes
 
+## [Segger RTT Support]($section.id('2025-06-26'))
+
+Segger makes a popular open source utility for sending and receiving data
+to/from an MCU via a JLink probe called
+[Real Time Trace](https://kb.segger.com/RTT). Support for this protocol
+was ported to pure Zig, and is available to be used by Arm Cortex-M
+targets. This enables both logging and sending data from/to the MCU via
+Segger's [RTT Viewer](https://kb.segger.com/J-Link_RTT_Viewer) utility.
+
 ## [Regz Wizard]($section.id('2025-06-22'))
 
 []($image.asset('regz-wizard-01.png'))

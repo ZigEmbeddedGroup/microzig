@@ -800,6 +800,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 return .{
                     .name = target.cpu.model.name,
                     .root_source_file = mb.core_dep.namedLazyPath("cpu_cortex_m"),
+                    .imports = mb.builder.allocator.dupe(Build.Module.Import, &.{
+                        .{
+                            .name = "rtt",
+                            .module = mb.dep.builder.dependency("modules/rtt", .{}).module("rtt"),
+                        },
+                    }) catch @panic("OOM"),
                 };
             } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
                 return .{
