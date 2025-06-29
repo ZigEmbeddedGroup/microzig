@@ -337,61 +337,53 @@ pub const I2C = struct {
     }
 
     pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) IOError!void {
-        for (chunks) |chunk| {
-            try i2c.read_blocking(addr, chunk, timeout);
-        }
-    }
-
-    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
-        for (chunks) |chunk| {
-            try i2c.write_blocking(addr, chunk, timeout);
-        }
-    }
-
-    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Timeout) IOError!void {
-        const regs = i2c.regs;
-        try i2c.START(timeout);
-        try i2c.set_addr(address, 0, timeout);
-
-        for (data) |bytes| {
-            regs.DR.modify(.{
-                .DR = bytes,
-            });
-
-            while (regs.SR1.read().TXE != 1) {
-                try i2c.check_error(timeout);
-            }
-        }
-
-        while (regs.SR1.read().BTF != 1) {
-            try i2c.check_error(timeout);
-        }
-
-        try i2c.STOP(timeout);
-    }
-
-    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Timeout) IOError!void {
         const regs = i2c.regs;
 
         try i2c.START(timeout);
-        try i2c.set_addr(address, 1, timeout);
+        try i2c.set_addr(addr, 1, timeout);
 
         regs.CR1.modify(.{
             .ACK = 1,
         });
+        for (chunks) |data| {
+            for (0..data.len) |index| {
+                if (index == data.len - 1) {
+                    //disable ACk on last byte
+                    regs.CR1.modify(.{
+                        .ACK = 0,
+                    });
+                }
+                while (regs.SR1.read().RXNE != 1) {
+                    try i2c.check_error(timeout);
+                }
 
-        for (0..data.len) |index| {
-            if (index == data.len - 1) {
-                //disable ACk on last byte
-                regs.CR1.modify(.{
-                    .ACK = 0,
-                });
+                data[index] = regs.DR.read().DR;
             }
-            while (regs.SR1.read().RXNE != 1) {
+
+            while (regs.SR1.read().BTF != 1) {
                 try i2c.check_error(timeout);
             }
+        }
 
-            data[index] = regs.DR.read().DR;
+        try i2c.STOP(timeout);
+    }
+
+    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
+
+        try i2c.START(timeout);
+        try i2c.set_addr(addr, 0, timeout);
+
+        for (chunks) |data| {
+            for (data) |byte| {
+                while (regs.SR1.read().TXE != 1) {
+                    try i2c.check_error(timeout);
+                }
+
+                regs.DR.modify(.{
+                    .DR = byte,
+                });
+            }
         }
 
         while (regs.SR1.read().BTF != 1) {
@@ -399,6 +391,14 @@ pub const I2C = struct {
         }
 
         try i2c.STOP(timeout);
+    }
+
+    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Timeout) IOError!void {
+        return i2c.writev_blocking(address, &.{data}, timeout);
+    }
+
+    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Timeout) IOError!void {
+        return i2c.readv_blocking(address, &.{data}, timeout);
     }
 
     ///use this function to check if the i2c is busy in multi-master mode

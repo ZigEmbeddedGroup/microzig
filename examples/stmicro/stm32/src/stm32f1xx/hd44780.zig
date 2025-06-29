@@ -34,7 +34,7 @@ pub const microzig_options = microzig.Options{
 
 var global_counter: stm32.drivers.CounterDevice = undefined;
 
-const i2c_device = I2C_Device.init(i2c, I2c.Address.new(0x27), config, &global_counter, null);
+const i2c_device = I2C_Device.init(i2c, I2c.Address.new(0x27), config, null, null);
 
 pub fn delay_us(time_delay: u32) void {
     global_counter.sleep_us(time_delay);
