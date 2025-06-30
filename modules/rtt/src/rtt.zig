@@ -53,7 +53,7 @@ pub const channel = struct {
     /// Implements a ring buffer of size - 1 bytes, as this implementation
     /// does not fill up the buffer in order to avoid the problem of being unable to
     /// distinguish between full and empty.
-    fn Up(comptime exclusive_access_: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
+    fn Up(comptime exclusive_access: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
         return extern struct {
             /// Name is optional and is not required by the spec. Standard names so far are:
             /// "Terminal", "SysView", "J-Scope_t4i4"
@@ -70,8 +70,6 @@ pub const channel = struct {
             /// Contains configuration flags. Flags[31:24] are used for validity check and must be zero.
             /// Flags[23:2] are reserved for future use. Flags[1:0] = RTT operating mode.
             flags: usize,
-
-            const exclusive_access = exclusive_access_;
 
             const Self = @This();
 
@@ -230,7 +228,7 @@ pub const channel = struct {
     /// Implements a ring buffer of size - 1 bytes, as this implementation
     /// does not fill up the buffer in order to avoid the problem of being unable to
     /// distinguish between full and empty.
-    fn Down(comptime exclusive_access_: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
+    fn Down(comptime exclusive_access: AnyLock, comptime barrier_fn: MemoryBarrierFn) type {
         return extern struct {
             /// Name is optional and is not required by the spec. Standard names so far are:
             /// "Terminal", "SysView", "J-Scope_t4i4"
@@ -249,7 +247,6 @@ pub const channel = struct {
             flags: usize,
 
             const Self = @This();
-            const exclusive_access = exclusive_access_;
 
             pub fn init(
                 self: *Self,
