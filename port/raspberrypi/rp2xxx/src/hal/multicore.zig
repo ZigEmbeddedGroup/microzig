@@ -166,10 +166,15 @@ pub const Spinlock = struct {
         return @intCast((@intFromPtr(self.lock_reg) - spinlock_base) / 4);
     }
 
-    /// Lock the spinlock.  If the spinlock is already locked, busy wait until
-    /// it is release by the other core.
+    /// Try to lock the spinlock. If the spinlock is already locked, returns false
+    /// otherwise locks the spinlock and returns true.
+    pub inline fn try_lock(self: Spinlock) bool {
+        return self.lock_reg.* != 0;
+    }
+
+    /// Lock the spinlock. If the spinlock is already locked, busy wait until
     pub fn lock(self: Spinlock) void {
-        while (self.lock_reg.* == 0) {}
+        while (!self.try_lock()) {}
     }
 
     /// Returns true if the spinlock is locked
