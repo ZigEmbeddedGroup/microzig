@@ -11,7 +11,7 @@ const lcd = drivers.display.HD44780;
 const PCF8574 = drivers.IO_expander.PCF8574;
 const State = drivers.base.Digital_IO.State;
 
-const timer = stm32.timer.GPTimer.init(.TIM2);
+const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const I2c = stm32.i2c;
 const I2C_Device = stm32.drivers.I2C_Device;
@@ -64,7 +64,7 @@ pub fn main() !void {
     SCL.set_output_mode(.alternate_function_open_drain, .max_50MHz);
     SDA.set_output_mode(.alternate_function_open_drain, .max_50MHz);
 
-    const counter = timer.into_counter(8_000_000);
+    const counter = timer.counter_device(8_000_000);
     global_counter = counter;
 
     i2c.apply(config);

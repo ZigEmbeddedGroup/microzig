@@ -5,7 +5,7 @@ const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 
-const timer = stm32.timer.GPTimer.init(.TIM2);
+const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const I2c = stm32.i2c;
 
@@ -38,7 +38,7 @@ pub fn main() !void {
         .TIM2EN = 1,
     });
 
-    const counter = timer.into_counter(8_000_000);
+    const counter = timer.counter_device(8_000_000);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 

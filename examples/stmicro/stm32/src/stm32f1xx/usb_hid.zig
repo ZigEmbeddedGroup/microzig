@@ -10,7 +10,7 @@ const flash_v1 = microzig.chip.types.peripherals.flash_f1;
 
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
-const timer = stm32.timer.GPTimer.init(.TIM2);
+const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
@@ -312,7 +312,7 @@ pub fn main() !void {
         .USBEN = 1,
     });
     const led = gpio.Pin.from_port(.B, 2);
-    Counter = timer.into_counter(60_000_000);
+    Counter = timer.counter_device(72_000_000);
 
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
     usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));

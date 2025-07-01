@@ -8,7 +8,7 @@ const RCC = microzig.chip.peripherals.RCC;
 const DMA = microzig.chip.peripherals.DMA1;
 const DMA_t = microzig.chip.types.peripherals.bdma_v1;
 const stm32 = microzig.hal;
-const timer = microzig.hal.timer.GPTimer.init(.TIM2);
+const timer = microzig.hal.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
@@ -69,7 +69,7 @@ pub fn main() !void {
         .ADC1EN = 1,
         .ADC2EN = 1,
     });
-    const counter = timer.into_counter(8_000_000);
+    const counter = timer.counter_device(8_000_000);
     const adc1 = AdvancedADC.init(.ADC1);
     const adc2 = AdvancedADC.init(.ADC2);
 
