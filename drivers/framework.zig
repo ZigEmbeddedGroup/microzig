@@ -53,6 +53,7 @@ pub const stepper = struct {
     pub const A4988 = s.Stepper(s.A4988);
     pub const DRV8825 = s.Stepper(s.DRV8825);
     pub const ULN2003 = @import("stepper/ULN2003.zig").ULN2003;
+    pub const TMC2209 = @import("stepper/TMC2209.zig").TMC2209;
 };
 
 pub const IO_expander = struct {
@@ -220,6 +221,7 @@ test {
     _ = stepper.A4988;
     _ = stepper.DRV8825;
     _ = stepper.ULN2003;
+    _ = stepper.TMC2209;
 
     _ = IO_expander.pcf8574;
 
