@@ -29,7 +29,7 @@ const BaseChip = struct {
         }) catch @panic("out of memory");
 
         const mem: []const microzig.MemoryRegion = &.{
-            .{ .tag = .flash, .offset = 0x08000000, .length = flash_size, .access = .rx },
+            .{ .tag = .flash, .offset = 0x0, .length = flash_size, .access = .rx },
             .{ .tag = .ram, .offset = 0x20000000, .length = ram_size, .access = .rw },
         };
         const mem_alloc = b.allocator.dupe(microzig.MemoryRegion, mem) catch @panic("out of memory");
