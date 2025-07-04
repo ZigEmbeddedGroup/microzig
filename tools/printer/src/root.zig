@@ -33,7 +33,7 @@ pub const Annotator = struct {
         loop: switch (self.state) {
             .waiting => {
                 if (std.mem.indexOf(u8, data[index..], "0x")) |start_hex_index| {
-                    try out_stream.writeAll(data[index..][0..start_hex_index + 2]);
+                    try out_stream.writeAll(data[index..][0 .. start_hex_index + 2]);
                     index += start_hex_index + 2;
 
                     continue :loop .{ .reading_address = .{
@@ -81,7 +81,7 @@ pub const Annotator = struct {
                         const query_result = try debug_info.query(allocator, address);
                         defer if (query_result.file_path) |path| allocator.free(path);
 
-                        try out_stream.writeAll(data[index..][0..new_line_index + 1]);
+                        try out_stream.writeAll(data[index..][0 .. new_line_index + 1]);
                         index += new_line_index + 1;
 
                         try output_location_info(out_stream, out_tty_config, address, query_result);
