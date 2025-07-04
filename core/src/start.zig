@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const app = @import("app");
 
@@ -11,7 +12,7 @@ pub const microzig_options: microzig.Options = if (@hasDecl(app, "microzig_optio
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub const std_options = std.Options{
+pub const std_options: std.Options = .{
     .log_level = microzig_options.log_level,
     .log_scope_levels = microzig_options.log_scope_levels,
     .logFn = microzig_options.logFn,
@@ -64,17 +65,19 @@ export fn microzig_main() noreturn {
 
     if (@typeInfo(return_type) == .error_union) {
         main() catch |err| {
-            // TODO:
-            // - Compute maximum size on the type of "err"
-            // - Do not emit error names when std.builtin.strip is set.
-            var msg: [64]u8 = undefined;
-            @panic(std.fmt.bufPrint(&msg, "main() returned error {s}", .{@errorName(err)}) catch @panic("main() returned error."));
+            const msg_base = "main() returned error.{s}";
+            const err_name = if (!builtin.strip_debug_info) @errorName(err) else "";
+
+            std.log.err(msg_base, .{err_name});
+            if (@errorReturnTrace()) |trace| {
+                _ = microzig.utilities.dump_stack_trace(trace);
+            }
         };
     } else {
         main();
     }
 
-    // main returned, just hang around here a bit
+    // main returned, just hang around here a bit (actually for a very long time)
     microzig.hang();
 }
 
