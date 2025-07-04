@@ -46,7 +46,7 @@ pub const panic = std.debug.FullPanic(struct {
 
         var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
         while (iter.next()) |address| : (frame_index += 1) {
-            std.log.debug("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
+            std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
         }
 
         // Attach a breakpoint. this might trigger another panic internally, so
