@@ -72,12 +72,17 @@ export fn microzig_main() noreturn {
             if (@errorReturnTrace()) |trace| {
                 _ = microzig.utilities.dump_stack_trace(trace);
             }
+
+            // Maybe someone doesn't use logging so let's notify that we
+            // have an error (in case they specify a custom panic handler
+            // like blink an led).
+            @panic("main() returned error.");
         };
     } else {
         main();
     }
 
-    // main returned, just hang around here a bit (actually for a very long time)
+    // main returned, just hang around here a bit
     microzig.hang();
 }
 
