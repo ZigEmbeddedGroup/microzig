@@ -31,7 +31,7 @@ pub const Patch = union(enum) {
     /// context
     set_enum_type: struct {
         of: []const u8,
-        to: []const u8,
+        to: ?[]const u8,
     },
     add_interrupt: struct {
         device_name: []const u8,
