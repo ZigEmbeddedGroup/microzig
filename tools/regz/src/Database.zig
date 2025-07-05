@@ -59,8 +59,6 @@ pub const DevicePeripheral = struct {
             .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
         },
     };
-
-    // TODO: SQL opts
 };
 
 pub const Mode = struct {
@@ -1518,7 +1516,7 @@ pub fn create_nested_struct(
     parent: StructID,
     opts: CreateNestedStructOptions,
 ) !StructID {
-    var savepoint = try db.sql.savepoint("create_interrupt");
+    var savepoint = try db.sql.savepoint("create_nested_struct");
     defer savepoint.rollback();
 
     const struct_id = try db.create_struct(.{});
@@ -2060,7 +2058,7 @@ pub fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
     return register.id;
 }
 
-pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name: []const u8, enum_id: EnumID) !void {
+pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name: []const u8, enum_id: ?EnumID) !void {
     try db.exec(
         \\UPDATE struct_fields
         \\SET enum_id = ?
@@ -2076,7 +2074,7 @@ pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_
         .name = field_name,
     });
 
-    log.debug("set_register_field_enum_id: register_id={} field_name={s} enum_id={}", .{
+    log.debug("set_register_field_enum_id: register_id={} field_name={s} enum_id={?}", .{
         register_id,
         field_name,
         enum_id,
@@ -2142,7 +2140,7 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
                 }
             },
             .set_enum_type => |set_enum_type| {
-                const enum_id = try db.get_enum_ref(set_enum_type.to);
+                const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
                 const field_name, const register_ref = try get_ref_last_component(set_enum_type.of);
                 const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
                 try db.set_register_field_enum_id(register_id, field_name, enum_id);
