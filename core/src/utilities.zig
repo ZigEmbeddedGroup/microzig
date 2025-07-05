@@ -431,3 +431,19 @@ test "Slice_Vector.Iterator.next_chunk" {
         }
     }
 }
+
+pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
+    const frame_count = @min(trace.index, trace.instruction_addresses.len);
+
+    var frame_index: usize = 0;
+    var frames_left: usize = frame_count;
+    while (frames_left != 0) : ({
+        frames_left -= 1;
+        frame_index = (frame_index + 1) % trace.instruction_addresses.len;
+    }) {
+        const address = trace.instruction_addresses[frame_index];
+        std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
+    }
+
+    return frame_count;
+}

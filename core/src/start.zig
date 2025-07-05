@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const app = @import("app");
 
@@ -11,7 +12,7 @@ pub const microzig_options: microzig.Options = if (@hasDecl(app, "microzig_optio
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub const std_options = std.Options{
+pub const std_options: std.Options = .{
     .log_level = microzig_options.log_level,
     .log_scope_levels = microzig_options.log_scope_levels,
     .logFn = microzig_options.logFn,
@@ -64,17 +65,37 @@ export fn microzig_main() noreturn {
 
     if (@typeInfo(return_type) == .error_union) {
         main() catch |err| {
-            // TODO:
-            // - Compute maximum size on the type of "err"
-            // - Do not emit error names when std.builtin.strip is set.
-            var msg: [64]u8 = undefined;
-            @panic(std.fmt.bufPrint(&msg, "main() returned error {s}", .{@errorName(err)}) catch @panic("main() returned error."));
+            // Although here we could use @errorReturnTrace similar to
+            // `std.start` and just dump the trace (without panic), the user
+            // might not use logging and have the panic handler just blink an
+            // led.
+
+            const msg_base = "main() returned error.";
+
+            if (!builtin.strip_debug_info) {
+                const max_error_size = comptime blk: {
+                    var max_error_size: usize = 0;
+                    const err_type = @typeInfo(return_type).error_union.error_set;
+                    if (@typeInfo(err_type).error_set) |err_set| {
+                        for (err_set) |current_err| {
+                            max_error_size = @max(max_error_size, current_err.name.len);
+                        }
+                    }
+                    break :blk max_error_size;
+                };
+
+                var buf: [msg_base.len + max_error_size]u8 = undefined;
+                const msg = std.fmt.bufPrint(&buf, "{s}{s}", .{ msg_base, @errorName(err) }) catch @panic(msg_base);
+                @panic(msg);
+            } else {
+                @panic(msg_base);
+            }
         };
     } else {
         main();
     }
 
-    // main returned, just hang around here a bit
+    // Main returned, just hang around here a bit.
     microzig.hang();
 }
 
