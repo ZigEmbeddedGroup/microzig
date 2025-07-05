@@ -1,3 +1,5 @@
+//basic example of using timers on STM32F1xx showing how to use high-level APIs for PWM and Counter.
+
 const std = @import("std");
 const microzig = @import("microzig");
 
@@ -39,10 +41,10 @@ pub fn main() !void {
     }
 
     //first we need to configure the PWM peripheral
-    pwm.configure_PWM(.{
+    pwm.configure(.{
         .prescaler = 7, //prescaler value, 7 means pckl / 8
         .auto_reload = 1000, //1khz
-        .counter_direction = .Up,
+        .counter_mode = .{ .up = {} },
     });
 
     //then we configure the channels
