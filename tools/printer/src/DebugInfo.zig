@@ -71,12 +71,16 @@ pub fn deinit(self: *DebugInfo, allocator: std.mem.Allocator) void {
 
 /// The `file_path` field has the same lifetime as `DebugInfo`.
 pub const QueryResult = struct {
-    line: ?u32 = null,
-    column: ?u32 = null,
-    dir_path: ?[]const u8 = null,
-    file_path: ?[]const u8 = null,
+    source_location: ?ResolvedSourceLocation = null,
     function_name: ?[]const u8 = null,
     module_name: ?[]const u8 = null,
+};
+
+pub const ResolvedSourceLocation = struct {
+    line: u32,
+    column: u32,
+    dir_path: []const u8,
+    file_path: []const u8,
 };
 
 pub fn query(self: *DebugInfo, address: u64) QueryResult {
@@ -93,10 +97,12 @@ pub fn query(self: *DebugInfo, address: u64) QueryResult {
         const file = &self.files[src_loc.file_index];
         const dir_path = self.directories[file.dir_index];
 
-        result.line = src_loc.line;
-        result.column = src_loc.column;
-        result.dir_path = dir_path;
-        result.file_path = file.path;
+        result.source_location = .{
+            .line = src_loc.line,
+            .column = src_loc.column,
+            .dir_path = dir_path,
+            .file_path = file.path,
+        };
     }
 
     for (self.functions) |function| {

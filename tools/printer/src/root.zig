@@ -83,7 +83,9 @@ pub const Annotator = struct {
                         index += new_line_index + 1;
 
                         try output_location_info(out_stream, out_tty_config, address, query_result);
-                        try output_source_line(out_stream, out_tty_config, query_result);
+                        if (query_result.source_location) |src_loc| {
+                            try output_source_line(out_stream, out_tty_config, src_loc);
+                        }
                     }
 
                     continue :loop .waiting;
@@ -105,21 +107,14 @@ fn output_location_info(
 ) !void {
     try out_tty_config.setColor(out_stream, .bold);
 
-    if (query_result.dir_path != null and query_result.file_path != null)
-        try out_stream.print("{s}:", .{std.fs.path.fmtJoin(&.{ query_result.dir_path.?, query_result.file_path.? })})
-    else
-        try out_stream.writeAll("???:");
-
-    if (query_result.line) |line| {
-        try out_stream.print("{}:", .{line});
+    if (query_result.source_location) |src_loc| {
+        try out_stream.print("{s}:{}:{}", .{
+            std.fs.path.fmtJoin(&.{ src_loc.dir_path, src_loc.file_path }),
+            src_loc.line,
+            src_loc.column,
+        });
     } else {
-        try out_stream.writeAll("?:");
-    }
-
-    if (query_result.column) |column| {
-        try out_stream.print("{}", .{column});
-    } else {
-        try out_stream.writeAll("?");
+        try out_stream.writeAll("???:?:?");
     }
 
     try out_tty_config.setColor(out_stream, .reset);
@@ -137,18 +132,12 @@ fn output_location_info(
 fn output_source_line(
     out_stream: anytype,
     out_tty_config: std.io.tty.Config,
-    query_result: DebugInfo.QueryResult,
+    src_loc: DebugInfo.ResolvedSourceLocation,
 ) !void {
-    // we need all these to output the source line
-    const column = query_result.column orelse return;
-    const line_no = query_result.line orelse return;
-    const dir_path = query_result.dir_path orelse return;
-    const file_path = query_result.file_path orelse return;
-
-    var dir = try std.fs.cwd().openDir(dir_path, .{});
+    var dir = try std.fs.cwd().openDir(src_loc.dir_path, .{});
     defer dir.close();
 
-    const file = dir.openFile(file_path, .{}) catch return;
+    const file = dir.openFile(src_loc.file_path, .{}) catch return;
     defer file.close();
 
     var buf_reader = std.io.bufferedReader(file.reader());
@@ -171,7 +160,7 @@ fn output_source_line(
             else => return err,
         } orelse return;
 
-        if (line_no == line_count) {
+        if (src_loc.line == line_count) {
             break :loop .{
                 .line = line,
                 .too_long = too_long,
@@ -185,8 +174,8 @@ fn output_source_line(
     }
     try out_stream.writeAll("\n");
 
-    if (column > 0) {
-        const space_needed = column - 1;
+    if (src_loc.column > 0) {
+        const space_needed = src_loc.column - 1;
 
         try out_stream.writeByteNTimes(' ', space_needed);
         try out_tty_config.setColor(out_stream, .green);
