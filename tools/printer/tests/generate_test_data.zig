@@ -58,5 +58,7 @@ pub fn main() !void {
         });
     }
 
-    try std.zon.stringify.serialize(all_data.items, .{}, test_data_file.writer());
+    const writer = test_data_file.writer();
+    try std.zon.stringify.serialize(all_data.items, .{}, writer);
+    try writer.writeByte('\n');
 }

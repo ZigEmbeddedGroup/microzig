@@ -104,13 +104,8 @@ pub fn build(b: *std.Build) void {
         });
     }
 
-    const test_data_fmt = b.addFmt(.{
-        .paths = &.{ "tests/test_data.zon" },
-    });
-    test_data_fmt.step.dependOn(&generate_test_data_run.step);
-
     const generate_test_results_step = b.step("generate-test-data", "regenerate test data");
-    generate_test_results_step.dependOn(&test_data_fmt.step);
+    generate_test_results_step.dependOn(&generate_test_data_run.step);
 
     const run_tests_run = b.addRunArtifact(test_exe);
     const run_tests_step = b.step("test", "test printer");
