@@ -9,7 +9,7 @@
             .hash = "serial-0.0.1-PoeRzI20AABcp4FffI6HXKOL6LcGPKmeqfN4Bna4-YYm",
         },
         // use to compile the test program
-        .microzig = .{ .path = "../.." },
+        .microzig = .{ .path = "../..", .lazy = true },
     },
     .paths = .{
         "build.zig",

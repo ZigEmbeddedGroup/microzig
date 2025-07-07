@@ -346,8 +346,14 @@ pub fn MicroBuild(port_select: PortSelect) type {
             ///     exe.link_function_sections = true;
             strip_unused_symbols: bool = true,
 
-            /// Unwind tables option for the firmware executable
+            /// Unwind tables option for the firmware executable.
             unwind_tables: ?std.builtin.UnwindTables = null,
+
+            /// Error tracing option for the firmware executable.
+            error_tracing: ?bool = null,
+
+            /// Dwarf format option for the firmware executable.
+            dwarf_format: ?std.dwarf.Format = null,
 
             /// Additional patches the user may apply to the generated register
             /// code. This does not override the chip's existing patches.
@@ -535,6 +541,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         .single_threaded = options.single_threaded orelse target.single_threaded,
                         .strip = options.strip,
                         .unwind_tables = options.unwind_tables,
+                        .error_tracing = options.error_tracing,
+                        .dwarf_format = options.dwarf_format,
                     }),
                     .linkage = .static,
                 }),

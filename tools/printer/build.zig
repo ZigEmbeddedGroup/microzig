@@ -49,25 +49,6 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const test_program_elf = blk: {
-        const mz_dep = b.dependency("microzig", .{});
-
-        const mb = @import("microzig").MicroBuild(.{
-            .rp2xxx = true,
-        }).init(b, mz_dep) orelse return;
-
-        break :blk mb.add_firmware(.{
-            .name = "test_program",
-            .root_source_file = b.path("tests/test_program.zig"),
-            .optimize = .Debug,
-            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
-        }).get_emitted_elf();
-    };
-
-    const test_program_elf_mod = b.createModule(.{
-        .root_source_file = test_program_elf,
-    });
-
     const generate_test_data_exe = b.addExecutable(.{
         .name = "generate_results",
         .root_module = b.createModule(.{
@@ -75,7 +56,6 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "common", .module = test_common_mod },
                 .{ .name = "printer", .module = printer_mod },
-                .{ .name = "elf", .module = test_program_elf_mod },
             },
             .target = target,
             .optimize = optimize,
@@ -88,7 +68,6 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tests/test.zig"),
             .imports = &.{
                 .{ .name = "common", .module = test_common_mod },
-                .{ .name = "elf", .module = test_program_elf_mod },
                 .{ .name = "printer", .module = printer_mod },
             },
             .target = target,
@@ -97,9 +76,41 @@ pub fn build(b: *std.Build) void {
     });
 
     const generate_test_data_run = b.addRunArtifact(generate_test_data_exe);
+    if (b.option(bool, "rebuild-test-elf", "rebuild the test program elf") == true) {
+        const mz_dep = b.lazyDependency("microzig", .{}) orelse return;
+
+        const mb = @import("microzig").MicroBuild(.{
+            .rp2xxx = true,
+        }).init(b, mz_dep) orelse return;
+
+        generate_test_data_run.addFileArg(blk: {
+            break :blk mb.add_firmware(.{
+                .name = "test_program.dwarf32",
+                .root_source_file = b.path("tests/test_program.zig"),
+                .optimize = .Debug,
+                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+                .dwarf_format = .@"32",
+            }).get_emitted_elf();
+        });
+
+        generate_test_data_run.addFileArg(blk: {
+            break :blk mb.add_firmware(.{
+                .name = "test_program.dwarf64",
+                .root_source_file = b.path("tests/test_program.zig"),
+                .optimize = .Debug,
+                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+                .dwarf_format = .@"64",
+            }).get_emitted_elf();
+        });
+    }
+
+    const test_data_fmt = b.addFmt(.{
+        .paths = &.{ "tests/test_data.zon" },
+    });
+    test_data_fmt.step.dependOn(&generate_test_data_run.step);
 
     const generate_test_results_step = b.step("generate-test-data", "regenerate test data");
-    generate_test_results_step.dependOn(&generate_test_data_run.step);
+    generate_test_results_step.dependOn(&test_data_fmt.step);
 
     const run_tests_run = b.addRunArtifact(test_exe);
     const run_tests_step = b.step("test", "test printer");

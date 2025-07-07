@@ -7,6 +7,6 @@ pub const Test = struct {
 };
 
 pub const Data = struct {
-    zig_version_string: []const u8,
+    elf_path: []const u8,
     tests: []const Test,
 };
