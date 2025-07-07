@@ -49,19 +49,23 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const test_program_exe = b.addExecutable(.{
-        .name = "test_program",
-        .root_module = b.createModule(.{
+    const test_program_elf = blk: {
+        const mz_dep = b.dependency("microzig", .{});
+
+        const mb = @import("microzig").MicroBuild(.{
+            .rp2xxx = true,
+        }).init(b, mz_dep) orelse return;
+
+        break :blk mb.add_firmware(.{
+            .name = "test_program",
             .root_source_file = b.path("tests/test_program.zig"),
-            .target = b.resolveTargetQuery(std.Target.Query.parse(.{
-                .arch_os_abi = "x86_64-linux-gnu",
-            }) catch unreachable),
             .optimize = .Debug,
-        }),
-    });
+            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+        }).get_emitted_elf();
+    };
 
     const test_program_elf_mod = b.createModule(.{
-        .root_source_file = test_program_exe.getEmittedBin(),
+        .root_source_file = test_program_elf,
     });
 
     const generate_test_data_exe = b.addExecutable(.{

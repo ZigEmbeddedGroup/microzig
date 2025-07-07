@@ -33,7 +33,7 @@ pub fn main() !void {
         if (!region.flags.exec) continue;
 
         var address = region.start_address;
-        while (address < region.end_address) : (address += 0x1000) {
+        while (address < region.end_address) : (address += 1024) {
             const query_result = try debug_info.query(allocator, address);
             try tests.append(allocator, .{
                 .address = address,

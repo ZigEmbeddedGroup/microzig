@@ -88,7 +88,7 @@ pub fn query(self: *DebugInfo, allocator: std.mem.Allocator, address: u64) !Quer
         }
     }.compare);
 
-    if (index == 0 or index != self.loc_list.len) {
+    if (index > 0 and index != self.loc_list.len) {
         const src_loc = self.loc_list[index - 1];
         const file = &self.files[src_loc.file_index];
         const dir_path = self.directories[file.dir_index];

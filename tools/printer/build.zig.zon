@@ -8,6 +8,8 @@
             .url = "git+https://github.com/ZigEmbeddedGroup/serial#ad338133eda8d86332718bbdc58c641a66307c84",
             .hash = "serial-0.0.1-PoeRzI20AABcp4FffI6HXKOL6LcGPKmeqfN4Bna4-YYm",
         },
+        // use to compile the test program
+        .microzig = .{ .path = "../.." },
     },
     .paths = .{
         "build.zig",
