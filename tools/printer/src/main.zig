@@ -13,7 +13,8 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     if (args.len <= 1) {
-        return error.UsageError;
+        try std.io.getStdErr().writeAll("usage: ./printer elf_file [input_file]\n");
+        std.process.exit(1);
     }
 
     const elf_file = try std.fs.cwd().openFile(args[1], .{});

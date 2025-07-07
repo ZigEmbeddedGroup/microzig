@@ -20,6 +20,16 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ## Changes
 
+## [Printer]($section.id('2025-07-07'))
+
+[]($image.asset('printer-01.png'))
+
+Printer is a tool to process logging output from your code and print it in a
+readable and pretty format. As of now it only annotates addresses from stack
+traces with source code locations, but it can be extended later to also print
+defmt (when this kind of logger will be added to microzig). You can also use it
+as a library to write build system tools (checkout the rp2xxx_flasher example).
+
 ## [Segger RTT Support]($section.id('2025-06-26'))
 
 Segger makes a popular open source utility for sending and receiving data
@@ -45,13 +55,13 @@ exist](https://github.com/embassy-rs/stm32-data) just to provide consistent
 data structure between MCUs. This consistency makes it easier to write HALs
 that are portable across multiple MCUs.
 
-### [Initial micro:bit support]($section.id('2025-06-19'))
+## [Initial micro:bit support]($section.id('2025-06-19'))
 
 Add support for the micro:bit 5x5 led display.
 
 []($image.asset('microbit-display.jpeg'))
 
-### [Linker Script Generation]($section.id('2025-06-18'))
+## [Linker Script Generation]($section.id('2025-06-18'))
 
 Every firmware needs a linker script that places stuff where it belongs in
 memory. When porting microzig to a new target you must face the challenge of
@@ -211,7 +221,7 @@ SECTIONS
 INSERT BEFORE .flash_start;
 ```
 
-#### FYI
+### FYI
 - If the ram memory region used by the linker script generator is executable, a
   `.ram_text` section will be included for code that should be placed in ram.
   This applies to the rp2040 target where the section tagged as ram is

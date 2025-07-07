@@ -144,7 +144,6 @@ fn output_source_line(
     const file_path = query_result.file_path orelse return;
 
     const file = std.fs.cwd().openFile(file_path, .{}) catch {
-        // warn
         return;
     };
     defer file.close();

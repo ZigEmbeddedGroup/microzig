@@ -1,11 +1,9 @@
 # Printer
 
-Printer is supposed to process logging output from your microzig code and show
-it in a readable format.
-
-## Features:
-- [x] pretty stack traces (similar to those of a non freestanding zig binary)
-- [ ] defmt support
+Printer is a tool to process logging output from your code and print it in a
+readable and pretty format. As of now it only annotates addresses from stack
+traces with source code locations, but it can be extended later to also print
+defmt (when this kind of logger will be added to microzig).
 
 ## Use it like a library!
 
