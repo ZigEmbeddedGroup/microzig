@@ -23,8 +23,8 @@ pub const SectionTypes = enum {
 };
 
 pub const Region = struct {
-    start_address: usize,
-    end_address: usize,
+    start_address: u64,
+    end_address: u64,
     flags: Flags,
 
     pub const Flags = packed struct {

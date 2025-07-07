@@ -94,10 +94,9 @@ jobs:
       - name: Build Printer
         run: zig build
         working-directory: tools/printer
-      # TODO: actual testing
-      # - name: Test Printer
-      #   run: zig build test
-      #   working-directory: tools/printer
+      - name: Test Printer
+        run: zig build test
+        working-directory: tools/printer
 
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
