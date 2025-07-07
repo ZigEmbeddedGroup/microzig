@@ -15,5 +15,6 @@
         "README.md",
         "src",
         "examples",
+        "tests",
     },
 }
