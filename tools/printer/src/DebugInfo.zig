@@ -73,13 +73,13 @@ pub fn deinit(self: *DebugInfo, allocator: std.mem.Allocator) void {
 pub const QueryResult = struct {
     line: ?u32 = null,
     column: ?u32 = null,
+    dir_path: ?[]const u8 = null,
     file_path: ?[]const u8 = null,
     function_name: ?[]const u8 = null,
     module_name: ?[]const u8 = null,
 };
 
-/// Caller must free file_path if present in `QueryResult`.
-pub fn query(self: *DebugInfo, allocator: std.mem.Allocator, address: u64) !QueryResult {
+pub fn query(self: *DebugInfo, address: u64) QueryResult {
     var result: QueryResult = .{};
 
     const index = std.sort.upperBound(SourceLocation, self.loc_list, address, struct {
@@ -95,7 +95,8 @@ pub fn query(self: *DebugInfo, allocator: std.mem.Allocator, address: u64) !Quer
 
         result.line = src_loc.line;
         result.column = src_loc.column;
-        result.file_path = try std.fs.path.join(allocator, &.{ dir_path, file.path });
+        result.dir_path = dir_path;
+        result.file_path = file.path;
     }
 
     for (self.functions) |function| {

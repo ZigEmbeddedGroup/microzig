@@ -24,12 +24,12 @@ pub fn main() !void {
         defer debug_info.deinit(allocator);
 
         for (data.tests) |t| {
-            const actual = try debug_info.query(allocator, t.address);
-            defer if (actual.file_path) |file_path| allocator.free(file_path);
+            const actual = debug_info.query(t.address);
 
             try std.testing.expectEqual(t.query_result.line, actual.line);
             try std.testing.expectEqual(t.query_result.column, actual.column);
             try expect_equal_maybe_strings(t.query_result.file_path, actual.file_path);
+            try expect_equal_maybe_strings(t.query_result.dir_path, actual.dir_path);
             try expect_equal_maybe_strings(t.query_result.function_name, actual.function_name);
             try expect_equal_maybe_strings(t.query_result.module_name, actual.module_name);
         }

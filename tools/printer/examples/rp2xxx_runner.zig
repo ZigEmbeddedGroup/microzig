@@ -59,6 +59,6 @@ pub fn main() !void {
     var buf: [4096]u8 = undefined;
     while (true) {
         const n = try serial_device.read(&buf);
-        try annotator.process(allocator, buf[0..n], elf, &debug_info, out_stream, out_tty_config);
+        try annotator.process(buf[0..n], elf, &debug_info, out_stream, out_tty_config);
     }
 }

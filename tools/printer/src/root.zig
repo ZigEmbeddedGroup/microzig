@@ -21,7 +21,6 @@ pub const Annotator = struct {
 
     pub fn process(
         self: *Annotator,
-        allocator: std.mem.Allocator,
         data: []const u8,
         elf: Elf,
         debug_info: *DebugInfo,
@@ -78,8 +77,7 @@ pub const Annotator = struct {
             .print_address => |address| {
                 if (std.mem.indexOfScalar(u8, data[index..], '\n')) |new_line_index| {
                     if (elf.is_address_executable(address)) {
-                        const query_result = try debug_info.query(allocator, address);
-                        defer if (query_result.file_path) |path| allocator.free(path);
+                        const query_result = debug_info.query(address);
 
                         try out_stream.writeAll(data[index..][0 .. new_line_index + 1]);
                         index += new_line_index + 1;
@@ -107,7 +105,10 @@ fn output_location_info(
 ) !void {
     try out_tty_config.setColor(out_stream, .bold);
 
-    try out_stream.print("{s}:", .{query_result.file_path orelse "???"});
+    if (query_result.dir_path != null and query_result.file_path != null)
+        try out_stream.print("{s}:", .{std.fs.path.fmtJoin(&.{ query_result.dir_path.?, query_result.file_path.? })})
+    else
+        try out_stream.writeAll("???:");
 
     if (query_result.line) |line| {
         try out_stream.print("{}:", .{line});
@@ -141,11 +142,13 @@ fn output_source_line(
     // we need all these to output the source line
     const column = query_result.column orelse return;
     const line_no = query_result.line orelse return;
+    const dir_path = query_result.dir_path orelse return;
     const file_path = query_result.file_path orelse return;
 
-    const file = std.fs.cwd().openFile(file_path, .{}) catch {
-        return;
-    };
+    var dir = try std.fs.cwd().openDir(dir_path, .{});
+    defer dir.close();
+
+    const file = dir.openFile(file_path, .{}) catch return;
     defer file.close();
 
     var buf_reader = std.io.bufferedReader(file.reader());

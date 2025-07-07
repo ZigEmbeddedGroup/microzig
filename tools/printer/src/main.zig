@@ -45,7 +45,6 @@ pub fn main() !void {
         const n = try in_stream.read(&buf);
 
         try annotator.process(
-            allocator,
             buf[0..n],
             elf,
             &debug_info,

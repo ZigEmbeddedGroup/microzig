@@ -44,7 +44,7 @@ pub fn main() !void {
 
             var address = region.start_address;
             while (address < region.end_address) : (address += 0x1000) {
-                const query_result = try debug_info.query(allocator, address);
+                const query_result = debug_info.query(address);
                 try tests.append(allocator, .{
                     .address = address,
                     .query_result = query_result,
