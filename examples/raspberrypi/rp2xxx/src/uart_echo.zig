@@ -2,44 +2,67 @@ const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
 
-const rp2xxx = microzig.hal;
-const gpio = rp2xxx.gpio;
-const clocks = rp2xxx.clocks;
+const rpxxxx = microzig.hal;
+const gpio = rpxxxx.gpio;
+const clocks = rpxxxx.clocks;
+const rptime = rpxxxx.time;
 
 const led = gpio.num(25);
-const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
-const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
+const uart0 = rpxxxx.uart.instance.num(0);
+const baud_rate = 9600;
+const uart0_tx_pin = gpio.num(0);
+const uart0_rx_pin = gpio.num(1);
 
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
+    init();
 
-    uart.apply(.{
-        .baud_rate = baud_rate,
-        .clock_config = rp2xxx.clock_config,
-    });
-
-    var data: [1]u8 = .{0};
+    var data: [4]u8 = undefined;
     while (true) {
-        // Read one byte, timeout disabled
-        uart.read_blocking(&data, null) catch {
-            // You need to clear UART errors before making a new transaction
-            uart.clear_errors();
+        uart0.read_blocking(data[0..3], null) catch {
+            led.toggle();
+            uart0.clear_errors();
             continue;
         };
 
-        //tries to write one byte with 100ms timeout
-        uart.write_blocking(&data, time.Duration.from_ms(100)) catch {
-            uart.clear_errors();
+        const n = received(&data);
+        uart0.write_blocking(data[0..n], null) catch {
+            led.toggle();
+            uart0.clear_errors();
         };
-        // Toggle the led every time we think we've received a character so we
-        // know something is going on.
-        led.toggle();
+
+        toggle(n);
+
+        data = .{ 0, 0, 0, 0 };
     }
+}
+
+fn toggle(n: usize) void {
+    for (0..n * 2) |_| {
+        led.toggle();
+        rptime.sleep_ms(250);
+    }
+}
+
+fn received(data: []u8) u4 {
+    var i: u4 = 0;
+    for (data[0..]) |x| {
+        if (x == 0) {
+            return i;
+        }
+        i += 1;
+    }
+    return 0;
+}
+
+fn init() void {
+    led.set_function(.sio);
+    led.set_direction(.out);
+
+    uart0_tx_pin.set_function(.uart);
+    uart0_rx_pin.set_function(.uart);
+
+    uart0.apply(.{
+        .baud_rate = baud_rate,
+        .clock_config = rpxxxx.clock_config,
+    });
 }
