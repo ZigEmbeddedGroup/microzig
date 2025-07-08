@@ -129,12 +129,15 @@ pub const TMC2209 = struct {
 
         std.log.debug("read request {x}", .{buf});
 
-        self.clock_device.sleep_ms(10);
-
-        // the read request will be in the rx buffer since the tx and rx pins are physically connected
-        _ = try self.uart.read(&buf);
+        self.clock_device.sleep_ms(100);
+        // The read request will be in the rx buffer since the
+        // tx and rx pins are physically connected.
+        _ = self.uart.read(&buf) catch |err| {
+            std.log.debug("read err {}", .{err});
+        };
 
         std.log.debug("read crud {x}", .{buf});
+        self.clock_device.sleep_ms(10);
 
         var resp: [8]u8 = undefined;
         const r1 = try self.uart.read(&resp);
@@ -241,7 +244,7 @@ pub const TMC2209 = struct {
         } = undefined,
     };
 
-    const ifcnt = struct {
+    pub const ifcnt = struct {
         register: u8 = 0x02,
         val: packed struct(u32) {
             ifcnt: u8 = 0,
@@ -518,28 +521,24 @@ test "read" {
 
     const data = [_]u8{
         0x00, 0x00, 0x00, 0x00,
-        0x05, 0xff, 0xec, 0x14,
-        0x00, 0x00, 0x05, 0xec,
+        0x05, 0xff, 0x02, 0x00,
+        0x00, 0x00, 0x07, 0xe2,
     };
 
-    var td = Test_Stream.init(&data, true);
-    defer td.deinit();
-    td.connected = true;
-
     var tc = Test_Clock.init();
+    var ts = Test_Stream.init(&data, true);
+    ts.connected = true;
+    defer ts.deinit();
 
-    var stepper = try TMC2209.init(.{ .address = 0, .uart = td.stream_device(), .clock = tc.clock_device() });
+    var stepper = try TMC2209.init(.{ .address = 0, .uart = ts.stream_device(), .clock = tc.clock_device() });
 
-    var cf = TMC2209.chopconf{};
-    try stepper.read(&cf);
+    var x = TMC2209.ifcnt{};
+    try stepper.read(&x);
 
-    try std.testing.expectEqual(5, cf.val.toff);
-    try std.testing.expectEqual(4, cf.val.mres);
-    try std.testing.expectEqual(1, cf.val.intpol);
-    try std.testing.expectEqual(0, cf.val.dedge);
+    try std.testing.expectEqual(7, x.val.ifcnt);
 
-    const sent = [_]u8{ 0x05, 0x00, 0x6c, 0xca };
-    try td.expect_sent(&sent);
+    const sent = [_]u8{ 0x05, 0x00, x.register, 0x8f };
+    try ts.expect_sent(&sent);
 }
 
 test "move" {

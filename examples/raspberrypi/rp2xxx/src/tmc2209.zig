@@ -38,13 +38,17 @@ pub fn main() !void {
         .address = 0,
     });
 
+    // var c1 = TMC2209.ifcnt{};
+    // try driver.read(&c1);
+    // std.log.debug("c1 {d}", .{c1.val.ifcnt});
+
     try driver.set_microsteps(4);
     try driver.spreadcycle();
 
-    var i: f32 = 1;
+    var i: f32 = 5;
     while (true) {
         std.log.debug("move {d}", .{5 * i});
-        try driver.move(5 * i);
+        try driver.move(i);
         i *= -1;
         time.sleep_ms(5000);
     }
