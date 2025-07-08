@@ -10,13 +10,14 @@ pub const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
 pub const URS = microzig.chip.types.peripherals.timer_v1.URS;
 pub const CMS = microzig.chip.types.peripherals.timer_v1.CMS;
 pub const CCDS = microzig.chip.types.peripherals.timer_v1.CCDS;
+pub const TI1S = microzig.chip.types.peripherals.timer_v1.TI1S;
 pub const CKD = microzig.chip.types.peripherals.timer_v1.CKD;
 pub const FilterValue = microzig.chip.types.peripherals.timer_v1.FilterValue;
 pub const CCMR_Input_CCS = microzig.chip.types.peripherals.timer_v1.CCMR_Input_CCS;
 pub const ETP = microzig.chip.types.peripherals.timer_v1.ETP;
 pub const ETPS = microzig.chip.types.peripherals.timer_v1.ETPS;
 pub const MSM = microzig.chip.types.peripherals.timer_v1.MSM;
-
+pub const MMS = microzig.chip.types.peripherals.timer_v1.MMS;
 pub const OCM = microzig.chip.types.peripherals.timer_v1.OCM; //OCM stands for Output Compare Mode
 
 pub const Instances = create_peripheral_enum("TIM", "TIM_GP16");
@@ -144,10 +145,12 @@ pub const TimerGenealConfig = struct {
     one_pulse_mode: bool = false, //if true, timer will stop after one pulse
     event_source: URS = .CounterOnly, //update request source
     clock_division: CKD = .Div1, // <- tDTS signal
+    TI1_source: TI1S = .Normal,
 
     enable_update_interrupt: bool = false, //if true, timer will generate an interrupt on update event
     enable_update_dma_request: bool = false, //if true, timer will generate a DMA request on update event
     channel_dma_trigger: CCDS = .OnCompare, //selects when the DMA request is generated, applies to all channels
+    trigger_output: MMS = .Reset,
     slave_config: ?SlaveModeConfig = null,
 };
 
@@ -199,7 +202,11 @@ pub const GPTimer = struct {
             .ARPE = @as(u1, @intFromEnum(config.auto_reload_mode)),
             .URS = config.event_source,
         });
-        regs.CR2.modify(.{ .CCDS = config.channel_dma_trigger });
+        regs.CR2.modify(.{
+            .CCDS = config.channel_dma_trigger,
+            .TI1S = config.TI1_source,
+            .MMS = config.trigger_output,
+        });
         self.set_counter_mode(config.counter_mode);
         const enable_dma: u1 = @intFromBool(config.enable_update_dma_request);
         const enable_interrupt: u1 = @intFromBool(config.enable_update_interrupt);
