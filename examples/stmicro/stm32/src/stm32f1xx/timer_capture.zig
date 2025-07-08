@@ -31,7 +31,7 @@ var global_downtime: i32 = 0;
 var global_dif: u32 = 0;
 
 var freq: i32 = 0;
-var duty_cicle: f32 = 0;
+var duty_cycle: f32 = 0;
 
 //function that handles timer interrupts
 //since the timer is reset at each rising edge,
@@ -51,7 +51,7 @@ fn isr_tim2() callconv(.C) void {
         global_dif = @intCast(@abs(global_uptime - global_downtime));
         freq = @divFloor(1_000_000, global_uptime);
 
-        duty_cicle = (rev_fch2 / rev_fch1) * 100;
+        duty_cycle = (rev_fch2 / rev_fch1) * 100;
     }
 
     comp.clear_interrupts();
@@ -125,7 +125,7 @@ pub fn main() !void {
         std.log.info("uptime: {d}", .{global_uptime});
         std.log.info("downtime: {d}", .{global_downtime});
         std.log.info("freq: {d}HZ", .{freq});
-        std.log.info("duty: {d:.2}%", .{duty_cicle});
+        std.log.info("duty: {d:.2}%", .{duty_cycle});
 
         cd.sleep_ms(1350);
     }
