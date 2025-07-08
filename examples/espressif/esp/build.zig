@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
     const targets = [_]TargetDescription{
         .{ .prefix = "esp32_c3", .target = mb.ports.esp.chips.esp32_c3 },
         .{ .prefix = "esp32_c3_direct_boot", .target = mb.ports.esp.chips.esp32_c3_direct_boot },
+        .{ .prefix = "esp32_c3_flashless", .target = mb.ports.esp.chips.esp32_c3_flashless },
     };
 
     const available_examples = [_]Example{
