@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) void {
 
     const targets = [_]TargetDescription{
         .{ .prefix = "esp32_c3", .target = mb.ports.esp.chips.esp32_c3 },
-        .{ .prefix = "esp32_c3_direct_boot", .target = mb.ports.esp.chips.esp32_c3_direct_boot },
+        // .{ .prefix = "esp32_c3_direct_boot", .target = mb.ports.esp.chips.esp32_c3_direct_boot },
     };
 
     const available_examples = [_]Example{
@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "systimer", .file = "src/systimer.zig" },
         .{ .name = "ws2812_blinky", .file = "src/ws2812_blinky.zig" },
+        .{ .name = "wifi", .file = "src/wifi.zig" },
     };
 
     for (available_examples) |example| {

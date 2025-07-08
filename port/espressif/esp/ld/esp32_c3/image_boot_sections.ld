@@ -32,11 +32,24 @@ SECTIONS
   {
     KEEP(*(.app_desc))
     *(.rodata*)
+
+    /* wifi rodata */
+    *(.rodata_wlog_*.*)
   } > DROM
 
   .ram_text :
   {
     KEEP(*(.ram_text))
+
+    /* wifi rwtext */
+    *(.wifi0iram  .wifi0iram.*)
+    *(.wifirxiram  .wifirxiram.*)
+    *(.wifislprxiram  .wifislprxiram.*)
+    *(.wifislpiram  .wifislpiram.*)
+    *(.phyiram  .phyiram.*)
+    *(.iram1  .iram1.*)
+    *(.wifiextrairam.* )
+    *(.coexiram.* )
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
@@ -52,6 +65,10 @@ SECTIONS
     microzig_data_start = .;
     *(.sdata*)
     *(.data*)
+
+    /* wifi data */
+    *(.dram1 .dram1.*)
+
     microzig_data_end = .;
   } > DRAM
 
