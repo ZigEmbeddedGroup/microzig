@@ -1,7 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig.zig");
 
+/// Fills .bss with zeroes and copies .data from flash into ram. May be called
+/// by the cpu module at startup.
 pub fn initialize_system_memories() void {
+
     // Contains references to the microzig .data and .bss sections, also
     // contains the initial load address for .data if it is in flash.
     const sections = struct {
