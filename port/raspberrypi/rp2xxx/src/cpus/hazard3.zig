@@ -1,6 +1,4 @@
 const std = @import("std");
-const root = @import("root");
-const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 const riscv32_common = @import("riscv32-common");
 
@@ -129,11 +127,11 @@ pub const interrupt = struct {
     }
 
     pub inline fn has_ram_vectors() bool {
-        return @hasField(@TypeOf(microzig_options.cpu), "ram_vectors") and microzig_options.cpu.ram_vectors;
+        return @hasField(@TypeOf(microzig.options.cpu), "ram_vectors") and microzig.options.cpu.ram_vectors;
     }
 
     pub inline fn has_ram_vectors_section() bool {
-        return @hasField(@TypeOf(microzig_options.cpu), "has_ram_vectors_section") and microzig_options.cpu.has_ram_vectors_section;
+        return @hasField(@TypeOf(microzig.options.cpu), "has_ram_vectors_section") and microzig.options.cpu.has_ram_vectors_section;
     }
 
     pub fn set_handler(int: ExternalInterrupt, handler: ?Handler) ?Handler {
@@ -203,7 +201,7 @@ pub const startup_logic = struct {
 
     pub export fn _start_c() callconv(.c) noreturn {
         if (!microzig.config.ram_image) {
-            root.initialize_system_memories();
+            microzig.utilities.initialize_system_memories();
         }
 
         // Move vector table to RAM if requested
@@ -234,10 +232,10 @@ pub const startup_logic = struct {
     pub export fn _vector_table() align(64) linksection("core_vectors") callconv(.naked) noreturn {
         comptime {
             // NOTE: using the union variant .naked here is fine because both variants have the same layout
-            @export(if (microzig_options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
-            @export(if (microzig_options.interrupts.MachineSoftware) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_software_handler" });
-            @export(if (microzig_options.interrupts.MachineTimer) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_timer_handler" });
-            @export(if (microzig_options.interrupts.MachineExternal) |handler| handler.naked else &machine_external_interrupt, .{ .name = "_machine_external_handler" });
+            @export(if (microzig.options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
+            @export(if (microzig.options.interrupts.MachineSoftware) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_software_handler" });
+            @export(if (microzig.options.interrupts.MachineTimer) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_timer_handler" });
+            @export(if (microzig.options.interrupts.MachineExternal) |handler| handler.naked else &machine_external_interrupt, .{ .name = "_machine_external_handler" });
         }
 
         asm volatile (
@@ -260,7 +258,7 @@ pub const startup_logic = struct {
         var temp: [vector_count]Handler = @splat(microzig.interrupt.unhandled);
 
         for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
-            if (@field(microzig_options.interrupts, field.name)) |handler| {
+            if (@field(microzig.options.interrupts, field.name)) |handler| {
                 temp[field.value] = handler;
             }
         }

@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const root = @import("root");
 
 pub const interrupt = struct {
     pub fn enable_interrupts() void {

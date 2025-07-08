@@ -51,7 +51,7 @@ pub const panic = std.debug.FullPanic(struct {
 
         // Attach a breakpoint. this might trigger another panic internally, so
         // only do that if requested.
-        if (root.microzig_options.breakpoint_in_panic) {
+        if (options.breakpoint_in_panic) {
             std.log.info("triggering breakpoint...", .{});
             @breakpoint();
         }
@@ -92,7 +92,16 @@ pub const Options = struct {
 
     /// If true, will trigger a breakpoint in the default panic handler.
     breakpoint_in_panic: bool = false,
+
+    /// The default panic called when main returns an error will include the
+    /// name of the error. If this option is true, a panic will be invoked with
+    /// only a static message, avoiding the call to @errorName. This can help
+    /// reduce code size as the string literals for error names no longer have to
+    /// be included in the executable.
+    simple_panic_if_main_errors: bool = false,
 };
+
+pub const options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
