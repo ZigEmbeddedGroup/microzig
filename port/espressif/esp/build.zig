@@ -7,6 +7,7 @@ const Self = @This();
 chips: struct {
     esp32_c3: *const microzig.Target,
     esp32_c3_direct_boot: *const microzig.Target,
+    esp32_c3_flashless: *const microzig.Target,
 },
 
 boards: struct {},
@@ -102,6 +103,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         dep,
                         "final.ld",
                         b.path("ld/esp32_c3/direct_boot_sections.ld"),
+                        b.path("ld/esp32_c3/rom_functions.ld"),
+                    ),
+                },
+            }),
+            .esp32_c3_flashless = chip_esp32_c3.derive(.{
+                .ram_image = true,
+                .linker_script = .{
+                    .generate = .memory_regions,
+                    .file = generate_linker_script(
+                        dep,
+                        "final.ld",
+                        b.path("ld/esp32_c3/flashless_sections.ld"),
                         b.path("ld/esp32_c3/rom_functions.ld"),
                     ),
                 },
