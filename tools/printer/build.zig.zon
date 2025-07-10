@@ -1,0 +1,22 @@
+.{
+    .name = .tools_printer,
+    .version = "0.0.0",
+    .fingerprint = 0x72009d00e5692d30,
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{
+        .serial = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/serial#ad338133eda8d86332718bbdc58c641a66307c84",
+            .hash = "serial-0.0.1-PoeRzI20AABcp4FffI6HXKOL6LcGPKmeqfN4Bna4-YYm",
+        },
+        // use to compile the test program
+        .microzig = .{ .path = "../..", .lazy = true },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "src",
+        "examples",
+        "tests",
+    },
+}
