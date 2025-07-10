@@ -6,16 +6,14 @@ const app = @import("app");
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
-pub const microzig_options: microzig.Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
-
 // Conditionally provide a default no-op logFn if app does not have one
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
 pub const std_options: std.Options = .{
-    .log_level = microzig_options.log_level,
-    .log_scope_levels = microzig_options.log_scope_levels,
-    .logFn = microzig_options.logFn,
+    .log_level = microzig.options.log_level,
+    .log_scope_levels = microzig.options.log_scope_levels,
+    .logFn = microzig.options.logFn,
 };
 
 // Startup logic:
@@ -72,7 +70,7 @@ export fn microzig_main() noreturn {
 
             const msg_base = "main() returned error.";
 
-            if (!builtin.strip_debug_info) {
+            if (!microzig.options.simple_panic_if_main_errors) {
                 const max_error_size = comptime blk: {
                     var max_error_size: usize = 0;
                     const err_type = @typeInfo(return_type).error_union.error_set;
@@ -97,38 +95,4 @@ export fn microzig_main() noreturn {
 
     // Main returned, just hang around here a bit.
     microzig.hang();
-}
-
-/// Contains references to the microzig .data and .bss sections, also
-/// contains the initial load address for .data if it is in flash.
-pub const sections = struct {
-    // it looks odd to just use a u8 here, but in C it's common to use a
-    // char when linking these values from the linkerscript. What's
-    // important is the addresses of these values.
-    extern var microzig_data_start: u8;
-    extern var microzig_data_end: u8;
-    extern var microzig_bss_start: u8;
-    extern var microzig_bss_end: u8;
-    extern const microzig_data_load_start: u8;
-};
-
-pub fn initialize_system_memories() void {
-    // fill .bss with zeroes
-    {
-        const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
-        const bss_end: [*]u8 = @ptrCast(&sections.microzig_bss_end);
-        const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
-
-        @memset(bss_start[0..bss_len], 0);
-    }
-
-    // load .data from flash
-    {
-        const data_start: [*]u8 = @ptrCast(&sections.microzig_data_start);
-        const data_end: [*]u8 = @ptrCast(&sections.microzig_data_end);
-        const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-        const data_src: [*]const u8 = @ptrCast(&sections.microzig_data_load_start);
-
-        @memcpy(data_start[0..data_len], data_src[0..data_len]);
-    }
 }

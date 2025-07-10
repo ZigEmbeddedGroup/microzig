@@ -1,5 +1,4 @@
 const std = @import("std");
-const root = @import("root");
 const microzig = @import("microzig");
 
 const riscv32_common = @import("riscv32-common");
@@ -35,7 +34,7 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
-        root.initialize_system_memories();
+        microzig.utilities.initialize_system_memories();
 
         microzig_main();
     }
