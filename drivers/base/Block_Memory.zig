@@ -75,7 +75,7 @@ pub const TestDevice = struct {
         td.read_enabled = false;
         td.write_enabled = false;
     }
-    pub fn erase(ctx: *anyopaque, sector: u8) WriteError!void {
+    pub fn erase(ctx: *anyopaque, sector: u32) WriteError!void {
         const td: *TestDevice = @ptrCast(@alignCast(ctx));
         if (td.write_enabled) {
             std.debug.print("Erasing sector: {}\n", .{sector});
@@ -84,7 +84,7 @@ pub const TestDevice = struct {
         }
     }
 
-    pub fn write(ctx: *anyopaque, sector: u8, data: []u8) WriteError!void {
+    pub fn write(ctx: *anyopaque, sector: u32, data: []u8) WriteError!void {
         const td: *TestDevice = @ptrCast(@alignCast(ctx));
         if (td.write_enabled) {
             std.debug.print("Writing offset: {}, data length: {}\n", .{ sector, data.len });
@@ -105,7 +105,7 @@ pub const TestDevice = struct {
             return error.ReadDisabled;
         }
     }
-    pub fn sectorSize(ctx: *anyopaque, sector: u8) BaseError!u32 {
+    pub fn sectorSize(ctx: *anyopaque, sector: u32) BaseError!u32 {
         const td: *TestDevice = @ptrCast(@alignCast(ctx));
         if (sector < td.num_sectors) {
             return td.sector_size;
@@ -132,7 +132,7 @@ test TestDevice {
 
     td.sector_size = 10;
 
-    const fd = td.Block_Memory();
+    const fd = td.block_memory();
     var buffer: [3]u8 = .{ 42, 43, 44 };
     try std.testing.expectError(error.WriteDisabled, fd.write(0, buffer[0..]));
     try std.testing.expectError(error.ReadDisabled, fd.read(0, buffer[0..]));
