@@ -4,7 +4,7 @@ const microzig = @import("microzig");
 const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 
-const timer = stm32.timer.GPTimer.init(.TIM2);
+const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
@@ -21,7 +21,7 @@ pub fn main() !void {
         .GPIOAEN = 1,
     });
 
-    const counter = timer.into_counter(8_000_000);
+    const counter = timer.counter_device(8_000_000);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     RX.set_input_mode(.pull);

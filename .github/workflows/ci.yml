@@ -77,6 +77,27 @@ jobs:
         run: zig build test
         working-directory: tools/esp-image
 
+  test-printer:
+    name: Test Printer
+    continue-on-error: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build Printer
+        run: zig build
+        working-directory: tools/printer
+      - name: Test Printer
+        run: zig build test
+        working-directory: tools/printer
+
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
     continue-on-error: true

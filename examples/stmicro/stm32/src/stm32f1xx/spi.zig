@@ -6,7 +6,7 @@ const GPTimer = microzig.hal.timer.GPTimer;
 const gpio = microzig.hal.gpio;
 const SPI = microzig.hal.spi.SPI;
 
-const timer = GPTimer.init(.TIM2);
+const timer = GPTimer.init(.TIM2).into_counter_mode();
 
 const spi = SPI.init(.SPI2);
 const MOSI = gpio.Pin.from_port(.B, 15);
@@ -23,7 +23,7 @@ pub fn main() void {
         .AFIOEN = 1,
     });
 
-    const counter = timer.into_counter(8_000_000);
+    const counter = timer.counter_device(8_000_000);
 
     MOSI.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     MISO.set_input_mode(.pull);

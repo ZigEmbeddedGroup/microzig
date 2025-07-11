@@ -17,6 +17,7 @@
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
         .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
+        .@"modules/rtt" = .{ .path = "modules/rtt" },
 
         // simulators
         .@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
@@ -44,7 +45,6 @@
         "build.zig.zon",
         "LICENSE",
         "design",
-        "docs",
         "tools/generate_linker_script.zig",
         "tools",
         "port",

@@ -11,7 +11,7 @@ const flash_v1 = microzig.chip.types.peripherals.flash_f1;
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 const Timeout = stm32.drivers.Timeout;
-const timer = stm32.timer.GPTimer.init(.TIM2);
+const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
@@ -471,7 +471,7 @@ pub fn main() !void {
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
 
-    Counter = timer.into_counter(60_000_000);
+    Counter = timer.counter_device(72_000_000);
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
     usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
     var recv_byte: [64]u8 = undefined;

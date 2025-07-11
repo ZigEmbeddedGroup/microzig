@@ -26,6 +26,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_random_data", .file = "src/rp2350_only/random_data.zig" },
         .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_random_data", .file = "src/rp2350_only/random_data.zig" },
@@ -46,6 +48,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "pwm", .file = "src/pwm.zig" },
         .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
+        .{ .name = "rtt-log", .file = "src/rtt_log.zig", .works_with_riscv = false },
         .{ .name = "spi-master", .file = "src/spi_master.zig" },
         .{ .name = "spi-slave", .file = "src/spi_slave.zig" },
         .{ .name = "spi-loopback-dma", .file = "src/spi_loopback_dma.zig" },
@@ -80,11 +83,13 @@ pub fn build(b: *std.Build) void {
             .file = example.file,
         }) catch @panic("out of memory");
 
-        available_examples.append(.{
-            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
-            .name = b.fmt("pico2_riscv_{s}", .{example.name}),
-            .file = example.file,
-        }) catch @panic("out of memory");
+        if (example.works_with_riscv) {
+            available_examples.append(.{
+                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
+                .name = b.fmt("pico2_riscv_{s}", .{example.name}),
+                .file = example.file,
+            }) catch @panic("out of memory");
+        }
     }
 
     for (available_examples.items) |example| {
@@ -125,4 +130,5 @@ const Example = struct {
 const ChipAgnosticExample = struct {
     name: []const u8,
     file: []const u8,
+    works_with_riscv: bool = true,
 };

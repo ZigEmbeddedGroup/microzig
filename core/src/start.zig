@@ -1,20 +1,19 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const app = @import("app");
 
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
-pub const microzig_options: microzig.Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
-
 // Conditionally provide a default no-op logFn if app does not have one
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub const std_options = std.Options{
-    .log_level = microzig_options.log_level,
-    .log_scope_levels = microzig_options.log_scope_levels,
-    .logFn = microzig_options.logFn,
+pub const std_options: std.Options = .{
+    .log_level = microzig.options.log_level,
+    .log_scope_levels = microzig.options.log_scope_levels,
+    .logFn = microzig.options.logFn,
 };
 
 // Startup logic:
@@ -64,50 +63,36 @@ export fn microzig_main() noreturn {
 
     if (@typeInfo(return_type) == .error_union) {
         main() catch |err| {
-            // TODO:
-            // - Compute maximum size on the type of "err"
-            // - Do not emit error names when std.builtin.strip is set.
-            var msg: [64]u8 = undefined;
-            @panic(std.fmt.bufPrint(&msg, "main() returned error {s}", .{@errorName(err)}) catch @panic("main() returned error."));
+            // Although here we could use @errorReturnTrace similar to
+            // `std.start` and just dump the trace (without panic), the user
+            // might not use logging and have the panic handler just blink an
+            // led.
+
+            const msg_base = "main() returned error.";
+
+            if (!microzig.options.simple_panic_if_main_errors) {
+                const max_error_size = comptime blk: {
+                    var max_error_size: usize = 0;
+                    const err_type = @typeInfo(return_type).error_union.error_set;
+                    if (@typeInfo(err_type).error_set) |err_set| {
+                        for (err_set) |current_err| {
+                            max_error_size = @max(max_error_size, current_err.name.len);
+                        }
+                    }
+                    break :blk max_error_size;
+                };
+
+                var buf: [msg_base.len + max_error_size]u8 = undefined;
+                const msg = std.fmt.bufPrint(&buf, "{s}{s}", .{ msg_base, @errorName(err) }) catch @panic(msg_base);
+                @panic(msg);
+            } else {
+                @panic(msg_base);
+            }
         };
     } else {
         main();
     }
 
-    // main returned, just hang around here a bit
+    // Main returned, just hang around here a bit.
     microzig.hang();
-}
-
-/// Contains references to the microzig .data and .bss sections, also
-/// contains the initial load address for .data if it is in flash.
-pub const sections = struct {
-    // it looks odd to just use a u8 here, but in C it's common to use a
-    // char when linking these values from the linkerscript. What's
-    // important is the addresses of these values.
-    extern var microzig_data_start: u8;
-    extern var microzig_data_end: u8;
-    extern var microzig_bss_start: u8;
-    extern var microzig_bss_end: u8;
-    extern const microzig_data_load_start: u8;
-};
-
-pub fn initialize_system_memories() void {
-    // fill .bss with zeroes
-    {
-        const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
-        const bss_end: [*]u8 = @ptrCast(&sections.microzig_bss_end);
-        const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
-
-        @memset(bss_start[0..bss_len], 0);
-    }
-
-    // load .data from flash
-    {
-        const data_start: [*]u8 = @ptrCast(&sections.microzig_data_start);
-        const data_end: [*]u8 = @ptrCast(&sections.microzig_data_end);
-        const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-        const data_src: [*]const u8 = @ptrCast(&sections.microzig_data_load_start);
-
-        @memcpy(data_start[0..data_len], data_src[0..data_len]);
-    }
 }

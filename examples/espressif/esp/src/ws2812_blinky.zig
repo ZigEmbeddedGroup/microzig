@@ -6,7 +6,7 @@ const hal = microzig.hal;
 const gpio = hal.gpio;
 
 pub const microzig_options: microzig.Options = .{
-    .log_level = .debug,
+    .logFn = hal.usb_serial_jtag.logger.log,
 };
 
 pub fn main() !void {

@@ -19,3 +19,9 @@ NOTE: you have to provide a [bootloader](https://docs.espressif.com/projects/esp
 esptool.py --chip esp32c3 --baud 460800 --before default_reset --after hard_reset write_flash 0x0 \
     zig-out/firmware/esp32_c3_direct_boot_blinky.bin
 ```
+
+- flashless image
+
+```sh
+esptool.py --chip esp32c3 --baud 460800 --no-stub load_ram zig-out/firmware/esp32_c3_flashless_blinky.bin
+```

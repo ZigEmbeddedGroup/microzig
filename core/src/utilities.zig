@@ -1,6 +1,43 @@
 const std = @import("std");
 const microzig = @import("microzig.zig");
 
+/// Fills .bss with zeroes and copies .data from flash into ram. May be called
+/// by the cpu module at startup.
+pub fn initialize_system_memories() void {
+
+    // Contains references to the microzig .data and .bss sections, also
+    // contains the initial load address for .data if it is in flash.
+    const sections = struct {
+        // it looks odd to just use a u8 here, but in C it's common to use a
+        // char when linking these values from the linkerscript. What's
+        // important is the addresses of these values.
+        extern var microzig_data_start: u8;
+        extern var microzig_data_end: u8;
+        extern var microzig_bss_start: u8;
+        extern var microzig_bss_end: u8;
+        extern const microzig_data_load_start: u8;
+    };
+
+    // fill .bss with zeroes
+    {
+        const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
+        const bss_end: [*]u8 = @ptrCast(&sections.microzig_bss_end);
+        const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+
+        @memset(bss_start[0..bss_len], 0);
+    }
+
+    // load .data from flash
+    {
+        const data_start: [*]u8 = @ptrCast(&sections.microzig_data_start);
+        const data_end: [*]u8 = @ptrCast(&sections.microzig_data_end);
+        const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
+        const data_src: [*]const u8 = @ptrCast(&sections.microzig_data_load_start);
+
+        @memcpy(data_start[0..data_len], data_src[0..data_len]);
+    }
+}
+
 /// A helper class that allows operating on a slice of slices
 /// with similar operations to those of a slice.
 pub fn Slice_Vector(comptime Slice: type) type {
@@ -430,4 +467,20 @@ test "Slice_Vector.Iterator.next_chunk" {
             try std.testing.expectEqualStrings(expected[index], chunk);
         }
     }
+}
+
+pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
+    const frame_count = @min(trace.index, trace.instruction_addresses.len);
+
+    var frame_index: usize = 0;
+    var frames_left: usize = frame_count;
+    while (frames_left != 0) : ({
+        frames_left -= 1;
+        frame_index = (frame_index + 1) % trace.instruction_addresses.len;
+    }) {
+        const address = trace.instruction_addresses[frame_index];
+        std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
+    }
+
+    return frame_count;
 }

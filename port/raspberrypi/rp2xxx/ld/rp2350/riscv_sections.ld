@@ -15,7 +15,7 @@ SECTIONS {
 INSERT AFTER .flash_start;
 
 SECTIONS {
-  .ram_vectors (NOLOAD)  :
+  .ram_vectors (NOLOAD) :
   {
     KEEP(*(ram_vectors))
   } > ram0

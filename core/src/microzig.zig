@@ -30,36 +30,35 @@ pub const board = if (config.has_board) @import("board") else void;
 /// Contains device-independent drivers for peripherial devices.
 pub const drivers = @import("drivers");
 
-pub const mmio = @import("mmio.zig");
-pub const interrupt = @import("interrupt.zig");
 pub const core = @import("core.zig");
 pub const concurrency = @import("concurrency.zig");
+pub const interrupt = @import("interrupt.zig");
+pub const mmio = @import("mmio.zig");
 pub const utilities = @import("utilities.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+pub const panic = std.debug.FullPanic(struct {
+    pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
+        std.log.err("panic: {s}", .{message});
 
-    // utilize logging functions
-    std.log.err("microzig PANIC: {s}", .{message});
+        var frame_index: usize = 0;
+        if (@errorReturnTrace()) |trace| frame_index = utilities.dump_stack_trace(trace);
 
-    if (builtin.cpu.arch != .avr) {
-        var index: usize = 0;
-        var iter = std.debug.StackIterator.init(@returnAddress(), null);
-        while (iter.next()) |address| : (index += 1) {
-            if (index == 0) {
-                std.log.err("stack trace:", .{});
-            }
-            std.log.err("{d: >3}: 0x{X:0>8}", .{ index, address });
+        var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
+        while (iter.next()) |address| : (frame_index += 1) {
+            std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
         }
+
+        // Attach a breakpoint. this might trigger another panic internally, so
+        // only do that if requested.
+        if (options.breakpoint_in_panic) {
+            std.log.info("triggering breakpoint...", .{});
+            @breakpoint();
+        }
+
+        hang();
     }
-    if (@import("builtin").mode == .Debug) {
-        // attach a breakpoint, this might trigger another
-        // panic internally, so only do that in debug mode.
-        std.log.info("triggering breakpoint...", .{});
-        @breakpoint();
-    }
-    hang();
-}
+}.panic_fn);
 
 pub const InterruptOptions = if (@hasDecl(cpu, "InterruptOptions")) cpu.InterruptOptions else struct {};
 
@@ -90,7 +89,19 @@ pub const Options = struct {
     interrupts: InterruptOptions = .{},
     cpu: CPU_Options = .{},
     hal: HAL_Options = .{},
+
+    /// If true, will trigger a breakpoint in the default panic handler.
+    breakpoint_in_panic: bool = false,
+
+    /// The default panic called when main returns an error will include the
+    /// name of the error. If this option is true, a panic will be invoked with
+    /// only a static message, avoiding the call to @errorName. This can help
+    /// reduce code size as the string literals for error names no longer have to
+    /// be included in the executable.
+    simple_panic_if_main_errors: bool = false,
 };
+
+pub const options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {

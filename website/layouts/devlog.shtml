@@ -4,16 +4,12 @@
   <div id="page" :loop="$page.contentSections()">
     <ctx :if="$loop.first" :html="$loop.it.html()"></ctx>
     <ctx
-      :if="$loop.first.not().and($loop.last.not())"
+      :if="$loop.first.not()"
     >
       <div id="$loop.it.id">
-        <h3><a :text="$loop.it.id" href="$loop.it.id.prefix('#')"></a></h3>
-        <h4 :text="$loop.it.data.get('date')"></h4>
+        <h4 :text="$loop.it.id.parseDate().format('January 02, 2006')"></h4>
         <ctx :html="$loop.it.html()"></ctx>
       </div>
-    </ctx>
-    <ctx :if="$loop.last">
-      <div id="old" :html="$loop.it.html()"></div>
     </ctx>
   </div>
 </div>
