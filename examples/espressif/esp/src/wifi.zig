@@ -21,7 +21,7 @@ pub const microzig_options: microzig.Options = .{
             .level = .err,
         },
     },
-    .logFn = log,
+    .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
         .interrupt1 = radio.interrupt_handlers.wifi_xxx,
         .interrupt2 = radio.interrupt_handlers.timer,
@@ -29,33 +29,9 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-pub fn log(
-    comptime level: std.log.Level,
-    comptime scope: @TypeOf(.EnumLiteral),
-    comptime format: []const u8,
-    args: anytype,
-) void {
-    const cs = microzig.interrupt.enter_critical_section();
-    defer cs.leave();
-
-    usb_serial_jtag.logger.log(level, scope, format, args);
-}
-
 var buffer: [50 * 1024]u8 = undefined;
 
 pub fn main() !void {
-    // microzig.cpu.interrupt.map(.assist_debug, .interrupt1);
-    // microzig.cpu.interrupt.set_priority(.interrupt1, .lowest);
-    // microzig.cpu.interrupt.enable(.interrupt1);
-    // microzig.cpu.interrupt.enable_interrupts();
-    //
-    // microzig.chip.peripherals.ASSIST_DEBUG.CORE_0_SP_MAX.write_raw(0xffffffff);
-    // microzig.chip.peripherals.ASSIST_DEBUG.CORE_0_SP_MIN.write_raw(0x3FC7C000 + 400 * 1024 - 10);
-    // microzig.chip.peripherals.ASSIST_DEBUG.CORE_0_INTR_ENA.modify(.{
-    //     .CORE_0_SP_SPILL_MIN_INTR_ENA = 1,
-    //     .CORE_0_SP_SPILL_MAX_INTR_ENA = 1,
-    // });
-
     var fba: std.heap.FixedBufferAllocator = .init(&buffer);
     const allocator = fba.threadSafeAllocator();
 
@@ -70,8 +46,7 @@ pub fn main() !void {
     });
 
     try radio.wifi.start();
-
-    try radio.wifi.c_result(radio.wifi.c.esp_wifi_connect());
+    try radio.wifi.connect();
 
     // var ssid: [1:0]u8 = @splat(0);
     // var bssid: [1:0]u8 = @splat(0);
