@@ -9,6 +9,7 @@ const microzig = @import("microzig");
 
 //example usage
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const GPTimer = stm32.timer.GPTimer;
 
@@ -63,28 +64,28 @@ pub fn main() !void {
     //first we need to enable the clocks for the GPIO and TIM peripherals
 
     //use HSE as system clock source, more stable than HSI
-    try stm32.rcc.clock_init(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
+    try rcc.clock_init(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
 
     //enable GPIOA and TIM2, TIM3, AFIO clocks
     //AFIO is needed for alternate function remapping, not used in this example but eneble for easy remapping
     //if needed
-    stm32.rcc.enable_clock(.GPIOA);
-    stm32.rcc.enable_clock(.TIM2);
-    stm32.rcc.enable_clock(.TIM3);
-    stm32.rcc.enable_clock(.AFIO);
-    stm32.rcc.enable_clock(.USART1);
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.TIM3);
+    rcc.enable_clock(.AFIO);
+    rcc.enable_clock(.USART1);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
-    uart.apply(.{
+    try uart.apply_runtime(.{
         .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+        .clock_speed = rcc.get_clock(.USART1),
     });
 
     stm32.uart.init_logger(&uart);
 
     //counter device to genereate delays
-    const cd = counter.counter_device(8_000_000); //8MHz clock
+    const cd = counter.counter_device(rcc.get_clock(.TIM2)); //8MHz clock
 
     //set PA0 (TI1) to input
     ch1.set_input_mode(.floating);

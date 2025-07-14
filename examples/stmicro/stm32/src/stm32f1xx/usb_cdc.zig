@@ -3,12 +3,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
-const flash = microzig.chip.peripherals.FLASH;
-const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;
-const flash_v1 = microzig.chip.types.peripherals.flash_f1;
-
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const Timeout = stm32.drivers.Timeout;
 const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
@@ -384,48 +380,6 @@ const USB_conf = usb_ll.Config{
     .RX_buffer = &USB_RX_BUFFER,
 };
 
-//set clock to 72Mhz and USB to 48Mhz
-//NOTE: USB clock must be exactly 48Mhz
-fn config_clock() void {
-    RCC.CR.modify(.{
-        .HSEON = 1,
-    });
-    while (RCC.CR.read().HSERDY == 0) {
-        asm volatile ("nop");
-    }
-
-    RCC.CFGR.modify(.{
-        .PLLSRC = rcc_v1.PLLSRC.HSE_Div_PREDIV,
-        .PLLMUL = rcc_v1.PLLMUL.Mul9,
-    });
-
-    RCC.CR.modify(.{
-        .PLLON = 1,
-    });
-
-    while (RCC.CR.read().PLLRDY == 0) {
-        asm volatile ("nop");
-    }
-
-    flash.ACR.modify(.{
-        .LATENCY = flash_v1.LATENCY.WS2,
-        .PRFTBE = 1,
-    });
-
-    RCC.CFGR.modify(.{
-        .PPRE1 = rcc_v1.PPRE.Div2,
-        .USBPRE = rcc_v1.USBPRE.Div1_5,
-    });
-
-    RCC.CFGR.modify(.{
-        .SW = rcc_v1.SW.PLL1_P,
-    });
-
-    while (RCC.CFGR.read().SWS != rcc_v1.SW.PLL1_P) {
-        asm volatile ("nop");
-    }
-}
-
 fn CDC_write(msg: []const u8) void {
     const send: *volatile bool = &CDC_send;
     const EP2 = usb_ll.EpControl.EPC2;
@@ -455,23 +409,25 @@ fn CDC_read(buf: []u8, timeout: Timeout) ![]const u8 {
 }
 
 pub fn main() !void {
-    config_clock();
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .GPIOAEN = 1,
-        .GPIOBEN = 1,
-        .GPIOCEN = 1,
+    try rcc.clock_init(.{
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1Prescaler = .RCC_HCLK_DIV2,
+        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
     });
 
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-        .USBEN = 1,
-    });
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.GPIOC);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.USB);
+
     const led = gpio.Pin.from_port(.B, 2);
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
 
-    Counter = timer.counter_device(72_000_000);
+    Counter = timer.counter_device(rcc.get_clock(.TIM2));
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
     usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
     var recv_byte: [64]u8 = undefined;

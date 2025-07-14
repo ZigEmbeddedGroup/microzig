@@ -292,7 +292,10 @@ fn config_peripherals(comptime config: ClockTree.Config) void {
     }
 
     if (config.USBPrescaler) |pre| {
-        const p: u32 = @intFromEnum(pre);
+        const p: u1 = switch (pre) {
+            .RCC_USBCLKSOURCE_PLL_DIV1_5 => 0,
+            .RCC_USBCLKSOURCE_PLL => 1,
+        };
         const val: USBPRE = @enumFromInt(p);
         rcc.CFGR.modify(.{ .USBPRE = val });
     }

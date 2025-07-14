@@ -1,8 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const timer = microzig.hal.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const uart = stm32.uart.UART.init(.USART1);
@@ -26,16 +26,12 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-    });
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .USART1EN = 1,
-        .GPIOAEN = 1,
-        .ADC1EN = 1,
-    });
-    const counter = timer.counter_device(8_000_000);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.AFIO);
+    rcc.enable_clock(.USART1);
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.ADC1);
+    const counter = timer.counter_device(rcc.get_clock(.TIM2));
     const adc = ADC.init(.ADC1);
     var adc_out_buf: [10]u16 = undefined;
 
@@ -43,9 +39,9 @@ pub fn main() !void {
     ADC_pin1.set_input_mode(.analog);
     ADC_pin2.set_input_mode(.analog);
 
-    uart.apply(.{
+    try uart.apply_runtime(.{
         .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+        .clock_speed = rcc.get_clock(.USART1),
     });
 
     stm32.uart.init_logger(&uart);

@@ -1,8 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 
 const drivers = microzig.drivers;
@@ -16,9 +16,6 @@ const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const I2c = stm32.i2c;
 const I2C_Device = stm32.drivers.I2C_Device;
 
-const uart = stm32.uart.UART.init(.USART1);
-const TX = gpio.Pin.from_port(.A, 9);
-
 const i2c = I2c.I2C.init(.I2C2);
 const SCL = gpio.Pin.from_port(.B, 10);
 const SDA = gpio.Pin.from_port(.B, 11);
@@ -26,10 +23,6 @@ const config = I2c.Config{
     .pclk = 8_000_000,
     .speed = 100_000,
     .mode = .standard,
-};
-
-pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.log,
 };
 
 var global_counter: stm32.drivers.CounterDevice = undefined;
@@ -40,19 +33,11 @@ pub fn delay_us(time_delay: u32) void {
     global_counter.sleep_us(time_delay);
 }
 pub fn main() !void {
-    RCC.APB2ENR.modify(.{
-        .GPIOBEN = 1,
-        .GPIOAEN = 1,
-        .AFIOEN = 1,
-        .USART1EN = 1,
-    });
-
-    RCC.APB1ENR.modify(.{
-        .I2C2EN = 1,
-        .TIM2EN = 1,
-    });
-
-    TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.GPIOC);
+    rcc.enable_clock(.USART1);
+    rcc.enable_clock(.I2C2);
+    rcc.enable_clock(.TIM2);
 
     //Set internal Pull-ups (not recommended for real applications)
     SCL.set_input_mode(.pull);
@@ -69,12 +54,6 @@ pub fn main() !void {
 
     i2c.apply(config);
 
-    uart.apply(.{
-        .baud_rate = 115200,
-        .clock_speed = 8_000_000,
-    });
-
-    stm32.uart.init_logger(&uart);
     var expander = PCF8574(.{}).init(i2c_device.datagram_device());
     const pins_config = lcd(.{}).pins_struct{
         .high_pins = .{
