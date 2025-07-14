@@ -298,6 +298,10 @@ pub fn start() InternalError!void {
     try c_result(c.esp_wifi_start());
 }
 
+pub fn connect() InternalError!void {
+    try c_result(c.esp_wifi_connect());
+}
+
 pub const Event = enum(i32) {
     /// Wi-Fi is ready for operation.
     WifiReady = 0,
@@ -400,6 +404,25 @@ pub const Event = enum(i32) {
     /// Received Neighbor Report response.
     StaNeighborRep,
 };
+
+// const StaState = enum {
+//     none,
+//     sta_started,
+//     sta_connected,
+//     sta_disconnected,
+//     sta_stopped,
+// };
+//
+// var sta_state: StaState = .none;
+//
+// /// Internal method called on each event post.
+// pub fn update_state(event: Event) void {
+//     switch (event) {
+//
+//     }
+// }
+
+// TODO: ApState
 
 var wifi_tx_in_flight: usize = 0;
 
