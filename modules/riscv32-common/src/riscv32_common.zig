@@ -53,6 +53,10 @@ pub fn wfi() void {
     asm volatile ("wfi");
 }
 
+pub fn fence() void {
+    asm volatile ("fence");
+}
+
 // NOTE: Contains all csrs from the riscv manual and should follow their spec. Cpu implementations can
 // reexport what they need from here.
 pub const csr = struct {

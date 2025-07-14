@@ -5,6 +5,10 @@
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
+        .@"esp-wifi-sys" = .{
+            .url = "git+https://github.com/esp-rs/esp-wifi-sys#99dd43f9992b276efff3c75467839801e7ea55c7",
+            .hash = "N-V-__8AAHPIYgTLdblCzREIT-te95dusmO6q1o0PST0CziO",
+        },
     },
     .paths = .{
         "README.md",
