@@ -230,6 +230,7 @@ pub const interrupt = struct {
 
 pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
+pub const fence = riscv32_common.fence;
 
 pub const startup_logic = switch (cpu_config.boot_mode) {
     .direct => struct {
@@ -683,14 +684,20 @@ fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
     );
 }
 
-fn unhandled(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
+fn unhandled(frame: *TrapFrame) linksection(".ram_text") callconv(.c) void {
     const mcause = csr.mcause.read();
 
     if (mcause.is_interrupt != 0) {
         std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
     } else {
         const exception: Exception = @enumFromInt(mcause.code);
-        std.log.err("exception {s} occurred!", .{@tagName(exception)});
+        std.log.err("exception {s} occurred at {x}!", .{@tagName(exception), frame.pc});
+
+        switch (exception) {
+            .InstructionFault => std.log.err("faulting address: {x}", .{csr.mtval.read_raw()}),
+            .LoadFault => std.log.err("faulting address: {x}", .{csr.mtval.read_raw()}),
+            else => {},
+        }
     }
 
     @panic("unhandled trap");

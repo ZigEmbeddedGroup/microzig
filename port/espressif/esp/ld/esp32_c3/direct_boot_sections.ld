@@ -5,9 +5,9 @@ SECTIONS
     _irom_start = .;
     KEEP(*(microzig_flash_start))
     *(.text*)
-  } > IROM
 
-  . = ALIGN(8);
+    . = ALIGN(8);
+  } > IROM
 
   _irom_size = . - _irom_start;
 
@@ -15,6 +15,10 @@ SECTIONS
   .rodata _drom_start : AT(_irom_size)
   {
     *(.rodata*)
+    *(.srodata*)
+
+    /* wifi rodata */
+    *(.rodata_wlog_*.*)
   } > DROM
 
   _drom_size = . - _drom_start;
@@ -23,6 +27,21 @@ SECTIONS
   {
     microzig_ram_text_start = .;
     KEEP(*(.ram_text))
+
+    *(.rwtext*)
+
+    /* wifi rwtext */
+    *(.wifi0iram  .wifi0iram.*)
+    *(.wifirxiram  .wifirxiram.*)
+    *(.wifislprxiram  .wifislprxiram.*)
+    *(.wifislpiram  .wifislpiram.*)
+    *(.phyiram  .phyiram.*)
+    *(.iram1  .iram1.*)
+    *(.wifiextrairam.* )
+    *(.coexiram.* )
+
+    . = ALIGN(8);
+
     microzig_ram_text_end = .;
   } > IRAM
 
@@ -35,6 +54,9 @@ SECTIONS
     microzig_data_start = . - _iram_size;
     *(.sdata*)
     *(.data*)
+
+    /* wifi data */
+    *(.dram1*)
     microzig_data_end = .;
   } > DRAM
 

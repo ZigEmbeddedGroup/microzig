@@ -60,6 +60,23 @@ pub fn build(b: *std.Build) void {
             mb.install_firmware(firmware, .{ .format = .elf });
         }
     }
+
+    if (maybe_example) |selected_example| {
+        if (std.mem.containsAtLeast(u8, "wifi", 1, selected_example)) {
+            // only works with image boot target for now (it should also
+            // support direct boot in the future). The flashless target doesn't
+            // have enough space to run this.
+            const wifi_example_firmware = mb.add_firmware(.{
+                .name = "wifi",
+                .target = mb.ports.esp.chips.esp32_c3,
+                .optimize = optimize,
+                .root_source_file = b.path("src/wifi.zig"),
+            });
+
+            mb.install_firmware(wifi_example_firmware, .{});
+            mb.install_firmware(wifi_example_firmware, .{ .format = .elf });
+        }
+    }
 }
 
 const TargetDescription = struct {

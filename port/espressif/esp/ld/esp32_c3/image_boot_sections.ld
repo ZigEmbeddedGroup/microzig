@@ -1,9 +1,37 @@
 SECTIONS
 {
-  .irom.skip (NOLOAD) :
+  .rodata.skip (NOLOAD) :
   {
     /* Skip 0x20 bytes for the esp image format mapping header. */
     . += 0x20;
+  } > DROM
+
+  .rodata : ALIGN(4)
+  {
+    . = ALIGN(4);
+    KEEP(*(.app_desc))
+    *(.rodata*)
+    *(.srodata*)
+    . = ALIGN(4);
+  } > DROM
+
+  .rodata.wifi : ALIGN(4)
+  {
+    . = ALIGN(4);
+    *(.rodata_wlog_*.*)
+    . = ALIGN(4);
+  } > DROM
+
+  .text.dummy (NOLOAD) : ALIGN(4)
+  {
+    . = ALIGN(ALIGNOF(.rodata));
+    . = ALIGN(ALIGNOF(.rodata.wifi));
+
+    . = . + SIZEOF(.rodata.skip);
+    . = . + SIZEOF(.rodata);
+    . = . + SIZEOF(.rodata.wifi);
+
+    . = ALIGN(0x10000) + 0x20;
   } > IROM
 
   .text :
@@ -20,47 +48,64 @@ SECTIONS
     . += 16;
   } > IROM
 
-  .drom.dummy (NOLOAD) :
+  .ram_text : ALIGN(4)
   {
-    . = ORIGIN(DROM) + 0x20 + SIZEOF(.text);
-
-    /* Add alignment of MMU page size + 0x20 bytes for the mapping header. */
-    . = ALIGN(0x10000) + 0x20;
-  } > DROM
-
-  .rodata :
-  {
-    KEEP(*(.app_desc))
-    *(.rodata*)
-  } > DROM
-
-  .ram_text :
-  {
+    . = ALIGN(4);
     KEEP(*(.ram_text))
+    . = ALIGN(4);
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
   } > IRAM
 
-  .dram.dummy (NOLOAD) :
+  .ram_text.wifi : ALIGN(4)
   {
-    . = ORIGIN(DRAM) + SIZEOF(.ram_text);
+    . = ALIGN(4);
+    *( .wifi0iram  .wifi0iram.*)
+    *( .wifirxiram  .wifirxiram.*)
+    *( .wifislprxiram  .wifislprxiram.*)
+    *( .wifislpiram  .wifislpiram.*)
+    *( .phyiram  .phyiram.*)
+    *( .iram1  .iram1.*)
+    *( .wifiextrairam.* )
+    *( .coexiram.* )
+    . = ALIGN(4);
+  } > IRAM
+
+  .data.dummy (NOLOAD) : ALIGN(4)
+  {
+    . = . + SIZEOF(.ram_text) + SIZEOF(.ram_text.wifi);
   } > DRAM
 
-  .data :
+  .data : ALIGN(4)
   {
     microzig_data_start = .;
+    . = ALIGN (4);
+
     *(.sdata*)
     *(.data*)
+
     microzig_data_end = .;
+    . = ALIGN (4);
   } > DRAM
 
-  .bss (NOLOAD) :
+  .data.wifi : ALIGN(4)
+  {
+    . = ALIGN (4);
+    *(.dram1*)
+    . = ALIGN (4);
+  }
+
+  .bss (NOLOAD) : ALIGN (4)
   {
     microzig_bss_start = .;
+    . = ALIGN (4);
+
     *(.sbss*)
     *(.bss*)
+
     microzig_bss_end = .;
+    . = ALIGN (4);
   } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);

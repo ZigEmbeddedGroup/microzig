@@ -6,6 +6,7 @@ pub const compatibility = @import("hal/compatibility.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const i2c = @import("hal/i2c.zig");
+pub const radio = @import("hal/radio.zig");
 pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
 pub const spi = @import("hal/spi.zig");
@@ -21,7 +22,7 @@ comptime {
 }
 
 /// Clock config applied by the default `init()` function of the hal.
-pub const clock_config: clocks.Config = .default;
+pub const clock_config: clocks.Config = .init_comptime(160_000_000);
 
 pub fn init() void {
     init_sequence(clock_config);

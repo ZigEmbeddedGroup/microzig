@@ -7,7 +7,17 @@ SECTIONS
     KEEP(*(microzig_ram_start))
     *(.text*)
     KEEP(*(.ram_text))
+    *(.rwtext*)
 
+    /* wifi rwtext */
+    *(.wifi0iram  .wifi0iram.*)
+    *(.wifirxiram  .wifirxiram.*)
+    *(.wifislprxiram  .wifislprxiram.*)
+    *(.wifislpiram  .wifislpiram.*)
+    *(.phyiram  .phyiram.*)
+    *(.iram1  .iram1.*)
+    *(.wifiextrairam.* )
+    *(.coexiram.* )
   } > IRAM
 
   . = ALIGN(8);
@@ -19,7 +29,15 @@ SECTIONS
     microzig_data_start = .;
     *(.sdata*)
     *(.data*)
+
+    /* wifi rodata */
+    *(.rodata_wlog_*.*)
+
+    /* wifi data */
+    *(.dram1 .dram1.*)
+
     *(.rodata*)
+    *(.srodata*)
   } > DRAM
 
   .bss (NOLOAD) :
