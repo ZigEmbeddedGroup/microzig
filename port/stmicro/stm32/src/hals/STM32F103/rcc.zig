@@ -80,10 +80,9 @@ pub const ResetReason = enum {
     NRST,
 };
 
-//TODO: change anytype to the correct clocktype
-//NOTE: procedural style or loop through all elements of the struct?
 /// Configures the system clocks
-/// NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power register before configuring the clocks
+/// NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power
+/// register before configuring the clocks
 pub fn clock_init(comptime config: ClockTree.Config) ClockInitError!void {
     const sysclck = comptime validate_clocks(config);
 
@@ -189,7 +188,7 @@ fn config_LSI() void {
 fn config_HSE(comptime config: ClockTree.Config) ClockInitError!void {
     rcc.CR.modify(.{ .HSEON = 1 });
 
-    const max_wait: u32 = if (config.HSE_Timout) |val| @intFromEnum(val) else std.math.maxInt(u32);
+    const max_wait: u32 = if (config.HSE_Timeout) |val| @intFromEnum(val) else std.math.maxInt(u32);
     var ticks: usize = 0;
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == max_wait - 1) return error.HSETimeout;
@@ -199,7 +198,7 @@ fn config_HSE(comptime config: ClockTree.Config) ClockInitError!void {
 }
 
 fn config_LSE(comptime config: ClockTree.Config) ClockInitError!void {
-    const max_wait: u32 = if (config.LSE_Timout) |val| @intFromEnum(val) else std.math.maxInt(u32);
+    const max_wait: u32 = if (config.LSE_Timeout) |val| @intFromEnum(val) else std.math.maxInt(u32);
     var ticks: usize = 0;
     rcc.BDCR.modify(.{ .LSEON = 1 });
     while (rcc.BDCR.read().LSERDY == 0) {

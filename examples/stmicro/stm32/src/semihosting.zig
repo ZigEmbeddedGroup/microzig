@@ -12,7 +12,7 @@ pub fn main() void {
     semihosting.Debug.print("Hello World\n", .{});
 
     const args = semihosting.Debug.get_cmd_args(&some_buf) catch return;
-    semihosting.Debug.print("recive args: {s}\n", .{args});
+    semihosting.Debug.print("receive args: {s}\n", .{args});
 
     semihosting.Debug.print("feature support: STDOUT FILE: {any}, EXIT CODE {any}\n", .{
         semihosting.Debug.check_extensions(0, 1),
