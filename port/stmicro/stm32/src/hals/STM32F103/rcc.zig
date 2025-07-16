@@ -2,12 +2,13 @@
 //TODO: Add support for 105/107
 const std = @import("std");
 const microzig = @import("microzig");
-const find_clocktree = @import("util.zig").find_clock_tree;
 
-const ClockInitError = error{
-    HSETimeout,
-    LSETimeout,
-};
+const find_clocktree = @import("util.zig").find_clock_tree;
+const ClockTree = find_clocktree(microzig.config.chip_name);
+
+//expose only the configuration structs
+pub const Config = ClockTree.Config;
+pub const ConfigWithRef = ClockTree.ConfigWithRef;
 
 const flash_v1 = microzig.chip.types.peripherals.flash_f1;
 const flash = microzig.chip.peripherals.FLASH;
@@ -23,7 +24,10 @@ const MCOSEL = microzig.chip.types.peripherals.rcc_f1.MCOSEL;
 const SW = microzig.chip.types.peripherals.rcc_f1.SW;
 const rcc = microzig.chip.peripherals.RCC;
 
-pub const ClockTree = find_clocktree(microzig.config.chip_name);
+const ClockInitError = error{
+    HSETimeout,
+    LSETimeout,
+};
 
 const RccPeriferals = enum {
     DMA1,
@@ -80,14 +84,34 @@ pub const ResetReason = enum {
     NRST,
 };
 
-//TODO: change anytype to the correct clocktype
+pub const ClockOutputs = struct {
+    //system clock
+    SYS: u32 = 0,
+
+    //Bus Clocks
+    AHB: u32 = 0,
+    APB1: u32 = 0,
+    APB2: u32 = 0,
+
+    //Peripheral clocks
+    FSMC: u32 = 0,
+    SDIO: u32 = 0,
+    TimAPB1: u32 = 0,
+    TimAPB2: u32 = 0,
+    ADC: u32 = 0,
+    USB: u32 = 0,
+};
+
+//default clock config
+var corrent_clocks: ClockOutputs = validate_clocks(.{});
+
 //NOTE: procedural style or loop through all elements of the struct?
 /// Configures the system clocks
 /// NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power register before configuring the clocks
 pub fn clock_init(comptime config: ClockTree.Config) ClockInitError!void {
-    const sysclck = comptime validate_clocks(config);
+    const clck = comptime validate_clocks(config);
 
-    set_flash(sysclck);
+    set_flash(clck.SYS);
 
     //rest all clock configs
     secure_enable();
@@ -100,24 +124,29 @@ pub fn clock_init(comptime config: ClockTree.Config) ClockInitError!void {
     try config_RTC(config);
     try config_system_clock(config);
     config_MCO(config);
+    corrent_clocks = clck;
 }
 
-//check clocks and return sysclk for flash config
-fn validate_clocks(comptime config: ClockTree.Config) usize {
+//check clocks and return all used outputs
+fn validate_clocks(comptime config: ClockTree.Config) ClockOutputs {
     const tree_values = ClockTree.ClockTree.init_comptime(config);
+    var outputs: ClockOutputs = .{};
 
     //checks if the clocks of the used peripherals are valid
-    const sysclk = tree_values.SysCLKOutput.get_comptime();
-    _ = tree_values.APB1Output.get_comptime();
-    _ = tree_values.APB2Output.get_comptime();
-    _ = tree_values.AHBOutput.get_comptime();
+    outputs.SYS = @intFromFloat(tree_values.SysCLKOutput.get_comptime());
+
+    outputs.AHB = @intFromFloat(tree_values.AHBOutput.get_comptime());
+    outputs.APB1 = @intFromFloat(tree_values.APB1Output.get_comptime());
+    outputs.APB2 = @intFromFloat(tree_values.APB2Output.get_comptime());
+    outputs.TimAPB1 = @intFromFloat(tree_values.TimPrescOut1.get_comptime());
+    outputs.TimAPB2 = @intFromFloat(tree_values.TimPrescOut2.get_comptime());
 
     if (config.MCOMult) |_| {
         _ = tree_values.MCOoutput.get_comptime();
     }
 
     if (config.USBPrescaler) |_| {
-        _ = tree_values.USBoutput.get_comptime();
+        outputs.USB = @intFromFloat(tree_values.USBoutput.get_comptime());
         if (config.PLLSource) |src| {
             if (src == .RCC_PLLSOURCE_HSI_DIV2) {
                 @compileError("USB clock is not stable when PLL source is HSI");
@@ -125,10 +154,14 @@ fn validate_clocks(comptime config: ClockTree.Config) usize {
         }
     }
 
-    return @intFromFloat(sysclk);
+    if (config.ADCprescaler) |_| {
+        outputs.ADC = @intFromFloat(tree_values.ADCoutput.get_comptime());
+    }
+
+    return outputs;
 }
 
-fn set_flash(clock: usize) void {
+fn set_flash(clock: u32) void {
     if (clock <= 24_000_000) {
         flash.ACR.modify(.{
             .LATENCY = flash_v1.LATENCY.WS0,
@@ -189,7 +222,7 @@ fn config_LSI() void {
 fn config_HSE(comptime config: ClockTree.Config) ClockInitError!void {
     rcc.CR.modify(.{ .HSEON = 1 });
 
-    const max_wait: u32 = if (config.HSE_Timout) |val| @intFromEnum(val) else std.math.maxInt(u32);
+    const max_wait: u32 = if (config.HSE_Timeout) |val| @intFromEnum(val) else std.math.maxInt(u32);
     var ticks: usize = 0;
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == max_wait - 1) return error.HSETimeout;
@@ -199,7 +232,7 @@ fn config_HSE(comptime config: ClockTree.Config) ClockInitError!void {
 }
 
 fn config_LSE(comptime config: ClockTree.Config) ClockInitError!void {
-    const max_wait: u32 = if (config.LSE_Timout) |val| @intFromEnum(val) else std.math.maxInt(u32);
+    const max_wait: u32 = if (config.LSE_Timeout) |val| @intFromEnum(val) else std.math.maxInt(u32);
     var ticks: usize = 0;
     rcc.BDCR.modify(.{ .LSEON = 1 });
     while (rcc.BDCR.read().LSERDY == 0) {
@@ -259,7 +292,10 @@ fn config_peripherals(comptime config: ClockTree.Config) void {
     }
 
     if (config.USBPrescaler) |pre| {
-        const p: u32 = @intFromEnum(pre);
+        const p: u1 = switch (pre) {
+            .RCC_USBCLKSOURCE_PLL_DIV1_5 => 0,
+            .RCC_USBCLKSOURCE_PLL => 1,
+        };
         const val: USBPRE = @enumFromInt(p);
         rcc.CFGR.modify(.{ .USBPRE = val });
     }
@@ -468,4 +504,63 @@ pub fn disable_all_clocks() void {
     rcc.AHBENR.raw = 0;
     rcc.APB1ENR.raw = 0;
     rcc.APB2ENR.raw = 0;
+}
+//NOTE: should we panic on invalid clocks?
+//errors at comptime appear for peripherals manually configured like USB.
+///if requests the clock of an unconfigured peripheral, 0 means error, != 0 means ok
+pub fn get_clock(source: RccPeriferals) u32 {
+    return switch (source) {
+        // AHB peripherals
+        .DMA1,
+        .DMA2,
+        .SRAM,
+        .FLASH,
+        .CRC,
+        => corrent_clocks.AHB,
+
+        .FSMC => corrent_clocks.FSMC,
+        .SDIO => corrent_clocks.SDIO,
+
+        // APB2 peripherals
+        .AFIO,
+        .GPIOA,
+        .GPIOB,
+        .GPIOC,
+        .GPIOD,
+        .GPIOE,
+        .GPIOF,
+        .GPIOG,
+        .SPI1,
+        .USART1,
+        => corrent_clocks.APB2,
+
+        .ADC1, .ADC2 => corrent_clocks.ADC,
+
+        .TIM1 => corrent_clocks.TimAPB2,
+
+        // APB1 peripherals
+        .TIM2, .TIM3, .TIM4, .TIM5, .TIM6, .TIM7 => corrent_clocks.TimAPB1,
+
+        .DAC => corrent_clocks.APB1,
+
+        .WWDG,
+        .SPI2,
+        .SPI3,
+        .USART2,
+        .USART3,
+        .UART4,
+        .UART5,
+        .I2C1,
+        .I2C2,
+        .CAN,
+        .BKP,
+        .PWR,
+        => corrent_clocks.APB1,
+
+        .USB => corrent_clocks.USB,
+    };
+}
+
+pub inline fn get_sys_clk() u32 {
+    return corrent_clocks.SYS;
 }

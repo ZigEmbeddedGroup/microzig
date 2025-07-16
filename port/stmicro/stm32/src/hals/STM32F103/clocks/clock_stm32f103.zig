@@ -1,3 +1,6 @@
+//NOTE: this clock tree is valid for all STM32F1xx low to high density devices
+//NOTE: this file was manually generated from data coming from CubeMX, manual changes may be necessary
+
 const std = @import("std");
 const clock = @import("clocknodes.zig");
 const ClockNode = clock.ClockNode;
@@ -191,14 +194,14 @@ pub const PLLMULConf = enum {
         };
     }
 };
-pub const HSE_TimoutConf = enum(u32) {
+pub const HSE_TimeoutConf = enum(u32) {
     _,
     pub fn get(num: @This()) f32 {
         const val: u32 = @intFromEnum(num);
         return @as(f32, @floatFromInt(val));
     }
 };
-pub const LSE_TimoutConf = enum(u32) {
+pub const LSE_TimeoutConf = enum(u32) {
     _,
     pub fn get(num: @This()) f32 {
         const val: u32 = @intFromEnum(num);
@@ -227,8 +230,8 @@ pub const Config = struct {
     USBPrescaler: ?USBPrescalerConf = null,
     PLLSource: ?PLLSourceVirtualConf = null,
     PLLMUL: ?PLLMULConf = null,
-    HSE_Timout: ?HSE_TimoutConf = null,
-    LSE_Timout: ?LSE_TimoutConf = null,
+    HSE_Timeout: ?HSE_TimeoutConf = null,
+    LSE_Timeout: ?LSE_TimeoutConf = null,
     HSICalibrationValue: ?HSICalibrationValueConf = null,
 };
 
@@ -247,8 +250,8 @@ pub const ConfigWithRef = struct {
     USBPrescaler: ?USBPrescalerConf = null,
     PLLSourceVirtual: ?PLLSourceVirtualConf = null,
     PLLMUL: ?PLLMULConf = null,
-    HSE_Timout: ?HSE_TimoutConf = null,
-    LSE_Timout: ?LSE_TimoutConf = null,
+    HSE_Timeout: ?HSE_TimeoutConf = null,
+    LSE_Timeout: ?LSE_TimeoutConf = null,
     HSICalibrationValue: ?HSICalibrationValueConf = null,
     pub fn into_config(self: *const ConfigWithRef) Config {
         return .{
@@ -266,8 +269,8 @@ pub const ConfigWithRef = struct {
             .USBPrescaler = self.USBPrescaler,
             .PLLSource = self.PLLSourceVirtual,
             .PLLMUL = self.PLLMUL,
-            .HSE_Timout = self.HSE_Timout,
-            .LSE_Timout = self.LSE_Timout,
+            .HSE_Timeout = self.HSE_Timeout,
+            .LSE_Timeout = self.LSE_Timeout,
             .HSICalibrationValue = self.HSICalibrationValue,
         };
     }
@@ -319,8 +322,8 @@ pub const ClockTree = struct {
     PLLSource: ClockNode,
     VCO2output: ClockNode,
     PLLMUL: ClockNode,
-    HSE_Timout: ClockNodeTypes,
-    LSE_Timout: ClockNodeTypes,
+    HSE_Timeout: ClockNodeTypes,
+    LSE_Timeout: ClockNodeTypes,
     HSICalibrationValue: ClockNodeTypes,
 
     pub fn init_comptime(comptime config: Config) this {
@@ -750,15 +753,15 @@ pub const ClockTree = struct {
             .Nodetype = USBoutputval,
             .parents = &[_]*const ClockNode{&USBPrescaler},
         };
-        const HSE_Timoutval = ClockNodeTypes{
+        const HSE_Timeoutval = ClockNodeTypes{
             .source = .{
-                .value = if (config.HSE_Timout) |val| val.get() else 100,
+                .value = if (config.HSE_Timeout) |val| val.get() else 100,
                 .limit = .{ .max = 4294967295, .min = 1 },
             },
         };
-        const LSE_Timoutval = ClockNodeTypes{
+        const LSE_Timeoutval = ClockNodeTypes{
             .source = .{
-                .value = if (config.LSE_Timout) |val| val.get() else 5000,
+                .value = if (config.LSE_Timeout) |val| val.get() else 5000,
                 .limit = .{ .max = 4294967295, .min = 1 },
             },
         };
@@ -812,8 +815,8 @@ pub const ClockTree = struct {
             .PLLSource = PLLSource,
             .VCO2output = VCO2output,
             .PLLMUL = PLLMUL,
-            .HSE_Timout = HSE_Timoutval,
-            .LSE_Timout = LSE_Timoutval,
+            .HSE_Timeout = HSE_Timeoutval,
+            .LSE_Timeout = LSE_Timeoutval,
             .HSICalibrationValue = HSICalibrationValueval,
         };
     }

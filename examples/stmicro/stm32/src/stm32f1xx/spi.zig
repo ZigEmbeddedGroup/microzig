@@ -2,9 +2,11 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const RCC = microzig.chip.peripherals.RCC;
-const GPTimer = microzig.hal.timer.GPTimer;
-const gpio = microzig.hal.gpio;
-const SPI = microzig.hal.spi.SPI;
+const stm32 = microzig.hal;
+const rcc = stm32.rcc;
+const GPTimer = stm32.timer.GPTimer;
+const gpio = stm32.gpio;
+const SPI = stm32.spi.SPI;
 
 const timer = GPTimer.init(.TIM2).into_counter_mode();
 
@@ -23,7 +25,11 @@ pub fn main() void {
         .AFIOEN = 1,
     });
 
-    const counter = timer.counter_device(8_000_000);
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.SPI2);
+    rcc.enable_clock(.TIM2);
+
+    const counter = timer.counter_device(rcc.get_clock(.TIM2));
 
     MOSI.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     MISO.set_input_mode(.pull);

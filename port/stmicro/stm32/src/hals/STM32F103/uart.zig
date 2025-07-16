@@ -126,7 +126,7 @@ pub const UART = struct {
         uart.apply_internal(config);
     }
 
-    pub fn apply_runtime(uart: *const UART, comptime config: Config) !void {
+    pub fn apply_runtime(uart: *const UART, config: Config) !void {
         try validate_baudrate(config.baud_rate, config.clock_speed);
         try validate_config(uart, config);
         uart.apply_internal(config);
