@@ -31,6 +31,7 @@ pub fn build(b: *std.Build) void {
             .example = .{
                 .name = "wifi",
                 .file = "src/wifi.zig",
+                .features = .{ .lwip = true },
             },
         },
     };
@@ -83,6 +84,49 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(example.file),
         });
 
+        if (example.features.lwip) {
+            const resolved_zig_target = b.resolveTargetQuery(firmware.target.zig_target);
+
+            const foundation_libc_dep = b.dependency("foundation_libc", .{
+                .optimize = optimize,
+                .target = resolved_zig_target,
+            });
+            const lwip_dep = b.dependency("lwip", .{});
+
+            const lwip_lib = b.addLibrary(.{
+                .name = "lwip",
+                .root_module = b.createModule(.{
+                    .optimize = optimize,
+                    .target = resolved_zig_target,
+                }),
+                .linkage = .static,
+            });
+
+            lwip_lib.addCSourceFiles(.{
+                .root = lwip_dep.path("src"),
+                .files = &lwip_files,
+                .flags = &lwip_flags,
+            });
+
+            lwip_lib.linkLibrary(foundation_libc_dep.artifact("foundation"));
+
+            lwip_lib.addIncludePath(b.path("src/include"));
+            lwip_lib.addIncludePath(lwip_dep.path("src/include"));
+
+            firmware.app_mod.linkLibrary(lwip_lib);
+
+            const lwip_translate_c = b.addTranslateC(.{
+                .root_source_file = b.path("src/include/lwip.h"),
+                .target = resolved_zig_target,
+                .optimize = optimize,
+                .link_libc = false,
+            });
+            lwip_translate_c.addIncludePath(b.path("src/include"));
+            lwip_translate_c.addIncludePath(lwip_dep.path("src/include"));
+
+            firmware.app_mod.addImport("lwip", lwip_translate_c.createModule());
+        }
+
         // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.
         //
@@ -129,11 +173,121 @@ const TargetDescription = struct {
 };
 
 const Example = struct {
+    const Features = packed struct {
+        lwip: bool = false,
+    };
+
     name: []const u8,
     file: []const u8,
+    features: Features = .{},
 };
 
 const TargetedExample = struct {
     target: TargetEnum,
     example: Example,
+};
+
+const lwip_flags = [_][]const u8{ "-std=c99", "-fno-sanitize=undefined" };
+const lwip_files = [_][]const u8{
+    // Core files
+    "core/init.c",
+    "core/def.c",
+    "core/dns.c",
+    "core/inet_chksum.c",
+    "core/ip.c",
+    "core/mem.c",
+    "core/memp.c",
+    "core/netif.c",
+    "core/pbuf.c",
+    "core/raw.c",
+    "core/stats.c",
+    "core/sys.c",
+    "core/altcp.c",
+    "core/altcp_alloc.c",
+    "core/altcp_tcp.c",
+    "core/tcp.c",
+    "core/tcp_in.c",
+    "core/tcp_out.c",
+    "core/timeouts.c",
+    "core/udp.c",
+
+    // IPv4 implementation:
+    "core/ipv4/acd.c",
+    "core/ipv4/autoip.c",
+    "core/ipv4/dhcp.c",
+    "core/ipv4/etharp.c",
+    "core/ipv4/icmp.c",
+    "core/ipv4/igmp.c",
+    "core/ipv4/ip4_frag.c",
+    "core/ipv4/ip4.c",
+    "core/ipv4/ip4_addr.c",
+
+    // IPv6 implementation:
+    "core/ipv6/dhcp6.c",
+    "core/ipv6/ethip6.c",
+    "core/ipv6/icmp6.c",
+    "core/ipv6/inet6.c",
+    "core/ipv6/ip6.c",
+    "core/ipv6/ip6_addr.c",
+    "core/ipv6/ip6_frag.c",
+    "core/ipv6/mld6.c",
+    "core/ipv6/nd6.c",
+
+    // Interfaces
+    "netif/ethernet.c",
+
+    // Interfaces:
+    // "netif/bridgeif.c",
+    // "netif/ethernet.c",
+    // "netif/slipif.c",
+    // "netif/bridgeif_fdb.c",
+
+    // sequential APIs
+    // "api/err.c",
+    // "api/api_msg.c",
+    // "api/netifapi.c",
+    // "api/sockets.c",
+    // "api/netbuf.c",
+    // "api/api_lib.c",
+    // "api/tcpip.c",
+    // "api/netdb.c",
+    // "api/if_api.c",
+
+    // 6LoWPAN
+    // "netif/lowpan6.c",
+    // "netif/lowpan6_ble.c",
+    // "netif/lowpan6_common.c",
+    // "netif/zepif.c",
+
+    // PPP
+    // "netif/ppp/polarssl/arc4.c",
+    // "netif/ppp/polarssl/des.c",
+    // "netif/ppp/polarssl/md4.c",
+    // "netif/ppp/polarssl/sha1.c",
+    // "netif/ppp/polarssl/md5.c",
+    // "netif/ppp/ipcp.c",
+    // "netif/ppp/magic.c",
+    // "netif/ppp/pppoe.c",
+    // "netif/ppp/mppe.c",
+    // "netif/ppp/multilink.c",
+    // "netif/ppp/chap-new.c",
+    // "netif/ppp/auth.c",
+    // "netif/ppp/chap_ms.c",
+    // "netif/ppp/ipv6cp.c",
+    // "netif/ppp/chap-md5.c",
+    // "netif/ppp/upap.c",
+    // "netif/ppp/pppapi.c",
+    // "netif/ppp/pppos.c",
+    // "netif/ppp/eap.c",
+    // "netif/ppp/pppol2tp.c",
+    // "netif/ppp/demand.c",
+    // "netif/ppp/fsm.c",
+    // "netif/ppp/eui64.c",
+    // "netif/ppp/ccp.c",
+    // "netif/ppp/pppcrypt.c",
+    // "netif/ppp/utils.c",
+    // "netif/ppp/vj.c",
+    // "netif/ppp/lcp.c",
+    // "netif/ppp/ppp.c",
+    // "netif/ppp/ecp.c",
 };

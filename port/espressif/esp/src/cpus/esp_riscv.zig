@@ -289,6 +289,7 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
         const sections = struct {
             extern var microzig_bss_start: u8;
             extern var microzig_bss_end: u8;
+            extern var end_of_stack: u8;
         };
 
         fn _start() callconv(.naked) noreturn {
@@ -296,7 +297,7 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
                 \\mv sp, %[eos]
                 \\jal _start_c
                 :
-                : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+                : [eos] "r" (@as(u32, @intFromPtr(&sections.end_of_stack))),
             );
         }
 

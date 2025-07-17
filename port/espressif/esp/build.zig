@@ -159,11 +159,9 @@ pub fn build(b: *std.Build) void {
     const translate_c = b.addTranslateC(.{
         .root_source_file = esp_wifi_sys_dep.path("esp-wifi-sys/include/include.h"),
         .target = esp32_c3_resolved_zig_target,
-        .optimize = .ReleaseFast,
+        .optimize = .Debug,
         .link_libc = false,
     });
-
-    const mod = translate_c.addModule("esp-wifi-driver");
 
     translate_c.addIncludePath(b.path("src/hal/radio/libc_dummy_include"));
     translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/include"));
@@ -171,6 +169,13 @@ pub fn build(b: *std.Build) void {
 
     // esp32_c3 specific
     translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/headers/esp32c3"));
+
+    const mod = translate_c.addModule("esp-wifi-driver");
+
+    const foundation_libc_dep = b.dependency("microzig/modules/foundation-libc", .{
+        .target = esp32_c3_resolved_zig_target,
+    });
+    mod.linkLibrary(foundation_libc_dep.artifact("foundation"));
 
     mod.addLibraryPath(esp_wifi_sys_dep.path("esp-wifi-sys/libs/esp32c3"));
     inline for (&.{

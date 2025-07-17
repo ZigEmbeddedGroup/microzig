@@ -51,10 +51,6 @@ pub fn init() InternalError!void {
     inited = true;
 }
 
-pub fn callback(_: ?*anyopaque) callconv(.c) void {
-    log.info("hello world", .{});
-}
-
 pub fn deinit() void {
     if (!inited) {
         @panic("trying to deinit the wifi controller but it isn't initialized");
@@ -302,6 +298,20 @@ pub fn connect() InternalError!void {
     try c_result(c.esp_wifi_connect());
 }
 
+pub const Interface = enum(u32) {
+    sta = c.WIFI_IF_STA,
+    ap = c.WIFI_IF_AP,
+
+    pub fn is_active(self: Interface) InternalError!bool {
+        const mode = try get_mode();
+        if (mode == .ap_sta) return true;
+        return switch (self) {
+            .sta => mode == .sta,
+            .ap => mode == .ap,
+        };
+    }
+};
+
 pub const Event = enum(i32) {
     /// Wi-Fi is ready for operation.
     WifiReady = 0,
@@ -405,26 +415,49 @@ pub const Event = enum(i32) {
     StaNeighborRep,
 };
 
-// const StaState = enum {
-//     none,
-//     sta_started,
-//     sta_connected,
-//     sta_disconnected,
-//     sta_stopped,
-// };
-//
-// var sta_state: StaState = .none;
-//
-// /// Internal method called on each event post.
-// pub fn update_state(event: Event) void {
-//     switch (event) {
-//
-//     }
-// }
+const StaState = enum {
+    none,
+    sta_started,
+    sta_connected,
+    sta_disconnected,
+    sta_stopped,
+};
+
+var sta_state: StaState = .none;
+
+/// Internal method called on each event post.
+pub fn update_sta_state(event: Event) void {
+    const new_sta_state: StaState = switch (event) {
+        .StaStart => .sta_started,
+        .StaConnected => .sta_connected,
+        .StaDisconnected => .sta_disconnected,
+        .StaStop => .sta_stopped,
+        else => return,
+    };
+    @atomicStore(StaState, &sta_state, new_sta_state, .unordered);
+}
+
+pub fn get_sta_state() StaState {
+    return @atomicLoad(StaState, &sta_state, .unordered);
+}
 
 // TODO: ApState
 
-var wifi_tx_in_flight: usize = 0;
+var packets_in_flight: usize = 0;
+
+pub fn send_packet(iface: Interface, data: []const u8) (error{TooManyPacketsInFlight} || InternalError)!void {
+    std.debug.assert(try iface.is_active()); // tried to send packet on invalid interface
+
+    const pkts_in_flight = @atomicLoad(usize, &packets_in_flight, .acquire);
+    if (pkts_in_flight >= 15) {
+        log.warn("too many packets in flight", .{});
+        return error.TooManyPacketsInFlight;
+    }
+    _ = @atomicRmw(usize, &packets_in_flight, .Add, 1, .acq_rel);
+    errdefer _ = @atomicRmw(usize, &packets_in_flight, .Sub, 1, .acq_rel);
+
+    try c_result(c.esp_wifi_internal_tx(@intFromEnum(iface), @constCast(@ptrCast(data.ptr)), @intCast(data.len)));
+}
 
 fn tx_done_cb(
     _: u8,
@@ -434,41 +467,65 @@ fn tx_done_cb(
 ) callconv(.c) void {
     log.debug("tx_done_cb", .{});
 
-    const cs = microzig.interrupt.enter_critical_section();
-    defer cs.leave();
+    _ = @atomicRmw(usize, &packets_in_flight, .Sub, 1, .acq_rel);
+}
 
-    if (wifi_tx_in_flight > 0) {
-        wifi_tx_in_flight -= 1;
+/// Every packet buffer must be deinited by the user in the callback.
+pub const PacketBuffer = struct {
+    data: []const u8,
+    eb: ?*anyopaque,
+
+    pub fn deinit(self: PacketBuffer) void {
+        c.esp_wifi_internal_free_rx_buffer(self.eb);
     }
+};
+
+pub const RxCallback = *const fn (pb: PacketBuffer) void;
+
+var packet_rx_sta_callback: ?RxCallback = null;
+var packet_rx_ap_callback: ?RxCallback = null;
+
+pub fn set_packet_rx_sta_callback(cb: RxCallback) void {
+    packet_rx_sta_callback = cb;
 }
 
 fn recv_cb_sta(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
-    log.debug("recv_cb_sta {?} {} {?}", .{buf, len, eb});
+    log.debug("recv_cb_sta {?} {} {?}", .{ buf, len, eb });
+
+    const pb: PacketBuffer = .{
+        .data = @as([*]const u8, @ptrCast(buf))[0..len],
+        .eb = eb,
+    };
+
+    if (packet_rx_sta_callback) |cb| {
+        cb(pb);
+    }
 
     return c.ESP_OK;
 }
 
 fn recv_cb_ap(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
-    _ = buf; // autofix
-    _ = len; // autofix
-    _ = eb; // autofix
+    const pb: PacketBuffer = .{
+        .data = @as([*]const u8, @ptrCast(buf))[0..len],
+        .eb = eb,
+    };
 
-    log.debug("recv_cb_ap", .{});
+    if (packet_rx_ap_callback) |cb| {
+        cb(pb);
+    }
 
-    @panic("recv_cb_ap");
-
-    // return c.ESP_OK;
+    return c.ESP_OK;
 }
 
 // I pupulated this with the defaults from rust. Some of it should be configurable.
 var init_config: c.wifi_init_config_t = .{
     .osi_funcs = &g_wifi_osi_funcs,
     // .wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs,
-    .static_rx_buf_num = 3, //10,
-    .dynamic_rx_buf_num = 3, //32,
+    .static_rx_buf_num = 10,
+    .dynamic_rx_buf_num = 32,
     .tx_buf_type = c.CONFIG_ESP_WIFI_TX_BUFFER_TYPE,
     .static_tx_buf_num = 0,
-    .dynamic_tx_buf_num = 3, //32,
+    .dynamic_tx_buf_num = 32,
     .rx_mgmt_buf_type = c.CONFIG_ESP_WIFI_STATIC_RX_MGMT_BUFFER,
     .rx_mgmt_buf_num = c.CONFIG_ESP_WIFI_RX_MGMT_BUF_NUM_DEF,
     .cache_tx_buf_num = c.WIFI_CACHE_TX_BUFFER_NUM,
@@ -693,7 +750,7 @@ pub fn c_result(err_code: i32) InternalError!void {
 
     if (err_code != c.ESP_OK) {
         const err: InternalWifiError = @enumFromInt(err_code);
-        log.err("Internal wifi error occurred: {s}", .{@tagName(err)});
+        log.err("internal wifi error occurred: {s}", .{@tagName(err)});
         return error.InternalError;
     }
 }

@@ -40,6 +40,7 @@ const header_files = [_][]const u8{
     "inttypes.h",
     "math.h",
     "setjmp.h",
+    "stdio.h",
     "stdlib.h",
     "string.h",
     "tgmath.h",

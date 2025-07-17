@@ -5,11 +5,17 @@ const hal = microzig.hal;
 const radio = hal.radio;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
+const c = @import("lwip");
+
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .log_scope_levels = &.{
         .{
             .scope = .esp_radio,
+            .level = .info,
+        },
+        .{
+            .scope = .esp_radio_wifi,
             .level = .info,
         },
         .{
@@ -32,21 +38,76 @@ pub const microzig_options: microzig.Options = .{
 var buffer: [50 * 1024]u8 = undefined;
 
 pub fn main() !void {
-    var fba: std.heap.FixedBufferAllocator = .init(&buffer);
-    const allocator = fba.threadSafeAllocator();
+    // var fba: std.heap.FixedBufferAllocator = .init(&buffer);
+    // const allocator = fba.threadSafeAllocator();
+    var alloc = microzig.allocator.init_with_buffer(&buffer);
+    const allocator = alloc.allocator();
 
     microzig.cpu.interrupt.enable_interrupts();
 
     try radio.init(allocator);
     try radio.wifi.init();
 
+    c.lwip_init();
+
+    var netif: c.netif = undefined;
+    _ = c.netif_add(&netif, @ptrCast(c.IP4_ADDR_ANY), @ptrCast(c.IP4_ADDR_ANY), @ptrCast(c.IP4_ADDR_ANY), null, netif_init, c.netif_input);
+    @memcpy(&netif.name, "e0");
+    c.netif_create_ip6_linklocal_address(&netif, 1);
+    netif.ip6_autoconfig_enabled = 1;
+    c.netif_set_status_callback(&netif, netif_status_callback);
+    c.netif_set_default(&netif);
+    c.netif_set_up(&netif);
+    _ = c.dhcp_start(&netif);
+
     try radio.wifi.set_mode(.sta);
     try radio.wifi.set_client_config(.{
         .ssid = "Internet",
     });
 
+    radio.wifi.set_packet_rx_sta_callback(rx_callback);
+
     try radio.wifi.start();
     try radio.wifi.connect();
+
+    var connected: bool = false;
+    var last_mem_show = hal.time.get_time_since_boot();
+
+    while (true) {
+        const sta_state = radio.wifi.get_sta_state();
+        if (!connected and sta_state == .sta_connected) {
+            std.log.info("link up", .{});
+            c.netif_set_link_up(&netif);
+            connected = true;
+        } else if (connected and sta_state == .sta_disconnected) {
+            std.log.info("link down", .{});
+            c.netif_set_link_down(&netif);
+            connected = false;
+        }
+
+        const maybe_pbuf = blk: {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            break :blk rx_queue.dequeue();
+        };
+
+        if (maybe_pbuf) |pbuf| {
+            if (netif.input.?(pbuf, &netif) != c.ERR_OK) {
+                _ = c.pbuf_free(pbuf);
+            }
+        }
+
+        c.sys_check_timeouts();
+
+        const now = hal.time.get_time_since_boot();
+        if (!now.diff(last_mem_show).less_than(.from_ms(1000))) {
+            const used_mem = 50 * 1024 - alloc.free_heap();
+            std.log.info("used memory: {}K ({})", .{used_mem / 1024, used_mem});
+            last_mem_show = now;
+        }
+        hal.time.sleep_ms(100);
+    }
 
     // var ssid: [1:0]u8 = @splat(0);
     // var bssid: [1:0]u8 = @splat(0);
@@ -73,9 +134,131 @@ pub fn main() !void {
     // try radio.wifi.c_result(c.esp_wifi_scan_get_ap_num(&no));
 
     // std.log.info("found {} aps", .{no});
+}
 
-    while (true) {
-        std.log.info("tick!", .{});
-        hal.time.sleep_ms(1000);
+var rx_queue: Queue(*c.struct_pbuf, 10) = .empty;
+
+fn rx_callback(packet: radio.wifi.PacketBuffer) void {
+    defer packet.deinit();
+    // std.log.info("receiving packet", .{});
+
+    const maybe_pbuf: ?*c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(packet.data.len), c.PBUF_POOL);
+    if (maybe_pbuf) |pbuf| {
+        _ = c.pbuf_take(pbuf, packet.data.ptr, @intCast(packet.data.len));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        rx_queue.enqueue(pbuf) catch {
+            std.log.warn("packet dropped", .{});
+            _ = c.pbuf_free(pbuf);
+        };
     }
+}
+
+fn netif_init(netif_c: [*c]c.struct_netif) callconv(.c) c.err_t {
+    const netif: *c.struct_netif = netif_c;
+
+    netif.linkoutput = netif_output;
+    netif.output = c.etharp_output;
+    netif.output_ip6 = c.ethip6_output;
+    netif.mtu = 1500;
+    netif.flags = c.NETIF_FLAG_BROADCAST | c.NETIF_FLAG_ETHARP | c.NETIF_FLAG_ETHERNET | c.NETIF_FLAG_IGMP | c.NETIF_FLAG_MLD6;
+    @memcpy(&netif.hwaddr, &radio.read_mac());
+    netif.hwaddr_len = 6;
+
+    return c.ERR_OK;
+}
+
+var packet_buf: [1500]u8 = undefined;
+
+fn netif_output(netif: [*c]c.struct_netif, pbuf_c: [*c]c.struct_pbuf) callconv(.c) c.err_t {
+    _ = netif; // autofix
+    const pbuf: *c.struct_pbuf = pbuf_c;
+
+    // std.log.info("sending packet", .{});
+
+    // const cs = microzig.interrupt.enter_critical_section();
+    // defer cs.leave();
+
+    var off: usize = 0;
+    while (off < pbuf.tot_len) {
+        const cnt = c.pbuf_copy_partial(pbuf, packet_buf[off..].ptr, @as(u15, @intCast(pbuf.tot_len - off)), @as(u15, @intCast(off)));
+        if (cnt == 0) {
+            std.log.err("failed to copy network packet", .{});
+            return c.ERR_BUF;
+        }
+        off += cnt;
+    }
+
+    radio.wifi.send_packet(.sta, packet_buf[0..pbuf.tot_len]) catch |err| {
+        std.log.err("failed to send packet: {}", .{err});
+    };
+
+    return c.ERR_OK;
+}
+
+const IPFormatter = struct {
+    addr: c.ip_addr_t,
+
+    pub fn init(addr: c.ip_addr_t) IPFormatter {
+        return .{ .addr = addr };
+    }
+
+    pub fn format(addr: IPFormatter, comptime fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = opt;
+        try writer.writeAll(std.mem.sliceTo(c.ip4addr_ntoa(@as(*const c.ip4_addr_t, @ptrCast(&addr.addr))), 0));
+    }
+};
+
+fn netif_status_callback(netif_c: [*c]c.netif) callconv(.C) void {
+    const netif: *c.netif = netif_c;
+
+    std.log.info("netif status changed ip to {}", .{IPFormatter.init(netif.ip_addr)});
+}
+
+comptime {
+    _ = sys_now;
+}
+
+export fn sys_now() callconv(.c) u32 {
+    return @truncate(hal.time.get_time_since_boot().to_us() * 1_000);
+}
+
+fn Queue(Item: type, capacity: usize) type {
+    return struct {
+        const Self = @This();
+
+        pub const empty: Self = .{
+            .buf = undefined,
+            .read_index = 0,
+            .write_index = 0,
+            .len = 0,
+        };
+
+        buf: [capacity]Item,
+        read_index: usize,
+        write_index: usize,
+        len: usize,
+
+        pub fn enqueue(self: *Self, item: Item) error{NoSpace}!void {
+            if (self.len < capacity) {
+                self.buf[self.write_index] = item;
+                self.write_index = (self.write_index + 1) % capacity;
+                self.len += 1;
+            } else {
+                return error.NoSpace;
+            }
+        }
+
+        pub fn dequeue(self: *Self) ?Item {
+            if (self.len == 0) return null;
+
+            const item = self.buf[self.read_index];
+            self.read_index = (self.read_index + 1) % capacity;
+            self.len -= 1;
+            return item;
+        }
+    };
 }

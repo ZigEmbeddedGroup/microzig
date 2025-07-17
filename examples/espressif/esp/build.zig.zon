@@ -4,6 +4,11 @@
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },
+        .lwip = .{
+            .url = "https://download.savannah.nongnu.org/releases/lwip/lwip-2.2.1.zip",
+            .hash = "N-V-__8AAHHNdQCulP7hfd2g0o1RPg4_KWqqUjQ42Wda47eN",
+        },
+        .foundation_libc = .{ .path = "../../../modules/foundation-libc" },
     },
     .paths = .{
         "README.md",
