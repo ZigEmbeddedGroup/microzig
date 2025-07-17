@@ -38,11 +38,11 @@ fn syslog(fmt: ?[*:0]const u8, va_list: std.builtin.VaList) callconv(.c) void {
 
 pub export var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
 
-pub export fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
-    const s = str orelse return 0;
-
-    return std.mem.len(s);
-}
+// pub export fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
+//     const s = str orelse return 0;
+//
+//     return std.mem.len(s);
+// }
 
 pub export fn strnlen(str: ?[*:0]const u8, _: usize) callconv(.c) usize {
     const s = str orelse return 0;
@@ -59,9 +59,9 @@ pub export fn strdup(_: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
     @panic("strdup");
 }
 
-pub export fn atoi(_: ?[*:0]const u8) callconv(.c) i32 {
-    @panic("atoi");
-}
+// pub export fn atoi(_: ?[*:0]const u8) callconv(.c) i32 {
+//     @panic("atoi");
+// }
 
 pub export fn strcasecmp(_: ?[*:0]const u8, _: ?[*:0]const u8) callconv(.c) i32 {
     @panic("atoi");
@@ -89,14 +89,14 @@ pub export fn __assert_func(
 pub export fn malloc(len: usize) callconv(.c) ?*anyopaque {
     log.debug("malloc {}", .{len});
 
-    const buf = allocator.alloc(u8, @sizeOf(usize) + len) catch {
+    const buf = allocator.rawAlloc(@sizeOf(usize) + len, .@"4", @returnAddress()) orelse {
         log.warn("failed to allocate memory: {}", .{len});
         return null;
     };
 
-    const alloc_len: *usize = @alignCast(@ptrCast(buf.ptr));
+    const alloc_len: *usize = @alignCast(@ptrCast(buf));
     alloc_len.* = len;
-    return @ptrFromInt(@intFromPtr(buf.ptr) + @sizeOf(usize));
+    return @ptrFromInt(@intFromPtr(buf) + @sizeOf(usize));
 }
 
 pub export fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
@@ -115,7 +115,7 @@ pub export fn free(ptr: ?*anyopaque) callconv(.c) void {
 
     const buf_ptr: [*]u8 = @ptrFromInt(@intFromPtr(ptr) - @sizeOf(usize));
     const buf_len: *usize = @alignCast(@ptrCast(buf_ptr));
-    allocator.free(buf_ptr[0 .. @sizeOf(usize) + buf_len.*]);
+    allocator.rawFree(buf_ptr[0 .. @sizeOf(usize) + buf_len.*], .@"4", @returnAddress());
 }
 
 pub export fn esp_wifi_free_internal_heap(_: ?*anyopaque) callconv(.c) void {
@@ -203,11 +203,11 @@ pub export fn esp_fill_random(buf: [*c]u8, len: usize) callconv(.c) void {
 comptime {
     _ = WIFI_EVENT;
 
-    _ = strlen;
+    // _ = strlen;
     _ = strnlen;
     _ = strrchr;
     _ = strdup;
-    _ = atoi;
+    // _ = atoi;
     _ = strcasecmp;
     _ = mktime;
     _ = __assert_func;
@@ -228,6 +228,7 @@ comptime {
     _ = sleep;
     _ = usleep;
     _ = esp_fill_random;
+    _ = rand;
 }
 
 // ----- end of exports -----
@@ -794,6 +795,8 @@ pub fn event_post(
     const event: wifi.Event = @enumFromInt(id);
     log.info("received event: {s}", .{@tagName(event)});
 
+    wifi.update_sta_state(event);
+
     return 0;
 }
 
@@ -801,7 +804,7 @@ pub fn get_free_heap_size() callconv(.c) void {
     @panic("get_free_heap_size: not implemented");
 }
 
-pub fn rand() callconv(.c) u32 {
+pub export fn rand() callconv(.c) u32 {
     return hal.rng.random_u32();
 }
 

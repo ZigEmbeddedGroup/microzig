@@ -30,6 +30,7 @@ pub const board = if (config.has_board) @import("board") else void;
 /// Contains device-independent drivers for peripherial devices.
 pub const drivers = @import("drivers");
 
+pub const allocator = @import("allocator.zig");
 pub const core = @import("core.zig");
 pub const concurrency = @import("concurrency.zig");
 pub const interrupt = @import("interrupt.zig");
