@@ -159,3 +159,41 @@ test "AtomicStaticBitSet set_first_available" {
     const err = bs.set_first_available();
     try std.testing.expectError(AtomicStaticBitSetError.NoAvailableBit, err);
 }
+
+// TODO: docs + tests + someone please verify it
+pub fn SPSC_Queue(Item: type, capacity: usize) type {
+    return struct {
+        const Self = @This();
+
+        pub const empty: Self = .{
+            .buf = undefined,
+            .read_index = 0,
+            .write_index = 0,
+            .len = .init(0),
+        };
+
+        buf: [capacity]Item,
+        read_index: usize,
+        write_index: usize,
+        len: std.atomic.Value(usize),
+
+        pub fn enqueue(self: *Self, item: Item) error{NoSpace}!void {
+            if (self.len.load(.acquire) < capacity) {
+                self.buf[self.write_index] = item;
+                self.write_index = (self.write_index + 1) % capacity;
+                _ = self.len.fetchAdd(1, .acq_rel);
+            } else {
+                return error.NoSpace;
+            }
+        }
+
+        pub fn dequeue(self: *Self) ?Item {
+            if (self.len.load(.acquire) == 0) return null;
+
+            const item = self.buf[self.read_index];
+            self.read_index = (self.read_index + 1) % capacity;
+            _ = self.len.fetchSub(1, .acq_rel);
+            return item;
+        }
+    };
+}

@@ -171,12 +171,6 @@ pub fn build(b: *std.Build) void {
     translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/headers/esp32c3"));
 
     const mod = translate_c.addModule("esp-wifi-driver");
-
-    const foundation_libc_dep = b.dependency("microzig/modules/foundation-libc", .{
-        .target = esp32_c3_resolved_zig_target,
-    });
-    mod.linkLibrary(foundation_libc_dep.artifact("foundation"));
-
     mod.addLibraryPath(esp_wifi_sys_dep.path("esp-wifi-sys/libs/esp32c3"));
     inline for (&.{
         "btbb",
@@ -191,10 +185,13 @@ pub fn build(b: *std.Build) void {
         "smartconfig",
         "wapi",
         "wpa_supplicant",
-        "printf",
     }) |library| {
         mod.linkSystemLibrary(library, .{});
     }
+
+    mod.linkSystemLibrary("printf", .{
+        .weak = true,
+    });
 }
 
 const BootMode = enum {

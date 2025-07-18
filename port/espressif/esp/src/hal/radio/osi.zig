@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const log = std.log.scoped(.esp_radio_osi);
 
@@ -36,57 +37,55 @@ fn syslog(fmt: ?[*:0]const u8, va_list: std.builtin.VaList) callconv(.c) void {
 
 // ----- exports -----
 
-pub export var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
-
-// pub export fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
-//     const s = str orelse return 0;
-//
-//     return std.mem.len(s);
-// }
-
-pub export fn strnlen(str: ?[*:0]const u8, _: usize) callconv(.c) usize {
+pub fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
     const s = str orelse return 0;
 
-    // TODO Actually provide a complete implementation.
     return std.mem.len(s);
 }
 
-pub export fn strrchr(_: ?[*:0]const u8, _: u32) callconv(.c) usize {
-    @panic("strrchr");
+pub fn strnlen(str: ?[*:0]const u8, _: usize) callconv(.c) usize {
+    // const s = str orelse return 0;
+    // return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index + 1 else n;
+    const s = str orelse return 0;
+
+    return std.mem.len(s);
 }
 
-pub export fn strdup(_: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
-    @panic("strdup");
+pub fn strrchr(str: ?[*:0]const u8, chr: u32) callconv(.c) ?[*:0]const u8 {
+    const s = str orelse return null;
+
+    // Should return even the index of the zero byte if requested. This
+    // implementation only works with single byte characters.
+
+    if (std.mem.lastIndexOfScalar(u8, s[0 .. std.mem.len(s) + 1], @intCast(chr))) |index| {
+        return @ptrFromInt(@intFromPtr(s) + index);
+    } else {
+        return null;
+    }
 }
 
-// pub export fn atoi(_: ?[*:0]const u8) callconv(.c) i32 {
-//     @panic("atoi");
-// }
-
-pub export fn strcasecmp(_: ?[*:0]const u8, _: ?[*:0]const u8) callconv(.c) i32 {
-    @panic("atoi");
-}
-
-pub export fn mktime(_: ?*const anyopaque) callconv(.c) i64 {
-    @panic("mktime");
-}
-
-pub export fn __assert_func(
+pub fn __assert_func(
     file: ?[*:0]const u8,
     line: u32,
     func: ?[*:0]const u8,
     failed_expr: ?[*:0]const u8,
-) void {
-    log.err("assertion `{s}` failed: file `{s}`, line {}, function `{s}`", .{
-        failed_expr orelse "",
-        file orelse "",
-        line,
-        func orelse "",
-    });
-    @panic("assertion failed");
+) callconv(.c) void {
+    switch (builtin.mode) {
+        .Debug, .ReleaseSafe => {
+            log.err("assertion failed: `{?s}` in file {?s}, line {}, function {?s}", .{
+                failed_expr orelse "",
+                file orelse "",
+                line,
+                func orelse "",
+            });
+            @panic("assertion failed");
+        },
+        .ReleaseSmall => @panic("assertion failed"),
+        .ReleaseFast => unreachable,
+    }
 }
 
-pub export fn malloc(len: usize) callconv(.c) ?*anyopaque {
+pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
     log.debug("malloc {}", .{len});
 
     const buf = allocator.rawAlloc(@sizeOf(usize) + len, .@"4", @returnAddress()) orelse {
@@ -99,7 +98,7 @@ pub export fn malloc(len: usize) callconv(.c) ?*anyopaque {
     return @ptrFromInt(@intFromPtr(buf) + @sizeOf(usize));
 }
 
-pub export fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
+pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
     const total_size: usize = number * size;
     if (malloc(total_size)) |ptr| {
         @memset(@as([*]u8, @ptrCast(ptr))[0..total_size], 0);
@@ -108,7 +107,7 @@ pub export fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
     return null;
 }
 
-pub export fn free(ptr: ?*anyopaque) callconv(.c) void {
+pub fn free(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("free {?}", .{ptr});
 
     std.debug.assert(ptr != null);
@@ -118,41 +117,51 @@ pub export fn free(ptr: ?*anyopaque) callconv(.c) void {
     allocator.rawFree(buf_ptr[0 .. @sizeOf(usize) + buf_len.*], .@"4", @returnAddress());
 }
 
-pub export fn esp_wifi_free_internal_heap(_: ?*anyopaque) callconv(.c) void {
-    @panic("esp_wifi_free_internal_heap");
-}
-
-pub export fn esp_wifi_allocate_from_internal_ram() callconv(.c) void {
-    @panic("esp_wifi_allocate_from_internal_ram");
-}
-
-pub export fn esp_wifi_deallocate_from_internal_ram() callconv(.c) void {
-    @panic("esp_wifi_deallocate_from_internal_ram");
-}
-
-pub export fn _putchar(byte: u8) callconv(.c) void {
-    // NOTE: not interrupt safe
-
-    const static = struct {
-        var buf: [256]u8 = undefined;
-        var bytes_written: usize = 0;
-    };
-
-    static.buf[static.bytes_written] = byte;
-    static.bytes_written += 1;
-
-    if (static.bytes_written >= 256) {
-        log_esp_wifi_driver_internal.debug("_putchar: {s}", .{&static.buf});
-        static.bytes_written = 0;
-    }
-}
-
-pub export fn puts(ptr: ?*anyopaque) callconv(.c) void {
-    // NOTE: not interrupt safe
-
+pub fn puts(ptr: ?*anyopaque) callconv(.c) void {
     const s: []const u8 = std.mem.span(@as([*:0]const u8, @ptrCast(ptr)));
     log_esp_wifi_driver_internal.debug("{s}", .{s});
 }
+
+pub fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) callconv(.c) i32 {
+    if (tv) |time_val| {
+        const usec = hal.time.get_time_since_boot().to_us();
+        time_val.tv_sec = usec / 1_000_000;
+        time_val.tv_usec = @intCast(usec % 1_000_000);
+    }
+
+    return 0;
+}
+
+pub fn sleep(time_sec: c_uint) callconv(.c) c_int {
+    task_delay(time_sec * 1_000_000);
+    return 0;
+}
+
+pub fn usleep(time_us: u32) callconv(.c) c_int {
+    task_delay(time_us);
+    return 0;
+}
+
+comptime {
+    // provide some weak links so they can be overriten
+
+    @export(&strlen, .{ .name = "strlen", .linkage = .weak });
+    @export(&strnlen, .{ .name = "strnlen", .linkage = .weak });
+    @export(&strrchr, .{ .name = "strrchr", .linkage = .weak });
+
+    @export(&__assert_func, .{ .name = "__assert_func", .linkage = .weak });
+
+    @export(&malloc, .{ .name = "malloc", .linkage = .weak });
+    @export(&calloc, .{ .name = "calloc", .linkage = .weak });
+    @export(&free, .{ .name = "free", .linkage = .weak });
+    @export(&puts, .{ .name = "puts", .linkage = .weak });
+
+    @export(&gettimeofday, .{ .name = "gettimeofday", .linkage = .weak });
+    @export(&sleep, .{ .name = "sleep", .linkage = .weak });
+    @export(&usleep, .{ .name = "usleep", .linkage = .weak });
+}
+
+pub export var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
 
 pub export fn rtc_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
     syslog(fmt, @cVaStart());
@@ -174,61 +183,10 @@ pub export fn pp_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
     syslog(fmt, @cVaStart());
 }
 
-pub export fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) i32 {
-    if (tv) |time_val| {
-        const usec = hal.time.get_time_since_boot().to_us();
-        time_val.tv_sec = usec / 1_000_000;
-        time_val.tv_usec = @intCast(usec % 1_000_000);
-    }
-
-    return 0;
-}
-
-pub export fn sleep(time_sec: c_uint) callconv(.c) c_int {
-    hal.rom.delay_us(time_sec * 1_000_000);
-    return 0;
-}
-
-pub export fn usleep(time_us: u32) callconv(.c) c_int {
-    hal.rom.delay_us(time_us);
-    return 0;
-}
-
 pub export fn esp_fill_random(buf: [*c]u8, len: usize) callconv(.c) void {
     log.debug("esp_fill_random {any} {}", .{ buf, len });
 
     hal.rng.read(buf[0..len]);
-}
-
-comptime {
-    _ = WIFI_EVENT;
-
-    // _ = strlen;
-    _ = strnlen;
-    _ = strrchr;
-    _ = strdup;
-    // _ = atoi;
-    _ = strcasecmp;
-    _ = mktime;
-    _ = __assert_func;
-    _ = malloc;
-    _ = calloc;
-    _ = free;
-    _ = esp_wifi_free_internal_heap;
-    _ = esp_wifi_allocate_from_internal_ram;
-    _ = esp_wifi_deallocate_from_internal_ram;
-    _ = _putchar;
-    _ = puts;
-    _ = rtc_printf;
-    _ = phy_printf;
-    _ = coexist_printf;
-    _ = net80211_printf;
-    _ = pp_printf;
-    _ = gettimeofday;
-    _ = sleep;
-    _ = usleep;
-    _ = esp_fill_random;
-    _ = rand;
 }
 
 // ----- end of exports -----
@@ -281,11 +239,12 @@ pub fn set_isr(
     }
 }
 
-// TODO: I don't think we need to do anything here.
+// TODO
 pub fn ints_on(mask: u32) callconv(.c) void {
     log.debug("ints_on {}", .{mask});
 }
 
+// TODO
 pub fn ints_off(mask: u32) callconv(.c) void {
     std.debug.panic("ints_off {}", .{mask});
 }
@@ -498,6 +457,7 @@ pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     }
 }
 
+// TODO: maybe use atomics? maybe it is spsc?
 pub const Queue = struct {
     len: usize = 0,
     capacity: usize,
@@ -696,13 +656,7 @@ fn task_create_common(
         log.warn("failed to create task", .{});
         return 0;
     };
-
-    {
-        const cs = enter_critical_section();
-        cs.leave();
-
-        multitasking.schedule_task(task);
-    }
+    multitasking.schedule_task(task);
 
     @as(*usize, @alignCast(@ptrCast(task_handle))).* = @intFromPtr(task);
 
@@ -780,31 +734,11 @@ pub fn task_get_max_priority() callconv(.c) i32 {
     return -1;
 }
 
-pub fn event_post(
-    base: [*c]const u8,
-    id: i32,
-    data: ?*anyopaque,
-    data_size: usize,
-    ticks_to_wait: u32,
-) callconv(.c) i32 {
-    _ = base; // autofix
-    _ = data; // autofix
-    _ = data_size; // autofix
-    _ = ticks_to_wait; // autofix
-
-    const event: wifi.Event = @enumFromInt(id);
-    log.info("received event: {s}", .{@tagName(event)});
-
-    wifi.update_sta_state(event);
-
-    return 0;
-}
-
 pub fn get_free_heap_size() callconv(.c) void {
     @panic("get_free_heap_size: not implemented");
 }
 
-pub export fn rand() callconv(.c) u32 {
+pub fn rand() callconv(.c) u32 {
     return hal.rng.random_u32();
 }
 
@@ -1005,40 +939,13 @@ pub fn phy_update_country_info(country: [*c]const u8) callconv(.c) c_int {
 pub fn read_mac(mac: [*c]u8, typ: c_uint) callconv(.c) c_int {
     log.debug("read_mac {*} {}", .{ mac, typ });
 
-    const mac_tmp: [6]u8 = hal.radio.read_mac();
+    const mac_tmp: [6]u8 = hal.radio.read_mac(switch (typ) {
+        0 => .sta,
+        1 => .ap,
+        2 => .bt,
+        else => @panic("unknown mac typ"),
+    });
     @memcpy(mac[0..6], &mac_tmp);
-
-    // idk what this means
-    switch (typ) {
-        // esp_mac_wifi_softap
-        1 => {
-            const tmp = mac[0];
-            var i: u6 = 0;
-            while (i < 64) : (i += 1) {
-                mac[0] |= 0x02;
-                mac[0] ^= @intCast(i << 2);
-
-                if (mac[0] != tmp) {
-                    break;
-                }
-            }
-        },
-        // esp_mac_bt
-        2 => {
-            const tmp = mac[0];
-            var i: u6 = 0;
-            while (i < 64) : (i += 1) {
-                mac[0] |= 0x02;
-                mac[0] ^= @intCast(i << 2);
-
-                if (mac[0] != tmp) {
-                    break;
-                }
-            }
-            mac[5] += 1;
-        },
-        else => {},
-    }
 
     return 0;
 }
@@ -1052,7 +959,6 @@ pub fn timer_disarm(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
 
     const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
 
-    // TODO: locking
     const cs = enter_critical_section();
     defer cs.leave();
 
@@ -1068,7 +974,6 @@ pub fn timer_done(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
 
     const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
 
-    // TODO: locking
     const cs = enter_critical_section();
     defer cs.leave();
 
@@ -1087,7 +992,6 @@ pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?
     const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
     const callback: timer.CallbackFn = @alignCast(@ptrCast(callback_ptr));
 
-    // TODO: locking
     const cs = enter_critical_section();
     defer cs.leave();
 
@@ -1265,11 +1169,12 @@ pub fn wifi_realloc() callconv(.c) void {
 pub const wifi_calloc = calloc;
 pub const wifi_zalloc = zalloc_internal;
 
-var wifi_queue_handle: *Queue = undefined;
+var wifi_queue_handle: ?*Queue = null;
 
 pub fn wifi_create_queue(capacity: c_int, item_len: c_int) callconv(.c) ?*anyopaque {
     log.debug("wifi_create_queue {} {}", .{ capacity, item_len });
 
+    std.debug.assert(wifi_queue_handle == null);
     wifi_queue_handle = Queue.create(@intCast(capacity), @intCast(item_len)) catch {
         log.warn("failed to allocate wifi queue", .{});
         return null;
@@ -1283,12 +1188,12 @@ pub fn wifi_create_queue(capacity: c_int, item_len: c_int) callconv(.c) ?*anyopa
 pub fn wifi_delete_queue(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("wifi_delete_queue {?}", .{ptr});
 
-    // if (wifi_queue_handle != ptr) {
-    //     @panic("unknown queue when trying to delete wifi queue");
-    // }
+    std.debug.assert(ptr == @as(?*anyopaque, @ptrCast(wifi_queue_handle)));
 
     const queue: *Queue = @alignCast(@ptrCast(ptr));
     queue.destroy();
+
+    wifi_queue_handle = null;
 }
 
 pub fn coex_init() callconv(.c) c_int {

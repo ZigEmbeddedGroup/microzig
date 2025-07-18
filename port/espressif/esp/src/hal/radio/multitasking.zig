@@ -56,6 +56,7 @@ var main_task: *Task = undefined;
 /// running. It can't be deleted.
 pub var current_task: *Task = undefined;
 
+/// Must be called before the preemption timer interrupt is enabled.
 pub fn init(allocator: Allocator) !void {
     const task: *Task = try allocator.create(Task);
     task.* = .{
@@ -68,6 +69,9 @@ pub fn init(allocator: Allocator) !void {
 }
 
 pub fn schedule_task(task: *Task) void {
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
+
     task.next = current_task.next;
     current_task.next = task;
 }
@@ -88,6 +92,8 @@ fn copy_context(dst: *TrapFrame, src: *const TrapFrame) void {
 }
 
 pub fn yield_task() void {
+    std.debug.assert(microzig.cpu.interrupt.globally_enabled());
+
     // TODO: config
     SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
         .CPU_INTR_FROM_CPU_0 = 1,

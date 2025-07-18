@@ -24,10 +24,10 @@ const TimerListNode = TimerList.Node;
 
 var timer_list: TimerList = .{};
 
-pub fn init(allocator: Allocator) !void {
-    const task = try multitasking.Task.create(allocator, timer_task, null, 8192);
-    multitasking.schedule_task(task);
-}
+// pub fn init(allocator: Allocator) !void {
+//     const task = try multitasking.Task.create(allocator, timer_task, null, 8192);
+//     multitasking.schedule_task(task);
+// }
 
 pub fn add(allocator: Allocator, ets_timer: *c.ets_timer, callback: CallbackFn, arg: ?*anyopaque) !void {
     const timer: Timer = .{
@@ -47,11 +47,9 @@ pub fn add(allocator: Allocator, ets_timer: *c.ets_timer, callback: CallbackFn, 
 }
 
 pub fn remove(allocator: Allocator, timer: *Timer) void {
-    _ = allocator; // autofix
-    _ = timer; // autofix
-    // const node: *TimerListNode = @fieldParentPtr("data", timer);
-    // timer_list.remove(node);
-    // allocator.destroy(node);
+    const node: *TimerListNode = @fieldParentPtr("data", timer);
+    timer_list.remove(node);
+    allocator.destroy(node);
 }
 
 pub fn find(ets_timer: *c.ets_timer) ?*Timer {
@@ -65,18 +63,7 @@ pub fn find(ets_timer: *c.ets_timer) ?*Timer {
     return null;
 }
 
-fn find_next_due(now: time.Absolute) ?*Timer {
-    var current_node = timer_list.first;
-    while (current_node) |node| : (current_node = node.next) {
-        const timer = &node.data;
-        if (timer.deadline.is_reached_by(now)) {
-            return timer;
-        }
-    }
-    return null;
-}
-
-fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
+pub fn tick() void {
     while (true) {
         const now = hal.time.get_time_since_boot();
 
@@ -100,7 +87,21 @@ fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
         if (maybe_call) |callback| {
             callback(arg);
         } else {
-            multitasking.yield_task();
+            break;
         }
     }
 }
+
+fn find_next_due(now: time.Absolute) ?*Timer {
+    var current_node = timer_list.first;
+    while (current_node) |node| : (current_node = node.next) {
+        const timer = &node.data;
+        if (timer.deadline.is_reached_by(now)) {
+            return timer;
+        }
+    }
+    return null;
+}
+
+// fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
+// }

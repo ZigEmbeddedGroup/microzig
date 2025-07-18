@@ -21,6 +21,10 @@ comptime {
     _ = @import("hal/atomic.zig");
 }
 
+pub const HAL_Options = struct {
+    radio: ?radio.Options = null,
+};
+
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .init_comptime(160_000_000);
 

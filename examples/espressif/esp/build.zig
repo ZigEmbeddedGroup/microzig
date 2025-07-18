@@ -98,6 +98,7 @@ pub fn build(b: *std.Build) void {
                 .root_module = b.createModule(.{
                     .optimize = optimize,
                     .target = resolved_zig_target,
+                    .link_libc = false,
                 }),
                 .linkage = .static,
             });

@@ -21,7 +21,23 @@ const osi = @import("radio/osi.zig");
 const timer = @import("radio/timer.zig");
 const multitasking = @import("radio/multitasking.zig");
 
-/// You should enable interrupts after/before this.
+pub const Options = struct {
+    wifi_interrupt: microzig.cpu.Interrupt,
+    timer_interrupt: microzig.cpu.Interrupt,
+    // TODO: we could probably do a context switch without this
+    yield_interrupt: microzig.cpu.Interrupt,
+    // TODO: support other timers and other systimer units
+    /// What alarm to use for preemption in systimer unit 0.
+    systimer_alarm: systimer.Alarm = .alarm0,
+};
+pub const options = microzig.options.hal.radio orelse
+    @compileError("Please specify options if you want to use radio.");
+
+// TODO: We should allow the user to select the scheduling algorithm. We should
+// pass something like the `IO` interface alongside an allocator.
+
+/// Radio uses the official esp drivers. You should enable interrupts
+/// after/before this.
 pub fn init(allocator: Allocator) Allocator.Error!void {
     // TODO: check that clock frequency is higher or equal to 80mhz
 
@@ -34,15 +50,16 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
 
         osi.allocator = allocator;
 
-        setup_timer_periodic_alarm();
-        setup_interrupts();
-
         // TODO: errdefer deinit
         try multitasking.init(allocator);
-        try timer.init(allocator);
+
+        setup_timer_periodic_alarm();
+        setup_interrupts();
     }
 
     multitasking.yield_task();
+
+    // try timer.init(allocator);
 
     log.debug("initialization complete", .{});
 
@@ -52,10 +69,18 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
     };
 }
 
-// TODO: deinit
+// TODO
+// should free everything
+pub fn deinit() void {
+
+}
+
+pub fn tick() void {
+    timer.tick();
+}
 
 // TODO: maybe this can be moved in an efuse hal
-pub fn read_mac() [6]u8 {
+pub fn read_base_mac() [6]u8 {
     const EFUSE = microzig.chip.peripherals.EFUSE;
 
     var mac: [6]u8 = undefined;
@@ -65,6 +90,20 @@ pub fn read_mac() [6]u8 {
     @memcpy(mac[0..4], std.mem.asBytes(&low_32_bits));
     @memcpy(mac[4..6], std.mem.asBytes(&high_16_bits));
 
+    return mac;
+}
+
+pub fn read_mac(iface: enum {
+    sta,
+    ap,
+    bt,
+}) [6]u8 {
+    var mac = read_base_mac();
+    switch (iface) {
+        .sta => {},
+        .ap => mac[5] += 1,
+        .bt => mac[5] += 2,
+    }
     return mac;
 }
 
@@ -127,38 +166,39 @@ fn setup_interrupts() void {
 
     microzig.cpu.interrupt.set_priority_threshold(.zero);
 
-    microzig.cpu.interrupt.map(.wifi_mac, .interrupt1);
-    microzig.cpu.interrupt.map(.wifi_pwr, .interrupt1);
-    microzig.cpu.interrupt.map(.systimer_target0, .interrupt2);
-    microzig.cpu.interrupt.map(.from_cpu_intr0, .interrupt3);
+    microzig.cpu.interrupt.map(.wifi_mac, options.wifi_interrupt);
+    microzig.cpu.interrupt.map(.wifi_pwr, options.wifi_interrupt);
+    microzig.cpu.interrupt.map(.systimer_target0, options.timer_interrupt);
+    microzig.cpu.interrupt.map(.from_cpu_intr0, options.yield_interrupt);
 
-    inline for (&.{ .interrupt1, .interrupt2, .interrupt3 }) |int| {
+    inline for (&.{ options.wifi_interrupt, options.timer_interrupt, options.yield_interrupt }) |int| {
         microzig.cpu.interrupt.set_type(int, .level);
         microzig.cpu.interrupt.set_priority(int, .lowest);
     }
 
-    inline for (&.{ .interrupt2, .interrupt3 }) |int| {
+    inline for (&.{ options.timer_interrupt, options.yield_interrupt }) |int| {
         microzig.cpu.interrupt.enable(int);
     }
 }
 
 // TODO: config (even other timers)
-const timer_alarm: systimer.Alarm = .alarm0;
 const preemt_interval: time.Duration = .from_ms(10);
 
 fn setup_timer_periodic_alarm() void {
+    const alarm = options.systimer_alarm;
+
     // unit0 is already enabled as it is used by `hal.time`.
-    timer_alarm.set_unit(.unit0);
+    alarm.set_unit(.unit0);
 
     // sets the period to one second.
-    timer_alarm.set_period(@intCast(preemt_interval.to_us() * systimer.ticks_per_us()));
+    alarm.set_period(@intCast(preemt_interval.to_us() * systimer.ticks_per_us()));
 
     // to enable period mode you have to first clear the mode bit.
-    timer_alarm.set_mode(.target);
-    timer_alarm.set_mode(.period);
+    alarm.set_mode(.target);
+    alarm.set_mode(.period);
 
-    timer_alarm.set_interrupt_enabled(true);
-    timer_alarm.set_enabled(true);
+    alarm.set_interrupt_enabled(true);
+    alarm.set_enabled(true);
 }
 
 pub const interrupt_handlers = struct {
@@ -174,8 +214,7 @@ pub const interrupt_handlers = struct {
     }
 
     pub fn timer(trap_frame: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        timer_alarm.clear_interrupt();
-
+        options.systimer_alarm.clear_interrupt();
         multitasking.switch_task(trap_frame);
     }
 
