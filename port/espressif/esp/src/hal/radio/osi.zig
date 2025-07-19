@@ -589,14 +589,16 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const item: [*]u8 = @alignCast(@ptrCast(item_ptr));
 
     while (true) {
-        const cs = enter_critical_section();
-        defer cs.leave();
+        {
+            const cs = enter_critical_section();
+            defer cs.leave();
 
-        if (queue.dequeue(item)) |_| {
-            log.debug(">>>> return from queue recv: {*}", .{queue});
+            if (queue.dequeue(item)) |_| {
+                log.debug(">>>> return from queue recv: {*}", .{queue});
 
-            return 1;
-        } else |_| {}
+                return 1;
+            } else |_| {}
+        }
 
         if (!forever and hal.time.get_time_since_boot().diff(start).to_us() > timeout) {
             log.warn(">>>> return from queue recv from timeout: {*}", .{queue});

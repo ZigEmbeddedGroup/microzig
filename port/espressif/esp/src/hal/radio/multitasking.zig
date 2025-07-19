@@ -92,10 +92,14 @@ fn copy_context(dst: *TrapFrame, src: *const TrapFrame) void {
 }
 
 pub fn yield_task() void {
-    std.debug.assert(microzig.cpu.interrupt.globally_enabled());
+    if (!microzig.cpu.interrupt.globally_enabled()) {
+        @panic("can't yield when interrupts are disabled");
+    }
 
     // TODO: config
     SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
         .CPU_INTR_FROM_CPU_0 = 1,
     });
+
+    microzig.cpu.wfi();
 }

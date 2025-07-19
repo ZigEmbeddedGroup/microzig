@@ -32,7 +32,7 @@ pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .interrupt1 = radio.interrupt_handlers.wifi_xxx,
         .interrupt2 = radio.interrupt_handlers.timer,
-        .interrupt3 = radio.interrupt_handlers.software,
+        .interrupt3 = radio.interrupt_handlers.yield,
     },
     .hal = .{
         .radio = .{
@@ -78,10 +78,7 @@ pub fn main() !void {
         },
     });
 
-    radio.wifi.set_packet_rx_sta_callback(rx_callback);
-
     try radio.wifi.start();
-    // non blocking
     try radio.wifi.connect();
 
     var connected: bool = false;
@@ -101,16 +98,17 @@ pub fn main() !void {
             connected = false;
         }
 
-        const maybe_pbuf = blk: {
-            const cs = microzig.interrupt.enter_critical_section();
-            defer cs.leave();
+        while (radio.wifi.recv_packet(.sta)) |packet| {
+            defer packet.deinit();
 
-            break :blk rx_queue.dequeue();
-        };
+            const maybe_pbuf: ?*c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(packet.data.len), c.PBUF_POOL);
+            if (maybe_pbuf) |pbuf| {
+                _ = c.pbuf_take(pbuf, packet.data.ptr, @intCast(packet.data.len));
+                defer _ = c.pbuf_free(pbuf);
 
-        if (maybe_pbuf) |pbuf| {
-            if (netif.input.?(pbuf, &netif) != c.ERR_OK) {
-                _ = c.pbuf_free(pbuf);
+                if (c.netif_input(pbuf, &netif) != c.ERR_OK) {
+                    std.log.warn("lwip netif input failed", .{});
+                }
             }
         }
 
@@ -180,18 +178,6 @@ fn rx_callback(packet: radio.wifi.ReceivedPacket) void {
 
     // std.log.info("receiving packet", .{});
 
-    const maybe_pbuf: ?*c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(packet.data.len), c.PBUF_POOL);
-    if (maybe_pbuf) |pbuf| {
-        _ = c.pbuf_take(pbuf, packet.data.ptr, @intCast(packet.data.len));
-
-        const cs = microzig.interrupt.enter_critical_section();
-        defer cs.leave();
-
-        rx_queue.enqueue(pbuf) catch {
-            std.log.warn("packet dropped", .{});
-            _ = c.pbuf_free(pbuf);
-        };
-    }
 }
 
 fn netif_init(netif_c: [*c]c.struct_netif) callconv(.c) c.err_t {

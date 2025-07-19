@@ -2,7 +2,10 @@ const std = @import("std");
 const log = std.log.scoped(.esp_radio_wifi);
 
 const microzig = @import("microzig");
+const SPSC_Queue = microzig.concurrency.SPSC_Queue;
 
+const radio = @import("../radio.zig");
+const options = radio.options.wifi;
 const osi = @import("osi.zig");
 
 pub const c = @import("esp-wifi-driver");
@@ -10,6 +13,11 @@ pub const c = @import("esp-wifi-driver");
 pub const InternalError = error{InternalError};
 
 var inited: bool = false;
+
+pub const Options = struct {
+    rx_queue_len: usize = 15,
+    tx_queue_len: usize = 15,
+};
 
 pub fn init() InternalError!void {
     if (inited) {
@@ -30,8 +38,8 @@ pub fn init() InternalError!void {
 
     try c_result(c.esp_wifi_set_tx_done_cb(tx_done_cb));
 
-    try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_STA, recv_cb_sta));
     try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_AP, recv_cb_ap));
+    try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_STA, recv_cb_sta));
 
     {
         // TODO: config
@@ -325,6 +333,7 @@ pub fn stop() InternalError!void {
     try c_result(c.esp_wifi_stop());
 }
 
+/// Non-blocking.
 pub fn connect() InternalError!void {
     try c_result(c.esp_wifi_connect());
 }
@@ -456,6 +465,8 @@ fn event_post(
     return 0;
 }
 
+// TODO: ApState
+
 pub const StaState = enum {
     none,
     sta_started,
@@ -481,17 +492,15 @@ pub fn get_sta_state() StaState {
     return @atomicLoad(StaState, &sta_state, .unordered);
 }
 
-// TODO: ApState
-
 pub const Interface = enum(u32) {
-    sta = c.WIFI_IF_STA,
     ap = c.WIFI_IF_AP,
+    sta = c.WIFI_IF_STA,
 
     pub fn is_active(self: Interface) InternalError!bool {
         const mode = try get_mode();
         return switch (self) {
-            .sta => mode.is_sta(),
             .ap => mode.is_ap(),
+            .sta => mode.is_sta(),
         };
     }
 };
@@ -499,10 +508,8 @@ pub const Interface = enum(u32) {
 var packets_in_flight: usize = 0;
 
 pub fn send_packet(iface: Interface, data: []const u8) (error{TooManyPacketsInFlight} || InternalError)!void {
-    std.debug.assert(try iface.is_active()); // tried to send packet on invalid interface
-
     const pkts_in_flight = @atomicLoad(usize, &packets_in_flight, .acquire);
-    if (pkts_in_flight >= 15) {
+    if (pkts_in_flight >= options.tx_queue_len) {
         log.warn("too many packets in flight", .{});
         return error.TooManyPacketsInFlight;
     }
@@ -533,13 +540,30 @@ pub const ReceivedPacket = struct {
     }
 };
 
-pub const RxCallback = *const fn (packet: ReceivedPacket) void;
+var ap_rx_queue: SPSC_Queue(ReceivedPacket, options.rx_queue_len) = .empty;
+var sta_rx_queue: SPSC_Queue(ReceivedPacket, options.rx_queue_len) = .empty;
 
-var packet_rx_sta_callback: ?RxCallback = null;
-var packet_rx_ap_callback: ?RxCallback = null;
+pub fn recv_packet(comptime iface: Interface) ?ReceivedPacket {
+    return switch (iface) {
+        .ap => ap_rx_queue.dequeue(),
+        .sta => sta_rx_queue.dequeue(),
+    };
+}
 
-pub fn set_packet_rx_sta_callback(cb: RxCallback) void {
-    @atomicStore(?RxCallback, &packet_rx_sta_callback, cb, .unordered);
+fn recv_cb_ap(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
+    log.debug("recv_cb_ap {?} {} {?}", .{ buf, len, eb });
+
+    const packet: ReceivedPacket = .{
+        .data = @as([*]const u8, @ptrCast(buf))[0..len],
+        .eb = eb,
+    };
+
+    ap_rx_queue.enqueue(packet) catch {
+        log.warn("ap rx queue full. packet dropped.", .{});
+        packet.deinit();
+    };
+
+    return c.ESP_OK;
 }
 
 fn recv_cb_sta(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
@@ -550,22 +574,10 @@ fn recv_cb_sta(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_e
         .eb = eb,
     };
 
-    if (@atomicLoad(?RxCallback, &packet_rx_sta_callback, .unordered)) |cb| {
-        cb(packet);
-    }
-
-    return c.ESP_OK;
-}
-
-fn recv_cb_ap(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
-    const pb: ReceivedPacket = .{
-        .data = @as([*]const u8, @ptrCast(buf))[0..len],
-        .eb = eb,
+    sta_rx_queue.enqueue(packet) catch {
+        log.warn("sta rx queue full. packet dropped.", .{});
+        packet.deinit();
     };
-
-    if (@atomicLoad(?RxCallback, &packet_rx_ap_callback, .unordered)) |cb| {
-        cb(pb);
-    }
 
     return c.ESP_OK;
 }

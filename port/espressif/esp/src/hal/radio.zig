@@ -29,6 +29,8 @@ pub const Options = struct {
     // TODO: support other timers and other systimer units
     /// What alarm to use for preemption in systimer unit 0.
     systimer_alarm: systimer.Alarm = .alarm0,
+
+    wifi: wifi.Options = .{},
 };
 pub const options = microzig.options.hal.radio orelse
     @compileError("Please specify options if you want to use radio.");
@@ -218,7 +220,7 @@ pub const interrupt_handlers = struct {
         multitasking.switch_task(trap_frame);
     }
 
-    pub fn software(trap_frame: *TrapFrame) linksection(".ram_text") callconv(.c) void {
+    pub fn yield(trap_frame: *TrapFrame) linksection(".ram_text") callconv(.c) void {
         // TODO: config
         SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
             .CPU_INTR_FROM_CPU_0 = 0,
