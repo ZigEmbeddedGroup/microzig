@@ -537,6 +537,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             // TODO: check program settings vs pin mapping
             const offset = try self.add_program(program);
+
             self.sm_init(sm, offset, .{
                 .clkdiv = options.clkdiv,
                 .shift = options.shift,

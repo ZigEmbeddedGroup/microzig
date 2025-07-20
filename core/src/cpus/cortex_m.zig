@@ -671,7 +671,7 @@ pub const startup_logic = struct {
     const VectorTable = microzig.chip.VectorTable;
 
     // will be imported by microzig.zig to allow system startup.
-    pub const _vector_table: VectorTable = blk: {
+    pub const _vector_table: VectorTable align(256) = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },

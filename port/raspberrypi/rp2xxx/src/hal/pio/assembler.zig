@@ -79,6 +79,8 @@ pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?
     for (encoder_output.programs.slice()) |bounded|
         try programs.append(bounded.to_exported_program());
 
+    const program_copy = programs.buffer[0..programs.len].*;
+
     return Output{
         .defines = blk: {
             var tmp = std.BoundedArray(Define, options.encode.max_defines).init(0) catch unreachable;
@@ -87,9 +89,10 @@ pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?
                     .name = define.name,
                     .value = define.value,
                 }) catch unreachable;
-            break :blk tmp.constSlice();
+            const copy = tmp.buffer[0..tmp.len].*;
+            break :blk &copy;
         },
-        .programs = programs.constSlice(),
+        .programs = &program_copy,
     };
 }
 
