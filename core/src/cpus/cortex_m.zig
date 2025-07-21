@@ -652,7 +652,9 @@ pub const startup_logic = struct {
 
                 @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
 
-                peripherals.scb.VTOR = @intFromPtr(&ram_vectors);
+                const vtor_addr: u32 = @intFromPtr(&ram_vectors);
+                std.debug.assert(std.mem.isAligned(vtor_addr, 256));
+                peripherals.scb.VTOR = vtor_addr;
             }
         }
 
@@ -662,7 +664,8 @@ pub const startup_logic = struct {
     const VectorTable = microzig.chip.VectorTable;
 
     // will be imported by microzig.zig to allow system startup.
-    pub const _vector_table: VectorTable = blk: {
+    // must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
+    pub const _vector_table: VectorTable align(256) = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },

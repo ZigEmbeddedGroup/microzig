@@ -100,7 +100,7 @@ pub const Channel = enum(u4) {
         al3_read_addr_trig: u32,
     };
 
-    fn get_regs(chan: Channel) *volatile Regs {
+    pub inline fn get_regs(chan: Channel) *volatile Regs {
         const regs = @as(*volatile [num_channels]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
         return &regs[@intFromEnum(chan)];
     }
