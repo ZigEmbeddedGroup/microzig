@@ -168,8 +168,8 @@ fn get_descriptor(setup: []const u8, epc: EpControl) void {
     epc.USB_send(buffer[0..length], .force_data1) catch unreachable;
 }
 
-fn set_addr(recive_addr: u7, epc: EpControl) void {
-    device_addr = recive_addr;
+fn set_addr(receive_addr: u7, epc: EpControl) void {
+    device_addr = receive_addr;
     epc.ZLP(.force_data1) catch unreachable;
 }
 

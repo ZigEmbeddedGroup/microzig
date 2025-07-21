@@ -107,7 +107,8 @@ var corrent_clocks: ClockOutputs = validate_clocks(.{});
 
 //NOTE: procedural style or loop through all elements of the struct?
 /// Configures the system clocks
-/// NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power register before configuring the clocks
+/// NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power
+/// register before configuring the clocks
 pub fn clock_init(comptime config: ClockTree.Config) ClockInitError!void {
     const clck = comptime validate_clocks(config);
 
