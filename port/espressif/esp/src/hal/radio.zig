@@ -35,8 +35,8 @@ pub const Options = struct {
 pub const options = microzig.options.hal.radio orelse
     @compileError("Please specify options if you want to use radio.");
 
-// TODO: We should allow the user to select the scheduling algorithm. We should
-// pass something like the `IO` interface alongside an allocator.
+// TODO: We should allow the user to select the scheduling algorithm. Maybe at
+// compile time?
 
 /// Radio uses the official esp drivers. You should enable interrupts
 /// after/before this.
@@ -59,7 +59,7 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
         setup_interrupts();
     }
 
-    multitasking.yield_task();
+    // multitasking.yield_task();
 
     // try timer.init(allocator);
 

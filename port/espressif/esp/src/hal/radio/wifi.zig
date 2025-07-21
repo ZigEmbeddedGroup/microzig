@@ -582,7 +582,7 @@ fn recv_cb_sta(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_e
     return c.ESP_OK;
 }
 
-// I pupulated this with the defaults from rust. Some of it should be configurable.
+// TODO: configurable
 var init_config: c.wifi_init_config_t = .{
     .osi_funcs = &g_wifi_osi_funcs,
     // .wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs,

@@ -226,14 +226,10 @@ pub fn set_isr(
             // don't need critical section because we enable the interrupt
             // bellow.
 
-            microzig.cpu.interrupt.disable(.interrupt1);
-
             wifi_interrupt_handler = .{
                 .f = @alignCast(@ptrCast(f)),
                 .arg = arg,
             };
-
-            microzig.cpu.interrupt.enable(.interrupt1);
         },
         else => @panic("invalid interrupt number"),
     }
@@ -242,11 +238,19 @@ pub fn set_isr(
 // TODO
 pub fn ints_on(mask: u32) callconv(.c) void {
     log.debug("ints_on {}", .{mask});
+
+    if (mask == 2) {
+        microzig.cpu.interrupt.enable(.interrupt1);
+    }
 }
 
 // TODO
 pub fn ints_off(mask: u32) callconv(.c) void {
-    std.debug.panic("ints_off {}", .{mask});
+    log.debug("ints_off {}", .{mask});
+
+    if (mask == 2) {
+        microzig.cpu.interrupt.disable(.interrupt1);
+    }
 }
 
 pub fn is_from_isr() callconv(.c) bool {

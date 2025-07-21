@@ -120,7 +120,7 @@ pub fn main() !void {
             std.log.info("used memory: {}K ({})", .{ used_mem / 1024, used_mem });
             last_mem_show = now;
         }
-        hal.time.sleep_ms(100);
+        hal.time.sleep_ms(10);
 
         // if (events.wifi.contains(.Connected)) {
         //     c.netif_set_link_up(&netif);
