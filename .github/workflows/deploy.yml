@@ -23,7 +23,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: master
 
       - name: Extract version
         run: echo "MICROZIG_VERSION=$(zig build package -- get-version)" >> $GITHUB_ENV
