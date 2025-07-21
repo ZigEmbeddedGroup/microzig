@@ -69,6 +69,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .zig_target = .{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+            .cpu_features_sub = std.Target.arm.featureSet(&.{
+                .slowfpvfmx,
+                .slowfpvmlx,
+            }),
             .os_tag = .freestanding,
             .abi = .eabi,
         },

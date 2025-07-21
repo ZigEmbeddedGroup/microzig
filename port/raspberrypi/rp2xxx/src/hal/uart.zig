@@ -153,7 +153,7 @@ pub const UART = enum(u1) {
         return .{ .context = uart };
     }
 
-    fn get_regs(uart: UART) *volatile UartRegs {
+    pub fn get_regs(uart: UART) *volatile UartRegs {
         return switch (@intFromEnum(uart)) {
             0 => UART0_reg,
             1 => UART1_reg,
