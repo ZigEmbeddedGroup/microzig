@@ -3,6 +3,7 @@ const microzig = @import("microzig");
 
 const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 
 const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 
@@ -12,23 +13,18 @@ const TX = gpio.Pin.from_port(.A, 9);
 const RX = gpio.Pin.from_port(.A, 10);
 
 pub fn main() !void {
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-    });
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.USART1);
 
-    RCC.APB2ENR.modify(.{
-        .USART1EN = 1,
-        .GPIOAEN = 1,
-    });
-
-    const counter = timer.counter_device(8_000_000);
+    const counter = timer.counter_device(rcc.get_clock(.TIM2));
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     RX.set_input_mode(.pull);
 
-    uart.apply(.{
+    try uart.apply_runtime(.{
         .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+        .clock_speed = rcc.get_clock(.USART1),
     });
 
     var byte: [100]u8 = undefined;

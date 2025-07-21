@@ -11,12 +11,13 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const interrupt = microzig.interrupt;
 
-const RCC = microzig.chip.peripherals.RCC;
+const interrupt = microzig.interrupt;
 const DMA = microzig.chip.peripherals.DMA1;
 const DMA_t = microzig.chip.types.peripherals.bdma_v1;
+
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const timer = microzig.hal.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const uart = stm32.uart.UART.init(.USART1);
@@ -69,20 +70,16 @@ fn DMA_init(arr_addr: u32, adc_addr: u32) void {
 }
 
 pub fn main() !void {
-    RCC.AHBENR.modify(.{
-        .DMA1EN = 1,
-    });
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-    });
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .USART1EN = 1,
-        .GPIOAEN = 1,
-        .ADC1EN = 1,
-    });
+    try rcc.clock_init(.{ .ADCprescaler = .RCC_ADCPCLK2_DIV2 });
 
-    const counter = timer.counter_device(8_000_000);
+    rcc.enable_clock(.DMA1);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.AFIO);
+    rcc.enable_clock(.USART1);
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.ADC1);
+
+    const counter = timer.counter_device(rcc.get_clock(.TIM2));
 
     const adc_data_addr: u32 = @intFromPtr(&adc.regs.DR);
     var adc_buf: [10]u16 = .{0} ** 10;
@@ -92,9 +89,9 @@ pub fn main() !void {
     //configure UART log
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
-    uart.apply(.{
+    try uart.apply_runtime(.{
         .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+        .clock_speed = rcc.get_clock(.USART1),
     });
     stm32.uart.init_logger(&uart);
 

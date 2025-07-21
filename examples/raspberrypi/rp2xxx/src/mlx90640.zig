@@ -76,7 +76,7 @@ fn init() !void {
         .clock_config = rpxxxx.clock_config,
     });
 
-    try i2c0.apply(i2c.Config{ .clock_config = rpxxxx.clock_config });
+    i2c0.apply(i2c.Config{ .clock_config = rpxxxx.clock_config });
 
     rpxxxx.uart.init_logger(uart);
     pin_config.apply();

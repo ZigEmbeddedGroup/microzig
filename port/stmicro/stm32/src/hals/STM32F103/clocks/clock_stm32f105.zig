@@ -1,3 +1,6 @@
+//NOTE: this clock tree is valid only for STM32F105/107 and XL density devices
+//NOTE: this file was manually generated from data coming from CubeMX, manual changes may be necessary
+
 const std = @import("std");
 const clock = @import("clocknodes.zig");
 const ClockNode = clock.ClockNode;

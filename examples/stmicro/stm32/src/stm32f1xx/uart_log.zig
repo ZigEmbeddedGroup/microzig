@@ -3,6 +3,7 @@ const microzig = @import("microzig");
 
 const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 
 const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
@@ -13,16 +14,14 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    RCC.APB2ENR.modify(.{
-        .USART1EN = 1,
-        .GPIOAEN = 1,
-    });
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.USART1);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
-    uart.apply(.{
+    try uart.apply_runtime(.{
         .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+        .clock_speed = rcc.get_clock(.USART1),
     });
 
     stm32.uart.init_logger(&uart);

@@ -3,12 +3,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
-const flash = microzig.chip.peripherals.FLASH;
-const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;
-const flash_v1 = microzig.chip.types.peripherals.flash_f1;
-
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const usb_ll = stm32.usb.usb_ll;
@@ -213,48 +209,6 @@ fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
     epc.set_status(.TX, .Nak, .no_change) catch unreachable;
 }
 
-//set clock to 72Mhz and USB to 48Mhz
-//NOTE: USB clock must be exactly 48Mhz
-fn config_clock() void {
-    RCC.CR.modify(.{
-        .HSEON = 1,
-    });
-    while (RCC.CR.read().HSERDY == 0) {
-        asm volatile ("nop");
-    }
-
-    RCC.CFGR.modify(.{
-        .PLLSRC = rcc_v1.PLLSRC.HSE_Div_PREDIV,
-        .PLLMUL = rcc_v1.PLLMUL.Mul9,
-    });
-
-    RCC.CR.modify(.{
-        .PLLON = 1,
-    });
-
-    while (RCC.CR.read().PLLRDY == 0) {
-        asm volatile ("nop");
-    }
-
-    flash.ACR.modify(.{
-        .LATENCY = flash_v1.LATENCY.WS2,
-        .PRFTBE = 1,
-    });
-
-    RCC.CFGR.modify(.{
-        .PPRE1 = rcc_v1.PPRE.Div2,
-        .USBPRE = rcc_v1.USBPRE.Div1_5,
-    });
-
-    RCC.CFGR.modify(.{
-        .SW = rcc_v1.SW.PLL1_P,
-    });
-
-    while (RCC.CFGR.read().SWS != rcc_v1.SW.PLL1_P) {
-        asm volatile ("nop");
-    }
-}
-
 const endpoint0 = usb_ll.Endpoint{
     .ep_control = .EPC0,
     .endpoint = 0,
@@ -299,18 +253,20 @@ fn report(keys: []const u8) void {
 }
 
 pub fn main() !void {
-    config_clock();
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .GPIOAEN = 1,
-        .GPIOBEN = 1,
-        .GPIOCEN = 1,
+    try rcc.clock_init(.{
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1Prescaler = .RCC_HCLK_DIV2,
+        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
     });
 
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-        .USBEN = 1,
-    });
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.GPIOC);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.USB);
+
     const led = gpio.Pin.from_port(.B, 2);
     Counter = timer.counter_device(72_000_000);
 
