@@ -25,7 +25,7 @@ const InterruptGroupEntry = struct {
 const Context = struct {
     db: *Database,
     arena: std.heap.ArenaAllocator,
-    interrupt_groups: std.StringHashMapUnmanaged(std.ArrayListUnmanaged(InterruptGroupEntry)) = .{},
+    interrupt_groups: std.StringHashMapUnmanaged(std.ArrayList(InterruptGroupEntry)) = .empty,
     inferred_register_group_offsets: std.AutoArrayHashMapUnmanaged(StructID, u64) = .{},
 
     fn init(db: *Database) Context {
@@ -270,8 +270,8 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
         break :blk max_value;
     };
 
-    var field_sizes = std.ArrayList(u64).init(allocator);
-    defer field_sizes.deinit();
+    var field_sizes: std.ArrayList(u64) = .empty;
+    defer field_sizes.deinit(allocator);
 
     var register_it = module_node.iterate(&.{"register-group"}, &.{"register"});
     while (register_it.next()) |register_node| {
@@ -282,7 +282,7 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
                     log.debug("found values={s}", .{values});
                     const mask_str = bitfield_node.get_attribute("mask") orelse continue;
                     const mask = try std.fmt.parseInt(u64, mask_str, 0);
-                    try field_sizes.append(@popCount(mask));
+                    try field_sizes.append(allocator, @popCount(mask));
                     // TODO: assert consecutive
                 }
             }
@@ -418,7 +418,7 @@ fn load_register_group_children(
     var mode_it = node.iterate(&.{}, &.{"mode"});
     while (mode_it.next()) |mode_node|
         load_mode(ctx, mode_node, parent) catch |err| {
-            log.err("{}: failed to load mode: {}", .{ parent, err });
+            log.err("{f}: failed to load mode: {}", .{ parent, err });
             return err;
         };
 
@@ -438,7 +438,7 @@ fn load_nested_register_group(
     parent: StructID,
 ) !void {
     const db = ctx.db;
-    log.debug("load_nested_register_group: peripheral={} parent={}", .{ peripheral, parent });
+    log.debug("load_nested_register_group: peripheral={f} parent={f}", .{ peripheral, parent });
 
     validate_attrs(node, &.{
         "name",
@@ -453,9 +453,9 @@ fn load_nested_register_group(
     const name_in_module = node.get_attribute("name-in-module") orelse return error.MissingNameInModule;
 
     const peripheral_struct_id = try db.get_peripheral_struct(peripheral);
-    log.debug("  peripheral_struct_id={}", .{peripheral_struct_id});
+    log.debug("  peripheral_struct_id={f}", .{peripheral_struct_id});
     const struct_id = try db.get_struct_decl_id_by_name(peripheral_struct_id, name_in_module);
-    log.debug("  struct_id={}", .{struct_id});
+    log.debug("  struct_id={f}", .{struct_id});
 
     try db.add_nested_struct_field(parent, .{
         .name = name,
@@ -489,7 +489,7 @@ fn infer_register_group_offset(ctx: *Context, node: xml.Node, struct_id: StructI
 
     if (min) |m| {
         try ctx.inferred_register_group_offsets.put(ctx.arena.allocator(), struct_id, m);
-        log.debug("inferred offset of {}: {} bytes", .{ struct_id, m });
+        log.debug("inferred offset of {f}: {} bytes", .{ struct_id, m });
     }
 }
 
@@ -556,7 +556,7 @@ fn assign_modes_to_register(
     parent: StructID,
     mode_names: []const u8,
 ) !void {
-    log.debug("assigning mode_names='{s}' to {} from {}", .{ mode_names, register_id, parent });
+    log.debug("assigning mode_names='{s}' to {f} from {f}", .{ mode_names, register_id, parent });
     const db = ctx.db;
 
     const modes = try db.get_struct_modes(ctx.arena.allocator(), parent);
@@ -583,7 +583,7 @@ fn load_register(
     parent: StructID,
 ) !void {
     const db = ctx.db;
-    log.debug("load_register: parent={}", .{parent});
+    log.debug("load_register: parent={f}", .{parent});
 
     validate_attrs(node, &.{
         "rw",
@@ -605,7 +605,7 @@ fn load_register(
     const name = node.get_attribute("name") orelse return error.MissingRegisterName;
 
     const register_group_offset = ctx.inferred_register_group_offsets.get(parent) orelse 0;
-    log.debug("{} inferred offset: {}", .{ parent, register_group_offset });
+    log.debug("{f} inferred offset: {}", .{ parent, register_group_offset });
 
     const register_id = try db.create_register(parent, .{
         .name = name,
@@ -824,7 +824,7 @@ fn load_enum(
         .size_bits = size_bits,
     });
 
-    log.debug("{}: name={s} inferred_size={}", .{ enum_id, name, size_bits });
+    log.debug("{f}: name={s} inferred_size={}", .{ enum_id, name, size_bits });
 
     var value_it = node.iterate(&.{}, &.{"value"});
     while (value_it.next()) |value_node|
@@ -884,7 +884,7 @@ fn load_module_instances(
 fn peripheral_is_inlined(ctx: *Context, struct_id: StructID) !bool {
     // inlined peripherals do not have any register groups
     const struct_decls = try ctx.db.get_struct_decls(ctx.arena.allocator(), struct_id);
-    log.debug("{} has {} struct decls. Is inlined: {}", .{ struct_id, struct_decls.len, struct_decls.len == 0 });
+    log.debug("{f} has {} struct decls. Is inlined: {}", .{ struct_id, struct_decls.len, struct_decls.len == 0 });
     return (struct_decls.len == 0);
 }
 

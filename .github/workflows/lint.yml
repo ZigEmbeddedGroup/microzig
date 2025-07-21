@@ -20,7 +20,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.1
 
       - name: Build linter
         working-directory: tools/linter
@@ -45,8 +45,7 @@ jobs:
           echo "Lint results:"
           cat lint_results.json
 
-
-      - name: Post comments with metadata
+      - name: Post review with grouped comments
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -62,58 +61,126 @@ jobs:
             const content = fs.readFileSync('lint_results.json', 'utf8').trim();
             if (!content || content === '[]') {
               console.log('No lint issues found');
+
+              // Check if there's an existing review to dismiss
+              const existingReviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number
+              });
+
+              const botReview = existingReviews.data.find(review =>
+                review.user.login === 'github-actions[bot]' &&
+                review.body && review.body.includes('<!-- lint-review -->')
+              );
+
+              if (botReview) {
+                await github.rest.pulls.dismissReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number,
+                  review_id: botReview.id,
+                  message: 'All lint issues have been resolved'
+                });
+                console.log('Dismissed previous lint review - no issues found');
+              }
               return;
             }
 
             const issues = JSON.parse(content);
 
-            const existingComments = await github.rest.pulls.listReviewComments({
+            // Check for existing bot review
+            const existingReviews = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
 
-            const botComments = existingComments.data.filter(comment =>
-              comment.user.login === 'github-actions[bot]' &&
-              comment.body.includes('<!-- lint-comment')
+            const botReview = existingReviews.data.find(review =>
+              review.user.login === 'github-actions[bot]' &&
+              review.body && review.body.includes('<!-- lint-review -->')
             );
 
-            const existingHashes = new Set();
-            botComments.forEach(comment => {
-              const match = comment.body.match(/<!-- lint-comment:(\w+) -->/);
-              if (match) existingHashes.add(match[1]);
-            });
+            // Create hash of current issues to check if review needs updating
+            const issuesHash = crypto.createHash('md5')
+              .update(JSON.stringify(issues.map(i => `${i.file}:${i.line}:${i.message}`)))
+              .digest('hex')
+              .substring(0, 8);
 
-            let postedCount = 0;
-            let skippedCount = 0;
+            // Check if existing review has the same issues
+            if (botReview && botReview.body.includes(`<!-- lint-hash:${issuesHash} -->`)) {
+              console.log('Review already exists with same issues, skipping');
+              return;
+            }
+
+            // Dismiss existing review if it exists
+            if (botReview) {
+              await github.rest.pulls.dismissReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                review_id: botReview.id,
+                message: 'Updating with new lint results'
+              });
+            }
+
+            // Prepare review comments
+            const reviewComments = [];
+            const issuesByFile = {};
 
             for (const issue of issues) {
-              const issueData = `${issue.file}:${issue.line}:${issue.message}`;
-              const issueHash = crypto.createHash('md5').update(issueData).digest('hex').substring(0, 8);
-
-              if (existingHashes.has(issueHash)) {
-                console.log(`Skipping duplicate issue: ${issueHash}`);
-                skippedCount++;
-                continue;
+              if (!issuesByFile[issue.file]) {
+                issuesByFile[issue.file] = [];
               }
+              issuesByFile[issue.file].push(issue);
 
-              const commentBody = `${issue.message}\n\n<!-- lint-comment:${issueHash} -->\n`;
-              console.log(`comment body:`, commentBody);
+              reviewComments.push({
+                path: issue.file,
+                line: issue.line,
+                body: issue.message
+              });
+            }
 
+            // Create review body with summary
+            const totalIssues = issues.length;
+            const fileCount = Object.keys(issuesByFile).length;
+
+            let reviewBody = `## 🔍 Lint Results\n\n`;
+            reviewBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
+
+            for (const [file, fileIssues] of Object.entries(issuesByFile)) {
+              reviewBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
+            }
+
+            reviewBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
+
+            try {
+              const review = await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                commit_id: context.payload.pull_request.head.sha,
+                body: reviewBody,
+                event: 'REQUEST_CHANGES',
+                comments: reviewComments
+              });
+
+              console.log(`Created review with ${reviewComments.length} comments`);
+            } catch (error) {
+              console.error(`Failed to create review:`, error.message);
+
+              // Fallback: try to create review without comments if there's an error
               try {
-                await github.rest.pulls.createReviewComment({
+                await github.rest.pulls.createReview({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: context.issue.number,
                   commit_id: context.payload.pull_request.head.sha,
-                  path: issue.file,
-                  line: issue.line,
-                  body: commentBody
+                  body: reviewBody + '\n\n⚠️ Could not attach inline comments due to an error.',
+                  event: 'REQUEST_CHANGES'
                 });
-                postedCount++;
-              } catch (error) {
-                console.error(`Failed to post comment:`, error.message);
+                console.log('Created review without inline comments as fallback');
+              } catch (fallbackError) {
+                console.error('Fallback review creation also failed:', fallbackError.message);
               }
             }
-
-            console.log(`Posted ${postedCount} new comments, skipped ${skippedCount} duplicates`);

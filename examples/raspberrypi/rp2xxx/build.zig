@@ -72,23 +72,23 @@ pub fn build(b: *std.Build) void {
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
     };
 
-    var available_examples = std.ArrayList(Example).init(b.allocator);
-    available_examples.appendSlice(specific_examples) catch @panic("out of memory");
+    var available_examples: std.ArrayList(Example) = .empty;
+    available_examples.appendSlice(b.allocator, specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
-        available_examples.append(.{
+        available_examples.append(b.allocator, .{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
             .name = b.fmt("pico_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
 
-        available_examples.append(.{
+        available_examples.append(b.allocator, .{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
 
         if (example.works_with_riscv) {
-            available_examples.append(.{
+            available_examples.append(b.allocator, .{
                 .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
                 .name = b.fmt("pico2_riscv_{s}", .{example.name}),
                 .file = example.file,

@@ -108,7 +108,7 @@ pub fn hang() noreturn {
     cpu.interrupt.disable_interrupts();
     while (true) {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 

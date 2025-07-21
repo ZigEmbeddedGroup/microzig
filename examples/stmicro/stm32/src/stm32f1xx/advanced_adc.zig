@@ -37,7 +37,7 @@ const v25 = 1.43;
 const avg_slope = 0.0043; //4.3mV/°C
 
 var ovf_flag: bool = false;
-pub fn watchdog_handler() callconv(.C) void {
+pub fn watchdog_handler() callconv(.c) void {
     ovf_flag = true;
     adc.clear_flags(adc.read_flags()); //clear all active flags
 }

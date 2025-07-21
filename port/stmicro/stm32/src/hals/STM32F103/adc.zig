@@ -55,7 +55,7 @@ pub const ADC = struct {
 
         //wait for calibration to finish
         while (regs.CR2.read().CAL == 1) {
-            asm volatile ("" ::: "memory");
+            asm volatile ("" ::: .{ .memory = true });
         }
         regs.SR.raw = 0; //clear all status flags
 
@@ -107,7 +107,7 @@ pub const ADC = struct {
 
         //wait for conversion to finish
         while (regs.SR.read().EOC == 0) {
-            asm volatile ("" ::: "memory");
+            asm volatile ("" ::: .{ .memory = true });
         }
         const result: u16 = regs.DR.read().DATA; //read the data registe, this will also clear the EOC flag
         regs.SR.modify(.{ .STRT = 0 }); //clear the START flag
@@ -425,7 +425,7 @@ pub const AdvancedADC = struct {
 
         //wait for calibration to finish
         while (regs.CR2.read().CAL == 1) {
-            asm volatile ("" ::: "memory");
+            asm volatile ("" ::: .{ .memory = true });
         }
         const data = regs.DR.read().DATA;
         return data;
@@ -439,7 +439,7 @@ pub const AdvancedADC = struct {
         regs.CR2.modify(.{ .RTSCAL = 1 }); //reset calibration
         //wait for reset to finish
         while (regs.CR2.read().RTSCAL == 1) {
-            asm volatile ("" ::: "memory");
+            asm volatile ("" ::: .{ .memory = true });
         }
         return regs.DR.read().DATA; //read the calibration data
 

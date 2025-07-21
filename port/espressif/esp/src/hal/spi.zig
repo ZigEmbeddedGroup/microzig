@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const Slice_Vector = microzig.utilities.Slice_Vector;
+const SliceVector = microzig.utilities.SliceVector;
 const hal = microzig.hal;
 const system = hal.system;
 
@@ -163,7 +163,7 @@ pub const SPI_Bus = struct {
         buffer_vec: []const []const u8,
         bit_mode: BitMode,
     ) void {
-        const vec: Slice_Vector([]const u8) = .init(buffer_vec);
+        const vec: SliceVector([]const u8) = .init(buffer_vec);
         var iter = vec.iterator();
 
         var remaining = vec.size();
@@ -200,7 +200,7 @@ pub const SPI_Bus = struct {
         buffer_vec: []const []u8,
         bit_mode: BitMode,
     ) usize {
-        const vec: Slice_Vector([]u8) = .init(buffer_vec);
+        const vec: SliceVector([]u8) = .init(buffer_vec);
         var iter = vec.iterator();
 
         const total_len = vec.size();
@@ -242,9 +242,9 @@ pub const SPI_Bus = struct {
         write_buffer_vec: []const []const u8,
         read_buffer_vec: []const []u8,
     ) void {
-        const write_vec: Slice_Vector([]const u8) = .init(write_buffer_vec);
+        const write_vec: SliceVector([]const u8) = .init(write_buffer_vec);
         var write_iter = write_vec.iterator();
-        const read_vec: Slice_Vector([]const u8) = .init(read_buffer_vec);
+        const read_vec: SliceVector([]const u8) = .init(read_buffer_vec);
         var read_iter = read_vec.iterator();
 
         var remaining = write_vec.size();
@@ -284,7 +284,7 @@ pub const SPI_Bus = struct {
         });
     }
 
-    fn fill_fifo(self: SPI_Bus, iter: *Slice_Vector([]const u8).Iterator, len: usize) void {
+    fn fill_fifo(self: SPI_Bus, iter: *SliceVector([]const u8).Iterator, len: usize) void {
         const fifo: *volatile [16]u32 = @ptrCast(&self.regs.W0);
 
         var i: usize = 0;
@@ -302,7 +302,7 @@ pub const SPI_Bus = struct {
         }
     }
 
-    fn read_fifo(self: SPI_Bus, iter: *Slice_Vector([]u8).Iterator, len: usize) void {
+    fn read_fifo(self: SPI_Bus, iter: *SliceVector([]u8).Iterator, len: usize) void {
         const fifo: *volatile [16]u32 = @ptrCast(&self.regs.W0);
 
         var i: usize = 0;

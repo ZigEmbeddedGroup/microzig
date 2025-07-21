@@ -65,7 +65,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
         };
 
         fn read_fn(ctx: *anyopaque) ReadError!State {
-            const pin_ref: *u8 = @alignCast(@ptrCast(ctx));
+            const pin_ref: *u8 = @ptrCast(@alignCast(ctx));
             const index = pin_ref.*;
             const pin_base: *[8]u8 = @ptrFromInt(@intFromPtr(pin_ref) - index); //just 1 byte
             var PCF_base: *Self = @alignCast(@fieldParentPtr("pin_arr", pin_base));
@@ -74,7 +74,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
         }
 
         fn write_fn(ctx: *anyopaque, state: State) WriteError!void {
-            const pin_ref: *u8 = @alignCast(@ptrCast(ctx));
+            const pin_ref: *u8 = @ptrCast(@alignCast(ctx));
             const index = pin_ref.*;
             const pin_base: *[8]u8 = @ptrFromInt(@intFromPtr(pin_ref) - index); //just 1 byte
             var PCF_base: *Self = @alignCast(@fieldParentPtr("pin_arr", pin_base));

@@ -805,11 +805,11 @@ pub fn days_in_month(year: u16, month: u4) u5 {
 }
 
 fn int_to_string(out_string: []u8, int: u32) usize {
-    return std.fmt.formatIntBuf(out_string, int, 10, .lower, .{});
+    return std.fmt.printInt(out_string, int, 10, .lower, .{});
 }
 
 fn int_to_string_padded(out_string: []u8, int: u32, width: usize) usize {
-    return std.fmt.formatIntBuf(out_string, int, 10, .lower, .{ .fill = '0', .width = width });
+    return std.fmt.printInt(out_string, int, 10, .lower, .{ .fill = '0', .width = width });
 }
 
 test "DateTime-Conversion" {
