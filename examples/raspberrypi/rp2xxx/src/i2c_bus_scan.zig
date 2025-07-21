@@ -35,7 +35,7 @@ pub fn main() !void {
         pin.set_function(.i2c);
     }
 
-    try i2c0.apply(.{
+    i2c0.apply(.{
         .clock_config = rp2xxx.clock_config,
     });
 
