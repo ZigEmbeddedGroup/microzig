@@ -72,6 +72,12 @@ pub const Diagnostics = struct {
     }
 };
 
+/// Creates a copy of a slice at comptime that is guaranteed to be immutable.
+fn comptime_copy(comptime T: type, comptime slice: []const T) []const T {
+    const arr: [slice.len]T = slice[0..slice.len].*;
+    return &arr;
+}
+
 pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
     const tokens = try tokenizer.tokenize(chip, source, diags, options.tokenize);
     const encoder_output = try encoder.encode(chip, tokens.slice(), diags, options.encode);
@@ -87,9 +93,9 @@ pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?
                     .name = define.name,
                     .value = define.value,
                 }) catch unreachable;
-            break :blk tmp.constSlice();
+            break :blk comptime_copy(Define, tmp.slice());
         },
-        .programs = programs.constSlice(),
+        .programs = comptime_copy(Program, programs.slice()),
     };
 }
 
