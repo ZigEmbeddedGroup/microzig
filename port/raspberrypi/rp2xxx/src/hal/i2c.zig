@@ -384,7 +384,7 @@ pub const I2C = enum(u1) {
     pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
         try i2c.set_address(addr, .allow_general);
 
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(chunks);
         if (write_vec.size() == 0)
             return Error.NoData;
 
@@ -460,7 +460,7 @@ pub const I2C = enum(u1) {
     pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
         try i2c.set_address(addr, .dont_allow_reserved);
 
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(chunks);
         if (read_vec.size() == 0)
             return Error.NoData;
 
@@ -528,8 +528,8 @@ pub const I2C = enum(u1) {
     pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
         try i2c.set_address(addr, .dont_allow_reserved);
 
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(write_chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(read_chunks);
 
         if (write_vec.size() == 0)
             return Error.NoData;

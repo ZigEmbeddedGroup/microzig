@@ -434,7 +434,7 @@ pub fn default_reset_handler() void {
     });
 }
 
-pub fn usb_handler() callconv(.C) void {
+pub fn usb_handler() callconv(.c) void {
     const event = USB.ISTR.read();
     if (event.RESET == 1) {
         USB.ISTR.modify(.{ .RESET = 0 });

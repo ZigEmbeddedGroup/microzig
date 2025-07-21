@@ -268,10 +268,14 @@ pub fn build(b: *std.Build) !void {
     // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
 
     const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/hal.zig"),
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hal.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
 
@@ -297,8 +301,10 @@ fn get_bootrom(b: *std.Build, target: *const microzig.Target, rom: BootROM) std.
 
     const rom_exe = b.addExecutable(.{
         .name = b.fmt("stage2-{s}", .{@tagName(rom)}),
-        .optimize = .ReleaseSmall,
-        .target = b.resolveTargetQuery(zig_target),
+        .root_module = b.createModule(.{
+            .optimize = .ReleaseSmall,
+            .target = b.resolveTargetQuery(zig_target),
+        }),
     });
 
     //rom_exe.linkage = .static;

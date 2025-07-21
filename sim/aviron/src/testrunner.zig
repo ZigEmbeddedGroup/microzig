@@ -127,10 +127,10 @@ pub fn main() !u8 {
     if (cli.positionals.len == 0)
         @panic("usage: aviron [--trace] <elf>");
 
-    var stdout = std.ArrayList(u8).init(allocator);
+    var stdout = std.array_list.Managed(u8).init(allocator);
     defer stdout.deinit();
 
-    var stderr = std.ArrayList(u8).init(allocator);
+    var stderr = std.array_list.Managed(u8).init(allocator);
     defer stderr.deinit();
 
     test_system = SystemState{
@@ -229,8 +229,8 @@ const IO = struct {
     sp: u16,
     sreg: *aviron.Cpu.SREG,
 
-    stdout: *std.ArrayList(u8),
-    stderr: *std.ArrayList(u8),
+    stdout: *std.array_list.Managed(u8),
+    stderr: *std.array_list.Managed(u8),
 
     stdin: []const u8,
 

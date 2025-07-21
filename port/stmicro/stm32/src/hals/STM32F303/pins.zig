@@ -103,6 +103,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
 ///     PF15: ?PinConfiguration = null,
 /// }
 fn PortConfiguration() type {
+    @setEvalBranchQuota(200000);
     var fields: []const StructField = &.{};
     for ("ABCDEF") |gpio_port_id| {
         for (0..16) |gpio_pin_number_int| {

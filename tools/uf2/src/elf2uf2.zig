@@ -34,6 +34,9 @@ fn find_arg(args: []const []const u8, key: []const u8) !?[]const u8 {
     return value;
 }
 
+var elf_reader_buf: [1024]u8 = undefined;
+var output_writer_buf: [1024]u8 = undefined;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -42,7 +45,8 @@ pub fn main() !void {
     defer std.process.argsFree(gpa.allocator(), args);
 
     for (args) |arg| if (std.mem.eql(u8, "--help", arg)) {
-        try std.io.getStdOut().writeAll(usage);
+        var writer = std.fs.File.stdout().writer(&.{});
+        try writer.interface.writeAll(usage);
         return;
     };
 
@@ -73,14 +77,18 @@ pub fn main() !void {
     var archive = uf2.Archive.init(gpa.allocator());
     defer archive.deinit();
 
-    try archive.add_elf(elf_path, .{
+    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
+    defer elf_file.close();
+    var elf_reader = elf_file.reader(&elf_reader_buf);
+
+    try archive.add_elf(&elf_reader, .{
         .family_id = family_id,
     });
 
     const dest_file = try std.fs.cwd().createFile(output_path, .{});
     defer dest_file.close();
 
-    var buffered = std.io.bufferedWriter(dest_file.writer());
-    try archive.write_to(buffered.writer());
-    try buffered.flush();
+    var writer = dest_file.writer(&output_writer_buf);
+    try archive.write_to(&writer.interface);
+    try writer.interface.flush();
 }

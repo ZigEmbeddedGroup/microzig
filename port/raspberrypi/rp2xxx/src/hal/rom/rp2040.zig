@@ -20,7 +20,7 @@ pub inline fn lookup_float_function(f: SoftFloatFunction) *const anyopaque {
             @panic("function not available in this bootrom version");
     }
 
-    const table: [*]const usize = @alignCast(@ptrCast(rom.lookup_and_cache_data(.soft_float_table)));
+    const table: [*]const usize = @ptrCast(@alignCast(rom.lookup_and_cache_data(.soft_float_table)));
     return @ptrFromInt(table[@intFromEnum(f) / 4]);
 }
 
@@ -28,7 +28,7 @@ pub inline fn lookup_double_function(f: SoftDoubleFunction) *const anyopaque {
     if (rom.get_version_number() < f.min_version())
         @panic("function not available in this bootrom version");
 
-    const table: [*]const usize = @alignCast(@ptrCast(rom.lookup_and_cache_data(.soft_double_table)));
+    const table: [*]const usize = @ptrCast(@alignCast(rom.lookup_and_cache_data(.soft_double_table)));
     return @ptrFromInt(table[@intFromEnum(f) / 4]);
 }
 

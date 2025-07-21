@@ -1,6 +1,5 @@
 const std = @import("std");
 const dwarf = std.dwarf;
-const ArrayListUnmanaged = std.ArrayListUnmanaged;
 const Elf = @import("Elf.zig");
 
 const DebugInfo = @This();
@@ -121,22 +120,21 @@ pub fn query(self: *DebugInfo, address: u64) QueryResult {
 
 const Parser = struct {
     arena: std.mem.Allocator,
-    directories: ArrayListUnmanaged([]const u8) = .empty,
-    files: ArrayListUnmanaged(File) = .empty,
-    loc_list: ArrayListUnmanaged(SourceLocation) = .empty,
-    compile_unit_names: ArrayListUnmanaged([]const u8) = .empty,
-    functions: ArrayListUnmanaged(Function) = .empty,
+    directories: std.ArrayList([]const u8) = .empty,
+    files: std.ArrayList(File) = .empty,
+    loc_list: std.ArrayList(SourceLocation) = .empty,
+    compile_unit_names: std.ArrayList([]const u8) = .empty,
+    functions: std.ArrayList(Function) = .empty,
 
     fn parse_elf(self: *Parser, elf: Elf) !void {
-        const data = elf.sections.get(.@".debug_info") orelse return bad();
         var reader: std.debug.FixedBufferReader = .{
-            .buf = data,
-            .endian = .little,
+            .buf = elf.sections.get(.@".debug_info") orelse return bad(),
+            .endian = elf.endian,
         };
 
         var current_cu_index: ?usize = null;
 
-        while (reader.pos < data.len) {
+        while (reader.pos < reader.buf.len) {
             var length: u64 = try reader.readInt(u32);
             var dwarf_format: dwarf.Format = .@"32";
 
@@ -160,7 +158,7 @@ const Parser = struct {
                 address_size = try reader.readByte();
             }
 
-            var abbrev_table = try self.get_abbrev_table(elf.sections, abbrev_table_offset);
+            var abbrev_table = try self.get_abbrev_table(elf, abbrev_table_offset);
 
             var depth: usize = 0;
             while (true) {
@@ -255,11 +253,11 @@ const Parser = struct {
         }.less_than);
     }
 
-    fn get_abbrev_table(self: *Parser, sections: Elf.Sections, offset: usize) !AbbrevTable {
+    fn get_abbrev_table(self: *Parser, elf: Elf, offset: usize) !AbbrevTable {
         var reader: std.debug.FixedBufferReader = .{
-            .buf = sections.get(.@".debug_abbrev") orelse return bad(),
+            .buf = elf.sections.get(.@".debug_abbrev") orelse return bad(),
             .pos = offset,
-            .endian = .little,
+            .endian = elf.endian,
         };
 
         var abbrev_table: std.AutoHashMapUnmanaged(u64, AbbrevDecl) = .empty;
@@ -273,7 +271,7 @@ const Parser = struct {
             const tag = try reader.readUleb128(u64);
             const has_children = try reader.readByte();
 
-            var attrs: ArrayListUnmanaged(AbbrevDecl.Attrib) = .empty;
+            var attrs: std.ArrayList(AbbrevDecl.Attrib) = .empty;
 
             while (true) {
                 const id = try reader.readUleb128(u64);
@@ -327,7 +325,7 @@ const Parser = struct {
         var reader: std.debug.FixedBufferReader = .{
             .buf = elf.sections.get(.@".debug_line") orelse return bad(),
             .pos = offset,
-            .endian = .little,
+            .endian = elf.endian,
         };
 
         var unit_length: u64 = try reader.readInt(u32);

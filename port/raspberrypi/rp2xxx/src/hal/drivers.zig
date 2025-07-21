@@ -72,7 +72,7 @@ pub const I2C_Datagram_Device = struct {
 
     pub fn readv(dev: I2C_Datagram_Device, datagrams: []const []u8) !usize {
         try dev.bus.readv_blocking(dev.address, datagrams, dev.timeout);
-        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+        return microzig.utilities.SliceVector([]u8).init(datagrams).size();
     }
 
     pub fn write_then_read(dev: I2C_Datagram_Device, src: []const u8, dst: []u8) !void {
@@ -335,7 +335,7 @@ pub const SPI_Device = struct {
 
     pub fn readv(dev: SPI_Device, datagrams: []const []const u8) !usize {
         dev.bus.readv_blocking(u8, dev.rx_dummy_data, datagrams);
-        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+        return microzig.utilities.SliceVector([]u8).init(datagrams).size();
     }
 
     const vtable = Datagram_Device.VTable{
@@ -363,7 +363,7 @@ pub const SPI_Device = struct {
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
         const dev: *SPI_Device = @ptrCast(@alignCast(dd));
         dev.bus.readv_blocking(u8, dev.rx_dummy_data, chunks);
-        return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
+        return microzig.utilities.SliceVector([]u8).init(chunks).size();
     }
 };
 

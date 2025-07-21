@@ -17,29 +17,30 @@ pub const Options = struct {
 };
 
 pub fn from_elf(dep: *std.Build.Dependency, elf_file: std.Build.LazyPath, options: Options) std.Build.LazyPath {
-    const elf2image_exe = dep.artifact("elf2image");
+    const b = dep.builder;
 
-    const run = dep.builder.addRunArtifact(elf2image_exe);
+    const elf2image_exe = dep.artifact("elf2image");
+    const run = b.addRunArtifact(elf2image_exe);
 
     run.addFileArg(elf_file);
 
-    run.addArg("--chip-id");
-    run.addArg(@tagName(options.chip_id));
-
-    var rev_buf: [5]u8 = undefined;
+    run.addArgs(&.{
+        "--chip-id",
+        @tagName(options.chip_id),
+    });
 
     if (options.min_rev) |min_rev| {
-        const n = std.fmt.formatIntBuf(&rev_buf, min_rev, 10, .lower, .{});
-
-        run.addArg("--min-rev-full");
-        run.addArg(rev_buf[0..n]);
+        run.addArgs(&.{
+            "--min-rev-full",
+            b.fmt("{}", .{min_rev}),
+        });
     }
 
     if (options.max_rev) |max_rev| {
-        const n = std.fmt.formatIntBuf(&rev_buf, max_rev, 10, .lower, .{});
-
-        run.addArg("--max-rev-full");
-        run.addArg(rev_buf[0..n]);
+        run.addArgs(&.{
+            "--max-rev-full",
+            b.fmt("{}", .{max_rev}),
+        });
     }
 
     if (options.dont_append_digest) |dont_append_digest| {

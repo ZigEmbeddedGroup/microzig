@@ -23,9 +23,14 @@ pub fn main() !u8 {
     var file = try std.fs.cwd().openFile(output_file_name, .{ .mode = .read_write });
     defer file.close();
 
-    const header = try std.elf.Header.read(file);
+    var read_buf: [4096]u8 = undefined;
+    var write_buf: [4096]u8 = undefined;
+    var file_reader = file.reader(&read_buf);
+    var file_writer = file.writer(&write_buf);
 
-    var iter = header.program_header_iterator(file);
+    const header = try std.elf.Header.read(&file_reader.interface);
+
+    var iter = header.iterateProgramHeaders(&file_reader);
     while (try iter.next()) |phdr| {
         if (phdr.p_type != std.elf.PT_LOAD) {
             continue;
@@ -48,19 +53,18 @@ pub fn main() !u8 {
         }
 
         try file.seekTo(phdr.p_offset);
-        var reader = file.reader();
-        var writer = file.writer();
 
         var checksum: u32 = 0;
 
         var i: usize = 0;
         while (i < boot_sector_items - 1) : (i += 1) {
-            const item = try reader.readInt(u32, .little);
+            const item = try file_reader.interface.adaptToOldInterface().readInt(u32, .little);
             checksum -%= item;
         }
 
-        try writer.writeInt(u32, checksum, .little);
+        try file_writer.interface.writeInt(u32, checksum, .little);
     }
 
+    try file_writer.interface.flush();
     return 0;
 }

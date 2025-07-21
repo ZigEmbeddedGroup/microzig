@@ -535,7 +535,7 @@ pub const Counter = struct {
     }
 
     fn load_and_start(ctx: *const anyopaque, psc: u32, arr: u16) void {
-        const self: *const GPTimer = @alignCast(@ptrCast(ctx));
+        const self: *const GPTimer = @ptrCast(@alignCast(ctx));
         const regs = self.regs;
         regs.CR1.modify(.{ .CEN = 0 });
         regs.SR.raw = 0;
@@ -546,13 +546,13 @@ pub const Counter = struct {
     }
 
     fn check_event(ctx: *const anyopaque) bool {
-        const self: *const GPTimer = @alignCast(@ptrCast(ctx));
+        const self: *const GPTimer = @ptrCast(@alignCast(ctx));
         const regs = self.regs;
         return regs.SR.read().UIF == 1;
     }
 
     fn busy_wait_fn(ctx: *const anyopaque, time: u64) void {
-        const self: *const GPTimer = @alignCast(@ptrCast(ctx));
+        const self: *const GPTimer = @ptrCast(@alignCast(ctx));
         const regs = self.regs;
         const full_ticks: usize = @intCast(time / std.math.maxInt(u16));
         const partial_ticks: u16 = @intCast(time % std.math.maxInt(u16));
