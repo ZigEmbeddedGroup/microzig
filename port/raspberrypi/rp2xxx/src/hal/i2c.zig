@@ -216,7 +216,7 @@ pub const instance = struct {
 pub const I2C = enum(u1) {
     _,
 
-    fn get_regs(i2c: I2C) *volatile I2cRegs {
+    pub inline fn get_regs(i2c: I2C) *volatile I2cRegs {
         return switch (@intFromEnum(i2c)) {
             0 => I2C0,
             1 => I2C1,
