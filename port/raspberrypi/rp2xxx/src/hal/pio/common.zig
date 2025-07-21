@@ -133,8 +133,12 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 if (origin != offset)
                     return false;
 
+            // Will never fit in the first place:
+            if (offset + program.instructions.len > 32)
+                return false;
+
             const used_mask = UsedInstructionSpace(chip).val[@intFromEnum(self)];
-            const program_mask = program.get_mask();
+            const program_mask = (program.get_mask() << offset);
 
             // We can add the program if the masks don't overlap, if there is
             // overlap the result of a bitwise AND will have a non-zero result
