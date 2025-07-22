@@ -8,7 +8,9 @@ pub fn build(b: *std.Build) !void {
     const unit_tests = b.addTest(.{
         // We're not using the `start.zig` entrypoint as it overrides too much
         // configuration
-        .root_source_file = b.path("src/microzig.zig"),
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/microzig.zig"),
+        }),
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
