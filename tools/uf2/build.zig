@@ -36,9 +36,11 @@ pub fn build(b: *std.Build) void {
 
     const elf2uf2 = b.addExecutable(.{
         .name = "elf2uf2",
-        .root_source_file = b.path("src/elf2uf2.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/elf2uf2.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     b.installArtifact(elf2uf2);
 
@@ -47,7 +49,10 @@ pub fn build(b: *std.Build) void {
     });
 
     const main_tests = b.addTest(.{
-        .root_source_file = b.path("src/uf2.zig"),
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/uf2.zig"),
+            .target = b.graph.host,
+        }),
     });
     const run_main_tests = b.addRunArtifact(main_tests);
 
@@ -56,8 +61,10 @@ pub fn build(b: *std.Build) void {
 
     const gen = b.addExecutable(.{
         .name = "gen",
-        .root_source_file = b.path("src/gen.zig"),
-        .target = b.graph.host,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/gen.zig"),
+            .target = b.graph.host,
+        }),
     });
     const gen_run_step = b.addRunArtifact(gen);
     const gen_step = b.step("gen", "Generate family id enum");
@@ -65,8 +72,10 @@ pub fn build(b: *std.Build) void {
 
     const example = b.addExecutable(.{
         .name = "example",
-        .root_source_file = b.path("src/example.zig"),
-        .target = b.graph.host,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/example.zig"),
+            .target = b.graph.host,
+        }),
     });
     b.installArtifact(example);
 }
