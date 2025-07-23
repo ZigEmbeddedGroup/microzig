@@ -48,12 +48,6 @@ SECTIONS
     . += 16;
   } > IROM
 
-  .stack (NOLOAD) : ALIGN(4)
-  {
-    . += 0x8000;
-    end_of_stack = .;
-  } > DRAM
-
   .ram_text : ALIGN(4)
   {
     . = ALIGN(4);
@@ -80,7 +74,7 @@ SECTIONS
 
   .data.dummy (NOLOAD) : ALIGN(4)
   {
-    . = . + SIZEOF(.stack) + SIZEOF(.ram_text) + SIZEOF(.ram_text.wifi);
+    . = . + SIZEOF(.ram_text) + SIZEOF(.ram_text.wifi);
   } > DRAM
 
   .data : ALIGN(4)

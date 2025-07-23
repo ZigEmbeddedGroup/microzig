@@ -121,27 +121,6 @@ pub fn main() !void {
             last_mem_show = now;
         }
         hal.time.sleep_ms(10);
-
-        // if (events.wifi.contains(.Connected)) {
-        //     c.netif_set_link_up(&netif);
-        // }
-        // if (events.contains(.Disconnected)) {
-        //     c.netif_set_link_down(&netif);
-        // }
-        //
-        // while (radio.wifi.recv_packet()) |packet| {
-        //     netif.input.?(packet);
-        // }
-        //
-        // c.sys_check_timeouts();
-        //
-        // const now = hal.time.get_time_since_boot();
-        // if (!now.diff(last_mem_show).less_than(.from_ms(1000))) {
-        //     const used_mem = 50 * 1024 - alloc.free_heap();
-        //     std.log.info("used memory: {}K ({})", .{ used_mem / 1024, used_mem });
-        //     last_mem_show = now;
-        // }
-        // hal.time.sleep_ms(100);
     }
 
     // var ssid: [1:0]u8 = @splat(0);
