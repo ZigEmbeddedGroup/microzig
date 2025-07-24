@@ -200,6 +200,7 @@ pub const base = struct {
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
     pub const Clock_Device = @import("base/Clock_Device.zig");
+    pub const Block_Memory = @import("base/Block_Memory.zig");
 };
 
 test {
@@ -229,4 +230,5 @@ test {
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
     _ = base.Digital_IO;
+    _ = base.Block_Memory;
 }
