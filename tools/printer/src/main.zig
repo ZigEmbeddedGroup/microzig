@@ -49,6 +49,10 @@ pub fn main() !void {
 
     while (true) {
         _ = try in_stream.interface.stream(&printer_writer.interface, .unlimited);
+
+        // flush the writers
+        // TODO: Is there a better way to do this?
         try printer_writer.interface.flush();
+        try out_stream.interface.flush();
     }
 }

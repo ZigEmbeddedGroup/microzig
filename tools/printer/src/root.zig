@@ -4,6 +4,8 @@ const Io = std.Io;
 pub const Elf = @import("Elf.zig");
 pub const DebugInfo = @import("DebugInfo.zig");
 
+// TODO: defmt
+/// Forwards data to the output writer with annotated stack traces.
 pub const Writer = struct {
     interface: Io.Writer,
 
@@ -13,7 +15,13 @@ pub const Writer = struct {
     elf: Elf,
     debug_info: *DebugInfo,
 
-    pub fn init(buffer: []u8, out_stream: *Io.Writer, out_tty_config: std.io.tty.Config, elf: Elf, debug_info: *DebugInfo) Writer {
+    pub fn init(
+        buffer: []u8,
+        out_stream: *Io.Writer,
+        out_tty_config: std.io.tty.Config,
+        elf: Elf,
+        debug_info: *DebugInfo,
+    ) Writer {
         return .{
             .interface = init_interface(buffer),
             .out_stream = out_stream,
@@ -42,8 +50,7 @@ pub const Writer = struct {
         if (buffered.len != 0) {
             errdefer _ = io_w.consume(len);
 
-            w.annotator.process(buffered, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch return error.WriteFailed;
-            len += buffered.len;
+            len += try w.process(buffered);
         }
 
         for (data[0 .. data.len - 1]) |buf| {
@@ -51,8 +58,7 @@ pub const Writer = struct {
 
             errdefer _ = io_w.consume(len);
 
-            w.annotator.process(buf, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch return error.WriteFailed;
-            len += buf.len;
+            len += try w.process(buf);
         }
 
         const pattern = data[data.len - 1];
@@ -61,16 +67,20 @@ pub const Writer = struct {
         for (0..splat) |_| {
             errdefer _ = io_w.consume(len);
 
-            w.annotator.process(pattern, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch return error.WriteFailed;
+            len += try w.process(pattern);
         }
-        len += splat * pattern.len;
 
         return io_w.consume(len);
     }
+
+    fn process(w: *Writer, buf: []const u8) Io.Writer.Error!usize {
+        w.annotator.process(buf, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch
+            return error.WriteFailed;
+        return buf.len;
+    }
 };
 
-/// Takes data and displays it, as well as annotating addresses where it's
-/// necessary.
+/// Stack traces annotator.
 pub const Annotator = struct {
     state: State,
 
@@ -85,6 +95,7 @@ pub const Annotator = struct {
         print_address: u64,
     };
 
+    /// Forwards data to the output writer with annotated stack traces.
     pub fn process(
         self: *Annotator,
         data: []const u8,
@@ -162,8 +173,6 @@ pub const Annotator = struct {
         }
 
         try out_stream.writeAll(data[index..]);
-
-        try out_stream.flush();
     }
 };
 
