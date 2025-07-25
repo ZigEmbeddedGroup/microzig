@@ -128,15 +128,14 @@ const Parser = struct {
     functions: ArrayListUnmanaged(Function) = .empty,
 
     fn parse_elf(self: *Parser, elf: Elf) !void {
-        const data = elf.sections.get(.@".debug_info") orelse return bad();
         var reader: std.debug.FixedBufferReader = .{
-            .buf = data,
-            .endian = .little,
+            .buf = elf.sections.get(.@".debug_info") orelse return bad(),
+            .endian = elf.endian,
         };
 
         var current_cu_index: ?usize = null;
 
-        while (reader.pos < data.len) {
+        while (reader.pos < reader.buf.len) {
             var length: u64 = try reader.readInt(u32);
             var dwarf_format: dwarf.Format = .@"32";
 
@@ -160,7 +159,7 @@ const Parser = struct {
                 address_size = try reader.readByte();
             }
 
-            var abbrev_table = try self.get_abbrev_table(elf.sections, abbrev_table_offset);
+            var abbrev_table = try self.get_abbrev_table(elf, abbrev_table_offset);
 
             var depth: usize = 0;
             while (true) {
@@ -255,11 +254,11 @@ const Parser = struct {
         }.less_than);
     }
 
-    fn get_abbrev_table(self: *Parser, sections: Elf.Sections, offset: usize) !AbbrevTable {
+    fn get_abbrev_table(self: *Parser, elf: Elf, offset: usize) !AbbrevTable {
         var reader: std.debug.FixedBufferReader = .{
-            .buf = sections.get(.@".debug_abbrev") orelse return bad(),
+            .buf = elf.sections.get(.@".debug_abbrev") orelse return bad(),
             .pos = offset,
-            .endian = .little,
+            .endian = elf.endian,
         };
 
         var abbrev_table: std.AutoHashMapUnmanaged(u64, AbbrevDecl) = .empty;
@@ -327,7 +326,7 @@ const Parser = struct {
         var reader: std.debug.FixedBufferReader = .{
             .buf = elf.sections.get(.@".debug_line") orelse return bad(),
             .pos = offset,
-            .endian = .little,
+            .endian = elf.endian,
         };
 
         var unit_length: u64 = try reader.readInt(u32);

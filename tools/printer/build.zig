@@ -79,7 +79,7 @@ pub fn build(b: *std.Build) void {
     if (b.option(bool, "rebuild-test-elf", "rebuild the test program elf") == true) {
         const mz_dep = b.lazyDependency("microzig", .{}) orelse return;
 
-        const mb = @import("microzig").MicroBuild(.{
+        const mb = b.lazyImport(@This(), "microzig").?.MicroBuild(.{
             .rp2xxx = true,
         }).init(b, mz_dep) orelse return;
 
