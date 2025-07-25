@@ -1,7 +1,73 @@
 const std = @import("std");
+const Io = std.Io;
 
 pub const Elf = @import("Elf.zig");
 pub const DebugInfo = @import("DebugInfo.zig");
+
+pub const Writer = struct {
+    interface: Io.Writer,
+
+    annotator: Annotator = .init,
+    out_stream: *Io.Writer,
+    out_tty_config: std.io.tty.Config,
+    elf: Elf,
+    debug_info: *DebugInfo,
+
+    pub fn init(buffer: []u8, out_stream: *Io.Writer, out_tty_config: std.io.tty.Config, elf: Elf, debug_info: *DebugInfo) Writer {
+        return .{
+            .interface = init_interface(buffer),
+            .out_stream = out_stream,
+            .out_tty_config = out_tty_config,
+            .elf = elf,
+            .debug_info = debug_info,
+        };
+    }
+
+    pub fn init_interface(buffer: []u8) Io.Writer {
+        return .{
+            .vtable = &.{
+                .drain = drain,
+                .sendFile = Io.Writer.unimplementedSendFile,
+            },
+            .buffer = buffer,
+        };
+    }
+
+    pub fn drain(io_w: *Io.Writer, data: []const []const u8, splat: usize) Io.Writer.Error!usize {
+        const w: *Writer = @alignCast(@fieldParentPtr("interface", io_w));
+
+        var len: usize = 0;
+
+        const buffered = io_w.buffered();
+        if (buffered.len != 0) {
+            errdefer _ = io_w.consume(len);
+
+            w.annotator.process(buffered, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch return error.WriteFailed;
+            len += buffered.len;
+        }
+
+        for (data[0 .. data.len - 1]) |buf| {
+            if (buf.len == 0) continue;
+
+            errdefer _ = io_w.consume(len);
+
+            w.annotator.process(buf, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch return error.WriteFailed;
+            len += buf.len;
+        }
+
+        const pattern = data[data.len - 1];
+        if (pattern.len == 0 or splat == 0) return io_w.consume(len);
+
+        for (0..splat) |_| {
+            errdefer _ = io_w.consume(len);
+
+            w.annotator.process(pattern, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch return error.WriteFailed;
+        }
+        len += splat * pattern.len;
+
+        return io_w.consume(len);
+    }
+};
 
 /// Takes data and displays it, as well as annotating addresses where it's
 /// necessary.
@@ -22,10 +88,10 @@ pub const Annotator = struct {
     pub fn process(
         self: *Annotator,
         data: []const u8,
+        out_stream: *Io.Writer,
+        out_tty_config: std.io.tty.Config,
         elf: Elf,
         debug_info: *DebugInfo,
-        out_stream: anytype,
-        out_tty_config: std.io.tty.Config,
     ) !void {
         var index: usize = 0;
 
@@ -96,11 +162,13 @@ pub const Annotator = struct {
         }
 
         try out_stream.writeAll(data[index..]);
+
+        try out_stream.flush();
     }
 };
 
 fn output_location_info(
-    out_stream: anytype,
+    out_stream: *Io.Writer,
     out_tty_config: std.io.tty.Config,
     address: u64,
     query_result: DebugInfo.QueryResult,
@@ -108,7 +176,7 @@ fn output_location_info(
     try out_tty_config.setColor(out_stream, .bold);
 
     if (query_result.source_location) |src_loc| {
-        try out_stream.print("{s}:{}:{}", .{
+        try out_stream.print("{f}:{}:{}", .{
             std.fs.path.fmtJoin(&.{ src_loc.dir_path, src_loc.file_path }),
             src_loc.line,
             src_loc.column,
@@ -130,7 +198,7 @@ fn output_location_info(
 }
 
 fn output_source_line(
-    out_stream: anytype,
+    out_stream: *Io.Writer,
     out_tty_config: std.io.tty.Config,
     src_loc: DebugInfo.ResolvedSourceLocation,
 ) !void {
@@ -140,33 +208,37 @@ fn output_source_line(
     const file = dir.openFile(src_loc.file_path, .{}) catch return;
     defer file.close();
 
-    var buf_reader = std.io.bufferedReader(file.reader());
-    const in_stream = buf_reader.reader();
+    var r_buf: [512]u8 = undefined;
+    var file_reader = file.reader(&r_buf);
 
     var line_count: u32 = 1;
-    var buf: [150]u8 = undefined;
+    var line_buf: [128]u8 = undefined;
     const src_line: struct {
         line: []const u8,
         too_long: bool,
-    } = loop: while (true) : (line_count += 1) {
-        var too_long = false;
-
-        const line = in_stream.readUntilDelimiterOrEof(&buf, '\n') catch |err| switch (err) {
-            error.StreamTooLong => blk: {
-                try in_stream.skipUntilDelimiterOrEof('\n');
-                too_long = true;
-                break :blk &buf;
+    } = while (line_count < src_loc.line) : (line_count += 1) {
+        _ = file_reader.interface.discardDelimiterInclusive('\n') catch |err| {
+            if (err == error.EndOfStream) {
+                return error.InvalidLineNumber;
+            } else {
+                return err;
+            }
+        };
+    } else blk: {
+        const line = file_reader.interface.takeDelimiterExclusive('\n') catch |err| switch (err) {
+            error.EndOfStream => return error.InvalidLineNumber,
+            error.StreamTooLong => break :blk .{
+                .line = &line_buf,
+                .too_long = true,
             },
             else => return err,
-        } orelse return;
+        };
 
-        if (src_loc.line == line_count) {
-            break :loop .{
-                .line = line,
-                .too_long = too_long,
-            };
-        }
-    } else return;
+        break :blk .{
+            .line = line,
+            .too_long = false,
+        };
+    };
 
     try out_stream.print("{s}", .{src_line.line});
     if (src_line.too_long) {
@@ -177,7 +249,7 @@ fn output_source_line(
     if (src_loc.column > 0) {
         const space_needed = src_loc.column - 1;
 
-        try out_stream.writeByteNTimes(' ', space_needed);
+        _ = try out_stream.splatByte(' ', space_needed);
         try out_tty_config.setColor(out_stream, .green);
         try out_stream.writeAll("^");
         try out_tty_config.setColor(out_stream, .reset);
