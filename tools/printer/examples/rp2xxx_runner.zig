@@ -70,6 +70,8 @@ pub fn main() !void {
 
     while (true) {
         _ = try in_stream.interface.stream(&printer_writer.interface, .unlimited);
+
         try printer_writer.interface.flush();
+        try out_stream.interface.flush();
     }
 }
