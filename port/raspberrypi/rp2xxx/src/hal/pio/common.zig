@@ -167,19 +167,23 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                     break offset;
             } else error.NoSpace;
         }
-        inline fn is_jmp(insn: u16) bool {
-            return (insn & 0xe000) == 0;
-        }
 
         pub fn add_program_at_offset_unlocked(self: EnumType, program: Program, offset: u5) !void {
             if (!self.can_add_program_at_offset(program, offset))
                 return error.NoSpace;
 
             const instruction_memory = self.get_instruction_memory();
-            for (program.instructions, offset..) |insn, i| {
-                // offset jump instructions since they are absolute
-                instruction_memory[i] = if (is_jmp(insn)) insn + offset else insn;
-            }
+            for (program.instructions, program.relocations, offset..) |insn, reloc, i|
+                instruction_memory[i] = switch (reloc) {
+                    .none => insn,
+                    .jmpslot => blk: {
+                        // Add the base address of the program to the jmp offset so it's relative to the start
+                        const Jmp = packed struct(u16) { address: u5, reset: u11 };
+                        var jmp: Jmp = @bitCast(insn);
+                        jmp.address += offset;
+                        break :blk @as(u16, @bitCast(jmp));
+                    },
+                };
 
             const program_mask = program.get_mask();
             UsedInstructionSpace(chip).val[@intFromEnum(self)] |= program_mask << offset;
