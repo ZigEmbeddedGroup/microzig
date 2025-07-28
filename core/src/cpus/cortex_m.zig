@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
@@ -587,7 +588,14 @@ pub const atomic = struct {
     }
 
     /// Atomic compare and swap
-    pub fn cmpxchg(comptime T: type, ptr: *T, expected_value: T, new_value: T, comptime success_ordering: std.builtin.AtomicOrder, comptime failure_ordering: std.builtin.AtomicOrder) ?T {
+    pub fn cmpxchg(
+        comptime T: type,
+        ptr: *T,
+        expected_value: T,
+        new_value: T,
+        comptime success_ordering: std.builtin.AtomicOrder,
+        comptime failure_ordering: std.builtin.AtomicOrder,
+    ) ?T {
         if (has_native_atomics) {
             return @cmpxchgWeak(T, ptr, expected_value, new_value, success_ordering, failure_ordering);
         } else {
@@ -604,7 +612,13 @@ pub const atomic = struct {
     }
 
     /// Atomic read-modify-write
-    pub fn rmw(comptime T: type, ptr: *T, comptime op: std.builtin.AtomicRmwOp, operand: T, comptime ordering: std.builtin.AtomicOrder) T {
+    pub fn rmw(
+        comptime T: type,
+        ptr: *T,
+        comptime op: std.builtin.AtomicRmwOp,
+        operand: T,
+        comptime ordering: std.builtin.AtomicOrder,
+    ) T {
         if (has_native_atomics) {
             return @atomicRmw(T, ptr, op, operand, ordering);
         } else {
@@ -718,13 +732,35 @@ pub const startup_logic = struct {
         // could e.g. disable timekeeping
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);
-            if (maybe_handler) |handler| {
-                @field(tmp, field.name) = handler;
-            }
+            @field(tmp, field.name) = if (maybe_handler) |handler|
+                handler
+            else
+                default_exception_handler(field.name);
         }
 
         return tmp;
     }
+
+    fn default_exception_handler(comptime name: []const u8) microzig.interrupt.Handler {
+        return switch (builtin.mode) {
+            .Debug => .{ .c = DebugExceptionHandler(name).handle },
+            else => .{ .c = ReleaseExceptionHandler.handle },
+        };
+    }
+
+    fn DebugExceptionHandler(comptime name: []const u8) type {
+        return struct {
+            fn handle() callconv(.c) void {
+                @panic("Unhandled exception: " ++ name);
+            }
+        };
+    }
+
+    const ReleaseExceptionHandler = struct {
+        fn handle() callconv(.c) void {
+            @panic("Unhandled exception");
+        }
+    };
 };
 
 const is_ram_image = microzig.config.ram_image;
