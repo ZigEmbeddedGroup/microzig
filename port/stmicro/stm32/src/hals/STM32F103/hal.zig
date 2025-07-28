@@ -8,6 +8,8 @@ pub const drivers = @import("drivers.zig");
 pub const timer = @import("timer.zig");
 pub const usb = @import("usb.zig");
 pub const adc = @import("adc.zig");
+pub const crc = @import("crc.zig");
+pub const power = @import("power.zig");
 
 pub var RESET: rcc.ResetReason = .POR_or_PDR;
 pub fn init() void {
