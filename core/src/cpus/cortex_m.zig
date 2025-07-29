@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
@@ -673,12 +674,34 @@ pub const startup_logic = struct {
 
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);
-            if (maybe_handler) |handler| {
-                @field(tmp, field.name) = handler;
-            }
+            @field(tmp, field.name) = if (maybe_handler) |handler|
+                handler
+            else
+                default_exception_handler(field.name);
         }
 
         break :blk tmp;
+    };
+
+    fn default_exception_handler(comptime name: []const u8) microzig.interrupt.Handler {
+        return switch (builtin.mode) {
+            .Debug => .{ .c = DebugExceptionHandler(name).handle },
+            else => .{ .c = ReleaseExceptionHandler.handle },
+        };
+    }
+
+    fn DebugExceptionHandler(comptime name: []const u8) type {
+        return struct {
+            fn handle() callconv(.c) void {
+                @panic("Unhandled exception: " ++ name);
+            }
+        };
+    }
+
+    const ReleaseExceptionHandler = struct {
+        fn handle() callconv(.c) void {
+            @panic("Unhandled exception");
+        }
     };
 };
 
