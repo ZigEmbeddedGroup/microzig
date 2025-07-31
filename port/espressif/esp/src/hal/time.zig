@@ -1,7 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
-const systimer = microzig.hal.systimer;
+
+const systimer = @import("systimer.zig");
 
 pub fn initialize() void {
     systimer.unit(0).apply(.enabled);

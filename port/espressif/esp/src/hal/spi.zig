@@ -1,8 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const SliceVector = microzig.utilities.SliceVector;
-const hal = microzig.hal;
-const system = hal.system;
+
+const clocks = @import("clocks.zig");
+const system = @import("system.zig");
 
 const SPI_Regs = microzig.chip.types.peripherals.SPI2;
 
@@ -22,7 +23,7 @@ pub const SPI_Instance = enum {
 
 pub const SPI_Bus = struct {
     pub const Config = struct {
-        clock_config: hal.clocks.Config,
+        clock_config: clocks.Config,
         baud_rate: u32,
         bit_order: BitOrder = .msb_first,
 

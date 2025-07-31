@@ -12,8 +12,6 @@ const peripherals = microzig.chip.peripherals;
 const IO_MUX = peripherals.IO_MUX;
 const GPIO = peripherals.GPIO;
 
-// TODO: chip independent. currently specific to esp32c3.
-
 pub fn num(n: u5) Pin {
     std.debug.assert(n < 22);
     return @as(Pin, @enumFromInt(n));
@@ -84,8 +82,18 @@ pub const InputSignal = enum(u8) {
 
 pub const OutputSignal = enum(u8) {
     // TODO: Other signals
+    ledc_ls_sig_out0 = 45,
+    ledc_ls_sig_out1 = 46,
+    ledc_ls_sig_out2 = 47,
+    ledc_ls_sig_out3 = 48,
+    ledc_ls_sig_out4 = 49,
+    ledc_ls_sig_out5 = 50,
+
     rmt0 = 51,
     rmt1 = 52,
+
+    i2cext0_scl = 53,
+    i2cext0_sda = 54,
 
     fspiclk = 63,
     fspiq = 64,
@@ -99,24 +107,60 @@ pub const OutputSignal = enum(u8) {
     fspics4 = 72,
     fspics5 = 73,
 
-    i2cext0_scl = 53,
-    i2cext0_sda = 54,
     gpio = 128,
+
+    fn has_output_enable_signal(signal: OutputSignal) bool {
+        return switch (signal) {
+            .fspiclk,
+            .fspiq,
+            .fspid,
+            .fspihd,
+            .fspiwp,
+            .fspics0,
+            .fspics1,
+            .fspics2,
+            .fspics3,
+            .fspics4,
+            .fspics5,
+            => true,
+            else => false,
+        };
+    }
+
+    fn direct_output_via_io_mux(signal: OutputSignal) bool {
+        return switch (signal) {
+            .fspiclk,
+            .fspiq,
+            .fspid,
+            .fspihd,
+            .fspiwp,
+            .fspics0,
+            .fspics1,
+            .fspics2,
+            .fspics3,
+            .fspics4,
+            .fspics5,
+            => true,
+            else => false,
+        };
+    }
 };
 
 pub const Pin = enum(u5) {
     _,
 
     pub const Config = struct {
+        output_signal: OutputSignal = .gpio,
+        output_invert: bool = false,
+
         input_enable: bool = false,
-        output_enable: bool = false,
+        input_invert: bool = false,
+        input_filter_enable: bool = false,
+
         open_drain: bool = false,
         pullup_enable: bool = false,
         pulldown_enable: bool = false,
-        input_filter_enable: bool = false,
-        output_invert: bool = false,
         drive_strength: DriveStrength = .@"5mA",
-        output_signal: OutputSignal = .gpio,
     };
 
     pub fn apply(self: Pin, config: Config) void {
@@ -133,7 +177,7 @@ pub const Pin = enum(u5) {
 
         GPIO.FUNC_OUT_SEL_CFG[n].write(.{
             .OUT_SEL = @intFromEnum(config.output_signal),
-            .OEN_SEL = @intFromBool(config.output_enable),
+            .OEN_SEL = @intFromBool(config.output_signal.has_output_enable_signal()),
             .INV_SEL = @intFromBool(config.output_invert),
             .OEN_INV_SEL = 0,
         });
@@ -163,10 +207,10 @@ pub const Pin = enum(u5) {
         GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n });
     }
 
-    pub fn set_output_enable(self: Pin, enable: bool) void {
-        // TODO: Some other implementations (only) set GPIO.ENABLE_W1TS?
-        GPIO.FUNC_OUT_SEL_CFG[@intFromEnum(self)].modify(.{ .OEN_SEL = @intFromBool(enable) });
-    }
+    // pub fn set_output_enable(self: Pin, enable: bool) void {
+    //     // TODO: Some other implementations (only) set GPIO.ENABLE_W1TS?
+    //     GPIO.FUNC_OUT_SEL_CFG[@intFromEnum(self)].modify(.{ .OEN_SEL = @intFromBool(enable) });
+    // }
 
     pub fn set_input_enable(self: Pin, enable: bool) void {
         IO_MUX.GPIO[@intFromEnum(self)].modify(.{ .FUN_IE = @intFromBool(enable) });
