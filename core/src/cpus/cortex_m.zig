@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
+const shared = @import("cortex_m/shared_types.zig");
 const VectorTable = microzig.chip.VectorTable;
 
 const Core = enum {
@@ -683,6 +684,16 @@ pub const startup_logic = struct {
                 : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
+        if (@hasField(types.peripherals.SystemControlBlock, "SHCSR")) {
+            // Enable distinction between MemFault, BusFault and UsageFault:
+            peripherals.scb.SHCSR.modify(.{
+                .MEMFAULTENA = 1,
+                .BUSFAULTENA = 1,
+                .USGFAULTENA = 1,
+            });
+            enable_fault_irq();
+        }
+
         microzig_main();
     }
 
@@ -700,15 +711,27 @@ pub const startup_logic = struct {
     // bytes) that only provides the reset vector and the initial stack
     // pointer.
     // Must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
-    const _vector_table: FlashVectorTable align(256) = if (is_ram_image)
-        @compileError("`_vector_table` is not available in a RAM image")
-    else if (using_ram_vector_table)
-        .{
+    const _vector_table: FlashVectorTable align(256) = if (is_ram_image) {
+        @compileError("`_vector_table` is not available in a RAM image");
+    } else if (using_ram_vector_table) blk: {
+        if (cpu_flags.has_hard_fault and !@hasField(VectorTable, HardFault_name)) {
+            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
+        }
+        if (cpu_flags.has_bus_fault and !@hasField(VectorTable, BusFault_name)) {
+            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
+        }
+        if (cpu_flags.has_mem_manage_fault and !@hasField(VectorTable, MemManageFault_name)) {
+            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
+        }
+        if (cpu_flags.has_usage_fault and !@hasField(VectorTable, UsageFault_name)) {
+            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
+        }
+
+        break :blk .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
-        }
-    else
-        generate_vector_table();
+        };
+    } else generate_vector_table();
 
     fn generate_vector_table() VectorTable {
         var tmp: VectorTable = .{
@@ -749,11 +772,36 @@ pub const startup_logic = struct {
     }
 
     fn DebugExceptionHandler(comptime name: []const u8) type {
+        if (microzig.options.cpu.verbose_unhandled_irq) {
+            return struct {
+                pub const handle = debugExceptionHandler(name);
+            };
+        } else {
+            return ReleaseExceptionHandler;
+        }
+    }
+
+    const IrqHandlerFn = *const fn () callconv(.c) void;
+
+    fn debugExceptionHandler(comptime name: []const u8) IrqHandlerFn {
+        // Only use verbose fault handlers on cores that have the required registers
+        const has_hfsr = @hasField(types.peripherals.SystemControlBlock, "HFSR");
+        const has_cfsr = @hasField(types.peripherals.SystemControlBlock, "CFSR");
+
+        if (comptime std.mem.eql(u8, name, HardFault_name) and has_hfsr)
+            return debug.hard_fault_handler;
+        if (comptime std.mem.eql(u8, name, BusFault_name) and has_cfsr)
+            return debug.bus_fault_handler;
+        if (comptime std.mem.eql(u8, name, MemManageFault_name))
+            return debug.mem_manage_fault_handler;
+        if (comptime std.mem.eql(u8, name, UsageFault_name) and has_cfsr)
+            return debug.usage_fault_handler;
+
         return struct {
             fn handle() callconv(.c) void {
                 @panic("Unhandled exception: " ++ name);
             }
-        };
+        }.handle;
     }
 
     const ReleaseExceptionHandler = struct {
@@ -761,6 +809,133 @@ pub const startup_logic = struct {
             @panic("Unhandled exception");
         }
     };
+
+    const HardFault_name = "HardFault";
+    const BusFault_name = "BusFault";
+    const MemManageFault_name = "MemManageFault";
+    const UsageFault_name = "UsageFault";
+};
+
+/// Implements several mechanisms to easy debugging with Cortex-M cpus.
+///
+/// Read more here:
+///     https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
+pub const debug = struct {
+    const logger = std.log.scoped(.cortex_m3_debug);
+
+    /// This frame is pushed mostly by the CPU itself, and we move it into
+    /// the parameter register, so we can inspect it.
+    pub const ContextStateFrame = extern struct {
+        r0: u32,
+        r1: u32,
+        r2: u32,
+        r3: u32,
+        r12: u32,
+        lr: u32,
+        return_address: u32,
+        xpsr: u32,
+    };
+
+    /// Wraps `handler` in a small asm block that ensures that it is a regular interrupt handler
+    /// function, but also provides us with a ContextStateFrame fetched from the system status:
+    pub fn make_fault_handler(comptime handler: *const fn (context: *ContextStateFrame) callconv(.c) void) *const fn () callconv(.c) void {
+        return struct {
+            fn invoke() callconv(.c) void {
+                // See this article on how we use that:
+                // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
+                asm volatile (
+                    \\
+                    // Check 2th bit of LR.
+                    \\tst lr, #4
+                    // Do "if then else" equal
+                    \\ite eq
+                    // if equals, we use the MSP
+                    \\mrseq r0, msp
+                    // otherwise, we use the PSP
+                    \\mrsne r0, psp
+                    // Then we branch to our handler:
+                    \\b %[handler]
+                    :
+                    : [handler] "s" (handler),
+                );
+            }
+        }.invoke;
+    }
+
+    pub fn hard_fault_handler() callconv(.c) void {
+        const hfsr = peripherals.scb.HFSR;
+
+        logger.err("Hard Fault:", .{});
+        logger.err("  VECTTBL:  {}", .{hfsr.VECTTBL});
+        logger.err("  FORCED:   {}", .{hfsr.FORCED});
+        logger.err("  DEBUGEVT: {}", .{hfsr.DEBUGEVT});
+
+        @panic("Hard fault");
+    }
+
+    pub fn mem_manage_fault_handler() callconv(.c) void {
+        @panic("Memory fault");
+    }
+
+    pub const bus_fault_handler = make_fault_handler(handle_bus_fault_wrapped);
+
+    fn handle_bus_fault_wrapped(context: *const ContextStateFrame) callconv(.c) void {
+        const bfsr = peripherals.scb.CFSR.read().BFSR;
+
+        logger.err("Bus Fault:", .{});
+        logger.err("  context                         =  r0:0x{X:0>8}  r1:0x{X:0>8}  r2:0x{X:0>8}    r3:0x{X:0>8}", .{
+            context.r0,
+            context.r1,
+            context.r2,
+            context.r3,
+        });
+        logger.err("                                    r12:0x{X:0>8}  lr:0x{X:0>8}  ra:0x{X:0>8}  xpsr:0x{X:0>8}", .{
+            context.r12,
+            context.lr,
+            context.return_address,
+            context.xpsr,
+        });
+        logger.err("  instruction bus error           = {}", .{bfsr.instruction_bus_error});
+        logger.err("  precice data bus error          = {}", .{bfsr.precice_data_bus_error});
+        logger.err("  imprecice data bus error        = {}", .{bfsr.imprecice_data_bus_error});
+        logger.err("  unstacking exception error      = {}", .{bfsr.unstacking_exception_error});
+        logger.err("  exception stacking error        = {}", .{bfsr.exception_stacking_error});
+        logger.err("  busfault address register valid = {}", .{bfsr.busfault_address_register_valid});
+        if (bfsr.busfault_address_register_valid) {
+            const address = peripherals.scb.BFAR;
+            logger.err("    busfault address register = 0x{X:0>8}", .{address});
+        }
+
+        @panic("Bus fault");
+    }
+
+    pub const usage_fault_handler = make_fault_handler(handle_usage_fault_wrapped);
+
+    fn handle_usage_fault_wrapped(context: *const ContextStateFrame) callconv(.c) void {
+        const ufsr = peripherals.scb.CFSR.read().UFSR;
+
+        logger.err("Usage Fault:", .{});
+        logger.err("  context                         =  r0:0x{X:0>8}  r1:0x{X:0>8}  r2:0x{X:0>8}    r3:0x{X:0>8}", .{
+            context.r0,
+            context.r1,
+            context.r2,
+            context.r3,
+        });
+        logger.err("                                    r12:0x{X:0>8}  lr:0x{X:0>8}  ra:0x{X:0>8}  xpsr:0x{X:0>8}", .{
+            context.r12,
+            context.lr,
+            context.return_address,
+            context.xpsr,
+        });
+        logger.err("  undefined instruction     = {}", .{ufsr.undefined_instruction});
+        logger.err("  invalid state             = {}", .{ufsr.invalid_state});
+        logger.err("  invalid pc load           = {}", .{ufsr.invalid_pc_load});
+        logger.err("  missing coprocessor usage = {}", .{ufsr.missing_coprocessor_usage});
+        logger.err("  unaligned memory access   = {}", .{ufsr.unaligned_memory_access});
+        logger.err("  divide by zero            = {}", .{ufsr.divide_by_zero});
+
+        @panic("usage fault");
+    }
 };
 
 const is_ram_image = microzig.config.ram_image;
@@ -813,6 +988,8 @@ const core = blk: {
         .cortex_m7 => @import("cortex_m/m7.zig"),
     };
 };
+
+const cpu_flags: shared.CpuFlags = core.cpu_flags;
 
 pub const utils = switch (cortex_m) {
     .cortex_m7 => @import("cortex_m/m7_utils.zig"),

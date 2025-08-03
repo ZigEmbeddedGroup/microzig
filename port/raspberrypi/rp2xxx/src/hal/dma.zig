@@ -75,7 +75,7 @@ pub const Channel = enum(u4) {
         return @as(MaskType, 1) << @intFromEnum(chan);
     }
 
-    const Regs = extern struct {
+    pub const Regs = extern struct {
         read_addr: u32,
         write_addr: u32,
         trans_count: u32,

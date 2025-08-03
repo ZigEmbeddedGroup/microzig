@@ -1,7 +1,8 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
+const shared = @import("shared_types.zig");
 
-pub const CPU_Options = struct {};
+pub const CPU_Options = shared.Basic_Options;
 
 pub const scb_base_offset = 0x0d00;
 

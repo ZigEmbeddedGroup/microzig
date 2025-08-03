@@ -2,11 +2,15 @@
 //! - ARM Cortex-M33 Reference: https://developer.arm.com/documentation/100230/latest/
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
+const shared = @import("shared_types.zig");
 
-pub const CPU_Options = struct {
-    /// When true, the vector table lives in RAM.
-    ram_vector_table: bool = false,
+pub const cpu_flags: shared.CpuFlags = .{
+    .has_bus_fault = true,
+    .has_mem_manage_fault = true,
+    .has_usage_fault = true,
 };
+
+pub const CPU_Options = shared.options.Ram_Vector_Options;
 
 pub const scb_base_offset = 0x0cfc;
 
@@ -217,18 +221,18 @@ pub const SystemControlBlock = extern struct {
     /// System Handler Priority Registers.
     SHPR: [12]u8,
     /// System Handler Control and State Register.
-    SHCSR: u32,
+    SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
         /// MemManage Fault Register.
-        MMFSR: u8,
+        MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
-        BFSR: u8,
+        BFSR: shared.scb.BFSR,
         /// Usage Fault Status Register.
-        UFSR: u16,
+        UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: u32,
+    HFSR: shared.scb.HFSR,
     reserved0: u32 = 0,
     /// MemManage Fault Address Register.
     MMFAR: u32,
