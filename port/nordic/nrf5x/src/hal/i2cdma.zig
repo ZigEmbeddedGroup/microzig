@@ -79,6 +79,7 @@ pub const TransactionError = error{
     Receive,
 };
 
+/// Create an I2C instance from a peripheral number (0 or 1).
 pub fn num(n: u1) I2C {
     return @as(I2C, @enumFromInt(n));
 }
@@ -164,14 +165,18 @@ pub const I2C = enum(u1) {
         regs.ADDRESS.raw = 0x00000000;
     }
 
+    /// Check if a TX byte has been sent by reading the TXDSENT event.
     fn tx_sent(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_TXDSENT.read().EVENTS_TXDSENT == .Generated;
     }
 
+    /// Check if RX data is ready by reading the RXDREADY event.
     fn rx_ready(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
     }
 
+    /// Configure the TX DMA buffer for transmission.
+    /// Returns error if buffer is too large for the hardware's MAXCNT register.
     fn set_tx_buffer(i2c: I2C, buf: []const u8) !void {
         // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
         // nRF52831
@@ -184,12 +189,21 @@ pub const I2C = enum(u1) {
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
 
-    fn set_rx_buffer(i2c: I2C, buf: []u8) void {
+    /// Configure the RX DMA buffer for reception.
+    /// Returns error if buffer is too large for the hardware's MAXCNT register.
+    fn set_rx_buffer(i2c: I2C, buf: []u8) !void {
         const regs = i2c.get_regs();
+        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+        // nRF52831
+        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(rx_cnt_type, buf.len) == null)
+            return TransactionError.TooMuchData;
         regs.RXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
 
+    /// Set the target I2C device address for the next transaction.
+    /// Temporarily disables the peripheral to update the address register.
     fn set_address(i2c: I2C, addr: Address) void {
         i2c.disable();
         defer i2c.enable();
@@ -198,11 +212,13 @@ pub const I2C = enum(u1) {
         });
     }
 
+    /// Clear all hardware shortcuts by resetting the SHORTS register.
     fn clear_shorts(i2c: I2C) void {
         const regs = i2c.get_regs();
         regs.SHORTS.raw = 0x00000000;
     }
 
+    /// Clear pending I2C event flags (SUSPENDED, STOPPED, ERROR).
     fn clear_events(i2c: I2C) void {
         const regs = i2c.get_regs();
         regs.EVENTS_SUSPENDED.raw = 0;
@@ -210,12 +226,14 @@ pub const I2C = enum(u1) {
         regs.EVENTS_ERROR.raw = 0;
     }
 
+    /// Clear all error flags in the ERRORSRC register.
     fn clear_errors(i2c: I2C) void {
         const regs = i2c.get_regs();
         regs.ERRORSRC.raw = 0xFFFFFFFF;
     }
 
     // NOTE: Probably not needed, we never set them
+    /// Disable I2C interrupts for STOPPED, ERROR, and SUSPENDED events.
     fn disable_interrupts(i2c: I2C) void {
         const regs = i2c.get_regs();
         // NOTE: Ignore `.Enabled`, this is write to clear
@@ -226,6 +244,8 @@ pub const I2C = enum(u1) {
         });
     }
 
+    /// Check for I2C transaction errors by reading the ERRORSRC register.
+    /// Returns the raw error source value on success, or a specific TransactionError.
     fn check_error(i2c: I2C) TransactionError!u32 {
         const regs = i2c.get_regs();
         const abort_reason = regs.ERRORSRC.read();
@@ -243,6 +263,8 @@ pub const I2C = enum(u1) {
         return @bitCast(abort_reason);
     }
 
+    /// Verify that the expected number of bytes were received via DMA.
+    /// Returns error if actual received count doesn't match expected length.
     fn check_rx(i2c: I2C, len: usize) TransactionError!void {
         const regs = i2c.get_regs();
         const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
@@ -250,6 +272,8 @@ pub const I2C = enum(u1) {
             return TransactionError.Receive;
     }
 
+    /// Verify that the expected number of bytes were transmitted via DMA.
+    /// Returns error if actual transmitted count doesn't match expected length.
     fn check_tx(i2c: I2C, len: usize) TransactionError!void {
         const regs = i2c.get_regs();
         const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
@@ -257,7 +281,8 @@ pub const I2C = enum(u1) {
             return TransactionError.Transmit;
     }
 
-    /// Wait until the task is stopped or suspended, there's an error, or we timeout.
+    /// Wait until the I2C task completes, is suspended, encounters an error, or times out.
+    /// Automatically triggers a stop on error and handles the stop event.
     fn wait(i2c: I2C, deadline: mdf.time.Deadline) TransactionError!void {
         const regs = i2c.get_regs();
         while (true) {
@@ -360,6 +385,8 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
+    /// NOTE: readv_blocking is unsupported because of a bug in the chip, where subsequent reads
+    /// cannot be performed without sending an extra START event.
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
@@ -367,12 +394,6 @@ pub const I2C = enum(u1) {
         // TODO: We can handle this if for some reason we want to send a start and immediate stop?
         if (dst.len == 0)
             return TransactionError.NoData;
-
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
-        if (std.math.cast(rx_cnt_type, dst.len) == null)
-            return TransactionError.TooMuchData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
@@ -385,7 +406,7 @@ pub const I2C = enum(u1) {
 
         i2c.disable_interrupts();
 
-        i2c.set_rx_buffer(dst);
+        try i2c.set_rx_buffer(dst);
 
         // TODO: We only set the stop one if this is the last transaction... we could handle writev
         // this way probably. If it's not the last chunk, then just suspend
@@ -418,15 +439,6 @@ pub const I2C = enum(u1) {
         if (dst.len == 0)
             return TransactionError.NoData;
 
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
-        if (std.math.cast(tx_cnt_type, data.len) == null)
-            return TransactionError.TooMuchData;
-        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
-        if (std.math.cast(rx_cnt_type, dst.len) == null)
-            return TransactionError.TooMuchData;
-
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
@@ -439,7 +451,7 @@ pub const I2C = enum(u1) {
         i2c.disable_interrupts();
 
         try i2c.set_tx_buffer(data);
-        i2c.set_rx_buffer(dst);
+        try i2c.set_rx_buffer(dst);
 
         // Set it up to automatically start a read after it's finished writing, and stop after it's
         // finished reading.
