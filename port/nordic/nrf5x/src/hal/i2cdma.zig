@@ -239,17 +239,15 @@ pub const I2C = enum(u1) {
     fn check_rx(i2c: I2C, len: usize) TransactionError!void {
         const regs = i2c.get_regs();
         const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
-        if (bytes_read != len) {
+        if (bytes_read != len)
             return TransactionError.Receive;
-        }
     }
 
     fn check_tx(i2c: I2C, len: usize) TransactionError!void {
         const regs = i2c.get_regs();
         const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
-        if (bytes_written != len) {
+        if (bytes_written != len)
             return TransactionError.Transmit;
-        }
     }
 
     /// Wait until the task is stopped or suspended, there's an error, or we timeout.
@@ -307,8 +305,6 @@ pub const I2C = enum(u1) {
 
         i2c.set_tx_buffer(data);
 
-        // TODO: We only set the stop one if this is the last transaction... we could handle writev
-        // this way probably. If it's not the last chunk, then just suspend
         // Set it up to automatically stop after sending the last byte
         regs.SHORTS.modify(.{ .LASTTX_STOP = .Enabled });
 
@@ -320,12 +316,93 @@ pub const I2C = enum(u1) {
         try i2c.check_tx(data.len);
     }
 
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+        if (addr.is_reserved())
+            return TransactionError.TargetAddressReserved;
+
+        // TODO: We can handle this if for some reason we want to send a start and immediate stop?
+        if (chunks.len == 0)
+            return TransactionError.NoData;
+
+        // Make sure total size fits?
+        // But isn't it actually checked for each chunk since each one is its one dma transaction?
+        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(tx_cnt_type, write_vec.size()) == null)
+            return TransactionError.TooMuchData;
+
+        const regs = i2c.get_regs();
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+
+        i2c.set_address(addr);
+
+        i2c.clear_shorts();
+        i2c.clear_events();
+        i2c.clear_errors();
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
+
+        // std.log.debug("n chunks{}", .{chunks.len});
+        for (0.., chunks) |i, chunk| {
+            const stop = i == chunks.len - 1;
+            i2c.set_tx_buffer(chunk);
+            // Set it up to automatically stop after sending the last byte of this DMA transaction,
+            // but only if we are on the last chunk. Otherwise, instead we want to suspend so that
+            // we can resume on the next chunk.
+            if (stop) {
+                // std.log.debug("Setting stop short for chunk {}", .{i});
+                // NOTE: Confirmed that the suspend short is not cleared
+                // const shorts = regs.SHORTS.read(); // DELETEME
+                // std.log.debug("Got shorts {any}", .{shorts});
+                regs.SHORTS.modify(.{
+                    .LASTTX_STOP = .Enabled,
+                    .LASTTX_SUSPEND = .Disabled,
+                });
+            } else {
+                // std.log.debug("Setting suspend short for chunk {}", .{i});
+                // const shorts = regs.SHORTS.read(); // DELETEME
+                // std.log.debug("Got shorts {any}", .{shorts});
+                regs.SHORTS.modify(.{
+                    .LASTTX_SUSPEND = .Enabled,
+                    .LASTTX_STOP = .Disabled,
+                });
+            }
+
+            // If we are on the first chunk, we start a transaction, otherwise, we resume a
+            // suspended one.
+            // if (i == 0) {
+            // std.log.debug("start task for chunk {}", .{i});
+            // NOTE: Apparently even if we are resuming, we also have to start?
+            regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
+            // } else {
+            if (i != 0) {
+                // std.log.debug("resume task for chunk {}", .{i});
+                regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
+            }
+
+            // If current chunk has 0 len, we can send start, but we need to explicitly set the stop
+            // or suspend task
+            if (chunk.len == 0)
+                if (stop)
+                    regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger })
+                else
+                    regs.TASKS_SUSPEND.write(.{ .TASKS_SUSPEND = .Trigger });
+
+            try i2c.wait(deadline);
+            // Read the error
+            _ = try i2c.check_error();
+            try i2c.check_tx(chunk.len);
+        }
+    }
+
     /// Attempts to read number of bytes in provided slice from target device and blocks until one
     /// of the following occurs:
     /// - Bytes have been read successfully
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
+    /// NOTE: (Apparently) consecutive reads are not supported by the hardware. See
+    /// https://github.com/embassy-rs/embassy/blob/main/embassy-nrf/src/twim.rs#L398
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
