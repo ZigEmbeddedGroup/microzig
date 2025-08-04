@@ -209,6 +209,7 @@ pub const I2C = enum(u1) {
         regs.ERRORSRC.raw = 0xFFFFFFFF;
     }
 
+    // NOTE: Probably not needed, we never set them
     fn disable_interrupts(i2c: I2C) void {
         const regs = i2c.get_regs();
         // NOTE: Ignore `.Enabled`, this is write to clear
@@ -300,7 +301,6 @@ pub const I2C = enum(u1) {
         i2c.clear_shorts();
         i2c.clear_events();
         i2c.clear_errors();
-        // Probably not needed, we never set them
         i2c.disable_interrupts();
 
         i2c.set_tx_buffer(data);
@@ -320,7 +320,6 @@ pub const I2C = enum(u1) {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
-        // TODO: We can handle this if for some reason we want to send a start and immediate stop?
         if (chunks.len == 0)
             return TransactionError.NoData;
 
@@ -339,49 +338,34 @@ pub const I2C = enum(u1) {
         i2c.clear_shorts();
         i2c.clear_events();
         i2c.clear_errors();
-        // Probably not needed, we never set them
         i2c.disable_interrupts();
 
-        // std.log.debug("n chunks{}", .{chunks.len});
         for (0.., chunks) |i, chunk| {
             const stop = i == chunks.len - 1;
             i2c.set_tx_buffer(chunk);
+
             // Set it up to automatically stop after sending the last byte of this DMA transaction,
             // but only if we are on the last chunk. Otherwise, instead we want to suspend so that
             // we can resume on the next chunk.
-            if (stop) {
-                // std.log.debug("Setting stop short for chunk {}", .{i});
-                // NOTE: Confirmed that the suspend short is not cleared
-                // const shorts = regs.SHORTS.read(); // DELETEME
-                // std.log.debug("Got shorts {any}", .{shorts});
+            if (stop)
                 regs.SHORTS.modify(.{
                     .LASTTX_STOP = .Enabled,
                     .LASTTX_SUSPEND = .Disabled,
-                });
-            } else {
-                // std.log.debug("Setting suspend short for chunk {}", .{i});
-                // const shorts = regs.SHORTS.read(); // DELETEME
-                // std.log.debug("Got shorts {any}", .{shorts});
+                })
+            else
                 regs.SHORTS.modify(.{
                     .LASTTX_SUSPEND = .Enabled,
                     .LASTTX_STOP = .Disabled,
                 });
-            }
 
-            // If we are on the first chunk, we start a transaction, otherwise, we resume a
-            // suspended one.
-            // if (i == 0) {
-            // std.log.debug("start task for chunk {}", .{i});
-            // NOTE: Apparently even if we are resuming, we also have to start?
+            // We always have to START, but if we are not on tthe firstt chunk, we also have to resume
             regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
-            // } else {
-            if (i != 0) {
-                // std.log.debug("resume task for chunk {}", .{i});
+            if (i != 0)
                 regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
-            }
 
-            // If current chunk has 0 len, we can send start, but we need to explicitly set the stop
-            // or suspend task
+            // If current chunk has 0 len, we can still START a transaction, but because the LASTTX
+            // event will never hit, the shortcut above won't trigger. Therefore, we need to
+            // explicitly stop or suspend the task in this case.
             if (chunk.len == 0)
                 if (stop)
                     regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger })
@@ -389,7 +373,6 @@ pub const I2C = enum(u1) {
                     regs.TASKS_SUSPEND.write(.{ .TASKS_SUSPEND = .Trigger });
 
             try i2c.wait(deadline);
-            // Read the error
             _ = try i2c.check_error();
             try i2c.check_tx(chunk.len);
         }
@@ -401,8 +384,6 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    /// NOTE: (Apparently) consecutive reads are not supported by the hardware. See
-    /// https://github.com/embassy-rs/embassy/blob/main/embassy-nrf/src/twim.rs#L398
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
@@ -426,7 +407,6 @@ pub const I2C = enum(u1) {
         i2c.clear_events();
         i2c.clear_errors();
 
-        // Probably not needed, we never set them
         i2c.disable_interrupts();
 
         i2c.set_rx_buffer(dst);
@@ -439,7 +419,6 @@ pub const I2C = enum(u1) {
         regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
 
         try i2c.wait(deadline);
-        // Read the error
         _ = try i2c.check_error();
         try i2c.check_rx(dst.len);
     }
@@ -481,7 +460,6 @@ pub const I2C = enum(u1) {
         i2c.clear_events();
         i2c.clear_errors();
 
-        // Probably not needed, we never set them
         i2c.disable_interrupts();
 
         i2c.set_tx_buffer(data);
@@ -498,7 +476,6 @@ pub const I2C = enum(u1) {
         regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
 
         try i2c.wait(deadline);
-        // Read the error
         _ = try i2c.check_error();
         try i2c.check_rx(dst.len);
         try i2c.check_tx(data.len);
