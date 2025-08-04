@@ -3,6 +3,7 @@
 //!
 //! Datasheet:
 //! * https://www.infineon.com/assets/row/public/documents/24/49/infineon-tlv493d-a1b6-datasheet-en.pdf
+//! * https://www.infineon.com/dgdl/Infineon-TLV493D-A1B6_3DMagnetic-UM-v01_03-EN.pdf?fileId=5546d46261d5e6820161e75721903ddd
 //!
 const std = @import("std");
 const mdf = @import("../framework.zig");
@@ -66,7 +67,9 @@ const ReadRegister = packed struct(u80) {
     T: u1,
     reserved: u1,
     TEMP2: u8,
-    padding: u24,
+    reserved55: u8,
+    reserved63: u8,
+    reserved71: u8,
 };
 
 const WriteRegister = packed struct(u32) {
@@ -162,16 +165,14 @@ pub const TLV493D = struct {
     }
 
     fn setup_write_buffer(self: *Self) !void {
-        // NOTE: I think that this is just to clear it out and reset its state.
         try self.read_out();
 
-        inline for (
-            .{ WriteMaskKey.W_RES1, WriteMaskKey.W_RES2, WriteMaskKey.W_RES3 },
-            .{ ReadMaskKey.R_RES1, ReadMaskKey.R_RES2, ReadMaskKey.R_RES3 },
-        ) |w_mask, r_mask| {
-            const value = self.get_reg_bits(get_read_mask(r_mask));
-            self.set_write_key(get_write_mask(w_mask), value);
-        }
+        // I am not sure why (or if) this is needed. The Adafruit CircuitPython driver reads out
+        // everything and copies a bunch of reserved bits into the write register. See
+        // https://github.com/adafruit/Adafruit_CircuitPython_TLV493D/blob/2.0.9/adafruit_tlv493d.py#L141-L145
+        self.write_data.reserved11 = @truncate((self.read_data.reserved55 & 0x18) >> 3);
+        self.write_data.reserved15 = self.read_data.reserved63;
+        self.write_data.reserved23 = @truncate(self.read_data.reserved71 & 0x1F);
     }
 
     /// Deinitialize the device
@@ -272,7 +273,6 @@ pub const TLV493D = struct {
 
         // Read measurement data
         self.read_out() catch return Error.BusError;
-        // std.log.debug("{x}", .{self.read_data}); // DELETEME
 
         // Construct results from registers
         self.x_data = self.concat_results(self.read_data.BX1, self.read_data.BX2, true);
