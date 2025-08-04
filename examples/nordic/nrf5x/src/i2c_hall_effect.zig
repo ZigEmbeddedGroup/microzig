@@ -44,23 +44,24 @@ pub fn main() !void {
 
     // ------------------------ BUS SCAN ------------------------
     std.log.info("I2C bus scan", .{});
-    // for (0..std.math.maxInt(u7)) |addr| {
-    //     // std.log.info("Trying {x}", .{addr}); // DELETEME
-    //     const a: i2c.Address = @enumFromInt(addr);
-    //
-    //     var rx_data: [1]u8 = undefined;
-    //     _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
-    //         if (e != i2c.TransactionError.DeviceNotPresent and
-    //             e != i2c.TransactionError.TargetAddressReserved)
-    //             std.log.info("Error {any}", .{e});
-    //         continue;
-    //     };
-    //
-    //     std.log.info("I2C device found at address {X}.", .{addr});
-    // }
+    for (0..std.math.maxInt(u7)) |addr| {
+        // std.log.info("Trying {x}", .{addr}); // DELETEME
+        const a: i2c.Address = @enumFromInt(addr);
+
+        var rx_data: [1]u8 = undefined;
+        _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
+            if (e != i2c.TransactionError.DeviceNotPresent and
+                e != i2c.TransactionError.TargetAddressReserved)
+                std.log.info("Error {any}", .{e});
+            continue;
+        };
+
+        std.log.info("I2C device found at address {X}.", .{addr});
+    }
     // i2c0.reset();
 
     // // Create i2c datagram device
+    // var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x1F), null);
     var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x5E), null);
     // Pass i2c device to driver to create sensor instance
     var cd = ClockDevice{};
@@ -69,8 +70,11 @@ pub fn main() !void {
         cd.clock_device(),
         .{
             // The device needs to know the address because apparently it has a
-            // different protocol to reset it if the address isn't the default?
+            // different protocol to reset it if the address isn't the default
+            // NOTE: Sometimes the device changes addresses on me for some reason!
+            // .addr = 0x1F,
             .addr = 0x5E,
+            // .reset = true, // DELETEME
             // .mode = .fast,
         },
     );
