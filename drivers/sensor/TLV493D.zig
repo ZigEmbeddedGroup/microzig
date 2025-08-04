@@ -130,11 +130,7 @@ pub const TLV493D = struct {
     expected_frame_count: u8,
 
     /// Create a new TLV493D instance
-    pub fn init(
-        dev: Datagram_Device,
-        clock: Clock_Device,
-        config: Config,
-    ) Error!Self {
+    pub fn init(dev: Datagram_Device, clock: Clock_Device, config: Config) Error!Self {
         var self = Self{
             .dev = dev,
             .clock = clock,
@@ -161,6 +157,7 @@ pub const TLV493D = struct {
         try self.read_out();
 
         try self.set_access_mode(self.mode);
+
         if (config.enable_temp)
             try self.enable_temp();
 
@@ -249,7 +246,7 @@ pub const TLV493D = struct {
     }
 
     /// Disable temperature measurement
-    pub fn disableTemp(self: *Self) Error!void {
+    pub fn disable_temp(self: *Self) Error!void {
         self.write_data.TEMP_NEN = 1;
         self.calc_parity();
         try self.write_out();
@@ -328,9 +325,9 @@ pub const TLV493D = struct {
 
     /// Get magnetic field magnitude
     pub fn get_magnitude(self: *Self) f32 {
-        const x = @as(f32, @floatFromInt(self.x_data));
-        const y = @as(f32, @floatFromInt(self.y_data));
-        const z = @as(f32, @floatFromInt(self.z_data));
+        const x: f32 = @floatFromInt(self.x_data);
+        const y: f32 = @floatFromInt(self.y_data);
+        const z: f32 = @floatFromInt(self.z_data);
         return TLV493D_B_MULT * @sqrt(x * x + y * y + z * z);
     }
 
@@ -341,9 +338,9 @@ pub const TLV493D = struct {
 
     /// Get polar angle (atan2(z, sqrt(x² + y²)))
     pub fn get_polar(self: *Self) f32 {
-        const x = @as(f32, @floatFromInt(self.x_data));
-        const y = @as(f32, @floatFromInt(self.y_data));
-        const z = @as(f32, @floatFromInt(self.z_data));
+        const x: f32 = @floatFromInt(self.x_data);
+        const y: f32 = @floatFromInt(self.y_data);
+        const z: f32 = @floatFromInt(self.z_data);
         return std.math.atan2(z, @sqrt(x * x + y * y));
     }
 

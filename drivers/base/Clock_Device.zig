@@ -55,8 +55,6 @@ pub fn get_time_since_boot(td: Clock_Device) mdf.time.Absolute {
 
 pub const VTable = struct {
     get_time_since_boot: *const fn (*anyopaque) mdf.time.Absolute,
-    // TODO: Should we rename this so that the unit is known, or have it take a duration? Teis is in
-    // us (I believe)
     sleep: ?*const fn (*anyopaque, u64) void = null,
 };
 
