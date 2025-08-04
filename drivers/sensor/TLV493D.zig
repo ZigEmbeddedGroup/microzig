@@ -21,15 +21,6 @@ pub const TLV493D_B_MULT: f32 = 0.098; // mT per LSB
 pub const TLV493D_TEMP_MULT: f32 = 1.1; // °C per LSB
 pub const TLV493D_TEMP_OFFSET: f32 = 340.0; // Temperature offset
 
-/// Access modes for the sensor
-pub const AccessMode = enum(u8) {
-    powerdown = 0,
-    fast = 1,
-    low_power = 2,
-    ultra_low_power = 3,
-    master_controlled = 4,
-};
-
 /// Default mode for sensor operation
 pub const TLV493D_DEFAULTMODE = AccessMode.master_controlled;
 
@@ -59,102 +50,54 @@ pub const Error = error{
     InvalidData,
 };
 
-/// Register indices for read operations
-const ReadReg = struct {
-    pub const BX1: u8 = 0;
-    pub const BY1: u8 = 1;
-    pub const BZ1: u8 = 2;
-    pub const TEMP1: u8 = 3;
-    pub const BX2: u8 = 4;
-    pub const BZ2: u8 = 5;
-    pub const TEMP2: u8 = 6;
-    pub const RES1: u8 = 7;
-    pub const RES2: u8 = 8;
-    pub const RES3: u8 = 9;
+// TODO: Ensure the order is as expected
+const ReadRegister = packed struct(u80) {
+    BX1: u8,
+    BY1: u8,
+    BZ1: u8,
+    CHANNEL: u2,
+    FRAMECOUNTER: u2,
+    TEMP1: u4,
+    BY2: u4,
+    BX2: u4,
+    BZ2: u4,
+    PD: u1,
+    FF: u1,
+    T: u1,
+    reserved: u1,
+    TEMP2: u8,
+    padding: u24,
 };
 
-/// Register masks for bit field operations
-const RegMask = struct {
-    byte_index: u8,
-    mask: u8,
-    shift: u3,
+const WriteRegister = packed struct(u32) {
+    reserved0: u8,
+    LOWPOWER: u1,
+    FAST: u1,
+    INT: u1,
+    reserved11: u2,
+    I2C_ADDR: u2,
+    PARITY: u1,
+    reserved15: u8,
+    reserved23: u5,
+    PARITY_EN: u1,
+    LP_PERIOD: u1,
+    TEMP_NEN: u1,
 };
 
-/// Read register mask keys
-const ReadMaskKey = enum(u8) {
-    R_BX1 = 0,
-    R_BY1 = 1,
-    R_BZ1 = 2,
-    R_TEMP1 = 3,
-    R_BX2 = 4,
-    R_BY2 = 5,
-    R_BZ2 = 6,
-    R_TEMP2 = 7,
-    R_FRAMECOUNTER = 8,
-    R_CHANNEL = 9,
-    R_RES1 = 10,
-    R_RES2 = 11,
-    R_RES3 = 12,
+/// Access modes for the sensor
+pub const AccessMode = enum(u8) {
+    powerdown = 0,
+    fast = 1,
+    low_power = 2,
+    ultra_low_power = 3,
+    master_controlled = 4,
 };
-
-/// Read register masks lookup table
-const READ_MASK_TABLE = [_]RegMask{
-    RegMask{ .byte_index = 0, .mask = 0xFF, .shift = 0 }, // R_BX1
-    RegMask{ .byte_index = 1, .mask = 0xFF, .shift = 0 }, // R_BY1
-    RegMask{ .byte_index = 2, .mask = 0xFF, .shift = 0 }, // R_BZ1
-    RegMask{ .byte_index = 3, .mask = 0xF0, .shift = 4 }, // R_TEMP1
-    RegMask{ .byte_index = 4, .mask = 0xF0, .shift = 4 }, // R_BX2
-    RegMask{ .byte_index = 4, .mask = 0x0F, .shift = 0 }, // R_BY2
-    RegMask{ .byte_index = 5, .mask = 0x0F, .shift = 0 }, // R_BZ2
-    RegMask{ .byte_index = 6, .mask = 0xFF, .shift = 0 }, // R_TEMP2
-    RegMask{ .byte_index = 3, .mask = 0x0C, .shift = 2 }, // R_FRAMECOUNTER
-    RegMask{ .byte_index = 3, .mask = 0x03, .shift = 0 }, // R_CHANNEL
-    RegMask{ .byte_index = 7, .mask = 0x1F, .shift = 0 }, // R_RES1
-    RegMask{ .byte_index = 8, .mask = 0xFF, .shift = 0 }, // R_RES2
-    RegMask{ .byte_index = 9, .mask = 0x1F, .shift = 0 }, // R_RES3
-};
-
-fn get_read_mask(key: ReadMaskKey) RegMask {
-    return READ_MASK_TABLE[@intFromEnum(key)];
-}
-
-/// Write register mask keys
-const WriteMaskKey = enum(u8) {
-    W_PARITY = 0,
-    W_RES1 = 1,
-    W_INT = 2,
-    W_FAST = 3,
-    W_LOWPOWER = 4,
-    W_RES2 = 5,
-    W_TEMP_NEN = 6,
-    W_LP_PERIOD = 7,
-    W_PARITY_EN = 8,
-    W_RES3 = 9,
-};
-
-/// Write register masks lookup table
-const WRITE_MASK_TABLE = [_]RegMask{
-    RegMask{ .byte_index = 1, .mask = 0x80, .shift = 7 }, // W_PARITY
-    RegMask{ .byte_index = 1, .mask = 0x18, .shift = 3 }, // W_RES1
-    RegMask{ .byte_index = 1, .mask = 0x04, .shift = 2 }, // W_INT
-    RegMask{ .byte_index = 1, .mask = 0x02, .shift = 1 }, // W_FAST
-    RegMask{ .byte_index = 1, .mask = 0x01, .shift = 0 }, // W_LOWPOWER
-    RegMask{ .byte_index = 2, .mask = 0xFF, .shift = 0 }, // W_RES2
-    RegMask{ .byte_index = 3, .mask = 0x80, .shift = 7 }, // W_TEMP_NEN
-    RegMask{ .byte_index = 3, .mask = 0x40, .shift = 6 }, // W_LP_PERIOD
-    RegMask{ .byte_index = 3, .mask = 0x20, .shift = 5 }, // W_PARITY_EN
-    RegMask{ .byte_index = 3, .mask = 0x1F, .shift = 0 }, // W_RES3
-};
-
-fn get_write_mask(key: WriteMaskKey) RegMask {
-    return WRITE_MASK_TABLE[@intFromEnum(key)];
-}
 
 /// Access mode configuration
 const AccessModeConfig = struct {
-    fast: u8,
-    lp: u8,
-    lp_period: u8,
+    fast: u1,
+    lp: u1,
+    lp_period: u1,
     measurement_time: u16, // in ms
 };
 
@@ -173,8 +116,8 @@ pub const TLV493D = struct {
     dev: Datagram_Device,
     clock: Clock_Device,
     config: Config,
-    read_data: [10]u8,
-    write_data: [4]u8,
+    read_data: ReadRegister,
+    write_data: WriteRegister,
     x_data: i16 = 0,
     y_data: i16 = 0,
     z_data: i16 = 0,
@@ -192,8 +135,8 @@ pub const TLV493D = struct {
             .dev = dev,
             .clock = clock,
             .config = config,
-            .read_data = [_]u8{0} ** 10,
-            .write_data = [_]u8{0} ** 4,
+            .read_data = @bitCast([_]u8{0} ** 10),
+            .write_data = @bitCast([_]u8{0} ** 4),
             // TODO: Add to config
             // .mode = .fast,
             .mode = TLV493D_DEFAULTMODE,
@@ -254,22 +197,23 @@ pub const TLV493D = struct {
 
     /// Read all registers from sensor
     fn read_out(self: *Self) Error!void {
-        const bytes_read = self.dev.readv(&.{&self.read_data}) catch return Error.DatagramError;
+        // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
+        const bytes_read = self.dev.readv(&.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
         if (bytes_read != 10) return Error.InvalidData;
     }
 
     /// Write configuration to sensor
     fn write_out(self: *Self) Error!void {
-        self.dev.writev(&.{&self.write_data}) catch return Error.DatagramError;
+        self.dev.writev(&.{std.mem.asBytes(&self.write_data)}) catch return Error.DatagramError;
     }
 
     /// Set access mode
     pub fn set_access_mode(self: *Self, mode: AccessMode) Error!void {
         const mode_config = &ACCESS_MODE_CONFIGS[@intFromEnum(mode)];
 
-        self.set_write_key(get_write_mask(WriteMaskKey.W_FAST), mode_config.fast);
-        self.set_write_key(get_write_mask(WriteMaskKey.W_LOWPOWER), mode_config.lp);
-        self.set_write_key(get_write_mask(WriteMaskKey.W_LP_PERIOD), mode_config.lp_period);
+        self.write_data.FAST = mode_config.fast;
+        self.write_data.LOWPOWER = mode_config.lp;
+        self.write_data.LP_PERIOD = mode_config.lp_period;
 
         self.calc_parity();
         try self.write_out();
@@ -279,14 +223,14 @@ pub const TLV493D = struct {
 
     /// Enable interrupt
     pub fn enable_interrupt(self: *Self) Error!void {
-        self.set_write_key(get_write_mask(WriteMaskKey.W_INT), 1);
+        self.write_data.INT = 1;
         self.calc_parity();
         try self.write_out();
     }
 
     /// Disable interrupt
     pub fn disable_interrupt(self: *Self) Error!void {
-        self.set_write_key(get_write_mask(WriteMaskKey.W_INT), 0);
+        self.write_data.INT = 0;
         self.calc_parity();
         try self.write_out();
     }
@@ -295,14 +239,14 @@ pub const TLV493D = struct {
     /// Note that according to the datasheet, we can save 25% of power consumption by keeping this
     /// turned off.
     pub fn enable_temp(self: *Self) Error!void {
-        self.set_write_key(get_write_mask(WriteMaskKey.W_TEMP_NEN), 0);
+        self.write_data.TEMP_NEN = 0;
         self.calc_parity();
         try self.write_out();
     }
 
     /// Disable temperature measurement
     pub fn disableTemp(self: *Self) Error!void {
-        self.set_write_key(get_write_mask(WriteMaskKey.W_TEMP_NEN), 1);
+        self.write_data.TEMP_NEN = 1;
         self.calc_parity();
         try self.write_out();
     }
@@ -331,36 +275,20 @@ pub const TLV493D = struct {
         // std.log.debug("{x}", .{self.read_data}); // DELETEME
 
         // Construct results from registers
-        self.x_data = self.concat_results(
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_BX1)),
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_BX2)),
-            true,
-        );
-        self.y_data = self.concat_results(
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_BY1)),
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_BY2)),
-            true,
-        );
-        self.z_data = self.concat_results(
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_BZ1)),
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_BZ2)),
-            true,
-        );
-        self.temp_data = self.concat_results(
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_TEMP1)),
-            self.get_reg_bits(get_read_mask(ReadMaskKey.R_TEMP2)),
-            false,
-        );
+        self.x_data = self.concat_results(self.read_data.BX1, self.read_data.BX2, true);
+        self.y_data = self.concat_results(self.read_data.BY1, self.read_data.BY2, true);
+        self.z_data = self.concat_results(self.read_data.BZ1, self.read_data.BZ2, true);
+        self.temp_data = self.concat_results(self.read_data.TEMP1, self.read_data.TEMP2, false);
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
         if (powerdown)
             self.set_access_mode(AccessMode.powerdown) catch return Error.BusError;
 
         // Check for frame errors
-        if (self.get_reg_bits(get_read_mask(ReadMaskKey.R_CHANNEL)) != 0)
+        if (self.read_data.CHANNEL != 0)
             return Error.FrameError;
 
-        self.expected_frame_count = self.get_reg_bits(get_read_mask(ReadMaskKey.R_FRAMECOUNTER)) +% 1;
+        self.expected_frame_count = self.read_data.FRAMECOUNTER;
     }
 
     /// Read magnetic field and temperature values
@@ -416,27 +344,14 @@ pub const TLV493D = struct {
         return std.math.atan2(z, @sqrt(x * x + y * y));
     }
 
-    /// Set register bits using mask
-    fn set_write_key(self: *Self, mask: RegMask, data: u8) void {
-        var current = self.write_data[mask.byte_index];
-        current &= ~mask.mask; // Clear bits
-        current |= (data << mask.shift) & mask.mask; // Set new bits
-        self.write_data[mask.byte_index] = current;
-    }
-
-    /// Get register bits using mask
-    fn get_reg_bits(self: *Self, mask: RegMask) u8 {
-        return (self.read_data[mask.byte_index] & mask.mask) >> mask.shift;
-    }
-
     /// Calculate and set parity bit
     fn calc_parity(self: *Self) void {
         // Set parity bit to 1 initially
-        self.set_write_key(get_write_mask(WriteMaskKey.W_PARITY), 1);
+        self.write_data.PARITY = 1;
 
         var y: u8 = 0x00;
         // XOR all write data bytes
-        for (self.write_data) |byte| {
+        for (std.mem.asBytes(&self.write_data)) |byte| {
             y ^= byte;
         }
 
@@ -446,7 +361,7 @@ pub const TLV493D = struct {
         y = y ^ (y >> 4);
 
         // Set parity bit (LSB of y)
-        self.set_write_key(get_write_mask(WriteMaskKey.W_PARITY), y & 0x01);
+        self.write_data.PARITY = @truncate(y & 0x01);
     }
 
     /// Concatenate register values into 12-bit signed result
