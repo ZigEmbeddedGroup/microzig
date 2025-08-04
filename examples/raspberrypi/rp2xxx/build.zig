@@ -47,7 +47,6 @@ pub fn build(b: *std.Build) void {
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
         .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .name = "i2c-hall-effect", .file = "src/i2c_hall_effect.zig" },
         .{ .name = "pwm", .file = "src/pwm.zig" },
         .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
