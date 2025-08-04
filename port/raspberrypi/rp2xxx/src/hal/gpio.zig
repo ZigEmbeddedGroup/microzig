@@ -77,11 +77,6 @@ pub const SchmittTrigger = enum(u1) {
     disabled,
 };
 
-pub const Enabled = enum {
-    disabled,
-    enabled,
-};
-
 pub const Pull = enum {
     up,
     down,
@@ -156,7 +151,7 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+            pub fn set_schmitt_trigger(self: Mask, enabled: SchmittTrigger) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
@@ -235,7 +230,7 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+            pub fn set_schmitt_trigger(self: Mask, enabled: SchmittTrigger) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
@@ -489,7 +484,7 @@ pub const Pin = enum(u6) {
         });
     }
 
-    pub fn set_schmitt_trigger(gpio: Pin, enabled: Enabled) void {
+    pub fn set_schmitt_trigger(gpio: Pin, enabled: SchmittTrigger) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
             .SCHMITT = switch (enabled) {
