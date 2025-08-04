@@ -173,12 +173,13 @@ pub const I2C = enum(u1) {
     }
 
     fn set_tx_buffer(i2c: I2C, buf: []const u8) !void {
-        const regs = i2c.get_regs();
         // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
         // nRF52831
         const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
         if (std.math.cast(tx_cnt_type, buf.len) == null)
             return TransactionError.TooMuchData;
+
+        const regs = i2c.get_regs();
         regs.TXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
