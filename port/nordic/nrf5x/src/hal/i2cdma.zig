@@ -172,8 +172,13 @@ pub const I2C = enum(u1) {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
     }
 
-    fn set_tx_buffer(i2c: I2C, buf: []const u8) void {
+    fn set_tx_buffer(i2c: I2C, buf: []const u8) !void {
         const regs = i2c.get_regs();
+        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+        // nRF52831
+        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(tx_cnt_type, buf.len) == null)
+            return TransactionError.TooMuchData;
         regs.TXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
@@ -290,13 +295,6 @@ pub const I2C = enum(u1) {
         if (chunks.len == 0)
             return TransactionError.NoData;
 
-        // Make sure total size fits?
-        // But isn't it actually checked for each chunk since each one is its one dma transaction?
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
-        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
-        if (std.math.cast(tx_cnt_type, write_vec.size()) == null)
-            return TransactionError.TooMuchData;
-
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
@@ -309,7 +307,7 @@ pub const I2C = enum(u1) {
 
         for (0.., chunks) |i, chunk| {
             const stop = i == chunks.len - 1;
-            i2c.set_tx_buffer(chunk);
+            try i2c.set_tx_buffer(chunk);
 
             // Set it up to automatically stop after sending the last byte of this DMA transaction,
             // but only if we are on the last chunk. Otherwise, instead we want to suspend so that
@@ -429,7 +427,7 @@ pub const I2C = enum(u1) {
 
         i2c.disable_interrupts();
 
-        i2c.set_tx_buffer(data);
+        try i2c.set_tx_buffer(data);
         i2c.set_rx_buffer(dst);
 
         // Set it up to automatically start a read after it's finished writing, and stop after it's
