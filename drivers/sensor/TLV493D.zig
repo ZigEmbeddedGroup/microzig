@@ -38,6 +38,7 @@ pub const Config = struct {
     // TODO: With an i2c interface we'd use this to set up the peripheral
     addr: u8, // No default to force user to set it
     reset: bool = true,
+    enable_temp: bool = false,
 };
 
 /// TLV493D related errors
@@ -160,6 +161,8 @@ pub const TLV493D = struct {
         try self.read_out();
 
         try self.set_access_mode(self.mode);
+        if (config.enable_temp)
+            try self.enable_temp();
 
         return self;
     }
