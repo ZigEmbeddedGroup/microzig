@@ -7,6 +7,7 @@ pub const drivers = @import("hal/drivers.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const efuse = @import("hal/efuse.zig");
 pub const i2c = @import("hal/i2c.zig");
+pub const ledc = @import("hal/ledc.zig");
 pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
 pub const spi = @import("hal/spi.zig");
