@@ -288,6 +288,16 @@ pub const I2C = enum(u1) {
         return i2c.writev_blocking(addr, &.{data}, timeout);
     }
 
+    /// Attempts to write number of bytes provided to target device and blocks until one of the following occurs:
+    /// - Bytes have been transmitted successfully
+    /// - An error occurs and the transaction is aborted
+    /// - The transaction times out (a null for timeout blocks indefinitely)
+    ///
+    /// NOTE: This function is a vectored version of `write_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
     pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
