@@ -280,40 +280,7 @@ pub const I2C = enum(u1) {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
-
-        // TODO: We can handle this if for some reason we want to send a start and immediate stop?
-        if (data.len == 0)
-            return TransactionError.NoData;
-
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
-        if (std.math.cast(tx_cnt_type, data.len) == null)
-            return TransactionError.TooMuchData;
-
-        const regs = i2c.get_regs();
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-
-        i2c.set_address(addr);
-
-        i2c.clear_shorts();
-        i2c.clear_events();
-        i2c.clear_errors();
-        i2c.disable_interrupts();
-
-        i2c.set_tx_buffer(data);
-
-        // Set it up to automatically stop after sending the last byte
-        regs.SHORTS.modify(.{ .LASTTX_STOP = .Enabled });
-
-        regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
-
-        try i2c.wait(deadline);
-        // Read the error
-        _ = try i2c.check_error();
-        try i2c.check_tx(data.len);
+        return i2c.writev_blocking(addr, &.{data}, timeout);
     }
 
     pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
