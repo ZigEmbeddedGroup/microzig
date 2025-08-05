@@ -66,11 +66,11 @@ const ReadRegister = packed struct(u80) {
     PD: u1,
     FF: u1,
     T: u1,
-    reserved: u1,
+    reserved47: u1,
     TEMP2: u8,
-    reserved55: u8,
-    reserved63: u8,
-    reserved71: u8,
+    reserved60: u8,
+    reserved68: u8,
+    reserved76: u8,
 };
 
 const WriteRegister = packed struct(u32) {
@@ -81,8 +81,8 @@ const WriteRegister = packed struct(u32) {
     reserved11: u2,
     I2C_ADDR: u2,
     PARITY: u1,
-    reserved15: u8,
-    reserved23: u5,
+    reserved16: u8,
+    reserved24: u5,
     PARITY_EN: u1,
     LP_PERIOD: u1,
     TEMP_NEN: u1,
@@ -170,9 +170,9 @@ pub const TLV493D = struct {
         // I am not sure why (or if) this is needed. The Adafruit CircuitPython driver reads out
         // everything and copies a bunch of reserved bits into the write register. See
         // https://github.com/adafruit/Adafruit_CircuitPython_TLV493D/blob/2.0.9/adafruit_tlv493d.py#L141-L145
-        self.write_data.reserved11 = @truncate((self.read_data.reserved55 & 0x18) >> 3);
-        self.write_data.reserved15 = self.read_data.reserved63;
-        self.write_data.reserved23 = @truncate(self.read_data.reserved71 & 0x1F);
+        self.write_data.reserved11 = @truncate((self.read_data.reserved60 & 0x18) >> 3);
+        self.write_data.reserved16 = self.read_data.reserved68;
+        self.write_data.reserved24 = @truncate(self.read_data.reserved76 & 0x1F);
     }
 
     /// Deinitialize the device
