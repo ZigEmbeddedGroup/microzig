@@ -8,21 +8,21 @@ pub const TPAL = microzig.chip.types.peripherals.bkp_v1.TPAL;
 const bkp_addr = @intFromPtr(bkp);
 const BKPData = packed struct(u32) {
     data: u16,
-    __pad: u16 = 0,
+    padding16: u16 = 0,
 };
 
 ///This function is used to reset the backup domain and the RTC.
-/// its is the same as `hal.rcc.reset_backup_domain()` and is here for convenience.
+/// it's is the same as `hal.rcc.reset_backup_domain()` and is here for convenience.
 pub const reset = @import("rcc.zig").reset_backup_domain;
 
 /// this data is retained as long as the backup domain is powered. (by VDD or VBAT)
-/// it also can by cleared by the TAMPER pin event.
+/// it also can be cleared by the TAMPER pin event.
 pub const BackupData1: *[10]BKPData = @ptrFromInt(bkp_addr + 0x04);
 pub const BackupData2: *[31]BKPData = @ptrFromInt(bkp_addr + 0x40);
 
 ///enable/disable the backup domain write protection.
 ///
-/// note: this is the same function as `hal.power.backup_domain_protection` and is hare for convenience.
+/// NOTE: this is the same function as `hal.power.backup_domain_protection` and is here for convenience.
 pub inline fn set_data_protection(on: bool) void {
     backup_domain_protection(on);
 }
@@ -35,7 +35,7 @@ pub inline fn reset_backup_domain() void {
 
 ///enable the tamper detection feature.
 /// when tamper pin is activated, the backup domain is reset and the tamper detection flag is set.
-/// the backup domain will ramain in reset state until the tamper event flag is cleared by `tamper_event_clear`.
+/// the backup domain will remain in reset state until the tamper event flag is cleared by `tamper_event_clear`.
 pub inline fn enable_tamper_detection(trigger_level: TPAL) void {
     bkp.CR.modify(.{
         .TPE = 1,
@@ -79,7 +79,7 @@ pub inline fn set_rtc_event_output(on: bool) void {
 ///enable/disable the RTC clock output on the TAMPER pin.
 /// if enabled, the (RTC clock)/64 is output on the TAMPER pin.
 ///
-/// note: tamper function must be disabled to avoid activation of the tamper detection feature.
+/// NOTE: tamper function must be disabled to avoid activation of the tamper detection feature.
 pub inline fn set_RTC_clock_output(on: bool) void {
     bkp.RTCCR.modify_one("CCO", @intFromBool(on));
 }

@@ -3,8 +3,8 @@ const rcc = @import("rcc.zig");
 const rtc = microzig.chip.peripherals.RTC;
 
 ///enable the RTC clock.
-/// this function is the same as `hal.rcc.enable_RTC()`.
-/// it is here for convenience.
+///this function is the same as `hal.rcc.enable_RTC()`.
+///it is here for convenience.
 pub const enable = rcc.enable_RTC;
 pub const is_running = rcc.rtc_running;
 
@@ -12,7 +12,7 @@ pub const is_running = rcc.rtc_running;
 pub const Config = struct {
     prescaler: u20 = 0,
     alarm: u32 = 0,
-    conter_start_value: u32 = 0,
+    counter_start_value: u32 = 0,
 };
 
 pub const InterruptConfig = struct {
@@ -48,7 +48,7 @@ pub fn apply(config: Config) void {
     const alr_high: u16 = @truncate(alarm >> 16);
     const alr_low: u16 = @truncate(alarm);
 
-    const start = config.conter_start_value;
+    const start = config.counter_start_value;
     const str_high: u16 = @truncate(start >> 16);
     const str_low: u16 = @truncate(start);
 
@@ -70,7 +70,7 @@ pub fn apply(config: Config) void {
 }
 
 ///Interrups are one of the only things that is reset by the system reset,
-///so we need to apply them every time a reset occurs.
+///so we needs to apply them every time a reset occurs.
 pub fn apply_interrupts(config: InterruptConfig) void {
     enter_config_mode();
     rtc.CRH.modify(.{
@@ -108,7 +108,7 @@ pub fn clear_events(events: Events) void {
     });
 }
 
-///read the corrent frac of the RTC counter.
+///read the current frac of the RTC counter.
 pub fn read_frac() u20 {
     return @truncate(rtc.DIVL.read().DIVL | (@as(u32, (rtc.DIVH.read().DIVH)) << 16));
 }
