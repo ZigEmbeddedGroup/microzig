@@ -315,10 +315,10 @@ pub const TLV493D = struct {
         self.read_out() catch return Error.BusError;
 
         // Construct results from registers
-        self.x_data = self.concat_results(self.read_data.BxH, self.read_data.BxL, true);
-        self.y_data = self.concat_results(self.read_data.ByH, self.read_data.ByL, true);
-        self.z_data = self.concat_results(self.read_data.BzH, self.read_data.BzL, true);
-        self.temp_data = self.concat_results(self.read_data.TEMPH, self.read_data.TEMPL, false);
+        self.x_data = @as(i12, self.read_data.BxH) << 4 | self.read_data.BxL;
+        self.y_data = @as(i12, self.read_data.ByH) << 4 | self.read_data.ByL;
+        self.z_data = @as(i12, self.read_data.BzH) << 4 | self.read_data.BzL;
+        self.temp_data = @as(i12, self.read_data.TEMPH) << 8 | self.read_data.TEMPL;
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
         if (powerdown)
@@ -402,22 +402,5 @@ pub const TLV493D = struct {
 
         // Set parity bit (LSB of y)
         self.write_data.PARITY = @truncate(y & 0x01);
-    }
-
-    /// Concatenate register values into 12-bit signed result
-    fn concat_results(self: *Self, upper_byte: u8, lower_byte: u8, upper_full: bool) i12 {
-        _ = self;
-        var value: i16 = 0;
-
-        if (upper_full) {
-            value = @as(i16, upper_byte) << 8;
-            value |= @as(i16, lower_byte & 0x0F) << 4;
-        } else {
-            value = @as(i16, upper_byte & 0x0F) << 12;
-            value |= @as(i16, lower_byte) << 4;
-        }
-
-        // Shift right to get signed 12-bit integer
-        return @truncate(value >> 4);
     }
 };
