@@ -11,8 +11,8 @@ const Datagram_Device = mdf.base.Datagram_Device;
 const Clock_Device = mdf.base.Clock_Device;
 
 /// TLV493D I2C addresses
-pub const TLV493D_ADDRESS1: u8 = 0x5E;
-pub const TLV493D_ADDRESS2: u8 = 0x1F;
+pub const TLV493D_ADDRESS0: u8 = 0x1F;
+pub const TLV493D_ADDRESS1: u8 = 0x5E; // Default
 
 /// Startup delay in milliseconds
 pub const TLV493D_STARTUPDELAY_MS: u32 = 40;
@@ -120,7 +120,8 @@ const AccessModeConfig = struct {
 
 /// Access mode lookup table
 const ACCESS_MODE_CONFIGS = [_]AccessModeConfig{
-    .{ .fast = 0, .lp = 0, .lp_period = 0, .measurement_time = 1000 }, // POWERDOWNMODE
+    // POWERDOWNMODE. Can write configuration, but measurements are not takend
+    .{ .fast = 0, .lp = 0, .lp_period = 0, .measurement_time = 1000 },
     .{ .fast = 1, .lp = 0, .lp_period = 0, .measurement_time = 1 }, // FASTMODE
     .{ .fast = 0, .lp = 1, .lp_period = 0, .measurement_time = 10 }, // LOWPOWERMODE
     .{ .fast = 0, .lp = 1, .lp_period = 1, .measurement_time = 100 }, // ULTRALOWPOWERMODE
@@ -169,6 +170,7 @@ pub const TLV493D = struct {
         // Get all register data from sensor
         try self.read_out();
 
+        // We must set the mode, as it powers up in power-down mode.
         try self.set_access_mode(self.mode);
 
         if (config.enable_temp)
@@ -180,8 +182,14 @@ pub const TLV493D = struct {
     fn setup_write_buffer(self: *Self) !void {
         try self.read_out();
 
-        // I am not sure why (or if) this is needed. The Adafruit CircuitPython driver reads out
-        // everything and copies a bunch of reserved bits into the write register. See
+        // Section 5.2 of the user manual:
+        // > After that byte 7, 8 & 9 have to be read out at least one time and stored for later use
+        // > by the user. This is necessary for any write command later on in order not to change
+        // > the internal configurations accidentally. This means, that the bits transferred at any
+        // > write command and not used for configuration, needs to be set to the same values as you
+        // > read them out before, otherwise configuration will be changed
+        // This is explained terribly. It doesn't explain where these bytes should be stored in the
+        // write registers, so I am following the lead of the Adafruit CircuitPython driver. See
         // https://github.com/adafruit/Adafruit_CircuitPython_TLV493D/blob/2.0.9/adafruit_tlv493d.py#L141-L145
         self.write_data.reserved11 = @truncate((self.read_data.reserved60 & 0x18) >> 3);
         self.write_data.reserved16 = self.read_data.reserved68;
@@ -196,17 +204,22 @@ pub const TLV493D = struct {
 
     /// Reset the sensor using recovery sequence
     fn reset_sensor(self: *Self) Error!void {
-        var reset_data: [1]u8 = undefined;
+        // TODO: To do this we have to write to the i2c address 0, which we can't do with a datagram
+        // device.
+        // On startup the SDA line is sampled. If the line is high, it will listen on address 0x5E.
+        // Otherwise, it will listen on 0x1F. The line must be kept stable for 200us.
+        // Because we shouldn't be touching the line that early, and SDA is pulled high, it should
+        // be assigned 0x5E, but it is better if we can explicitly set it.
+        // We can explicitly set the address by writing either 0xFF ox 0x00 to address 0
+        // var reset_data: [1]u8 = undefined;
+        // if (self.config.addr == TLV493D_ADDRESS1)
+        //     reset_data[0] = 0xFF // Set SDA high for address 0x5E
+        // else
+        //     reset_data[0] = 0x00; // Set SDA low for address 0x1F
+        // self.dev.writev(&.{&reset_data}) catch return Error.DatagramError;
 
-        // This IC uses the value on the SDA line to determine which address it listens on.
-        // NOTE: The proper way to do this is to write to the i2c address 0, which we can't do with
-        // a datagram device.
-        if (self.config.addr == TLV493D_ADDRESS1)
-            reset_data[0] = 0xFF // Set SDA high for address 0x5E
-        else
-            reset_data[0] = 0x00; // Set SDA low for address 0x1F
-
-        self.dev.writev(&.{&reset_data}) catch return Error.DatagramError;
+        // Send recovery frame, clearing bad state
+        self.dev.writev(&.{&.{0xFF}}) catch return Error.DatagramError;
     }
 
     /// Read all registers from sensor
