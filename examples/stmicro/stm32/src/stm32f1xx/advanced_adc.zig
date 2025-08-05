@@ -70,7 +70,7 @@ fn DMA_init(arr_addr: u32, adc_addr: u32) void {
 }
 
 pub fn main() !void {
-    try rcc.clock_init(.{ .ADCprescaler = .RCC_ADCPCLK2_DIV2 });
+    try rcc.apply_clock(.{ .ADCprescaler = .RCC_ADCPCLK2_DIV2 });
 
     rcc.enable_clock(.DMA1);
     rcc.enable_clock(.TIM2);

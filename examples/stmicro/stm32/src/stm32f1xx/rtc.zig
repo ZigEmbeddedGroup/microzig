@@ -30,7 +30,7 @@ pub fn main() !void {
     //by the system reset, so we need to check if it is already running.
     //If it is not running, we will configure it and enable it.
     if (fresh_start()) {
-        try rcc.clock_init(.{ .RTCClkSource = .RCC_RTCCLKSOURCE_LSE });
+        try rcc.apply_clock(.{ .RTCClkSource = .RCC_RTCCLKSOURCE_LSE });
         rcc.enable_clock(.PWR);
         rcc.enable_clock(.BKP);
 
