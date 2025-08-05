@@ -98,8 +98,8 @@ pub const SPI = struct {
     }
 
     ///this function is full-duplex only and does not support 3-wire mode and data burst
-    /// if the revice buffer is bigger than the transmit buffer dummy bytes will be sent until the receive buffer is full
-    /// if the transmit buffer is bigger than the receive buffer, all additional bytes will be ignored
+    ///if the revice buffer is bigger than the transmit buffer dummy bytes will be sent until the receive buffer is full
+    ///if the transmit buffer is bigger than the receive buffer, all additional bytes will be ignored
     pub fn transceive_blocking(self: *const SPI, out: []const u8, in: []u8) void {
         const out_len = out.len;
         const in_len = in.len;

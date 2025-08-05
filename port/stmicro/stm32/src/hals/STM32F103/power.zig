@@ -52,16 +52,16 @@ pub inline fn set_pvd(set: bool) void {
 }
 
 ///get the current power detection status.
-/// 0 = VDD/VDDA is higher than the threshold.
-/// 1 = VDD/VDDA is lower than the threshold.
+///0 = VDD/VDDA is higher than the threshold.
+///1 = VDD/VDDA is lower than the threshold.
 pub inline fn pvd_status() u1 {
     return pwd.CSR.read().PVDO;
 }
 
 ///enable/disable the backup domain write protection.
-/// this is used to protect the RTC and backup registers.
+///this is used to protect the RTC and backup registers.
 ///
-/// this function also exists in the `hal.backup` module.
+///this function also exists in the `hal.backup` module.
 pub inline fn backup_domain_protection(set: bool) void {
     pwd.CR.modify(.{ .DBP = @intFromBool(!set) });
 }
