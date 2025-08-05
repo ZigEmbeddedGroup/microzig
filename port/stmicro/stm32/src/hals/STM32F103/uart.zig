@@ -89,7 +89,7 @@ pub const UART = struct {
     pub const Reader = std.io.GenericReader(*const UART, ReceiveError, generic_reader_fn);
 
     regs: UartReg,
-    /// Returns an error at runtime, and raises a compile error at comptime.
+    ///Returns an error at runtime, and raises a compile error at comptime.
     fn validate_baudrate(baud_rate: u32, peri_freq: u32) ConfigError!void {
         const val: f32 = @as(f32, @floatFromInt(peri_freq)) / (@as(f32, @floatFromInt(baud_rate)) * 16);
         if (val > 4095) {
@@ -314,12 +314,12 @@ pub const UART = struct {
 
 var uart_logger: ?UART.Writer = null;
 
-/// Set a specific uart instance to be used for logging.
+///Set a specific uart instance to be used for logging.
 ///
-/// Allows system logging over uart via:
-/// pub const microzig_options = .{
-///     .logFn = hal.uart.log,
-/// };
+///Allows system logging over uart via:
+///pub const microzig_options = .{
+///    .logFn = hal.uart.log,
+///};
 pub fn init_logger(uart: *const UART) void {
     uart_logger = uart.writer();
     if (uart_logger) |logger| {
@@ -327,7 +327,7 @@ pub fn init_logger(uart: *const UART) void {
     }
 }
 
-/// Disables logging via the uart instance.
+///Disables logging via the uart instance.
 pub fn deinit_logger() void {
     uart_logger = null;
 }

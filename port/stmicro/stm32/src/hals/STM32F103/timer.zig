@@ -158,19 +158,19 @@ fn get_regs(instance: Instances) *volatile TIM_GP16 {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
-/// General Purpose Timer (GPTimer) driver for STM32F1xx series,
+///General Purpose Timer (GPTimer) driver for STM32F1xx series,
 ///
-/// This driver provides a low-level interface for the  16bits general-purpose timers.
-/// but, it does provide a high-level API for basic counter mode and PWM mode.
+///This driver provides a low-level interface for the  16bits general-purpose timers.
+///but, it does provide a high-level API for basic counter mode and PWM mode.
 ///
-/// This driver supports the following modes:
-/// - Basic counter mode.
-/// - Capture mode.
-/// - Compare mode <- includes PWM mode.
-/// - sync and TRGI modes for synchronization with other timers (TODO).
-/// - DMA support for update and compare events.
-/// - Interrupt support for update and compare events.
-/// - DMA burst support for update and compare events (TODO).
+///This driver supports the following modes:
+///- Basic counter mode.
+///- Capture mode.
+///- Compare mode <- includes PWM mode.
+///- sync and TRGI modes for synchronization with other timers (TODO).
+///- DMA support for update and compare events.
+///- Interrupt support for update and compare events.
+///- DMA burst support for update and compare events (TODO).
 pub const GPTimer = struct {
     regs: *volatile TIM_GP16,
     //=============== Modes ================
@@ -222,7 +222,7 @@ pub const GPTimer = struct {
         self.software_update();
     }
 
-    /// This function clears all control registers of the timer.
+    ///This function clears all control registers of the timer.
     pub fn clear_all_control_registers(self: *const GPTimer) void {
         const regs = self.regs;
         regs.CR1.raw = 0;
@@ -586,7 +586,7 @@ pub const Counter = struct {
         self.gptimer.timer_general_config(config);
     }
 
-    /// This function sets the prescaler, auto-reload value and optionally forces an update event.
+    ///This function sets the prescaler, auto-reload value and optionally forces an update event.
     pub fn set_values(self: *const Counter, prescaler: u32, auto_reload: u16, force_update: bool) void {
         const timer = self.gptimer;
         timer.set_prescaler(prescaler);
@@ -633,7 +633,7 @@ pub const PWM = struct {
         timer.start();
     }
 
-    /// This function configures the output channel for PWM mode.
+    ///This function configures the output channel for PWM mode.
     pub fn configure_channel(self: *const PWM, channel: u2, config: PWMChConfig) void {
         const timer = self.gptimer;
         timer.configure_ccr(channel, .{

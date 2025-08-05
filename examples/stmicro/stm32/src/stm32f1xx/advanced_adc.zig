@@ -5,8 +5,8 @@
 //before creating a program using ADC from older ST families, such as in this case STM32F1
 //be aware of possible hardware bugs and limitations
 //for example:
-// temperature sensor/VREF cannot be read in interleaved mode as it requires a sample time greater than 17
-// readings after 1ms from the previous reading may contain more noise than expected
+//temperature sensor/VREF cannot be read in interleaved mode as it requires a sample time greater than 17
+//readings after 1ms from the previous reading may contain more noise than expected
 //Voltage glitch on ADC input 0
 
 const std = @import("std");
@@ -148,7 +148,7 @@ pub fn main() !void {
     while (true) {
         adc.software_trigger(); //start conversion
         counter.sleep_ms(100);
-        std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
+        std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(adc_buf[0])});
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});

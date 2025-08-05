@@ -18,10 +18,10 @@ pub fn rtc_handler() callconv(.C) void {
     rtc.clear_events(events);
 }
 
-/// LED used to indicate that the RTC is running.
-/// On the WeAct BluePill+ board, this is the built-in LED.
-/// On other BluePill boards, you need to connect an LED to pin PB2,
-/// (NOTE: PC13 is the TAMPER pin, which is used for output RTC events on this example)
+///LED used to indicate that the RTC is running.
+///On the WeAct BluePill+ board, this is the built-in LED.
+///On other BluePill boards, you need to connect an LED to pin PB2,
+///(NOTE: PC13 is the TAMPER pin, which is used for output RTC events on this example)
 const led = gpio.Pin.from_port(.B, 2);
 
 pub fn main() !void {
@@ -51,14 +51,14 @@ pub fn main() !void {
         //enable the backup domain write protection
         bkp.set_data_protection(true);
     }
-    rtc.busy_sync(); // wait for RTC to be ready
+    rtc.busy_sync(); //wait for RTC to be ready
 
     //RTC interrupt need to be applied every time the system is reset
     //even if the RTC is already running.
     rtc.apply_interrupts(.{ .second_interrupt = true });
 
-    rcc.enable_clock(.GPIOB); // enable GPIOB clock for LED
-    rcc.enable_clock(.GPIOC); // enable GPIOC clock for TAMPER pin
+    rcc.enable_clock(.GPIOB); //enable GPIOB clock for LED
+    rcc.enable_clock(.GPIOC); //enable GPIOC clock for TAMPER pin
     led.set_output_mode(.general_purpose_push_pull, .max_10MHz);
     microzig.interrupt.enable(.RTC);
     microzig.interrupt.enable_interrupts();

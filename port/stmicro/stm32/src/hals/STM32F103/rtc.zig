@@ -81,8 +81,8 @@ pub fn apply_interrupts(config: InterruptConfig) void {
     exit_config_mode();
 }
 
-/// Wait for RTC registers to synchronize.
-/// After a reset, reading RTC registers may return unsynchronized or corrupted data.
+///Wait for RTC registers to synchronize.
+///After a reset, reading RTC registers may return unsynchronized or corrupted data.
 pub fn busy_sync() void {
     const cr = rtc.CRL.read();
     while (cr.RSF == 0) asm volatile ("" ::: "memory");

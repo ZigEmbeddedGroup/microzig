@@ -402,8 +402,8 @@ pub const I2C = struct {
     }
 
     ///use this function to check if the i2c is busy in multi-master mode
-    /// NOTE: in single master mode
-    /// having a busy state before the start condition means that the bus is in an error state.
+    ///NOTE: in single master mode
+    ///having a busy state before the start condition means that the bus is in an error state.
     pub fn is_busy(i2c: *const I2C) bool {
         const regs = i2c.regs;
         return regs.SR2.read().BUSY == 1;

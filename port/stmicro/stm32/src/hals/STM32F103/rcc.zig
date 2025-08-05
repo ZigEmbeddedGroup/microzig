@@ -107,9 +107,9 @@ pub const ClockOutputs = struct {
 var corrent_clocks: ClockOutputs = validate_clocks(.{});
 
 //NOTE: procedural style or loop through all elements of the struct?
-/// Configures the system clocks
-/// NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power
-/// register before configuring the clocks
+///Configures the system clocks
+///NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power
+///register before configuring the clocks
 pub fn apply_clock(comptime config: ClockTree.Config) ClockInitError!void {
     const clck = comptime validate_clocks(config);
 
@@ -376,7 +376,7 @@ fn config_MCO(comptime config: ClockTree.Config) void {
 }
 
 ///after the reset, the BDRD becomes read_only until access is released by the power register
-/// this function can also be called from `backup.reset()`
+///this function can also be called from `backup.reset()`
 pub fn reset_backup_domain() void {
     rcc.BDCR.modify(.{ .BDRST = 1 });
     for (0..5) |i| {
@@ -386,19 +386,19 @@ pub fn reset_backup_domain() void {
 }
 
 ///configure the power and clock registers before enabling the RTC
-/// this function also can be called from `rtc.enable()`
+///this function also can be called from `rtc.enable()`
 pub fn enable_RTC(on: bool) void {
     rcc.BDCR.modify(.{ .RTCEN = @intFromBool(on) });
 }
 
-/// backup domain is not reset with the rest of the system
-/// so this function can be used to check if the RTC is already running.
+///backup domain is not reset with the rest of the system
+///so this function can be used to check if the RTC is already running.
 pub fn rtc_running() bool {
     return rcc.BDCR.read().RTCEN != 0;
 }
 
 ///This function is called internally by the HAL, the RESET value should only be read after the RESET
-/// read the Reset value through the global variable hal.RESET
+///read the Reset value through the global variable hal.RESET
 pub fn get_reset_reason() ResetReason {
     const flags = rcc.CSR.read();
     const rst: ResetReason = blk: {
@@ -532,7 +532,7 @@ pub fn disable_all_clocks() void {
     rcc.APB2ENR.raw = 0;
 }
 
-/// Reset all clocks to their default state
+///Reset all clocks to their default state
 pub fn reset_all_clocks() void {
     rcc.APB2RSTR.raw = std.math.maxInt(u32);
     rcc.APB2RSTR.raw = 0;
