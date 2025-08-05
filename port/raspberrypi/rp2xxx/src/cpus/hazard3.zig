@@ -144,7 +144,7 @@ pub fn sev() void {
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub export fn _start() linksection(if (microzig.config.ram_image)
+    fn _start() linksection(if (microzig.config.ram_image)
         "microzig_ram_start"
     else
         "microzig_flash_start") callconv(.naked) noreturn {
@@ -177,7 +177,7 @@ pub const startup_logic = struct {
         );
     }
 
-    pub export fn _start_c() callconv(.c) noreturn {
+    fn _start_c() callconv(.c) noreturn {
         if (!microzig.config.ram_image) {
             microzig.utilities.initialize_system_memories();
         }
@@ -185,16 +185,18 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    fn unhandled_interrupt() callconv(riscv_calling_convention) void {
-        @panic("unhandled core interrupt");
-    }
-
-    const vector_table_section = if (using_ram_vector_table())
+    // NOTE: technically the vector table is always in RAM in ram images no
+    // matter the section but put it in .ram_text just to be consistent.
+    const vector_table_section = if (microzig.options.cpu.ram_vector_table or microzig.config.ram_image)
         ".ram_text"
     else
         ".text";
 
-    export fn _vector_table() align(64) linksection(vector_table_section) callconv(.naked) noreturn {
+    fn unhandled_interrupt() linksection(vector_table_section) callconv(riscv_calling_convention) void {
+        @panic("unhandled core interrupt");
+    }
+
+    fn _vector_table() align(64) linksection(vector_table_section) callconv(.naked) noreturn {
         comptime {
             // NOTE: using the union variant .naked here is fine because both variants have the same layout
             @export(if (microzig.options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
@@ -205,17 +207,27 @@ pub const startup_logic = struct {
 
         asm volatile (
             \\j _exception_handler
+            \\.balign 4
+
             \\.word 0
             \\.word 0
+
             \\j _machine_software_handler
+            \\.balign 4
+
             \\.word 0
             \\.word 0
             \\.word 0
+
             \\j _machine_timer_handler
+            \\.balign 4
+
             \\.word 0
             \\.word 0
             \\.word 0
+
             \\j _machine_external_handler
+            \\.balign 4
         );
     }
 
@@ -232,7 +244,7 @@ pub const startup_logic = struct {
         break :blk temp;
     };
 
-    fn machine_external_interrupt() linksection(".ram_text") callconv(riscv_calling_convention) void {
+    fn machine_external_interrupt() linksection(vector_table_section) callconv(riscv_calling_convention) void {
         if (microzig.hal.compatibility.arch == .riscv) {
             // MAGIC: This is to work around a bug in the compiler.
             //        If it is not here the compiler fails to generate
@@ -261,10 +273,6 @@ pub const startup_logic = struct {
     }
 };
 
-inline fn using_ram_vector_table() bool {
-    return microzig.options.cpu.ram_vector_table;
-}
-
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{
         .name = "_start",
@@ -280,7 +288,7 @@ pub fn export_startup_logic() void {
 
     @export(&startup_logic.external_interrupt_table, .{
         .name = "_external_interrupt_table",
-        .section = if (using_ram_vector_table())
+        .section = if (microzig.options.cpu.ram_vector_table or microzig.config.ram_image)
             ".data"
         else
             ".rodata",
