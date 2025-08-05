@@ -543,7 +543,8 @@ pub fn clrex() void {
 pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
     startup_logic.generate_vector_table()
 else
-    @compileError("`ram_vector_table` is not available. Consider adding .cpu = .{ .ram_vector_table = true } to your microzig_options or using a RAM image");
+    @compileError("`ram_vector_table` is not available. Consider adding .cpu = .{ .ram_vector_table = true }" ++
+        " to your microzig_options or using a RAM image");
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
