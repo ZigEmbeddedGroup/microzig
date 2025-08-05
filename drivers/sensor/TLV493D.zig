@@ -20,7 +20,7 @@ pub const TLV493D_STARTUPDELAY_MS: u32 = 40;
 /// Conversion factors
 pub const TLV493D_B_MULT: f32 = 0.098; // mT per LSB
 pub const TLV493D_TEMP_MULT: f32 = 1.1; // °C per LSB
-pub const TLV493D_TEMP_OFFSET: f32 = 340.0; // Temperature offset
+pub const TLV493D_TEMP_OFFSET = 340; // Temperature offset (in LSB)
 
 /// Default mode for sensor operation
 pub const TLV493D_DEFAULTMODE = AccessMode.master_controlled;
@@ -125,7 +125,7 @@ pub const TLV493D = struct {
     x_data: i16 = 0,
     y_data: i16 = 0,
     z_data: i16 = 0,
-    temp_data: i16 = 0,
+    temp_data: i12 = 0,
     mode: AccessMode,
     expected_frame_count: u8,
 
@@ -278,7 +278,7 @@ pub const TLV493D = struct {
         self.x_data = self.concat_results(self.read_data.BX1, self.read_data.BX2, true);
         self.y_data = self.concat_results(self.read_data.BY1, self.read_data.BY2, true);
         self.z_data = self.concat_results(self.read_data.BZ1, self.read_data.BZ2, true);
-        self.temp_data = self.concat_results(self.read_data.TEMP1, self.read_data.TEMP2, false);
+        self.temp_data = @truncate(self.concat_results(self.read_data.TEMP1, self.read_data.TEMP2, false));
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
         if (powerdown)
@@ -299,7 +299,7 @@ pub const TLV493D = struct {
             .x = @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT,
             .y = @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT,
             .z = @as(f32, @floatFromInt(self.z_data)) * TLV493D_B_MULT,
-            .temp = (@as(f32, @floatFromInt(self.temp_data)) - TLV493D_TEMP_OFFSET) * TLV493D_TEMP_MULT,
+            .temp = (@as(f32, @floatFromInt(self.temp_data - TLV493D_TEMP_OFFSET))) * TLV493D_TEMP_MULT,
         };
     }
 
