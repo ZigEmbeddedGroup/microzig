@@ -52,36 +52,49 @@ pub const Error = error{
     InvalidData,
 };
 
-// TODO: Ensure the order is as expected
 const ReadRegister = packed struct(u80) {
+    // Bx (0x0) - Bx[11:4]
     BX1: u8,
+    // By (0x1) - By[11:4]
     BY1: u8,
+    // Bz (0x2) - Bz[11:4]
     BZ1: u8,
+    // Temp (0x3) - bits 1:0=CH, bits 3:2=FRM, bits 7:4=Temp[11:8]
     CHANNEL: u2,
     FRAMECOUNTER: u2,
     TEMP1: u4,
+    // Bx2 (0x4) - bits 3:0=By[3:0], bits 7:4=Bx[3:0]
     BY2: u4,
     BX2: u4,
+    // Bz2 (0x5) - bits 3:0=Bz[3:0], bit 4=PD, bit 5=FF, bit 6=T, bit 7=Reserved
     BZ2: u4,
     PD: u1,
     FF: u1,
     T: u1,
     reserved47: u1,
+    // Temp2 (0x6) - Temp[7:0]
     TEMP2: u8,
+    // FactSet1 (0x7) - Reserved
     reserved60: u8,
+    // FactSet2 (0x8) - Reserved
     reserved68: u8,
+    // FactSet3 (0x9) - Reserved
     reserved76: u8,
 };
 
 const WriteRegister = packed struct(u32) {
+    // Res (0x0) - Reserved
     reserved0: u8,
+    // MOD1 (0x1) - bit 0=LOW, bit 1=FAST, bit 2=INT, bits 4:3=Reserved, bits 6:5=I2CAddr, bit 7=P
     LOWPOWER: u1,
     FAST: u1,
     INT: u1,
     reserved11: u2,
     I2C_ADDR: u2,
     PARITY: u1,
+    // Res (0x2) - Reserved
     reserved16: u8,
+    // MOD2 (0x3) - bits 4:0=Reserved, bit 5=PT, bit 6=LP, bit 7=T
     reserved24: u5,
     PARITY_EN: u1,
     LP_PERIOD: u1,
