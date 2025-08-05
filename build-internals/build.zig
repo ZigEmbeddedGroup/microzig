@@ -62,7 +62,7 @@ pub const Target = struct {
     /// Provides a custom linker script for the hardware or define a custom generation.
     linker_script: LinkerScript = .{},
 
-    /// Provides the stack end for the target.
+    /// Determines the location of the stack.
     stack: Stack = .{ .ram_region_index = 0 },
 
     /// (optional) Explicitly set the entry point.
@@ -256,7 +256,7 @@ pub const Stack = union(enum) {
     address: usize,
     /// Place the stack at the end of the n-th ram memory region.
     ram_region_index: usize,
-    /// Place the stack end at a symbol address.
+    /// Place the stack at a symbol's address.
     symbol_name: []const u8,
 };
 

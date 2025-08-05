@@ -386,7 +386,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 region.validate_tag();
             }
 
-            // TODO: use unions when they are supported
+            // TODO: use unions when they are supported in the build system
             const EndOfStack = struct {
                 address: ?usize = null,
                 symbol_name: ?[]const u8 = null,
