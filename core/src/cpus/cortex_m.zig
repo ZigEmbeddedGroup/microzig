@@ -550,31 +550,38 @@ pub const startup_logic = struct {
 
     pub fn ram_image_entry_point() linksection("microzig_ram_start") callconv(.naked) void {
         asm volatile (
-            \\
-            // Set VTOR to point to ram table
             \\mov r0, %[_vector_table]
-            \\mov r1, %[_VTOR_ADDRESS]
-            \\str r0, [r1]
             // Set up stack and jump to _start
             \\ldm r0!, {r1, r2}
             \\msr msp, r1
             \\bx r2
             :
             : [_vector_table] "r" (&ram_vector_table),
-              [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
             : "memory", "r0", "r1", "r2"
         );
     }
 
-    pub fn _start() callconv(.c) noreturn {
+    pub fn _start() callconv(.naked) noreturn {
+        if (using_ram_vector_table or is_ram_image) {
+            asm volatile (
+                \\
+                // Set VTOR to point to ram table
+                \\mov r0, %[_vector_table]
+                \\mov r1, %[_VTOR_ADDRESS]
+                \\str r0, [r1]
+                :
+                : [_vector_table] "r" (&ram_vector_table),
+                  [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
+                : "memory", "r0", "r1"
+            );
+        }
+
+        asm volatile ("b _start_c");
+    }
+
+    pub fn _start_c() callconv(.c) noreturn {
         if (!is_ram_image) {
             microzig.utilities.initialize_system_memories();
-
-            if (using_ram_vector_table) {
-                const vtor_addr: u32 = @intFromPtr(&ram_vector_table);
-                std.debug.assert(std.mem.isAligned(vtor_addr, 256));
-                peripherals.scb.VTOR = vtor_addr;
-            }
         }
 
         microzig_main();
@@ -599,7 +606,7 @@ pub const startup_logic = struct {
     else if (using_ram_vector_table)
         .{
             .initial_stack_pointer = microzig.config.end_of_stack,
-            .Reset = .{ .c = microzig.cpu.startup_logic._start },
+            .Reset = .{ .naked = microzig.cpu.startup_logic._start },
         }
     else
         generate_vector_table();
@@ -640,6 +647,10 @@ pub fn export_startup_logic() void {
 
     @export(&startup_logic._start, .{
         .name = "_start",
+    });
+
+    @export(&startup_logic._start_c, .{
+        .name = "_start_c",
     });
 }
 
