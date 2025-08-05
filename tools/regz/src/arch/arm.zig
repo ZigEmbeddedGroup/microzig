@@ -106,7 +106,7 @@ pub fn write_interrupt_vector(
             \\    const Handler = microzig.interrupt.Handler;
             \\    const unhandled = microzig.interrupt.unhandled;
             \\
-            \\    initial_stack_pointer: u32,
+            \\    initial_stack_pointer: *const anyopaque,
             \\    Reset: Handler,
             \\
         );

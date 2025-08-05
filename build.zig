@@ -10,6 +10,7 @@ pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const LinkerScript = internals.LinkerScript;
+pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
@@ -333,6 +334,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LinkerScript = null,
 
+            /// If set, overrides the `stack` property of the target.
+            stack: ?Stack = null,
+
             /// If set, overrides the default `entry` property of the arget.
             entry: ?Build.Step.Compile.Entry = null,
 
@@ -382,12 +386,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 region.validate_tag();
             }
 
-            const EndOfStack = union(enum) {
-                address: usize,
-                symbol_name: []const u8,
+            // TODO: use unions when they are supported
+            const EndOfStack = struct {
+                address: ?usize = null,
+                symbol_name: ?[]const u8 = null,
             };
 
-            const end_of_stack: EndOfStack = switch (options.stack_end) {
+            const end_of_stack: EndOfStack = switch (options.stack orelse options.target.stack) {
                 .address => |address| .{ .address = address },
                 .ram_region_index => |index| blk: {
                     var i: usize = 0;

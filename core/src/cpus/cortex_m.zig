@@ -667,7 +667,7 @@ pub const startup_logic = struct {
     // must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
     pub const _vector_table: VectorTable align(256) = blk: {
         var tmp: VectorTable = .{
-            .initial_stack_pointer = microzig.config.end_of_stack,
+            .initial_stack_pointer = microzig.utilities.get_end_of_stack(),
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 

@@ -259,9 +259,10 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
         fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
             interrupt.disable_interrupts();
 
+            const eos = comptime microzig.utilities.get_end_of_stack();
             asm volatile ("mv sp, %[eos]"
                 :
-                : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+                : [eos] "r" (@as(u32, @intFromPtr(eos))),
             );
 
             asm volatile (
@@ -291,11 +292,12 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
         };
 
         fn _start() callconv(.naked) noreturn {
+            const eos = comptime microzig.utilities.get_end_of_stack();
             asm volatile (
                 \\mv sp, %[eos]
                 \\jal _start_c
                 :
-                : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+                : [eos] "r" (@as(u32, @intFromPtr(eos))),
             );
         }
 
