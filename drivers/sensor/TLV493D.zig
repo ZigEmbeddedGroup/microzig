@@ -245,6 +245,7 @@ pub const TLV493D = struct {
 
     /// Write configuration to sensor
     fn write_out(self: *Self) Error!void {
+        self.calc_parity();
         self.dev.writev(&.{std.mem.asBytes(&self.write_data)}) catch return Error.DatagramError;
     }
 
@@ -256,7 +257,6 @@ pub const TLV493D = struct {
         self.write_data.LOWPOWER = mode_config.lp;
         self.write_data.LP_PERIOD = mode_config.lp_period;
 
-        self.calc_parity();
         try self.write_out();
 
         self.mode = mode;
@@ -265,14 +265,12 @@ pub const TLV493D = struct {
     /// Enable interrupt
     pub fn enable_interrupt(self: *Self) Error!void {
         self.write_data.INT = 1;
-        self.calc_parity();
         try self.write_out();
     }
 
     /// Disable interrupt
     pub fn disable_interrupt(self: *Self) Error!void {
         self.write_data.INT = 0;
-        self.calc_parity();
         try self.write_out();
     }
 
@@ -281,14 +279,12 @@ pub const TLV493D = struct {
     /// turned off.
     pub fn enable_temp(self: *Self) Error!void {
         self.write_data.TEMP_NEN = 0;
-        self.calc_parity();
         try self.write_out();
     }
 
     /// Disable temperature measurement
     pub fn disable_temp(self: *Self) Error!void {
         self.write_data.TEMP_NEN = 1;
-        self.calc_parity();
         try self.write_out();
     }
 
