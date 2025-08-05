@@ -135,9 +135,9 @@ pub const TLV493D = struct {
     config: Config,
     read_data: ReadRegister,
     write_data: WriteRegister,
-    x_data: i16 = 0,
-    y_data: i16 = 0,
-    z_data: i16 = 0,
+    x_data: i12 = 0,
+    y_data: i12 = 0,
+    z_data: i12 = 0,
     temp_data: i12 = 0,
     mode: AccessMode,
     expected_frame_count: u8,
@@ -291,7 +291,7 @@ pub const TLV493D = struct {
         self.x_data = self.concat_results(self.read_data.BX1, self.read_data.BX2, true);
         self.y_data = self.concat_results(self.read_data.BY1, self.read_data.BY2, true);
         self.z_data = self.concat_results(self.read_data.BZ1, self.read_data.BZ2, true);
-        self.temp_data = @truncate(self.concat_results(self.read_data.TEMP1, self.read_data.TEMP2, false));
+        self.temp_data = self.concat_results(self.read_data.TEMP1, self.read_data.TEMP2, false);
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
         if (powerdown)
@@ -378,7 +378,7 @@ pub const TLV493D = struct {
     }
 
     /// Concatenate register values into 12-bit signed result
-    fn concat_results(self: *Self, upper_byte: u8, lower_byte: u8, upper_full: bool) i16 {
+    fn concat_results(self: *Self, upper_byte: u8, lower_byte: u8, upper_full: bool) i12 {
         _ = self;
         var value: i16 = 0;
 
@@ -391,6 +391,6 @@ pub const TLV493D = struct {
         }
 
         // Shift right to get signed 12-bit integer
-        return value >> 4;
+        return @truncate(value >> 4);
     }
 };
