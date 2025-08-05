@@ -25,6 +25,9 @@ pub const rp2350_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
     .interrupts = .{ .TIMER0_IRQ_0 = .{ .c = timer_interrupt } },
+    .cpu = .{
+        .ram_vector_table = true,
+    },
 };
 
 pub const microzig_options = if (chip == .RP2040) rp2040_options else rp2350_options;

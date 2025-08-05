@@ -597,8 +597,8 @@ pub const startup_logic = struct {
     else
         VectorTable;
 
-    // If we are using a RAM vector table, we can use a dummy vector table
-    // (only 8 bytes) that only provides the reset vector and the initial stack
+    // If we are using a RAM vector table, we can use a dummy one (only 8
+    // bytes) that only provides the reset vector and the initial stack
     // pointer.
     // Must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
     const _vector_table: FlashVectorTable align(256) = if (is_ram_image)

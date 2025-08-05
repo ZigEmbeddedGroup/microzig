@@ -3,14 +3,8 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 
-pub const microzig_options: microzig.Options = .{
-    .cpu = .{
-        .ram_vector_table = true,
-    },
-};
-
-const pin_config = rp2xxx.pins.GlobalConfiguration{
-    .GPIO0 = .{
+const pin_config: rp2xxx.pins.GlobalConfiguration = .{
+    .GPIO25 = .{
         .name = "led",
         .direction = .out,
     },
