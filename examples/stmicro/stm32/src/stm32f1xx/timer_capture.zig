@@ -91,12 +91,12 @@ pub fn main() !void {
     ch1.set_input_mode(.floating);
 
     //configure the timer for a frequency of 1MHz counting upwards
-    //enable slave mode to reset the counter on the rising edge of TI1 (after filtering)
+    //enable sync mode to reset the counter on the rising edge of TI1 (after filtering)
     //filter only can be configured by channel 1 (index 0)
     comp.timer_general_config(.{
         .prescaler = 7,
         .counter_mode = .{ .up = {} },
-        .slave_config = .{
+        .sync_config = .{
             .trigger_source = .TI1FP1,
             .mode = .ResetMode,
         },

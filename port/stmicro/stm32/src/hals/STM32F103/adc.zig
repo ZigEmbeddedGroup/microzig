@@ -267,16 +267,16 @@ pub const InjectedConfig = struct {
 pub const SimultaneousInjected = struct {
     trigger: InjectedTrigger = .SWSTART,
 
-    master_seq: []const u5, //sequence of channels to read for master ADC, max 4 channels
-    master_offsets: InjectedOffsets = .{},
-    master_interrupt: bool = false,
+    primary_seq: []const u5, //sequence of channels to read for primary ADC, max 4 channels
+    primary_offsets: InjectedOffsets = .{},
+    primary_interrupt: bool = false,
 
-    slave_seq: []const u5, //sequence of channels to read for slave ADC, max 4 channels
-    slave_offsets: InjectedOffsets = .{},
-    slave_interrupt: bool = false,
+    secondary_seq: []const u5, //sequence of channels to read for secondary ADC, max 4 channels
+    secondary_offsets: InjectedOffsets = .{},
+    secondary_interrupt: bool = false,
 
     ///in dual mode both ADCs must have the same sample rates for the channels.
-    ///if not provided, the sample rates will be set to the master ADC sample rates values
+    ///if not provided, the sample rates will be set to the primary ADC sample rates values
     rate_seq: ?[]const SampleRate = null,
 };
 
@@ -290,15 +290,15 @@ pub const SimultaneousRegular = struct {
     ///even though DMA is an optional feature, it is highly recommended to use it.
     /// especially in applications that require high sampling rates.
     ///
-    /// NOTE: without DMA the ADC slave value cannot be read from the master ADC registers,
+    /// NOTE: without DMA the ADC secondary value cannot be read from the primary ADC registers,
     /// NOTE: in Dualmode DMA request are 32bits wide.
     dma: bool = false,
     mode: SimRegModes,
     trigger: RegularTrigger = .SWSTART,
-    master_seq: []const u5, //sequence of channels to read for master ADC, max 17 channels
-    master_interrupt: bool = false,
-    slave_seq: []const u5, //sequence of channels to read for slave ADC, max 17 channels
-    slave_interrupt: bool = false,
+    primary_seq: []const u5, //sequence of channels to read for primary ADC, max 17 channels
+    primary_interrupt: bool = false,
+    secondary_seq: []const u5, //sequence of channels to read for secondary ADC, max 17 channels
+    secondary_interrupt: bool = false,
     ///in dual mode both ADCs must have the same sample rates for the channels.
     ///if not provided, the sample rates will not be modified.
     /// Ignore only if the sample rates are already set for the channels.
@@ -306,7 +306,7 @@ pub const SimultaneousRegular = struct {
 };
 
 pub const Interleaved = struct {
-    interrupt: bool = false, //in this mode only the master ADC can generate an interrupt
+    interrupt: bool = false, //in this mode only the primary ADC can generate an interrupt
     ///same as in `SimultaneousRegular`
     dma: bool = false,
     ///NOTE: this config only have effect if the ADC is in Fast interleaved.
@@ -671,7 +671,7 @@ pub const AdvancedADC = struct {
     ///read the injected group conversion data.
     /// this value can be negative if offssets are set.
     ///
-    ///NOTE: in dual mode the slave data is read from the slave ADC registers
+    ///NOTE: in dual mode the secondary data is read from the secondary ADC registers
     pub fn read_injected_data(self: *const AdvancedADC, index: u2) i16 {
         const regs = self.regs;
         return @bitCast(regs.JDR[index].read().JDATA);
@@ -830,7 +830,7 @@ pub const AdvancedADC = struct {
 
     ///configure the ADC for dual mode. this function can only be called for ADC1
     ///
-    /// NOTE: This function will not enable the ADC slave, you need to call the `enable` function manually.
+    /// NOTE: This function will not enable the ADC secondary, you need to call the `enable` function manually.
     pub fn configure_dual_mode(self: *const AdvancedADC, config: DualModeSelection) DualConfigError!void {
         if (self.adc_num == 2 or !@hasDecl(periferals, "ADC2")) {
             return DualConfigError.ADC2NotSupported;
@@ -883,23 +883,23 @@ pub const AdvancedADC = struct {
 
     ///disable the dual mode. This function can only be called for ADC1 and will do nothing for other ADCs.
     ///
-    /// NOTE: this function will not disable the Master/slave ADC or clear configuration.
+    /// NOTE: this function will not disable the Primary/Secondary ADC or clear configuration.
     pub fn set_indedpended(adc1: *const AdvancedADC) void {
         adc1.regs.CR1.modify(.{ .DUALMOD = .Independent }); //set independent mode
     }
 
     pub fn set_regular_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousRegular) DualConfigError!void {
         try check_regular_simultaneous(adc1, adc2, config);
-        const master_seq = config.master_seq;
-        const slave_seq = config.slave_seq;
-        const m_seq = Sequence{ .seq = master_seq };
-        const s_seq = Sequence{ .seq = slave_seq };
-        const m_mode: RegularModes = switch (config.mode) {
-            .Single => RegularModes{ .Single = m_seq },
-            .Continuous => RegularModes{ .Continuous = m_seq },
+        const primary_seq = config.primary_seq;
+        const secondary_seq = config.secondary_seq;
+        const p_seq = Sequence{ .seq = primary_seq };
+        const s_seq = Sequence{ .seq = secondary_seq };
+        const p_mode: RegularModes = switch (config.mode) {
+            .Single => RegularModes{ .Single = p_seq },
+            .Continuous => RegularModes{ .Continuous = p_seq },
             .Discontinuous => |len| RegularModes{
                 .Discontinuous = .{
-                    .channels = m_seq,
+                    .channels = p_seq,
                     .length = len,
                 },
             },
@@ -917,21 +917,21 @@ pub const AdvancedADC = struct {
         };
 
         adc1.configure_regular(.{
-            .mode = m_mode,
+            .mode = p_mode,
             .trigger = config.trigger,
             .dma = config.dma,
-            .interrupt = config.master_interrupt,
+            .interrupt = config.primary_interrupt,
         }) catch unreachable;
 
         adc2.configure_regular(.{
             .mode = s_mode,
-            .trigger = .SWSTART, //slave ADC must use software trigger
-            .dma = false, //slave ADC does not support DMA.
-            .interrupt = config.slave_interrupt,
+            .trigger = .SWSTART, //secondary ADC must use software trigger
+            .dma = false, //secondary ADC does not support DMA.
+            .interrupt = config.secondary_interrupt,
         }) catch unreachable;
 
         if (config.rate_seq) |rates| {
-            for (rates, master_seq, slave_seq) |rate, mseq, ssque| {
+            for (rates, primary_seq, secondary_seq) |rate, mseq, ssque| {
                 adc1.set_channel_sample_rate(mseq, rate);
                 adc2.set_channel_sample_rate(ssque, rate);
             }
@@ -940,34 +940,34 @@ pub const AdvancedADC = struct {
 
     pub fn set_injected_simultaneous(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: SimultaneousInjected) DualConfigError!void {
         try check_injected_simultaneous(adc1, adc2, config);
-        const master_seq = config.master_seq;
-        const slave_seq = config.slave_seq;
+        const primary_seq = config.primary_seq;
+        const secondary_seq = config.secondary_seq;
         adc1.configure_injected(.{
             .trigger = config.trigger,
-            .offsets = config.master_offsets,
-            .interrupt = config.master_interrupt,
+            .offsets = config.primary_offsets,
+            .interrupt = config.primary_interrupt,
             .mode = .{
                 .Single = .{
-                    .seq = master_seq,
-                    .channels_conf = null, //no channels configuration for master
+                    .seq = primary_seq,
+                    .channels_conf = null, //no channels configuration for primary
                 },
             },
         }) catch unreachable;
 
         adc2.configure_injected(.{
             .trigger = .SWSTART,
-            .offsets = config.slave_offsets,
-            .interrupt = config.slave_interrupt,
+            .offsets = config.secondary_offsets,
+            .interrupt = config.secondary_interrupt,
             .mode = .{
                 .Single = .{
-                    .seq = slave_seq,
-                    .channels_conf = null, //no channels configuration for master
+                    .seq = secondary_seq,
+                    .channels_conf = null, //no channels configuration for primary
                 },
             },
         }) catch unreachable;
 
         if (config.rate_seq) |rates| {
-            for (rates, master_seq, slave_seq) |rate, mseq, ssque| {
+            for (rates, primary_seq, secondary_seq) |rate, mseq, ssque| {
                 adc1.set_channel_sample_rate(mseq, rate);
                 adc2.set_channel_sample_rate(ssque, rate);
             }
@@ -1013,25 +1013,25 @@ pub const AdvancedADC = struct {
         if (adc1.adc_num != 1 or adc2.adc_num != 2) {
             return DualConfigError.InvalidADC; //only ADC1 and ADC2 can be used in dual mode
         }
-        const master_len = config.master_seq.len;
-        const slave_len = config.slave_seq.len;
-        if (master_len != slave_len) {
-            return DualConfigError.invalidSequence; //master and slave sequences must have the same length
-        } else if (master_len == 0 or slave_len == 0) {
+        const primary_len = config.primary_seq.len;
+        const secondary_len = config.secondary_seq.len;
+        if (primary_len != secondary_len) {
+            return DualConfigError.invalidSequence; //primary and secondary sequences must have the same length
+        } else if (primary_len == 0 or secondary_len == 0) {
             return DualConfigError.invalidSequence; //sequence cannot be empty
-        } else if (master_len > 17 or slave_len > 17) {
+        } else if (primary_len > 17 or secondary_len > 17) {
             return DualConfigError.invalidSequence; //max length is 17 [0..16]
         }
 
-        for (config.master_seq, config.slave_seq) |mch, sch| {
+        for (config.primary_seq, config.secondary_seq) |mch, sch| {
             if (mch == sch) {
-                return DualConfigError.invalidSequence; //master and slave channels must be different
+                return DualConfigError.invalidSequence; //primary and secondary channels must be different
             }
         }
 
         if (config.rate_seq) |rates| {
-            if (rates.len != master_len) {
-                return DualConfigError.InvalidSequence; //sample rates must match the master sequence length
+            if (rates.len != primary_len) {
+                return DualConfigError.InvalidSequence; //sample rates must match the primary sequence length
             }
         }
     }
@@ -1040,25 +1040,25 @@ pub const AdvancedADC = struct {
         if (adc1.adc_num != 1 or adc2.adc_num != 2) {
             return DualConfigError.InvalidADC; //only ADC1 and ADC2 can be used in dual mode
         }
-        const master_len = config.master_seq.len;
-        const slave_len = config.slave_seq.len;
-        if (master_len != slave_len) {
-            return DualConfigError.invalidSequence; //master and slave sequences must have the same length
-        } else if (master_len == 0 or slave_len == 0) {
+        const primary_len = config.primary_seq.len;
+        const secondary_len = config.secondary_seq.len;
+        if (primary_len != secondary_len) {
+            return DualConfigError.invalidSequence; //primary and secondary sequences must have the same length
+        } else if (primary_len == 0 or secondary_len == 0) {
             return DualConfigError.invalidSequence; //sequence cannot be empty
-        } else if (master_len > 4 or slave_len > 4) {
+        } else if (primary_len > 4 or secondary_len > 4) {
             return DualConfigError.invalidSequence; //max length is 4 [0..3]
         }
 
-        for (config.master_seq, config.slave_seq) |mch, sch| {
+        for (config.primary_seq, config.secondary_seq) |mch, sch| {
             if (mch == sch) {
-                return DualConfigError.invalidSequence; //master and slave channels must be different
+                return DualConfigError.invalidSequence; //primary and secondary channels must be different
             }
         }
 
         if (config.rate_seq) |rates| {
-            if (rates.len != master_len) {
-                return DualConfigError.InvalidSequence; //sample rates must match the master sequence length
+            if (rates.len != primary_len) {
+                return DualConfigError.InvalidSequence; //sample rates must match the primary sequence length
             }
         }
     }

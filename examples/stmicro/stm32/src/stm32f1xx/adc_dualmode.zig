@@ -90,8 +90,8 @@ pub fn main() !void {
 
     try adc1.configure_dual_mode(.{ .Regular = .{
         .dma = true,
-        .master_seq = &.{ 16, 17 },
-        .slave_seq = &.{ 1, 2 },
+        .primary_seq = &.{ 16, 17 },
+        .secondary_seq = &.{ 1, 2 },
         .rate_seq = &.{ .@"239.5", .@"239.5" },
         .trigger = .SWSTART,
         .mode = .{ .Continuous = {} },

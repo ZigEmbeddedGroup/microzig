@@ -72,7 +72,7 @@ pub fn main() !void {
                 continue;
             };
 
-            std.log.info("receiving data from the slave", .{});
+            std.log.info("receiving data from the device", .{});
             i2c2.read_blocking(ADDR, &to_read, counter.make_ms_timeout(1000)) catch |err| {
                 std.log.err("fail to read data | error {any}", .{err});
                 if (err == error.UnrecoverableError) {
