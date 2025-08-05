@@ -4,7 +4,7 @@ const microzig = @import("microzig");
 const pwd = microzig.chip.peripherals.PWR;
 const PDDS = microzig.chip.types.peripherals.pwr_f1.PDDS;
 
-pub const PDVThreshold = enum(u3) {
+pub const PvdThreshold = enum(u3) {
     V2_2,
     V2_3,
     V2_4,
@@ -31,7 +31,7 @@ pub const Events = packed struct(u2) {
 };
 
 pub const PowerConfig = struct {
-    pvd_threshold: PDVThreshold = .V2_9,
+    pvd_threshold: PvdThreshold = .V2_9,
     deepsleep_mode: DeepsleepModes = .stop, //define the deepsleep behavior
     volt_regulator_mode: VoltRegulatorMode = .on, //define the voltage regulator behavior , only used if `deepsleep_mode` is set to `stop`
     wakeup_pin: bool = false, //enable/disable the wakeup pin
