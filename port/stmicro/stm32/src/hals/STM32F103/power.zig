@@ -60,8 +60,10 @@ pub inline fn pdv_status() u1 {
 
 ///enable/disable the backup domain write protection.
 /// this is used to protect the RTC and backup registers.
+///
+/// this function also exist in the `hal.backup` module.
 pub inline fn backup_domain_protection(set: bool) void {
-    pwd.CR.modify(.{ .DBP = @intFromBool(set) });
+    pwd.CR.modify(.{ .DBP = @intFromBool(!set) });
 }
 
 pub inline fn get_events() Events {
