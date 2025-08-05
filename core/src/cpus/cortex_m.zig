@@ -549,22 +549,22 @@ else
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub fn ram_image_entry_point() linksection("microzig_ram_start") callconv(.naked) void {
+    pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) void {
         asm volatile (
-            \\mov r0, %[_vector_table]
             // Set up stack and jump to _start
-            \\ldm r0!, {r1, r2}
-            \\msr msp, r1
-            \\bx r2
+            \\msr msp, %[eos]
+            \\b _start
             :
-            : [_vector_table] "r" (&ram_vector_table),
-            : "memory", "r0", "r1", "r2"
+            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
     }
 
     pub fn _start() callconv(.c) noreturn {
+        if (!is_ram_image) {
+            microzig.utilities.initialize_system_memories();
+        }
+
         if (using_ram_vector_table or is_ram_image) {
-            // Set VTOR first so that we have exceptions.
             asm volatile (
                 \\
                 // Set VTOR to point to ram table
@@ -576,10 +576,6 @@ pub const startup_logic = struct {
                   [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
                 : "memory", "r0", "r1"
             );
-        }
-
-        if (!is_ram_image) {
-            microzig.utilities.initialize_system_memories();
         }
 
         microzig_main();
@@ -631,7 +627,7 @@ const using_ram_vector_table = @hasField(CPU_Options, "ram_vector_table") and mi
 
 pub fn export_startup_logic() void {
     if (is_ram_image) {
-        @export(&startup_logic.ram_image_entry_point, .{
+        @export(&startup_logic.ram_image_start, .{
             .name = "_entry_point",
             .linkage = .strong,
         });
