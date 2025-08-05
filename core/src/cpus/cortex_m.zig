@@ -551,6 +551,7 @@ pub const startup_logic = struct {
 
     pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) void {
         asm volatile (
+            \\
             // Set up stack and jump to _start
             \\msr msp, %[eos]
             \\b _start
