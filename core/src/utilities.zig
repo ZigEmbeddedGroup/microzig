@@ -484,3 +484,13 @@ pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
 
     return frame_count;
 }
+
+pub fn get_end_of_stack() *const anyopaque {
+    if (microzig.config.end_of_stack.address) |address| {
+        return @ptrFromInt(address);
+    } else if (microzig.config.end_of_stack.symbol_name) |sym_name| {
+        return @extern(*const anyopaque, .{ .name = sym_name });
+    } else {
+        @panic("expected at least one of end_of_stack.address or end_of_stack.symbol_name to be set");
+    }
+}
