@@ -141,10 +141,19 @@ pub fn sev() void {
     asm volatile ("slt zero, zero, x1");
 }
 
+// NOTE: Technically the vector table is always in RAM in ram images no
+// matter the section but put it in .ram_text just to be consistent.
+/// The section in which the vector table is located. Core interrupts should be
+/// part of this section as otherwise you can get relocation errors.
+pub const vector_table_section = if (microzig.options.cpu.ram_vector_table or microzig.config.ram_image)
+    ".ram_text"
+else
+    ".text";
+
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    fn _start() linksection(if (microzig.config.ram_image)
+    pub fn _start() linksection(if (microzig.config.ram_image)
         "microzig_ram_start"
     else
         "microzig_flash_start") callconv(.naked) noreturn {
@@ -177,20 +186,13 @@ pub const startup_logic = struct {
         );
     }
 
-    fn _start_c() callconv(.c) noreturn {
+    pub fn _start_c() callconv(.c) noreturn {
         if (!microzig.config.ram_image) {
             microzig.utilities.initialize_system_memories();
         }
 
         microzig_main();
     }
-
-    // NOTE: technically the vector table is always in RAM in ram images no
-    // matter the section but put it in .ram_text just to be consistent.
-    const vector_table_section = if (microzig.options.cpu.ram_vector_table or microzig.config.ram_image)
-        ".ram_text"
-    else
-        ".text";
 
     fn unhandled_interrupt() linksection(vector_table_section) callconv(riscv_calling_convention) void {
         @panic("unhandled core interrupt");
@@ -208,24 +210,18 @@ pub const startup_logic = struct {
         asm volatile (
             \\j _exception_handler
             \\.balign 4
-
             \\.word 0
             \\.word 0
-
             \\j _machine_software_handler
             \\.balign 4
-
             \\.word 0
             \\.word 0
             \\.word 0
-
             \\j _machine_timer_handler
             \\.balign 4
-
             \\.word 0
             \\.word 0
             \\.word 0
-
             \\j _machine_external_handler
             \\.balign 4
         );

@@ -472,7 +472,6 @@ pub const interrupt = struct {
         }
     }
 
-    // TODO: also for exceptions
     pub fn clear_pending(comptime int: ExternalInterrupt) void {
         const num: comptime_int = @intFromEnum(int);
         switch (cortex_m) {
@@ -539,23 +538,15 @@ pub fn clrex() void {
     asm volatile ("clrex");
 }
 
-/// The RAM vector table used. You can update/swap handlers at runtime here.
-pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table() or is_ram_image())
+/// The RAM vector table used. You can swap interrupt handlers at runtime here.
+/// Available when using a RAM vector table or a RAM image.
+pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
     startup_logic.generate_vector_table()
 else
-    @compileError("RAM vector table is disabled. Consider adding .cpu = .{ .ram_vector_table = true } to your microzig_options or using a RAM image");
+    @compileError("`ram_vector_table` is not available. Consider adding .cpu = .{ .ram_vector_table = true } to your microzig_options or using a RAM image");
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
-
-    // it looks odd to just use a u8 here, but in C it's common to use a
-    // char when linking these values from the linkerscript. What's
-    // important is the addresses of these values.
-    extern var microzig_data_start: u8;
-    extern var microzig_data_end: u8;
-    extern var microzig_bss_start: u8;
-    extern var microzig_bss_end: u8;
-    extern const microzig_data_load_start: u8;
 
     pub fn ram_image_entry_point() linksection("microzig_ram_start") callconv(.naked) void {
         asm volatile (
@@ -576,27 +567,10 @@ pub const startup_logic = struct {
     }
 
     pub fn _start() callconv(.c) noreturn {
-        if (comptime !is_ram_image()) {
-            // fill .bss with zeroes
-            {
-                const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
-                const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
-                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+        if (!is_ram_image) {
+            microzig.utilities.initialize_system_memories();
 
-                @memset(bss_start[0..bss_len], 0);
-            }
-
-            // load .data from flash
-            {
-                const data_start: [*]u8 = @ptrCast(&microzig_data_start);
-                const data_end: [*]u8 = @ptrCast(&microzig_data_end);
-                const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-                const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
-
-                @memcpy(data_start[0..data_len], data_src[0..data_len]);
-            }
-
-            if (using_ram_vector_table()) {
+            if (using_ram_vector_table) {
                 const vtor_addr: u32 = @intFromPtr(&ram_vector_table);
                 std.debug.assert(std.mem.isAligned(vtor_addr, 256));
                 peripherals.scb.VTOR = vtor_addr;
@@ -606,24 +580,28 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    pub const DummyVectorTable = extern struct {
+    const DummyVectorTable = extern struct {
         initial_stack_pointer: usize,
         Reset: Handler,
     };
 
-    pub const InitialVectorTable = if (using_ram_vector_table())
+    const FlashVectorTable = if (using_ram_vector_table)
         DummyVectorTable
     else
         VectorTable;
 
-    // will be imported by microzig.zig to allow system startup.
-    // must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
-    pub const _vector_table: InitialVectorTable align(256) = if (using_ram_vector_table())
+    // If we are using a RAM vector table, we can use a dummy vector table
+    // (only 8 bytes) that only provides the reset vector and the initial stack
+    // pointer.
+    // Must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
+    const _vector_table: FlashVectorTable align(256) = if (is_ram_image)
+        @compileError("`_vector_table` is not available in a RAM image")
+    else if (using_ram_vector_table)
         .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         }
-    else if (!is_ram_image())
+    else
         generate_vector_table();
 
     fn generate_vector_table() VectorTable {
@@ -643,16 +621,11 @@ pub const startup_logic = struct {
     }
 };
 
-inline fn is_ram_image() bool {
-    return microzig.config.ram_image;
-}
-
-inline fn using_ram_vector_table() bool {
-    return microzig.options.cpu.ram_vector_table;
-}
+const is_ram_image = microzig.config.ram_image;
+const using_ram_vector_table = microzig.options.cpu.ram_vector_table;
 
 pub fn export_startup_logic() void {
-    if (is_ram_image()) {
+    if (is_ram_image) {
         @export(&startup_logic.ram_image_entry_point, .{
             .name = "_entry_point",
             .linkage = .strong,
