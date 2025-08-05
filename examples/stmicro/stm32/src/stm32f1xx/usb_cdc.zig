@@ -409,7 +409,7 @@ fn CDC_read(buf: []u8, timeout: Timeout) ![]const u8 {
 }
 
 pub fn main() !void {
-    try rcc.clock_init(.{
+    try rcc.apply_clock(.{
         .PLLSource = .RCC_PLLSOURCE_HSE,
         .PLLMUL = .RCC_PLL_MUL9,
         .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
