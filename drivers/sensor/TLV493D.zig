@@ -54,31 +54,39 @@ pub const Error = error{
 
 const ReadRegister = packed struct(u80) {
     // Bx (0x0) - Bx[11:4]
-    BX1: u8,
+    BxH: u8,
     // By (0x1) - By[11:4]
-    BY1: u8,
+    ByH: u8,
     // Bz (0x2) - Bz[11:4]
-    BZ1: u8,
+    BzH: u8,
     // Temp (0x3) - bits 1:0=CH, bits 3:2=FRM, bits 7:4=Temp[11:8]
+    // -- CHANNEL should read 0. Means conversion is complete and read is valid
     CHANNEL: u2,
     FRAMECOUNTER: u2,
-    TEMP1: u4,
+    TEMPH: u4,
     // Bx2 (0x4) - bits 3:0=By[3:0], bits 7:4=Bx[3:0]
-    BY2: u4,
-    BX2: u4,
+    ByL: u4,
+    BxL: u4,
     // Bz2 (0x5) - bits 3:0=Bz[3:0], bit 4=PD, bit 5=FF, bit 6=T, bit 7=Reserved
-    BZ2: u4,
+    BzL: u4,
+    // -- Should be 1. Power down flag
     PD: u1,
+    // -- Should be 1. Fuse parity check
     FF: u1,
+    // -- Should be 0. Test mode
     T: u1,
     reserved47: u1,
     // Temp2 (0x6) - Temp[7:0]
-    TEMP2: u8,
+    TEMPL: u8,
     // FactSet1 (0x7) - Reserved
+    // -- Bits 6:3 must be saved into register 1
+    // -- NOTE: Doc must have a bug, we only have 2 bits in register 1
     reserved60: u8,
     // FactSet2 (0x8) - Reserved
+    // -- Bits 7:0 must be written into register 2
     reserved68: u8,
     // FactSet3 (0x9) - Reserved
+    // -- Bits 4:0 must be written into register 3
     reserved76: u8,
 };
 
@@ -89,12 +97,17 @@ const WriteRegister = packed struct(u32) {
     LOWPOWER: u1,
     FAST: u1,
     INT: u1,
+    // -- Must store bits 4:3 from register 7
     reserved11: u2,
+    // -- Used to set slave address for extra devices (up to 8 total). Seems to set bits 4 and 2
+    // to the complement of bit 1 and 0, respectivly
     I2C_ADDR: u2,
     PARITY: u1,
     // Res (0x2) - Reserved
+    // -- Must store register 8
     reserved16: u8,
     // MOD2 (0x3) - bits 4:0=Reserved, bit 5=PT, bit 6=LP, bit 7=T
+    // -- Must store bits 4:00 from register 9
     reserved24: u5,
     PARITY_EN: u1,
     LP_PERIOD: u1,
@@ -120,12 +133,13 @@ const AccessModeConfig = struct {
 
 /// Access mode lookup table
 const ACCESS_MODE_CONFIGS = [_]AccessModeConfig{
-    // POWERDOWNMODE. Can write configuration, but measurements are not takend
+    // POWERDOWNMODE: Can write configuration, but measurements are not taken
     .{ .fast = 0, .lp = 0, .lp_period = 0, .measurement_time = 1000 },
     .{ .fast = 1, .lp = 0, .lp_period = 0, .measurement_time = 1 }, // FASTMODE
     .{ .fast = 0, .lp = 1, .lp_period = 0, .measurement_time = 10 }, // LOWPOWERMODE
     .{ .fast = 0, .lp = 1, .lp_period = 1, .measurement_time = 100 }, // ULTRALOWPOWERMODE
-    .{ .fast = 1, .lp = 1, .lp_period = 0, .measurement_time = 1 }, // MASTERCONTROLLEDMODE
+    // MASTERCONTROLLEDMODE: Measurements are made after the last value is read
+    .{ .fast = 1, .lp = 1, .lp_period = 0, .measurement_time = 1 },
 };
 
 pub const TLV493D = struct {
@@ -157,6 +171,8 @@ pub const TLV493D = struct {
             .expected_frame_count = 0,
         };
 
+        // The first thing we have to do is read out the factory calibration and pack it into the
+        // write register so that we don't clear it on the first write.
         self.setup_write_buffer() catch return Error.BusError;
 
         // Sleep for startup delay
@@ -188,9 +204,7 @@ pub const TLV493D = struct {
         // > the internal configurations accidentally. This means, that the bits transferred at any
         // > write command and not used for configuration, needs to be set to the same values as you
         // > read them out before, otherwise configuration will be changed
-        // This is explained terribly. It doesn't explain where these bytes should be stored in the
-        // write registers, so I am following the lead of the Adafruit CircuitPython driver. See
-        // https://github.com/adafruit/Adafruit_CircuitPython_TLV493D/blob/2.0.9/adafruit_tlv493d.py#L141-L145
+        // Section 7 explains how the read registers map to the write registers.
         self.write_data.reserved11 = @truncate((self.read_data.reserved60 & 0x18) >> 3);
         self.write_data.reserved16 = self.read_data.reserved68;
         self.write_data.reserved24 = @truncate(self.read_data.reserved76 & 0x1F);
@@ -301,10 +315,10 @@ pub const TLV493D = struct {
         self.read_out() catch return Error.BusError;
 
         // Construct results from registers
-        self.x_data = self.concat_results(self.read_data.BX1, self.read_data.BX2, true);
-        self.y_data = self.concat_results(self.read_data.BY1, self.read_data.BY2, true);
-        self.z_data = self.concat_results(self.read_data.BZ1, self.read_data.BZ2, true);
-        self.temp_data = self.concat_results(self.read_data.TEMP1, self.read_data.TEMP2, false);
+        self.x_data = self.concat_results(self.read_data.BxH, self.read_data.BxL, true);
+        self.y_data = self.concat_results(self.read_data.ByH, self.read_data.ByL, true);
+        self.z_data = self.concat_results(self.read_data.BzH, self.read_data.BzL, true);
+        self.temp_data = self.concat_results(self.read_data.TEMPH, self.read_data.TEMPL, false);
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
         if (powerdown)
