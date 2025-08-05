@@ -153,10 +153,12 @@ else
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub fn _start() linksection(if (microzig.config.ram_image)
+    const start_section = if (microzig.config.ram_image)
         "microzig_ram_start"
     else
-        "microzig_flash_start") callconv(.naked) noreturn {
+        "microzig_flash_start";
+
+    pub fn _start() linksection(start_section) callconv(.naked) noreturn {
         asm volatile (
             \\.option push
             \\.option norelax
