@@ -72,14 +72,9 @@ pub const SlewRate = enum(u1) {
 
 pub const DriveStrength = microzig.chip.types.peripherals.PADS_BANK0.DriveStrength;
 
-pub const SchmittTrigger = enum(u1) {
+pub const Enabled = enum(u1) {
     enabled,
     disabled,
-};
-
-pub const Enabled = enum {
-    disabled,
-    enabled,
 };
 
 pub const Pull = enum {
@@ -442,9 +437,9 @@ pub const Pin = enum(u6) {
         }
     }
 
-    pub inline fn set_input_enabled(pin: Pin, enabled: bool) void {
+    pub inline fn set_input_enabled(pin: Pin, enabled: Enabled) void {
         const pads_reg = pin.get_pads_reg();
-        pads_reg.modify(.{ .IE = @intFromBool(enabled) });
+        pads_reg.modify(.{ .IE = @intFromEnum(enabled) });
     }
 
     pub inline fn set_output_disabled(pin: Pin, disabled: bool) void {
