@@ -81,7 +81,7 @@ pub const Pin = enum {
         drive_strength: ?gpio.DriveStrength = null,
         pull: ?gpio.Pull = null,
         slew_rate: ?gpio.SlewRate = null,
-        schmitt_trigger: ?gpio.SchmittTrigger = null,
+        schmitt_trigger: ?gpio.Enabled = null,
 
         pub fn get_direction(comptime config: Configuration) Direction {
             return if (config.direction) |direction|
