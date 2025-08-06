@@ -72,7 +72,7 @@ pub const SlewRate = enum(u1) {
 
 pub const DriveStrength = microzig.chip.types.peripherals.PADS_BANK0.DriveStrength;
 
-pub const SchmittTrigger = enum(u1) {
+pub const Enabled = enum(u1) {
     enabled,
     disabled,
 };
@@ -151,7 +151,7 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: SchmittTrigger) void {
+            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
@@ -230,7 +230,7 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: SchmittTrigger) void {
+            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
@@ -437,9 +437,9 @@ pub const Pin = enum(u6) {
         }
     }
 
-    pub inline fn set_input_enabled(pin: Pin, enabled: bool) void {
+    pub inline fn set_input_enabled(pin: Pin, enabled: Enabled) void {
         const pads_reg = pin.get_pads_reg();
-        pads_reg.modify(.{ .IE = @intFromBool(enabled) });
+        pads_reg.modify(.{ .IE = @intFromEnum(enabled) });
     }
 
     pub inline fn set_output_disabled(pin: Pin, disabled: bool) void {
@@ -484,7 +484,7 @@ pub const Pin = enum(u6) {
         });
     }
 
-    pub fn set_schmitt_trigger(gpio: Pin, enabled: SchmittTrigger) void {
+    pub fn set_schmitt_trigger(gpio: Pin, enabled: Enabled) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
             .SCHMITT = switch (enabled) {
