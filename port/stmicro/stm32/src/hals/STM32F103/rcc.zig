@@ -103,6 +103,12 @@ pub const ClockOutputs = struct {
     USB: u32 = 0,
 };
 
+pub const Bus = enum {
+    // AHB, //AHB cannot be reset by software
+    APB1,
+    APB2,
+};
+
 //default clock config
 var corrent_clocks: ClockOutputs = validate_clocks(.{});
 
@@ -415,8 +421,14 @@ pub fn get_reset_reason() ResetReason {
     return rst;
 }
 
-///NOTE: AHB bus cannot be reset, so this function only resets the APB1 and APB2 peripherals
+///reset the selected peripheral to they default state.
+///this is useful to get the peripheral out of a deadlock state or
+///to put the peripheral in a known state before configuring it.
+///
+///NOTE: this function does not effect the ENR (clock enable) registers.
 pub fn reset_clock(peri: RccPeriferals) void {
+
+    //set the selected peripheral reset bit
     switch (peri) {
         // APB2RSTR (APB2 peripherals)
         .AFIO => rcc.APB2RSTR.modify(.{ .AFIORST = 1 }),
@@ -456,7 +468,8 @@ pub fn reset_clock(peri: RccPeriferals) void {
         .DAC => rcc.APB1RSTR.modify(.{ .DACRST = 1 }), //F103xE
         else => {},
     }
-    //release reset
+    //release the reset, this is necessary because the reset bits are not self-clearing
+    //write 0 to all bits is safe becuse 0 does nothing (other than releasing the reset)
     rcc.APB2RSTR.raw = 0;
     rcc.APB1RSTR.raw = 0;
 }
@@ -532,12 +545,22 @@ pub fn disable_all_clocks() void {
     rcc.APB2ENR.raw = 0;
 }
 
-///Reset all clocks to their default state
-pub fn reset_all_clocks() void {
-    rcc.APB2RSTR.raw = std.math.maxInt(u32);
-    rcc.APB2RSTR.raw = 0;
-    rcc.APB1RSTR.raw = std.math.maxInt(u32);
-    rcc.APB1RSTR.raw = 0;
+///Reset all periferals of the specified bus to they default state.
+///NOTE: this function does not effect the ENR registers.
+pub fn reset_bus(bus: Bus) void {
+    //first write 1 to all bits to reset them
+    //then write 0 to all bits to release the reset
+    //this is necessary because the reset bits are not self-clearing
+    switch (bus) {
+        .APB1 => {
+            rcc.APB1RSTR.raw = std.math.maxInt(u32);
+            rcc.APB1RSTR.raw = 0;
+        },
+        .APB2 => {
+            rcc.APB2RSTR.raw = std.math.maxInt(u32);
+            rcc.APB2RSTR.raw = 0;
+        },
+    }
 }
 //NOTE: should we panic on invalid clocks?
 //errors at comptime appear for peripherals manually configured like USB.
