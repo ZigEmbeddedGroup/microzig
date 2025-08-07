@@ -90,8 +90,8 @@ pub fn main() !void {
 
     try adc1.configure_dual_mode(.{ .Regular = .{
         .dma = true,
-        .master_seq = &.{ 16, 17 },
-        .slave_seq = &.{ 1, 2 },
+        .primary_seq = &.{ 16, 17 },
+        .secondary_seq = &.{ 1, 2 },
         .rate_seq = &.{ .@"239.5", .@"239.5" },
         .trigger = .SWSTART,
         .mode = .{ .Continuous = {} },
@@ -106,7 +106,7 @@ pub fn main() !void {
         const vref = adc_buf[1].adc1;
         const ch1 = adc_buf[0].adc2;
         const ch2 = adc_buf[1].adc2;
-        std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
+        std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(temp)});
         std.log.info("Vref: {d}", .{vref});
         std.log.info("CH1: {d}", .{ch1});
