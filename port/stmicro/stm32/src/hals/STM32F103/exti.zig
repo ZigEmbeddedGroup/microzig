@@ -104,7 +104,7 @@ pub fn set_interrupt(line: u5, enable: bool) void {
 }
 
 ///force a software trigger on the given line
-/// this tigger is cleared by `clear_pending()`
+/// this trigger is cleared by `clear_pending()`
 pub inline fn software_trigger(line: u5) void {
     EXTI.SWIER.raw |= (@as(u32, 1) << line);
 }
@@ -113,8 +113,7 @@ pub inline fn software_trigger(line: u5) void {
 pub inline fn pending() pendingLine {
     return @bitCast(@as(u20, @intCast(EXTI.PR.raw)));
 }
-
-///clear the pending lines return by `pending()`.
+///clears all pending lines returned by: `pending()`.
 pub inline fn clear_pending(pendings: pendingLine) void {
     EXTI.PR.raw = @as(u20, @bitCast(pendings));
 }
