@@ -20,7 +20,7 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
         // We must specify a custom entry point since by default RP2350 expects
         // the vector table at the start of the image.
         .entry_point = .{
-            .entry = &microzig.cpu.startup_logic.ram_image_entry_point,
+            .entry = &microzig.cpu.startup_logic.ram_image_start,
             .sp = microzig.utilities.get_end_of_stack(),
         },
     },

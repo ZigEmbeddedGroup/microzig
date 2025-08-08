@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 
-const pin_config = rp2xxx.pins.GlobalConfiguration{
+const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     .GPIO25 = .{
         .name = "led",
         .direction = .out,
