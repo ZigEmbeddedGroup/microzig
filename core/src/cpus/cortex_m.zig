@@ -550,13 +550,16 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) void {
+        const eos = comptime microzig.utilities.get_end_of_stack();
         asm volatile (
             \\
             // Set up stack and jump to _start
             \\msr msp, %[eos]
-            \\b _start
+            // using bx instead of b because the _start function might be too far away
+            \\bx %[start_fn]
             :
-            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+            : [eos] "r" (@as(u32, @intFromPtr(eos))),
+              [start_fn] "r" (@as(u32, @intFromPtr(&_start))),
         );
     }
 
