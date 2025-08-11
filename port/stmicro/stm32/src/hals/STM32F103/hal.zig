@@ -13,6 +13,7 @@ pub const crc = @import("crc.zig");
 pub const power = @import("power.zig");
 pub const backup = @import("backup.zig");
 pub const rtc = @import("rtc.zig");
+pub const dma = @import("DMA.zig");
 
 pub var RESET: rcc.ResetReason = .POR_or_PDR;
 pub fn init() void {
