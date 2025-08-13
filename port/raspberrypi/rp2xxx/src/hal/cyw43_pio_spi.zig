@@ -57,7 +57,7 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     config.pio.gpio_init(config.io_pin);
     config.io_pin.set_output_disabled(false);
     config.io_pin.set_pull(.disabled);
-    config.io_pin.set_schmitt_trigger(.enabled);
+    config.io_pin.set_schmitt_trigger_enabled(true);
 
     config.pio.set_input_sync_bypass(to_pio_pin_num(config.io_pin));
 
