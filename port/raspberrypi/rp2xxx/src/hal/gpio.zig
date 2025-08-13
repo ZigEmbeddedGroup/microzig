@@ -72,16 +72,6 @@ pub const SlewRate = enum(u1) {
 
 pub const DriveStrength = microzig.chip.types.peripherals.PADS_BANK0.DriveStrength;
 
-pub const SchmittTrigger = enum(u1) {
-    enabled,
-    disabled,
-};
-
-pub const Enabled = enum {
-    disabled,
-    enabled,
-};
-
 pub const Pull = enum {
     up,
     down,
@@ -156,12 +146,12 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+            pub fn set_schmitt_trigger_enabled(self: Mask, enabled: bool) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
-                        num(bit).set_schmitt_trigger(enabled);
+                        num(bit).set_schmitt_trigger_enabled(enabled);
                 }
             }
 
@@ -235,12 +225,12 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+            pub fn set_schmitt_trigger_enabled(self: Mask, enabled: bool) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
-                        num(bit).set_schmitt_trigger(enabled);
+                        num(bit).set_schmitt_trigger_enabled(enabled);
                 }
             }
 
@@ -489,13 +479,10 @@ pub const Pin = enum(u6) {
         });
     }
 
-    pub fn set_schmitt_trigger(gpio: Pin, enabled: Enabled) void {
+    pub fn set_schmitt_trigger_enabled(gpio: Pin, enabled: bool) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
-            .SCHMITT = switch (enabled) {
-                .enabled => @as(u1, 1),
-                .disabled => @as(u1, 0),
-            },
+            .SCHMITT = @intFromBool(enabled),
         });
     }
 
