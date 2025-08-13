@@ -432,7 +432,7 @@ pub const Pin = enum(u6) {
         }
     }
 
-    pub inline fn set_input_enabled(pin: Pin, enabled: true) void {
+    pub inline fn set_input_enabled(pin: Pin, enabled: bool) void {
         const pads_reg = pin.get_pads_reg();
         pads_reg.modify(.{ .IE = @intFromBool(enabled) });
     }
