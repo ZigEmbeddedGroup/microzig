@@ -10,6 +10,7 @@ pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const LinkerScript = internals.LinkerScript;
+pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
@@ -333,6 +334,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LinkerScript = null,
 
+            /// If set, overrides the `stack` property of the target.
+            stack: ?Stack = null,
+
             /// If set, overrides the default `entry` property of the arget.
             entry: ?Build.Step.Compile.Entry = null,
 
@@ -382,13 +386,25 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 region.validate_tag();
             }
 
-            // TODO: let the user override which ram section to use the stack on,
-            // for now just using the first ram section in the memory region list
-            const first_ram = blk: {
-                for (target.chip.memory_regions) |region| {
-                    if (region.tag == .ram)
-                        break :blk region;
-                } else @panic("no ram memory region found for setting the end-of-stack address");
+            // TODO: use unions when they are supported in the build system
+            const EndOfStack = struct {
+                address: ?usize = null,
+                symbol_name: ?[]const u8 = null,
+            };
+
+            const end_of_stack: EndOfStack = switch (options.stack orelse options.target.stack) {
+                .address => |address| .{ .address = address },
+                .ram_region_index => |index| blk: {
+                    var i: usize = 0;
+                    for (target.chip.memory_regions) |region| {
+                        if (region.tag == .ram) {
+                            if (i == index)
+                                break :blk .{ .address = region.offset + region.length };
+                            i += 1;
+                        }
+                    } else @panic("no ram memory region found for setting the end-of-stack address");
+                },
+                .symbol_name => |name| .{ .symbol_name = name },
             };
 
             const zig_resolved_target = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
@@ -404,7 +420,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             config.addOption([]const u8, "cpu_name", cpu.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
             config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
-            config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
+            config.addOption(EndOfStack, "end_of_stack", end_of_stack);
             config.addOption(bool, "ram_image", target.ram_image);
 
             const core_mod = b.createModule(.{

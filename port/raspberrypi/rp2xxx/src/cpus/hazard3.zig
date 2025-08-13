@@ -178,9 +178,10 @@ pub const startup_logic = struct {
             \\.option pop
         );
 
+        const eos = comptime microzig.utilities.get_end_of_stack();
         asm volatile ("mv sp, %[eos]"
             :
-            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+            : [eos] "r" (@as(u32, @intFromPtr(eos))),
         );
 
         asm volatile (
