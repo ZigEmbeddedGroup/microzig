@@ -146,12 +146,12 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: bool) void {
+            pub fn set_schmitt_trigger_enabled(self: Mask, enabled: bool) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
-                        num(bit).set_schmitt_trigger(enabled);
+                        num(bit).set_schmitt_trigger_enabled(enabled);
                 }
             }
 
@@ -225,12 +225,12 @@ pub const Mask =
                 }
             }
 
-            pub fn set_schmitt_trigger(self: Mask, enabled: bool) void {
+            pub fn set_schmitt_trigger_enabled(self: Mask, enabled: bool) void {
                 const raw_mask = @intFromEnum(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
-                        num(bit).set_schmitt_trigger(enabled);
+                        num(bit).set_schmitt_trigger_enabled(enabled);
                 }
             }
 
@@ -479,7 +479,7 @@ pub const Pin = enum(u6) {
         });
     }
 
-    pub fn set_schmitt_trigger(gpio: Pin, enabled: bool) void {
+    pub fn set_schmitt_trigger_enabled(gpio: Pin, enabled: bool) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
             .SCHMITT = @intFromBool(enabled),
