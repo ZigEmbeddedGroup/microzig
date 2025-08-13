@@ -46,7 +46,6 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const irq = microzig.hal.irq;
 const i2c = microzig.hal.i2c;
 
 const mdf = microzig.drivers;
@@ -147,15 +146,11 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
     self.enable();
 
     if (self.regs == I2C0) {
-        if (irq.can_set_handler()) {
-            _ = irq.set_handler(.I2C0_IRQ, .{ .c = isr0 });
-        }
-        irq.enable(.I2C0_IRQ);
+        microzig.cpu.interrupt.clear_pending(.I2C0_IRQ);
+        microzig.cpu.interrupt.enable(.I2C0_IRQ);
     } else {
-        if (irq.can_set_handler()) {
-            _ = irq.set_handler(.I2C1_IRQ, .{ .c = isr1 });
-        }
-        irq.enable(.I2C1_IRQ);
+        microzig.cpu.interrupt.clear_pending(.I2C1_IRQ);
+        microzig.cpu.interrupt.enable(.I2C1_IRQ);
     }
 }
 
