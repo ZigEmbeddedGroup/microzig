@@ -1,14 +1,51 @@
 //!
-//! An abstract datagram oriented device with runtime dispatch.
-//!
-//! Datagram devices behave similar to an SPI or Ethernet device where
-//! packets with an ahead-of-time known length can be transferred in a
-//! single transaction.
+//! An abstract I2C device with runtime dispatch
 //!
 
 const std = @import("std");
 
-const Datagram_Device = @This();
+/// Error is a set of errors that make sense for I2C at the protocol level
+pub const Error = error{
+    DeviceNotPresent,
+    NoAcknowledge,
+    Timeout,
+    TargetAddressReserved,
+    NoData,
+    BufferOverrun,
+    UnknownAbort,
+    IllegalAddress,
+};
+// InterfaceError adds additional errors that only make sense for the interface (e.g. unsupported
+// feature).
+pub const InterfaceError = Error || error{Unsupported};
+
+///
+/// 7-bit I²C address, without the read/write bit.
+///
+pub const Address = enum(u7) {
+    _,
+    /// The general call addresses all devices on the bus using the I²C address 0.
+    pub const general_call: Address = @enumFromInt(0x00);
+
+    ///
+    /// Returns `true` if the Address is a reserved I²C address.
+    ///
+    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
+    ///
+    /// See more here: https://www.i2c-bus.org/addressing/
+    pub fn is_reserved(addr: Address) bool {
+        const value: u7 = @intFromEnum(addr);
+        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
+    }
+
+    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
+    }
+};
+
+const I2C_Device = @This();
 
 /// Pointer to the object implementing the driver.
 ///
@@ -19,85 +56,59 @@ ptr: *anyopaque,
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
 
-const BaseError = error{ IoError, Timeout };
-pub const ConnectError = BaseError || error{DeviceBusy};
-pub const WriteError = BaseError || error{ Unsupported, NotConnected };
-pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
-
-/// Establishes a connection to the device (like activating a chip-select lane or similar).
-/// NOTE: Call `.disconnect()` when the usage of the device is done to release it.
-pub fn connect(dd: Datagram_Device) ConnectError!void {
-    if (dd.vtable.connect_fn) |connectFn| {
-        return connectFn(dd.ptr);
-    }
-}
-
-/// Releases a device from the connection.
-pub fn disconnect(dd: Datagram_Device) void {
-    if (dd.vtable.disconnect_fn) |disconnectFn| {
-        return disconnectFn(dd.ptr);
-    }
+pub fn set_address(dev: I2C_Device, addr: Address) InterfaceError!void {
+    const set_address_fn = dev.vtable.set_address_fn orelse return InterfaceError.Unsupported;
+    return set_address_fn(dev.ptr, addr);
 }
 
 /// Writes a single `datagram` to the device.
-pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
-    return try dd.writev(&.{datagram});
+pub fn write(dev: I2C_Device, datagram: []const u8) InterfaceError!void {
+    return try dev.writev(&.{datagram});
 }
 
 /// Writes multiple `datagrams` to the device.
-pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!void {
-    const writev_fn = dd.vtable.writev_fn orelse return error.Unsupported;
-    return writev_fn(dd.ptr, datagrams);
+pub fn writev(dev: I2C_Device, datagrams: []const []const u8) InterfaceError!void {
+    const writev_fn = dev.vtable.writev_fn orelse return InterfaceError.Unsupported;
+    return writev_fn(dev.ptr, datagrams);
 }
 
 /// Writes then reads a single `datagram` to the device.
-pub fn write_then_read(
-    dd: Datagram_Device,
-    src: []const u8,
-    dst: []u8,
-) (WriteError || ReadError)!void {
-    return try dd.writev_then_readv(&.{src}, &.{dst});
+pub fn write_then_read(dev: I2C_Device, src: []const u8, dst: []u8) InterfaceError!void {
+    return try dev.writev_then_readv(&.{src}, &.{dst});
 }
 
 /// Writes a slice of datagrams to the device, then reads back into another slice of datagrams
 pub fn writev_then_readv(
-    dd: Datagram_Device,
+    dev: I2C_Device,
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
-) (WriteError || ReadError)!void {
-    const writev_then_readv_fn = dd.vtable.writev_then_readv_fn orelse return error.Unsupported;
-    return writev_then_readv_fn(dd.ptr, write_chunks, read_chunks);
+) InterfaceError!void {
+    const writev_then_readv_fn = dev.vtable.writev_then_readv_fn orelse return InterfaceError.Unsupported;
+    return writev_then_readv_fn(dev.ptr, write_chunks, read_chunks);
 }
 
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagram`.
-///
-/// If `error.BufferOverrun` is returned, the `datagram` will still be fully filled with the data
-/// that was received up till the overrun. The rest of the datagram will be discarded.
-pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
-    return try dd.readv(&.{datagram});
+pub fn read(dev: I2C_Device, datagram: []u8) InterfaceError!usize {
+    return try dev.readv(&.{datagram});
 }
 
 /// Reads multiple `datagrams` from the device.
 /// Function returns the number of bytes written in `datagrams`.
-///
-/// If `error.BufferOverrun` is returned, the `datagrams` will still be fully filled with the data
-/// that was received up till the overrun. The rest of the datagram will be discarded.
-pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!usize {
-    const readv_fn = dd.vtable.readv_fn orelse return error.Unsupported;
-    return readv_fn(dd.ptr, datagrams);
+pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
+    const readv_fn = dev.vtable.readv_fn orelse return InterfaceError.Unsupported;
+    return readv_fn(dev.ptr, datagrams);
 }
 
 pub const VTable = struct {
-    connect_fn: ?*const fn (*anyopaque) ConnectError!void,
-    disconnect_fn: ?*const fn (*anyopaque) void,
-    writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
-    readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
+    set_address_fn: ?*const fn (*anyopaque, Address) InterfaceError!void,
+    writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) InterfaceError!void,
+    readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) InterfaceError!usize,
     writev_then_readv_fn: ?*const fn (
         *anyopaque,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
-    ) (WriteError || ReadError)!void = null,
+    ) InterfaceError!void = null,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
@@ -110,9 +121,8 @@ pub const Test_Device = struct {
     input_sequence: ?[]const []const u8,
     input_sequence_pos: usize,
 
+    addr: Address,
     write_enabled: bool,
-
-    connected: bool,
 
     pub fn init_receiver_only() Test_Device {
         return init(null, true);
@@ -132,7 +142,7 @@ pub const Test_Device = struct {
 
             .write_enabled = write_enabled,
 
-            .connected = false,
+            .addr = @enumFromInt(0),
         };
     }
 
@@ -151,34 +161,21 @@ pub const Test_Device = struct {
         }
     }
 
-    pub fn datagram_device(td: *Test_Device) Datagram_Device {
-        return Datagram_Device{
+    pub fn i2c_device(td: *Test_Device) I2C_Device {
+        return I2C_Device{
             .ptr = td,
             .vtable = &vtable,
         };
     }
 
-    fn connect(ctx: *anyopaque) ConnectError!void {
+    fn set_address(ctx: *anyopaque, addr: Address) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-        if (td.connected)
-            return error.DeviceBusy;
-        td.connected = true;
+        if (addr.is_reserved()) return Error.IllegalAddress;
+        td.addr = addr;
     }
 
-    fn disconnect(ctx: *anyopaque) void {
+    fn writev(ctx: *anyopaque, datagrams: []const []const u8) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-        if (!td.connected) {
-            std.log.err("disconnect when test device was not connected!", .{});
-        }
-        td.connected = false;
-    }
-
-    fn writev(ctx: *anyopaque, datagrams: []const []const u8) WriteError!void {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx));
-
-        if (!td.connected) {
-            return error.NotConnected;
-        }
 
         if (!td.write_enabled) {
             return error.Unsupported;
@@ -192,7 +189,7 @@ pub const Test_Device = struct {
             break :blk len;
         };
 
-        const dg = td.arena.allocator().alloc(u8, total_len) catch return error.IoError;
+        const dg = td.arena.allocator().alloc(u8, total_len) catch return error.UnknownAbort;
         errdefer td.arena.allocator().free(dg);
 
         {
@@ -204,20 +201,16 @@ pub const Test_Device = struct {
             std.debug.assert(offset == total_len);
         }
 
-        td.packets.append(dg) catch return error.IoError;
+        td.packets.append(dg) catch return error.UnknownAbort;
     }
 
-    fn readv(ctx: *anyopaque, datagrams: []const []u8) ReadError!usize {
+    fn readv(ctx: *anyopaque, datagrams: []const []u8) InterfaceError!usize {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-
-        if (!td.connected) {
-            return error.NotConnected;
-        }
 
         const inputs = td.input_sequence orelse return error.Unsupported;
 
         if (td.input_sequence_pos >= inputs.len) {
-            return error.IoError;
+            return error.NoData;
         }
 
         const packet = inputs[td.input_sequence_pos];
@@ -251,14 +244,13 @@ pub const Test_Device = struct {
         return written;
     }
 
-    fn writev_then_readv(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
+    fn writev_then_readv(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) InterfaceError!void {
         try Test_Device.writev(ctx, write_chunks);
         _ = try Test_Device.readv(ctx, read_chunks);
     }
 
-    const vtable = VTable{
-        .connect_fn = Test_Device.connect,
-        .disconnect_fn = Test_Device.disconnect,
+    const vtable = I2C_Device.VTable{
+        .set_address_fn = Test_Device.set_address,
         .writev_fn = Test_Device.writev,
         .readv_fn = Test_Device.readv,
         .writev_then_readv_fn = Test_Device.writev_then_readv,
@@ -275,29 +267,7 @@ test Test_Device {
 
     var buffer: [16]u8 = undefined;
 
-    const dd = td.datagram_device();
-
-    // As long as we're not connected, the test device will handle
-    // this case and yield an error:
-    try std.testing.expectError(error.NotConnected, dd.write("not connected"));
-    try std.testing.expectError(error.NotConnected, dd.read(&buffer));
-
-    {
-        // The first connect call must succeed ...
-        try dd.connect();
-
-        // ... while the second call must fail:
-        try std.testing.expectError(error.DeviceBusy, dd.connect());
-
-        // After a disconnect...
-        dd.disconnect();
-
-        // ... the connect must succeed again:
-        try dd.connect();
-
-        // We'll keep the device connected for the rest of the test to
-        // ease handling.
-    }
+    const dd = td.i2c_device();
 
     {
         // The first input datagram will be received here:
@@ -321,7 +291,7 @@ test Test_Device {
 
     // As there's no fourth datagram available, the test device will yield
     // an `IoError` for when no datagrams are available anymore:
-    try std.testing.expectError(error.IoError, dd.read(&buffer));
+    try std.testing.expectError(error.NoData, dd.read(&buffer));
 
     try dd.write("Hello, World!");
     try dd.writev(&.{ "See", " you ", "soon!" });
