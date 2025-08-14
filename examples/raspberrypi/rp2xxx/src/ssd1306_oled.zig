@@ -52,8 +52,10 @@ pub fn main() void {
     var counter: u8 = 0;
     while (true) : (time.sleep_ms(1000)) {
         var allocator = fba.allocator();
+        var temp_buf: [7]u8 = undefined;
+        const str = std.fmt.bufPrint(&temp_buf, "{s}{}", .{ "Try #", counter }) catch unreachable;
         var counter_buf: [80]u8 = undefined;
-        const text_centered = center(&counter_buf, counter);
+        const text_centered = center(&counter_buf, str);
 
         const text = font8x8.Fonts.drawAlloc(allocator, text_centered) catch continue;
         defer allocator.free(text);
@@ -68,10 +70,7 @@ pub fn main() void {
     }
 }
 
-fn center(buf: []u8, value: anytype) []u8 {
-    var temp_buf: [2]u8 = undefined;
-    const str = std.fmt.bufPrint(&temp_buf, "{}", .{value}) catch unreachable;
-
+fn center(buf: []u8, str: []u8) []u8 {
     const to_be_added = @divTrunc(16 - str.len, 2);
     @memcpy(buf[0..64], four_rows);
     for (0..to_be_added) |i| {
