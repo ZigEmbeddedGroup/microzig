@@ -154,7 +154,7 @@ pub const TimerGenealConfig = struct {
     sync_config: ?SyncModeConfig = null,
 };
 
-fn get_regs(instance: Instances) *volatile TIM_GP16 {
+fn get_regs(comptime instance: Instances) *volatile TIM_GP16 {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
@@ -174,7 +174,7 @@ fn get_regs(instance: Instances) *volatile TIM_GP16 {
 pub const GPTimer = struct {
     regs: *volatile TIM_GP16,
     //=============== Modes ================
-    pub fn init(instance: Instances) GPTimer {
+    pub fn init(comptime instance: Instances) GPTimer {
         return .{ .regs = get_regs(instance) };
     }
 
