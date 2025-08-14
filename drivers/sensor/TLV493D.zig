@@ -8,14 +8,16 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 const I2C_Device = mdf.base.I2C_Device;
+const I2CAddress = mdf.base.I2C_Device.Address;
 const Clock_Device = mdf.base.Clock_Device;
 
 /// TLV493D I2C addresses
-pub const TLV493D_ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
-pub const TLV493D_ADDRESS1: I2C_Device.Address = @enumFromInt(0x5E); // Default
+pub const TLV493D_ADDRESS0: I2CAddress = @enumFromInt(0x1F);
+pub const TLV493D_ADDRESS1: I2CAddress = @enumFromInt(0x5E); // Default
 
 /// Startup delay in milliseconds
 pub const TLV493D_STARTUPDELAY_MS: u32 = 40;
+pub const TLV493D_RESETDELAY_MS: u32 = 200;
 
 /// Conversion factors
 pub const TLV493D_B_MULT: f32 = 0.098; // mT per LSB
@@ -132,6 +134,7 @@ const AccessModeConfig = struct {
 /// Access mode lookup table
 const ACCESS_MODE_CONFIGS = [_]AccessModeConfig{
     // POWERDOWNMODE: Can write configuration, but measurements are not taken
+    // TODO: Check lp_period
     .{ .fast = 0, .lp = 0, .lp_period = 0, .measurement_time = 1000 },
     .{ .fast = 1, .lp = 0, .lp_period = 0, .measurement_time = 1 }, // FASTMODE
     .{ .fast = 0, .lp = 1, .lp_period = 0, .measurement_time = 10 }, // LOWPOWERMODE
@@ -153,7 +156,7 @@ pub const TLV493D = struct {
     z_data: i12 = 0,
     temp_data: i12 = 0,
     mode: AccessMode,
-    expected_frame_count: u8,
+    expected_frame_count: u2 = 0,
 
     /// Create a new TLV493D instance
     pub fn init(dev: I2C_Device, address: I2C_Device.Address, clock: Clock_Device, config: Config) Error!Self {
@@ -166,8 +169,11 @@ pub const TLV493D = struct {
             // TODO: Add to config
             // .mode = .fast,
             .mode = TLV493D_DEFAULTMODE,
-            .expected_frame_count = 0,
         };
+
+        // We don't support setting the I2C bits for the extra 6 addresses
+        if (address != TLV493D_ADDRESS0 and address != TLV493D_ADDRESS1)
+            return Error.InvalidData;
 
         // The first thing we have to do is read out the factory calibration and pack it into the
         // write register so that we don't clear it on the first write.
@@ -178,6 +184,7 @@ pub const TLV493D = struct {
         self.clock.sleep_ms(TLV493D_STARTUPDELAY_MS);
 
         // Reset sensor if requested
+        // TODO: When using the broadcast address, the subsequent reads seem to hang
         if (config.reset)
             try self.reset_sensor();
 
@@ -194,7 +201,15 @@ pub const TLV493D = struct {
     }
 
     fn setup_write_buffer(self: *Self) !void {
-        try self.read_out();
+        self.read_out() catch |e| switch (e) {
+            // The FRAMECOUNTER doesn't seem to correctly reset to 0, so since this is the first
+            // read we do, we can catch the frame error and synchronize with it.
+            Error.FrameError => {
+                std.log.debug("Syncronizing EFC", .{}); // DELETEME
+                self.expected_frame_count = @truncate(@as(u8, self.read_data.FRAMECOUNTER) + 1);
+            },
+            else => return e,
+        };
 
         // Section 5.2 of the user manual:
         // > After that byte 7, 8 & 9 have to be read out at least one time and stored for later use
@@ -234,6 +249,14 @@ pub const TLV493D = struct {
         // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
         const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
         if (bytes_read != 10) return Error.InvalidData;
+
+        // NOTE: The FRAMECOUNTER seems unreliable
+        // std.log.debug("{x}", .{std.mem.asBytes(&self.read_data)[0..10]}); // DELETEME
+        std.log.debug("ex {d} fc {d}", .{ self.expected_frame_count, self.read_data.FRAMECOUNTER }); // DELETEME
+        if (self.expected_frame_count != self.read_data.FRAMECOUNTER)
+            return error.FrameError;
+
+        self.expected_frame_count = @truncate(@as(u8, self.expected_frame_count) + 1);
     }
 
     /// Write configuration to sensor
@@ -311,7 +334,7 @@ pub const TLV493D = struct {
         self.temp_data = @as(i12, self.read_data.TEMPH) << 8 | self.read_data.TEMPL;
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
-        if (powerdown)
+        if (self.mode == AccessMode.powerdown)
             self.set_access_mode(AccessMode.powerdown) catch return Error.BusError;
 
         // Check for frame errors
@@ -325,6 +348,7 @@ pub const TLV493D = struct {
     pub fn read(self: *Self) Error!Values {
         try self.update_data();
 
+        std.log.debug("Temp LSB: {d}", .{self.temp_data}); // DELETEME
         return Values{
             .x = @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT,
             .y = @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT,

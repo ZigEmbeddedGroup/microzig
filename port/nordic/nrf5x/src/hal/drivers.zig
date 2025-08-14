@@ -19,6 +19,7 @@ const I2CAddress = drivers.I2C_Device.Address;
 
 ///
 /// A datagram device attached to an I²C bus.
+/// Can also return an I2C_Device interface.
 ///
 pub const I2C_Datagram_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
@@ -29,7 +30,7 @@ pub const I2C_Datagram_Device = struct {
     bus: hal.i2c.I2C,
 
     /// The address of our I²C device.
-    address: drivers.I2C_Datagram_Device.Address,
+    address: I2CAddress,
 
     /// Default timeout duration
     timeout: ?mdf.time.Duration = null,
@@ -91,6 +92,13 @@ pub const I2C_Datagram_Device = struct {
         .writev_then_readv_fn = writev_then_readv_fn,
     };
 
+    const i2c_vtable = drivers.I2C_Device.VTable{
+        .set_address_fn = set_address_fn,
+        .writev_fn = i2c_writev_fn,
+        .readv_fn = i2c_readv_fn,
+        .writev_then_readv_fn = i2c_writev_then_readv_fn,
+    };
+
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
         const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |err| switch (err) {
@@ -149,6 +157,48 @@ pub const I2C_Datagram_Device = struct {
 
             error.Timeout => error.Timeout,
             error.NoData => {},
+        };
+    }
+
+    pub fn set_address_fn(
+        dd: *anyopaque,
+        addr: drivers.I2C_Device.Address,
+        allow_reserved: drivers.I2C_Device.Allow_Reserved,
+    ) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        if (allow_reserved == .dont_allow_reserved)
+            addr.check_reserved() catch return I2CError.IllegalAddress
+        else if (allow_reserved == .allow_general)
+            addr.check_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
+                return drivers.I2C_Device.Error.IllegalAddress;
+        dev.address = addr;
+    }
+
+    fn i2c_writev_fn(dd: *anyopaque, chunks: []const []const u8) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev(chunks) catch |err| switch (err) {
+            error.Overrun => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    fn i2c_readv_fn(dd: *anyopaque, chunks: []const []u8) I2CError!usize {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.readv(chunks) catch |err| switch (err) {
+            error.Overrun => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    fn i2c_writev_then_readv_fn(
+        dd: *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
+            error.Overrun => I2CError.UnknownAbort,
+            else => |e| e,
         };
     }
 };

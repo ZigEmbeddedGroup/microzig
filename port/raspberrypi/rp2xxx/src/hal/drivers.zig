@@ -19,6 +19,7 @@ const I2CAddress = drivers.I2C_Device.Address;
 
 ///
 /// A datagram device attached to an I²C bus.
+/// Can also return an I2C_Device interface.
 ///
 pub const I2C_Datagram_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
