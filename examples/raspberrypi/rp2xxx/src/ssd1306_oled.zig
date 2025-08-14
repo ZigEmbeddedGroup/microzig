@@ -79,7 +79,7 @@ fn center(buf: []u8, value: anytype) []u8 {
     }
     @memcpy(buf[(64 + to_be_added)..(64 + to_be_added + str.len)], str);
     for ((64 + str.len + to_be_added)..buf.len) |i| {
-        @memcpy(buf[i..(i + 1)], space);
+        @memcpy(buf[i..(i + 1)], " ");
     }
     return buf;
 }
