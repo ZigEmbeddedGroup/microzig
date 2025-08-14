@@ -14,9 +14,12 @@ const Datagram_Device = drivers.Datagram_Device;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
 const Clock_Device = drivers.Clock_Device;
+const I2CError = drivers.I2C_Device.Error;
+const I2CAddressError = drivers.I2C_Device.Address.Error;
 
 ///
 /// A datagram device attached to an I²C bus.
+/// Can also return an I2C_Device interface.
 ///
 pub const I2C_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
@@ -27,7 +30,7 @@ pub const I2C_Device = struct {
     bus: hal.i2c.I2C,
 
     /// The address of our I²C device.
-    address: hal.i2c.Address,
+    address: drivers.I2C_Device.Address,
 
     /// Default timeout duration
     timeout: ?mdf.time.Duration = null,
@@ -44,6 +47,13 @@ pub const I2C_Device = struct {
         return .{
             .ptr = dev,
             .vtable = &vtable,
+        };
+    }
+
+    pub fn i2c_device(dev: *I2C_Device) drivers.I2C_Device {
+        return .{
+            .ptr = dev,
+            .vtable = &i2c_vtable,
         };
     }
 
@@ -89,14 +99,23 @@ pub const I2C_Device = struct {
         .writev_then_readv_fn = writev_then_readv_fn,
     };
 
+    const i2c_vtable = drivers.I2C_Device.VTable{
+        .set_address_fn = set_address_fn,
+        .writev_fn = i2c_writev_fn,
+        .readv_fn = i2c_readv_fn,
+        .writev_then_readv_fn = i2c_writev_then_readv_fn,
+    };
+
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |err| switch (err) {
-            error.DeviceNotPresent,
-            error.NoAcknowledge,
             error.TargetAddressReserved,
+            error.IllegalAddress,
             => error.Unsupported,
 
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
             error.UnknownAbort,
             error.TxFifoFlushed,
             => error.IoError,
@@ -109,11 +128,13 @@ pub const I2C_Device = struct {
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.readv(chunks) catch |err| switch (err) {
-            error.DeviceNotPresent,
-            error.NoAcknowledge,
             error.TargetAddressReserved,
+            error.IllegalAddress,
             => error.Unsupported,
 
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
             error.UnknownAbort,
             error.TxFifoFlushed,
             => error.IoError,
@@ -126,17 +147,61 @@ pub const I2C_Device = struct {
     fn writev_then_readv_fn(dd: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
-            error.DeviceNotPresent,
-            error.NoAcknowledge,
             error.TargetAddressReserved,
+            error.IllegalAddress,
             => error.Unsupported,
 
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
             error.UnknownAbort,
             error.TxFifoFlushed,
             => error.IoError,
 
             error.Timeout => error.Timeout,
             error.NoData => {},
+        };
+    }
+
+    pub fn set_address_fn(
+        dd: *anyopaque,
+        addr: drivers.I2C_Device.Address,
+        allow_reserved: drivers.I2C_Device.Allow_Reserved,
+    ) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        if (allow_reserved == .dont_allow_reserved)
+            addr.is_reserved() catch return I2CError.IllegalAddress
+        else if (allow_reserved == .allow_general)
+            addr.is_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
+                return drivers.I2C_Device.Error.IllegalAddress;
+        dev.address = addr;
+    }
+
+    fn i2c_writev_fn(dd: *anyopaque, chunks: []const []const u8) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev(chunks) catch |err| switch (err) {
+            error.TxFifoFlushed => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    fn i2c_readv_fn(dd: *anyopaque, chunks: []const []u8) I2CError!usize {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.readv(chunks) catch |err| switch (err) {
+            error.TxFifoFlushed => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    fn i2c_writev_then_readv_fn(
+        dd: *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
+            error.TxFifoFlushed => I2CError.UnknownAbort,
+            else => |e| e,
         };
     }
 };
