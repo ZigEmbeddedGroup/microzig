@@ -200,6 +200,7 @@ pub const base = struct {
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
     pub const Clock_Device = @import("base/Clock_Device.zig");
+    pub const I2C_Device = @import("base/I2C_Device.zig");
 };
 
 test {
