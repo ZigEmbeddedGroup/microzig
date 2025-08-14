@@ -52,6 +52,7 @@ pub fn main() void {
         defer allocator.free(text);
         lcd.write_gdram(text) catch continue;
         counter += 1;
+        time.sleep_ms(1000);
     }
 }
 
