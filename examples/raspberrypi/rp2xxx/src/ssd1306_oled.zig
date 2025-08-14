@@ -4,7 +4,7 @@ const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const i2c = rp2xxx.i2c;
-const font8x8 = @import("font8x8");
+const font8x8 = @import("font8x8"); //zig fetch --save=font8x8 git+https://github.com/Gnyblast/zig-ssd1306-gddram-fonts
 
 // Compile-time pin configuration
 const pin_config = rp2xxx.pins.GlobalConfiguration{
@@ -42,9 +42,11 @@ pub fn main() void {
     const print_val = empty_row ++ empty_row ++ empty_row ++ empty_row ++ "    WELCOME!";
     var buff: [print_val.len * 8]u8 = undefined;
     lcd.write_gdram(font8x8.Fonts.draw(&buff, print_val)) catch unreachable;
+    time.sleep_ms(2000);
 
-    var counter = 0;
+    var counter: u8 = 0;
     while (true) : (time.sleep_ms(1000)) {
+        lcd.clear_screen(false) catch continue;
         var allocator = fba.allocator();
         var counter_buf: [80]u8 = undefined;
         const text_centered = center(&counter_buf, counter);
@@ -53,11 +55,13 @@ pub fn main() void {
         lcd.write_gdram(text) catch continue;
         counter += 1;
         time.sleep_ms(1000);
+        if (counter > 59)
+            break;
     }
 }
 
 fn center(buf: []u8, value: anytype) []u8 {
-    var temp_buf: [32]u8 = undefined;
+    var temp_buf: [2]u8 = undefined;
     const str = std.fmt.bufPrint(&temp_buf, "{}", .{value}) catch unreachable;
 
     const space = " ";
@@ -65,8 +69,11 @@ fn center(buf: []u8, value: anytype) []u8 {
     const four_rows = empty_row ++ empty_row ++ empty_row ++ empty_row;
     @memcpy(buf[0..64], four_rows);
     for (0..to_be_added) |i| {
-        @memcpy(buf[64 + i], space);
+        @memcpy(buf[(64 + i)..(64 + i + 1)], space);
     }
     @memcpy(buf[(64 + to_be_added)..(64 + to_be_added + str.len)], str);
+    for ((64 + str.len + to_be_added)..buf.len) |i| {
+        @memcpy(buf[i..(i + 1)], space);
+    }
     return buf;
 }
