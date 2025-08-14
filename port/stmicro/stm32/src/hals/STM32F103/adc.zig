@@ -30,14 +30,8 @@ pub const ReadError = error{
     ADCNotEnabled,
 };
 
-fn get_regs(adc: ADC_inst) *volatile adc_regs {
-    const number = @intFromEnum(adc);
-    return switch (number) {
-        1 => if (@hasDecl(periferals, "ADC1")) periferals.ADC1 else unreachable,
-        2 => if (@hasDecl(periferals, "ADC2")) periferals.ADC2 else unreachable,
-        3 => if (@hasDecl(periferals, "ADC3")) periferals.ADC3 else unreachable,
-        else => unreachable,
-    };
+fn get_regs(comptime adc: ADC_inst) *volatile adc_regs {
+    return @field(microzig.chip.peripherals, @tagName(adc));
 }
 
 ///1ms, the actual stabilization time is in microseconds, but we use 1ms to be safe with all microcontrollers
@@ -178,7 +172,7 @@ pub const ADC = struct {
         return to_read;
     }
 
-    pub fn init(adc: ADC_inst) ADC {
+    pub fn init(comptime adc: ADC_inst) ADC {
         return .{
             .regs = get_regs(adc),
         };
@@ -1124,7 +1118,7 @@ pub const AdvancedADC = struct {
         regs.LTR.modify(.{ .LT = config.low_treshold });
     }
 
-    pub fn init(adc: ADC_inst) AdvancedADC {
+    pub fn init(comptime adc: ADC_inst) AdvancedADC {
         return .{
             .regs = get_regs(adc),
             .adc_num = @intFromEnum(adc),
