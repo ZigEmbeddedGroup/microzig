@@ -34,26 +34,33 @@ const four_rows = empty_row ++ empty_row ++ empty_row ++ empty_row;
 pub fn main() void {
     var backinf_buffer: [200 * 1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&backinf_buffer);
+
     pin_config.apply();
     rp2xxx.i2c.I2C.apply(i2c0, .{ .baud_rate = 400_000, .clock_config = rp2xxx.clock_config });
 
     const I2C_DEVICE = rp2xxx.drivers.I2C_Device.init(i2c0, lcd_address, null);
     const lcd = microzig.drivers.display.ssd1306.init(.i2c, I2C_DEVICE, null) catch unreachable;
-    lcd.clear_screen(false) catch unreachable;
+
     const print_val = four_rows ++ "    WELCOME!";
     var buff: [print_val.len * 8]u8 = undefined;
+
+    lcd.clear_screen(false) catch unreachable;
     lcd.write_gdram(font8x8.Fonts.draw(&buff, print_val)) catch unreachable;
+
     time.sleep_ms(2000);
 
     var counter: u8 = 0;
     while (true) : (time.sleep_ms(1000)) {
-        lcd.clear_screen(false) catch continue;
         var allocator = fba.allocator();
         var counter_buf: [80]u8 = undefined;
         const text_centered = center(&counter_buf, counter);
+
         const text = font8x8.Fonts.drawAlloc(allocator, text_centered) catch continue;
         defer allocator.free(text);
+
+        lcd.clear_screen(false) catch continue;
         lcd.write_gdram(text) catch continue;
+
         counter += 1;
         time.sleep_ms(1000);
         if (counter > 59)
