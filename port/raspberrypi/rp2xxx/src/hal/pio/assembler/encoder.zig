@@ -59,6 +59,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
         const BoundedDefines = std.BoundedArray(DefineWithIndex, options.max_defines);
         const BoundedPrograms = std.BoundedArray(BoundedProgram, options.max_programs);
         const BoundedInstructions = std.BoundedArray(Instruction(chip), 32);
+        const BoundedRelocations = std.BoundedArray(assembler.Relocation, 32);
         const BoundedLabels = std.BoundedArray(Label, 32);
         const Label = struct {
             name: []const u8,
@@ -71,6 +72,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
             defines: BoundedDefines,
             private_defines: BoundedDefines,
             instructions: BoundedInstructions,
+            relocations: BoundedRelocations,
             labels: BoundedLabels,
             origin: ?u5,
             side_set: ?SideSet,
@@ -99,6 +101,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                         break :blk defines_const.constSlice();
                     },
                     .instructions = @as([]const u16, @ptrCast(bounded.instructions.constSlice())),
+                    .relocations = @as([]const assembler.Relocation, @ptrCast(bounded.relocations.constSlice())),
                     .origin = bounded.origin,
                     .side_set = bounded.side_set,
                     .wrap_target = bounded.wrap_target,
@@ -458,6 +461,13 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                 .payload = payload,
                 .delay_side_set = delay_side_set,
             });
+
+            program.relocations.append(switch (tag) {
+                .jmp => .jmpslot,
+                else => .none,
+            }) catch unreachable;
+
+            std.debug.assert(program.instructions.len == program.relocations.len);
         }
 
         fn calc_delay_side_set(
@@ -546,10 +556,11 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
             var program = BoundedProgram{
                 .name = program_token.data.program,
-                .defines = BoundedDefines.init(0) catch unreachable,
-                .private_defines = BoundedDefines.init(0) catch unreachable,
-                .instructions = BoundedInstructions.init(0) catch unreachable,
-                .labels = BoundedLabels.init(0) catch unreachable,
+                .defines = .{},
+                .private_defines = .{},
+                .instructions = .{},
+                .relocations = .{},
+                .labels = .{},
                 .side_set = null,
                 .origin = null,
                 .wrap_target = null,
