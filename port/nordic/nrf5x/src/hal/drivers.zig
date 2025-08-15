@@ -14,9 +14,11 @@ const Datagram_Device = drivers.Datagram_Device;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
 const Clock_Device = drivers.Clock_Device;
+const I2CError = drivers.I2C_Device.Error;
 
 ///
 /// A datagram device attached to an I²C bus.
+/// Can also return an I2C_Device interface.
 ///
 pub const I2C_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
@@ -44,6 +46,13 @@ pub const I2C_Device = struct {
         return .{
             .ptr = dev,
             .vtable = &vtable,
+        };
+    }
+
+    pub fn i2c_device(dev: *I2C_Device) drivers.I2C_Device {
+        return .{
+            .ptr = dev,
+            .vtable = &i2c_vtable,
         };
     }
 
@@ -89,14 +98,23 @@ pub const I2C_Device = struct {
         .writev_then_readv_fn = writev_then_readv_fn,
     };
 
+    const i2c_vtable = drivers.I2C_Device.VTable{
+        .set_address_fn = set_address_fn,
+        .writev_fn = i2c_writev_fn,
+        .readv_fn = i2c_readv_fn,
+        .writev_then_readv_fn = i2c_writev_then_readv_fn,
+    };
+
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |err| switch (err) {
-            error.DeviceNotPresent,
-            error.NoAcknowledge,
             error.TargetAddressReserved,
+            error.IllegalAddress,
             => error.Unsupported,
 
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
             error.UnknownAbort,
             error.Overrun,
             => error.IoError,
@@ -109,11 +127,13 @@ pub const I2C_Device = struct {
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.readv(chunks) catch |err| switch (err) {
-            error.DeviceNotPresent,
-            error.NoAcknowledge,
             error.TargetAddressReserved,
+            error.IllegalAddress,
             => error.Unsupported,
 
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
             error.UnknownAbort,
             error.Overrun,
             => error.IoError,
@@ -131,8 +151,10 @@ pub const I2C_Device = struct {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
             error.TargetAddressReserved,
+            error.IllegalAddress,
             => error.Unsupported,
 
+            error.BufferOverrun,
             error.DeviceNotPresent,
             error.NoAcknowledge,
             error.UnknownAbort,
@@ -141,6 +163,41 @@ pub const I2C_Device = struct {
 
             error.Timeout => error.Timeout,
             error.NoData => {},
+        };
+    }
+
+    pub fn set_address_fn(dd: *anyopaque, addr: drivers.I2C_Device.Address) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        if (addr.is_reserved())
+            return I2CError.IllegalAddress;
+        dev.address = addr;
+    }
+
+    fn i2c_writev_fn(dd: *anyopaque, chunks: []const []const u8) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev(chunks) catch |err| switch (err) {
+            error.Overrun => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    fn i2c_readv_fn(dd: *anyopaque, chunks: []const []u8) I2CError!usize {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.readv(chunks) catch |err| switch (err) {
+            error.Overrun => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    fn i2c_writev_then_readv_fn(
+        dd: *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
+            error.Overrun => I2CError.UnknownAbort,
+            else => |e| e,
         };
     }
 };

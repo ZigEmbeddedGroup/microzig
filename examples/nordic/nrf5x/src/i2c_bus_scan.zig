@@ -4,6 +4,8 @@ const time = microzig.drivers.time;
 const board = microzig.board;
 const nrf = microzig.hal;
 
+const I2CError = microzig.drivers.base.I2C_Device.Error;
+
 const gpio = nrf.gpio;
 const i2c = nrf.i2c;
 const i2cdma = nrf.i2cdma;
@@ -45,8 +47,8 @@ pub fn main() !void {
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
-            if (e != i2c.TransactionError.DeviceNotPresent and
-                e != i2c.TransactionError.TargetAddressReserved)
+            if (e != I2CError.DeviceNotPresent and
+                e != I2CError.TargetAddressReserved)
                 std.log.info("Error {any}", .{e});
             continue;
         };
@@ -67,8 +69,8 @@ pub fn main() !void {
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0dma.read_blocking(a, &rx_data, null) catch |e| {
-            if (e != i2c.TransactionError.DeviceNotPresent and
-                e != i2c.TransactionError.TargetAddressReserved)
+            if (e != I2CError.DeviceNotPresent and
+                e != I2CError.TargetAddressReserved)
                 std.log.info("Error {any}", .{e});
             continue;
         };

@@ -1,41 +1,47 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const board = microzig.board;
-const nrf = microzig.hal;
+const rp2xxx = microzig.hal;
 
-const gpio = nrf.gpio;
-const i2c = nrf.i2c;
+const gpio = rp2xxx.gpio;
+const i2c = rp2xxx.i2c;
 
-const ClockDevice = nrf.drivers.ClockDevice;
-const I2C_Device = nrf.drivers.I2C_Device;
+const ClockDevice = rp2xxx.drivers.ClockDevice;
+const I2C_Device = rp2xxx.drivers.I2C_Device;
 const ICM_20948 = microzig.drivers.sensor.ICM_20948;
 
-const uart = nrf.uart.num(0);
-const i2c0 = i2c.num(0);
+const uart = rp2xxx.uart.instance.num(0);
+const baud_rate = 115200;
+const uart_tx_pin = gpio.num(0);
+const i2c0 = i2c.instance.num(0);
 
 pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = nrf.uart.log,
+    .log_level = .info,
+    .logFn = rp2xxx.uart.log,
 };
 
-const sleep_ms = nrf.time.sleep_ms;
+const sleep_ms = rp2xxx.time.sleep_ms;
 
 pub fn main() !void {
-    board.init();
-
+    // init uart logging
+    uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .tx_pin = board.uart_tx,
-        .rx_pin = board.uart_rx,
-        .baud_rate = .@"115200",
+        .baud_rate = baud_rate,
+        .clock_config = rp2xxx.clock_config,
     });
-
-    nrf.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart);
 
     defer i2c0.reset();
 
-    try i2c0.apply(.{
-        .scl_pin = gpio.num(0, 9),
-        .sda_pin = gpio.num(0, 10),
+    const sda_pin = gpio.num(4);
+    const scl_pin = gpio.num(5);
+    inline for (&.{ scl_pin, sda_pin }) |pin| {
+        pin.set_slew_rate(.slow);
+        pin.set_schmitt_trigger_enabled(true);
+        pin.set_function(.i2c);
+    }
+
+    i2c0.apply(.{
+        .clock_config = rp2xxx.clock_config,
     });
 
     // Create i2c and clock devices

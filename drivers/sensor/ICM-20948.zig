@@ -7,7 +7,7 @@
 //! Example usage:
 //! ```zig
 //! var sensor = try ICM_20948.init(
-//!     i2c_device.datagram_device(),
+//!     i2c_device.i2c_device(),
 //!     clock.clock_device(),
 //!     .{
 //!         .accel_range = .gs4,
@@ -62,7 +62,7 @@ pub const ICM_20948 = struct {
     const MAG_READ_DELAY_US = 10_000;
     const MAG_RESET_DELAY_US = 100_000;
 
-    dev: mdf.base.Datagram_Device,
+    dev: mdf.base.I2C_Device,
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
@@ -320,7 +320,7 @@ pub const ICM_20948 = struct {
         i2c_slv0_en: u1 = 0,
     };
 
-    pub fn init(dev: mdf.base.Datagram_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
+    pub fn init(dev: mdf.base.I2C_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
         return Self{ .dev = dev, .clock = clock, .config = config };
     }
 
@@ -889,15 +889,14 @@ pub const ICM_20948 = struct {
 };
 
 // Testing
-const TestDatagramDevice = mdf.base.Datagram_Device.Test_Device;
+const TestI2CDevice = mdf.base.I2C_Device.Test_Device;
 const TestTime = mdf.base.Clock_Device.Test_Device;
 
 test "set_bank" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const dd = d.i2c_device();
 
     var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
 
@@ -923,10 +922,9 @@ test "set_bank" {
 
 test "reset" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const dd = d.i2c_device();
 
     var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
 
@@ -942,10 +940,9 @@ test "reset" {
 
 test "read_byte" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const dd = d.i2c_device();
 
     var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
 
@@ -960,10 +957,9 @@ test "read_byte" {
 
 test "error handling in setup" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const dd = d.i2c_device();
 
     var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
 
@@ -975,10 +971,9 @@ test "error handling in setup" {
 
 test "device responsiveness check" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const dd = d.i2c_device();
 
     var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
 
