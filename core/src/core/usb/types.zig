@@ -495,7 +495,8 @@ pub const UsbClassDriver = struct {
     fn_init: *const fn (ptr: *anyopaque, device: UsbDevice) void,
     fn_open: *const fn (ptr: *anyopaque, cfg: []const u8) anyerror!usize,
     fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
-    fn_transfer: *const fn (ptr: *anyopaque, ep_addr: u8, data: []u8) void,
+    fn_send: *const fn (ptr: *anyopaque, ep_in: Endpoint.Num, data: []const u8) void,
+    fn_receive: *const fn (ptr: *anyopaque, ep_out: Endpoint.Num, data: []const u8) void,
 
     pub fn init(self: *@This(), device: UsbDevice) void {
         return self.fn_init(self.ptr, device);
@@ -510,7 +511,11 @@ pub const UsbClassDriver = struct {
         return self.fn_class_control(self.ptr, stage, setup);
     }
 
-    pub fn transfer(self: *@This(), ep_addr: u8, data: []u8) void {
-        return self.fn_transfer(self.ptr, ep_addr, data);
+    pub fn send(self: *@This(), ep_in: Endpoint.Num, data: []const u8) void {
+        return self.fn_send(self.ptr, ep_in, data);
+    }
+
+    pub fn receive(self: *@This(), ep_out: Endpoint.Num, len: []const u8) void {
+        return self.fn_receive(self.ptr, ep_out, len);
     }
 };

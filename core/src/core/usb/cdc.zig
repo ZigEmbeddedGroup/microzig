@@ -281,24 +281,24 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             return true;
         }
 
-        fn transfer(ptr: *anyopaque, ep_addr: u8, data: []u8) void {
+        fn send(ptr: *anyopaque, ep_in: types.Endpoint.Num, data: []const u8) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
-            const ep: types.Endpoint = .from_address(ep_addr);
-            switch (ep.dir) {
-                .Out => if (ep.num == self.ep_out) {
-                    self.rx.write(data) catch {};
-                    self.prep_out_transaction();
-                },
-                .In => if (ep.num == self.ep_in) {
-                    if (self.write_flush() == 0) {
-                        // If there is no data left, a empty packet should be sent if
-                        // data len is multiple of EP Packet size and not zero
-                        if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
-                            _ = self.device.?.endpoint_tx(self.ep_in, &.{&.{}});
-                        }
-                    }
-                },
+            if (ep_in == self.ep_in and self.write_flush() == 0) {
+                // If there is no data left, a empty packet should be sent if
+                // data len is multiple of EP Packet size and not zero
+                if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
+                    _ = self.device.?.endpoint_tx(self.ep_in, &.{&.{}});
+                }
+            }
+        }
+
+        fn receive(ptr: *anyopaque, ep_out: types.Endpoint.Num, data: []const u8) void {
+            var self: *@This() = @ptrCast(@alignCast(ptr));
+
+            if (ep_out == self.ep_out) {
+                self.rx.write(data) catch {};
+                self.prep_out_transaction();
             }
         }
 
@@ -308,7 +308,8 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 .fn_init = init,
                 .fn_open = open,
                 .fn_class_control = class_control,
-                .fn_transfer = transfer,
+                .fn_send = send,
+                .fn_receive = receive,
             };
         }
     };

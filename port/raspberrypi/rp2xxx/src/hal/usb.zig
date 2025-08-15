@@ -498,7 +498,7 @@ pub fn F(comptime config: UsbConfig) type {
 
             // Copy the data from SRAM
             return usb.EPB{
-                .endpoint_address = ep.to_address(),
+                .endpoint = ep,
                 .buffer = ep_hard.data_buffer[0..len],
             };
         }

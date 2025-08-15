@@ -415,8 +415,7 @@ pub fn Usb(comptime f: anytype) type {
                     // Perform any required action on the data. For OUT, the `data`
                     // will be whatever was sent by the host. For IN, it's a copy of
                     // whatever we sent.
-                    const ep: Endpoint = .from_address(epb.endpoint_address);
-                    if (ep.num == .ep0 and ep.dir == .In) {
+                    if (epb.endpoint.num == .ep0 and epb.endpoint.dir == .In) {
                         if (debug) std.log.info("    EP0_IN_ADDR", .{});
 
                         const buffer_reader = &S.buffer_reader;
@@ -453,15 +452,18 @@ pub fn Usb(comptime f: anytype) type {
                             }
                         }
                     } else {
-                        const dir_as_number: u1 = switch (ep.dir) {
-                            .Out => 0,
-                            .In => 1,
-                        };
-                        if (get_driver(ep_to_drv[ep.num.to_int()][dir_as_number])) |driver| {
-                            driver.transfer(epb.endpoint_address, epb.buffer);
-                        }
-                        if (ep.dir == .Out) {
-                            f.endpoint_reset_rx(ep);
+                        const drv = ep_to_drv[epb.endpoint.num.to_int()];
+                        switch (epb.endpoint.dir) {
+                            .Out => {
+                                if (get_driver(drv[0])) |driver|
+                                    driver.receive(epb.endpoint.num, epb.buffer);
+
+                                f.endpoint_reset_rx(epb.endpoint);
+                            },
+                            .In => {
+                                if (get_driver(drv[1])) |driver|
+                                    driver.send(epb.endpoint.num, epb.buffer);
+                            },
                         }
                     }
                 }
@@ -530,7 +532,7 @@ pub const EPBError = error{
 /// Element returned by the endpoint buffer iterator (EPBIter)
 pub const EPB = struct {
     /// The endpoint the data belongs to
-    endpoint_address: u8,
+    endpoint: Endpoint,
     /// Data buffer
     buffer: []u8,
 };

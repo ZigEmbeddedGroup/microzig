@@ -643,7 +643,8 @@ pub const HidClassDriver = struct {
         return true;
     }
 
-    fn transfer(_: *anyopaque, _: u8, _: []u8) void {}
+    fn send(_: *anyopaque, _: types.Endpoint.Num, _: []const u8) void {}
+    fn receive(_: *anyopaque, _: types.Endpoint.Num, _: []const u8) void {}
 
     pub fn driver(self: *@This()) types.UsbClassDriver {
         return .{
@@ -651,7 +652,8 @@ pub const HidClassDriver = struct {
             .fn_init = init,
             .fn_open = open,
             .fn_class_control = class_control,
-            .fn_transfer = transfer,
+            .fn_send = send,
+            .fn_receive = receive,
         };
     }
 };
