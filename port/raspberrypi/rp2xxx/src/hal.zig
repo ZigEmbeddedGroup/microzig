@@ -43,17 +43,20 @@ comptime {
     // atomics, so we don't need to export those functions for them.
     if (!builtin.is_test and compatibility.chip == .RP2040) {
         _ = @import("hal/atomic.zig");
+        _ = rom;
     }
 }
 
 pub const HAL_Options = switch (compatibility.chip) {
-    .RP2040 => struct {},
+    .RP2040 => struct {
+        bootrom_v2_math_intrinsics: bool = true,
+    },
     .RP2350 => struct {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
 
-            /// Next metadata block to link after image_def. **Last block in the
-            /// chain must link back to the first one** (to
+            /// Next metadata block to link after image_def. **Last block in
+            /// the chain must link back to the first one** (to
             /// `bootmeta.image_def_block`).
             next_block: ?*const anyopaque = null,
         } = .{},
