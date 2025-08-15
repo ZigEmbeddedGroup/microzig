@@ -49,9 +49,7 @@ comptime {
 }
 
 pub const HAL_Options = switch (compatibility.chip) {
-    .RP2040 => struct {
-        bootrom_v2_math_intrinsics: bool = true,
-    },
+    .RP2040 => struct {},
     .RP2350 => struct {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,

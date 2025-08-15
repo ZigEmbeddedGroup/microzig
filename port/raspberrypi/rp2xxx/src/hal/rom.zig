@@ -163,14 +163,15 @@ pub inline fn flash_range_program(addr: u32, data: []const u8) void {
     lookup_function(.flash_range_program)(addr, data.ptr, data.len);
 }
 
-/// Reset to USB bootloader function based on rom.
+/// Reset to USB bootloader.
 pub fn reset_to_usb_boot() !void {
     switch (chip) {
         .RP2040 => lookup_function(.reset_to_usb_boot)(0, 0),
         .RP2350 => {
             // 0x0002 - reset to bootsel
-            // 0x0100 - block until reset unless error occurred (can it?)
-            try chip_specific.check_result(lookup_function(.reboot)(0x0002 | 0x0100, 0, 0, 0));
+            // 0x0100 - block until reset
+            _ = lookup_function(.reboot)(0x0002 | 0x0100, 10, 0, 0);
+            unreachable;
         },
     }
 }

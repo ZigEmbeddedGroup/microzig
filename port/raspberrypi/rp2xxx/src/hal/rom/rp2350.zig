@@ -2,7 +2,8 @@ const std = @import("std");
 const rom = @import("../rom.zig");
 const arch = @import("../compatibility.zig").arch;
 
-pub inline fn lookup_data(comptime info: DataInfo) ?info.PtrType {
+/// Asserts that info is valid for the current chip.
+pub inline fn lookup_data(comptime info: DataInfo) info.PtrType {
     info.mask.check_arch();
 
     const code = comptime std.mem.readInt(u16, &info.code, .little);
@@ -14,7 +15,8 @@ pub inline fn lookup_data(comptime info: DataInfo) ?info.PtrType {
     return @alignCast(@ptrCast(rom_data_lookup_fn(code, 0x40))); // 0x40 = data mask
 }
 
-pub inline fn lookup_function(comptime info: FunctionInfo) ?*const info.Signature {
+/// Asserts that info is valid for the current chip.
+pub inline fn lookup_function(comptime info: FunctionInfo) *const info.Signature {
     info.mask.check_arch();
 
     const code = comptime std.mem.readInt(u16, &info.code, .little);
@@ -46,8 +48,8 @@ pub const FunctionInfo = struct {
     pub const flash_flush_cache: FunctionInfo = .{ .code = .{ 'F', 'C' }, .mask = .riscv_or_arm_s, .Signature = fn () callconv(.c) void };
     pub const flash_range_erase: FunctionInfo = .{ .code = .{ 'R', 'E' }, .mask = .riscv_or_arm_s, .Signature = fn (u32, usize, u32, u8) callconv(.c) void };
     pub const flash_range_program: FunctionInfo = .{ .code = .{ 'R', 'P' }, .mask = .riscv_or_arm_s, .Signature = fn (u32, [*]const u8, usize) callconv(.c) void };
-    pub const flash_reset_address_translate: FunctionInfo = .{ .code = .{ 'R', 'A' }, .mask = .riscv_or_arm_s, .Signature = fn () callconv(.c) void };
-    pub const flash_select_xip_read_mode: FunctionInfo = .{ .code = .{ 'S', 'X' }, .mask = .riscv_or_arm_s, .Signature = fn () callconv(.c) void };
+    pub const flash_reset_address_trans: FunctionInfo = .{ .code = .{ 'R', 'A' }, .mask = .riscv_or_arm_s, .Signature = fn () callconv(.c) void };
+    pub const flash_select_xip_read_mode: FunctionInfo = .{ .code = .{ 'S', 'X' }, .mask = .riscv_or_arm_s, .Signature = fn (mode: u8, clkdiv: u8) callconv(.c) void };
 
     pub const flash_op: FunctionInfo = .{ .code = .{ 'F', 'O' }, .mask = .riscv_or_arm_s, .Signature = fn (u32, u32, u32, u32) callconv(.c) i32 };
     pub const flash_op_ns: FunctionInfo = .{ .code = .{ 'F', 'O' }, .mask = .arm_ns, .Signature = fn (u32, u32, u32, u32) callconv(.c) i32 };
@@ -76,9 +78,25 @@ pub const Mask = enum(u32) {
     }
 };
 
-pub fn check_result(ret: i32) Error!void {
-    const err_code: ?ErrorCode = .from_int(ret);
-    return if (err_code) |code| code.map_to_error() else {};
+pub fn check_result(ret: i32) Error!u32 {
+    return switch (ret) {
+        -4 => Error.NotPermitted,
+        -5 => Error.InvalidArgument,
+        -10 => Error.InvalidAddress,
+        -11 => Error.BadAlignment,
+        -12 => Error.InvalidState,
+        -13 => Error.BufferTooSmall,
+        -14 => Error.PreconditionNotMet,
+        -15 => Error.ModifiedData,
+        -16 => Error.InvalidData,
+        -17 => Error.NotFound,
+        -18 => Error.UnsupportedModification,
+        -19 => Error.LockRequired,
+        else => if (ret >= 0)
+            @intCast(ret)
+        else
+            Error.UnexpectedErrorCode,
+    };
 }
 
 pub const Error = error{
@@ -94,42 +112,7 @@ pub const Error = error{
     NotFound,
     UnsupportedModification,
     LockRequired,
-};
-
-pub const ErrorCode = enum(i32) {
-    not_permitted = -4,
-    invalid_argument = -5,
-    invalid_address = -10,
-    bad_alignment = -11,
-    invalid_state = -12,
-    buffer_too_small = -13,
-    precondition_not_met = -14,
-    modified_data = -15,
-    invalid_data = -16,
-    not_found = -17,
-    unsupported_modification = -18,
-    lock_required = -19,
-
-    pub fn from_int(x: i32) ?ErrorCode {
-        return std.meta.intToEnum(ErrorCode, x) catch null;
-    }
-
-    pub fn map_to_error(err_code: ErrorCode) Error {
-        return switch (err_code) {
-            .not_permitted => Error.NotPermitted,
-            .invalid_argument => Error.InvalidArgument,
-            .invalid_address => Error.InvalidAddress,
-            .bad_alignment => Error.BadAlignment,
-            .invalid_state => Error.InvalidState,
-            .buffer_too_small => Error.BufferTooSmall,
-            .precondition_not_met => Error.PreconditionNotMet,
-            .modified_data => Error.ModifiedData,
-            .invalid_data => Error.InvalidData,
-            .not_found => Error.NotFound,
-            .unsupported_modification => Error.UnsupportedModification,
-            .lock_required => Error.LockRequired,
-        };
-    }
+    UnexpectedErrorCode,
 };
 
 const ROM_TABLE_LOOKUP_A1: *const u32 = switch (arch) {
