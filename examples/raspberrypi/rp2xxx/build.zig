@@ -92,6 +92,12 @@ pub fn build(b: *std.Build) void {
         }
     }
 
+    const no_bin = b.option(
+        bool,
+        "no-bin",
+        "skip emitting binaries",
+    ) orelse false;
+
     for (available_examples.items) |example| {
         // If we specify example, only select the ones that match
         if (maybe_example) |selected_example|
@@ -110,14 +116,19 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(example.file),
         });
 
-        // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
-        // and allows installing the firmware as a typical firmware file.
-        //
-        // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        mb.install_firmware(firmware, .{});
+        if (no_bin) {
+            // Skip emitting binaries to get compile errors faster (great with --watch)
+            b.getInstallStep().dependOn(&firmware.artifact.step);
+        } else {
+            // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
+            // and allows installing the firmware as a typical firmware file.
+            //
+            // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
+            mb.install_firmware(firmware, .{});
 
-        // For debugging, we also always install the firmware as an ELF file
-        mb.install_firmware(firmware, .{ .format = .elf });
+            // For debugging, we also always install the firmware as an ELF file
+            mb.install_firmware(firmware, .{ .format = .elf });
+        }
     }
 }
 

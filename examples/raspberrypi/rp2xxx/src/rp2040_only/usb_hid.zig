@@ -19,7 +19,7 @@ const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
 const usb_config_descriptor =
     usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-    usb.templates.hid_in_out_descriptor(0, 0, 0, usb.hid.ReportDescriptorGenericInOut.len, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size, 0);
+    usb.templates.hid_in_out_descriptor(0, 0, 0, usb.hid.ReportDescriptorGenericInOut.len, .ep1, .ep1, usb_packet_size, 0);
 
 var driver_hid = usb.hid.HidClassDriver{ .report_descriptor = &usb.hid.ReportDescriptorGenericInOut };
 var drivers = [_]usb.types.UsbClassDriver{driver_hid.driver()};

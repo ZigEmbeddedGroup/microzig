@@ -95,12 +95,12 @@ pub fn Usb(comptime f: anytype) type {
                 const data_chunk = S.buffer_reader.try_peek(64);
 
                 if (data_chunk.len > 0) {
-                    f.usb_start_tx(Endpoint.EP0_IN_ADDR, data_chunk);
+                    f.usb_start_tx(.ep0, data_chunk);
                 }
             }
 
             fn send_cmd_ack() void {
-                f.usb_start_tx(Endpoint.EP0_IN_ADDR, &.{});
+                f.usb_start_tx(.ep0, &.{});
             }
         };
 
@@ -149,17 +149,18 @@ pub fn Usb(comptime f: anytype) type {
 
         fn device_endpoint_open(ep_desc: []const u8) void {
             const ep_addr = BosConfig.get_data_u8(ep_desc, 2);
+            const ep: Endpoint = .from_address(ep_addr);
             const ep_transfer_type = BosConfig.get_data_u8(ep_desc, 3);
             const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
-            f.endpoint_open(ep_addr, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk);
+            f.endpoint_open(ep, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk);
         }
 
-        fn device_endpoint_transfer(ep_addr: u8, data: []const u8) void {
-            if (Endpoint.dir_from_address(ep_addr) == .In) {
-                f.usb_start_tx(ep_addr, data);
+        fn device_endpoint_transfer(ep: Endpoint, data: []const u8) void {
+            if (ep.dir == .In) {
+                f.usb_start_tx(ep.num, data);
             } else {
-                f.usb_start_rx(ep_addr, max_packet_size);
+                f.usb_start_rx(ep.num, max_packet_size);
             }
         }
 
@@ -371,8 +372,11 @@ pub fn Usb(comptime f: anytype) type {
                         curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
                     }) {
                         if (BosConfig.try_get_desc_as(types.EndpointDescriptor, curr_bos_cfg)) |desc_ep| {
-                            const ep_addr = desc_ep.endpoint_address;
-                            ep_to_drv[Endpoint.num_from_address(ep_addr)][Endpoint.dir_from_address(ep_addr).as_number()] = drv_idx;
+                            const dir_as_number: u1 = switch (desc_ep.endpoint.dir) {
+                                .Out => 0,
+                                .In => 1,
+                            };
+                            ep_to_drv[desc_ep.endpoint.num.to_int()][dir_as_number] = drv_idx;
                         }
                     }
                 }
@@ -431,63 +435,54 @@ pub fn Usb(comptime f: anytype) type {
                     // Perform any required action on the data. For OUT, the `data`
                     // will be whatever was sent by the host. For IN, it's a copy of
                     // whatever we sent.
-                    switch (epb.endpoint_address) {
-                        Endpoint.EP0_IN_ADDR => {
-                            if (debug) std.log.info("    EP0_IN_ADDR", .{});
+                    const ep: Endpoint = .from_address(epb.endpoint_address);
+                    if (ep.num == .ep0 and ep.dir == .In) {
+                        if (debug) std.log.info("    EP0_IN_ADDR", .{});
 
-                            const buffer_reader = &S.buffer_reader;
+                        const buffer_reader = &S.buffer_reader;
 
-                            // We use this opportunity to finish the delayed
-                            // SetAddress request, if there is one:
-                            if (S.new_address) |addr| {
-                                // Change our address:
-                                f.set_address(@intCast(addr));
-                            }
+                        // We use this opportunity to finish the delayed
+                        // SetAddress request, if there is one:
+                        if (S.new_address) |addr| {
+                            // Change our address:
+                            f.set_address(@intCast(addr));
+                        }
 
-                            if (epb.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
-                                _ = buffer_reader.try_advance(epb.buffer.len);
-                                const next_data_chunk = buffer_reader.try_peek(64);
-                                if (next_data_chunk.len > 0) {
-                                    f.usb_start_tx(
-                                        Endpoint.EP0_IN_ADDR,
-                                        next_data_chunk,
-                                    );
-                                } else {
-                                    f.usb_start_rx(
-                                        Endpoint.EP0_OUT_ADDR,
-                                        0,
-                                    );
-
-                                    if (S.driver) |driver| {
-                                        _ = driver.class_control(.Ack, &S.setup_packet);
-                                    }
-                                }
+                        if (epb.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
+                            _ = buffer_reader.try_advance(epb.buffer.len);
+                            const next_data_chunk = buffer_reader.try_peek(64);
+                            if (next_data_chunk.len > 0) {
+                                f.usb_start_tx(.ep0, next_data_chunk);
                             } else {
-                                // Otherwise, we've just finished sending
-                                // something to the host. We expect an ensuing
-                                // status phase where the host sends us (via EP0
-                                // OUT) a zero-byte DATA packet, so, set that
-                                // up:
-                                f.usb_start_rx(
-                                    Endpoint.EP0_OUT_ADDR,
-                                    0,
-                                );
+                                f.usb_start_rx(.ep0, 0);
 
                                 if (S.driver) |driver| {
                                     _ = driver.class_control(.Ack, &S.setup_packet);
                                 }
                             }
-                        },
-                        else => {
-                            const ep_num = Endpoint.num_from_address(epb.endpoint_address);
-                            const ep_dir = Endpoint.dir_from_address(epb.endpoint_address).as_number();
-                            if (get_driver(ep_to_drv[ep_num][ep_dir])) |driver| {
-                                driver.transfer(epb.endpoint_address, epb.buffer);
+                        } else {
+                            // Otherwise, we've just finished sending
+                            // something to the host. We expect an ensuing
+                            // status phase where the host sends us (via EP0
+                            // OUT) a zero-byte DATA packet, so, set that
+                            // up:
+                            f.usb_start_rx(.ep0, 0);
+
+                            if (S.driver) |driver| {
+                                _ = driver.class_control(.Ack, &S.setup_packet);
                             }
-                            if (Endpoint.dir_from_address(epb.endpoint_address) == .Out) {
-                                f.endpoint_reset_rx(epb.endpoint_address);
-                            }
-                        },
+                        }
+                    } else {
+                        const dir_as_number: u1 = switch (ep.dir) {
+                            .Out => 0,
+                            .In => 1,
+                        };
+                        if (get_driver(ep_to_drv[ep.num.to_int()][dir_as_number])) |driver| {
+                            driver.transfer(epb.endpoint_address, epb.buffer);
+                        }
+                        if (ep.dir == .Out) {
+                            f.endpoint_reset_rx(ep);
+                        }
                     }
                 }
             } // <-- END of buf status handling

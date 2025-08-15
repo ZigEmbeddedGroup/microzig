@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 pub const DescType = enum(u8) {
     Device = 0x01,
@@ -79,36 +80,56 @@ pub const FeatureSelector = enum(u8) {
 pub const Dir = enum(u1) {
     Out = 0,
     In = 1,
-
-    pub const DIR_IN_MASK = 0x80;
-
-    pub inline fn as_number(self: @This()) u1 {
-        return @intFromEnum(self);
-    }
-
-    pub inline fn as_number_reversed(self: @This()) u1 {
-        return ~@intFromEnum(self);
-    }
 };
 
-pub const Endpoint = struct {
-    pub inline fn to_address(num: u8, dir: Dir) u8 {
-        return switch (dir) {
-            .Out => num,
-            .In => num | Dir.DIR_IN_MASK,
-        };
+pub const Endpoint = packed struct(u8) {
+    // There are up to 15 endpoints for eqch direction.
+    pub const Num = enum(u4) {
+        ep0 = 0,
+        ep1,
+        ep2,
+        ep3,
+        ep4,
+        ep5,
+        ep6,
+        ep7,
+        ep8,
+        ep9,
+        ep10,
+        ep11,
+        ep12,
+        ep13,
+        ep14,
+        ep15,
+
+        pub fn from_int(int: u4) @This() {
+            return @enumFromInt(int);
+        }
+
+        pub fn to_int(this: @This()) u4 {
+            return @intFromEnum(this);
+        }
+    };
+
+    num: Num,
+    _padding: u3 = 0,
+    dir: Dir,
+
+    pub inline fn to_address(this: @This()) u8 {
+        return @bitCast(this);
     }
 
-    pub inline fn num_from_address(addr: u8) u8 {
-        return addr & ~@as(u8, @intCast(Dir.DIR_IN_MASK));
+    pub inline fn from_address(addr: u8) @This() {
+        return @bitCast(addr & 0x8F);
     }
 
-    pub inline fn dir_from_address(addr: u8) Dir {
-        return if (addr & Dir.DIR_IN_MASK != 0) Dir.In else Dir.Out;
+    pub inline fn out(num: Num) @This() {
+        return .{ .num = num, .dir = .Out };
     }
 
-    pub const EP0_IN_ADDR: u8 = to_address(0, .In);
-    pub const EP0_OUT_ADDR: u8 = to_address(0, .Out);
+    pub inline fn in(num: Num) @This() {
+        return .{ .num = num, .dir = .In };
+    }
 };
 
 pub const RequestType = packed struct(u8) {
@@ -187,7 +208,7 @@ pub const EndpointDescriptor = extern struct {
     descriptor_type: DescType = const_descriptor_type,
     /// Address of this endpoint, where the bottom 4 bits give the endpoint
     /// number (0..15) and the top bit distinguishes IN (1) from OUT (0).
-    endpoint_address: u8,
+    endpoint: Endpoint,
     /// Endpoint attributes; the most relevant part is the bottom 2 bits, which
     /// control the transfer type using the values from `TransferType`.
     attributes: u8,
@@ -201,7 +222,7 @@ pub const EndpointDescriptor = extern struct {
         var out: [7]u8 = undefined;
         out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = self.endpoint_address;
+        out[2] = self.endpoint.to_address();
         out[3] = self.attributes;
         out[4] = @intCast(self.max_packet_size & 0xff);
         out[5] = @intCast((self.max_packet_size >> 8) & 0xff);
@@ -440,7 +461,7 @@ pub const UsbDevice = struct {
     fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
     fn_control_ack: *const fn (setup: *const SetupPacket) void,
     fn_endpoint_open: *const fn (ep_desc: []const u8) void,
-    fn_endpoint_transfer: *const fn (ep_addr: u8, data: []const u8) void,
+    fn_endpoint_transfer: *const fn (ep_addr: Endpoint, data: []const u8) void,
 
     pub fn ready(self: *@This()) bool {
         return self.fn_ready();
@@ -458,8 +479,8 @@ pub const UsbDevice = struct {
         return self.fn_endpoint_open(ep_desc);
     }
 
-    pub fn endpoint_transfer(self: *@This(), ep_addr: u8, data: []const u8) void {
-        return self.fn_endpoint_transfer(ep_addr, data);
+    pub fn endpoint_transfer(self: *@This(), ep: Endpoint, data: []const u8) void {
+        return self.fn_endpoint_transfer(ep, data);
     }
 };
 

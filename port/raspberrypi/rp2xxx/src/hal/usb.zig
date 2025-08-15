@@ -55,7 +55,7 @@ const EndpointType = microzig.chip.types.peripherals.USB_DPRAM.EndpointType;
 
 const HardwareEndpoint = struct {
     configured: bool,
-    ep_addr: u8,
+    ep: Endpoint,
     next_pid_1: bool,
     transfer_type: types.TransferType,
     endpoint_control_index: usize,
@@ -97,20 +97,25 @@ const rp2xxx_endpoints = struct {
     const USB_DPRAM_BUFFERS_CTRL_BASE = USB_DPRAM_BASE + 0x80;
     const USB_DPRAM_ENDPOINTS_CTRL_BASE = USB_DPRAM_BASE + 0x8;
 
-    pub fn get_ep_ctrl(ep_num: u8, ep_dir: types.Dir) ?*EndpointControlMimo {
-        if (ep_num == 0) {
+    fn dir_index(dir: types.Dir) u1 {
+        return switch (dir) {
+            .In => 0,
+            .Out => 1,
+        };
+    }
+
+    pub fn get_ep_ctrl(ep: Endpoint) ?*EndpointControlMimo {
+        if (ep.num == .ep0) {
             return null;
         } else {
-            const dir_index: u8 = if (ep_dir == .In) 0 else 1;
             const ep_ctrl_base = @as([*][2]u32, @ptrFromInt(USB_DPRAM_ENDPOINTS_CTRL_BASE));
-            return @ptrCast(&ep_ctrl_base[ep_num - 1][dir_index]);
+            return @ptrCast(&ep_ctrl_base[ep.num.to_int() - 1][dir_index(ep.dir)]);
         }
     }
 
-    pub fn get_buf_ctrl(ep_num: u8, ep_dir: types.Dir) ?*BufferControlMmio {
-        const dir_index: u8 = if (ep_dir == .In) 0 else 1;
+    pub fn get_buf_ctrl(ep: Endpoint) ?*BufferControlMmio {
         const buf_ctrl_base = @as([*][2]u32, @ptrFromInt(USB_DPRAM_BUFFERS_CTRL_BASE));
-        return @ptrCast(&buf_ctrl_base[ep_num][dir_index]);
+        return @ptrCast(&buf_ctrl_base[ep.num.to_int()][dir_index(ep.dir)]);
     }
 };
 
@@ -178,13 +183,13 @@ pub fn F(comptime config: UsbConfig) type {
             peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
 
             for (1..cfg_max_endpoints_count) |i| {
-                rp2xxx_endpoints.get_ep_ctrl(@intCast(i), .In).?.write_raw(0);
-                rp2xxx_endpoints.get_ep_ctrl(@intCast(i), .Out).?.write_raw(0);
+                rp2xxx_endpoints.get_ep_ctrl(.in(.from_int(@intCast(i)))).?.write_raw(0);
+                rp2xxx_endpoints.get_ep_ctrl(.out(.from_int(@intCast(i)))).?.write_raw(0);
             }
 
             for (0..cfg_max_endpoints_count) |i| {
-                rp2xxx_endpoints.get_buf_ctrl(@intCast(i), .In).?.write_raw(0);
-                rp2xxx_endpoints.get_buf_ctrl(@intCast(i), .Out).?.write_raw(0);
+                rp2xxx_endpoints.get_buf_ctrl(.in(.from_int(@intCast(i)))).?.write_raw(0);
+                rp2xxx_endpoints.get_buf_ctrl(.out(.from_int(@intCast(i)))).?.write_raw(0);
             }
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are
@@ -229,8 +234,8 @@ pub fn F(comptime config: UsbConfig) type {
             });
 
             @memset(std.mem.asBytes(&endpoints), 0);
-            endpoint_open(Endpoint.EP0_IN_ADDR, 64, types.TransferType.Control);
-            endpoint_open(Endpoint.EP0_OUT_ADDR, 64, types.TransferType.Control);
+            endpoint_open(.in(.ep0), 64, types.TransferType.Control);
+            endpoint_open(.out(.ep0), 64, types.TransferType.Control);
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
@@ -244,22 +249,20 @@ pub fn F(comptime config: UsbConfig) type {
         /// reuse `buffer` immediately after this returns. No need to wait for the
         /// packet to be sent.
         pub fn usb_start_tx(
-            ep_addr: u8,
+            ep_in: Endpoint.Num,
             buffer: []const u8,
         ) void {
             // It is technically possible to support longer buffers but this demo
             // doesn't bother.
             // TODO: assert!(buffer.len() <= 64);
-            // You should only be calling this on IN endpoints.
-            // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::In);
 
-            const ep = hardware_endpoint_get_by_address(ep_addr);
+            const ep_hard = hardware_endpoint(.in(ep_in));
 
             // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-            std.mem.copyForwards(u8, ep.data_buffer[0..buffer.len], buffer);
+            std.mem.copyForwards(u8, ep_hard.data_buffer[0..buffer.len], buffer);
 
             // Configure the IN:
-            const np: u1 = if (ep.next_pid_1) 1 else 0;
+            const np: u1 = if (ep_hard.next_pid_1) 1 else 0;
 
             // The AVAILABLE bit in the buffer control register should be set
             // separately to the rest of the data in the buffer control register,
@@ -267,7 +270,7 @@ pub fn F(comptime config: UsbConfig) type {
             // accurate when the AVAILABLE bit is set.
 
             // Write the buffer information to the buffer control register
-            ep.buffer_control.?.modify(.{
+            ep_hard.buffer_control.?.modify(.{
                 .PID_0 = np, // DATA0/1, depending
                 .FULL_0 = 1, // We have put data in
                 .LENGTH_0 = @as(u10, @intCast(buffer.len)), // There are this many bytes
@@ -282,32 +285,30 @@ pub fn F(comptime config: UsbConfig) type {
             );
 
             // Set available bit
-            ep.buffer_control.?.modify(.{
+            ep_hard.buffer_control.?.modify(.{
                 .AVAILABLE_0 = 1, // The data is for the computer to use now
             });
 
-            ep.next_pid_1 = !ep.next_pid_1;
+            ep_hard.next_pid_1 = !ep_hard.next_pid_1;
         }
 
         pub fn usb_start_rx(
-            ep_addr: u8,
+            ep_out: Endpoint.Num,
             len: usize,
         ) void {
             // It is technically possible to support longer buffers but this demo
             // doesn't bother.
             // TODO: assert!(len <= 64);
-            // You should only be calling this on OUT endpoints.
-            // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::Out);
 
-            const ep = hardware_endpoint_get_by_address(ep_addr);
+            const ep_hard = hardware_endpoint(.out(ep_out));
 
-            if (ep.awaiting_rx)
+            if (ep_hard.awaiting_rx)
                 return;
 
             // Check which DATA0/1 PID this endpoint is expecting next.
-            const np: u1 = if (ep.next_pid_1) 1 else 0;
+            const np: u1 = if (ep_hard.next_pid_1) 1 else 0;
             // Configure the OUT:
-            ep.buffer_control.?.modify(.{
+            ep_hard.buffer_control.?.modify(.{
                 .PID_0 = np, // DATA0/1 depending
                 .FULL_0 = 0, // Buffer is NOT full, we want the computer to fill it
                 .AVAILABLE_0 = 1, // It is, however, available to be filled
@@ -315,13 +316,13 @@ pub fn F(comptime config: UsbConfig) type {
             });
 
             // Flip the DATA0/1 PID for the next receive
-            ep.next_pid_1 = !ep.next_pid_1;
-            ep.awaiting_rx = true;
+            ep_hard.next_pid_1 = !ep_hard.next_pid_1;
+            ep_hard.awaiting_rx = true;
         }
 
-        pub fn endpoint_reset_rx(ep_addr: u8) void {
-            const ep = hardware_endpoint_get_by_address(ep_addr);
-            ep.awaiting_rx = false;
+        pub fn endpoint_reset_rx(ep: Endpoint) void {
+            const ep_hard = hardware_endpoint(ep);
+            ep_hard.awaiting_rx = false;
         }
 
         /// Check which interrupt flags are set
@@ -378,47 +379,45 @@ pub fn F(comptime config: UsbConfig) type {
         }
 
         pub fn reset_ep0() void {
-            var ep = hardware_endpoint_get_by_address(Endpoint.EP0_IN_ADDR);
+            var ep = hardware_endpoint(.in(.ep0));
             ep.next_pid_1 = true;
         }
 
-        fn hardware_endpoint_get_by_address(ep_addr: u8) *HardwareEndpoint {
-            const num = Endpoint.num_from_address(ep_addr);
-            const dir = Endpoint.dir_from_address(ep_addr);
-            return &endpoints[num][dir.as_number()];
+        fn hardware_endpoint(ep: Endpoint) *HardwareEndpoint {
+            const dir_as_number: u1 = switch (ep.dir) {
+                .Out => 0,
+                .In => 1,
+            };
+            return &endpoints[ep.num.to_int()][dir_as_number];
         }
 
-        pub fn endpoint_open(ep_addr: u8, max_packet_size: u11, transfer_type: types.TransferType) void {
-            const ep_num = Endpoint.num_from_address(ep_addr);
-            const ep = hardware_endpoint_get_by_address(ep_addr);
+        pub fn endpoint_open(ep: Endpoint, max_packet_size: u11, transfer_type: types.TransferType) void {
+            const ep_hard = hardware_endpoint(ep);
 
-            endpoint_init(ep_addr, max_packet_size, transfer_type);
+            endpoint_init(ep, max_packet_size, transfer_type);
 
-            if (ep_num != 0) {
-                endpoint_alloc(ep) catch {};
-                endpoint_enable(ep);
+            if (ep.num != .ep0) {
+                endpoint_alloc(ep_hard) catch {};
+                endpoint_enable(ep_hard);
             }
         }
 
-        fn endpoint_init(ep_addr: u8, max_packet_size: u11, transfer_type: types.TransferType) void {
-            const ep_num = Endpoint.num_from_address(ep_addr);
-            const ep_dir = Endpoint.dir_from_address(ep_addr);
+        fn endpoint_init(ep: Endpoint, max_packet_size: u11, transfer_type: types.TransferType) void {
+            std.debug.assert(ep.num.to_int() <= cfg_max_endpoints_count);
 
-            std.debug.assert(ep_num <= cfg_max_endpoints_count);
+            var ep_hard = hardware_endpoint(ep);
+            ep_hard.ep = ep;
+            ep_hard.max_packet_size = max_packet_size;
+            ep_hard.transfer_type = transfer_type;
+            ep_hard.next_pid_1 = false;
+            ep_hard.awaiting_rx = false;
 
-            var ep = hardware_endpoint_get_by_address(ep_addr);
-            ep.ep_addr = ep_addr;
-            ep.max_packet_size = max_packet_size;
-            ep.transfer_type = transfer_type;
-            ep.next_pid_1 = false;
-            ep.awaiting_rx = false;
+            ep_hard.buffer_control = rp2xxx_endpoints.get_buf_ctrl(ep);
+            ep_hard.endpoint_control = rp2xxx_endpoints.get_ep_ctrl(ep);
 
-            ep.buffer_control = rp2xxx_endpoints.get_buf_ctrl(ep_num, ep_dir);
-            ep.endpoint_control = rp2xxx_endpoints.get_ep_ctrl(ep_num, ep_dir);
-
-            if (ep_num == 0) {
+            if (ep.num == .ep0) {
                 // ep0 has fixed data buffer
-                ep.data_buffer = rp2xxx_buffers.ep0_buffer0;
+                ep_hard.data_buffer = rp2xxx_buffers.ep0_buffer0;
             }
         }
 
@@ -472,15 +471,15 @@ pub fn F(comptime config: UsbConfig) type {
             self.last_bit = lowbit;
             self.bufbits ^= lowbit;
 
-            // Here we exploit knowledge of the ordering of buffer control
-            // registers in the peripheral. Each endpoint has a pair of
-            // registers, so we can determine the endpoint number by:
-            const epnum = @as(u8, @intCast(lowbit_index >> 1));
-            // Of the pair, the IN endpoint comes first, followed by OUT, so
-            // we can get the direction by:
-            const dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out;
-
-            const ep_addr = Endpoint.to_address(epnum, dir);
+            const ep: Endpoint = .{
+                // Here we exploit knowledge of the ordering of buffer control
+                // registers in the peripheral. Each endpoint has a pair of
+                // registers, so we can determine the endpoint number by:
+                .num = .from_int(@intCast(lowbit_index >> 1)),
+                // Of the pair, the IN endpoint comes first, followed by OUT, so
+                // we can get the direction by:
+                .dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out,
+            };
             // Process the buffer-done event.
 
             // Process the buffer-done event.
@@ -490,7 +489,7 @@ pub fn F(comptime config: UsbConfig) type {
             // method here, but in practice, the number of endpoints is
             // small so a linear scan doesn't kill us.
 
-            const ep = hardware_endpoint_get_by_address(ep_addr);
+            const ep_hard = hardware_endpoint(ep);
 
             // We should only get here if we've been notified that
             // the buffer is ours again. This is indicated by the hw
@@ -504,12 +503,12 @@ pub fn F(comptime config: UsbConfig) type {
 
             // Get the actual length of the data, which may be less
             // than the buffer size.
-            const len = ep.buffer_control.?.read().LENGTH_0;
+            const len = ep_hard.buffer_control.?.read().LENGTH_0;
 
             // Copy the data from SRAM
             return usb.EPB{
-                .endpoint_address = ep_addr,
-                .buffer = ep.data_buffer[0..len],
+                .endpoint_address = ep.to_address(),
+                .buffer = ep_hard.data_buffer[0..len],
             };
         }
     };

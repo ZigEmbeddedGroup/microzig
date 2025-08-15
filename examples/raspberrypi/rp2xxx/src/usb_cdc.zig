@@ -18,7 +18,7 @@ const usb_dev = rp2xxx.usb.Usb(.{});
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
 const usb_config_descriptor =
     usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
-    usb.templates.cdc_descriptor(0, 4, usb.Endpoint.to_address(1, .In), 8, usb.Endpoint.to_address(2, .Out), usb.Endpoint.to_address(2, .In), 64);
+    usb.templates.cdc_descriptor(0, 4, .ep1, 8, .ep2, .ep2, 64);
 
 var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
 var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};

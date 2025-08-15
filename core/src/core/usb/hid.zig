@@ -524,8 +524,8 @@ pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
 
 pub const HidClassDriver = struct {
     device: ?types.UsbDevice = null,
-    ep_in: u8 = 0,
-    ep_out: u8 = 0,
+    ep_in: types.Endpoint.Num = .ep0,
+    ep_out: types.Endpoint.Num = .ep0,
     hid_descriptor: []const u8 = &.{},
     report_descriptor: []const u8,
 
@@ -554,9 +554,9 @@ pub const HidClassDriver = struct {
 
         for (0..2) |_| {
             if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                    .In => self.ep_in = desc_ep.endpoint_address,
-                    .Out => self.ep_out = desc_ep.endpoint_address,
+                switch (desc_ep.endpoint.dir) {
+                    .In => self.ep_in = desc_ep.endpoint.num,
+                    .Out => self.ep_out = desc_ep.endpoint.num,
                 }
                 self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                 curr_cfg = bos.get_desc_next(curr_cfg);

@@ -130,9 +130,9 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
     return struct {
         device: ?types.UsbDevice = null,
-        ep_notif: u8 = 0,
-        ep_in: u8 = 0,
-        ep_out: u8 = 0,
+        ep_in_notif: types.Endpoint.Num = .ep0,
+        ep_in: types.Endpoint.Num = .ep0,
+        ep_out: types.Endpoint.Num = .ep0,
 
         line_coding: CdcLineCoding = undefined,
 
@@ -175,14 +175,14 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 return 0;
             }
             const len = self.tx.read(&self.epin_buf);
-            self.device.?.endpoint_transfer(self.ep_in, self.epin_buf[0..len]);
+            self.device.?.endpoint_transfer(.in(self.ep_in), self.epin_buf[0..len]);
             return len;
         }
 
         fn prep_out_transaction(self: *@This()) void {
             if (self.rx.writableLength() >= usb.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
-                self.device.?.endpoint_transfer(self.ep_out, &.{});
+                self.device.?.endpoint_transfer(.out(self.ep_out), &.{});
             }
         }
 
@@ -215,7 +215,8 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             }
 
             if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                self.ep_notif = desc_ep.endpoint_address;
+                std.debug.assert(desc_ep.endpoint.dir == .In);
+                self.ep_in_notif = desc_ep.endpoint.num;
                 curr_cfg = bos.get_desc_next(curr_cfg);
             }
 
@@ -224,9 +225,9 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                     curr_cfg = bos.get_desc_next(curr_cfg);
                     for (0..2) |_| {
                         if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                            switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                                .In => self.ep_in = desc_ep.endpoint_address,
-                                .Out => self.ep_out = desc_ep.endpoint_address,
+                            switch (desc_ep.endpoint.dir) {
+                                .In => self.ep_in = desc_ep.endpoint.num,
+                                .Out => self.ep_out = desc_ep.endpoint.num,
                             }
                             self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                             curr_cfg = bos.get_desc_next(curr_cfg);
@@ -282,19 +283,21 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         fn transfer(ptr: *anyopaque, ep_addr: u8, data: []u8) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
-            if (ep_addr == self.ep_out) {
-                self.rx.write(data) catch {};
-                self.prep_out_transaction();
-            }
-
-            if (ep_addr == self.ep_in) {
-                if (self.write_flush() == 0) {
-                    // If there is no data left, a empty packet should be sent if
-                    // data len is multiple of EP Packet size and not zero
-                    if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
-                        self.device.?.endpoint_transfer(self.ep_in, &.{});
+            const ep: types.Endpoint = .from_address(ep_addr);
+            switch (ep.dir) {
+                .Out => if (ep.num == self.ep_out) {
+                    self.rx.write(data) catch {};
+                    self.prep_out_transaction();
+                },
+                .In => if (ep.num == self.ep_in) {
+                    if (self.write_flush() == 0) {
+                        // If there is no data left, a empty packet should be sent if
+                        // data len is multiple of EP Packet size and not zero
+                        if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
+                            self.device.?.endpoint_transfer(.in(self.ep_in), &.{});
+                        }
                     }
-                }
+                },
             }
         }
 
