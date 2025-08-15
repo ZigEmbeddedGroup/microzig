@@ -2,20 +2,19 @@
 //here it shows how to configure and use the Dual ADC mode using the advanced ADC API
 
 const std = @import("std");
-const microzig = @import("microzig");
-const DMA = microzig.chip.peripherals.DMA1;
-const DMA_t = microzig.chip.types.peripherals.bdma_v1;
 
+const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
-
-const timer = microzig.hal.timer.GPTimer.init(.TIM2).into_counter_mode();
-
-const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
-const TX = gpio.Pin.from_port(.A, 9);
+const dma = stm32.dma;
+const AdvancedADC = stm32.adc.AdvancedADC;
 
-const AdvancedADC = microzig.hal.adc.AdvancedADC;
+const dma_controller = dma.DMAController.init(.DMA1);
+const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const uart = stm32.uart.UART.init(.USART1);
+
+const TX = gpio.Pin.from_port(.A, 9);
 const ADC_pin1 = gpio.Pin.from_port(.A, 1);
 const ADC_pin2 = gpio.Pin.from_port(.A, 2);
 
@@ -36,26 +35,6 @@ fn adc_to_temp(val: usize) f32 {
     return ((v25 - temp_mv) / avg_slope) + 25; //convert to celsius
 }
 
-fn DMA_init(arr_addr: u32, adc_addr: u32) void {
-    const CH1: *volatile DMA_t.CH = @ptrCast(&DMA.CH);
-    CH1.CR.raw = 0; //disable channel
-    CH1.NDTR.raw = 0;
-    CH1.CR.modify(.{
-        .DIR = DMA_t.DIR.FromPeripheral,
-        .CIRC = 1, //disable circular mode
-        .PL = DMA_t.PL.High, //high priority
-        .MSIZE = DMA_t.SIZE.Bits32,
-        .PSIZE = DMA_t.SIZE.Bits32,
-        .MINC = 1, //memory increment mode
-        .PINC = 0, //peripheral not incremented
-    });
-
-    CH1.NDTR.modify(.{ .NDT = 2 }); //number of data to transfer, 2 samples
-    CH1.PAR = adc_addr; //peripheral address
-    CH1.MAR = arr_addr; //memory address
-    CH1.CR.modify(.{ .EN = 1 }); //enable channel
-}
-
 pub fn main() !void {
     rcc.enable_clock(.DMA1);
     rcc.enable_clock(.TIM2);
@@ -68,10 +47,22 @@ pub fn main() !void {
     const counter = timer.counter_device(rcc.get_clock(.TIM2));
     const adc1 = AdvancedADC.init(.ADC1);
     const adc2 = AdvancedADC.init(.ADC2);
-
-    const adc_data_addr: u32 = @intFromPtr(&adc1.regs.DR);
     var adc_buf: [2]AdcData = undefined;
-    const adc_buf_addr: u32 = @intFromPtr(&adc_buf[0]);
+
+    dma_controller.apply_channel(0, .{
+        .circular_mode = true,
+        .memory_increment = true,
+
+        .direction = .FromPeripheral,
+        .priority = .High,
+        .memory_size = .Bits32,
+        .peripheral_size = .Bits32,
+
+        .transfer_count = 2,
+        .periph_address = @intFromPtr(&adc1.regs.DR),
+        .mem_address = @intFromPtr(&adc_buf),
+    });
+    dma_controller.start_channel(0);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     ADC_pin1.set_input_mode(.analog);
@@ -90,15 +81,14 @@ pub fn main() !void {
 
     try adc1.configure_dual_mode(.{ .Regular = .{
         .dma = true,
-        .master_seq = &.{ 16, 17 },
-        .slave_seq = &.{ 1, 2 },
+        .primary_seq = &.{ 16, 17 },
+        .secondary_seq = &.{ 1, 2 },
         .rate_seq = &.{ .@"239.5", .@"239.5" },
         .trigger = .SWSTART,
         .mode = .{ .Continuous = {} },
     } });
 
     std.log.info("start Dual ADC scan", .{});
-    DMA_init(adc_buf_addr, adc_data_addr);
     adc1.software_trigger(); //start conversion
     while (true) {
         counter.sleep_ms(250);
@@ -106,7 +96,7 @@ pub fn main() !void {
         const vref = adc_buf[1].adc1;
         const ch1 = adc_buf[0].adc2;
         const ch2 = adc_buf[1].adc2;
-        std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
+        std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(temp)});
         std.log.info("Vref: {d}", .{vref});
         std.log.info("CH1: {d}", .{ch1});

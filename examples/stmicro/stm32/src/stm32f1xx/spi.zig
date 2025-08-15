@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const GPTimer = stm32.timer.GPTimer;
@@ -16,15 +15,6 @@ const MISO = gpio.Pin.from_port(.B, 14);
 const SCK = gpio.Pin.from_port(.B, 13);
 
 pub fn main() void {
-    RCC.APB1ENR.modify(.{
-        .SPI2EN = 1,
-        .TIM2EN = 1,
-    });
-    RCC.APB2ENR.modify(.{
-        .GPIOBEN = 1,
-        .AFIOEN = 1,
-    });
-
     rcc.enable_clock(.GPIOB);
     rcc.enable_clock(.SPI2);
     rcc.enable_clock(.TIM2);
