@@ -946,7 +946,7 @@ pub const GlobalConfiguration = struct {
                 }
 
                 if (pin_config.schmitt_trigger) |enabled| {
-                    gpio.num(gpio_num).set_schmitt_trigger(enabled == .enabled);
+                    gpio.num(gpio_num).set_schmitt_trigger_enabled(enabled == .enabled);
                 }
 
                 if (pin_config.drive_strength) |drive_strength| {

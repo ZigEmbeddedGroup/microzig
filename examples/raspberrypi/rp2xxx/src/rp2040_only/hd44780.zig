@@ -27,7 +27,7 @@ pub fn main() !void {
     const sda_pin = gpio.num(4);
     inline for (&.{ scl_pin, sda_pin }) |pin| {
         pin.set_slew_rate(.slow);
-        pin.set_schmitt_trigger(.enabled);
+        pin.set_schmitt_trigger_enabled(true);
         pin.set_function(.i2c);
     }
 
