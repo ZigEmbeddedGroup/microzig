@@ -61,7 +61,6 @@ pub fn Usb(comptime f: anytype) type {
 
         // We'll keep some state in Plain Old Static Local Variables:
         const S = struct {
-            var debug_mode = false;
             // When the host gives us a new address, we can't just slap it into
             // registers right away, because we have to do an acknowledgement step using
             // our _old_ address.
@@ -180,11 +179,9 @@ pub fn Usb(comptime f: anytype) type {
         pub fn task(debug: bool) !void {
             if (usb_config == null) return error.UninitializedDevice;
 
-            S.debug_mode = debug;
-
             // Device Specific Request
             const DeviceRequestProcessor = struct {
-                fn process_setup_request(setup: *const types.SetupPacket) !void {
+                fn process_setup_request(setup: *const types.SetupPacket, debug_mode: bool) !void {
                     switch (setup.request_type.type) {
                         .Class => {
                             //const itfIndex = setup.index & 0x00ff;
@@ -197,10 +194,10 @@ pub fn Usb(comptime f: anytype) type {
                                 .SetAddress => {
                                     S.new_address = @as(u8, @intCast(setup.value & 0xff));
                                     CmdEndpoint.send_cmd_ack();
-                                    if (S.debug_mode) std.log.info("    SetAddress: {}", .{S.new_address.?});
+                                    if (debug_mode) std.log.info("    SetAddress: {}", .{S.new_address.?});
                                 },
                                 .SetConfiguration => {
-                                    if (S.debug_mode) std.log.info("    SetConfiguration", .{});
+                                    if (debug_mode) std.log.info("    SetConfiguration", .{});
                                     const cfg_num = setup.value;
                                     if (S.cfg_num != cfg_num) {
                                         if (S.cfg_num > 0) {
@@ -221,7 +218,7 @@ pub fn Usb(comptime f: anytype) type {
                                 .GetDescriptor => {
                                     const descriptor_type = DescType.from_u8(@intCast(setup.value >> 8));
                                     if (descriptor_type) |dt| {
-                                        try process_get_descriptor(setup, dt);
+                                        try process_get_descriptor(setup, dt, debug_mode);
                                     }
                                 },
                                 .SetFeature => {
@@ -240,10 +237,10 @@ pub fn Usb(comptime f: anytype) type {
                     }
                 }
 
-                fn process_get_descriptor(setup: *const types.SetupPacket, descriptor_type: DescType) !void {
+                fn process_get_descriptor(setup: *const types.SetupPacket, descriptor_type: DescType, debug_mode: bool) !void {
                     switch (descriptor_type) {
                         .Device => {
-                            if (S.debug_mode) std.log.info("        Device", .{});
+                            if (debug_mode) std.log.info("        Device", .{});
 
                             var bw = BufferWriter{ .buffer = &S.tmp };
                             try bw.write(&usb_config.?.device_descriptor.serialize());
@@ -251,7 +248,7 @@ pub fn Usb(comptime f: anytype) type {
                             CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                         },
                         .Config => {
-                            if (S.debug_mode) std.log.info("        Config", .{});
+                            if (debug_mode) std.log.info("        Config", .{});
 
                             var bw = BufferWriter{ .buffer = &S.tmp };
                             try bw.write(usb_config.?.config_descriptor);
@@ -259,7 +256,7 @@ pub fn Usb(comptime f: anytype) type {
                             CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                         },
                         .String => {
-                            if (S.debug_mode) std.log.info("        String", .{});
+                            if (debug_mode) std.log.info("        String", .{});
                             // String descriptor index is in bottom 8 bits of
                             // `value`.
                             const i: usize = @intCast(setup.value & 0xff);
@@ -285,13 +282,13 @@ pub fn Usb(comptime f: anytype) type {
                             CmdEndpoint.send_cmd_response(bytes, setup.length);
                         },
                         .Interface => {
-                            if (S.debug_mode) std.log.info("        Interface", .{});
+                            if (debug_mode) std.log.info("        Interface", .{});
                         },
                         .Endpoint => {
-                            if (S.debug_mode) std.log.info("        Endpoint", .{});
+                            if (debug_mode) std.log.info("        Endpoint", .{});
                         },
                         .DeviceQualifier => {
-                            if (S.debug_mode) std.log.info("        DeviceQualifier", .{});
+                            if (debug_mode) std.log.info("        DeviceQualifier", .{});
                             // We will just copy parts of the DeviceDescriptor because
                             // the DeviceQualifierDescriptor can be seen as a subset.
                             const dqd = types.DeviceQualifierDescriptor{
@@ -407,7 +404,7 @@ pub fn Usb(comptime f: anytype) type {
                 f.reset_ep0();
 
                 switch (setup.request_type.recipient) {
-                    .Device => try DeviceRequestProcessor.process_setup_request(&setup),
+                    .Device => try DeviceRequestProcessor.process_setup_request(&setup, debug),
                     .Interface => try InterfaceRequestProcessor.process_setup_request(&setup),
                     .Endpoint => try EndpointRequestProcessor.process_setup_request(&setup),
                     else => {},
