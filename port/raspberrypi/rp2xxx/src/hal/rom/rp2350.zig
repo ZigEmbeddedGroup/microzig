@@ -2,8 +2,8 @@ const std = @import("std");
 const rom = @import("../rom.zig");
 const arch = @import("../compatibility.zig").arch;
 
-/// Asserts that info is valid for the current chip.
-pub inline fn lookup_data(comptime info: DataInfo) info.PtrType {
+/// Asserts that data with the given code exists in the bootrom.
+pub inline fn lookup_data(info: DataInfo) info.PtrType {
     info.mask.check_arch();
 
     const code = comptime std.mem.readInt(u16, &info.code, .little);
@@ -15,8 +15,8 @@ pub inline fn lookup_data(comptime info: DataInfo) info.PtrType {
     return @alignCast(@ptrCast(rom_data_lookup_fn(code, 0x40))); // 0x40 = data mask
 }
 
-/// Asserts that info is valid for the current chip.
-pub inline fn lookup_function(comptime info: FunctionInfo) *const info.Signature {
+/// Asserts that a function with the given code exists in the bootrom.
+pub inline fn lookup_function(info: FunctionInfo) *const info.Signature {
     info.mask.check_arch();
 
     const code = comptime std.mem.readInt(u16, &info.code, .little);

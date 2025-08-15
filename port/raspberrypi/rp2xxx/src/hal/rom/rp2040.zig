@@ -1,6 +1,7 @@
 const std = @import("std");
 const rom = @import("../rom.zig");
 
+/// Asserts that data with the given code exists in the bootrom.
 pub inline fn lookup_data(info: DataInfo) info.PtrType {
     const rom_table_lookup: *const LookupFn = @ptrFromInt(ROM_TABLE_LOOKUP.*);
     const data_table: *const anyopaque = @ptrFromInt(DATA_TABLE.*);
@@ -9,6 +10,7 @@ pub inline fn lookup_data(info: DataInfo) info.PtrType {
     return @alignCast(@ptrCast(rom_table_lookup(data_table, code)));
 }
 
+/// Asserts that a function with the given code exists in the bootrom.
 pub inline fn lookup_function(info: FunctionInfo) *const info.Signature {
     const rom_table_lookup: *const LookupFn = @ptrFromInt(ROM_TABLE_LOOKUP.*);
     const func_table: *const anyopaque = @ptrFromInt(FUNC_TABLE.*);
@@ -23,7 +25,7 @@ pub inline fn lookup_float_function(info: FloatFunctionInfo) *const info.Signatu
         if (rom.get_version_number() < min_version) @panic("function not available in this bootrom version");
     }
 
-    const table: [*]const usize = @alignCast(@ptrCast(rom.lookup_and_cache_data(.soft_float_table)));
+    const table: [*]const usize = rom.lookup_and_cache_data(.soft_float_table);
     return @ptrFromInt(table[info.offset / 4]);
 }
 
@@ -32,7 +34,7 @@ pub inline fn lookup_double_function(info: DoubleFunctionInfo) *const info.Signa
         if (rom.get_version_number() < min_version) @panic("function not available in this bootrom version");
     }
 
-    const table: [*]const usize = @alignCast(@ptrCast(rom.lookup_and_cache_data(.soft_double_table)));
+    const table: [*]const usize = rom.lookup_and_cache_data(.soft_double_table);
     return @ptrFromInt(table[info.offset / 4]);
 }
 
@@ -44,9 +46,9 @@ pub const DataInfo = struct {
     pub const copyright_string: DataInfo = .{ .code = .{ 'C', 'R' }, .PtrType = [*]const u8 };
     pub const git_revision: DataInfo = .{ .code = .{ 'G', 'R' }, .PtrType = [*]const u32 };
     pub const fplib_start: DataInfo = .{ .code = .{ 'F', 'S' }, .PtrType = *const anyopaque };
-    pub const soft_float_table: DataInfo = .{ .code = .{ 'S', 'F' }, .PtrType = *const anyopaque };
+    pub const soft_float_table: DataInfo = .{ .code = .{ 'S', 'F' }, .PtrType = [*]const usize };
     pub const fplib_end: DataInfo = .{ .code = .{ 'F', 'E' }, .PtrType = *const anyopaque };
-    pub const soft_double_table: DataInfo = .{ .code = .{ 'S', 'D' }, .min_version = 2, .PtrType = *const anyopaque };
+    pub const soft_double_table: DataInfo = .{ .code = .{ 'S', 'D' }, .min_version = 2, .PtrType = [*]const usize };
 };
 
 pub const FunctionInfo = struct {
@@ -84,42 +86,42 @@ pub const FloatFunctionInfo = struct {
     min_version: ?u8 = null,
     Signature: type,
 
-    pub const fadd: FloatFunctionInfo = .{ .Signature = fn (f32, f32) callconv(.c) f32, .offset = 0x00 };
-    pub const fsub: FloatFunctionInfo = .{ .Signature = fn (f32, f32) callconv(.c) f32, .offset = 0x04 };
-    pub const fmul: FloatFunctionInfo = .{ .Signature = fn (f32, f32) callconv(.c) f32, .offset = 0x08 };
-    pub const fdiv: FloatFunctionInfo = .{ .Signature = fn (f32, f32) callconv(.c) f32, .offset = 0x0c };
+    pub const fadd: FloatFunctionInfo = .{ .offset = 0x00, .Signature = fn (f32, f32) callconv(.c) f32 };
+    pub const fsub: FloatFunctionInfo = .{ .offset = 0x04, .Signature = fn (f32, f32) callconv(.c) f32 };
+    pub const fmul: FloatFunctionInfo = .{ .offset = 0x08, .Signature = fn (f32, f32) callconv(.c) f32 };
+    pub const fdiv: FloatFunctionInfo = .{ .offset = 0x0c, .Signature = fn (f32, f32) callconv(.c) f32 };
 
-    pub const fsqrt: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x18 };
-    pub const float_to_int: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) i32, .offset = 0x1c };
-    pub const float_to_fix: FloatFunctionInfo = .{ .Signature = fn (f32, i32) callconv(.c) i32, .offset = 0x20 };
-    pub const float_to_uint: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) u32, .offset = 0x24 };
-    pub const float_to_ufix: FloatFunctionInfo = .{ .Signature = fn (f32, i32) callconv(.c) u32, .offset = 0x28 };
-    pub const int_to_float: FloatFunctionInfo = .{ .Signature = fn (i32) callconv(.c) f32, .offset = 0x2c };
-    pub const fix_to_float: FloatFunctionInfo = .{ .Signature = fn (i32, i32) callconv(.c) f32, .offset = 0x30 };
-    pub const uint_to_float: FloatFunctionInfo = .{ .Signature = fn (u32) callconv(.c) f32, .offset = 0x34 };
-    pub const ufix_to_float: FloatFunctionInfo = .{ .Signature = fn (u32, i32) callconv(.c) f32, .offset = 0x38 };
-    pub const fcos: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x3c };
-    pub const fsin: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x40 };
-    pub const ftan: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x44 };
-    pub const fexp: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x4c };
-    pub const fln: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x50 };
+    pub const fsqrt: FloatFunctionInfo = .{ .offset = 0x18, .Signature = fn (f32) callconv(.c) f32 };
+    pub const float_to_int: FloatFunctionInfo = .{ .offset = 0x1c, .Signature = fn (f32) callconv(.c) i32 };
+    pub const float_to_fix: FloatFunctionInfo = .{ .offset = 0x20, .Signature = fn (f32, i32) callconv(.c) i32 };
+    pub const float_to_uint: FloatFunctionInfo = .{ .offset = 0x24, .Signature = fn (f32) callconv(.c) u32 };
+    pub const float_to_ufix: FloatFunctionInfo = .{ .offset = 0x28, .Signature = fn (f32, i32) callconv(.c) u32 };
+    pub const int_to_float: FloatFunctionInfo = .{ .offset = 0x2c, .Signature = fn (i32) callconv(.c) f32 };
+    pub const fix_to_float: FloatFunctionInfo = .{ .offset = 0x30, .Signature = fn (i32, i32) callconv(.c) f32 };
+    pub const uint_to_float: FloatFunctionInfo = .{ .offset = 0x34, .Signature = fn (u32) callconv(.c) f32 };
+    pub const ufix_to_float: FloatFunctionInfo = .{ .offset = 0x38, .Signature = fn (u32, i32) callconv(.c) f32 };
+    pub const fcos: FloatFunctionInfo = .{ .offset = 0x3c, .Signature = fn (f32) callconv(.c) f32 };
+    pub const fsin: FloatFunctionInfo = .{ .offset = 0x40, .Signature = fn (f32) callconv(.c) f32 };
+    pub const ftan: FloatFunctionInfo = .{ .offset = 0x44, .Signature = fn (f32) callconv(.c) f32 };
+    pub const fexp: FloatFunctionInfo = .{ .offset = 0x4c, .Signature = fn (f32) callconv(.c) f32 };
+    pub const fln: FloatFunctionInfo = .{ .offset = 0x50, .Signature = fn (f32) callconv(.c) f32 };
 
-    pub const fcmp: FloatFunctionInfo = .{ .Signature = fn (f32, f32) callconv(.c) i32, .offset = 0x54, .min_version = 2 };
-    pub const fatan2: FloatFunctionInfo = .{ .Signature = fn (f32, f32) callconv(.c) f32, .offset = 0x58, .min_version = 2 };
-    pub const int64_to_float: FloatFunctionInfo = .{ .Signature = fn (i64) callconv(.c) f32, .offset = 0x5c, .min_version = 2 };
-    pub const fix64_to_float: FloatFunctionInfo = .{ .Signature = fn (i64, i32) callconv(.c) f32, .offset = 0x60, .min_version = 2 };
-    pub const uint64_to_float: FloatFunctionInfo = .{ .Signature = fn (u64) callconv(.c) f32, .offset = 0x64, .min_version = 2 };
-    pub const ufix64_to_float: FloatFunctionInfo = .{ .Signature = fn (u64, i32) callconv(.c) f32, .offset = 0x68, .min_version = 2 };
-    pub const float_to_int64: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) i64, .offset = 0x6c, .min_version = 2 };
-    pub const float_to_fix64: FloatFunctionInfo = .{ .Signature = fn (f32, i32) callconv(.c) i64, .offset = 0x70, .min_version = 2 };
-    pub const float_to_uint64: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) u64, .offset = 0x74, .min_version = 2 };
-    pub const float_to_ufix64: FloatFunctionInfo = .{ .Signature = fn (f32, i32) callconv(.c) u64, .offset = 0x78, .min_version = 2 };
-    pub const float_to_double: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f64, .offset = 0x7c, .min_version = 2 };
+    pub const fcmp: FloatFunctionInfo = .{ .offset = 0x54, .min_version = 2, .Signature = fn (f32, f32) callconv(.c) i32 };
+    pub const fatan2: FloatFunctionInfo = .{ .offset = 0x58, .min_version = 2, .Signature = fn (f32, f32) callconv(.c) f32 };
+    pub const int64_to_float: FloatFunctionInfo = .{ .offset = 0x5c, .min_version = 2, .Signature = fn (i64) callconv(.c) f32 };
+    pub const fix64_to_float: FloatFunctionInfo = .{ .offset = 0x60, .min_version = 2, .Signature = fn (i64, i32) callconv(.c) f32 };
+    pub const uint64_to_float: FloatFunctionInfo = .{ .offset = 0x64, .min_version = 2, .Signature = fn (u64) callconv(.c) f32 };
+    pub const ufix64_to_float: FloatFunctionInfo = .{ .offset = 0x68, .min_version = 2, .Signature = fn (u64, i32) callconv(.c) f32 };
+    pub const float_to_int64: FloatFunctionInfo = .{ .offset = 0x6c, .min_version = 2, .Signature = fn (f32) callconv(.c) i64 };
+    pub const float_to_fix64: FloatFunctionInfo = .{ .offset = 0x70, .min_version = 2, .Signature = fn (f32, i32) callconv(.c) i64 };
+    pub const float_to_uint64: FloatFunctionInfo = .{ .offset = 0x74, .min_version = 2, .Signature = fn (f32) callconv(.c) u64 };
+    pub const float_to_ufix64: FloatFunctionInfo = .{ .offset = 0x78, .min_version = 2, .Signature = fn (f32, i32) callconv(.c) u64 };
+    pub const float_to_double: FloatFunctionInfo = .{ .offset = 0x7c, .min_version = 2, .Signature = fn (f32) callconv(.c) f64 };
 
     /// The sin result is in r0 (official return value) and the cos
     /// result is in r1. Is it possible to express the signature in
     /// terms of this?
-    pub const fsincos: FloatFunctionInfo = .{ .Signature = fn (f32) callconv(.c) f32, .offset = 0x48, .min_version = 3 };
+    pub const fsincos: FloatFunctionInfo = .{ .offset = 0x48, .min_version = 3, .Signature = fn (f32) callconv(.c) f32 };
 };
 
 // Only available from v2 onwards
@@ -128,42 +130,42 @@ pub const DoubleFunctionInfo = struct {
     min_version: ?u8 = null,
     Signature: type,
 
-    pub const dadd: DoubleFunctionInfo = .{ .Signature = fn (f64, f64) callconv(.c) f64, .offset = 0x00 };
-    pub const dsub: DoubleFunctionInfo = .{ .Signature = fn (f64, f64) callconv(.c) f64, .offset = 0x04 };
-    pub const dmul: DoubleFunctionInfo = .{ .Signature = fn (f64, f64) callconv(.c) f64, .offset = 0x08 };
-    pub const ddiv: DoubleFunctionInfo = .{ .Signature = fn (f64, f64) callconv(.c) f64, .offset = 0x0c };
+    pub const dadd: DoubleFunctionInfo = .{ .offset = 0x00, .Signature = fn (f64, f64) callconv(.c) f64 };
+    pub const dsub: DoubleFunctionInfo = .{ .offset = 0x04, .Signature = fn (f64, f64) callconv(.c) f64 };
+    pub const dmul: DoubleFunctionInfo = .{ .offset = 0x08, .Signature = fn (f64, f64) callconv(.c) f64 };
+    pub const ddiv: DoubleFunctionInfo = .{ .offset = 0x0c, .Signature = fn (f64, f64) callconv(.c) f64 };
 
-    pub const dsqrt: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x18 };
-    pub const double_to_int: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) i64, .offset = 0x1c };
-    pub const double_to_fix: DoubleFunctionInfo = .{ .Signature = fn (f64, i32) callconv(.c) i64, .offset = 0x20 };
-    pub const double_to_uint: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) u64, .offset = 0x24 };
-    pub const double_to_ufix: DoubleFunctionInfo = .{ .Signature = fn (f64, i32) callconv(.c) u64, .offset = 0x28 };
-    pub const int_to_double: DoubleFunctionInfo = .{ .Signature = fn (i32) callconv(.c) f64, .offset = 0x2c };
-    pub const fix_to_double: DoubleFunctionInfo = .{ .Signature = fn (i32, i32) callconv(.c) f64, .offset = 0x30 };
-    pub const uint_to_double: DoubleFunctionInfo = .{ .Signature = fn (u32) callconv(.c) f64, .offset = 0x34 };
-    pub const ufix_to_double: DoubleFunctionInfo = .{ .Signature = fn (u32, i32) callconv(.c) f64, .offset = 0x38 };
-    pub const dcos: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x3c };
-    pub const dsin: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x40 };
-    pub const dtan: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x44 };
-    pub const dexp: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x4c };
-    pub const dln: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x50 };
+    pub const dsqrt: DoubleFunctionInfo = .{ .offset = 0x18, .Signature = fn (f64) callconv(.c) f64 };
+    pub const double_to_int: DoubleFunctionInfo = .{ .offset = 0x1c, .Signature = fn (f64) callconv(.c) i64 };
+    pub const double_to_fix: DoubleFunctionInfo = .{ .offset = 0x20, .Signature = fn (f64, i32) callconv(.c) i64 };
+    pub const double_to_uint: DoubleFunctionInfo = .{ .offset = 0x24, .Signature = fn (f64) callconv(.c) u64 };
+    pub const double_to_ufix: DoubleFunctionInfo = .{ .offset = 0x28, .Signature = fn (f64, i32) callconv(.c) u64 };
+    pub const int_to_double: DoubleFunctionInfo = .{ .offset = 0x2c, .Signature = fn (i32) callconv(.c) f64 };
+    pub const fix_to_double: DoubleFunctionInfo = .{ .offset = 0x30, .Signature = fn (i32, i32) callconv(.c) f64 };
+    pub const uint_to_double: DoubleFunctionInfo = .{ .offset = 0x34, .Signature = fn (u32) callconv(.c) f64 };
+    pub const ufix_to_double: DoubleFunctionInfo = .{ .offset = 0x38, .Signature = fn (u32, i32) callconv(.c) f64 };
+    pub const dcos: DoubleFunctionInfo = .{ .offset = 0x3c, .Signature = fn (f64) callconv(.c) f64 };
+    pub const dsin: DoubleFunctionInfo = .{ .offset = 0x40, .Signature = fn (f64) callconv(.c) f64 };
+    pub const dtan: DoubleFunctionInfo = .{ .offset = 0x44, .Signature = fn (f64) callconv(.c) f64 };
+    pub const dexp: DoubleFunctionInfo = .{ .offset = 0x4c, .Signature = fn (f64) callconv(.c) f64 };
+    pub const dln: DoubleFunctionInfo = .{ .offset = 0x50, .Signature = fn (f64) callconv(.c) f64 };
 
-    pub const dcmp: DoubleFunctionInfo = .{ .Signature = fn (f64, f64) callconv(.c) i32, .offset = 0x54 };
-    pub const datan2: DoubleFunctionInfo = .{ .Signature = fn (f64, f64) callconv(.c) f64, .offset = 0x58 };
-    pub const int64_to_double: DoubleFunctionInfo = .{ .Signature = fn (i64) callconv(.c) f64, .offset = 0x5c };
-    pub const fix64_to_double: DoubleFunctionInfo = .{ .Signature = fn (i64, i32) callconv(.c) f64, .offset = 0x60 };
-    pub const uint64_to_double: DoubleFunctionInfo = .{ .Signature = fn (u64) callconv(.c) f64, .offset = 0x64 };
-    pub const ufix64_to_double: DoubleFunctionInfo = .{ .Signature = fn (u64, i32) callconv(.c) f64, .offset = 0x68 };
-    pub const double_to_int64: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) i64, .offset = 0x6c };
-    pub const double_to_fix64: DoubleFunctionInfo = .{ .Signature = fn (f64, i32) callconv(.c) i64, .offset = 0x70 };
-    pub const double_to_uint64: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) u64, .offset = 0x74 };
-    pub const double_to_ufix64: DoubleFunctionInfo = .{ .Signature = fn (f64, i32) callconv(.c) u64, .offset = 0x78 };
-    pub const double_to_float: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f32, .offset = 0x7c };
+    pub const dcmp: DoubleFunctionInfo = .{ .offset = 0x54, .Signature = fn (f64, f64) callconv(.c) i32 };
+    pub const datan2: DoubleFunctionInfo = .{ .offset = 0x58, .Signature = fn (f64, f64) callconv(.c) f64 };
+    pub const int64_to_double: DoubleFunctionInfo = .{ .offset = 0x5c, .Signature = fn (i64) callconv(.c) f64 };
+    pub const fix64_to_double: DoubleFunctionInfo = .{ .offset = 0x60, .Signature = fn (i64, i32) callconv(.c) f64 };
+    pub const uint64_to_double: DoubleFunctionInfo = .{ .offset = 0x64, .Signature = fn (u64) callconv(.c) f64 };
+    pub const ufix64_to_double: DoubleFunctionInfo = .{ .offset = 0x68, .Signature = fn (u64, i32) callconv(.c) f64 };
+    pub const double_to_int64: DoubleFunctionInfo = .{ .offset = 0x6c, .Signature = fn (f64) callconv(.c) i64 };
+    pub const double_to_fix64: DoubleFunctionInfo = .{ .offset = 0x70, .Signature = fn (f64, i32) callconv(.c) i64 };
+    pub const double_to_uint64: DoubleFunctionInfo = .{ .offset = 0x74, .Signature = fn (f64) callconv(.c) u64 };
+    pub const double_to_ufix64: DoubleFunctionInfo = .{ .offset = 0x78, .Signature = fn (f64, i32) callconv(.c) u64 };
+    pub const double_to_float: DoubleFunctionInfo = .{ .offset = 0x7c, .Signature = fn (f64) callconv(.c) f32 };
 
     /// The sin result is in r0/r1 (official return value) and the cos
     /// result is in r2/r3. Is it possible to express the signature in
     /// terms of this?
-    pub const sincos: DoubleFunctionInfo = .{ .Signature = fn (f64) callconv(.c) f64, .offset = 0x48, .min_version = 3 };
+    pub const sincos: DoubleFunctionInfo = .{ .offset = 0x48, .min_version = 3, .Signature = fn (f64) callconv(.c) f64 };
 };
 
 const intrinsics = struct {
