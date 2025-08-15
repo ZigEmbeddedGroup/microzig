@@ -175,14 +175,15 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 return 0;
             }
             const len = self.tx.read(&self.epin_buf);
-            self.device.?.endpoint_transfer(.in(self.ep_in), self.epin_buf[0..len]);
+            const tx_len = self.device.?.endpoint_tx(self.ep_in, &.{self.epin_buf[0..len]});
+            if (tx_len != len) @panic("bruh");
             return len;
         }
 
         fn prep_out_transaction(self: *@This()) void {
             if (self.rx.writableLength() >= usb.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
-                self.device.?.endpoint_transfer(.out(self.ep_out), &.{});
+                self.device.?.endpoint_rx(self.ep_out, usb.max_packet_size);
             }
         }
 
@@ -294,7 +295,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                         // If there is no data left, a empty packet should be sent if
                         // data len is multiple of EP Packet size and not zero
                         if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
-                            self.device.?.endpoint_transfer(.in(self.ep_in), &.{});
+                            _ = self.device.?.endpoint_tx(self.ep_in, &.{&.{}});
                         }
                     }
                 },

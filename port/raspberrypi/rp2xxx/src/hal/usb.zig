@@ -4,6 +4,7 @@
 //! Currently progressing towards adopting the TinyUSB like API
 
 const std = @import("std");
+const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
@@ -228,24 +229,29 @@ pub fn F(comptime config: UsbConfig) type {
         /// Configures a given endpoint to send data (device-to-host, IN) when the host
         /// next asks for it.
         ///
-        /// The contents of `buffer` will be _copied_ into USB SRAM, so you can
-        /// reuse `buffer` immediately after this returns. No need to wait for the
-        /// packet to be sent.
+        /// The contents of each of the slices in `data` will be _copied_ into USB SRAM,
+        /// so you can reuse them immediately after this returns.
+        /// No need to wait for the packet to be sent.
         pub fn usb_start_tx(
             ep_in: Endpoint.Num,
-            buffer: []const u8,
-        ) void {
-            // It is technically possible to support longer buffers but this demo
-            // doesn't bother.
-            // TODO: assert!(buffer.len() <= 64);
-
+            data: []const []const u8,
+        ) usize {
             const ep_hard = hardware_endpoint(.in(ep_in));
 
-            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-            std.mem.copyForwards(u8, ep_hard.data_buffer[0..buffer.len], buffer);
-
-            // Configure the IN:
-            const np: u1 = if (ep_hard.next_pid_1) 1 else 0;
+            // It is technically possible to support longer buffers but this demo doesn't bother.
+            const dst_buf_len = 64;
+            var n: usize = 0;
+            for (data) |buffer| {
+                const space_left = dst_buf_len - n;
+                if (space_left >= buffer.len) {
+                    // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
+                    std.mem.copyForwards(u8, ep_hard.data_buffer[n .. n + buffer.len], buffer);
+                    n += buffer.len;
+                } else {
+                    std.mem.copyForwards(u8, ep_hard.data_buffer[n..], buffer[0..space_left]);
+                    n = dst_buf_len;
+                }
+            }
 
             // The AVAILABLE bit in the buffer control register should be set
             // separately to the rest of the data in the buffer control register,
@@ -254,9 +260,9 @@ pub fn F(comptime config: UsbConfig) type {
 
             // Write the buffer information to the buffer control register
             ep_hard.buffer_control.?.modify(.{
-                .PID_0 = np, // DATA0/1, depending
+                .PID_0 = @as(u1, @intFromBool(ep_hard.next_pid_1)), // DATA0/1, depending
                 .FULL_0 = 1, // We have put data in
-                .LENGTH_0 = @as(u10, @intCast(buffer.len)), // There are this many bytes
+                .LENGTH_0 = @as(u10, @intCast(n)), // There are this many bytes
             });
 
             // Nop for some clock cycles
@@ -273,6 +279,8 @@ pub fn F(comptime config: UsbConfig) type {
             });
 
             ep_hard.next_pid_1 = !ep_hard.next_pid_1;
+
+            return n;
         }
 
         pub fn usb_start_rx(
@@ -386,7 +394,7 @@ pub fn F(comptime config: UsbConfig) type {
         }
 
         fn endpoint_init(ep: Endpoint, max_packet_size: u11, transfer_type: types.TransferType) void {
-            std.debug.assert(ep.num.to_int() <= cfg_max_endpoints_count);
+            assert(ep.num.to_int() <= cfg_max_endpoints_count);
 
             var ep_hard = hardware_endpoint(ep);
             ep_hard.ep = ep;

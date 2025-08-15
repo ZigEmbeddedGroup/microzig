@@ -461,7 +461,8 @@ pub const UsbDevice = struct {
     fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
     fn_control_ack: *const fn (setup: *const SetupPacket) void,
     fn_endpoint_open: *const fn (ep_desc: []const u8) void,
-    fn_endpoint_transfer: *const fn (ep_addr: Endpoint, data: []const u8) void,
+    fn_endpoint_tx: *const fn (ep_in: Endpoint.Num, data: []const []const u8) usize,
+    fn_endpoint_rx: *const fn (ep_out: Endpoint.Num, len: usize) void,
 
     pub fn ready(self: *@This()) bool {
         return self.fn_ready();
@@ -479,8 +480,12 @@ pub const UsbDevice = struct {
         return self.fn_endpoint_open(ep_desc);
     }
 
-    pub fn endpoint_transfer(self: *@This(), ep: Endpoint, data: []const u8) void {
-        return self.fn_endpoint_transfer(ep, data);
+    pub fn endpoint_tx(self: *@This(), ep_in: Endpoint.Num, data: []const []const u8) usize {
+        return self.fn_endpoint_tx(ep_in, data);
+    }
+
+    pub fn endpoint_rx(self: *@This(), ep_out: Endpoint.Num, len: usize) void {
+        return self.fn_endpoint_rx(ep_out, len);
     }
 };
 

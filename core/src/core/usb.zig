@@ -92,12 +92,12 @@ pub fn Usb(comptime f: anytype) type {
                 const data_chunk = S.buffer_reader.try_peek(64);
 
                 if (data_chunk.len > 0) {
-                    f.usb_start_tx(.ep0, data_chunk);
+                    _ = f.usb_start_tx(.ep0, &.{data_chunk});
                 }
             }
 
             fn send_cmd_ack() void {
-                f.usb_start_tx(.ep0, &.{});
+                _ = f.usb_start_tx(.ep0, &.{});
             }
         };
 
@@ -120,7 +120,8 @@ pub fn Usb(comptime f: anytype) type {
                 .fn_control_transfer = device_control_transfer,
                 .fn_control_ack = device_control_ack,
                 .fn_endpoint_open = device_endpoint_open,
-                .fn_endpoint_transfer = device_endpoint_transfer,
+                .fn_endpoint_tx = f.usb_start_tx,
+                .fn_endpoint_rx = f.usb_start_rx,
             };
         }
 
@@ -143,14 +144,6 @@ pub fn Usb(comptime f: anytype) type {
             const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
             f.endpoint_open(ep, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk);
-        }
-
-        fn device_endpoint_transfer(ep: Endpoint, data: []const u8) void {
-            if (ep.dir == .In) {
-                f.usb_start_tx(ep.num, data);
-            } else {
-                f.usb_start_rx(ep.num, max_packet_size);
-            }
         }
 
         fn get_driver(drv_idx: u8) ?*types.UsbClassDriver {
@@ -439,7 +432,7 @@ pub fn Usb(comptime f: anytype) type {
                             _ = buffer_reader.try_advance(epb.buffer.len);
                             const next_data_chunk = buffer_reader.try_peek(64);
                             if (next_data_chunk.len > 0) {
-                                f.usb_start_tx(.ep0, next_data_chunk);
+                                _ = f.usb_start_tx(.ep0, &.{next_data_chunk});
                             } else {
                                 f.usb_start_rx(.ep0, 0);
 
