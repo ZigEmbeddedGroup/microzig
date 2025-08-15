@@ -19,14 +19,6 @@ pub const Error = error{
 // feature).
 pub const InterfaceError = Error || error{Unsupported};
 
-pub const AddressError = error{
-    GeneralCall,
-    CBUSAddress,
-    ReservedFormat,
-    ReservedFuture,
-    HighSpeedMaster,
-    TenBitSlave,
-};
 ///
 /// 7-bit I²C address, without the read/write bit.
 ///
@@ -35,25 +27,34 @@ pub const Address = enum(u7) {
     /// The general call addresses all devices on the bus using the I²C address 0.
     pub const general_call: Address = @enumFromInt(0x00);
 
+    pub const Error = error{
+        GeneralCall,
+        CBUSAddress,
+        ReservedFormat,
+        ReservedFuture,
+        HighSpeedMaster,
+        TenBitSlave,
+    };
+
     ///
-    /// Returns an AddressError if the Address is a reserved I²C address.
+    /// Returns an Address.Error if the Address is a reserved I²C address.
     /// The error gives detail on why the address is reserved, allowing the client to determine
     /// whether it should allow it.
     ///
     /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
     ///
     /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) AddressError!void {
+    pub fn is_reserved(addr: Address) Address.Error!void {
         const value: u7 = @intFromEnum(addr);
 
         switch (value) {
-            0b0000000 => return AddressError.GeneralCall,
-            0b0000001 => return AddressError.CBUSAddress,
-            0b0000010 => return AddressError.ReservedFormat,
-            0b0000011 => return AddressError.ReservedFuture,
-            0b0001000...0b0001111 => return AddressError.HighSpeedMaster,
-            0b1111000...0b1111011 => return AddressError.TenBitSlave,
-            0b1111100...0b1111111 => return AddressError.ReservedFuture,
+            0b0000000 => return Address.Error.GeneralCall,
+            0b0000001 => return Address.Error.CBUSAddress,
+            0b0000010 => return Address.Error.ReservedFormat,
+            0b0000011 => return Address.Error.ReservedFuture,
+            0b0001000...0b0001111 => return Address.Error.HighSpeedMaster,
+            0b1111000...0b1111011 => return Address.Error.TenBitSlave,
+            0b1111100...0b1111111 => return Address.Error.ReservedFuture,
             else => return,
         }
     }
@@ -283,21 +284,21 @@ pub const Test_Device = struct {
 test "Address.is_reserved returns correct error types" {
     const TestCase = struct {
         address: u7,
-        expected_error: ?AddressError,
+        expected_error: ?Address.Error,
         description: []const u8,
     };
 
     const test_cases = [_]TestCase{
-        .{ .address = 0x00, .expected_error = AddressError.GeneralCall, .description = "General Call" },
-        .{ .address = 0x01, .expected_error = AddressError.CBUSAddress, .description = "CBUS Address" },
-        .{ .address = 0x02, .expected_error = AddressError.ReservedFormat, .description = "Reserved Format" },
-        .{ .address = 0x03, .expected_error = AddressError.ReservedFuture, .description = "Reserved for future purposes" },
-        .{ .address = 0x08, .expected_error = AddressError.HighSpeedMaster, .description = "High-Speed Master Code" },
-        .{ .address = 0x0F, .expected_error = AddressError.HighSpeedMaster, .description = "High-Speed Master Code" },
-        .{ .address = 0x78, .expected_error = AddressError.TenBitSlave, .description = "10-bit Slave Addressing" },
-        .{ .address = 0x7B, .expected_error = AddressError.TenBitSlave, .description = "10-bit Slave Addressing" },
-        .{ .address = 0x7C, .expected_error = AddressError.ReservedFuture, .description = "Reserved for future purposes" },
-        .{ .address = 0x7F, .expected_error = AddressError.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x00, .expected_error = Address.Error.GeneralCall, .description = "General Call" },
+        .{ .address = 0x01, .expected_error = Address.Error.CBUSAddress, .description = "CBUS Address" },
+        .{ .address = 0x02, .expected_error = Address.Error.ReservedFormat, .description = "Reserved Format" },
+        .{ .address = 0x03, .expected_error = Address.Error.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x08, .expected_error = Address.Error.HighSpeedMaster, .description = "High-Speed Master Code" },
+        .{ .address = 0x0F, .expected_error = Address.Error.HighSpeedMaster, .description = "High-Speed Master Code" },
+        .{ .address = 0x78, .expected_error = Address.Error.TenBitSlave, .description = "10-bit Slave Addressing" },
+        .{ .address = 0x7B, .expected_error = Address.Error.TenBitSlave, .description = "10-bit Slave Addressing" },
+        .{ .address = 0x7C, .expected_error = Address.Error.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x7F, .expected_error = Address.Error.ReservedFuture, .description = "Reserved for future purposes" },
         .{ .address = 0x10, .expected_error = null, .description = "Valid address" },
         .{ .address = 0x50, .expected_error = null, .description = "Valid address" },
         .{ .address = 0x77, .expected_error = null, .description = "Valid address" },
