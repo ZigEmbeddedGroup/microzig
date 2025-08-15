@@ -97,10 +97,10 @@ export fn _range_erase(offset: u32, count: u32) linksection(".ram_text") void {
 /// must be a multiple of 256!
 pub inline fn range_program(offset: u32, data: []const u8) void {
     // Do not inline `_range_program`!
-    @call(.never_inline, _range_program, .{ offset, data });
+    @call(.never_inline, _range_program, .{ offset, data.ptr, data.len });
 }
 
-fn _range_program(offset: u32, data: []const u8) linksection(".ram_text") void {
+export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection(".ram_text") void {
     // TODO: add sanity checks, e.g., offset + count < flash size
 
     asm volatile ("" ::: "memory"); // memory barrier
@@ -109,7 +109,7 @@ fn _range_program(offset: u32, data: []const u8) linksection(".ram_text") void {
 
     rom.connect_internal_flash();
     rom.flash_exit_xip();
-    rom.flash_range_program(offset, data);
+    rom.flash_range_program(offset, data[0..len]);
     rom.flash_flush_cache();
 
     boot2.flash_enable_xip();

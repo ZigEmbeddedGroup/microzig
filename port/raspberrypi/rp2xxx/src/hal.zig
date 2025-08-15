@@ -42,6 +42,7 @@ comptime {
     // functions that are used by the atomic builtins. Other chips have hardware
     // atomics, so we don't need to export those functions for them.
     if (!builtin.is_test and compatibility.chip == .RP2040) {
+        // export intrinsics (incidentally only needed for RP2040)
         _ = @import("hal/atomic.zig");
         _ = rom;
     }
