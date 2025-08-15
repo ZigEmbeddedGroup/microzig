@@ -78,9 +78,9 @@ pub fn main() !void {
     led.put(1);
 
     // First we initialize the USB clock
-    usb_dev.init_clk();
+    usb.init_clk(.pll_usb);
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device(&DEVICE_CONFIGURATION) catch unreachable;
+    usb_dev.init_device(&DEVICE_CONFIGURATION);
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {

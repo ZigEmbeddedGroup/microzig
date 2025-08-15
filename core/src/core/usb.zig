@@ -51,8 +51,6 @@ pub fn Usb(comptime f: anytype) type {
     return struct {
         /// The usb configuration set
         var usb_config: ?*DeviceConfiguration = null;
-        /// The clock has been initialized [Y/n]
-        var clk_init: bool = false;
         var itf_to_drv: [f.cfg_max_interfaces_count]u8 = @splat(0);
         var ep_to_drv: [f.cfg_max_endpoints_count][2]u8 = @splat(@splat(0));
         pub const max_packet_size = if (f.high_speed) 512 else 64;
@@ -104,18 +102,10 @@ pub fn Usb(comptime f: anytype) type {
             }
         };
 
-        /// Initialize the USB clock
-        pub fn init_clk() void {
-            f.usb_init_clk();
-            clk_init = true;
-        }
-
         /// Initialize the usb device using the given configuration
         ///
-        /// This function will return an error if the clock hasn't been initialized.
-        pub fn init_device(device_config: *DeviceConfiguration) !void {
-            if (!clk_init) return error.UninitializedClock;
-
+        /// You have to ensure that the device is getting an appropiate clock signal.
+        pub fn init_device(device_config: *DeviceConfiguration) void {
             f.usb_init_device(device_config);
             usb_config = device_config;
 

@@ -119,6 +119,19 @@ const rp2xxx_endpoints = struct {
     }
 };
 
+pub const ClkSrc = enum { pll_usb, pll_sys, xosc, gpin0, gpin1 };
+
+/// You have to guarantee that the used source is 48 MHz.
+pub fn init_clk(clk_src: ClkSrc) void {
+    switch (clk_src) {
+        .pll_usb => peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .clksrc_pll_usb }),
+        .pll_sys => peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .clksrc_pll_sys }),
+        .xosc => peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .xosc_clksrc }),
+        .gpin0 => peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .clksrc_gpin0 }),
+        .gpin1 => peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .clksrc_gpin1 }),
+    }
+}
+
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Code
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -139,36 +152,6 @@ pub fn F(comptime config: UsbConfig) type {
 
         var endpoints: [config.max_endpoints_count][2]HardwareEndpoint = undefined;
         var data_buffer: []u8 = rp2xxx_buffers.data_buffer;
-
-        /// Initialize the USB clock to 48 MHz
-        ///
-        /// This requres that the system clock has been set up before hand
-        /// using the 12 MHz crystal.
-        pub fn usb_init_clk() void {
-            // Bring PLL_USB up to 48MHz. PLL_USB is clocked from refclk, which we've
-            // already moved over to the 12MHz XOSC. We just need to make it x4 that
-            // clock.
-            //
-            // Configure it:
-            //
-            // RFDIV = 1
-            // FBDIV = 100 => FOUTVC0 = 1200 MHz
-            peripherals.PLL_USB.CS.modify(.{ .REFDIV = 1 });
-            peripherals.PLL_USB.FBDIV_INT.modify(.{ .FBDIV_INT = 100 });
-            peripherals.PLL_USB.PWR.modify(.{ .PD = 0, .VCOPD = 0 });
-            // Wait for lock
-            while (peripherals.PLL_USB.CS.read().LOCK == 0) {}
-            // Set up post dividers to enable output
-            //
-            // POSTDIV1 = POSTDIV2 = 5
-            // PLL_USB FOUT = 1200 MHz / 25 = 48 MHz
-            peripherals.PLL_USB.PRIM.modify(.{ .POSTDIV1 = 5, .POSTDIV2 = 5 });
-            peripherals.PLL_USB.PWR.modify(.{ .POSTDIVPD = 0 });
-            // Switch usbclk to be derived from PLLUSB
-            peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .clksrc_pll_usb });
-
-            // We now have the stable 48MHz reference clock required for USB:
-        }
 
         pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
             if (chip == .RP2350) {
