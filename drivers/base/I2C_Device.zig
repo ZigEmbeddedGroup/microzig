@@ -19,6 +19,14 @@ pub const Error = error{
 // feature).
 pub const InterfaceError = Error || error{Unsupported};
 
+pub const AddressError = error{
+    GeneralCall,
+    CBUSAddress,
+    ReservedFormat,
+    ReservedFuture,
+    HighSpeedMaster,
+    TenBitSlave,
+};
 ///
 /// 7-bit I²C address, without the read/write bit.
 ///
@@ -28,14 +36,26 @@ pub const Address = enum(u7) {
     pub const general_call: Address = @enumFromInt(0x00);
 
     ///
-    /// Returns `true` if the Address is a reserved I²C address.
+    /// Returns an AddressError if the Address is a reserved I²C address.
+    /// The error gives detail on why the address is reserved, allowing the client to determine
+    /// whether it should allow it.
     ///
     /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
     ///
     /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
+    pub fn is_reserved(addr: Address) AddressError!void {
         const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
+
+        switch (value) {
+            0b0000000 => return AddressError.GeneralCall,
+            0b0000001 => return AddressError.CBUSAddress,
+            0b0000010 => return AddressError.ReservedFormat,
+            0b0000011 => return AddressError.ReservedFuture,
+            0b0001000...0b0001111 => return AddressError.HighSpeedMaster,
+            0b1111000...0b1111011 => return AddressError.TenBitSlave,
+            0b1111100...0b1111111 => return AddressError.ReservedFuture,
+            else => return,
+        }
     }
 
     pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -256,6 +276,51 @@ pub const Test_Device = struct {
         .writev_then_readv_fn = Test_Device.writev_then_readv,
     };
 };
+
+test "Address.is_reserved returns correct error types" {
+    const TestCase = struct {
+        address: u7,
+        expected_error: ?AddressError,
+        description: []const u8,
+    };
+
+    const test_cases = [_]TestCase{
+        .{ .address = 0x00, .expected_error = AddressError.GeneralCall, .description = "General Call" },
+        .{ .address = 0x01, .expected_error = AddressError.CBUSAddress, .description = "CBUS Address" },
+        .{ .address = 0x02, .expected_error = AddressError.ReservedFormat, .description = "Reserved Format" },
+        .{ .address = 0x03, .expected_error = AddressError.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x08, .expected_error = AddressError.HighSpeedMaster, .description = "High-Speed Master Code" },
+        .{ .address = 0x0F, .expected_error = AddressError.HighSpeedMaster, .description = "High-Speed Master Code" },
+        .{ .address = 0x78, .expected_error = AddressError.TenBitSlave, .description = "10-bit Slave Addressing" },
+        .{ .address = 0x7B, .expected_error = AddressError.TenBitSlave, .description = "10-bit Slave Addressing" },
+        .{ .address = 0x7C, .expected_error = AddressError.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x7F, .expected_error = AddressError.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x10, .expected_error = null, .description = "Valid address" },
+        .{ .address = 0x50, .expected_error = null, .description = "Valid address" },
+        .{ .address = 0x77, .expected_error = null, .description = "Valid address" },
+    };
+
+    for (test_cases) |test_case| {
+        const addr: Address = @enumFromInt(test_case.address);
+        if (test_case.expected_error) |expected_error| {
+            std.testing.expectError(expected_error, addr.is_reserved()) catch |err| {
+                std.debug.print(
+                    "Failed test case: {s} (address 0x{X:0>2})\n",
+                    .{ test_case.description, test_case.address },
+                );
+                return err;
+            };
+        } else {
+            addr.is_reserved() catch |err| {
+                std.debug.print(
+                    "Expected valid address but got error for: {s} (address 0x{X:0>2})\n",
+                    .{ test_case.description, test_case.address },
+                );
+                return err;
+            };
+        }
+    }
+}
 
 test Test_Device {
     var td = Test_Device.init(&.{

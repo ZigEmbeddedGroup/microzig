@@ -232,4 +232,6 @@ test {
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
     _ = base.Digital_IO;
+    _ = base.Clock_Device;
+    _ = base.I2C_Device;
 }
