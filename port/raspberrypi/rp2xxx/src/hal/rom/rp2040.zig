@@ -332,68 +332,6 @@ const intrinsics = struct {
 
     // TODO: soft float and double
 
-    // fn sqrtf(x: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.fsqrt)(x);
-    // }
-    //
-    // fn sqrt(x: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.dsqrt)(x);
-    // }
-    //
-    // fn logf(x: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.fln)(x);
-    // }
-    //
-    // fn log(x: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.dln)(x);
-    // }
-    //
-    // fn expf(x: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.fexp)(x);
-    // }
-    //
-    // fn exp(x: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.dexp)(x);
-    // }
-    //
-    // // slower than default
-    // fn sinf(x: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.fsin)(x);
-    // }
-    //
-    // // slower than default
-    // fn sin(x: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.dsin)(x);
-    // }
-    //
-    // // slower than default
-    // fn cosf(x: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.fcos)(x);
-    // }
-    //
-    // // slower than default
-    // fn cos(x: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.dcos)(x);
-    // }
-    //
-    // // slower than default
-    // fn tanf(x: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.ftan)(x);
-    // }
-    //
-    // // slower than default
-    // fn tan(x: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.dtan)(x);
-    // }
-    //
-    // fn atan2f(x: f32, y: f32) callconv(.c) f32 {
-    //     return chip_specific.get_float_fn(.fatan2)(x, y);
-    // }
-    //
-    // fn atan2(x: f64, y: f64) callconv(.c) f64 {
-    //     return chip_specific.get_double_fn(.datan2)(x, y);
-    // }
-
     comptime {
         for (&.{ "__popcountsi2", "__popcountdi2" }) |name| {
             @export(&__popcountsi2, .{ .name = name, .linkage = .strong });
@@ -425,24 +363,6 @@ const intrinsics = struct {
         for (&.{ "__aeabi_memcpy4", "__aeabi_memcpy8" }) |name| {
             @export(&__aeabi_memcpy4, .{ .name = name, .linkage = .strong });
         }
-
-        // @export(&sqrtf, .{ .name = "sqrtf", .linkage = .strong });
-        // @export(&logf, .{ .name = "logf", .linkage = .strong });
-        // @export(&expf, .{ .name = "expf", .linkage = .strong });
-        // @export(&sinf, .{ .name = "sinf", .linkage = .strong });
-        // @export(&cosf, .{ .name = "cosf", .linkage = .strong });
-        // @export(&tanf, .{ .name = "tanf", .linkage = .strong });
-        // @export(&atan2f, .{ .name = "atan2f", .linkage = .strong });
-        //
-        // if (options.bootrom_v2_math_intrinsics) {
-        //     @export(&sqrt, .{ .name = "sqrt", .linkage = .strong });
-        //     @export(&log, .{ .name = "log", .linkage = .strong });
-        //     @export(&exp, .{ .name = "exp", .linkage = .strong });
-        //     @export(&sin, .{ .name = "sin", .linkage = .strong });
-        //     @export(&cos, .{ .name = "cos", .linkage = .strong });
-        //     @export(&tan, .{ .name = "tan", .linkage = .strong });
-        //     @export(&atan2, .{ .name = "atan2", .linkage = .strong });
-        // }
     }
 };
 

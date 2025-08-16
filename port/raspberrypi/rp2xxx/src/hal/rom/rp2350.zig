@@ -40,6 +40,9 @@ const masks = struct {
 };
 
 pub const Data = enum(u16) {
+    flash_devinfo16_ptr = cod(.{ 'F', 'D' }),
+    partition_table_ptr = cod(.{ 'P', 'T' }),
+    xip_setup_func_ptr = cod(.{ 'X', 'F' }),
     git_revision = cod(.{ 'G', 'R' }),
     _,
 };
@@ -57,7 +60,28 @@ pub const Function = enum(u16) {
     flash_op = cod(.{ 'F', 'O' }),
     flash_runtime_to_storage_addr = cod(.{ 'F', 'A' }),
 
+    get_partition_table_info = cod(.{ 'G', 'P' }),
+    get_sys_info = cod(.{ 'G', 'S' }),
+
+    get_b_partition = cod(.{ 'G', 'B' }),
+    get_uf2_target_partition = cod(.{ 'G', 'U' }),
+    pick_ab_partition = cod(.{ 'A', 'B' }),
+    load_partition_table = cod(.{ 'L', 'P' }),
+
+    set_bootrom_stack = cod(.{ 'S', 'S' }),
+    bootrom_state_reset = cod(.{ 'S', 'R' }),
+
+    chain_image = cod(.{ 'C', 'I' }),
+    explicit_buy = cod(.{ 'E', 'B' }),
+
+    set_ns_api_permission = cod(.{ 'S', 'P' }),
+    set_rom_callback = cod(.{ 'R', 'C' }),
+    validate_ns_buffer = cod(.{ 'V', 'B' }),
+
     reboot = cod(.{ 'R', 'B' }),
+    otp_access = cod(.{ 'O', 'A' }),
+
+    secure_call = cod(.{ 'S', 'C' }),
 
     _,
 };
@@ -79,7 +103,36 @@ pub const signatures = struct {
     pub const flash_op = fn (u32, u32, u32, u32) callconv(.c) i32;
     pub const flash_runtime_to_storage_addr = fn (u32) callconv(.c) i32;
 
+    pub const get_partition_table_info = fn (out_buffer: [*]u32, out_buffer_word_size: u32, flags_and_partition: u32) callconv(.c) i32;
+    pub const get_sys_info = fn (out_buffer: [*]u32, out_buffer_word_size: u32, flags: u32) callconv(.c) i32;
+
+    pub const get_b_partition = fn (partition_a: u32) callconv(.c) i32;
+    pub const get_uf2_target_partition = fn (
+        workarea_base: [*]u8,
+        workarea_size: u32,
+        family_id: u32,
+        partition_out: *extern struct {
+            permissions_and_location: u32,
+            permissions_and_flags: u32,
+        },
+    ) callconv(.c) i32;
+    pub const pick_ab_partition = fn (workarea_base: [*]u8, workarea_size: u32, partition_a_num: u32) callconv(.c) i32;
+    pub const load_partition_table = fn (workarea_base: [*]u8, workarea_size: u32, force_reload: bool) callconv(.c) i32;
+
+    pub const set_bootrom_stack = fn (base_size: [2]u32) callconv(.c) i32;
+    pub const bootrom_state_reset = fn (flags: u32) callconv(.c) void;
+
+    pub const chann_image = fn (workarea_base: [*]u8, workarea_size: u32, region_base: i32, region_size: u32) callconv(.c) i32;
+    pub const explicit_buy = fn (buffer: [*]u8, buffer_size: u32) callconv(.c) i32;
+
+    pub const set_ns_api_permission = fn (ns_api_num: u32, allowed: bool) callconv(.c) i32;
+    pub const set_rom_callback = fn (callback_number: u32, rom_callback: ?*const anyopaque) callconv(.c) i32;
+    pub const validate_ns_buffer = fn (addr: ?*const anyopaque, size: u32, write: u32, ok: *u32) callconv(.c) i32;
+
     pub const reboot = fn (flags: u32, delay_ms: u32, p0: u32, p1: u32) callconv(.c) i32;
+    pub const otp_access = fn (buf: [*]u8, buf_len: u32, row_and_flags: u32) callconv(.c) i32;
+
+    pub const secure_call = fn (...) callconv(.c) i32;
 };
 
 pub fn check_result(ret: i32) Error!u32 {
