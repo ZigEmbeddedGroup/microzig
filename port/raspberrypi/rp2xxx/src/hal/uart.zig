@@ -62,7 +62,6 @@ pub const ReceiveError = error{
     FramingError,
 };
 
-pub const ReceiveNonBlockingError = ReceiveError || error{WouldBlock};
 pub const ReceiveBlockingError = ReceiveError || error{Timeout};
 
 pub const ErrorStates = packed struct(u4) {
@@ -406,10 +405,9 @@ pub const UART = enum(u1) {
         return byte[0];
     }
 
-    /// Read a single byte from the RX line if available otherwise returns
-    /// `error.WouldBlock`.
-    pub fn read_word(uart: UART) ReceiveNonBlockingError!u8 {
-        if (!uart.is_readable()) return ReceiveNonBlockingError.WouldBlock;
+    /// Read a single byte from the RX line if available otherwise returns `null`.
+    pub fn read_word(uart: UART) ReceiveError!?u8 {
+        if (!uart.is_readable()) return null;
         return try uart.read_rx_fifo_with_error_check();
     }
 
