@@ -173,7 +173,7 @@ pub const I2C_Device = struct {
             addr.is_reserved() catch return I2CError.IllegalAddress
         else if (allow_reserved == .allow_general)
             addr.is_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
-                return drivers.I2C_Device.Error.IllegalAddress;
+                return I2CError.IllegalAddress;
         dev.address = addr;
     }
 
