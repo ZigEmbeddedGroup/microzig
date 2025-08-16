@@ -77,7 +77,7 @@ ptr: *anyopaque,
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
 
-pub fn set_address(dev: I2C_Device, addr: Address, allow_reserved: AllowReserved) InterfaceError!void {
+pub fn set_address(dev: I2C_Device, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
     const set_address_fn = dev.vtable.set_address_fn orelse return InterfaceError.Unsupported;
     return set_address_fn(dev.ptr, addr, allow_reserved);
 }
@@ -121,10 +121,10 @@ pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
     return readv_fn(dev.ptr, datagrams);
 }
 
-const AllowReserved = enum { AllowReserved, DontAllowReserved };
+pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
 
 pub const VTable = struct {
-    set_address_fn: ?*const fn (*anyopaque, Address, AllowReserved) InterfaceError!void,
+    set_address_fn: ?*const fn (*anyopaque, Address, Allow_Reserved) InterfaceError!void,
     writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) InterfaceError!void,
     readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) InterfaceError!usize,
     writev_then_readv_fn: ?*const fn (
@@ -191,10 +191,13 @@ pub const Test_Device = struct {
         };
     }
 
-    fn set_address(ctx: *anyopaque, addr: Address, allow_reserved: AllowReserved) InterfaceError!void {
+    fn set_address(ctx: *anyopaque, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-        if (allow_reserved == .DontAllowReserved)
-            addr.is_reserved() catch return Error.IllegalAddress;
+        if (allow_reserved == .dont_allow_reserved)
+            addr.is_reserved() catch return Error.IllegalAddress
+        else if (allow_reserved == .allow_general)
+            addr.is_reserved() catch |err| if (err != Address.Error.GeneralCall)
+                return Error.IllegalAddress;
         td.addr = addr;
     }
 
