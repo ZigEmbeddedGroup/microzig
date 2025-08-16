@@ -18,6 +18,7 @@ pub const ConfigError = error{
 };
 
 pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
 pub const Error = drivers.I2C_Device.Error || error{
     FifoExceeded,
     ArbitrationLost,
@@ -668,7 +669,7 @@ pub const I2C = enum(u1) {
         deadline: mdf.time.Deadline,
     ) Error!void {
         addr.is_reserved() catch |err| switch (err) {
-            .GeneralCall => void,
+            AddressError.GeneralCall => {},
             else => return Error.TargetAddressReserved,
         };
 
