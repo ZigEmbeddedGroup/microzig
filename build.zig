@@ -27,6 +27,7 @@ const port_list: []const struct {
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
+    .{ .name = "mcx", .dep_name = "port/nxp/mcx" },
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
