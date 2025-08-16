@@ -29,6 +29,7 @@
         .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
         .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
         .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
+        .@"port/nxp/mcx" = .{ .path = "port/nxp/mcx", .lazy = true },
         .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
