@@ -27,15 +27,36 @@ pub const Address = enum(u7) {
     /// The general call addresses all devices on the bus using the I²C address 0.
     pub const general_call: Address = @enumFromInt(0x00);
 
+    pub const Error = error{
+        GeneralCall,
+        CBUSAddress,
+        ReservedFormat,
+        ReservedFuture,
+        HighSpeedMaster,
+        TenBitSlave,
+    };
+
     ///
-    /// Returns `true` if the Address is a reserved I²C address.
+    /// Returns an Address.Error if the Address is a reserved I²C address.
+    /// The error gives detail on why the address is reserved, allowing the client to determine
+    /// whether it should allow it.
     ///
     /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
     ///
     /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
+    pub fn is_reserved(addr: Address) Address.Error!void {
         const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
+
+        switch (value) {
+            0b0000000 => return Address.Error.GeneralCall,
+            0b0000001 => return Address.Error.CBUSAddress,
+            0b0000010 => return Address.Error.ReservedFormat,
+            0b0000011 => return Address.Error.ReservedFuture,
+            0b0001000...0b0001111 => return Address.Error.HighSpeedMaster,
+            0b1111000...0b1111011 => return Address.Error.TenBitSlave,
+            0b1111100...0b1111111 => return Address.Error.ReservedFuture,
+            else => return,
+        }
     }
 
     pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -56,9 +77,9 @@ ptr: *anyopaque,
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
 
-pub fn set_address(dev: I2C_Device, addr: Address) InterfaceError!void {
+pub fn set_address(dev: I2C_Device, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
     const set_address_fn = dev.vtable.set_address_fn orelse return InterfaceError.Unsupported;
-    return set_address_fn(dev.ptr, addr);
+    return set_address_fn(dev.ptr, addr, allow_reserved);
 }
 
 /// Writes a single `datagram` to the device.
@@ -100,8 +121,10 @@ pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
     return readv_fn(dev.ptr, datagrams);
 }
 
+pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
+
 pub const VTable = struct {
-    set_address_fn: ?*const fn (*anyopaque, Address) InterfaceError!void,
+    set_address_fn: ?*const fn (*anyopaque, Address, Allow_Reserved) InterfaceError!void,
     writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) InterfaceError!void,
     readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) InterfaceError!usize,
     writev_then_readv_fn: ?*const fn (
@@ -168,9 +191,13 @@ pub const Test_Device = struct {
         };
     }
 
-    fn set_address(ctx: *anyopaque, addr: Address) InterfaceError!void {
+    fn set_address(ctx: *anyopaque, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-        if (addr.is_reserved()) return Error.IllegalAddress;
+        if (allow_reserved == .dont_allow_reserved)
+            addr.is_reserved() catch return Error.IllegalAddress
+        else if (allow_reserved == .allow_general)
+            addr.is_reserved() catch |err| if (err != Address.Error.GeneralCall)
+                return Error.IllegalAddress;
         td.addr = addr;
     }
 
@@ -256,6 +283,51 @@ pub const Test_Device = struct {
         .writev_then_readv_fn = Test_Device.writev_then_readv,
     };
 };
+
+test "Address.is_reserved returns correct error types" {
+    const TestCase = struct {
+        address: u7,
+        expected_error: ?Address.Error,
+        description: []const u8,
+    };
+
+    const test_cases = [_]TestCase{
+        .{ .address = 0x00, .expected_error = Address.Error.GeneralCall, .description = "General Call" },
+        .{ .address = 0x01, .expected_error = Address.Error.CBUSAddress, .description = "CBUS Address" },
+        .{ .address = 0x02, .expected_error = Address.Error.ReservedFormat, .description = "Reserved Format" },
+        .{ .address = 0x03, .expected_error = Address.Error.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x08, .expected_error = Address.Error.HighSpeedMaster, .description = "High-Speed Master Code" },
+        .{ .address = 0x0F, .expected_error = Address.Error.HighSpeedMaster, .description = "High-Speed Master Code" },
+        .{ .address = 0x78, .expected_error = Address.Error.TenBitSlave, .description = "10-bit Slave Addressing" },
+        .{ .address = 0x7B, .expected_error = Address.Error.TenBitSlave, .description = "10-bit Slave Addressing" },
+        .{ .address = 0x7C, .expected_error = Address.Error.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x7F, .expected_error = Address.Error.ReservedFuture, .description = "Reserved for future purposes" },
+        .{ .address = 0x10, .expected_error = null, .description = "Valid address" },
+        .{ .address = 0x50, .expected_error = null, .description = "Valid address" },
+        .{ .address = 0x77, .expected_error = null, .description = "Valid address" },
+    };
+
+    for (test_cases) |test_case| {
+        const addr: Address = @enumFromInt(test_case.address);
+        if (test_case.expected_error) |expected_error| {
+            std.testing.expectError(expected_error, addr.is_reserved()) catch |err| {
+                std.debug.print(
+                    "Failed test case: {s} (address 0x{X:0>2})\n",
+                    .{ test_case.description, test_case.address },
+                );
+                return err;
+            };
+        } else {
+            addr.is_reserved() catch |err| {
+                std.debug.print(
+                    "Expected valid address but got error for: {s} (address 0x{X:0>2})\n",
+                    .{ test_case.description, test_case.address },
+                );
+                return err;
+            };
+        }
+    }
+}
 
 test Test_Device {
     var td = Test_Device.init(&.{
