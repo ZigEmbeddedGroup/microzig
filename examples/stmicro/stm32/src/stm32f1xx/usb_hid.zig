@@ -1,4 +1,5 @@
 //NOTE: This is just an experimental test, USB HAL for the F1 family is not complete.
+//NOTE: THIS EXAMPLE ONLY RUNS IN RELEASE BUILDS, debug builds add too much overhead and USB ends up missing response timing
 
 const std = @import("std");
 const microzig = @import("microzig");
@@ -194,14 +195,14 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
 }
 
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
+    epc.set_status(.RX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
     if (device_addr) |addr| {
         usb_ll.set_addr(addr);
     }
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
+    epc.set_status(.RX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
@@ -242,14 +243,14 @@ const USB_conf = usb_ll.Config{
 
 //TODO: full HID report function
 fn report(keys: []const u8) void {
-    const len = @min(keys.len, 6);
+    const len = @min(keys.len, 5);
     const epc = usb_ll.EpControl.EPC1;
     const report_flag: *volatile bool = &to_report;
     if (!config) return;
     while (report_flag.*) {}
     std.mem.copyForwards(u8, HID_send[3..], keys[0..len]);
     report_flag.* = true;
-    epc.USB_send(&HID_send, .endpoint_ctr) catch unreachable;
+    epc.USB_send(&HID_send, .no_change) catch unreachable;
 }
 
 pub fn main() !void {

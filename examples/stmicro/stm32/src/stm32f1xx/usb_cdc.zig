@@ -1,4 +1,5 @@
 //NOTE: This is just an experimental test, USB HAL for the F1 family is not complete.
+//NOTE: THIS EXAMPLE ONLY RUNS IN RELEASE BUILDS, debug builds add too much overhead and USB ends up missing response timing
 
 const std = @import("std");
 const microzig = @import("microzig");
@@ -234,7 +235,7 @@ fn set_addr(receive_addr: u7, epc: EpControl) void {
 }
 
 fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
-    const setup = epc.USB_read(.endpoint_ctr) catch unreachable;
+    const setup = epc.USB_read(.no_change) catch unreachable;
     if (setup.len != 8) {
         return;
     }
@@ -267,7 +268,7 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
 }
 
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
-    const rev = epc.USB_read(.endpoint_ctr) catch unreachable;
+    const rev = epc.USB_read(.no_change) catch unreachable;
     if (CDC_coding) {
         const ep1 = usb_ll.EpControl.EPC1;
         epc.ZLP(.force_data1) catch unreachable;
@@ -298,7 +299,7 @@ fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
         }
         return;
     }
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
+    epc.set_status(.RX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
@@ -313,7 +314,7 @@ fn ep2_tx(_: EpControl, _: ?*anyopaque) void {
 }
 
 fn ep3_rx(epc: EpControl, _: ?*anyopaque) void {
-    const recv = epc.USB_read(.endpoint_ctr) catch unreachable;
+    const recv = epc.USB_read(.no_change) catch unreachable;
     const free_data = CDC_fifo.writableLength();
     const to_write = @min(recv.len, free_data);
     CDC_fifo.writeAssumeCapacity(recv[0..to_write]);
@@ -384,7 +385,7 @@ fn CDC_write(msg: []const u8) void {
     const send: *volatile bool = &CDC_send;
     const EP2 = usb_ll.EpControl.EPC2;
     send.* = true;
-    EP2.USB_send(msg, .force_data0) catch unreachable;
+    EP2.USB_send(msg, .no_change) catch unreachable;
     while (send.*) {
         asm volatile ("nop"); //don't call WFE or WFI here, USB events don't count for wakeup
     }
