@@ -5,7 +5,7 @@ const rp2xxx = microzig.hal;
 const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const usb = rp2xxx.usb;
+const usb = microzig.core.usb;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -15,10 +15,11 @@ const uart_rx_pin = gpio.num(1);
 
 const usb_dev = rp2xxx.usb.Usb(.{});
 
-const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
+const usb_templates = usb.templates.DescriptorsConfigTemplates;
+const usb_config_len = usb_templates.config_descriptor_len + usb_templates.cdc_descriptor_len;
 const usb_config_descriptor =
-    usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
-    usb.templates.cdc_descriptor(0, 4, .ep1, 8, .ep2, .ep2, 64);
+    usb_templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
+    usb_templates.cdc_descriptor(0, 4, .ep1, 8, .ep2, .ep2, 64);
 
 var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
 var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
@@ -26,7 +27,7 @@ var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .device_descriptor = &.{
-        .descriptor_type = usb.DescType.Device,
+        .descriptor_type = .Device,
         .bcd_usb = 0x0200,
         .device_class = 0xEF,
         .device_subclass = 2,
@@ -42,11 +43,14 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     },
     .config_descriptor = &usb_config_descriptor,
     .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
-    .descriptor_strings = &.{
-        &usb.utils.utf8_to_utf16_le("Raspberry Pi"),
-        &usb.utils.utf8_to_utf16_le("Pico Test Device"),
-        &usb.utils.utf8_to_utf16_le("someserial"),
-        &usb.utils.utf8_to_utf16_le("Board CDC"),
+    .descriptor_strings = blk: {
+        @setEvalBranchQuota(2000);
+        break :blk &.{
+            std.unicode.utf8ToUtf16LeStringLiteral("Raspberry Pi"),
+            std.unicode.utf8ToUtf16LeStringLiteral("Pico Test Device"),
+            std.unicode.utf8ToUtf16LeStringLiteral("someserial"),
+            std.unicode.utf8ToUtf16LeStringLiteral("Board CDC"),
+        };
     },
     .drivers = &drivers,
 };
@@ -78,8 +82,6 @@ pub fn main() !void {
 
     rp2xxx.uart.init_logger(uart);
 
-    // First we initialize the USB clock
-    usb.init_clk(.pll_usb);
     // Then initialize the USB device using the configuration defined above
     usb_dev.init_device(&DEVICE_CONFIGURATION);
     var old: u64 = time.get_time_since_boot().to_us();

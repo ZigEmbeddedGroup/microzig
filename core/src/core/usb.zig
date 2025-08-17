@@ -7,7 +7,7 @@
 //! 1. Define the functions (`pub const F = struct { ... }`) required by `Usb()` (see below)
 //! 2. Call `pub const device = Usb(F)`
 //! 3. Define the device configuration (DeviceConfiguration)
-//! 4. Initialize the device in main by calling `usb.init_clk()` and `usb.init_device(device_conf)`
+//! 4. Initialize the device in main by calling `usb.init_device(device_conf)`
 //! 5. Call `usb.task()` within the main loop
 
 const std = @import("std");
@@ -36,7 +36,6 @@ const BosConfig = utils.BosConfig;
 /// This is a abstract USB device implementation that requires a handful of functions
 /// to work correctly:
 ///
-/// * `usb_init_clk() void` - Initialize the USB clock
 /// * `usb_init_device(*DeviceConfiguration) - Initialize the USB device controller (e.g. enable interrupts, etc.)
 /// * `usb_start_tx(*EndpointConfiguration, []const u8)` - Transmit the given bytes over the specified endpoint
 /// * `usb_start_rx(*usb.EndpointConfiguration, n: usize)` - Receive n bytes over the specified endpoint
@@ -143,7 +142,7 @@ pub fn Usb(comptime f: anytype) type {
             const ep_transfer_type = BosConfig.get_data_u8(ep_desc, 3);
             const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
-            f.endpoint_open(ep, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk);
+            f.endpoint_open(ep, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk) catch unreachable;
         }
 
         fn get_driver(drv_idx: u8) ?*types.UsbClassDriver {
@@ -260,7 +259,7 @@ pub fn Usb(comptime f: anytype) type {
                                     break :StringBlk usb_config.?.lang_descriptor;
                                 } else {
                                     // Otherwise, set up one of our strings.
-                                    const s = usb_config.?.descriptor_strings[i - 1];
+                                    const s: []const u8 = @ptrCast(usb_config.?.descriptor_strings[i - 1]);
                                     const len = 2 + s.len;
 
                                     var wb = BufferWriter{ .buffer = &S.tmp };
@@ -502,7 +501,7 @@ pub const DeviceConfiguration = struct {
     device_descriptor: *const types.DeviceDescriptor,
     config_descriptor: []const u8,
     lang_descriptor: []const u8,
-    descriptor_strings: []const []const u8,
+    descriptor_strings: []const []const u16,
     drivers: []types.UsbClassDriver,
 };
 
@@ -618,24 +617,7 @@ const BufferReader = struct {
     }
 };
 
-pub const UsbUtils = struct {
-    /// Convert an utf8 into an utf16 (little endian) string
-    pub fn utf8_to_utf16_le(comptime s: []const u8) [s.len << 1]u8 {
-        const l = s.len << 1;
-        var ret: [l]u8 = @splat(0);
-        var i: usize = 0;
-        while (i < s.len) : (i += 1) {
-            ret[i << 1] = s[i];
-        }
-        return ret;
-    }
-};
-
 test "tests" {
     _ = hid;
-}
-
-test "utf8 to utf16" {
-    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &UsbUtils.utf8_to_utf16_le("My Vendor"));
-    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &UsbUtils.utf8_to_utf16_le("Raspberry Pi"));
+    _ = utils;
 }
