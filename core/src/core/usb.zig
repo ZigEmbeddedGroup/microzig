@@ -407,9 +407,10 @@ pub fn Usb(comptime f: anytype) type {
             // Events on one or more buffers? (In practice, always one.)
             if (ints.BuffStatus) {
                 if (debug) std.log.info("buff status", .{});
-                var iter = f.get_EPBIter(usb_config.?);
+                var iter: f.UnhandledEndpointIterator = .init();
+                defer iter.deinit();
 
-                while (iter.next(&iter)) |epb| {
+                while (iter.next()) |epb| {
                     if (debug) std.log.info("    data: {any}", .{epb.buffer});
 
                     // Perform any required action on the data. For OUT, the `data`
@@ -458,7 +459,7 @@ pub fn Usb(comptime f: anytype) type {
                                 if (get_driver(drv[0])) |driver|
                                     driver.receive(epb.endpoint.num, epb.buffer);
 
-                                f.endpoint_reset_rx(epb.endpoint);
+                                f.endpoint_reset_rx(epb.endpoint.num);
                             },
                             .In => {
                                 if (get_driver(drv[1])) |driver|
@@ -522,32 +523,12 @@ pub const InterruptStatus = struct {
     SetupReq: bool = false,
 };
 
-pub const EPBError = error{
-    /// The system has received a buffer event for an unknown endpoint (this is super unlikely)
-    UnknownEndpoint,
-    /// The buffer is not available (this is super unlikely)
-    NotAvailable,
-};
-
-/// Element returned by the endpoint buffer iterator (EPBIter)
-pub const EPB = struct {
+/// And endpoint and its corresponding buffer.
+pub const EndpointAndBuffer = struct {
     /// The endpoint the data belongs to
     endpoint: Endpoint,
     /// Data buffer
     buffer: []u8,
-};
-
-/// Iterator over all input buffers that hold data
-pub const EPBIter = struct {
-    /// Bitmask of the input buffers to handle
-    bufbits: u32,
-    /// The last input buffer handled. This can be used to flag the input buffer as handled on the
-    /// next call.
-    last_bit: ?u32 = null,
-    /// Point to the device configuration (to get access to the endpoint buffers defined by the user)
-    device_config: *const DeviceConfiguration,
-    /// Get the next available input buffer
-    next: *const fn (self: *@This()) ?EPB,
 };
 
 const BufferWriter = struct {

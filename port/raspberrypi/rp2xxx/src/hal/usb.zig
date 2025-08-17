@@ -311,8 +311,8 @@ pub fn F(comptime config: UsbConfig) type {
             ep_hard.awaiting_rx = true;
         }
 
-        pub fn endpoint_reset_rx(ep: Endpoint) void {
-            const ep_hard = hardware_endpoint(ep);
+        pub fn endpoint_reset_rx(ep_out: Endpoint.Num) void {
+            const ep_hard = hardware_endpoint(.out(ep_out));
             ep_hard.awaiting_rx = false;
         }
 
@@ -435,72 +435,45 @@ pub fn F(comptime config: UsbConfig) type {
             });
         }
 
-        /// Iterator over endpoint buffers events
-        pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
-            return .{
-                .bufbits = peripherals.USB.BUFF_STATUS.raw,
-                .device_config = dc,
-                .next = next,
-            };
-        }
+        pub const UnhandledEndpointIterator = struct {
+            initial_unhandled_mask: u32,
+            currently_unhandled_mask: u32,
 
-        pub fn next(self: *usb.EPBIter) ?usb.EPB {
-            if (self.last_bit) |lb| {
-                // Acknowledge the last handled buffer
-                peripherals.USB.BUFF_STATUS.write_raw(lb);
-                self.last_bit = null;
+            pub fn init() @This() {
+                const mask = peripherals.USB.BUFF_STATUS.raw;
+                return .{
+                    .initial_unhandled_mask = mask,
+                    .currently_unhandled_mask = mask,
+                };
             }
-            // All input buffers handled?
-            if (self.bufbits == 0) return null;
 
-            // Who's still outstanding? Find their bit index by counting how
-            // many LSBs are zero.
-            var lowbit_index: u5 = 0;
-            while ((self.bufbits >> lowbit_index) & 0x01 == 0) : (lowbit_index += 1) {}
-            // Remove their bit from our set.
-            const lowbit = @as(u32, @intCast(1)) << lowbit_index;
-            self.last_bit = lowbit;
-            self.bufbits ^= lowbit;
+            pub fn deinit(this: @This()) void {
+                const handled_mask = this.initial_unhandled_mask ^ this.currently_unhandled_mask;
+                peripherals.USB.BUFF_STATUS.write_raw(handled_mask);
+            }
 
-            const ep: Endpoint = .{
-                // Here we exploit knowledge of the ordering of buffer control
-                // registers in the peripheral. Each endpoint has a pair of
-                // registers, so we can determine the endpoint number by:
-                .num = .from_int(@intCast(lowbit_index >> 1)),
-                // Of the pair, the IN endpoint comes first, followed by OUT, so
-                // we can get the direction by:
-                .dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out,
-            };
-            // Process the buffer-done event.
+            pub fn next(this: *@This()) ?usb.EndpointAndBuffer {
+                const idx = std.math.cast(u5, @ctz(this.currently_unhandled_mask)) orelse return null;
+                this.currently_unhandled_mask &= this.currently_unhandled_mask -% 1; // clear lowest bit
 
-            // Process the buffer-done event.
-            //
-            // Scan the device table to figure out which endpoint struct
-            // corresponds to this address. We could use a smarter
-            // method here, but in practice, the number of endpoints is
-            // small so a linear scan doesn't kill us.
+                const ep: Endpoint = .{
+                    // Here we exploit knowledge of the ordering of buffer control
+                    // registers in the peripheral. Each endpoint has a pair of
+                    // registers, so we can determine the endpoint number by:
+                    .num = .from_int(@intCast(idx >> 1)),
+                    // Of the pair, the IN endpoint comes first, followed by OUT, so
+                    // we can get the direction by:
+                    .dir = if (idx & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out,
+                };
 
-            const ep_hard = hardware_endpoint(ep);
+                const ep_hard = hardware_endpoint(ep);
+                const len = ep_hard.buffer_control.?.read().LENGTH_0;
 
-            // We should only get here if we've been notified that
-            // the buffer is ours again. This is indicated by the hw
-            // _clearing_ the AVAILABLE bit.
-            //
-            // This ensures that we can return a shared reference to
-            // the databuffer contents without races.
-            // TODO: if ((bc & (1 << 10)) == 1) return EPBError.NotAvailable;
-
-            // Cool. Checks out.
-
-            // Get the actual length of the data, which may be less
-            // than the buffer size.
-            const len = ep_hard.buffer_control.?.read().LENGTH_0;
-
-            // Copy the data from SRAM
-            return usb.EPB{
-                .endpoint = ep,
-                .buffer = ep_hard.data_buffer[0..len],
-            };
-        }
+                return .{
+                    .endpoint = ep,
+                    .buffer = ep_hard.data_buffer[0..len],
+                };
+            }
+        };
     };
 }
