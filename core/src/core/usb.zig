@@ -142,7 +142,7 @@ pub fn Usb(comptime f: anytype) type {
             const ep_transfer_type = BosConfig.get_data_u8(ep_desc, 3);
             const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
-            f.endpoint_open(ep, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk) catch unreachable;
+            f.endpoint_open(ep, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk, ep_max_packet_size) catch unreachable;
         }
 
         fn get_driver(drv_idx: u8) ?*types.UsbClassDriver {
@@ -407,66 +407,60 @@ pub fn Usb(comptime f: anytype) type {
             if (ints.BuffStatus) {
                 if (debug) std.log.info("buff status", .{});
                 var iter: f.UnhandledEndpointIterator = .init();
-                defer iter.deinit();
 
-                while (iter.next()) |epb| {
-                    if (debug) std.log.info("    data: {any}", .{epb.buffer});
+                while (iter.next()) |result| switch (result) {
+                    .In => |in| {
+                        if (debug) std.log.info("    data: {any}", .{in.buffer});
 
-                    // Perform any required action on the data. For OUT, the `data`
-                    // will be whatever was sent by the host. For IN, it's a copy of
-                    // whatever we sent.
-                    if (epb.endpoint.num == .ep0 and epb.endpoint.dir == .In) {
-                        if (debug) std.log.info("    EP0_IN_ADDR", .{});
+                        // Perform any required action on the data. For OUT, the `data`
+                        // will be whatever was sent by the host. For IN, it's a copy of
+                        // whatever we sent.
+                        if (in.ep_num == .ep0) {
+                            if (debug) std.log.info("    EP0_IN_ADDR", .{});
 
-                        const buffer_reader = &S.buffer_reader;
+                            const buffer_reader = &S.buffer_reader;
 
-                        // We use this opportunity to finish the delayed
-                        // SetAddress request, if there is one:
-                        if (S.new_address) |addr| {
-                            // Change our address:
-                            f.set_address(@intCast(addr));
-                        }
+                            // We use this opportunity to finish the delayed
+                            // SetAddress request, if there is one:
+                            if (S.new_address) |addr| {
+                                // Change our address:
+                                f.set_address(@intCast(addr));
+                            }
 
-                        if (epb.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
-                            _ = buffer_reader.try_advance(epb.buffer.len);
-                            const next_data_chunk = buffer_reader.try_peek(64);
-                            if (next_data_chunk.len > 0) {
-                                _ = f.usb_start_tx(.ep0, &.{next_data_chunk});
+                            if (in.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
+                                _ = buffer_reader.try_advance(in.buffer.len);
+                                const next_data_chunk = buffer_reader.try_peek(64);
+                                if (next_data_chunk.len > 0) {
+                                    _ = f.usb_start_tx(.ep0, &.{next_data_chunk});
+                                } else {
+                                    f.usb_start_rx(.ep0, 0);
+
+                                    if (S.driver) |driver| {
+                                        _ = driver.class_control(.Ack, &S.setup_packet);
+                                    }
+                                }
                             } else {
+                                // Otherwise, we've just finished sending
+                                // something to the host. We expect an ensuing
+                                // status phase where the host sends us (via EP0
+                                // OUT) a zero-byte DATA packet, so, set that
+                                // up:
                                 f.usb_start_rx(.ep0, 0);
 
-                                if (S.driver) |driver| {
+                                if (S.driver) |driver|
                                     _ = driver.class_control(.Ack, &S.setup_packet);
-                                }
                             }
-                        } else {
-                            // Otherwise, we've just finished sending
-                            // something to the host. We expect an ensuing
-                            // status phase where the host sends us (via EP0
-                            // OUT) a zero-byte DATA packet, so, set that
-                            // up:
-                            f.usb_start_rx(.ep0, 0);
+                        } else if (get_driver(ep_to_drv[in.ep_num.to_int()][1])) |driver|
+                            driver.send(in.ep_num, in.buffer);
+                    },
+                    .Out => |out| {
+                        if (debug) std.log.info("    data: {any}", .{out.buffer});
+                        if (get_driver(ep_to_drv[out.ep_num.to_int()][0])) |driver|
+                            driver.receive(out.ep_num, out.buffer);
 
-                            if (S.driver) |driver| {
-                                _ = driver.class_control(.Ack, &S.setup_packet);
-                            }
-                        }
-                    } else {
-                        const drv = ep_to_drv[epb.endpoint.num.to_int()];
-                        switch (epb.endpoint.dir) {
-                            .Out => {
-                                if (get_driver(drv[0])) |driver|
-                                    driver.receive(epb.endpoint.num, epb.buffer);
-
-                                f.endpoint_reset_rx(epb.endpoint.num);
-                            },
-                            .In => {
-                                if (get_driver(drv[1])) |driver|
-                                    driver.send(epb.endpoint.num, epb.buffer);
-                            },
-                        }
-                    }
-                }
+                        f.endpoint_reset_rx(out.ep_num);
+                    },
+                };
             } // <-- END of buf status handling
 
             // Has the host signaled a bus reset?
@@ -523,11 +517,9 @@ pub const InterruptStatus = struct {
 };
 
 /// And endpoint and its corresponding buffer.
-pub const EndpointAndBuffer = struct {
-    /// The endpoint the data belongs to
-    endpoint: Endpoint,
-    /// Data buffer
-    buffer: []u8,
+pub const EndpointAndBuffer = union(Dir) {
+    Out: struct { ep_num: Endpoint.Num, buffer: []const u8 },
+    In: struct { ep_num: Endpoint.Num, buffer: []u8 },
 };
 
 const BufferWriter = struct {
