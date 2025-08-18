@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const hal = microzig.hal;
 
-const port3 = hal.port.init(3);
+const port3 = hal.port.num(3);
 const pin_led_red = port3.get_gpio(12);
 
 pub fn main() void {

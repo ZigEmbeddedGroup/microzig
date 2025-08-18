@@ -14,6 +14,8 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const mcux_soc_svd = b.dependency("mcux-soc-svd", .{});
+
     const chip_mcxa153: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
@@ -25,7 +27,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .chip = .{
             .name = "MCXA153",
-            .register_definition = .{ .svd = b.path("src/chips/MCXA153.svd") },
+            .register_definition = .{ .svd = mcux_soc_svd.path("MCXA153/MCXA153.xml") },
             .memory_regions = &.{
                 .{ .tag = .flash, .offset = 0x00000000, .length = 128 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 24 * 1024, .access = .rw },

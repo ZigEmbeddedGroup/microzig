@@ -5,6 +5,10 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"mcux-soc-svd" = .{
+            .url = "https://github.com/nxp-mcuxpresso/mcux-soc-svd/archive/refs/tags/MCUX_2.16.100.tar.gz",
+            .hash = "N-V-__8AADdFeofKFhsuzMbDdzLAKB4-syMJsHSEOTYGFrlH",
+        },
     },
     .paths = .{
         "build.zig",

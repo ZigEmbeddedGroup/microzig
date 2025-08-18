@@ -2,7 +2,7 @@ const microzig = @import("microzig");
 const syscon = @import("./syscon.zig");
 const gpio = @import("./gpio.zig");
 
-pub fn init(comptime n: u2) Port {
+pub fn num(comptime n: u2) Port {
     return @enumFromInt(n);
 }
 
@@ -22,6 +22,6 @@ pub const Port = enum(u2) {
     }
 
     pub fn get_gpio(comptime port: Port, comptime pin: u5) gpio.GPIO {
-        return gpio.init(@intFromEnum(port), pin);
+        return gpio.num(@intFromEnum(port), pin);
     }
 };

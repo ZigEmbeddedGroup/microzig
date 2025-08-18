@@ -5,7 +5,7 @@ pub const microzig_options = microzig.Options{
     .interrupts = .{ .GPIO3 = .{ .c = gpio3_irq_handler } },
 };
 
-const port3 = hal.port.init(3);
+const port3 = hal.port.num(3);
 const pin_led_red = port3.get_gpio(12);
 const pin_button = port3.get_gpio(29);
 
