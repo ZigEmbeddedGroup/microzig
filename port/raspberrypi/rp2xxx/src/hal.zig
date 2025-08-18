@@ -8,7 +8,6 @@ pub const clocks = @import("hal/clocks.zig");
 pub const dma = @import("hal/dma.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
-pub const irq = @import("hal/irq.zig");
 pub const multicore = @import("hal/multicore.zig");
 pub const mutex = @import("hal/mutex.zig");
 pub const pins = @import("hal/pins.zig");
@@ -42,7 +41,9 @@ comptime {
     // functions that are used by the atomic builtins. Other chips have hardware
     // atomics, so we don't need to export those functions for them.
     if (!builtin.is_test and compatibility.chip == .RP2040) {
+        // export intrinsics (incidentally only needed for RP2040)
         _ = @import("hal/atomic.zig");
+        _ = rom;
     }
 }
 
@@ -52,8 +53,8 @@ pub const HAL_Options = switch (compatibility.chip) {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
 
-            /// Next metadata block to link after image_def. **Last block in the
-            /// chain must link back to the first one** (to
+            /// Next metadata block to link after image_def. **Last block in
+            /// the chain must link back to the first one** (to
             /// `bootmeta.image_def_block`).
             next_block: ?*const anyopaque = null,
         } = .{},

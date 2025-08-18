@@ -209,6 +209,16 @@ var port_cache: PortCache = .{};
 /// ```
 pub fn MicroBuild(port_select: PortSelect) type {
     return struct {
+        builder: *Build,
+        dep: *Build.Dependency,
+        core_dep: *Build.Dependency,
+        drivers_dep: *Build.Dependency,
+
+        /// Contains all the ports you selected.
+        ports: SelectedPorts,
+
+        const Self = @This();
+
         const SelectedPorts = blk: {
             var fields: []const std.builtin.Type.StructField = &.{};
 
@@ -234,16 +244,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 },
             });
         };
-
-        const Self = @This();
-
-        builder: *Build,
-        dep: *Build.Dependency,
-        core_dep: *Build.Dependency,
-        drivers_dep: *Build.Dependency,
-
-        /// Contains all the ports you selected.
-        ports: SelectedPorts,
 
         const InitReturnType = blk: {
             @setEvalBranchQuota(2000);
