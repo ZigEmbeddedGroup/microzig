@@ -28,6 +28,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_interrupts", .file = "src/interrupts.zig" },
+        .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_interrupts", .file = "src/interrupts.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_random_data", .file = "src/rp2350_only/random_data.zig" },
         .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_random_data", .file = "src/rp2350_only/random_data.zig" },
