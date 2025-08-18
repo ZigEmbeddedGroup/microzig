@@ -1,5 +1,5 @@
 //!
-//! An abstract datagram orientied device with runtime dispatch.
+//! An abstract datagram oriented device with runtime dispatch.
 //!
 //! Datagram devices behave similar to an SPI or Ethernet device where
 //! packets with an ahead-of-time known length can be transferred in a

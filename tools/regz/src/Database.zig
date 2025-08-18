@@ -663,6 +663,20 @@ pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
     return db.get_id_by_name(PeripheralID, name);
 }
 
+/// Get the struct ID for a struct decl with `name` in parent struct
+pub fn get_struct_decl_id_by_name(db: *Database, parent: StructID, name: []const u8) !StructID {
+    const query =
+        \\SELECT struct_id
+        \\FROM struct_decls
+        \\WHERE parent_id = ? AND name = ?
+    ;
+
+    return db.one(StructID, query, .{
+        .parent_id = parent,
+        .name = name,
+    });
+}
+
 pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: StructID, name: []const u8) !StructDecl {
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
@@ -945,12 +959,16 @@ pub fn get_nested_struct_fields_with_calculated_size(
     const nested_struct_fields = try db.get_nested_struct_fields(allocator, struct_id);
     defer allocator.free(nested_struct_fields);
 
+    log.debug("nested_struct_fields.len={} struct_id={}", .{ nested_struct_fields.len, struct_id });
+
     var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(allocator);
     defer size_cache.deinit();
 
     for (nested_struct_fields) |*nsf| {
-        if (nsf.size_bytes != null)
+        if (nsf.size_bytes != null) {
+            try ret.append(nsf.*);
             continue;
+        }
 
         var depth: u8 = 0;
         const size_bytes = try db.recursively_calculate_struct_size(&depth, &size_cache, allocator, nsf.struct_id);
