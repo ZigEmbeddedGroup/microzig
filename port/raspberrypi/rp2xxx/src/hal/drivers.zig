@@ -109,10 +109,6 @@ pub const I2C_Device = struct {
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |err| switch (err) {
-            error.TargetAddressReserved,
-            error.IllegalAddress,
-            => error.Unsupported,
-
             error.BufferOverrun,
             error.DeviceNotPresent,
             error.NoAcknowledge,
@@ -128,10 +124,6 @@ pub const I2C_Device = struct {
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.readv(chunks) catch |err| switch (err) {
-            error.TargetAddressReserved,
-            error.IllegalAddress,
-            => error.Unsupported,
-
             error.BufferOverrun,
             error.DeviceNotPresent,
             error.NoAcknowledge,
@@ -147,10 +139,6 @@ pub const I2C_Device = struct {
     fn writev_then_readv_fn(dd: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
-            error.TargetAddressReserved,
-            error.IllegalAddress,
-            => error.Unsupported,
-
             error.BufferOverrun,
             error.DeviceNotPresent,
             error.NoAcknowledge,
@@ -170,9 +158,9 @@ pub const I2C_Device = struct {
     ) I2CError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         if (allow_reserved == .dont_allow_reserved)
-            addr.is_reserved() catch return I2CError.IllegalAddress
+            addr.check_reserved() catch return I2CError.IllegalAddress
         else if (allow_reserved == .allow_general)
-            addr.is_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
+            addr.check_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
                 return I2CError.IllegalAddress;
         dev.address = addr;
     }

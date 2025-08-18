@@ -564,7 +564,7 @@ pub const I2C = enum(u1) {
         will_continue: bool,
         deadline: mdf.time.Deadline,
     ) !void {
-        addr.is_reserved() catch return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.TargetAddressReserved;
 
         self.clear_interrupts();
 
@@ -668,7 +668,7 @@ pub const I2C = enum(u1) {
         stop: bool,
         deadline: mdf.time.Deadline,
     ) Error!void {
-        addr.is_reserved() catch |err| switch (err) {
+        addr.check_reserved() catch |err| switch (err) {
             AddressError.GeneralCall => {},
             else => return Error.TargetAddressReserved,
         };

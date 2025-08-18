@@ -44,7 +44,7 @@ pub const Address = enum(u7) {
     /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
     ///
     /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) Address.Error!void {
+    pub fn check_reserved(addr: Address) Address.Error!void {
         const value: u7 = @intFromEnum(addr);
 
         switch (value) {
@@ -194,9 +194,9 @@ pub const Test_Device = struct {
     fn set_address(ctx: *anyopaque, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
         if (allow_reserved == .dont_allow_reserved)
-            addr.is_reserved() catch return Error.IllegalAddress
+            addr.check_reserved() catch return Error.IllegalAddress
         else if (allow_reserved == .allow_general)
-            addr.is_reserved() catch |err| if (err != Address.Error.GeneralCall)
+            addr.check_reserved() catch |err| if (err != Address.Error.GeneralCall)
                 return Error.IllegalAddress;
         td.addr = addr;
     }
@@ -284,7 +284,7 @@ pub const Test_Device = struct {
     };
 };
 
-test "Address.is_reserved returns correct error types" {
+test "Address.check_reserved returns correct error types" {
     const TestCase = struct {
         address: u7,
         expected_error: ?Address.Error,
@@ -310,7 +310,7 @@ test "Address.is_reserved returns correct error types" {
     for (test_cases) |test_case| {
         const addr: Address = @enumFromInt(test_case.address);
         if (test_case.expected_error) |expected_error| {
-            std.testing.expectError(expected_error, addr.is_reserved()) catch |err| {
+            std.testing.expectError(expected_error, addr.check_reserved()) catch |err| {
                 std.debug.print(
                     "Failed test case: {s} (address 0x{X:0>2})\n",
                     .{ test_case.description, test_case.address },
@@ -318,7 +318,7 @@ test "Address.is_reserved returns correct error types" {
                 return err;
             };
         } else {
-            addr.is_reserved() catch |err| {
+            addr.check_reserved() catch |err| {
                 std.debug.print(
                     "Expected valid address but got error for: {s} (address 0x{X:0>2})\n",
                     .{ test_case.description, test_case.address },

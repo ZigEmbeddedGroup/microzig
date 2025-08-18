@@ -184,7 +184,7 @@ pub const I2C = enum(u1) {
 
     fn set_address(i2c: I2C, addr: Address) Error!void {
         // TODO: Allow arg
-        addr.is_reserved() catch return Error.IllegalAddress;
+        addr.check_reserved() catch return Error.IllegalAddress;
 
         i2c.disable();
         defer i2c.enable();
@@ -245,7 +245,7 @@ pub const I2C = enum(u1) {
     ///       in a separate memory.
     ///
     pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
-        addr.is_reserved() catch |err| switch (err) {
+        addr.check_reserved() catch |err| switch (err) {
             AddressError.GeneralCall => {},
             else => return Error.TargetAddressReserved,
         };
@@ -296,7 +296,7 @@ pub const I2C = enum(u1) {
     ///       in a separate memory.
     ///
     pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
-        addr.is_reserved() catch return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.TargetAddressReserved;
 
         const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
         if (read_vec.size() == 0)
@@ -360,7 +360,7 @@ pub const I2C = enum(u1) {
     ///       but can be managed in a separate memory.
     ///
     pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
-        addr.is_reserved() catch return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.TargetAddressReserved;
 
         const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
         const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
