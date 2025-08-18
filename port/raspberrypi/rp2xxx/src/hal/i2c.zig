@@ -443,7 +443,7 @@ pub const I2C = enum(u1) {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
-        return try i2c.readv_blocking(addr, &.{dst}, timeout);
+        return i2c.readv_blocking(addr, &.{dst}, timeout);
     }
 
     /// Attempts to read number of bytes in provided slice from target device and blocks until one of the following occurs:

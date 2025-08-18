@@ -45,11 +45,12 @@ pub fn main() !void {
     });
 
     // Create i2c and clock devices
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x69), null);
+    var i2c_device = I2C_Device.init(i2c0, null);
     var cd = ClockDevice{};
     // Pass devices to driver to create sensor instance
     var dev = try ICM_20948.init(
         i2c_device.i2c_device(),
+        @enumFromInt(0x69),
         cd.clock_device(),
         .{
             .accel_dlp = .@"6Hz",

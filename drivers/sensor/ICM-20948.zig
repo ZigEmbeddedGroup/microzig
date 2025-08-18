@@ -63,6 +63,7 @@ pub const ICM_20948 = struct {
     const MAG_RESET_DELAY_US = 100_000;
 
     dev: mdf.base.I2C_Device,
+    address: mdf.base.I2C_Device.Address,
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
@@ -320,8 +321,13 @@ pub const ICM_20948 = struct {
         i2c_slv0_en: u1 = 0,
     };
 
-    pub fn init(dev: mdf.base.I2C_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
-        return Self{ .dev = dev, .clock = clock, .config = config };
+    pub fn init(
+        dev: mdf.base.I2C_Device,
+        address: mdf.base.I2C_Device.Address,
+        clock: mdf.base.Clock_Device,
+        config: Config,
+    ) Error!Self {
+        return Self{ .dev = dev, .address = address, .clock = clock, .config = config };
     }
 
     pub fn setup(self: *Self) Error!void {
@@ -399,7 +405,7 @@ pub const ICM_20948 = struct {
 
         try self.set_bank(reg.bank());
 
-        self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf}) catch |err| {
+        self.dev.writev_then_readv(self.address, &.{&.{reg.value()}}, &.{buf}) catch |err| {
             log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
             return Error.ReadError;
         };
@@ -416,7 +422,7 @@ pub const ICM_20948 = struct {
     pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) Error!void {
         try self.set_bank(reg.bank());
 
-        self.dev.write(&.{ reg.value(), val }) catch |err| {
+        self.dev.write(self.address, &.{ reg.value(), val }) catch |err| {
             log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
             return Error.WriteError;
         };
@@ -452,7 +458,7 @@ pub const ICM_20948 = struct {
         if (bank == self.current_bank) return;
 
         // Bits 5:4 - directly write to bank0 register without recursion
-        self.dev.write(&.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
+        self.dev.write(self.address, &.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
             log.err("Failed to switch to bank {}: {}", .{ bank, err });
             return Error.BankSwitchFailed;
         };

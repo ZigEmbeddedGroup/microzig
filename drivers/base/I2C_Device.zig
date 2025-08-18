@@ -77,35 +77,31 @@ ptr: *anyopaque,
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
 
-pub fn set_address(dev: I2C_Device, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
-    const set_address_fn = dev.vtable.set_address_fn orelse return InterfaceError.Unsupported;
-    return set_address_fn(dev.ptr, addr, allow_reserved);
-}
-
 /// Writes a single `datagram` to the device.
-pub fn write(dev: I2C_Device, datagram: []const u8) InterfaceError!void {
-    return try dev.writev(&.{datagram});
+pub fn write(dev: I2C_Device, address: Address, datagram: []const u8) InterfaceError!void {
+    return try dev.writev(address, &.{datagram});
 }
 
 /// Writes multiple `datagrams` to the device.
-pub fn writev(dev: I2C_Device, datagrams: []const []const u8) InterfaceError!void {
+pub fn writev(dev: I2C_Device, address: Address, datagrams: []const []const u8) InterfaceError!void {
     const writev_fn = dev.vtable.writev_fn orelse return InterfaceError.Unsupported;
-    return writev_fn(dev.ptr, datagrams);
+    return writev_fn(dev.ptr, address, datagrams);
 }
 
 /// Writes then reads a single `datagram` to the device.
-pub fn write_then_read(dev: I2C_Device, src: []const u8, dst: []u8) InterfaceError!void {
-    return try dev.writev_then_readv(&.{src}, &.{dst});
+pub fn write_then_read(dev: I2C_Device, address: Address, src: []const u8, dst: []u8) InterfaceError!void {
+    return try dev.writev_then_readv(address, &.{src}, &.{dst});
 }
 
 /// Writes a slice of datagrams to the device, then reads back into another slice of datagrams
 pub fn writev_then_readv(
     dev: I2C_Device,
+    address: Address,
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) InterfaceError!void {
     const writev_then_readv_fn = dev.vtable.writev_then_readv_fn orelse return InterfaceError.Unsupported;
-    return writev_then_readv_fn(dev.ptr, write_chunks, read_chunks);
+    return writev_then_readv_fn(dev.ptr, address, write_chunks, read_chunks);
 }
 
 /// Reads a single `datagram` from the device.
@@ -124,11 +120,11 @@ pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
 pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
 
 pub const VTable = struct {
-    set_address_fn: ?*const fn (*anyopaque, Address, Allow_Reserved) InterfaceError!void,
-    writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) InterfaceError!void,
-    readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) InterfaceError!usize,
+    writev_fn: ?*const fn (*anyopaque, Address, datagrams: []const []const u8) InterfaceError!void,
+    readv_fn: ?*const fn (*anyopaque, Address, datagrams: []const []u8) InterfaceError!usize,
     writev_then_readv_fn: ?*const fn (
         *anyopaque,
+        Address,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
     ) InterfaceError!void = null,
@@ -191,18 +187,9 @@ pub const Test_Device = struct {
         };
     }
 
-    fn set_address(ctx: *anyopaque, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
+    fn writev(ctx: *anyopaque, address: Address, datagrams: []const []const u8) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-        if (allow_reserved == .dont_allow_reserved)
-            addr.check_reserved() catch return Error.IllegalAddress
-        else if (allow_reserved == .allow_general)
-            addr.check_reserved() catch |err| if (err != Address.Error.GeneralCall)
-                return Error.IllegalAddress;
-        td.addr = addr;
-    }
-
-    fn writev(ctx: *anyopaque, datagrams: []const []const u8) InterfaceError!void {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx));
+        _ = address;
 
         if (!td.write_enabled) {
             return error.Unsupported;
@@ -231,8 +218,9 @@ pub const Test_Device = struct {
         td.packets.append(dg) catch return error.UnknownAbort;
     }
 
-    fn readv(ctx: *anyopaque, datagrams: []const []u8) InterfaceError!usize {
+    fn readv(ctx: *anyopaque, address: Address, datagrams: []const []u8) InterfaceError!usize {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
+        _ = address;
 
         const inputs = td.input_sequence orelse return error.Unsupported;
 
@@ -271,13 +259,12 @@ pub const Test_Device = struct {
         return written;
     }
 
-    fn writev_then_readv(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) InterfaceError!void {
-        try Test_Device.writev(ctx, write_chunks);
-        _ = try Test_Device.readv(ctx, read_chunks);
+    fn writev_then_readv(ctx: *anyopaque, address: Address, write_chunks: []const []const u8, read_chunks: []const []u8) InterfaceError!void {
+        try Test_Device.writev(ctx, address, write_chunks);
+        _ = try Test_Device.readv(ctx, address, read_chunks);
     }
 
     const vtable = I2C_Device.VTable{
-        .set_address_fn = Test_Device.set_address,
         .writev_fn = Test_Device.writev,
         .readv_fn = Test_Device.readv,
         .writev_then_readv_fn = Test_Device.writev_then_readv,

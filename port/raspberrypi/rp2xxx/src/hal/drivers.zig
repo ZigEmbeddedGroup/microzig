@@ -14,6 +14,7 @@ const Datagram_Device = drivers.Datagram_Device;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
 const Clock_Device = drivers.Clock_Device;
+const I2CAddress = drivers.I2C_Device.Address;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddressError = drivers.I2C_Device.Address.Error;
 
@@ -29,23 +30,27 @@ pub const I2C_Device = struct {
     /// Selects which I²C bus should be used.
     bus: hal.i2c.I2C,
 
-    /// The address of our I²C device.
-    address: drivers.I2C_Device.Address,
+    /// The address of our I²C device. Only used for Datagram_Device
+    address: ?I2CAddress,
 
     /// Default timeout duration
     timeout: ?mdf.time.Duration = null,
 
-    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_Device {
+    pub fn init(bus: hal.i2c.I2C, timeout: ?mdf.time.Duration) I2C_Device {
+        // NOTE: Invarient: address is NULL for i2c devices since the address is always provided as
+        // an argument to its methods
         return .{
             .bus = bus,
-            .address = address,
+            .address = null,
             .timeout = timeout,
         };
     }
 
-    pub fn datagram_device(dev: *I2C_Device) Datagram_Device {
+    pub fn datagram_device(dev: *I2C_Device, address: I2CAddress) Datagram_Device {
+        // NOTE: Invarient: address is NOT NULL for datagram devices
         return .{
             .ptr = dev,
+            .address = address,
             .vtable = &vtable,
         };
     }
@@ -66,29 +71,29 @@ pub const I2C_Device = struct {
     }
 
     pub fn write(dev: I2C_Device, datagram: []const u8) !void {
-        try dev.bus.write_blocking(dev.address, datagram, dev.timeout);
+        try dev.bus.write_blocking(dev.address.?, datagram, dev.timeout);
     }
 
     pub fn writev(dev: I2C_Device, datagrams: []const []const u8) !void {
-        try dev.bus.writev_blocking(dev.address, datagrams, dev.timeout);
+        try dev.bus.writev_blocking(dev.address.?, datagrams, dev.timeout);
     }
 
     pub fn read(dev: I2C_Device, datagram: []u8) !usize {
-        try dev.bus.read_blocking(dev.address, datagram, dev.timeout);
+        try dev.bus.read_blocking(dev.address.?, datagram, dev.timeout);
         return datagram.len;
     }
 
     pub fn readv(dev: I2C_Device, datagrams: []const []u8) !usize {
-        try dev.bus.readv_blocking(dev.address, datagrams, dev.timeout);
+        try dev.bus.readv_blocking(dev.address.?, datagrams, dev.timeout);
         return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
     }
 
     pub fn write_then_read(dev: I2C_Device, src: []const u8, dst: []u8) !void {
-        try dev.bus.write_then_read_blocking(dev.address, src, dst, dev.timeout);
+        try dev.bus.write_then_read_blocking(dev.address.?, src, dst, dev.timeout);
     }
 
     pub fn writev_then_readv(dev: I2C_Device, write_chunks: []const []const u8, read_chunks: []const []u8) !void {
-        try dev.bus.writev_then_readv_blocking(dev.address, write_chunks, read_chunks, dev.timeout);
+        try dev.bus.writev_then_readv_blocking(dev.address.?, write_chunks, read_chunks, dev.timeout);
     }
 
     const vtable = Datagram_Device.VTable{
@@ -100,7 +105,6 @@ pub const I2C_Device = struct {
     };
 
     const i2c_vtable = drivers.I2C_Device.VTable{
-        .set_address_fn = set_address_fn,
         .writev_fn = i2c_writev_fn,
         .readv_fn = i2c_readv_fn,
         .writev_then_readv_fn = i2c_writev_then_readv_fn,
@@ -163,43 +167,31 @@ pub const I2C_Device = struct {
         };
     }
 
-    pub fn set_address_fn(
-        dd: *anyopaque,
-        addr: drivers.I2C_Device.Address,
-        allow_reserved: drivers.I2C_Device.Allow_Reserved,
-    ) I2CError!void {
+    fn i2c_writev_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []const u8) I2CError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        if (allow_reserved == .dont_allow_reserved)
-            addr.check_reserved() catch return I2CError.IllegalAddress
-        else if (allow_reserved == .allow_general)
-            addr.check_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
-                return I2CError.IllegalAddress;
-        dev.address = addr;
-    }
-
-    fn i2c_writev_fn(dd: *anyopaque, chunks: []const []const u8) I2CError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.writev(chunks) catch |err| switch (err) {
+        return dev.bus.writev_blocking(address, chunks, dev.timeout) catch |err| switch (err) {
             error.TxFifoFlushed => I2CError.UnknownAbort,
             else => |e| e,
         };
     }
 
-    fn i2c_readv_fn(dd: *anyopaque, chunks: []const []u8) I2CError!usize {
+    fn i2c_readv_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []u8) I2CError!usize {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.readv(chunks) catch |err| switch (err) {
-            error.TxFifoFlushed => I2CError.UnknownAbort,
-            else => |e| e,
+        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| switch (err) {
+            error.TxFifoFlushed => return I2CError.UnknownAbort,
+            else => |e| return e,
         };
+        return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
     }
 
     fn i2c_writev_then_readv_fn(
         dd: *anyopaque,
+        address: I2CAddress,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
     ) I2CError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
+        return dev.bus.writev_then_readv_blocking(address, write_chunks, read_chunks, dev.timeout) catch |err| switch (err) {
             error.TxFifoFlushed => I2CError.UnknownAbort,
             else => |e| e,
         };
