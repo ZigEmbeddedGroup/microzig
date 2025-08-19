@@ -1,7 +1,6 @@
 //! USB device implementation
 //!
 //! Initial inspiration: cbiffle's Rust [implementation](https://github.com/cbiffle/rp2040-usb-device-in-one-file/blob/main/src/main.rs)
-//! Currently progressing towards adopting the TinyUSB like API
 
 const std = @import("std");
 const assert = std.debug.assert;
@@ -94,9 +93,7 @@ pub const DpramAllocatorBump = struct {
 /// of system specific functions to Usb(). Those functions
 /// are used by the abstract USB impl of microzig.
 pub fn Usb(comptime config: UsbConfig) type {
-    // A set of functions required by the abstract USB impl to
-    // create a concrete one.
-    const f = struct {
+    return struct {
         comptime {
             if (config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
                 @compileError("RP2XXX USB endpoints number can't be grater than RP2XXX_MAX_ENDPOINTS_COUNT");
@@ -105,6 +102,7 @@ pub fn Usb(comptime config: UsbConfig) type {
         pub const cfg_max_endpoints_count = config.max_endpoints_count;
         pub const cfg_max_interfaces_count = config.max_interfaces_count;
         pub const high_speed = false;
+        pub const max_packet_size = 64;
 
         const HardwareEndpoint = packed struct(u7) {
             const ep_ctrl_all: *volatile [2 * (cfg_max_endpoints_count - 1)]EpCtrl =
@@ -182,7 +180,7 @@ pub fn Usb(comptime config: UsbConfig) type {
             }
         };
 
-        pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
+        pub fn usb_init_device() void {
             if (chip == .RP2350)
                 peri_usb.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
 
@@ -345,16 +343,7 @@ pub fn Usb(comptime config: UsbConfig) type {
 
             // Copy the setup packet out of its dedicated buffer at the base of
             // USB SRAM. The PAC models this buffer as two 32-bit registers,
-            // which is, like, not _wrong_ but slightly awkward since it means
-            // we can't just treat it as bytes. Instead, copy it out to a byte
-            // array.
-            var setup_packet: [8]u8 = @splat(0);
-            const spl: u32 = peri_dpram.SETUP_PACKET_LOW.raw;
-            const sph: u32 = peri_dpram.SETUP_PACKET_HIGH.raw;
-            @memcpy(setup_packet[0..4], std.mem.asBytes(&spl));
-            @memcpy(setup_packet[4..8], std.mem.asBytes(&sph));
-            // Reinterpret as setup packet
-            return std.mem.bytesToValue(usb.types.SetupPacket, &setup_packet);
+            return @bitCast([2]u32{ peri_dpram.SETUP_PACKET_LOW.raw, peri_dpram.SETUP_PACKET_HIGH.raw });
         }
 
         /// Called on a bus reset interrupt
@@ -419,6 +408,4 @@ pub fn Usb(comptime config: UsbConfig) type {
             }
         };
     };
-
-    return usb.Usb(f);
 }

@@ -13,47 +13,46 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-const usb_dev = rp2xxx.usb.Usb(.{});
-
 const usb_templates = usb.templates.DescriptorsConfigTemplates;
 const usb_config_len = usb_templates.config_descriptor_len + usb_templates.cdc_descriptor_len;
 const usb_config_descriptor =
     usb_templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
     usb_templates.cdc_descriptor(0, 4, .ep1, 8, .ep2, .ep2, 64);
 
-var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
-var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
-
 // This is our device configuration
-pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
-    .device_descriptor = &.{
-        .descriptor_type = .Device,
-        .bcd_usb = 0x0200,
-        .device_class = 0xEF,
-        .device_subclass = 2,
-        .device_protocol = 1,
-        .max_packet_size0 = 64,
-        .vendor = 0x2E8A,
-        .product = 0x000a,
-        .bcd_device = 0x0100,
-        .manufacturer_s = 1,
-        .product_s = 2,
-        .serial_s = 0,
-        .num_configurations = 1,
-    },
-    .config_descriptor = &usb_config_descriptor,
-    .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
-    .descriptor_strings = blk: {
-        @setEvalBranchQuota(2000);
-        break :blk &.{
-            std.unicode.utf8ToUtf16LeStringLiteral("Raspberry Pi"),
-            std.unicode.utf8ToUtf16LeStringLiteral("Pico Test Device"),
-            std.unicode.utf8ToUtf16LeStringLiteral("someserial"),
-            std.unicode.utf8ToUtf16LeStringLiteral("Board CDC"),
-        };
-    },
-    .drivers = &drivers,
-};
+const UsbDev = usb.Usb(.{
+    .device = rp2xxx.usb.Usb(.{}),
+    .descriptors = .create(
+        .{
+            .bcd_usb = .v1_1,
+            .device_triple = .{
+                .class = .Miscellaneous,
+                .subclass = 2,
+                .protocol = 1,
+            },
+            .max_packet_size0 = 64,
+            .vendor = 0x2E8A,
+            .product = 0x000a,
+            .bcd_device = 0x0100,
+            .manufacturer_s = 1,
+            .product_s = 2,
+            .serial_s = 0,
+            .num_configurations = 1,
+        },
+        &usb_config_descriptor,
+        .English,
+        &.{
+            "Raspberry Pi",
+            "Pico Test Device",
+            "someserial",
+            "Board CDC",
+        },
+    ),
+});
+
+var driver_cdc: usb.cdc.CdcClassDriver(UsbDev) = .{};
+
+var usb_dev: UsbDev = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -71,9 +70,8 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin|
         pin.set_function(.uart);
-    }
 
     uart.apply(.{
         .baud_rate = baud_rate,
@@ -83,7 +81,7 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device(&DEVICE_CONFIGURATION);
+    usb_dev.init_device(&.{driver_cdc.driver()});
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
@@ -121,11 +119,11 @@ pub fn usb_cdc_write(comptime fmt: []const u8, args: anytype) void {
 
     var write_buff = text;
     while (write_buff.len > 0) {
-        write_buff = driver_cdc.write(write_buff);
+        write_buff = driver_cdc.write(&usb_dev, write_buff);
         usb_dev.task(false) catch unreachable;
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
-    _ = driver_cdc.write_flush();
+    _ = driver_cdc.write_flush(&usb_dev);
     usb_dev.task(false) catch unreachable;
 }
 
@@ -138,7 +136,7 @@ pub fn usb_cdc_read() []const u8 {
     var read_buff: []u8 = usb_rx_buff[0..];
 
     while (true) {
-        const len = driver_cdc.read(read_buff);
+        const len = driver_cdc.read(&usb_dev, read_buff);
         read_buff = read_buff[len..];
         total_read += len;
         if (len == 0) break;

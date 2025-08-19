@@ -125,11 +125,10 @@ pub const CdcLineCoding = extern struct {
     data_bits: u8,
 };
 
-pub fn CdcClassDriver(comptime usb: anytype) type {
-    const fifo = std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size });
+pub fn CdcClassDriver(comptime Controller: type) type {
+    const fifo = std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = Controller.max_packet_size });
 
     return struct {
-        device: ?types.UsbDevice = null,
         ep_in_notif: types.Endpoint.Num = .ep0,
         ep_in: types.Endpoint.Num = .ep0,
         ep_out: types.Endpoint.Num = .ep0,
@@ -139,57 +138,51 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         rx: fifo = fifo.init(),
         tx: fifo = fifo.init(),
 
-        epin_buf: [usb.max_packet_size]u8 = undefined,
+        epin_buf: [Controller.max_packet_size]u8 = undefined,
 
         pub fn available(self: *@This()) usize {
             return self.rx.readableLength();
         }
 
-        pub fn read(self: *@This(), dst: []u8) usize {
+        pub fn read(self: *@This(), controller: *Controller, dst: []u8) usize {
             const read_count = self.rx.read(dst);
-            self.prep_out_transaction();
+            self.prep_out_transaction(controller);
             return read_count;
         }
 
-        pub fn write(self: *@This(), data: []const u8) []const u8 {
+        pub fn write(self: *@This(), controller: *Controller, data: []const u8) []const u8 {
             const write_count = @min(self.tx.writableLength(), data.len);
 
-            if (write_count > 0) {
-                self.tx.writeAssumeCapacity(data[0..write_count]);
-            } else {
+            if (write_count == 0)
                 return data[0..];
-            }
 
-            if (self.tx.writableLength() == 0) {
-                _ = self.write_flush();
-            }
+            self.tx.writeAssumeCapacity(data[0..write_count]);
+
+            if (self.tx.writableLength() == 0)
+                _ = self.write_flush(controller);
 
             return data[write_count..];
         }
 
-        pub fn write_flush(self: *@This()) usize {
-            if (self.device.?.ready() == false) {
+        pub fn write_flush(self: *@This(), controller: *Controller) usize {
+            if (!controller.ready() or self.tx.readableLength() == 0)
                 return 0;
-            }
-            if (self.tx.readableLength() == 0) {
-                return 0;
-            }
             const len = self.tx.read(&self.epin_buf);
-            const tx_len = self.device.?.endpoint_tx(self.ep_in, &.{self.epin_buf[0..len]});
+            const tx_len = controller.endpoint_tx(self.ep_in, &.{self.epin_buf[0..len]});
             if (tx_len != len) @panic("bruh");
             return len;
         }
 
-        fn prep_out_transaction(self: *@This()) void {
-            if (self.rx.writableLength() >= usb.max_packet_size) {
+        fn prep_out_transaction(self: *@This(), controller: *Controller) void {
+            if (self.rx.writableLength() >= Controller.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
-                self.device.?.endpoint_rx(self.ep_out, usb.max_packet_size);
+                controller.endpoint_rx(self.ep_out, Controller.max_packet_size);
             }
         }
 
-        fn init(ptr: *anyopaque, device: types.UsbDevice) void {
+        fn init(ptr: *anyopaque, controller: *Controller) void {
+            _ = controller;
             var self: *@This() = @ptrCast(@alignCast(ptr));
-            self.device = device;
             self.line_coding = .{
                 .bit_rate = 115200,
                 .stop_bits = 0,
@@ -198,7 +191,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             };
         }
 
-        fn open(ptr: *anyopaque, cfg: []const u8) !usize {
+        fn open(ptr: *anyopaque, controller: *Controller, cfg: []const u8) !usize {
             var self: *@This() = @ptrCast(@alignCast(ptr));
             var curr_cfg = cfg;
 
@@ -230,7 +223,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                                 .In => self.ep_in = desc_ep.endpoint.num,
                                 .Out => self.ep_out = desc_ep.endpoint.num,
                             }
-                            self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
+                            controller.endpoint_open(curr_cfg[0..desc_ep.length]);
                             curr_cfg = bos.get_desc_next(curr_cfg);
                         }
                     }
@@ -240,69 +233,43 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             return cfg.len - curr_cfg.len;
         }
 
-        fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+        fn class_control(ptr: *anyopaque, controller: *Controller, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
             if (CdcManagementRequestType.from_u8(setup.request)) |request| {
-                switch (request) {
-                    .SetLineCoding => {
-                        switch (stage) {
-                            .Setup => {
-                                // HACK, we should handle data phase somehow to read sent line_coding
-                                self.device.?.control_ack(setup);
-                            },
-                            else => {},
-                        }
-                    },
-                    .GetLineCoding => {
-                        if (stage == .Setup) {
-                            self.device.?.control_transfer(setup, std.mem.asBytes(&self.line_coding));
-                        }
-                    },
-                    .SetControlLineState => {
-                        switch (stage) {
-                            .Setup => {
-                                self.device.?.control_ack(setup);
-                            },
-                            else => {},
-                        }
-                    },
-                    .SendBreak => {
-                        switch (stage) {
-                            .Setup => {
-                                self.device.?.control_ack(setup);
-                            },
-                            else => {},
-                        }
-                    },
-                }
+                if (stage == .Setup) switch (request) {
+                    .SetLineCoding => controller.control_ack(setup),
+                    .GetLineCoding => controller.control_transfer(setup, std.mem.asBytes(&self.line_coding)),
+                    .SetControlLineState => controller.control_ack(setup),
+                    .SendBreak => controller.control_ack(setup),
+                };
             }
 
             return true;
         }
 
-        fn send(ptr: *anyopaque, ep_in: types.Endpoint.Num, data: []const u8) void {
+        fn send(ptr: *anyopaque, controller: *Controller, ep_in: types.Endpoint.Num, data: []const u8) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
-            if (ep_in == self.ep_in and self.write_flush() == 0) {
+            if (ep_in == self.ep_in and self.write_flush(controller) == 0) {
                 // If there is no data left, a empty packet should be sent if
                 // data len is multiple of EP Packet size and not zero
-                if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
-                    _ = self.device.?.endpoint_tx(self.ep_in, &.{&.{}});
+                if (self.tx.readableLength() == 0 and data.len > 0 and data.len == Controller.max_packet_size) {
+                    _ = controller.endpoint_tx(self.ep_in, &.{&.{}});
                 }
             }
         }
 
-        fn receive(ptr: *anyopaque, ep_out: types.Endpoint.Num, data: []const u8) void {
+        fn receive(ptr: *anyopaque, controller: *Controller, ep_out: types.Endpoint.Num, data: []const u8) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
             if (ep_out == self.ep_out) {
                 self.rx.write(data) catch {};
-                self.prep_out_transaction();
+                self.prep_out_transaction(controller);
             }
         }
 
-        pub fn driver(self: *@This()) types.UsbClassDriver {
+        pub fn driver(self: *@This()) Controller.DriverInterface {
             return .{
                 .ptr = self,
                 .fn_init = init,

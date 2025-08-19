@@ -29,6 +29,47 @@ const Endpoint = types.Endpoint;
 const SetupRequest = types.SetupRequest;
 const BosConfig = utils.BosConfig;
 
+pub const Descriptors = struct {
+    const Lang = struct {
+        lo: u8,
+        hi: u8,
+
+        pub const English: @This() = .{ .lo = 0x09, .hi = 0x04 };
+    };
+
+    device: []const u8,
+    config: []const u8,
+    string: []const []const u8,
+    device_qualifier: []const u8,
+
+    pub fn create(comptime device: types.DeviceDescriptor, config: []const u8, comptime lang: Lang, comptime strings: []const []const u8) @This() {
+        @setEvalBranchQuota(10000);
+
+        // String 0 indicates language.
+        var strings_utf16: []const []const u8 = &.{&.{ 0x04, 0x03, lang.lo, lang.hi }};
+        inline for (strings) |str| {
+            const str_utf16: []const u8 = @ptrCast(std.unicode.utf8ToUtf16LeStringLiteral(str));
+            strings_utf16 = strings_utf16 ++ .{.{ str_utf16.len + 2, strings_utf16[0][1] } ++ str_utf16};
+        }
+        return .{
+            .device = &device.serialize(),
+            .config = config,
+            .string = strings_utf16,
+            .device_qualifier = &(types.DeviceQualifierDescriptor{
+                .bcd_usb = device.bcd_usb,
+                .device_triple = device.device_triple,
+                .max_packet_size0 = device.max_packet_size0,
+                .num_configurations = device.num_configurations,
+            }).serialize(),
+        };
+    }
+};
+
+pub const Config = struct {
+    device: type,
+    descriptors: Descriptors,
+};
+
 /// Create a USB device
 ///
 /// # Arguments
@@ -45,135 +86,172 @@ const BosConfig = utils.BosConfig;
 /// * `set_address(addr: u7) void` - Set the given address
 /// * `get_EPBIter(*const DeviceConfiguration) EPBIter` - Return an endpoint buffer iterator. Each call to next returns an unhandeled endpoint buffer with data. How next is implemented depends on the system.
 /// The functions must be grouped under the same name space and passed to the fuction at compile time.
-/// The functions will be accessible to the user through the `callbacks` field.
-pub fn Usb(comptime f: anytype) type {
+/// The functions will be accessible to the user through the `Dev` field.
+pub fn Usb(comptime config: Config) type {
     return struct {
-        /// The usb configuration set
-        var usb_config: ?*DeviceConfiguration = null;
-        var itf_to_drv: [f.cfg_max_interfaces_count]u8 = @splat(0);
-        var ep_to_drv: [f.cfg_max_endpoints_count][2]u8 = @splat(@splat(0));
-        pub const max_packet_size = if (f.high_speed) 512 else 64;
+        const Controller = @This();
+
+        /// USB Class driver interface
+        pub const DriverInterface = struct {
+            ptr: *anyopaque,
+            fn_init: *const fn (ptr: *anyopaque, ctrl: *Controller) void,
+            fn_open: *const fn (ptr: *anyopaque, ctrl: *Controller, cfg: []const u8) anyerror!usize,
+            fn_class_control: *const fn (ptr: *anyopaque, ctrl: *Controller, stage: types.ControlStage, setup: *const types.SetupPacket) bool,
+            fn_send: *const fn (ptr: *anyopaque, ctrl: *Controller, ep_in: types.Endpoint.Num, data: []const u8) void,
+            fn_receive: *const fn (ptr: *anyopaque, ctrl: *Controller, ep_out: types.Endpoint.Num, data: []const u8) void,
+
+            pub fn init(interface: *const @This(), ctrl: *Controller) void {
+                return interface.fn_init(interface.ptr, ctrl);
+            }
+
+            /// Driver open (set config) operation. Must return length of consumed driver config data.
+            pub fn open(interface: *const @This(), ctrl: *Controller, cfg: []const u8) !usize {
+                return interface.fn_open(interface.ptr, ctrl, cfg);
+            }
+
+            pub fn class_control(interface: *const @This(), ctrl: *Controller, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+                return interface.fn_class_control(interface.ptr, ctrl, stage, setup);
+            }
+
+            pub fn send(interface: *const @This(), ctrl: *Controller, ep_in: types.Endpoint.Num, data: []const u8) void {
+                return interface.fn_send(interface.ptr, ctrl, ep_in, data);
+            }
+
+            pub fn receive(interface: *const @This(), ctrl: *Controller, ep_out: types.Endpoint.Num, len: []const u8) void {
+                return interface.fn_receive(interface.ptr, ctrl, ep_out, len);
+            }
+        };
+
+        pub const max_packet_size = config.device.max_packet_size;
         const drvid_invalid = 0xff;
 
-        /// The callbacks passed provided by the caller
-        pub const callbacks = f;
+        /// The usb configuration set
+        drivers: ?[]const DriverInterface,
+        itf_to_drv: [config.device.cfg_max_interfaces_count]u8,
+        ep_to_drv: [config.device.cfg_max_endpoints_count][2]u8,
+        // Class driver associated with last setup request if any
+        driver: ?*const DriverInterface,
+        // When the host gives us a new address, we can't just slap it into
+        // registers right away, because we have to do an acknowledgement step using
+        // our _old_ address.
+        new_address: ?u8,
+        // Flag recording whether the host has configured us with a
+        // `SetConfiguration` message.
+        configured: bool,
+        // Flag recording whether we've set up buffer transfers after being
+        // configured.
+        started: bool,
+        // Last setup packet request
+        setup_packet: types.SetupPacket,
+        // Keeps track of sent data from tmp buffer
+        now_sending: []const u8,
+        // 0 - no config set
+        cfg_num: u16,
 
-        // We'll keep some state in Plain Old Static Local Variables:
-        const S = struct {
-            // When the host gives us a new address, we can't just slap it into
-            // registers right away, because we have to do an acknowledgement step using
-            // our _old_ address.
-            var new_address: ?u8 = null;
-            // 0 - no config set
-            var cfg_num: u16 = 0;
-            // Flag recording whether the host has configured us with a
-            // `SetConfiguration` message.
-            var configured = false;
-            // Flag recording whether we've set up buffer transfers after being
-            // configured.
-            var started = false;
-            // Some scratch space that we'll use for things like preparing string
-            // descriptors for transmission.
-            var tmp: [128]u8 = @splat(0);
-            // Keeps track of sent data from tmp buffer
-            var buffer_reader = BufferReader{ .buffer = &.{} };
-            // Last setup packet request
-            var setup_packet: types.SetupPacket = undefined;
-            // Class driver associated with last setup request if any
-            var driver: ?*types.UsbClassDriver = null;
+        pub const init: @This() = .{
+            .drivers = null,
+            .itf_to_drv = @splat(0),
+            .ep_to_drv = @splat(@splat(0)),
+            .driver = null,
+            .new_address = null,
+            .configured = false,
+            .started = false,
+            .setup_packet = undefined,
+            .now_sending = &.{},
+            .cfg_num = 0,
         };
 
         // Command endpoint utilities
         const CmdEndpoint = struct {
             /// Command response utility function that can split long data in multiple packets
-            fn send_cmd_response(data: []const u8, expected_max_length: u16) void {
-                S.buffer_reader = BufferReader{ .buffer = data[0..@min(data.len, expected_max_length)] };
-                const data_chunk = S.buffer_reader.try_peek(64);
+            fn send_cmd_response(this2: *Controller, data: []const u8, expected_max_length: u16) void {
+                this2.now_sending = data[0..@min(data.len, expected_max_length)];
+                const data_chunk = this2.now_sending[0..@min(this2.now_sending.len, 64)];
 
                 if (data_chunk.len > 0) {
-                    _ = f.usb_start_tx(.ep0, &.{data_chunk});
+                    _ = config.device.usb_start_tx(.ep0, &.{data_chunk});
                 }
             }
 
-            fn send_cmd_ack() void {
-                _ = f.usb_start_tx(.ep0, &.{});
+            fn send_cmd_ack(this2: *Controller) void {
+                _ = this2;
+                _ = config.device.usb_start_tx(.ep0, &.{});
             }
         };
 
         /// Initialize the usb device using the given configuration
         ///
         /// You have to ensure that the device is getting an appropiate clock signal.
-        pub fn init_device(device_config: *DeviceConfiguration) void {
-            f.usb_init_device(device_config);
-            usb_config = device_config;
+        pub fn init_device(this: *@This(), d: []const DriverInterface) void {
+            config.device.usb_init_device();
+            this.drivers = d;
 
-            const device_interface = device();
-            for (usb_config.?.drivers) |*driver| {
-                driver.init(device_interface);
+            for (d) |*drv| {
+                drv.init(this);
             }
         }
 
-        fn device() types.UsbDevice {
-            return .{
-                .fn_ready = device_ready,
-                .fn_control_transfer = device_control_transfer,
-                .fn_control_ack = device_control_ack,
-                .fn_endpoint_open = device_endpoint_open,
-                .fn_endpoint_tx = f.usb_start_tx,
-                .fn_endpoint_rx = f.usb_start_rx,
-            };
+        pub fn ready(this: *@This()) bool {
+            return this.started;
         }
 
-        fn device_ready() bool {
-            return S.started;
+        pub fn control_transfer(this: *@This(), setup: *const types.SetupPacket, data: []const u8) void {
+            CmdEndpoint.send_cmd_response(this, data, setup.length);
         }
 
-        fn device_control_transfer(setup: *const types.SetupPacket, data: []const u8) void {
-            CmdEndpoint.send_cmd_response(data, setup.length);
+        pub fn control_ack(this: *@This(), _: *const types.SetupPacket) void {
+            CmdEndpoint.send_cmd_ack(this);
         }
 
-        fn device_control_ack(_: *const types.SetupPacket) void {
-            CmdEndpoint.send_cmd_ack();
+        pub fn endpoint_tx(this: *@This(), ep_in: Endpoint.Num, data: []const []const u8) usize {
+            _ = this;
+            return config.device.usb_start_tx(ep_in, data);
         }
 
-        fn device_endpoint_open(ep_desc: []const u8) void {
+        pub fn endpoint_rx(this: *@This(), ep_out: Endpoint.Num, len: usize) void {
+            _ = this;
+            return config.device.usb_start_rx(ep_out, len);
+        }
+
+        pub fn endpoint_open(this: *@This(), ep_desc: []const u8) void {
+            _ = this;
             const ep_addr = BosConfig.get_data_u8(ep_desc, 2);
             const ep: Endpoint = .from_address(ep_addr);
             const ep_transfer_type = BosConfig.get_data_u8(ep_desc, 3);
             const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
-            f.endpoint_open(ep, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk, ep_max_packet_size) catch unreachable;
+            config.device.endpoint_open(ep, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk, ep_max_packet_size) catch unreachable;
         }
 
-        fn get_driver(drv_idx: u8) ?*types.UsbClassDriver {
-            if (drv_idx == drvid_invalid) {
-                return null;
-            }
-            return &usb_config.?.drivers[drv_idx];
+        fn get_driver(this: *@This(), drv_idx: u8) ?*const DriverInterface {
+            if (drv_idx == drvid_invalid)
+                return null
+            else
+                return &this.drivers.?[drv_idx];
         }
 
-        fn get_setup_packet() types.SetupPacket {
-            const setup = f.get_setup_packet();
-            S.setup_packet = setup;
-            S.driver = null;
+        fn get_setup_packet(this: *@This()) types.SetupPacket {
+            const setup = config.device.get_setup_packet();
+            this.setup_packet = setup;
+            this.driver = null;
             return setup;
         }
 
-        fn configuration_reset() void {
-            @memset(&itf_to_drv, drvid_invalid);
-            @memset(&ep_to_drv, .{ drvid_invalid, drvid_invalid });
+        fn configuration_reset(this: *@This()) void {
+            @memset(&this.itf_to_drv, drvid_invalid);
+            @memset(&this.ep_to_drv, .{ drvid_invalid, drvid_invalid });
         }
 
         /// Usb task function meant to be executed in regular intervals after
         /// initializing the device.
         ///
         /// This function will return an error if the device hasn't been initialized.
-        pub fn task(debug: bool) !void {
-            if (usb_config == null) return error.UninitializedDevice;
+        pub fn task(this: *@This(), debug: bool) !void {
+            if (this.drivers == null) return error.UninitializedDevice;
 
             // Device Specific Request
             const DeviceRequestProcessor = struct {
-                fn process_setup_request(setup: *const types.SetupPacket, debug_mode: bool) !void {
+                fn process_setup_request(this2: *Controller, setup: *const types.SetupPacket, debug_mode: bool) !void {
                     switch (setup.request_type.type) {
                         .Class => {
                             //const itfIndex = setup.index & 0x00ff;
@@ -184,40 +262,39 @@ pub fn Usb(comptime f: anytype) type {
                             if (req == null) return;
                             switch (req.?) {
                                 .SetAddress => {
-                                    S.new_address = @as(u8, @intCast(setup.value & 0xff));
-                                    CmdEndpoint.send_cmd_ack();
-                                    if (debug_mode) std.log.info("    SetAddress: {}", .{S.new_address.?});
+                                    this2.new_address = @as(u8, @intCast(setup.value & 0xff));
+                                    CmdEndpoint.send_cmd_ack(this2);
+                                    if (debug_mode) std.log.info("    SetAddress: {}", .{this2.new_address.?});
                                 },
                                 .SetConfiguration => {
                                     if (debug_mode) std.log.info("    SetConfiguration", .{});
-                                    const cfg_num = setup.value;
-                                    if (S.cfg_num != cfg_num) {
-                                        if (S.cfg_num > 0) {
-                                            configuration_reset();
+                                    if (this2.cfg_num != setup.value) {
+                                        if (this2.cfg_num > 0) {
+                                            this2.configuration_reset();
                                         }
 
-                                        if (cfg_num > 0) {
-                                            try process_set_config(cfg_num - 1);
+                                        if (setup.value > 0) {
+                                            try process_set_config(this2, setup.value - 1);
                                             // TODO: call mount callback if any
                                         } else {
                                             // TODO: call umount callback if any
                                         }
                                     }
-                                    S.cfg_num = cfg_num;
-                                    S.configured = true;
-                                    CmdEndpoint.send_cmd_ack();
+                                    this2.cfg_num = setup.value;
+                                    this2.configured = true;
+                                    CmdEndpoint.send_cmd_ack(this2);
                                 },
                                 .GetDescriptor => {
                                     const descriptor_type = DescType.from_u8(@intCast(setup.value >> 8));
                                     if (descriptor_type) |dt| {
-                                        try process_get_descriptor(setup, dt, debug_mode);
+                                        try process_get_descriptor(this2, setup, dt, debug_mode);
                                     }
                                 },
                                 .SetFeature => {
                                     const feature = FeatureSelector.from_u8(@intCast(setup.value >> 8));
                                     if (feature) |feat| {
                                         switch (feat) {
-                                            .DeviceRemoteWakeup, .EndpointHalt => CmdEndpoint.send_cmd_ack(),
+                                            .DeviceRemoteWakeup, .EndpointHalt => CmdEndpoint.send_cmd_ack(this2),
                                             // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                                             .TestMode => {},
                                         }
@@ -229,81 +306,21 @@ pub fn Usb(comptime f: anytype) type {
                     }
                 }
 
-                fn process_get_descriptor(setup: *const types.SetupPacket, descriptor_type: DescType, debug_mode: bool) !void {
-                    switch (descriptor_type) {
-                        .Device => {
-                            if (debug_mode) std.log.info("        Device", .{});
-
-                            var bw = BufferWriter{ .buffer = &S.tmp };
-                            try bw.write(&usb_config.?.device_descriptor.serialize());
-
-                            CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
-                        },
-                        .Config => {
-                            if (debug_mode) std.log.info("        Config", .{});
-
-                            var bw = BufferWriter{ .buffer = &S.tmp };
-                            try bw.write(usb_config.?.config_descriptor);
-
-                            CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
-                        },
-                        .String => {
-                            if (debug_mode) std.log.info("        String", .{});
-                            // String descriptor index is in bottom 8 bits of
-                            // `value`.
-                            const i: usize = @intCast(setup.value & 0xff);
-                            const bytes = StringBlk: {
-                                if (i == 0) {
-                                    // Special index 0 requests the language
-                                    // descriptor.
-                                    break :StringBlk usb_config.?.lang_descriptor;
-                                } else {
-                                    // Otherwise, set up one of our strings.
-                                    const s: []const u8 = @ptrCast(usb_config.?.descriptor_strings[i - 1]);
-                                    const len = 2 + s.len;
-
-                                    var wb = BufferWriter{ .buffer = &S.tmp };
-                                    try wb.write_int(u8, @intCast(len));
-                                    try wb.write_int(u8, 0x03);
-                                    try wb.write(s);
-
-                                    break :StringBlk wb.get_written_slice();
-                                }
-                            };
-
-                            CmdEndpoint.send_cmd_response(bytes, setup.length);
-                        },
-                        .Interface => {
-                            if (debug_mode) std.log.info("        Interface", .{});
-                        },
-                        .Endpoint => {
-                            if (debug_mode) std.log.info("        Endpoint", .{});
-                        },
-                        .DeviceQualifier => {
-                            if (debug_mode) std.log.info("        DeviceQualifier", .{});
-                            // We will just copy parts of the DeviceDescriptor because
-                            // the DeviceQualifierDescriptor can be seen as a subset.
-                            const dqd = types.DeviceQualifierDescriptor{
-                                .bcd_usb = usb_config.?.device_descriptor.bcd_usb,
-                                .device_class = usb_config.?.device_descriptor.device_class,
-                                .device_subclass = usb_config.?.device_descriptor.device_subclass,
-                                .device_protocol = usb_config.?.device_descriptor.device_protocol,
-                                .max_packet_size0 = usb_config.?.device_descriptor.max_packet_size0,
-                                .num_configurations = usb_config.?.device_descriptor.num_configurations,
-                            };
-
-                            var bw = BufferWriter{ .buffer = &S.tmp };
-                            try bw.write(&dqd.serialize());
-
-                            CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
-                        },
-                        else => {},
-                    }
+                fn process_get_descriptor(this2: *Controller, setup: *const types.SetupPacket, descriptor_type: DescType, debug_mode: bool) !void {
+                    _ = debug_mode;
+                    const data = switch (descriptor_type) {
+                        .Device => config.descriptors.device,
+                        .Config => config.descriptors.config,
+                        .String => config.descriptors.string[setup.value & 0xff],
+                        .DeviceQualifier => config.descriptors.device_qualifier,
+                        else => return,
+                    };
+                    CmdEndpoint.send_cmd_response(this2, data, setup.length);
                 }
 
-                fn process_set_config(_: u16) !void {
+                fn process_set_config(this2: *Controller, _: u16) !void {
                     // TODO: we support just one config for now so ignore config index
-                    const bos_cfg = usb_config.?.config_descriptor;
+                    const bos_cfg = config.descriptors.config;
 
                     var curr_bos_cfg = bos_cfg;
                     var curr_drv_idx: u8 = 0;
@@ -329,15 +346,15 @@ pub fn Usb(comptime f: anytype) type {
                         }
                         const desc_itf = BosConfig.get_desc_as(types.InterfaceDescriptor, curr_bos_cfg);
 
-                        var driver = usb_config.?.drivers[curr_drv_idx];
-                        const drv_cfg_len = try driver.open(curr_bos_cfg);
+                        var drv = this2.drivers.?[curr_drv_idx];
+                        const drv_cfg_len = try drv.open(this2, curr_bos_cfg);
 
                         for (0..assoc_itf_count) |itf_offset| {
                             const itf_num = desc_itf.interface_number + itf_offset;
-                            itf_to_drv[itf_num] = curr_drv_idx;
+                            this2.itf_to_drv[itf_num] = curr_drv_idx;
                         }
 
-                        bind_endpoints_to_driver(curr_bos_cfg[0..drv_cfg_len], curr_drv_idx);
+                        bind_endpoints_to_driver(this2, curr_bos_cfg[0..drv_cfg_len], curr_drv_idx);
                         curr_bos_cfg = curr_bos_cfg[drv_cfg_len..];
 
                         // TODO: TMP solution - just 1 driver so quit while loop
@@ -345,7 +362,7 @@ pub fn Usb(comptime f: anytype) type {
                     }
                 }
 
-                fn bind_endpoints_to_driver(drv_bos_cfg: []const u8, drv_idx: u8) void {
+                fn bind_endpoints_to_driver(this2: *Controller, drv_bos_cfg: []const u8, drv_idx: u8) void {
                     var curr_bos_cfg = drv_bos_cfg;
                     while (curr_bos_cfg.len > 0) : ({
                         curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
@@ -355,7 +372,7 @@ pub fn Usb(comptime f: anytype) type {
                                 .Out => 0,
                                 .In => 1,
                             };
-                            ep_to_drv[desc_ep.endpoint.num.to_int()][dir_as_number] = drv_idx;
+                            this2.ep_to_drv[desc_ep.endpoint.num.to_int()][dir_as_number] = drv_idx;
                         }
                     }
                 }
@@ -363,13 +380,13 @@ pub fn Usb(comptime f: anytype) type {
 
             // Class/Interface Specific Request
             const InterfaceRequestProcessor = struct {
-                fn process_setup_request(setup: *const types.SetupPacket) !void {
+                fn process_setup_request(this2: *Controller, setup: *const types.SetupPacket) !void {
                     const itf: u8 = @intCast(setup.index & 0xFF);
-                    var driver = get_driver(itf_to_drv[itf]);
-                    if (driver == null) return;
-                    S.driver = driver;
+                    const drv = this2.get_driver(this2.itf_to_drv[itf]);
+                    if (drv == null) return;
 
-                    if (driver.?.class_control(.Setup, setup) == false) {
+                    this2.driver = drv;
+                    if (this2.driver.?.class_control(this2, .Setup, setup) == false) {
                         // TODO
                     }
                 }
@@ -381,23 +398,23 @@ pub fn Usb(comptime f: anytype) type {
             };
 
             // Check which interrupt flags are set.
-            const ints = f.get_interrupts();
+            const ints = config.device.get_interrupts();
 
             // Setup request received?
             if (ints.SetupReq) {
                 if (debug) std.log.info("setup req", .{});
 
-                const setup = get_setup_packet();
+                const setup = this.get_setup_packet();
 
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
                 // to an IN on EP0 needs to use PID DATA1, and this line will ensure
                 // that.
-                // TODO - maybe it can be moved to f.get_setup_packet?
-                f.reset_ep0();
+                // TODO - maybe it can be moved to config.device.get_setup_packet?
+                config.device.reset_ep0();
 
                 switch (setup.request_type.recipient) {
-                    .Device => try DeviceRequestProcessor.process_setup_request(&setup, debug),
-                    .Interface => try InterfaceRequestProcessor.process_setup_request(&setup),
+                    .Device => try DeviceRequestProcessor.process_setup_request(this, &setup, debug),
+                    .Interface => try InterfaceRequestProcessor.process_setup_request(this, &setup),
                     .Endpoint => try EndpointRequestProcessor.process_setup_request(&setup),
                     else => {},
                 }
@@ -406,7 +423,7 @@ pub fn Usb(comptime f: anytype) type {
             // Events on one or more buffers? (In practice, always one.)
             if (ints.BuffStatus) {
                 if (debug) std.log.info("buff status", .{});
-                var iter: f.UnhandledEndpointIterator = .init();
+                var iter: config.device.UnhandledEndpointIterator = .init();
 
                 while (iter.next()) |result| switch (result) {
                     .In => |in| {
@@ -418,25 +435,23 @@ pub fn Usb(comptime f: anytype) type {
                         if (in.ep_num == .ep0) {
                             if (debug) std.log.info("    EP0_IN_ADDR", .{});
 
-                            const buffer_reader = &S.buffer_reader;
-
                             // We use this opportunity to finish the delayed
                             // SetAddress request, if there is one:
-                            if (S.new_address) |addr| {
+                            if (this.new_address) |addr| {
                                 // Change our address:
-                                f.set_address(@intCast(addr));
+                                config.device.set_address(@intCast(addr));
                             }
 
-                            if (in.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
-                                _ = buffer_reader.try_advance(in.buffer.len);
-                                const next_data_chunk = buffer_reader.try_peek(64);
+                            if (in.buffer.len > 0 and this.now_sending.len > 0) {
+                                this.now_sending = this.now_sending[in.buffer.len..];
+                                const next_data_chunk = this.now_sending[0..@min(this.now_sending.len, 64)];
                                 if (next_data_chunk.len > 0) {
-                                    _ = f.usb_start_tx(.ep0, &.{next_data_chunk});
+                                    _ = config.device.usb_start_tx(.ep0, &.{next_data_chunk});
                                 } else {
-                                    f.usb_start_rx(.ep0, 0);
+                                    config.device.usb_start_rx(.ep0, 0);
 
-                                    if (S.driver) |driver| {
-                                        _ = driver.class_control(.Ack, &S.setup_packet);
+                                    if (this.driver) |drv| {
+                                        _ = drv.class_control(this, .Ack, &this.setup_packet);
                                     }
                                 }
                             } else {
@@ -445,20 +460,20 @@ pub fn Usb(comptime f: anytype) type {
                                 // status phase where the host sends us (via EP0
                                 // OUT) a zero-byte DATA packet, so, set that
                                 // up:
-                                f.usb_start_rx(.ep0, 0);
+                                config.device.usb_start_rx(.ep0, 0);
 
-                                if (S.driver) |driver|
-                                    _ = driver.class_control(.Ack, &S.setup_packet);
+                                if (this.driver) |drv|
+                                    _ = drv.class_control(this, .Ack, &this.setup_packet);
                             }
-                        } else if (get_driver(ep_to_drv[in.ep_num.to_int()][1])) |driver|
-                            driver.send(in.ep_num, in.buffer);
+                        } else if (this.get_driver(this.ep_to_drv[in.ep_num.to_int()][1])) |drv|
+                            drv.send(this, in.ep_num, in.buffer);
                     },
                     .Out => |out| {
                         if (debug) std.log.info("    data: {any}", .{out.buffer});
-                        if (get_driver(ep_to_drv[out.ep_num.to_int()][0])) |driver|
-                            driver.receive(out.ep_num, out.buffer);
+                        if (this.get_driver(this.ep_to_drv[out.ep_num.to_int()][0])) |drv|
+                            drv.receive(this, out.ep_num, out.buffer);
 
-                        f.endpoint_reset_rx(out.ep_num);
+                        config.device.endpoint_reset_rx(out.ep_num);
                     },
                 };
             } // <-- END of buf status handling
@@ -467,22 +482,21 @@ pub fn Usb(comptime f: anytype) type {
             if (ints.BusReset) {
                 if (debug) std.log.info("bus reset", .{});
 
-                configuration_reset();
+                this.configuration_reset();
                 // Reset the device
-                f.bus_reset();
+                config.device.bus_reset();
 
                 // Reset our state.
-                S.new_address = null;
-                S.configured = false;
-                S.started = false;
-                S.buffer_reader = BufferReader{ .buffer = &.{} };
+                this.new_address = null;
+                this.configured = false;
+                this.started = false;
+                this.now_sending = &.{};
             }
 
             // If we have been configured but haven't reached this point yet, set up
             // our custom EP OUT's to receive whatever data the host wants to send.
-            if (S.configured and !S.started) {
-                S.started = true;
-            }
+            if (this.configured and !this.started)
+                this.started = true;
         }
     };
 }
@@ -490,14 +504,6 @@ pub fn Usb(comptime f: anytype) type {
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Driver support stuctures
 // +++++++++++++++++++++++++++++++++++++++++++++++++
-
-pub const DeviceConfiguration = struct {
-    device_descriptor: *const types.DeviceDescriptor,
-    config_descriptor: []const u8,
-    lang_descriptor: []const u8,
-    descriptor_strings: []const []const u16,
-    drivers: []types.UsbClassDriver,
-};
 
 /// USB interrupt status
 ///
@@ -520,93 +526,6 @@ pub const InterruptStatus = struct {
 pub const EndpointAndBuffer = union(Dir) {
     Out: struct { ep_num: Endpoint.Num, buffer: []const u8 },
     In: struct { ep_num: Endpoint.Num, buffer: []u8 },
-};
-
-const BufferWriter = struct {
-    buffer: []u8,
-    pos: usize = 0,
-    endian: std.builtin.Endian = builtin.cpu.arch.endian(),
-
-    pub const Error = error{EndOfBuffer};
-
-    /// Moves forward write cursor by the provided number of bytes.
-    pub fn advance(self: *@This(), bytes: usize) Error!void {
-        try self.bound_check(bytes);
-        self.advance_unsafe(bytes);
-    }
-
-    /// Writes data provided as a slice to the buffer and moves write cursor forward by data size.
-    pub fn write(self: *@This(), data: []const u8) Error!void {
-        try self.bound_check(data.len);
-        defer self.advance_unsafe(data.len);
-        @memcpy(self.buffer[self.pos .. self.pos + data.len], data);
-    }
-
-    /// Writes an int with respect to the buffer's endianness and moves write cursor forward by int size.
-    pub fn write_int(self: *@This(), comptime T: type, value: T) Error!void {
-        const size = @divExact(@typeInfo(T).int.bits, 8);
-        try self.bound_check(size);
-        defer self.advance_unsafe(size);
-        std.mem.writeInt(T, self.buffer[self.pos..][0..size], value, self.endian);
-    }
-
-    /// Writes an int with respect to the buffer's endianness but skip bound check.
-    /// Useful in cases where the bound can be checked once for batch of ints.
-    pub fn write_int_unsafe(self: *@This(), comptime T: type, value: T) void {
-        const size = @divExact(@typeInfo(T).int.bits, 8);
-        defer self.advance_unsafe(size);
-        std.mem.writeInt(T, self.buffer[self.pos..][0..size], value, self.endian);
-    }
-
-    /// Returns a slice of the internal buffer containing the written data.
-    pub fn get_written_slice(self: *const @This()) []const u8 {
-        return self.buffer[0..self.pos];
-    }
-
-    /// Performs a buffer bound check against the current cursor position and the provided number of bytes to check forward.
-    pub fn bound_check(self: *const @This(), bytes: usize) Error!void {
-        if (self.pos + bytes > self.buffer.len) return error.EndOfBuffer;
-    }
-
-    fn advance_unsafe(self: *@This(), bytes: usize) void {
-        self.pos += bytes;
-    }
-};
-
-const BufferReader = struct {
-    buffer: []const u8,
-    pos: usize = 0,
-    endian: std.builtin.Endian = builtin.cpu.arch.endian(),
-
-    /// Attempts to move read cursor forward by the specified number of bytes.
-    /// Returns the actual number of bytes advanced, up to the specified number.
-    pub fn try_advance(self: *@This(), bytes: usize) usize {
-        const size = @min(bytes, self.buffer.len - self.pos);
-        self.advance_unsafe(size);
-        return size;
-    }
-
-    /// Attempts to read the given amount of bytes (or less if close to buffer end) and advances the read cursor.
-    pub fn try_read(self: *@This(), bytes: usize) []const u8 {
-        const size = @min(bytes, self.buffer.len - self.pos);
-        defer self.advance_unsafe(size);
-        return self.buffer[self.pos .. self.pos + size];
-    }
-
-    /// Attempts to read the given amount of bytes (or less if close to buffer end) without advancing the read cursor.
-    pub fn try_peek(self: *@This(), bytes: usize) []const u8 {
-        const size = @min(bytes, self.buffer.len - self.pos);
-        return self.buffer[self.pos .. self.pos + size];
-    }
-
-    /// Returns the number of bytes remaining from the current read cursor position to the end of the underlying buffer.
-    pub fn get_remaining_bytes_count(self: *const @This()) usize {
-        return self.buffer.len - self.pos;
-    }
-
-    fn advance_unsafe(self: *@This(), bytes: usize) void {
-        self.pos += bytes;
-    }
 };
 
 test "tests" {

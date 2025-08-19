@@ -21,11 +21,50 @@ pub const DescType = enum(u8) {
 };
 
 pub const ClassCode = enum(u8) {
-    Unspecified = 0,
-    Audio = 1,
-    Cdc = 2,
-    Hid = 3,
-    CdcData = 10,
+    Unspecified = 0x00,
+    Audio = 0x01,
+    Cdc = 0x02,
+    Hid = 0x03,
+    Physical = 0x05,
+    Image = 0x06,
+    Printer = 0x07,
+    MassStorage = 0x08,
+    Hub = 0x09,
+    CdcData = 0x0A,
+    SmartCard = 0x0B,
+    ContentSecurity = 0x0D,
+    Video = 0x0E,
+    PersonalHealthcare = 0x0F,
+    AudioVideoDevice = 0x10,
+    BillboardDevice = 0x11,
+    USBTypeCBridge = 0x12,
+    USBBulkDisplayProtocol = 0x13,
+    MCTPoverUSBProtocolEndpoint = 0x14,
+    I3C = 0x3C,
+    DiagnosticDevice = 0xDC,
+    WirelessController = 0xE0,
+    Miscellaneous = 0xEF,
+    ApplicationSpecific = 0xFE,
+    VendorSpecific = 0xFF,
+};
+
+/// Version of the device descriptor / USB protocol, in binary-coded
+/// decimal. This is typically `0x01_10` for USB 1.1.
+pub const BcdUsb = extern struct {
+    lo: u8,
+    hi: u8,
+
+    pub const v1_1: @This() = .{ .hi = 1, .lo = 1 };
+    pub const v2_0: @This() = .{ .hi = 2, .lo = 0 };
+};
+
+pub const DeviceTriple = extern struct {
+    /// Class of device, giving a broad functional area.
+    class: ClassCode,
+    /// Subclass of device, refining the class.
+    subclass: u8,
+    /// Protocol within the subclass.
+    protocol: u8,
 };
 
 /// Types of transfer that can be indicated by the `attributes` field on `EndpointDescriptor`.
@@ -354,20 +393,11 @@ pub const ConfigurationDescriptor = extern struct {
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
 pub const DeviceDescriptor = extern struct {
-    pub const const_descriptor_type = DescType.Device;
-
     length: u8 = 18,
     /// Type of this descriptor, must be `Device`.
-    descriptor_type: DescType = const_descriptor_type,
-    /// Version of the device descriptor / USB protocol, in binary-coded
-    /// decimal. This is typically `0x01_10` for USB 1.1.
-    bcd_usb: u16 align(1),
-    /// Class of device, giving a broad functional area.
-    device_class: u8,
-    /// Subclass of device, refining the class.
-    device_subclass: u8,
-    /// Protocol within the subclass.
-    device_protocol: u8,
+    descriptor_type: DescType = .Device,
+    bcd_usb: BcdUsb,
+    device_triple: DeviceTriple,
     /// Maximum unit of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
@@ -389,11 +419,11 @@ pub const DeviceDescriptor = extern struct {
         var out: [18]u8 = undefined;
         out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(self.bcd_usb & 0xff);
-        out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
-        out[4] = self.device_class;
-        out[5] = self.device_subclass;
-        out[6] = self.device_protocol;
+        out[2] = self.bcd_usb.lo;
+        out[3] = self.bcd_usb.hi;
+        out[4] = @intFromEnum(self.device_triple.class);
+        out[5] = self.device_triple.subclass;
+        out[6] = self.device_triple.protocol;
         out[7] = self.max_packet_size0;
         out[8] = @intCast(self.vendor & 0xff);
         out[9] = @intCast((self.vendor >> 8) & 0xff);
@@ -417,15 +447,8 @@ pub const DeviceQualifierDescriptor = extern struct {
     length: u8 = 10,
     /// Type of this descriptor, must be `Device`.
     descriptor_type: DescType = const_descriptor_type,
-    /// Version of the device descriptor / USB protocol, in binary-coded
-    /// decimal. This is typically `0x01_10` for USB 1.1.
-    bcd_usb: u16 align(1),
-    /// Class of device, giving a broad functional area.
-    device_class: u8,
-    /// Subclass of device, refining the class.
-    device_subclass: u8,
-    /// Protocol within the subclass.
-    device_protocol: u8,
+    bcd_usb: BcdUsb,
+    device_triple: DeviceTriple,
     /// Maximum unit of data this device can move.
     max_packet_size0: u8,
     /// Number of configurations supported by this device.
@@ -437,11 +460,11 @@ pub const DeviceQualifierDescriptor = extern struct {
         var out: [10]u8 = undefined;
         out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(self.bcd_usb & 0xff);
-        out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
-        out[4] = self.device_class;
-        out[5] = self.device_subclass;
-        out[6] = self.device_protocol;
+        out[2] = self.bcd_usb.lo;
+        out[3] = self.bcd_usb.hi;
+        out[4] = @intFromEnum(self.device_triple.class);
+        out[5] = self.device_triple.subclass;
+        out[6] = self.device_triple.protocol;
         out[7] = self.max_packet_size0;
         out[8] = self.num_configurations;
         out[9] = self.reserved;
@@ -454,68 +477,4 @@ pub const DriverErrors = error{
     UnsupportedInterfaceClassType,
     UnsupportedInterfaceSubClassType,
     UnexpectedDescriptor,
-};
-
-pub const UsbDevice = struct {
-    fn_ready: *const fn () bool,
-    fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
-    fn_control_ack: *const fn (setup: *const SetupPacket) void,
-    fn_endpoint_open: *const fn (ep_desc: []const u8) void,
-    fn_endpoint_tx: *const fn (ep_in: Endpoint.Num, data: []const []const u8) usize,
-    fn_endpoint_rx: *const fn (ep_out: Endpoint.Num, len: usize) void,
-
-    pub fn ready(self: *@This()) bool {
-        return self.fn_ready();
-    }
-
-    pub fn control_transfer(self: *@This(), setup: *const SetupPacket, data: []const u8) void {
-        return self.fn_control_transfer(setup, data);
-    }
-
-    pub fn control_ack(self: *@This(), setup: *const SetupPacket) void {
-        return self.fn_control_ack(setup);
-    }
-
-    pub fn endpoint_open(self: *@This(), ep_desc: []const u8) void {
-        return self.fn_endpoint_open(ep_desc);
-    }
-
-    pub fn endpoint_tx(self: *@This(), ep_in: Endpoint.Num, data: []const []const u8) usize {
-        return self.fn_endpoint_tx(ep_in, data);
-    }
-
-    pub fn endpoint_rx(self: *@This(), ep_out: Endpoint.Num, len: usize) void {
-        return self.fn_endpoint_rx(ep_out, len);
-    }
-};
-
-/// USB Class driver interface
-pub const UsbClassDriver = struct {
-    ptr: *anyopaque,
-    fn_init: *const fn (ptr: *anyopaque, device: UsbDevice) void,
-    fn_open: *const fn (ptr: *anyopaque, cfg: []const u8) anyerror!usize,
-    fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
-    fn_send: *const fn (ptr: *anyopaque, ep_in: Endpoint.Num, data: []const u8) void,
-    fn_receive: *const fn (ptr: *anyopaque, ep_out: Endpoint.Num, data: []const u8) void,
-
-    pub fn init(self: *@This(), device: UsbDevice) void {
-        return self.fn_init(self.ptr, device);
-    }
-
-    /// Driver open (set config) operation. Must return length of consumed driver config data.
-    pub fn open(self: *@This(), cfg: []const u8) !usize {
-        return self.fn_open(self.ptr, cfg);
-    }
-
-    pub fn class_control(self: *@This(), stage: ControlStage, setup: *const SetupPacket) bool {
-        return self.fn_class_control(self.ptr, stage, setup);
-    }
-
-    pub fn send(self: *@This(), ep_in: Endpoint.Num, data: []const u8) void {
-        return self.fn_send(self.ptr, ep_in, data);
-    }
-
-    pub fn receive(self: *@This(), ep_out: Endpoint.Num, len: []const u8) void {
-        return self.fn_receive(self.ptr, ep_out, len);
-    }
 };

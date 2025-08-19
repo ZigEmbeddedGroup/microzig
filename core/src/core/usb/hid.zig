@@ -522,141 +522,139 @@ pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
     // End
     ++ hid_collection_end();
 
-pub const HidClassDriver = struct {
-    device: ?types.UsbDevice = null,
-    ep_in: types.Endpoint.Num = .ep0,
-    ep_out: types.Endpoint.Num = .ep0,
-    hid_descriptor: []const u8 = &.{},
-    report_descriptor: []const u8,
+pub fn HidClassDriver(comptime Controller: type) type {
+    return struct {
+        ep_in: types.Endpoint.Num = .ep0,
+        ep_out: types.Endpoint.Num = .ep0,
+        hid_descriptor: []const u8 = &.{},
+        report_descriptor: []const u8,
 
-    fn init(ptr: *anyopaque, device: types.UsbDevice) void {
-        var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
-        self.device = device;
-    }
+        fn init(_: *anyopaque, _: *Controller) void {}
 
-    fn open(ptr: *anyopaque, cfg: []const u8) !usize {
-        var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
-        var curr_cfg = cfg;
+        fn open(ptr: *anyopaque, controller: *Controller, cfg: []const u8) !usize {
+            var self: *@This() = @ptrCast(@alignCast(ptr));
+            var curr_cfg = cfg;
 
-        if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
-            if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return types.DriverErrors.UnsupportedInterfaceClassType;
-        } else {
-            return types.DriverErrors.ExpectedInterfaceDescriptor;
-        }
-
-        curr_cfg = bos.get_desc_next(curr_cfg);
-        if (bos.try_get_desc_as(HidDescriptor, curr_cfg)) |_| {
-            self.hid_descriptor = curr_cfg[0..bos.get_desc_len(curr_cfg)];
-            curr_cfg = bos.get_desc_next(curr_cfg);
-        } else {
-            return types.DriverErrors.UnexpectedDescriptor;
-        }
-
-        for (0..2) |_| {
-            if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                switch (desc_ep.endpoint.dir) {
-                    .In => self.ep_in = desc_ep.endpoint.num,
-                    .Out => self.ep_out = desc_ep.endpoint.num,
-                }
-                self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
-                curr_cfg = bos.get_desc_next(curr_cfg);
+            if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+                if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return types.DriverErrors.UnsupportedInterfaceClassType;
+            } else {
+                return types.DriverErrors.ExpectedInterfaceDescriptor;
             }
+
+            curr_cfg = bos.get_desc_next(curr_cfg);
+            if (bos.try_get_desc_as(HidDescriptor, curr_cfg)) |_| {
+                self.hid_descriptor = curr_cfg[0..bos.get_desc_len(curr_cfg)];
+                curr_cfg = bos.get_desc_next(curr_cfg);
+            } else {
+                return types.DriverErrors.UnexpectedDescriptor;
+            }
+
+            for (0..2) |_| {
+                if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
+                    switch (desc_ep.endpoint.dir) {
+                        .In => self.ep_in = desc_ep.endpoint.num,
+                        .Out => self.ep_out = desc_ep.endpoint.num,
+                    }
+                    controller.endpoint_open(curr_cfg[0..desc_ep.length]);
+                    curr_cfg = bos.get_desc_next(curr_cfg);
+                }
+            }
+
+            return cfg.len - curr_cfg.len;
         }
 
-        return cfg.len - curr_cfg.len;
-    }
+        fn class_control(ptr: *anyopaque, controller: *Controller, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+            const self: *@This() = @ptrCast(@alignCast(ptr));
 
-    fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-        var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
+            switch (setup.request_type.type) {
+                .Standard => {
+                    if (stage == .Setup) {
+                        const hid_desc_type = HidDescType.from_u8(@intCast((setup.value >> 8) & 0xff));
+                        const request_code = types.SetupRequest.from_u8(setup.request);
 
-        switch (setup.request_type.type) {
-            .Standard => {
-                if (stage == .Setup) {
-                    const hid_desc_type = HidDescType.from_u8(@intCast((setup.value >> 8) & 0xff));
-                    const request_code = types.SetupRequest.from_u8(setup.request);
+                        if (hid_desc_type == null or request_code == null) {
+                            return false;
+                        }
 
-                    if (hid_desc_type == null or request_code == null) {
-                        return false;
+                        if (request_code.? == .GetDescriptor and hid_desc_type == .Hid) {
+                            controller.control_transfer(setup, self.hid_descriptor);
+                        } else if (request_code.? == .GetDescriptor and hid_desc_type == .Report) {
+                            controller.control_transfer(setup, self.report_descriptor);
+                        } else {
+                            return false;
+                        }
                     }
+                },
+                .Class => {
+                    const hid_request_type = HidRequestType.from_u8(setup.request);
+                    if (hid_request_type == null) return false;
 
-                    if (request_code.? == .GetDescriptor and hid_desc_type == .Hid) {
-                        self.device.?.control_transfer(setup, self.hid_descriptor);
-                    } else if (request_code.? == .GetDescriptor and hid_desc_type == .Report) {
-                        self.device.?.control_transfer(setup, self.report_descriptor);
-                    } else {
-                        return false;
+                    switch (hid_request_type.?) {
+                        .SetIdle => {
+                            if (stage == .Setup) {
+                                // TODO: The host is attempting to limit bandwidth by requesting that
+                                // the device only return report data when its values actually change,
+                                // or when the specified duration elapses. In practice, the device can
+                                // still send reports as often as it wants, but for completeness this
+                                // should be implemented eventually.
+                                //
+                                // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                                controller.control_ack(setup);
+                            }
+                        },
+                        .SetProtocol => {
+                            if (stage == .Setup) {
+                                // TODO: The device should switch the format of its reports from the
+                                // boot keyboard/mouse protocol to the format described in its report descriptor,
+                                // or vice versa.
+                                //
+                                // For now, this request is ACKed without doing anything; in practice,
+                                // the OS will reuqest the report protocol anyway, so usually only one format is needed.
+                                // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
+                                // our device might not work in a limited BIOS environment.
+                                //
+                                // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                                controller.control_ack(setup);
+                            }
+                        },
+                        .SetReport => {
+                            if (stage == .Setup) {
+                                // TODO: This request sends a feature or output report to the device,
+                                // e.g. turning on the caps lock LED. This must be handled in an
+                                // application-specific way, so notify the application code of the event.
+                                //
+                                // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                                controller.control_ack(setup);
+                            }
+                        },
+                        else => {
+                            return false;
+                        },
                     }
-                }
-            },
-            .Class => {
-                const hid_request_type = HidRequestType.from_u8(setup.request);
-                if (hid_request_type == null) return false;
+                },
+                else => {
+                    return false;
+                },
+            }
 
-                switch (hid_request_type.?) {
-                    .SetIdle => {
-                        if (stage == .Setup) {
-                            // TODO: The host is attempting to limit bandwidth by requesting that
-                            // the device only return report data when its values actually change,
-                            // or when the specified duration elapses. In practice, the device can
-                            // still send reports as often as it wants, but for completeness this
-                            // should be implemented eventually.
-                            //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                            self.device.?.control_ack(setup);
-                        }
-                    },
-                    .SetProtocol => {
-                        if (stage == .Setup) {
-                            // TODO: The device should switch the format of its reports from the
-                            // boot keyboard/mouse protocol to the format described in its report descriptor,
-                            // or vice versa.
-                            //
-                            // For now, this request is ACKed without doing anything; in practice,
-                            // the OS will reuqest the report protocol anyway, so usually only one format is needed.
-                            // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
-                            // our device might not work in a limited BIOS environment.
-                            //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                            self.device.?.control_ack(setup);
-                        }
-                    },
-                    .SetReport => {
-                        if (stage == .Setup) {
-                            // TODO: This request sends a feature or output report to the device,
-                            // e.g. turning on the caps lock LED. This must be handled in an
-                            // application-specific way, so notify the application code of the event.
-                            //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                            self.device.?.control_ack(setup);
-                        }
-                    },
-                    else => {
-                        return false;
-                    },
-                }
-            },
-            else => {
-                return false;
-            },
+            return true;
         }
 
-        return true;
-    }
+        fn send(_: *anyopaque, _: *Controller, _: types.Endpoint.Num, _: []const u8) void {}
+        fn receive(_: *anyopaque, _: *Controller, _: types.Endpoint.Num, _: []const u8) void {}
 
-    fn send(_: *anyopaque, _: types.Endpoint.Num, _: []const u8) void {}
-    fn receive(_: *anyopaque, _: types.Endpoint.Num, _: []const u8) void {}
-
-    pub fn driver(self: *@This()) types.UsbClassDriver {
-        return .{
-            .ptr = self,
-            .fn_init = init,
-            .fn_open = open,
-            .fn_class_control = class_control,
-            .fn_send = send,
-            .fn_receive = receive,
-        };
-    }
-};
+        pub fn driver(self: *@This()) Controller.DriverInterface {
+            return .{
+                .ptr = self,
+                .fn_init = init,
+                .fn_open = open,
+                .fn_class_control = class_control,
+                .fn_send = send,
+                .fn_receive = receive,
+            };
+        }
+    };
+}
 
 test "create hid report item" {
     const r = hid_report_item(
