@@ -37,7 +37,6 @@ pub fn lookup_and_cache_function(comptime code: Function) ?*const anyopaque {
         var f: ?*const anyopaque = null;
     };
 
-    std.log.info("{*}", .{S.f});
     if (S.f == null) S.f = lookup_function(code);
     return S.f;
 }
