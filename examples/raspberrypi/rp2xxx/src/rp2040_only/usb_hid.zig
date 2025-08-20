@@ -16,16 +16,17 @@ const usb_templates = usb.templates.DescriptorsConfigTemplates;
 const usb_packet_size = 64;
 const usb_config_len = usb_templates.config_descriptor_len + usb_templates.hid_in_out_descriptor_len;
 const usb_config_descriptor =
-    usb_templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
+    usb_templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, .from_ma(100)) ++
     usb_templates.hid_in_out_descriptor(0, 0, 0, usb.hid.ReportDescriptorGenericInOut.len, .ep1, .ep1, usb_packet_size, 0);
-
-var driver_hid = usb.hid.HidClassDriver(UsbDev){ .report_descriptor = &usb.hid.ReportDescriptorGenericInOut };
 
 // This is our device configuration
 const UsbDev = usb.Usb(.{
+    .Device = rp2xxx.usb.Usb(.{}),
+    .Drivers = struct {
+        hid: usb.hid.HidClassDriver,
+    },
     .descriptors = .create(
         .{
-            .descriptor_type = .Device,
             .bcd_usb = .v1_1,
             .device_triple = .{
                 .class = .Unspecified,
@@ -51,7 +52,10 @@ const UsbDev = usb.Usb(.{
             "cafebabe",
         },
     ),
-    .device = rp2xxx.usb.Usb(.{}),
+    .usb_configurations = .{.create(&.{.{
+        .name = "hid",
+        .driver = usb.hid.HidClassDriver,
+    }})},
 });
 var usb_dev: UsbDev = .init;
 
@@ -67,6 +71,8 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
+    usb_dev.drivers_data.hid = .{ .report_descriptor = &usb.hid.ReportDescriptorGenericInOut };
+
     // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
@@ -80,14 +86,12 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device(&.{driver_hid.driver()});
+    usb_dev.init_device(&.{usb_dev.drivers_data.hid.driver()});
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.task(
-            false, // debug output over UART [Y/n]
-        ) catch unreachable;
+        usb_dev.interface().task();
 
         new = time.get_time_since_boot().to_us();
         if (new - old > 500000) {

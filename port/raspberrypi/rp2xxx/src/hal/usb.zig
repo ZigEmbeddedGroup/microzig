@@ -16,12 +16,9 @@ const resets = @import("resets.zig");
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
 pub const UsbConfig = struct {
-    // Comptime defined supported max endpoints number, can be reduced to save RAM space
-    max_endpoints_count: comptime_int = RP2XXX_MAX_ENDPOINTS_COUNT,
-    max_interfaces_count: comptime_int = 16,
     synchronization_nops: comptime_int = 3,
     dpram_allocator: type = DpramAllocatorBump,
-    swap_dpdm: bool = false,
+    // swap_dpdm: bool = false,
 };
 
 const Endpoint = usb.types.Endpoint;
@@ -94,21 +91,15 @@ pub const DpramAllocatorBump = struct {
 /// are used by the abstract USB impl of microzig.
 pub fn Usb(comptime config: UsbConfig) type {
     return struct {
-        comptime {
-            if (config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
-                @compileError("RP2XXX USB endpoints number can't be grater than RP2XXX_MAX_ENDPOINTS_COUNT");
-        }
-
-        pub const cfg_max_endpoints_count = config.max_endpoints_count;
-        pub const cfg_max_interfaces_count = config.max_interfaces_count;
-        pub const high_speed = false;
-        pub const max_packet_size = 64;
+        pub const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
+        // TODO: Support other buffer sizes.
+        const max_transfer_size = 64;
 
         const HardwareEndpoint = packed struct(u7) {
-            const ep_ctrl_all: *volatile [2 * (cfg_max_endpoints_count - 1)]EpCtrl =
+            const ep_ctrl_all: *volatile [2 * (max_endpoints_count - 1)]EpCtrl =
                 @ptrCast(&peri_dpram.EP1_IN_CONTROL);
 
-            const buf_ctrl_all: *volatile [2 * (cfg_max_endpoints_count)]BufCtrl =
+            const buf_ctrl_all: *volatile [2 * (max_endpoints_count)]BufCtrl =
                 @ptrCast(&peri_dpram.EP0_IN_BUFFER_CONTROL);
 
             var awaiting_rx: u32 = 0;
@@ -145,11 +136,6 @@ pub fn Usb(comptime config: UsbConfig) type {
                 return .{ .num = ep.num, .is_out = ep.dir == .Out };
             }
 
-            fn into(this: @This()) Endpoint {
-                assert(this._padding == 0);
-                return .{ .num = this.num, .dir = if (this.is_out) .Out else .In };
-            }
-
             fn in(num: Endpoint.Num) @This() {
                 return .{ .num = num, .is_out = false };
             }
@@ -173,10 +159,6 @@ pub fn Usb(comptime config: UsbConfig) type {
                 else
                     .ep0buf0;
                 return buf.start()[0..DpramBuffer.chunk_len];
-            }
-
-            fn buffer_ready(this: @This()) []u8 {
-                return this.buffer()[0..this.buf_ctrl().read().LENGTH_0];
             }
         };
 
@@ -233,8 +215,8 @@ pub fn Usb(comptime config: UsbConfig) type {
                 .SETUP_REQ = 1,
             });
 
-            endpoint_open(.in(.ep0), .Control, 0) catch unreachable;
-            endpoint_open(.out(.ep0), .Control, 0) catch unreachable;
+            _ = endpoint_open(.in(.ep0), .Control, 0) catch unreachable;
+            _ = endpoint_open(.out(.ep0), .Control, 0) catch unreachable;
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
@@ -247,58 +229,60 @@ pub fn Usb(comptime config: UsbConfig) type {
         /// The contents of each of the slices in `data` will be _copied_ into USB SRAM,
         /// so you can reuse them immediately after this returns.
         /// No need to wait for the packet to be sent.
-        pub fn usb_start_tx(ep_in: Endpoint.Num, data: []const []const u8) usize {
+        pub fn usb_start_tx(ep_in: Endpoint.Num, data: []const u8) usize {
+            const ep_hard: HardwareEndpoint = .in(ep_in);
+            const buf = ep_hard.buffer();
+
+            const len = @min(buf.len, data.len);
+            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
+            std.mem.copyForwards(u8, buf[0..len], data[0..len]);
+
+            submit_tx_buffer(ep_in, buf.ptr + len);
+
+            return len;
+        }
+
+        pub fn submit_tx_buffer(ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
             const ep_hard: HardwareEndpoint = .in(ep_in);
             const buf = ep_hard.buffer();
 
             // It is technically possible to support longer buffers but this demo doesn't bother.
-            var n: usize = 0;
-            for (data) |buffer| {
-                const space_left = buf.len - n;
-                if (space_left >= buffer.len) {
-                    // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-                    std.mem.copyForwards(u8, buf[n .. n + buffer.len], buffer);
-                    n += buffer.len;
-                } else {
-                    std.mem.copyForwards(u8, buf[n..DpramBuffer.chunk_len], buffer[0..space_left]);
-                    n = DpramBuffer.chunk_len;
-                }
-            }
-
-            // The AVAILABLE bit in the buffer control register should be set
-            // separately to the rest of the data in the buffer control register,
-            // so that the rest of the data in the buffer control register is
-            // accurate when the AVAILABLE bit is set.
+            const len = buffer_end - buf.ptr;
+            if (len > max_transfer_size)
+                std.log.err("wrong buffer submitted", .{});
 
             // Write the buffer information to the buffer control register
             const buf_ctrl = ep_hard.buf_ctrl();
             var rmw = buf_ctrl.read();
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 1; // We have put data in
-            rmw.LENGTH_0 = @as(u10, @intCast(n)); // There are this many bytes
+            rmw.LENGTH_0 = @intCast(len); // There are this many bytes
+
+            // If the CPU is running at a higher clock speed than USB,
+            // the AVAILABLE bit in the buffer control register should be set
+            // separately to the rest of the data in the buffer control register,
+            // so that the rest of the data in the buffer control register is
+            // accurate when the AVAILABLE bit is set.
+
+            if (config.synchronization_nops != 0) {
+                buf_ctrl.write(rmw);
+                asm volatile ("nop\n" ** config.synchronization_nops);
+            }
+
+            rmw.AVAILABLE_0 = 1;
             buf_ctrl.write(rmw);
-
-            // Nop for some clock cycles
-            // use volatile so the compiler doesn't optimize the nops away
-            inline for (0..config.synchronization_nops) |_|
-                asm volatile ("nop");
-
-            // Set available bit
-            rmw.AVAILABLE_0 = 1; // The data is for the computer to use now
-            buf_ctrl.write(rmw);
-
-            return n;
         }
 
         pub fn usb_start_rx(ep_out: Endpoint.Num, len: usize) void {
             const ep_hard: HardwareEndpoint = .out(ep_out);
 
-            if (ep_hard.awaiting_rx_get())
-                return;
-
             // Configure the OUT:
             const buf_ctrl = ep_hard.buf_ctrl();
             var rmw = buf_ctrl.read();
+            if (ep_hard.awaiting_rx_get()) {
+                std.log.err("should not be called twice {} {}", .{ rmw.FULL_0, rmw.AVAILABLE_0 });
+                return;
+            }
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 0; // Buffer is NOT full, we want the computer to fill it
             rmw.AVAILABLE_0 = 1; // It is, however, available to be filled
@@ -316,14 +300,13 @@ pub fn Usb(comptime config: UsbConfig) type {
         /// Check which interrupt flags are set
         pub fn get_interrupts() usb.InterruptStatus {
             const ints = peri_usb.INTS.read();
-
             return .{
-                .BuffStatus = if (ints.BUFF_STATUS == 1) true else false,
-                .BusReset = if (ints.BUS_RESET == 1) true else false,
-                .DevConnDis = if (ints.DEV_CONN_DIS == 1) true else false,
-                .DevSuspend = if (ints.DEV_SUSPEND == 1) true else false,
-                .DevResumeFromHost = if (ints.DEV_RESUME_FROM_HOST == 1) true else false,
-                .SetupReq = if (ints.SETUP_REQ == 1) true else false,
+                .BuffStatus = ints.BUFF_STATUS == 1,
+                .BusReset = ints.BUS_RESET == 1,
+                .DevConnDis = ints.DEV_CONN_DIS == 1,
+                .DevSuspend = ints.DEV_SUSPEND == 1,
+                .DevResumeFromHost = ints.DEV_RESUME_FROM_HOST == 1,
+                .SetupReq = ints.SETUP_REQ == 1,
             };
         }
 
@@ -335,7 +318,14 @@ pub fn Usb(comptime config: UsbConfig) type {
         /// setup request falg is set.
         pub fn get_setup_packet() usb.types.SetupPacket {
             // Clear the status flag (write-one-to-clear)
-            peri_usb.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
+            var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
+            sie_status.SETUP_REC = 1;
+            peri_usb.SIE_STATUS.write(sie_status);
+
+            // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
+            // to an IN on EP0 needs to use PID DATA1, and this line will ensure
+            // that.
+            defer peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
 
             // This assumes that the setup packet is arriving on EP0, our
             // control endpoint. Which it should be. We don't have any other
@@ -349,7 +339,9 @@ pub fn Usb(comptime config: UsbConfig) type {
         /// Called on a bus reset interrupt
         pub fn bus_reset() void {
             // Acknowledge by writing the write-one-to-clear status bit.
-            peri_usb.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
+            var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
+            sie_status.BUS_RESET = 1;
+            peri_usb.SIE_STATUS.write(sie_status);
             peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = 0 });
         }
 
@@ -357,41 +349,39 @@ pub fn Usb(comptime config: UsbConfig) type {
             peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
         }
 
-        pub fn reset_ep0() void {
-            // Next packet ID will be DATA1
-            peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
-        }
-
-        pub fn endpoint_open(ep: Endpoint, transfer_type: usb.types.TransferType, buf_size_hint: usize) error{OutOfBufferMemory}!void {
+        pub fn endpoint_open(ep: Endpoint, transfer_type: usb.types.TransferType, buf_size_hint: usize) error{OutOfBufferMemory}!?[]u8 {
             _ = buf_size_hint;
 
             const ep_hard: HardwareEndpoint = .from(ep);
 
-            assert(ep.num.to_int() < cfg_max_endpoints_count);
+            assert(ep.num.to_int() < max_endpoints_count);
             ep_hard.awaiting_rx_clr();
 
-            if (ep.num != .ep0) {
+            const start = if (ep.num != .ep0) blk: {
+                const buf = try config.dpram_allocator.alloc(1);
                 var ep_ctrl = ep_hard.ep_ctrl().?;
                 var rmw = ep_ctrl.read();
                 rmw.ENABLE = 1;
                 rmw.INTERRUPT_PER_BUFF = 1;
                 rmw.ENDPOINT_TYPE = @enumFromInt(transfer_type.as_number());
-                rmw.BUFFER_ADDRESS = (try config.dpram_allocator.alloc(1)).to_u16();
+                rmw.BUFFER_ADDRESS = buf.to_u16();
                 ep_ctrl.write(rmw);
-            }
+                break :blk buf.start();
+            } else DpramBuffer.Index.ep0buf0.start();
+            return start[0..max_transfer_size];
+        }
+
+        pub fn get_unhandled_endpoints() UnhandledEndpointIterator {
+            const mask = peri_usb.BUFF_STATUS.raw;
+            return .{
+                .initial_unhandled_mask = mask,
+                .currently_unhandled_mask = mask,
+            };
         }
 
         pub const UnhandledEndpointIterator = struct {
             initial_unhandled_mask: u32,
             currently_unhandled_mask: u32,
-
-            pub fn init() @This() {
-                const mask = peri_usb.BUFF_STATUS.raw;
-                return .{
-                    .initial_unhandled_mask = mask,
-                    .currently_unhandled_mask = mask,
-                };
-            }
 
             pub fn next(this: *@This()) ?usb.EndpointAndBuffer {
                 const idx = std.math.cast(u5, @ctz(this.currently_unhandled_mask)) orelse {
@@ -401,10 +391,11 @@ pub fn Usb(comptime config: UsbConfig) type {
                 };
                 this.currently_unhandled_mask &= this.currently_unhandled_mask -% 1; // clear lowest bit
                 const ep: HardwareEndpoint = .from_idx(idx);
-                return if (ep.is_out)
-                    .{ .Out = .{ .ep_num = ep.num, .buffer = ep.buffer_ready() } }
-                else
-                    .{ .In = .{ .ep_num = ep.num, .buffer = ep.buffer_ready() } };
+                const buf = ep.buffer();
+                if (ep.is_out) {
+                    const len = ep.buf_ctrl().read().LENGTH_0;
+                    return .{ .Out = .{ .ep_num = ep.num, .buffer = buf[0..len] } };
+                } else return .{ .In = .{ .ep_num = ep.num, .buffer = buf } };
             }
         };
     };

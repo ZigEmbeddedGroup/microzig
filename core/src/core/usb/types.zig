@@ -14,10 +14,7 @@ pub const DescType = enum(u8) {
     CsString = 0x23,
     CsInterface = 0x24,
     CsEndpoint = 0x25,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
+    _,
 };
 
 pub const ClassCode = enum(u8) {
@@ -46,16 +43,20 @@ pub const ClassCode = enum(u8) {
     Miscellaneous = 0xEF,
     ApplicationSpecific = 0xFE,
     VendorSpecific = 0xFF,
+    _,
 };
 
-/// Version of the device descriptor / USB protocol, in binary-coded
-/// decimal. This is typically `0x01_10` for USB 1.1.
 pub const BcdUsb = extern struct {
-    lo: u8,
-    hi: u8,
+    major: u8,
+    minor: u8,
 
-    pub const v1_1: @This() = .{ .hi = 1, .lo = 1 };
-    pub const v2_0: @This() = .{ .hi = 2, .lo = 0 };
+    pub const v1_1: @This() = .{ .major = 1, .minor = 1 };
+    pub const v2_0: @This() = .{ .major = 2, .minor = 0 };
+};
+
+pub const BcdDevice = extern struct {
+    major: u8,
+    minor: u8,
 };
 
 pub const DeviceTriple = extern struct {
@@ -73,10 +74,6 @@ pub const TransferType = enum(u2) {
     Isochronous = 1,
     Bulk = 2,
     Interrupt = 3,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 
     pub inline fn as_number(self: @This()) u2 {
         return @intFromEnum(self);
@@ -349,6 +346,15 @@ pub const InterfaceAssociationDescriptor = extern struct {
 pub const ConfigurationDescriptor = extern struct {
     pub const const_descriptor_type = DescType.Config;
 
+    /// Maximum device power consumption in units of 2mA.
+    pub const MaxCurrent = extern struct {
+        multiple_of_2ma: u8,
+
+        pub fn from_ma(ma: u9) @This() {
+            return .{ .multiple_of_2ma = @intCast((ma +| 1) >> 1) };
+        }
+    };
+
     length: u8 = 9,
     /// Type of this descriptor, must be `Config`.
     descriptor_type: DescType = const_descriptor_type,
@@ -372,8 +378,7 @@ pub const ConfigurationDescriptor = extern struct {
     /// (like a keyboard).
     /// - The rest are reserved and should be zero.
     attributes: u8,
-    /// Maximum device power consumption in units of 2mA.
-    max_power: u8,
+    max_current: MaxCurrent,
 
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
@@ -385,7 +390,7 @@ pub const ConfigurationDescriptor = extern struct {
         out[5] = self.configuration_value;
         out[6] = self.configuration_s;
         out[7] = self.attributes;
-        out[8] = self.max_power;
+        out[8] = self.max_current.multiple_of_2ma;
         return out;
     }
 };
@@ -419,8 +424,8 @@ pub const DeviceDescriptor = extern struct {
         var out: [18]u8 = undefined;
         out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = self.bcd_usb.lo;
-        out[3] = self.bcd_usb.hi;
+        out[2] = self.bcd_usb.minor;
+        out[3] = self.bcd_usb.major;
         out[4] = @intFromEnum(self.device_triple.class);
         out[5] = self.device_triple.subclass;
         out[6] = self.device_triple.protocol;
@@ -460,8 +465,8 @@ pub const DeviceQualifierDescriptor = extern struct {
         var out: [10]u8 = undefined;
         out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = self.bcd_usb.lo;
-        out[3] = self.bcd_usb.hi;
+        out[2] = self.bcd_usb.minor;
+        out[3] = self.bcd_usb.major;
         out[4] = @intFromEnum(self.device_triple.class);
         out[5] = self.device_triple.subclass;
         out[6] = self.device_triple.protocol;
@@ -470,11 +475,4 @@ pub const DeviceQualifierDescriptor = extern struct {
         out[9] = self.reserved;
         return out;
     }
-};
-
-pub const DriverErrors = error{
-    ExpectedInterfaceDescriptor,
-    UnsupportedInterfaceClassType,
-    UnsupportedInterfaceSubClassType,
-    UnexpectedDescriptor,
 };

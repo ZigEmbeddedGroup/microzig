@@ -12,6 +12,7 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
+const enumFromInt = std.meta.intToEnum;
 
 /// USB primitive types
 pub const types = @import("usb/types.zig");
@@ -65,9 +66,110 @@ pub const Descriptors = struct {
     }
 };
 
+pub const ControllerInterface = struct {
+    const Vtable = struct {
+        task: *const fn (ptr: *anyopaque) void,
+        control_transfer: *const fn (ptr: *anyopaque, data: []const u8) void,
+        endpoint_open: *const fn (ptr: *anyopaque, ep_desc: []const u8) anyerror!?[]u8,
+        submit_tx_buffer: *const fn (ptr: *anyopaque, ep_in: Endpoint.Num, buffer_end: [*]const u8) void,
+        endpoint_rx: *const fn (ptr: *anyopaque, ep_out: Endpoint.Num, len: usize) void,
+    };
+
+    ptr: *anyopaque,
+    vtable: *const Vtable,
+
+    pub fn task(this: @This()) void {
+        return this.vtable.task(this.ptr);
+    }
+
+    pub fn control_transfer(this: @This(), data: []const u8) void {
+        if (data.len == 0)
+            std.log.err("data empty", .{})
+        else
+            this.vtable.control_transfer(this.ptr, data);
+    }
+
+    pub fn control_ack(this: @This()) void {
+        this.vtable.control_transfer(this.ptr, "");
+    }
+
+    pub fn endpoint_open(this: @This(), ep_desc: []const u8) anyerror!?[]u8 {
+        return this.vtable.endpoint_open(this.ptr, ep_desc);
+    }
+
+    pub fn submit_tx_buffer(this: @This(), ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
+        return this.vtable.submit_tx_buffer(this.ptr, ep_in, buffer_end);
+    }
+
+    pub fn endpoint_rx(this: @This(), ep_out: Endpoint.Num, len: usize) void {
+        return this.vtable.endpoint_rx(this.ptr, ep_out, len);
+    }
+};
+
+/// USB Class driver interface
+pub const DriverInterface = struct {
+    pub const Vtable = struct {
+        open: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, cfg: []const u8) anyerror!usize,
+        class_control: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool,
+        on_tx_ready: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, data: []u8) void,
+        on_data_rx: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, data: []const u8) void,
+    };
+
+    ptr: *anyopaque,
+    vtable: *const Vtable,
+
+    /// Driver open (set config) operation. Must return length of consumed driver config data.
+    pub fn open(this: @This(), ctrl: ControllerInterface, cfg: []const u8) anyerror!usize {
+        return this.vtable.open(this.ptr, ctrl, cfg);
+    }
+
+    pub fn class_control(this: @This(), ctrl: ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+        return this.vtable.class_control(this.ptr, ctrl, stage, setup);
+    }
+
+    pub fn on_tx_ready(this: @This(), ctrl: ControllerInterface, data: []u8) void {
+        return this.vtable.on_tx_ready(this.ptr, ctrl, data);
+    }
+
+    pub fn on_data_rx(this: @This(), ctrl: ControllerInterface, len: []const u8) void {
+        return this.vtable.on_data_rx(this.ptr, ctrl, len);
+    }
+};
+
 pub const Config = struct {
-    device: type,
+    /// TODO: Description
+    pub const DriverConfig = struct {
+        name: []const u8,
+        driver: type,
+        // endpoints_in: PerEndpointOpt([]const u8),
+        // endpoints_out: PerEndpointOpt([]const u8),
+        strings: []const struct { name: []const u8, value: []const u8 } = &.{},
+    };
+
+    /// Describes one of the configurations the host can choose.
+    pub const UsbConfiguration = struct {
+        const Callback = struct {
+            name: []const u8,
+            func: []const u8,
+        };
+
+        endpoint_out_handlers: [16]?Callback,
+
+        pub fn create(comptime driver_config: []const DriverConfig) @This() {
+            _ = driver_config;
+            const this: @This() = .{
+                .endpoint_out_handlers = @splat(null),
+            };
+
+            return this;
+        }
+    };
+
+    Device: type,
+    Drivers: type,
     descriptors: Descriptors,
+    // Currently we only support one configuration.
+    usb_configurations: [1]UsbConfiguration,
 };
 
 /// Create a USB device
@@ -89,236 +191,120 @@ pub const Config = struct {
 /// The functions will be accessible to the user through the `Dev` field.
 pub fn Usb(comptime config: Config) type {
     return struct {
-        const Controller = @This();
+        pub const max_packet_size = config.Device.max_packet_size;
 
-        /// USB Class driver interface
-        pub const DriverInterface = struct {
-            ptr: *anyopaque,
-            fn_init: *const fn (ptr: *anyopaque, ctrl: *Controller) void,
-            fn_open: *const fn (ptr: *anyopaque, ctrl: *Controller, cfg: []const u8) anyerror!usize,
-            fn_class_control: *const fn (ptr: *anyopaque, ctrl: *Controller, stage: types.ControlStage, setup: *const types.SetupPacket) bool,
-            fn_send: *const fn (ptr: *anyopaque, ctrl: *Controller, ep_in: types.Endpoint.Num, data: []const u8) void,
-            fn_receive: *const fn (ptr: *anyopaque, ctrl: *Controller, ep_out: types.Endpoint.Num, data: []const u8) void,
-
-            pub fn init(interface: *const @This(), ctrl: *Controller) void {
-                return interface.fn_init(interface.ptr, ctrl);
-            }
-
-            /// Driver open (set config) operation. Must return length of consumed driver config data.
-            pub fn open(interface: *const @This(), ctrl: *Controller, cfg: []const u8) !usize {
-                return interface.fn_open(interface.ptr, ctrl, cfg);
-            }
-
-            pub fn class_control(interface: *const @This(), ctrl: *Controller, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-                return interface.fn_class_control(interface.ptr, ctrl, stage, setup);
-            }
-
-            pub fn send(interface: *const @This(), ctrl: *Controller, ep_in: types.Endpoint.Num, data: []const u8) void {
-                return interface.fn_send(interface.ptr, ctrl, ep_in, data);
-            }
-
-            pub fn receive(interface: *const @This(), ctrl: *Controller, ep_out: types.Endpoint.Num, len: []const u8) void {
-                return interface.fn_receive(interface.ptr, ctrl, ep_out, len);
-            }
+        pub const interface_vtable: ControllerInterface.Vtable = .{
+            .task = &task,
+            .control_transfer = &control_transfer,
+            .endpoint_open = &endpoint_open,
+            .endpoint_rx = &endpoint_rx,
+            .submit_tx_buffer = &submit_tx_buffer,
         };
 
-        pub const max_packet_size = config.device.max_packet_size;
-        const drvid_invalid = 0xff;
-
-        /// The usb configuration set
         drivers: ?[]const DriverInterface,
-        itf_to_drv: [config.device.cfg_max_interfaces_count]u8,
-        ep_to_drv: [config.device.cfg_max_endpoints_count][2]u8,
+        driver_by_interface: [16]?DriverInterface,
+        driver_by_endpoint_in: [config.Device.max_endpoints_count]?DriverInterface,
+        driver_by_endpoint_out: [config.Device.max_endpoints_count]?DriverInterface,
         // Class driver associated with last setup request if any
-        driver: ?*const DriverInterface,
+        driver: ?DriverInterface,
         // When the host gives us a new address, we can't just slap it into
         // registers right away, because we have to do an acknowledgement step using
         // our _old_ address.
-        new_address: ?u8,
-        // Flag recording whether the host has configured us with a
-        // `SetConfiguration` message.
-        configured: bool,
-        // Flag recording whether we've set up buffer transfers after being
-        // configured.
-        started: bool,
+        new_address: ?u7,
         // Last setup packet request
         setup_packet: types.SetupPacket,
         // Keeps track of sent data from tmp buffer
-        now_sending: []const u8,
+        now_sending_ep0: ?[]const u8,
         // 0 - no config set
         cfg_num: u16,
+        drivers_data: config.Drivers,
 
         pub const init: @This() = .{
             .drivers = null,
-            .itf_to_drv = @splat(0),
-            .ep_to_drv = @splat(@splat(0)),
+            .driver_by_interface = @splat(null),
+            .driver_by_endpoint_in = @splat(null),
+            .driver_by_endpoint_out = @splat(null),
             .driver = null,
             .new_address = null,
-            .configured = false,
-            .started = false,
             .setup_packet = undefined,
-            .now_sending = &.{},
+            .now_sending_ep0 = null,
             .cfg_num = 0,
+            .drivers_data = undefined,
         };
 
-        // Command endpoint utilities
-        const CmdEndpoint = struct {
-            /// Command response utility function that can split long data in multiple packets
-            fn send_cmd_response(this2: *Controller, data: []const u8, expected_max_length: u16) void {
-                this2.now_sending = data[0..@min(data.len, expected_max_length)];
-                const data_chunk = this2.now_sending[0..@min(this2.now_sending.len, 64)];
+        /// Command response utility function that can split long data in multiple packets
+        fn send_cmd_response(this: *@This(), data: []const u8) void {
+            if (this.now_sending_ep0) |residual|
+                std.log.err("residual data: {any}", .{residual});
 
-                if (data_chunk.len > 0) {
-                    _ = config.device.usb_start_tx(.ep0, &.{data_chunk});
-                }
-            }
-
-            fn send_cmd_ack(this2: *Controller) void {
-                _ = this2;
-                _ = config.device.usb_start_tx(.ep0, &.{});
-            }
-        };
+            const len = config.Device.usb_start_tx(.ep0, data);
+            if (len != 0)
+                this.now_sending_ep0 = data[len..];
+        }
 
         /// Initialize the usb device using the given configuration
-        ///
-        /// You have to ensure that the device is getting an appropiate clock signal.
-        pub fn init_device(this: *@This(), d: []const DriverInterface) void {
-            config.device.usb_init_device();
-            this.drivers = d;
-
-            for (d) |*drv| {
-                drv.init(this);
-            }
+        pub fn init_device(this: *@This(), drivers: []const DriverInterface) void {
+            config.Device.usb_init_device();
+            this.drivers = drivers;
         }
 
-        pub fn ready(this: *@This()) bool {
-            return this.started;
+        fn control_transfer(ptr: *anyopaque, data: []const u8) void {
+            const this: *@This() = @alignCast(@ptrCast(ptr));
+            this.send_cmd_response(data);
         }
 
-        pub fn control_transfer(this: *@This(), setup: *const types.SetupPacket, data: []const u8) void {
-            CmdEndpoint.send_cmd_response(this, data, setup.length);
+        fn submit_tx_buffer(ptr: *anyopaque, ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
+            _ = ptr;
+            return config.Device.submit_tx_buffer(ep_in, buffer_end);
         }
 
-        pub fn control_ack(this: *@This(), _: *const types.SetupPacket) void {
-            CmdEndpoint.send_cmd_ack(this);
+        fn endpoint_rx(ptr: *anyopaque, ep_out: Endpoint.Num, len: usize) void {
+            _ = ptr;
+            config.Device.usb_start_rx(ep_out, len);
         }
 
-        pub fn endpoint_tx(this: *@This(), ep_in: Endpoint.Num, data: []const []const u8) usize {
-            _ = this;
-            return config.device.usb_start_tx(ep_in, data);
-        }
-
-        pub fn endpoint_rx(this: *@This(), ep_out: Endpoint.Num, len: usize) void {
-            _ = this;
-            return config.device.usb_start_rx(ep_out, len);
-        }
-
-        pub fn endpoint_open(this: *@This(), ep_desc: []const u8) void {
-            _ = this;
+        fn endpoint_open(ptr: *anyopaque, ep_desc: []const u8) anyerror!?[]u8 {
+            _ = ptr;
             const ep_addr = BosConfig.get_data_u8(ep_desc, 2);
             const ep: Endpoint = .from_address(ep_addr);
             const ep_transfer_type = BosConfig.get_data_u8(ep_desc, 3);
             const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
-            config.device.endpoint_open(ep, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk, ep_max_packet_size) catch unreachable;
+            return config.Device.endpoint_open(ep, enumFromInt(types.TransferType, ep_transfer_type) catch .Bulk, ep_max_packet_size);
         }
 
-        fn get_driver(this: *@This(), drv_idx: u8) ?*const DriverInterface {
-            if (drv_idx == drvid_invalid)
-                return null
-            else
-                return &this.drivers.?[drv_idx];
+        pub fn interface(this: *@This()) ControllerInterface {
+            return .{
+                .ptr = this,
+                .vtable = &interface_vtable,
+            };
         }
 
-        fn get_setup_packet(this: *@This()) types.SetupPacket {
-            const setup = config.device.get_setup_packet();
-            this.setup_packet = setup;
-            this.driver = null;
-            return setup;
-        }
+        fn process_device_setup_request(this: *@This(), setup: *const types.SetupPacket) void {
+            if (setup.request_type.type != .Standard) return;
+            switch (enumFromInt(SetupRequest, setup.request) catch return) {
+                .SetAddress => {
+                    this.new_address = @intCast(setup.value);
+                    this.send_cmd_response("");
+                },
+                .SetConfiguration => {
+                    defer this.send_cmd_response("");
+                    if (this.cfg_num == setup.value) return;
+                    defer this.cfg_num = setup.value;
 
-        fn configuration_reset(this: *@This()) void {
-            @memset(&this.itf_to_drv, drvid_invalid);
-            @memset(&this.ep_to_drv, .{ drvid_invalid, drvid_invalid });
-        }
-
-        /// Usb task function meant to be executed in regular intervals after
-        /// initializing the device.
-        ///
-        /// This function will return an error if the device hasn't been initialized.
-        pub fn task(this: *@This(), debug: bool) !void {
-            if (this.drivers == null) return error.UninitializedDevice;
-
-            // Device Specific Request
-            const DeviceRequestProcessor = struct {
-                fn process_setup_request(this2: *Controller, setup: *const types.SetupPacket, debug_mode: bool) !void {
-                    switch (setup.request_type.type) {
-                        .Class => {
-                            //const itfIndex = setup.index & 0x00ff;
-                            std.log.info("Device.Class", .{});
-                        },
-                        .Standard => {
-                            const req = SetupRequest.from_u8(setup.request);
-                            if (req == null) return;
-                            switch (req.?) {
-                                .SetAddress => {
-                                    this2.new_address = @as(u8, @intCast(setup.value & 0xff));
-                                    CmdEndpoint.send_cmd_ack(this2);
-                                    if (debug_mode) std.log.info("    SetAddress: {}", .{this2.new_address.?});
-                                },
-                                .SetConfiguration => {
-                                    if (debug_mode) std.log.info("    SetConfiguration", .{});
-                                    if (this2.cfg_num != setup.value) {
-                                        if (this2.cfg_num > 0) {
-                                            this2.configuration_reset();
-                                        }
-
-                                        if (setup.value > 0) {
-                                            try process_set_config(this2, setup.value - 1);
-                                            // TODO: call mount callback if any
-                                        } else {
-                                            // TODO: call umount callback if any
-                                        }
-                                    }
-                                    this2.cfg_num = setup.value;
-                                    this2.configured = true;
-                                    CmdEndpoint.send_cmd_ack(this2);
-                                },
-                                .GetDescriptor => {
-                                    const descriptor_type = DescType.from_u8(@intCast(setup.value >> 8));
-                                    if (descriptor_type) |dt| {
-                                        try process_get_descriptor(this2, setup, dt, debug_mode);
-                                    }
-                                },
-                                .SetFeature => {
-                                    const feature = FeatureSelector.from_u8(@intCast(setup.value >> 8));
-                                    if (feature) |feat| {
-                                        switch (feat) {
-                                            .DeviceRemoteWakeup, .EndpointHalt => CmdEndpoint.send_cmd_ack(this2),
-                                            // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
-                                            .TestMode => {},
-                                        }
-                                    }
-                                },
-                            }
-                        },
-                        else => {},
+                    if (this.cfg_num > 0) {
+                        this.driver_by_interface = @splat(null);
+                        this.driver_by_endpoint_in = @splat(null);
+                        this.driver_by_endpoint_out = @splat(null);
+                        // TODO: call umount callback if any
                     }
-                }
 
-                fn process_get_descriptor(this2: *Controller, setup: *const types.SetupPacket, descriptor_type: DescType, debug_mode: bool) !void {
-                    _ = debug_mode;
-                    const data = switch (descriptor_type) {
-                        .Device => config.descriptors.device,
-                        .Config => config.descriptors.config,
-                        .String => config.descriptors.string[setup.value & 0xff],
-                        .DeviceQualifier => config.descriptors.device_qualifier,
-                        else => return,
-                    };
-                    CmdEndpoint.send_cmd_response(this2, data, setup.length);
-                }
+                    if (setup.value == 0) return;
 
-                fn process_set_config(this2: *Controller, _: u16) !void {
+                    // TODO: only init the drivers from the current configuration
+                    inline for (@typeInfo(config.Drivers).@"struct".fields) |field|
+                        @field(this.drivers_data, field.name).mount(this.interface());
+
                     // TODO: we support just one config for now so ignore config index
                     const bos_cfg = config.descriptors.config;
 
@@ -328,7 +314,7 @@ pub fn Usb(comptime config: Config) type {
                     if (BosConfig.try_get_desc_as(types.ConfigurationDescriptor, curr_bos_cfg)) |_| {
                         curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
                     } else {
-                        // TODO - error
+                        // TODO: error
                         return;
                     }
 
@@ -340,163 +326,146 @@ pub fn Usb(comptime config: Config) type {
                             curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
                         }
 
-                        if (BosConfig.get_desc_type(curr_bos_cfg) != DescType.Interface) {
-                            // TODO - error
+                        if (BosConfig.get_desc_type(curr_bos_cfg) != @intFromEnum(DescType.Interface)) {
+                            // TODO: error
                             return;
                         }
                         const desc_itf = BosConfig.get_desc_as(types.InterfaceDescriptor, curr_bos_cfg);
 
-                        var drv = this2.drivers.?[curr_drv_idx];
-                        const drv_cfg_len = try drv.open(this2, curr_bos_cfg);
+                        var drv = this.drivers.?[curr_drv_idx];
+                        const drv_cfg_len = drv.open(this.interface(), curr_bos_cfg) catch unreachable;
 
                         for (0..assoc_itf_count) |itf_offset| {
                             const itf_num = desc_itf.interface_number + itf_offset;
-                            this2.itf_to_drv[itf_num] = curr_drv_idx;
+                            this.driver_by_interface[itf_num] = drv;
                         }
 
-                        bind_endpoints_to_driver(this2, curr_bos_cfg[0..drv_cfg_len], curr_drv_idx);
+                        var curr_bos_cfg2 = curr_bos_cfg[0..drv_cfg_len];
+                        while (curr_bos_cfg2.len > 0) : ({
+                            curr_bos_cfg2 = BosConfig.get_desc_next(curr_bos_cfg2);
+                        }) {
+                            if (BosConfig.try_get_desc_as(types.EndpointDescriptor, curr_bos_cfg2)) |desc_ep| {
+                                switch (desc_ep.endpoint.dir) {
+                                    .Out => this.driver_by_endpoint_out[desc_ep.endpoint.num.to_int()] = drv,
+                                    .In => this.driver_by_endpoint_in[desc_ep.endpoint.num.to_int()] = drv,
+                                }
+                            }
+                        }
+
                         curr_bos_cfg = curr_bos_cfg[drv_cfg_len..];
 
                         // TODO: TMP solution - just 1 driver so quit while loop
-                        return;
+                        break;
                     }
-                }
-
-                fn bind_endpoints_to_driver(this2: *Controller, drv_bos_cfg: []const u8, drv_idx: u8) void {
-                    var curr_bos_cfg = drv_bos_cfg;
-                    while (curr_bos_cfg.len > 0) : ({
-                        curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
-                    }) {
-                        if (BosConfig.try_get_desc_as(types.EndpointDescriptor, curr_bos_cfg)) |desc_ep| {
-                            const dir_as_number: u1 = switch (desc_ep.endpoint.dir) {
-                                .Out => 0,
-                                .In => 1,
-                            };
-                            this2.ep_to_drv[desc_ep.endpoint.num.to_int()][dir_as_number] = drv_idx;
-                        }
+                },
+                .GetDescriptor => if (enumFromInt(DescType, setup.value >> 8)) |descriptor_type| blk: {
+                    const data = switch (descriptor_type) {
+                        .Device => config.descriptors.device,
+                        .Config => config.descriptors.config,
+                        .String => config.descriptors.string[setup.value & 0xff],
+                        .DeviceQualifier => config.descriptors.device_qualifier,
+                        else => break :blk,
+                    };
+                    const len = @min(data.len, setup.length);
+                    this.send_cmd_response(data[0..len]);
+                } else |_| {},
+                .SetFeature => if (enumFromInt(FeatureSelector, setup.value >> 8)) |feature|
+                    switch (feature) {
+                        .DeviceRemoteWakeup, .EndpointHalt => this.send_cmd_response(""),
+                        // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
+                        .TestMode => {},
                     }
-                }
-            };
+                else |_| {},
+            }
+        }
 
-            // Class/Interface Specific Request
-            const InterfaceRequestProcessor = struct {
-                fn process_setup_request(this2: *Controller, setup: *const types.SetupPacket) !void {
-                    const itf: u8 = @intCast(setup.index & 0xFF);
-                    const drv = this2.get_driver(this2.itf_to_drv[itf]);
-                    if (drv == null) return;
-
-                    this2.driver = drv;
-                    if (this2.driver.?.class_control(this2, .Setup, setup) == false) {
-                        // TODO
-                    }
-                }
-            };
-
-            // Endpoint Specific Request
-            const EndpointRequestProcessor = struct {
-                fn process_setup_request(_: *const types.SetupPacket) !void {}
-            };
-
+        /// Usb task function meant to be executed in regular intervals after
+        /// initializing the device.
+        ///
+        /// You have to ensure the device has been initialized.
+        pub fn task(ptr: *anyopaque) void {
+            const this: *@This() = @alignCast(@ptrCast(ptr));
             // Check which interrupt flags are set.
-            const ints = config.device.get_interrupts();
+            const ints = config.Device.get_interrupts();
 
             // Setup request received?
             if (ints.SetupReq) {
-                if (debug) std.log.info("setup req", .{});
-
-                const setup = this.get_setup_packet();
-
-                // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
-                // to an IN on EP0 needs to use PID DATA1, and this line will ensure
-                // that.
-                // TODO - maybe it can be moved to config.device.get_setup_packet?
-                config.device.reset_ep0();
+                const setup = config.Device.get_setup_packet();
+                this.setup_packet = setup;
+                this.driver = null;
 
                 switch (setup.request_type.recipient) {
-                    .Device => try DeviceRequestProcessor.process_setup_request(this, &setup, debug),
-                    .Interface => try InterfaceRequestProcessor.process_setup_request(this, &setup),
-                    .Endpoint => try EndpointRequestProcessor.process_setup_request(&setup),
+                    .Device => this.process_device_setup_request(&setup),
+                    .Interface => if (this.driver_by_interface[setup.index & 0xFF]) |drv| {
+                        this.driver = drv;
+                        if (drv.class_control(this.interface(), .Setup, &setup) == false) {
+                            // TODO
+                        }
+                    },
                     else => {},
                 }
             }
 
-            // Events on one or more buffers? (In practice, always one.)
+            // Events on one or more buffers?
             if (ints.BuffStatus) {
-                if (debug) std.log.info("buff status", .{});
-                var iter: config.device.UnhandledEndpointIterator = .init();
+                var iter = config.Device.get_unhandled_endpoints();
 
+                // Perform any required action on the data. For OUT, the `data`
+                // will be whatever was sent by the host. For IN, it's a new
+                // transmit buffer that has become available.
                 while (iter.next()) |result| switch (result) {
                     .In => |in| {
-                        if (debug) std.log.info("    data: {any}", .{in.buffer});
-
-                        // Perform any required action on the data. For OUT, the `data`
-                        // will be whatever was sent by the host. For IN, it's a copy of
-                        // whatever we sent.
                         if (in.ep_num == .ep0) {
-                            if (debug) std.log.info("    EP0_IN_ADDR", .{});
-
                             // We use this opportunity to finish the delayed
                             // SetAddress request, if there is one:
                             if (this.new_address) |addr| {
                                 // Change our address:
-                                config.device.set_address(@intCast(addr));
+                                config.Device.set_address(addr);
+                                this.new_address = null;
                             }
 
-                            if (in.buffer.len > 0 and this.now_sending.len > 0) {
-                                this.now_sending = this.now_sending[in.buffer.len..];
-                                const next_data_chunk = this.now_sending[0..@min(this.now_sending.len, 64)];
-                                if (next_data_chunk.len > 0) {
-                                    _ = config.device.usb_start_tx(.ep0, &.{next_data_chunk});
+                            if (this.now_sending_ep0) |data| {
+                                if (data.len > 0) {
+                                    const len = config.Device.usb_start_tx(.ep0, data);
+                                    this.now_sending_ep0 = data[len..];
                                 } else {
-                                    config.device.usb_start_rx(.ep0, 0);
+                                    // Otherwise, we've just finished sending
+                                    // something to the host. We expect an ensuing
+                                    // status phase where the host sends us (via EP0
+                                    // OUT) a zero-byte DATA packet, so, set that
+                                    // up:
+                                    config.Device.usb_start_rx(.ep0, 0);
+                                    if (this.driver) |drv|
+                                        _ = drv.class_control(this.interface(), .Ack, &this.setup_packet);
 
-                                    if (this.driver) |drv| {
-                                        _ = drv.class_control(this, .Ack, &this.setup_packet);
-                                    }
+                                    this.now_sending_ep0 = null;
                                 }
-                            } else {
-                                // Otherwise, we've just finished sending
-                                // something to the host. We expect an ensuing
-                                // status phase where the host sends us (via EP0
-                                // OUT) a zero-byte DATA packet, so, set that
-                                // up:
-                                config.device.usb_start_rx(.ep0, 0);
-
-                                if (this.driver) |drv|
-                                    _ = drv.class_control(this, .Ack, &this.setup_packet);
                             }
-                        } else if (this.get_driver(this.ep_to_drv[in.ep_num.to_int()][1])) |drv|
-                            drv.send(this, in.ep_num, in.buffer);
+                        } else if (this.driver_by_endpoint_in[in.ep_num.to_int()]) |drv|
+                            drv.on_tx_ready(this.interface(), in.buffer);
                     },
                     .Out => |out| {
-                        if (debug) std.log.info("    data: {any}", .{out.buffer});
-                        if (this.get_driver(this.ep_to_drv[out.ep_num.to_int()][0])) |drv|
-                            drv.receive(this, out.ep_num, out.buffer);
+                        if (this.driver_by_endpoint_out[out.ep_num.to_int()]) |drv|
+                            drv.on_data_rx(this.interface(), out.buffer);
 
-                        config.device.endpoint_reset_rx(out.ep_num);
+                        config.Device.endpoint_reset_rx(out.ep_num);
                     },
                 };
-            } // <-- END of buf status handling
+            }
 
             // Has the host signaled a bus reset?
             if (ints.BusReset) {
-                if (debug) std.log.info("bus reset", .{});
-
-                this.configuration_reset();
+                this.driver_by_interface = @splat(null);
+                this.driver_by_endpoint_in = @splat(null);
+                this.driver_by_endpoint_out = @splat(null);
                 // Reset the device
-                config.device.bus_reset();
+                config.Device.bus_reset();
 
                 // Reset our state.
                 this.new_address = null;
-                this.configured = false;
-                this.started = false;
-                this.now_sending = &.{};
+                this.cfg_num = 0;
+                this.now_sending_ep0 = null;
             }
-
-            // If we have been configured but haven't reached this point yet, set up
-            // our custom EP OUT's to receive whatever data the host wants to send.
-            if (this.configured and !this.started)
-                this.started = true;
         }
     };
 }

@@ -6,8 +6,8 @@ const Ep = types.Endpoint;
 pub const DescriptorsConfigTemplates = struct {
     pub const config_descriptor_len = 9;
 
-    pub fn config_descriptor(config_num: u8, interfaces_num: u8, string_index: u8, total_len: u16, attributes: u8, max_power_ma: u9) [9]u8 {
-        const desc1 = types.ConfigurationDescriptor{ .total_length = total_len, .num_interfaces = interfaces_num, .configuration_value = config_num, .configuration_s = string_index, .attributes = 0b01000000 | attributes, .max_power = max_power_ma / 2 };
+    pub fn config_descriptor(config_num: u8, interfaces_num: u8, string_index: u8, total_len: u16, attributes: u8, max_current: types.ConfigurationDescriptor.MaxCurrent) [9]u8 {
+        const desc1 = types.ConfigurationDescriptor{ .total_length = total_len, .num_interfaces = interfaces_num, .configuration_value = config_num, .configuration_s = string_index, .attributes = 0b01000000 | attributes, .max_current = max_current };
         return desc1.serialize();
     }
 

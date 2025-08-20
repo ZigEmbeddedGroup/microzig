@@ -2,15 +2,12 @@ const std = @import("std");
 const types = @import("types.zig");
 
 pub const BosConfig = struct {
-    const DESC_OFFSET_LEN = 0;
-    const DESC_OFFSET_TYPE = 1;
-
-    pub fn get_desc_len(bos_cfg: []const u8) u8 {
-        return bos_cfg[DESC_OFFSET_LEN];
+    pub inline fn get_desc_len(bos_cfg: []const u8) u8 {
+        return bos_cfg[0];
     }
 
-    pub fn get_desc_type(bos_cfg: []const u8) ?types.DescType {
-        return types.DescType.from_u8(bos_cfg[DESC_OFFSET_TYPE]);
+    pub fn get_desc_type(bos_cfg: []const u8) u8 {
+        return bos_cfg[1];
     }
 
     pub fn get_data_u8(bos_cfg: []const u8, offset: u16) u8 {
@@ -32,8 +29,7 @@ pub const BosConfig = struct {
     pub fn try_get_desc_as(comptime T: type, bos_cfg: []const u8) ?*const T {
         if (bos_cfg.len == 0) return null;
         const exp_desc_type = @field(T, "const_descriptor_type");
-        const cfg_desc_type = bos_cfg[DESC_OFFSET_TYPE];
-        if (cfg_desc_type != @intFromEnum(exp_desc_type)) {
+        if (get_desc_type(bos_cfg) != @intFromEnum(exp_desc_type)) {
             return null;
         } else {
             return @constCast(@ptrCast(bos_cfg.ptr));
@@ -41,8 +37,7 @@ pub const BosConfig = struct {
     }
 
     pub fn get_desc_next(bos_cfg: []const u8) []const u8 {
-        const len = bos_cfg[DESC_OFFSET_LEN];
-        return bos_cfg[len..];
+        return bos_cfg[get_desc_len(bos_cfg)..];
     }
 };
 
