@@ -117,8 +117,6 @@ pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
     return readv_fn(dev.ptr, datagrams);
 }
 
-pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
-
 pub const VTable = struct {
     writev_fn: ?*const fn (*anyopaque, Address, datagrams: []const []const u8) InterfaceError!void,
     readv_fn: ?*const fn (*anyopaque, Address, datagrams: []const []u8) InterfaceError!usize,

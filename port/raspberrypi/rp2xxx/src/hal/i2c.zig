@@ -29,7 +29,6 @@ pub const Config = struct {
 
 pub const Address = drivers.I2C_Device.Address;
 pub const AddressError = drivers.I2C_Device.Address.Error;
-pub const Allow_Reserved = drivers.I2C_Device.Allow_Reserved;
 pub const Error = drivers.I2C_Device.Error || error{TxFifoFlushed};
 
 pub const ConfigError = error{
@@ -284,6 +283,8 @@ pub const I2C = enum(u1) {
         return i2c.get_regs().IC_RXFLR.read().RXFLR;
     }
 
+    // TODO: Could move the check into read/write and remove this struct
+    pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
     fn set_address(i2c: I2C, addr: Address, allow_reserved: Allow_Reserved) Error!void {
         if (allow_reserved == .dont_allow_reserved)
             addr.check_reserved() catch return Error.IllegalAddress
