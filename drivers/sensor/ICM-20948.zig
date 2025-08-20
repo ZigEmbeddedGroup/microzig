@@ -902,9 +902,9 @@ test "set_bank" {
     var ttd = TestTime.init();
     var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.i2c_device();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -930,9 +930,9 @@ test "reset" {
     var ttd = TestTime.init();
     var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.i2c_device();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -948,9 +948,9 @@ test "read_byte" {
     var ttd = TestTime.init();
     var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.i2c_device();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Read byte will set the bank
     // -- Put in the values it expects to read
@@ -965,9 +965,9 @@ test "error handling in setup" {
     var ttd = TestTime.init();
     var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.i2c_device();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Test wrong WHO_AM_I response, first byte is read during reset()
     d.input_sequence = &.{ &.{0x00}, &.{0xFF} }; // Wrong ID after reset
@@ -979,9 +979,9 @@ test "device responsiveness check" {
     var ttd = TestTime.init();
     var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.i2c_device();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Test with correct WHO_AM_I
     d.input_sequence = &.{&.{ICM_20948.WHOAMI}};

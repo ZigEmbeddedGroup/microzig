@@ -106,15 +106,15 @@ pub fn writev_then_readv(
 
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagram`.
-pub fn read(dev: I2C_Device, datagram: []u8) InterfaceError!usize {
-    return try dev.readv(&.{datagram});
+pub fn read(dev: I2C_Device, address: Address, datagram: []u8) InterfaceError!usize {
+    return try dev.readv(address, &.{datagram});
 }
 
 /// Reads multiple `datagrams` from the device.
 /// Function returns the number of bytes written in `datagrams`.
-pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
+pub fn readv(dev: I2C_Device, address: Address, datagrams: []const []u8) InterfaceError!usize {
     const readv_fn = dev.vtable.readv_fn orelse return InterfaceError.Unsupported;
-    return readv_fn(dev.ptr, datagrams);
+    return readv_fn(dev.ptr, address, datagrams);
 }
 
 pub const VTable = struct {
@@ -324,17 +324,18 @@ test Test_Device {
 
     var buffer: [16]u8 = undefined;
 
-    const dd = td.i2c_device();
+    const id = td.i2c_device();
+    const addr: Address = @enumFromInt(0);
 
     {
         // The first input datagram will be received here:
-        const recv_len = try dd.read(&buffer);
+        const recv_len = try id.read(addr, &buffer);
         try std.testing.expectEqualStrings("first datagram", buffer[0..recv_len]);
     }
 
     {
         // The second one here:
-        const recv_len = try dd.read(&buffer);
+        const recv_len = try id.read(addr, &buffer);
         try std.testing.expectEqualStrings("second datagram", buffer[0..recv_len]);
     }
 
@@ -342,16 +343,16 @@ test Test_Device {
         // The third datagram will overrun our buffer, so we're receiving an error
         // which tells us that the whole buffer is filled, but there's data that
         // was discarded:
-        try std.testing.expectError(error.BufferOverrun, dd.read(&buffer));
+        try std.testing.expectError(error.BufferOverrun, id.read(addr, &buffer));
         try std.testing.expectEqualStrings("the very third d", &buffer);
     }
 
     // As there's no fourth datagram available, the test device will yield
     // an `IoError` for when no datagrams are available anymore:
-    try std.testing.expectError(error.NoData, dd.read(&buffer));
+    try std.testing.expectError(error.NoData, id.read(addr, &buffer));
 
-    try dd.write("Hello, World!");
-    try dd.writev(&.{ "See", " you ", "soon!" });
+    try id.write(addr, "Hello, World!");
+    try id.writev(addr, &.{ "See", " you ", "soon!" });
 
     // Check if we had exactly these datagrams:
     try td.expect_sent(&.{
