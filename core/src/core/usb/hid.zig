@@ -45,6 +45,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const usb = @import("../usb.zig");
+const descriptor = usb.descriptor;
 const types = usb.types;
 const DescType = types.DescType;
 const bos = usb.utils.BosConfig;
@@ -491,10 +492,25 @@ pub const ReportDescriptorKeyboard = hid_usage_page(UsageTable.desktop) ++ hid_u
 ++ hid_collection_end();
 
 pub const HidClassDriver = struct {
+    pub const num_interfaces = 1;
+
     ep_in: types.Endpoint.Num = .ep0,
     ep_out: types.Endpoint.Num = .ep0,
     hid_descriptor: []const u8 = &.{},
     report_descriptor: []const u8,
+
+    pub fn config_descriptor(string_ids: anytype, endpoints: anytype) []const u8 {
+        return &usb.templates.DescriptorsConfigTemplates.hid_in_out_descriptor(
+            0,
+            string_ids.name,
+            0,
+            ReportDescriptorGenericInOut.len,
+            endpoints.main,
+            endpoints.main,
+            64,
+            0,
+        );
+    }
 
     /// This function is called when the host chooses a configuration that contains this driver.
     pub fn mount(_: *@This(), _: usb.ControllerInterface) void {}
@@ -503,7 +519,7 @@ pub const HidClassDriver = struct {
         var self: *@This() = @ptrCast(@alignCast(ptr));
         var curr_cfg = cfg;
 
-        if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
             if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return error.UnsupportedInterfaceClassType;
         } else {
             return error.ExpectedInterfaceDescriptor;
@@ -518,7 +534,7 @@ pub const HidClassDriver = struct {
         }
 
         for (0..2) |_| {
-            if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
+            if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
                 switch (desc_ep.endpoint.dir) {
                     .In => self.ep_in = desc_ep.endpoint.num,
                     .Out => self.ep_out = desc_ep.endpoint.num,

@@ -92,8 +92,17 @@ pub const DpramAllocatorBump = struct {
 pub fn Usb(comptime config: UsbConfig) type {
     return struct {
         pub const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
-        // TODO: Support other buffer sizes.
-        const max_transfer_size = 64;
+        pub const max_transfer_size = 64; // TODO: Support other buffer sizes.
+        pub const default_strings: usb.Config.Strings = .{
+            .manufacturer = "Raspberry Pi",
+            .product = "Pico Test Device",
+            .serial = "someserial",
+        };
+        pub const bcd_usb = 0x02_00;
+        pub const default_vidpid: usb.Config.VidPid = .{
+            .vendor = 0x2E8A,
+            .product = 0x000a,
+        };
 
         const HardwareEndpoint = packed struct(u7) {
             const ep_ctrl_all: *volatile [2 * (max_endpoints_count - 1)]EpCtrl =

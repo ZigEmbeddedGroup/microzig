@@ -1,120 +1,18 @@
 const std = @import("std");
 
 const usb = @import("../usb.zig");
+const bos = usb.utils.BosConfig;
+const descriptor = usb.descriptor;
 const types = usb.types;
 
-const DescType = types.DescType;
-const bos = usb.utils.BosConfig;
-
-pub const DescSubType = enum(u8) {
-    Header = 0x00,
-    CallManagement = 0x01,
-    ACM = 0x02,
-    Union = 0x06,
-
-    pub fn from_u16(v: u16) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
-};
-
-pub const CdcManagementRequestType = enum(u8) {
+pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
     GetLineCoding = 0x21,
     SetControlLineState = 0x22,
     SendBreak = 0x23,
 };
 
-pub const CdcCommSubClassType = enum(u8) {
-    AbstractControlModel = 2,
-};
-
-pub const CdcHeaderDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `Header`.
-    descriptor_subtype: DescSubType = DescSubType.Header,
-    // USB Class Definitions for Communication Devices Specification release
-    // number in binary-coded decimal. Typically 0x01_10.
-    bcd_cdc: u16 align(1),
-
-    pub fn serialize(this: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(this.descriptor_type);
-        out[2] = @intFromEnum(this.descriptor_subtype);
-        out[3] = @intCast(this.bcd_cdc & 0xff);
-        out[4] = @intCast((this.bcd_cdc >> 8) & 0xff);
-        return out;
-    }
-};
-
-pub const CdcCallManagementDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `CallManagement`.
-    descriptor_subtype: DescSubType = DescSubType.CallManagement,
-    // Capabilities. Should be 0x00 for use as a serial device.
-    capabilities: u8,
-    // Data interface number.
-    data_interface: u8,
-
-    pub fn serialize(this: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(this.descriptor_type);
-        out[2] = @intFromEnum(this.descriptor_subtype);
-        out[3] = this.capabilities;
-        out[4] = this.data_interface;
-        return out;
-    }
-};
-
-pub const CdcAcmDescriptor = extern struct {
-    length: u8 = 4,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `ACM`.
-    descriptor_subtype: DescSubType = DescSubType.ACM,
-    // Capabilities. Should be 0x02 for use as a serial device.
-    capabilities: u8,
-
-    pub fn serialize(this: *const @This()) [4]u8 {
-        var out: [4]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(this.descriptor_type);
-        out[2] = @intFromEnum(this.descriptor_subtype);
-        out[3] = this.capabilities;
-        return out;
-    }
-};
-
-pub const CdcUnionDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `Union`.
-    descriptor_subtype: DescSubType = DescSubType.Union,
-    // The interface number of the communication or data class interface
-    // designated as the master or controlling interface for the union.
-    master_interface: u8,
-    // The interface number of the first slave or associated interface in the
-    // union.
-    slave_interface_0: u8,
-
-    pub fn serialize(this: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(this.descriptor_type);
-        out[2] = @intFromEnum(this.descriptor_subtype);
-        out[3] = this.master_interface;
-        out[4] = this.slave_interface_0;
-        return out;
-    }
-};
-
-pub const CdcLineCoding = extern struct {
+pub const LineCoding = extern struct {
     bit_rate: u32 align(1),
     stop_bits: u8,
     parity: u8,
@@ -126,24 +24,37 @@ pub const CdcLineCoding = extern struct {
         .parity = 0,
         .data_bits = 8,
     };
+
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
 };
 
 pub const CdcClassDriver = struct {
+    pub const num_interfaces = 2;
     const max_packet_size = 64;
-    const fifo = std.fifo.LinearFifo(
-        u8,
-        std.fifo.LinearFifoBufferType{ .Static = max_packet_size },
-    );
 
     ep_in_notif: types.Endpoint.Num = .ep0,
     ep_in: types.Endpoint.Num = .ep0,
     ep_out: types.Endpoint.Num = .ep0,
     awaiting_data: bool = false,
 
-    line_coding: CdcLineCoding = .init,
+    line_coding: LineCoding = .init,
 
     rx_buf: ?[]const u8 = null,
     tx_buf: ?[]u8 = null,
+
+    pub fn config_descriptor(string_ids: anytype, endpoints: anytype) []const u8 {
+        return &usb.templates.DescriptorsConfigTemplates.cdc_descriptor(
+            0,
+            string_ids.name,
+            endpoints.notifi,
+            8,
+            endpoints.data,
+            endpoints.data,
+            64,
+        );
+    }
 
     /// This function is called when the host chooses a configuration that contains this driver.
     pub fn mount(ptr: *@This(), controller: usb.ControllerInterface) void {
@@ -205,30 +116,30 @@ pub const CdcClassDriver = struct {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         var curr_cfg = cfg;
 
-        if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
             if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Cdc))
                 return error.UnsupportedInterfaceClassType;
-            if (desc_itf.interface_subclass != @intFromEnum(CdcCommSubClassType.AbstractControlModel))
+            if (desc_itf.interface_subclass != @intFromEnum(descriptor.cdc.SubType.AbstractControlModel))
                 return error.UnsupportedInterfaceSubClassType;
         } else return error.ExpectedInterfaceDescriptor;
 
         curr_cfg = bos.get_desc_next(curr_cfg);
 
-        while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == @intFromEnum(DescType.CsInterface)) {
+        while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == @intFromEnum(descriptor.Type.CsInterface)) {
             curr_cfg = bos.get_desc_next(curr_cfg);
         }
 
-        if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
+        if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
             std.debug.assert(desc_ep.endpoint.dir == .In);
             this.ep_in_notif = desc_ep.endpoint.num;
             curr_cfg = bos.get_desc_next(curr_cfg);
         }
 
-        if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
             if (desc_itf.interface_class == @intFromEnum(types.ClassCode.CdcData)) {
                 curr_cfg = bos.get_desc_next(curr_cfg);
                 for (0..2) |_| {
-                    if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
+                    if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
                         switch (desc_ep.endpoint.dir) {
                             .In => this.ep_in = desc_ep.endpoint.num,
                             .Out => this.ep_out = desc_ep.endpoint.num,
@@ -248,9 +159,9 @@ pub const CdcClassDriver = struct {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         if (stage != .Setup) return true;
 
-        if (std.meta.intToEnum(CdcManagementRequestType, setup.request)) |request| switch (request) {
+        if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| switch (request) {
             .SetLineCoding => controller.control_ack(),
-            .GetLineCoding => controller.control_transfer(std.mem.asBytes(&this.line_coding)[0..@min(@sizeOf(CdcLineCoding), setup.length)]),
+            .GetLineCoding => controller.control_transfer(std.mem.asBytes(&this.line_coding)[0..@min(@sizeOf(LineCoding), setup.length)]),
             .SetControlLineState => controller.control_ack(),
             .SendBreak => controller.control_ack(),
         } else |_| {}

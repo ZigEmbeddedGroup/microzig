@@ -22,49 +22,13 @@ pub const cdc = @import("usb/cdc.zig");
 pub const vendor = @import("usb/vendor.zig");
 pub const utils = @import("usb/utils.zig");
 pub const templates = @import("usb/templates.zig");
+pub const descriptor = @import("usb/descriptor.zig");
 
-const DescType = types.DescType;
 const FeatureSelector = types.FeatureSelector;
 const Dir = types.Dir;
 const Endpoint = types.Endpoint;
 const SetupRequest = types.SetupRequest;
 const BosConfig = utils.BosConfig;
-
-pub const Descriptors = struct {
-    const Lang = struct {
-        lo: u8,
-        hi: u8,
-
-        pub const English: @This() = .{ .lo = 0x09, .hi = 0x04 };
-    };
-
-    device: []const u8,
-    config: []const u8,
-    string: []const []const u8,
-    device_qualifier: []const u8,
-
-    pub fn create(comptime device: types.DeviceDescriptor, config: []const u8, comptime lang: Lang, comptime strings: []const []const u8) @This() {
-        @setEvalBranchQuota(10000);
-
-        // String 0 indicates language.
-        var strings_utf16: []const []const u8 = &.{&.{ 0x04, 0x03, lang.lo, lang.hi }};
-        inline for (strings) |str| {
-            const str_utf16: []const u8 = @ptrCast(std.unicode.utf8ToUtf16LeStringLiteral(str));
-            strings_utf16 = strings_utf16 ++ .{.{ str_utf16.len + 2, strings_utf16[0][1] } ++ str_utf16};
-        }
-        return .{
-            .device = &device.serialize(),
-            .config = config,
-            .string = strings_utf16,
-            .device_qualifier = &(types.DeviceQualifierDescriptor{
-                .bcd_usb = device.bcd_usb,
-                .device_triple = device.device_triple,
-                .max_packet_size0 = device.max_packet_size0,
-                .num_configurations = device.num_configurations,
-            }).serialize(),
-        };
-    }
-};
 
 pub const ControllerInterface = struct {
     const Vtable = struct {
@@ -137,39 +101,45 @@ pub const DriverInterface = struct {
 };
 
 pub const Config = struct {
-    /// TODO: Description
-    pub const DriverConfig = struct {
-        name: []const u8,
-        driver: type,
-        // endpoints_in: PerEndpointOpt([]const u8),
-        // endpoints_out: PerEndpointOpt([]const u8),
-        strings: []const struct { name: []const u8, value: []const u8 } = &.{},
+    pub fn NameValue(T: type) type {
+        return struct {
+            name: [:0]const u8,
+            value: T,
+        };
+    }
+
+    /// Vendor id and product id combo.
+    pub const VidPid = struct {
+        product: u16,
+        vendor: u16,
     };
 
-    /// Describes one of the configurations the host can choose.
-    pub const UsbConfiguration = struct {
-        const Callback = struct {
-            name: []const u8,
-            func: []const u8,
-        };
+    pub const Strings = struct {
+        manufacturer: []const u8,
+        product: []const u8,
+        serial: []const u8,
+    };
 
-        endpoint_out_handlers: [16]?Callback,
-
-        pub fn create(comptime driver_config: []const DriverConfig) @This() {
-            _ = driver_config;
-            const this: @This() = .{
-                .endpoint_out_handlers = @splat(null),
-            };
-
-            return this;
-        }
+    pub const Language = enum(u16) {
+        English = 0x0409,
     };
 
     Device: type,
-    Drivers: type,
-    descriptors: Descriptors,
-    // Currently we only support one configuration.
-    usb_configurations: [1]UsbConfiguration,
+    device_triple: descriptor.Device.DeviceTriple = .{
+        .class = .Unspecified,
+        .subclass = 0,
+        .protocol = 0,
+    },
+    id: ?VidPid = null,
+    bcd_device: u16 = 0x01_00,
+    strings: ?Strings = null,
+    attributes: descriptor.Configuration.Attributes,
+    max_current: descriptor.Configuration.MaxCurrent = .from_ma(100),
+    language: Language = .English,
+    // Eventually the fields below could be in an array to support multiple configurations.
+    Driver: type,
+    driver_endpoints: []const NameValue(types.Endpoint.Num),
+    driver_strings: []const NameValue([]const u8),
 };
 
 /// Create a USB device
@@ -201,6 +171,90 @@ pub fn Usb(comptime config: Config) type {
             .submit_tx_buffer = &submit_tx_buffer,
         };
 
+        const device_descriptor: descriptor.Device = .{
+            .bcd_usb = .from(config.Device.bcd_usb),
+            .device_triple = config.device_triple,
+            .max_packet_size0 = config.Device.max_transfer_size,
+            .vendor = .from(if (config.id) |id| id.vendor else config.Device.default_vidpid.vendor),
+            .product = .from(if (config.id) |id| id.product else config.Device.default_vidpid.product),
+            .bcd_device = .from(config.bcd_device),
+            .manufacturer_s = 1,
+            .product_s = 2,
+            .serial_s = 3,
+            .num_configurations = 1,
+        };
+
+        const config_descriptor: []const u8 = blk: {
+            const Field = std.builtin.Type.StructField;
+            var fields: []const Field = &.{};
+            for (config.driver_endpoints) |fld| {
+                fields = fields ++ .{Field{
+                    .name = fld.name,
+                    .type = @TypeOf(fld.value),
+                    .default_value_ptr = @ptrCast(&fld.value),
+                    .is_comptime = true,
+                    .alignment = @alignOf(@TypeOf(fld.value)),
+                }};
+            }
+            const endpoints_struct = @Type(.{ .@"struct" = .{
+                .layout = .auto,
+                .fields = fields,
+                .decls = &.{},
+                .is_tuple = false,
+            } });
+
+            const driver_desc = config.Driver.config_descriptor(string.ids{}, endpoints_struct{});
+            break :blk &(descriptor.Configuration{
+                .total_length = .from(@sizeOf(descriptor.Configuration) + driver_desc.len),
+                .num_interfaces = config.Driver.num_interfaces,
+                .configuration_value = 1,
+                .configuration_s = 0,
+                .attributes = config.attributes,
+                .max_current = config.max_current,
+            }).serialize() ++ driver_desc;
+        };
+
+        const string = blk: {
+            const Dev = config.Device;
+
+            // String 0 indicates language. First byte is length.
+            const lang: types.U16Le = .from(@intFromEnum(config.language));
+            var desc: []const []const u8 = &.{&.{
+                0x04,
+                @intFromEnum(descriptor.Type.String),
+                lang.lo,
+                lang.hi,
+            }};
+
+            const device_strings = config.strings orelse Dev.default_strings;
+            desc = desc ++ .{descriptor.string(device_strings.manufacturer)};
+            desc = desc ++ .{descriptor.string(device_strings.product)};
+            desc = desc ++ .{descriptor.string(device_strings.serial)};
+
+            const Field = std.builtin.Type.StructField;
+            var fields: []const Field = &.{};
+            for (config.driver_strings) |fld| {
+                const id: u8 = desc.len;
+                fields = fields ++ .{Field{
+                    .name = fld.name,
+                    .type = @TypeOf(id),
+                    .default_value_ptr = @ptrCast(&id),
+                    .is_comptime = true,
+                    .alignment = @alignOf(@TypeOf(id)),
+                }};
+                desc = desc ++ .{descriptor.string(fld.value)};
+            }
+            break :blk .{
+                .descriptors = desc,
+                .ids = @Type(.{ .@"struct" = .{
+                    .layout = .auto,
+                    .fields = fields,
+                    .decls = &.{},
+                    .is_tuple = false,
+                } }),
+            };
+        };
+
         drivers: ?[]const DriverInterface,
         driver_by_interface: [16]?DriverInterface,
         driver_by_endpoint_in: [config.Device.max_endpoints_count]?DriverInterface,
@@ -217,7 +271,7 @@ pub fn Usb(comptime config: Config) type {
         now_sending_ep0: ?[]const u8,
         // 0 - no config set
         cfg_num: u16,
-        drivers_data: config.Drivers,
+        driver_data: config.Driver,
 
         pub const init: @This() = .{
             .drivers = null,
@@ -229,7 +283,7 @@ pub fn Usb(comptime config: Config) type {
             .setup_packet = undefined,
             .now_sending_ep0 = null,
             .cfg_num = 0,
-            .drivers_data = undefined,
+            .driver_data = undefined,
         };
 
         /// Command response utility function that can split long data in multiple packets
@@ -301,17 +355,15 @@ pub fn Usb(comptime config: Config) type {
 
                     if (setup.value == 0) return;
 
-                    // TODO: only init the drivers from the current configuration
-                    inline for (@typeInfo(config.Drivers).@"struct".fields) |field|
-                        @field(this.drivers_data, field.name).mount(this.interface());
+                    this.driver_data.mount(this.interface());
 
                     // TODO: we support just one config for now so ignore config index
-                    const bos_cfg = config.descriptors.config;
+                    const bos_cfg = config_descriptor;
 
                     var curr_bos_cfg = bos_cfg;
                     var curr_drv_idx: u8 = 0;
 
-                    if (BosConfig.try_get_desc_as(types.ConfigurationDescriptor, curr_bos_cfg)) |_| {
+                    if (BosConfig.try_get_desc_as(descriptor.Configuration, curr_bos_cfg)) |_| {
                         curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
                     } else {
                         // TODO: error
@@ -321,16 +373,16 @@ pub fn Usb(comptime config: Config) type {
                     while (curr_bos_cfg.len > 0) : (curr_drv_idx += 1) {
                         var assoc_itf_count: u8 = 1;
                         // New class starts optionally from InterfaceAssociation followed by mandatory Interface
-                        if (BosConfig.try_get_desc_as(types.InterfaceAssociationDescriptor, curr_bos_cfg)) |desc_assoc_itf| {
+                        if (BosConfig.try_get_desc_as(descriptor.InterfaceAssociation, curr_bos_cfg)) |desc_assoc_itf| {
                             assoc_itf_count = desc_assoc_itf.interface_count;
                             curr_bos_cfg = BosConfig.get_desc_next(curr_bos_cfg);
                         }
 
-                        if (BosConfig.get_desc_type(curr_bos_cfg) != @intFromEnum(DescType.Interface)) {
+                        if (BosConfig.get_desc_type(curr_bos_cfg) != @intFromEnum(descriptor.Type.Interface)) {
                             // TODO: error
                             return;
                         }
-                        const desc_itf = BosConfig.get_desc_as(types.InterfaceDescriptor, curr_bos_cfg);
+                        const desc_itf = BosConfig.get_desc_as(descriptor.Interface, curr_bos_cfg);
 
                         var drv = this.drivers.?[curr_drv_idx];
                         const drv_cfg_len = drv.open(this.interface(), curr_bos_cfg) catch unreachable;
@@ -344,7 +396,7 @@ pub fn Usb(comptime config: Config) type {
                         while (curr_bos_cfg2.len > 0) : ({
                             curr_bos_cfg2 = BosConfig.get_desc_next(curr_bos_cfg2);
                         }) {
-                            if (BosConfig.try_get_desc_as(types.EndpointDescriptor, curr_bos_cfg2)) |desc_ep| {
+                            if (BosConfig.try_get_desc_as(descriptor.Endpoint, curr_bos_cfg2)) |desc_ep| {
                                 switch (desc_ep.endpoint.dir) {
                                     .Out => this.driver_by_endpoint_out[desc_ep.endpoint.num.to_int()] = drv,
                                     .In => this.driver_by_endpoint_in[desc_ep.endpoint.num.to_int()] = drv,
@@ -358,12 +410,15 @@ pub fn Usb(comptime config: Config) type {
                         break;
                     }
                 },
-                .GetDescriptor => if (enumFromInt(DescType, setup.value >> 8)) |descriptor_type| blk: {
-                    const data = switch (descriptor_type) {
-                        .Device => config.descriptors.device,
-                        .Config => config.descriptors.config,
-                        .String => config.descriptors.string[setup.value & 0xff],
-                        .DeviceQualifier => config.descriptors.device_qualifier,
+                .GetDescriptor => if (enumFromInt(descriptor.Type, setup.value >> 8)) |descriptor_type| blk: {
+                    const data: []const u8 = switch (descriptor_type) {
+                        .Device => comptime &device_descriptor.serialize(),
+                        .Configuration => config_descriptor,
+                        .String => if (setup.value & 0xff < string.descriptors.len)
+                            string.descriptors[setup.value & 0xff]
+                        else
+                            comptime descriptor.string(""),
+                        .DeviceQualifier => comptime &device_descriptor.qualifier().serialize(),
                         else => break :blk,
                     };
                     const len = @min(data.len, setup.length);
@@ -441,10 +496,12 @@ pub fn Usb(comptime config: Config) type {
                                     this.now_sending_ep0 = null;
                                 }
                             }
+                            // TODO: Route different endpoints to different functions.
                         } else if (this.driver_by_endpoint_in[in.ep_num.to_int()]) |drv|
                             drv.on_tx_ready(this.interface(), in.buffer);
                     },
                     .Out => |out| {
+                        // TODO: Route different endpoints to different functions.
                         if (this.driver_by_endpoint_out[out.ep_num.to_int()]) |drv|
                             drv.on_data_rx(this.interface(), out.buffer);
 
