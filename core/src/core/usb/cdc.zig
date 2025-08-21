@@ -112,7 +112,7 @@ pub const CdcClassDriver = struct {
         }
     }
 
-    fn open(ptr: *anyopaque, controller: usb.ControllerInterface, cfg: []const u8) anyerror!usize {
+    pub fn open(ptr: *@This(), controller: usb.ControllerInterface, cfg: []const u8) anyerror!usize {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         var curr_cfg = cfg;
 
@@ -155,7 +155,7 @@ pub const CdcClassDriver = struct {
         return cfg.len - curr_cfg.len;
     }
 
-    fn class_control(ptr: *anyopaque, controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+    pub fn class_control(ptr: *@This(), controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         if (stage != .Setup) return true;
 
@@ -169,25 +169,13 @@ pub const CdcClassDriver = struct {
         return true;
     }
 
-    fn on_tx_ready(ptr: *anyopaque, _: usb.ControllerInterface, data: []u8) void {
+    pub fn on_tx_ready(ptr: *@This(), _: usb.ControllerInterface, data: []u8) void {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         this.tx_buf = data;
     }
 
-    fn on_data_rx(ptr: *anyopaque, _: usb.ControllerInterface, data: []const u8) void {
+    pub fn on_data_rx(ptr: *@This(), _: usb.ControllerInterface, data: []const u8) void {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         this.rx_buf = data;
-    }
-
-    pub fn driver(this: *@This()) usb.DriverInterface {
-        return .{
-            .ptr = this,
-            .vtable = comptime &.{
-                .open = &open,
-                .class_control = &class_control,
-                .on_tx_ready = &on_tx_ready,
-                .on_data_rx = &on_data_rx,
-            },
-        };
     }
 };

@@ -70,36 +70,6 @@ pub const ControllerInterface = struct {
     }
 };
 
-/// USB Class driver interface
-pub const DriverInterface = struct {
-    pub const Vtable = struct {
-        open: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, cfg: []const u8) anyerror!usize,
-        class_control: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool,
-        on_tx_ready: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, data: []u8) void,
-        on_data_rx: *const fn (ptr: *anyopaque, ctrl: ControllerInterface, data: []const u8) void,
-    };
-
-    ptr: *anyopaque,
-    vtable: *const Vtable,
-
-    /// Driver open (set config) operation. Must return length of consumed driver config data.
-    pub fn open(this: @This(), ctrl: ControllerInterface, cfg: []const u8) anyerror!usize {
-        return this.vtable.open(this.ptr, ctrl, cfg);
-    }
-
-    pub fn class_control(this: @This(), ctrl: ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-        return this.vtable.class_control(this.ptr, ctrl, stage, setup);
-    }
-
-    pub fn on_tx_ready(this: @This(), ctrl: ControllerInterface, data: []u8) void {
-        return this.vtable.on_tx_ready(this.ptr, ctrl, data);
-    }
-
-    pub fn on_data_rx(this: @This(), ctrl: ControllerInterface, len: []const u8) void {
-        return this.vtable.on_data_rx(this.ptr, ctrl, len);
-    }
-};
-
 pub const Config = struct {
     pub fn NameValue(T: type) type {
         return struct {
@@ -159,7 +129,7 @@ pub const Config = struct {
 /// * `get_EPBIter(*const DeviceConfiguration) EPBIter` - Return an endpoint buffer iterator. Each call to next returns an unhandeled endpoint buffer with data. How next is implemented depends on the system.
 /// The functions must be grouped under the same name space and passed to the fuction at compile time.
 /// The functions will be accessible to the user through the `Dev` field.
-pub fn Usb(comptime config: Config) type {
+pub fn Controller(comptime config: Config) type {
     return struct {
         pub const max_packet_size = config.Device.max_packet_size;
 
@@ -255,12 +225,11 @@ pub fn Usb(comptime config: Config) type {
             };
         };
 
-        drivers: ?[]const DriverInterface,
-        driver_by_interface: [16]?DriverInterface,
-        driver_by_endpoint_in: [config.Device.max_endpoints_count]?DriverInterface,
-        driver_by_endpoint_out: [config.Device.max_endpoints_count]?DriverInterface,
+        driver_by_interface: [16]?*config.Driver,
+        driver_by_endpoint_in: [config.Device.max_endpoints_count]?*config.Driver,
+        driver_by_endpoint_out: [config.Device.max_endpoints_count]?*config.Driver,
         // Class driver associated with last setup request if any
-        driver: ?DriverInterface,
+        driver: ?*config.Driver,
         // When the host gives us a new address, we can't just slap it into
         // registers right away, because we have to do an acknowledgement step using
         // our _old_ address.
@@ -274,7 +243,6 @@ pub fn Usb(comptime config: Config) type {
         driver_data: config.Driver,
 
         pub const init: @This() = .{
-            .drivers = null,
             .driver_by_interface = @splat(null),
             .driver_by_endpoint_in = @splat(null),
             .driver_by_endpoint_out = @splat(null),
@@ -297,9 +265,8 @@ pub fn Usb(comptime config: Config) type {
         }
 
         /// Initialize the usb device using the given configuration
-        pub fn init_device(this: *@This(), drivers: []const DriverInterface) void {
+        pub fn init_device(_: *@This()) void {
             config.Device.usb_init_device();
-            this.drivers = drivers;
         }
 
         fn control_transfer(ptr: *anyopaque, data: []const u8) void {
@@ -384,7 +351,7 @@ pub fn Usb(comptime config: Config) type {
                         }
                         const desc_itf = BosConfig.get_desc_as(descriptor.Interface, curr_bos_cfg);
 
-                        var drv = this.drivers.?[curr_drv_idx];
+                        var drv = &this.driver_data;
                         const drv_cfg_len = drv.open(this.interface(), curr_bos_cfg) catch unreachable;
 
                         for (0..assoc_itf_count) |itf_offset| {

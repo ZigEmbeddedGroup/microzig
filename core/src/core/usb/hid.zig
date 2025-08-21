@@ -43,11 +43,11 @@
 
 const std = @import("std");
 const assert = std.debug.assert;
+const enumFromInt = std.meta.intToEnum;
 
 const usb = @import("../usb.zig");
 const descriptor = usb.descriptor;
 const types = usb.types;
-const DescType = types.DescType;
 const bos = usb.utils.BosConfig;
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -75,14 +75,10 @@ const bos = usb.utils.BosConfig;
 //      |   ReportDescriptor  |     |    PhysicalDesc   |
 //      -----------------------     ---------------------
 
-pub const HidDescType = enum(u8) {
+pub const SubType = enum(u8) {
     Hid = 0x21,
     Report = 0x22,
     Physical = 0x23,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
 pub const HidRequestType = enum(u8) {
@@ -92,19 +88,15 @@ pub const HidRequestType = enum(u8) {
     SetReport = 0x09,
     SetIdle = 0x0a,
     SetProtocol = 0x0b,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
 /// USB HID descriptor
 pub const HidDescriptor = struct {
-    pub const const_descriptor_type = HidDescType.Hid;
+    pub const const_descriptor_type = SubType.Hid;
 
     length: u8 = 9,
     /// Type of this descriptor
-    descriptor_type: HidDescType = const_descriptor_type,
+    descriptor_type: SubType = const_descriptor_type,
     /// Numeric expression identifying the HID Class Specification release
     bcd_hid: u16 align(1),
     /// Numeric expression identifying country code of the localized hardware
@@ -112,7 +104,7 @@ pub const HidDescriptor = struct {
     /// Numeric expression specifying the number of class descriptors
     num_descriptors: u8,
     /// Type of HID class report
-    report_type: HidDescType = HidDescType.Report,
+    report_type: SubType = SubType.Report,
     /// The total size of the Report descriptor
     report_length: u16 align(1),
 
@@ -515,7 +507,7 @@ pub const HidClassDriver = struct {
     /// This function is called when the host chooses a configuration that contains this driver.
     pub fn mount(_: *@This(), _: usb.ControllerInterface) void {}
 
-    fn open(ptr: *anyopaque, controller: usb.ControllerInterface, cfg: []const u8) anyerror!usize {
+    pub fn open(ptr: *@This(), controller: usb.ControllerInterface, cfg: []const u8) anyerror!usize {
         var self: *@This() = @ptrCast(@alignCast(ptr));
         var curr_cfg = cfg;
 
@@ -547,97 +539,65 @@ pub const HidClassDriver = struct {
         return cfg.len - curr_cfg.len;
     }
 
-    fn class_control(ptr: *anyopaque, controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+    pub fn class_control(ptr: *@This(), controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
         const self: *@This() = @ptrCast(@alignCast(ptr));
 
         switch (setup.request_type.type) {
-            .Standard => {
-                if (stage == .Setup) {
-                    const hid_desc_type = HidDescType.from_u8(@intCast((setup.value >> 8) & 0xff));
-                    const request_code = types.SetupRequest.from_u8(setup.request);
+            .Standard => if (stage == .Setup) {
+                const hid_desc_type = enumFromInt(SubType, (setup.value >> 8) & 0xff) catch return false;
+                const request_code = enumFromInt(types.SetupRequest, setup.request) catch return false;
 
-                    if (hid_desc_type == null or request_code == null) {
-                        return false;
-                    }
+                if (request_code != .GetDescriptor) return false;
 
-                    if (request_code.? == .GetDescriptor and hid_desc_type == .Hid) {
-                        controller.control_transfer(self.hid_descriptor[0..@min(self.hid_descriptor.len, setup.length)]);
-                    } else if (request_code.? == .GetDescriptor and hid_desc_type == .Report) {
-                        controller.control_transfer(self.report_descriptor[0..@min(self.report_descriptor.len, setup.length)]);
-                    } else {
-                        return false;
-                    }
-                }
-            },
-            .Class => {
-                const hid_request_type = HidRequestType.from_u8(setup.request);
-                if (hid_request_type == null) return false;
+                const data = switch (hid_desc_type) {
+                    .Hid => self.hid_descriptor,
+                    .Report => self.report_descriptor,
+                    else => return false,
+                };
 
-                switch (hid_request_type.?) {
-                    .SetIdle => {
-                        if (stage == .Setup) {
-                            // TODO: The host is attempting to limit bandwidth by requesting that
-                            // the device only return report data when its values actually change,
-                            // or when the specified duration elapses. In practice, the device can
-                            // still send reports as often as it wants, but for completeness this
-                            // should be implemented eventually.
-                            //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                            controller.control_ack();
-                        }
-                    },
-                    .SetProtocol => {
-                        if (stage == .Setup) {
-                            // TODO: The device should switch the format of its reports from the
-                            // boot keyboard/mouse protocol to the format described in its report descriptor,
-                            // or vice versa.
-                            //
-                            // For now, this request is ACKed without doing anything; in practice,
-                            // the OS will reuqest the report protocol anyway, so usually only one format is needed.
-                            // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
-                            // our device might not work in a limited BIOS environment.
-                            //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                            controller.control_ack();
-                        }
-                    },
-                    .SetReport => {
-                        if (stage == .Setup) {
-                            // TODO: This request sends a feature or output report to the device,
-                            // e.g. turning on the caps lock LED. This must be handled in an
-                            // application-specific way, so notify the application code of the event.
-                            //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                            controller.control_ack();
-                        }
-                    },
-                    else => {
-                        return false;
-                    },
-                }
+                controller.control_transfer(data[0..@min(data.len, setup.length)]);
             },
-            else => {
-                return false;
+            .Class => switch (enumFromInt(HidRequestType, setup.request) catch return false) {
+                .SetIdle => if (stage == .Setup) {
+                    // TODO: The host is attempting to limit bandwidth by requesting that
+                    // the device only return report data when its values actually change,
+                    // or when the specified duration elapses. In practice, the device can
+                    // still send reports as often as it wants, but for completeness this
+                    // should be implemented eventually.
+                    //
+                    // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                    controller.control_ack();
+                },
+                .SetProtocol => if (stage == .Setup) {
+                    // TODO: The device should switch the format of its reports from the
+                    // boot keyboard/mouse protocol to the format described in its report descriptor,
+                    // or vice versa.
+                    //
+                    // For now, this request is ACKed without doing anything; in practice,
+                    // the OS will reuqest the report protocol anyway, so usually only one format is needed.
+                    // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
+                    // our device might not work in a limited BIOS environment.
+                    //
+                    // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                    controller.control_ack();
+                },
+                .SetReport => if (stage == .Setup) {
+                    // TODO: This request sends a feature or output report to the device,
+                    // e.g. turning on the caps lock LED. This must be handled in an
+                    // application-specific way, so notify the application code of the event.
+                    //
+                    // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                    controller.control_ack();
+                },
+                else => return false,
             },
+            else => return false,
         }
-
         return true;
     }
 
-    fn on_tx_ready(_: *anyopaque, _: usb.ControllerInterface, _: []u8) void {}
-    fn on_data_rx(_: *anyopaque, _: usb.ControllerInterface, _: []const u8) void {}
-
-    pub fn driver(this: *@This()) usb.DriverInterface {
-        return .{
-            .ptr = this,
-            .vtable = comptime &.{
-                .open = open,
-                .class_control = class_control,
-                .on_tx_ready = on_tx_ready,
-                .on_data_rx = on_data_rx,
-            },
-        };
-    }
+    pub fn on_tx_ready(_: *@This(), _: usb.ControllerInterface, _: []u8) void {}
+    pub fn on_data_rx(_: *@This(), _: usb.ControllerInterface, _: []const u8) void {}
 };
 
 test "create hid report item" {

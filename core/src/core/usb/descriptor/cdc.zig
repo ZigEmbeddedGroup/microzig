@@ -63,7 +63,7 @@ pub const AbstractControlModel = extern struct {
     length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
     descriptor_type: Type = .CsInterface,
-    // Subtype of this descriptor, must be `ACM`.
+    // Subtype of this descriptor, must be `AbstractControlModel`.
     descriptor_subtype: SubType = .AbstractControlModel,
     // Capabilities. Should be 0x02 for use as a serial device.
     capabilities: u8,
@@ -135,25 +135,13 @@ pub const Template = extern struct {
                 .interface_protocol = 0,
                 .interface_s = string_index,
             },
-            .desc3 = .{
-                .descriptor_type = .CsInterface,
-                .descriptor_subtype = .Header,
-                .bcd_cdc = .from(0x0120),
-            },
+            .desc3 = .{ .bcd_cdc = .from(0x0120) },
             .desc4 = .{
-                .descriptor_type = .CsInterface,
-                .descriptor_subtype = .CallManagement,
                 .capabilities = 0,
                 .data_interface = interface_number + 1,
             },
-            .desc5 = .{
-                .descriptor_type = .CsInterface,
-                .descriptor_subtype = .AbstractControlModel,
-                .capabilities = 6,
-            },
+            .desc5 = .{ .capabilities = 6 },
             .desc6 = .{
-                .descriptor_type = .CsInterface,
-                .descriptor_subtype = .Union,
                 .master_interface = interface_number,
                 .slave_interface_0 = interface_number + 1,
             },

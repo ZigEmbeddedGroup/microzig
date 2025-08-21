@@ -12,7 +12,7 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 // This is our device configuration
-const UsbDev = microzig.core.usb.Usb(.{
+const UsbDev = microzig.core.usb.Controller(.{
     .Device = rp2xxx.usb.Usb(.{}),
     .attributes = .{ .self_powered = true },
     .device_triple = .{
@@ -57,7 +57,7 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb.init_device(&.{usb.driver_data.driver()});
+    usb.init_device();
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {

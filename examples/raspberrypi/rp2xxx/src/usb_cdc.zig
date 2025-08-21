@@ -14,7 +14,7 @@ const uart_tx_pin = gpio.num(12);
 const uart_rx_pin = gpio.num(1);
 
 // This is our device configuration
-const UsbDev = usb.Usb(.{
+const UsbDev = usb.Controller(.{
     .Device = rp2xxx.usb.Usb(.{}),
     .attributes = .{ .self_powered = true },
     .Driver = microzig.core.usb.cdc.CdcClassDriver,
@@ -58,7 +58,7 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device(&.{usb_dev.driver_data.driver()});
+    usb_dev.init_device();
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
