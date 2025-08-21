@@ -42,7 +42,6 @@
 //! The HID descriptor identifies the length and type of subordinate descriptors for device.
 
 const std = @import("std");
-const assert = std.debug.assert;
 const enumFromInt = std.meta.intToEnum;
 
 const usb = @import("../usb.zig");
@@ -50,438 +49,76 @@ const descriptor = usb.descriptor;
 const types = usb.types;
 const bos = usb.utils.BosConfig;
 
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Common Data Types
-// +++++++++++++++++++++++++++++++++++++++++++++++++
+pub const InDescriptor = extern struct {
+    desc1: descriptor.Interface,
+    desc2: descriptor.hid.Hid,
+    desc3: descriptor.Endpoint,
 
-//          ...
-//           |
-//           v
-// -------------------------
-// |  InterfaceDescriptor  |
-// -------------------------
-//       |        |
-//       |        -----------------
-//       |                        |
-//       v                        v
-//     ...         --------------------------
-//                 |     HidDescriptor      |
-//                 --------------------------
-//                     |              |
-//               ------               --------
-//               |                           |
-//               v                           v
-//      -----------------------     ---------------------
-//      |   ReportDescriptor  |     |    PhysicalDesc   |
-//      -----------------------     ---------------------
-
-pub const SubType = enum(u8) {
-    Hid = 0x21,
-    Report = 0x22,
-    Physical = 0x23,
-};
-
-pub const HidRequestType = enum(u8) {
-    GetReport = 0x01,
-    GetIdle = 0x02,
-    GetProtocol = 0x03,
-    SetReport = 0x09,
-    SetIdle = 0x0a,
-    SetProtocol = 0x0b,
-};
-
-/// USB HID descriptor
-pub const HidDescriptor = struct {
-    pub const const_descriptor_type = SubType.Hid;
-
-    length: u8 = 9,
-    /// Type of this descriptor
-    descriptor_type: SubType = const_descriptor_type,
-    /// Numeric expression identifying the HID Class Specification release
-    bcd_hid: u16 align(1),
-    /// Numeric expression identifying country code of the localized hardware
-    country_code: u8,
-    /// Numeric expression specifying the number of class descriptors
-    num_descriptors: u8,
-    /// Type of HID class report
-    report_type: SubType = SubType.Report,
-    /// The total size of the Report descriptor
-    report_length: u16 align(1),
-
-    pub fn serialize(self: *const @This()) [9]u8 {
-        var out: [9]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(self.bcd_hid & 0xff);
-        out[3] = @intCast((self.bcd_hid >> 8) & 0xff);
-        out[4] = self.country_code;
-        out[5] = self.num_descriptors;
-        out[6] = @intFromEnum(self.report_type);
-        out[7] = @intCast(self.report_length & 0xff);
-        out[8] = @intCast((self.report_length >> 8) & 0xff);
-        return out;
+    fn create(first_interface: u8, string_index: u8, boot_protocol: u8, report_desc_len: u16, endpoint_in: types.Endpoint.Num, endpoint_size: u16, endpoint_interval: u16) @This() {
+        return .{
+            .desc1 = .{
+                .interface_number = first_interface,
+                .alternate_setting = 0,
+                .num_endpoints = 1,
+                .interface_class = 3,
+                .interface_subclass = if (boot_protocol > 0) 1 else 0,
+                .interface_protocol = boot_protocol,
+                .interface_s = string_index,
+            },
+            .desc2 = .{
+                .bcd_hid = .from(0x0111),
+                .country_code = 0,
+                .num_descriptors = 1,
+                .report_length = .from(report_desc_len),
+            },
+            .desc3 = .{
+                .endpoint = .in(endpoint_in),
+                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                .max_packet_size = endpoint_size,
+                .interval = endpoint_interval,
+            },
+        };
     }
 };
 
-/// HID interface Subclass (for UsbInterfaceDescriptor)
-pub const Subclass = enum(u8) {
-    /// No Subclass
-    None = 0,
-    /// Boot Interface Subclass
-    Boot = 1,
+pub const InOutDescriptor = extern struct {
+    interface: descriptor.Interface,
+    hid: descriptor.hid.Hid,
+    ep_out: descriptor.Endpoint,
+    ep_in: descriptor.Endpoint,
+
+    fn create(first_interface: u8, string_index: u8, boot_protocol: u8, report_desc_len: u16, endpoint_out: types.Endpoint.Num, endpoint_in: types.Endpoint.Num, endpoint_size: u16, endpoint_interval: u16) @This() {
+        return .{
+            .interface = .{
+                .interface_number = first_interface,
+                .alternate_setting = 0,
+                .num_endpoints = 2,
+                .interface_class = 3,
+                .interface_subclass = if (boot_protocol > 0) 1 else 0,
+                .interface_protocol = boot_protocol,
+                .interface_s = string_index,
+            },
+            .hid = .{
+                .bcd_hid = .from(0x0111),
+                .country_code = 0,
+                .num_descriptors = 1,
+                .report_length = .from(report_desc_len),
+            },
+            .ep_out = .{
+                .endpoint = .out(endpoint_out),
+                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                .max_packet_size = .from(endpoint_size),
+                .interval = endpoint_interval,
+            },
+            .ep_in = .{
+                .endpoint = .in(endpoint_in),
+                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                .max_packet_size = .from(endpoint_size),
+                .interval = endpoint_interval,
+            },
+        };
+    }
 };
-
-/// HID interface protocol
-pub const Protocol = enum(u8) {
-    /// No protocol
-    None = 0,
-    /// Keyboard (only if boot interface)
-    Keyboard = 1,
-    /// Mouse (only if boot interface)
-    Mouse = 2,
-};
-
-/// HID request report type
-pub const ReportType = enum(u8) {
-    Invalid = 0,
-    Input = 1,
-    Output = 2,
-    Feature = 3,
-};
-
-/// HID country codes
-pub const CountryCode = enum(u8) {
-    NotSupported = 0,
-    Arabic,
-    Belgian,
-    CanadianBilingual,
-    CanadianFrench,
-    CzechRepublic,
-    Danish,
-    Finnish,
-    French,
-    German,
-    Greek,
-    Hebrew,
-    Hungary,
-    International,
-    Italian,
-    JapanKatakana,
-    Korean,
-    LatinAmerica,
-    NetherlandsDutch,
-    Norwegian,
-    PersianFarsi,
-    Poland,
-    Portuguese,
-    Russia,
-    Slovakia,
-    Spanish,
-    Swedish,
-    SwissFrench,
-    SwissGerman,
-    Switzerland,
-    Taiwan,
-    TurkishQ,
-    Uk,
-    Us,
-    Yugoslavia,
-    TurkishF,
-};
-
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Report Descriptor Data Types
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-
-pub const ReportItemTypes = enum(u2) {
-    Main = 0,
-    Global = 1,
-    Local = 2,
-};
-
-pub const ReportItemMainGroup = enum(u4) {
-    Input = 8,
-    Output = 9,
-    Collection = 10,
-    Feature = 11,
-    CollectionEnd = 12,
-};
-
-pub const CollectionItem = enum(u8) {
-    Physical = 0,
-    Application,
-    Logical,
-    Report,
-    NamedArray,
-    UsageSwitch,
-    UsageModifier,
-};
-
-pub const GlobalItem = enum(u4) {
-    UsagePage = 0,
-    LogicalMin = 1,
-    LogicalMax = 2,
-    PhysicalMin = 3,
-    PhysicalMax = 4,
-    UnitExponent = 5,
-    Unit = 6,
-    ReportSize = 7,
-    ReportId = 8,
-    ReportCount = 9,
-    Push = 10,
-    Pop = 11,
-};
-
-pub const LocalItem = enum(u4) {
-    Usage = 0,
-    UsageMin = 1,
-    UsageMax = 2,
-    DesignatorIndex = 3,
-    DesignatorMin = 4,
-    DesignatorMax = 5,
-    StringIndex = 7,
-    StringMin = 8,
-    StringMax = 9,
-    Delimiter = 10,
-};
-
-pub const UsageTable = struct {
-    pub const desktop: [1]u8 = "\x01".*;
-    pub const keyboard: [1]u8 = "\x07".*;
-    pub const led: [1]u8 = "\x08".*;
-    pub const fido: [2]u8 = "\xD0\xF1".*;
-    pub const vendor: [2]u8 = "\x00\xFF".*;
-};
-
-pub const FidoAllianceUsage = struct {
-    pub const u2fhid: [1]u8 = "\x01".*;
-    pub const data_in: [1]u8 = "\x20".*;
-    pub const data_out: [1]u8 = "\x21".*;
-};
-
-pub const DesktopUsage = struct {
-    pub const keyboard: [1]u8 = "\x06".*;
-};
-
-pub const HID_DATA: u8 = 0 << 0;
-pub const HID_CONSTANT: u8 = 1 << 0;
-
-pub const HID_ARRAY = 0 << 1;
-pub const HID_VARIABLE = 1 << 1;
-
-pub const HID_ABSOLUTE = 0 << 2;
-pub const HID_RELATIVE = 1 << 2;
-
-pub const HID_WRAP_NO = 0 << 3;
-pub const HID_WRAP = 1 << 3;
-
-pub const HID_LINEAR = 0 << 4;
-pub const HID_NONLINEAR = 1 << 4;
-
-pub const HID_PREFERRED_STATE = 0 << 5;
-pub const HID_PREFERRED_NO = 1 << 5;
-
-pub const HID_NO_NULL_POSITION = 0 << 6;
-pub const HID_NULL_STATE = 1 << 6;
-
-pub const HID_NON_VOLATILE = 0 << 7;
-pub const HID_VOLATILE = 1 << 7;
-
-pub const HID_BITFIELD = 0 << 8;
-pub const HID_BUFFERED_BYTES = 1 << 8;
-
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Report Descriptor Functions
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-
-pub fn hid_report_item(
-    typ: u2,
-    tag: u4,
-    data: anytype,
-) [data.len + 1]u8 {
-    comptime if (data.len != 0) assert(@TypeOf(data[0]) == u8);
-    const first = (@as(u8, tag) << 4) | (@as(u8, typ) << 2) | @as(u2, data.len + 1);
-
-    return switch (@typeInfo(@TypeOf(data))) {
-        .array, .@"struct" => .{first} ++ data,
-        .pointer => .{first} ++ data.*,
-        else => @compileLog(data),
-    };
-}
-
-// Main Items
-// -------------------------------------------------
-
-pub fn hid_collection(data: CollectionItem) [2]u8 {
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Main),
-        @intFromEnum(ReportItemMainGroup.Collection),
-        .{@intFromEnum(data)},
-    );
-}
-
-pub fn hid_input(data: u8) [2]u8 {
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Main),
-        @intFromEnum(ReportItemMainGroup.Input),
-        .{data},
-    );
-}
-
-pub fn hid_output(data: u8) [2]u8 {
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Main),
-        @intFromEnum(ReportItemMainGroup.Output),
-        .{data},
-    );
-}
-
-pub fn hid_collection_end() [1]u8 {
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Main),
-        @intFromEnum(ReportItemMainGroup.CollectionEnd),
-        .{},
-    );
-}
-
-// Global Items
-// -------------------------------------------------
-
-pub fn hid_usage_page(usage: anytype) [usage.len + 1]u8 {
-    comptime assert(@TypeOf(usage[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Global),
-        @intFromEnum(GlobalItem.UsagePage),
-        usage,
-    );
-}
-
-pub fn hid_logical_min(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Global),
-        @intFromEnum(GlobalItem.LogicalMin),
-        data,
-    );
-}
-
-pub fn hid_logical_max(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Global),
-        @intFromEnum(GlobalItem.LogicalMax),
-        data,
-    );
-}
-
-pub fn hid_report_size(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Global),
-        @intFromEnum(GlobalItem.ReportSize),
-        data,
-    );
-}
-
-pub fn hid_report_count(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Global),
-        @intFromEnum(GlobalItem.ReportCount),
-        data,
-    );
-}
-
-// Local Items
-// -------------------------------------------------
-
-pub fn hid_usage(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Local),
-        @intFromEnum(LocalItem.Usage),
-        data,
-    );
-}
-
-pub fn hid_usage_min(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Local),
-        @intFromEnum(LocalItem.UsageMin),
-        data,
-    );
-}
-
-pub fn hid_usage_max(data: anytype) [data.len + 1]u8 {
-    comptime assert(@TypeOf(data[0]) == u8);
-    return hid_report_item(
-        @intFromEnum(ReportItemTypes.Local),
-        @intFromEnum(LocalItem.UsageMax),
-        data,
-    );
-}
-
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Report Descriptors
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-
-pub const ReportDescriptorFidoU2f = hid_usage_page(UsageTable.fido) //
-    ++ hid_usage(FidoAllianceUsage.u2fhid) //
-    ++ hid_collection(CollectionItem.Application) //
-    // Usage Data In
-    ++ hid_usage(FidoAllianceUsage.data_in) //
-    ++ hid_logical_min("\x00") //
-    ++ hid_logical_max("\xff\x00") //
-    ++ hid_report_size("\x08") //
-    ++ hid_report_count("\x40") //
-    ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-    // Usage Data Out
-    ++ hid_usage(FidoAllianceUsage.data_out) //
-    ++ hid_logical_min("\x00") //
-    ++ hid_logical_max("\xff\x00") //
-    ++ hid_report_size("\x08") //
-    ++ hid_report_count("\x40") //
-    ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-    // End
-    ++ hid_collection_end();
-
-pub const ReportDescriptorGenericInOut = hid_usage_page(UsageTable.vendor) //
-    ++ hid_usage("\x01") //
-    ++ hid_collection(CollectionItem.Application) //
-    // Usage Data In
-    ++ hid_usage("\x02") //
-    ++ hid_logical_min("\x00") //
-    ++ hid_logical_max("\xff\x00") //
-    ++ hid_report_size("\x08") //
-    ++ hid_report_count("\x40") //
-    ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-    // Usage Data Out
-    ++ hid_usage("\x03") //
-    ++ hid_logical_min("\x00") //
-    ++ hid_logical_max("\xff\x00") //
-    ++ hid_report_size("\x08") //
-    ++ hid_report_count("\x40") //
-    ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-    // End
-    ++ hid_collection_end();
-
-/// Common keyboard report format, conforming to the boot protocol.
-/// See Appendix B.1 of the USB HID specification:
-/// https://usb.org/sites/default/files/hid1_11.pdf
-pub const ReportDescriptorKeyboard = hid_usage_page(UsageTable.desktop) ++ hid_usage(DesktopUsage.keyboard) ++ hid_collection(.Application)
-    // Input: modifier key bitmap
-++ hid_usage_page(UsageTable.keyboard) ++ hid_usage_min("\xe0") ++ hid_usage_max("\xe7") ++ hid_logical_min("\x00") ++ hid_logical_max("\x01") ++ hid_report_count("\x08") ++ hid_report_size("\x01") ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-    // Reserved 8 bits
-++ hid_report_count("\x01") ++ hid_report_size("\x08") ++ hid_input(HID_CONSTANT)
-    // Output: indicator LEDs
-++ hid_usage_page(UsageTable.led) ++ hid_usage_min("\x01") ++ hid_usage_max("\x05") ++ hid_report_count("\x05") ++ hid_report_size("\x01") ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE)
-    // Padding
-++ hid_report_count("\x01") ++ hid_report_size("\x03") ++ hid_output(HID_CONSTANT)
-    // Input: up to 6 pressed key codes
-++ hid_usage_page(UsageTable.keyboard) ++ hid_usage_min("\x00") ++ hid_usage_max("\xff\x00") ++ hid_logical_min("\x00") ++ hid_logical_max("\xff\x00") ++ hid_report_count("\x06") ++ hid_report_size("\x08") ++ hid_input(HID_DATA | HID_ARRAY | HID_ABSOLUTE)
-    // End
-++ hid_collection_end();
 
 pub const HidClassDriver = struct {
     pub const num_interfaces = 1;
@@ -491,12 +128,12 @@ pub const HidClassDriver = struct {
     hid_descriptor: []const u8 = &.{},
     report_descriptor: []const u8,
 
-    pub fn config_descriptor(string_ids: anytype, endpoints: anytype) []const u8 {
-        return &usb.templates.DescriptorsConfigTemplates.hid_in_out_descriptor(
-            0,
+    pub fn config_descriptor(first_interface: u8, string_ids: anytype, endpoints: anytype) InOutDescriptor {
+        return .create(
+            first_interface,
             string_ids.name,
             0,
-            ReportDescriptorGenericInOut.len,
+            descriptor.hid.report.GenericInOut.len,
             endpoints.main,
             endpoints.main,
             64,
@@ -505,38 +142,10 @@ pub const HidClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn mount(_: *@This(), _: usb.ControllerInterface) void {}
-
-    pub fn open(ptr: *@This(), controller: usb.ControllerInterface, cfg: []const u8) anyerror!usize {
-        var self: *@This() = @ptrCast(@alignCast(ptr));
-        var curr_cfg = cfg;
-
-        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
-            if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return error.UnsupportedInterfaceClassType;
-        } else {
-            return error.ExpectedInterfaceDescriptor;
-        }
-
-        curr_cfg = bos.get_desc_next(curr_cfg);
-        if (bos.try_get_desc_as(HidDescriptor, curr_cfg)) |_| {
-            self.hid_descriptor = curr_cfg[0..bos.get_desc_len(curr_cfg)];
-            curr_cfg = bos.get_desc_next(curr_cfg);
-        } else {
-            return error.UnexpectedDescriptor;
-        }
-
-        for (0..2) |_| {
-            if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
-                switch (desc_ep.endpoint.dir) {
-                    .In => self.ep_in = desc_ep.endpoint.num,
-                    .Out => self.ep_out = desc_ep.endpoint.num,
-                }
-                _ = try controller.endpoint_open(curr_cfg[0..desc_ep.length]);
-                curr_cfg = bos.get_desc_next(curr_cfg);
-            }
-        }
-
-        return cfg.len - curr_cfg.len;
+    pub fn mount(this: *@This(), _: usb.ControllerInterface, desc: *const InOutDescriptor) anyerror!void {
+        this.hid_descriptor = std.mem.asBytes(&desc.hid);
+        this.ep_in = desc.ep_in.endpoint.num;
+        this.ep_out = desc.ep_out.endpoint.num;
     }
 
     pub fn class_control(ptr: *@This(), controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
@@ -544,7 +153,7 @@ pub const HidClassDriver = struct {
 
         switch (setup.request_type.type) {
             .Standard => if (stage == .Setup) {
-                const hid_desc_type = enumFromInt(SubType, (setup.value >> 8) & 0xff) catch return false;
+                const hid_desc_type = enumFromInt(descriptor.hid.SubType, (setup.value >> 8) & 0xff) catch return false;
                 const request_code = enumFromInt(types.SetupRequest, setup.request) catch return false;
 
                 if (request_code != .GetDescriptor) return false;
@@ -557,7 +166,7 @@ pub const HidClassDriver = struct {
 
                 controller.control_transfer(data[0..@min(data.len, setup.length)]);
             },
-            .Class => switch (enumFromInt(HidRequestType, setup.request) catch return false) {
+            .Class => switch (enumFromInt(descriptor.hid.RequestType, setup.request) catch return false) {
                 .SetIdle => if (stage == .Setup) {
                     // TODO: The host is attempting to limit bandwidth by requesting that
                     // the device only return report data when its values actually change,
@@ -599,30 +208,3 @@ pub const HidClassDriver = struct {
     pub fn on_tx_ready(_: *@This(), _: usb.ControllerInterface, _: []u8) void {}
     pub fn on_data_rx(_: *@This(), _: usb.ControllerInterface, _: []const u8) void {}
 };
-
-test "create hid report item" {
-    const r = hid_report_item(
-        2,
-        0,
-        3,
-        "\x22\x11",
-    );
-
-    try std.testing.expectEqual(@as(usize, @intCast(3)), r.len);
-    try std.testing.expectEqual(@as(u8, @intCast(50)), r[0]);
-    try std.testing.expectEqual(@as(u8, @intCast(0x22)), r[1]);
-    try std.testing.expectEqual(@as(u8, @intCast(0x11)), r[2]);
-}
-
-test "create hid fido usage page" {
-    const f = hid_usage_page(UsageTable.fido);
-
-    try std.testing.expectEqual(@as(usize, @intCast(3)), f.len);
-    try std.testing.expectEqual(@as(u8, @intCast(6)), f[0]);
-    try std.testing.expectEqual(@as(u8, @intCast(0xd0)), f[1]);
-    try std.testing.expectEqual(@as(u8, @intCast(0xf1)), f[2]);
-}
-
-test "report descriptor fido" {
-    _ = ReportDescriptorFidoU2f;
-}

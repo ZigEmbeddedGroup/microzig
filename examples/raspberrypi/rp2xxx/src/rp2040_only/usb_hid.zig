@@ -12,7 +12,7 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 // This is our device configuration
-const UsbDev = microzig.core.usb.Controller(.{
+const Usb = microzig.core.usb.Controller(.{
     .Device = rp2xxx.usb.Usb(.{}),
     .attributes = .{ .self_powered = true },
     .device_triple = .{
@@ -28,7 +28,7 @@ const UsbDev = microzig.core.usb.Controller(.{
         .{ .name = "name", .value = "Board HID" },
     },
 });
-var usb: UsbDev = .init;
+var usb: Usb = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -42,7 +42,7 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    usb.driver_data = .{ .report_descriptor = &microzig.core.usb.hid.ReportDescriptorGenericInOut };
+    usb.driver_data = .{ .report_descriptor = &microzig.core.usb.descriptor.hid.report.GenericInOut };
 
     // init uart logging
     uart_tx_pin.set_function(.uart);

@@ -5,7 +5,6 @@ const rp2xxx = microzig.hal;
 const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const usb = microzig.core.usb;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -14,7 +13,7 @@ const uart_tx_pin = gpio.num(12);
 const uart_rx_pin = gpio.num(1);
 
 // This is our device configuration
-const UsbDev = usb.Controller(.{
+const Usb = microzig.core.usb.Controller(.{
     .Device = rp2xxx.usb.Usb(.{}),
     .attributes = .{ .self_powered = true },
     .Driver = microzig.core.usb.cdc.CdcClassDriver,
@@ -26,8 +25,7 @@ const UsbDev = usb.Controller(.{
         .{ .name = "name", .value = "Board CDC" },
     },
 });
-
-var usb_dev: UsbDev = .init;
+var usb: Usb = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -41,7 +39,7 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    usb_dev.driver_data = .{};
+    usb.driver_data = .{};
 
     led.set_function(.sio);
     led.set_direction(.out);
@@ -58,14 +56,14 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device();
+    usb.init_device();
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
     var i: u32 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.interface().task();
+        usb.interface().task();
 
         new = time.get_time_since_boot().to_us();
         if (new - old > 500000) {
@@ -76,16 +74,16 @@ pub fn main() !void {
 
             var tx_buf: [1024]u8 = undefined;
             const text = try std.fmt.bufPrint(&tx_buf, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
-            usb_dev.driver_data.writeAll(usb_dev.interface(), text);
+            usb.driver_data.writeAll(usb.interface(), text);
         }
 
         // read and print host command if present
         var rx_buf: [64]u8 = undefined;
-        const len = usb_dev.driver_data.read(usb_dev.interface(), &rx_buf);
+        const len = usb.driver_data.read(usb.interface(), &rx_buf);
         if (len > 0) {
-            usb_dev.driver_data.writeAll(usb_dev.interface(), "Your message to me was: '");
-            usb_dev.driver_data.writeAll(usb_dev.interface(), rx_buf[0..len]);
-            usb_dev.driver_data.writeAll(usb_dev.interface(), "'\r\n");
+            usb.driver_data.writeAll(usb.interface(), "Your message to me was: '");
+            usb.driver_data.writeAll(usb.interface(), rx_buf[0..len]);
+            usb.driver_data.writeAll(usb.interface(), "'\r\n");
         }
     }
 }

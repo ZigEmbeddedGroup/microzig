@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const usb = @import("../usb.zig");
-const bos = usb.utils.BosConfig;
 const descriptor = usb.descriptor;
 const types = usb.types;
 
@@ -30,6 +29,23 @@ pub const LineCoding = extern struct {
     }
 };
 
+pub const Descriptor = extern struct {
+    desc1: descriptor.InterfaceAssociation,
+    desc2: descriptor.Interface,
+    desc3: descriptor.cdc.Header,
+    desc4: descriptor.cdc.CallManagement,
+    desc5: descriptor.cdc.AbstractControlModel,
+    desc6: descriptor.cdc.Union,
+    ep_notifi: descriptor.Endpoint,
+    desc8: descriptor.Interface,
+    ep_out: descriptor.Endpoint,
+    ep_in: descriptor.Endpoint,
+
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
+};
+
 pub const CdcClassDriver = struct {
     pub const num_interfaces = 2;
     const max_packet_size = 64;
@@ -44,26 +60,77 @@ pub const CdcClassDriver = struct {
     rx_buf: ?[]const u8 = null,
     tx_buf: ?[]u8 = null,
 
-    pub fn config_descriptor(string_ids: anytype, endpoints: anytype) []const u8 {
-        return &usb.templates.DescriptorsConfigTemplates.cdc_descriptor(
-            0,
-            string_ids.name,
-            endpoints.notifi,
-            8,
-            endpoints.data,
-            endpoints.data,
-            64,
-        );
+    pub fn config_descriptor(first_interface: u8, string_ids: anytype, endpoints: anytype) Descriptor {
+        const endpoint_notifi_size = 8;
+        const endpoint_size = 64;
+        return .{
+            .desc1 = .{
+                .first_interface = first_interface,
+                .interface_count = 2,
+                .function_class = 2,
+                .function_subclass = 2,
+                .function_protocol = 0,
+                .function = 0,
+            },
+            .desc2 = .{
+                .interface_number = first_interface,
+                .alternate_setting = 0,
+                .num_endpoints = 1,
+                .interface_class = 2,
+                .interface_subclass = 2,
+                .interface_protocol = 0,
+                .interface_s = string_ids.name,
+            },
+            .desc3 = .{ .bcd_cdc = .from(0x0120) },
+            .desc4 = .{
+                .capabilities = 0,
+                .data_interface = first_interface + 1,
+            },
+            .desc5 = .{ .capabilities = 6 },
+            .desc6 = .{
+                .master_interface = first_interface,
+                .slave_interface_0 = first_interface + 1,
+            },
+            .ep_notifi = .{
+                .endpoint = .in(endpoints.notifi),
+                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                .max_packet_size = .from(endpoint_notifi_size),
+                .interval = 16,
+            },
+            .desc8 = .{
+                .interface_number = first_interface + 1,
+                .alternate_setting = 0,
+                .num_endpoints = 2,
+                .interface_class = 10,
+                .interface_subclass = 0,
+                .interface_protocol = 0,
+                .interface_s = 0,
+            },
+            .ep_out = .{
+                .endpoint = .out(endpoints.data),
+                .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                .max_packet_size = .from(endpoint_size),
+                .interval = 0,
+            },
+            .ep_in = .{
+                .endpoint = .in(endpoints.data),
+                .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                .max_packet_size = .from(endpoint_size),
+                .interval = 0,
+            },
+        };
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn mount(ptr: *@This(), controller: usb.ControllerInterface) void {
-        _ = controller;
-        var this: *@This() = @ptrCast(@alignCast(ptr));
+    pub fn mount(this: *@This(), controller: usb.ControllerInterface, desc: *const Descriptor) anyerror!void {
         this.line_coding = .init;
         this.awaiting_data = false;
         this.rx_buf = null;
         this.tx_buf = null;
+        this.ep_in_notif = desc.ep_notifi.endpoint.num;
+        this.ep_out = desc.ep_out.endpoint.num;
+        this.ep_in = desc.ep_in.endpoint.num;
+        controller.signal_rx_ready(this.ep_out, std.math.maxInt(usize));
     }
 
     pub fn available(this: *@This()) usize {
@@ -78,7 +145,7 @@ pub const CdcClassDriver = struct {
             if (len < rx.len)
                 this.rx_buf = rx[len..]
             else {
-                controller.endpoint_rx(this.ep_out, max_packet_size);
+                controller.signal_rx_ready(this.ep_out, std.math.maxInt(usize));
                 this.rx_buf = null;
             }
             return len;
@@ -110,49 +177,6 @@ pub const CdcClassDriver = struct {
             this.flush(controller);
             controller.task();
         }
-    }
-
-    pub fn open(ptr: *@This(), controller: usb.ControllerInterface, cfg: []const u8) anyerror!usize {
-        var this: *@This() = @ptrCast(@alignCast(ptr));
-        var curr_cfg = cfg;
-
-        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
-            if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Cdc))
-                return error.UnsupportedInterfaceClassType;
-            if (desc_itf.interface_subclass != @intFromEnum(descriptor.cdc.SubType.AbstractControlModel))
-                return error.UnsupportedInterfaceSubClassType;
-        } else return error.ExpectedInterfaceDescriptor;
-
-        curr_cfg = bos.get_desc_next(curr_cfg);
-
-        while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == @intFromEnum(descriptor.Type.CsInterface)) {
-            curr_cfg = bos.get_desc_next(curr_cfg);
-        }
-
-        if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
-            std.debug.assert(desc_ep.endpoint.dir == .In);
-            this.ep_in_notif = desc_ep.endpoint.num;
-            curr_cfg = bos.get_desc_next(curr_cfg);
-        }
-
-        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
-            if (desc_itf.interface_class == @intFromEnum(types.ClassCode.CdcData)) {
-                curr_cfg = bos.get_desc_next(curr_cfg);
-                for (0..2) |_| {
-                    if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
-                        switch (desc_ep.endpoint.dir) {
-                            .In => this.ep_in = desc_ep.endpoint.num,
-                            .Out => this.ep_out = desc_ep.endpoint.num,
-                        }
-                        this.tx_buf = try controller.endpoint_open(curr_cfg[0..desc_ep.length]);
-                        curr_cfg = bos.get_desc_next(curr_cfg);
-                    }
-                }
-            }
-        }
-        controller.endpoint_rx(this.ep_out, max_packet_size);
-
-        return cfg.len - curr_cfg.len;
     }
 
     pub fn class_control(ptr: *@This(), controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {

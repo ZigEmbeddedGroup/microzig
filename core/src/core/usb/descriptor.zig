@@ -1,5 +1,12 @@
 pub const cdc = @import("descriptor/cdc.zig");
 pub const hid = @import("descriptor/hid.zig");
+pub const vendor = @import("descriptor/vendor.zig");
+
+test "descriptor tests" {
+    _ = cdc;
+    _ = hid;
+    _ = vendor;
+}
 
 const std = @import("std");
 const types = @import("types.zig");
@@ -53,6 +60,12 @@ pub const Device = extern struct {
         subclass: u8,
         /// Protocol within the subclass.
         protocol: u8,
+
+        pub const unspecified: @This() = .{
+            .class = .Unspecified,
+            .subclass = 0,
+            .protocol = 0,
+        };
     };
 
     /// USB Device Qualifier Descriptor
@@ -129,7 +142,7 @@ pub const Device = extern struct {
 pub const Configuration = extern struct {
     pub const const_descriptor_type: Type = .Configuration;
 
-    /// Maximum device power consumption in units of 2mA.
+    /// Maximum device current consumption.
     pub const MaxCurrent = extern struct {
         multiple_of_2ma: u8,
 
@@ -147,7 +160,7 @@ pub const Configuration = extern struct {
     /// (like a keyboard).
     /// - The rest are reserved and should be zero.
     pub const Attributes = packed struct(u8) {
-        reserved0: u5 = 0,
+        reserved: u5 = 0,
         can_remote_wakeup: bool = false,
         self_powered: bool,
         usb1_bus_powered: bool = true,
@@ -191,6 +204,27 @@ pub fn string(comptime value: []const u8) []const u8 {
 pub const Endpoint = extern struct {
     pub const const_descriptor_type: Type = .Endpoint;
 
+    pub const Attributes = packed struct(u8) {
+        pub const Synchronisation = enum(u2) {
+            none = 0,
+            asynchronous = 1,
+            adaptive = 2,
+            synchronous = 3,
+        };
+
+        pub const Usage = enum(u2) {
+            data = 0,
+            feedback = 1,
+            implicit_feedback = 2,
+            reserved = 3,
+        };
+
+        transfer_type: types.TransferType,
+        synchronisation: Synchronisation = .none,
+        usage: Usage,
+        reserved: u2 = 0,
+    };
+
     comptime {
         assert(@alignOf(@This()) == 1);
         assert(@sizeOf(@This()) == 7);
@@ -204,7 +238,7 @@ pub const Endpoint = extern struct {
     endpoint: types.Endpoint,
     /// Endpoint attributes; the most relevant part is the bottom 2 bits, which
     /// control the transfer type using the values from `TransferType`.
-    attributes: u8,
+    attributes: Attributes,
     /// Maximum packet size this endpoint can accept/produce.
     max_packet_size: types.U16Le,
     /// Interval for polling interrupt/isochronous endpoints (which we don't

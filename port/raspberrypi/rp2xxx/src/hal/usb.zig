@@ -15,7 +15,7 @@ const resets = @import("resets.zig");
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
-pub const UsbConfig = struct {
+pub const Config = struct {
     synchronization_nops: comptime_int = 3,
     dpram_allocator: type = DpramAllocatorBump,
     // swap_dpdm: bool = false,
@@ -89,19 +89,48 @@ pub const DpramAllocatorBump = struct {
 /// We create a concrete implementaion by passing a handful
 /// of system specific functions to Usb(). Those functions
 /// are used by the abstract USB impl of microzig.
-pub fn Usb(comptime config: UsbConfig) type {
+pub fn Usb(comptime config: Config) type {
     return struct {
         pub const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
         pub const max_transfer_size = 64; // TODO: Support other buffer sizes.
+        pub const bcd_usb = 0x02_00;
         pub const default_strings: usb.Config.Strings = .{
             .manufacturer = "Raspberry Pi",
             .product = "Pico Test Device",
             .serial = "someserial",
         };
-        pub const bcd_usb = 0x02_00;
-        pub const default_vidpid: usb.Config.VidPid = .{
+        pub const default_vid_pid: usb.Config.VidPid = .{
             .vendor = 0x2E8A,
             .product = 0x000a,
+        };
+
+        pub const Events = struct {
+            pub const BufferIterator = struct {
+                // One bit per endpoint.
+                initial: u32,
+                pending: u32,
+
+                pub fn next(this: *@This()) ?usb.EndpointAndBuffer {
+                    const idx = std.math.cast(u5, @ctz(this.pending)) orelse {
+                        if (this.initial != 0)
+                            peri_usb.BUFF_STATUS.write_raw(this.initial);
+                        return null;
+                    };
+                    this.pending &= this.pending -% 1; // Clear lowest bit.
+                    const ep: HardwareEndpoint = .from_idx(idx);
+                    const buf = ep.buffer();
+                    if (ep.is_out) {
+                        const len = ep.buf_ctrl().read().LENGTH_0;
+                        return .{ .Out = .{ .ep_num = ep.num, .buffer = buf[0..len] } };
+                    } else return .{ .In = .{ .ep_num = ep.num, .buffer = buf } };
+                }
+            };
+
+            unhandled_buffers: ?BufferIterator,
+            bus_reset: bool,
+            device_suspend: bool,
+            host_resume: bool,
+            setup_packet: ?usb.types.SetupPacket,
         };
 
         const HardwareEndpoint = packed struct(u7) {
@@ -171,7 +200,7 @@ pub fn Usb(comptime config: UsbConfig) type {
             }
         };
 
-        pub fn usb_init_device() void {
+        pub fn usb_init_device() ?[]u8 {
             if (chip == .RP2350)
                 peri_usb.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
 
@@ -224,12 +253,48 @@ pub fn Usb(comptime config: UsbConfig) type {
                 .SETUP_REQ = 1,
             });
 
-            _ = endpoint_open(.in(.ep0), .Control, 0) catch unreachable;
+            const ret = endpoint_open(.in(.ep0), .Control, 0) catch unreachable;
             _ = endpoint_open(.out(.ep0), .Control, 0) catch unreachable;
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
             peri_usb.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
+            return ret;
+        }
+
+        pub fn set_address(addr: u7) void {
+            peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
+        }
+
+        /// Check which interrupt flags are set
+        pub fn get_events() Events {
+            const ints = peri_usb.INTS.read();
+            return .{
+                .unhandled_buffers = if (ints.BUFF_STATUS != 0) blk: {
+                    const mask = peri_usb.BUFF_STATUS.raw;
+                    break :blk .{ .initial = mask, .pending = mask };
+                } else null,
+                .bus_reset = ints.BUS_RESET == 1,
+                .device_suspend = ints.DEV_SUSPEND == 1,
+                .host_resume = ints.DEV_RESUME_FROM_HOST == 1,
+                .setup_packet = if (ints.SETUP_REQ != 0) blk: {
+                    // Clear the status flag (write-one-to-clear)
+                    var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
+                    sie_status.SETUP_REC = 1;
+                    peri_usb.SIE_STATUS.write(sie_status);
+
+                    // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
+                    // to an IN on EP0 needs to use PID DATA1.
+                    defer peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
+
+                    // Copy the setup packet out of its dedicated buffer at the base of
+                    // USB SRAM. The PAC models this buffer as two 32-bit registers.
+                    break :blk @bitCast([2]u32{
+                        peri_dpram.SETUP_PACKET_LOW.raw,
+                        peri_dpram.SETUP_PACKET_HIGH.raw,
+                    });
+                } else null,
+            };
         }
 
         /// Configures a given endpoint to send data (device-to-host, IN) when the host
@@ -282,7 +347,7 @@ pub fn Usb(comptime config: UsbConfig) type {
             buf_ctrl.write(rmw);
         }
 
-        pub fn usb_start_rx(ep_out: Endpoint.Num, len: usize) void {
+        pub fn signal_rx_ready(ep_out: Endpoint.Num, len: usize) void {
             const ep_hard: HardwareEndpoint = .out(ep_out);
 
             // Configure the OUT:
@@ -293,9 +358,9 @@ pub fn Usb(comptime config: UsbConfig) type {
                 return;
             }
             rmw.PID_0 ^= 1; // Flip DATA0/1
-            rmw.FULL_0 = 0; // Buffer is NOT full, we want the computer to fill it
-            rmw.AVAILABLE_0 = 1; // It is, however, available to be filled
-            rmw.LENGTH_0 = @intCast(len); // Up tho this many bytes
+            rmw.FULL_0 = 0; // Buffer is empty
+            rmw.AVAILABLE_0 = 1; // And ready to be filled
+            rmw.LENGTH_0 = @intCast(@min(len, max_transfer_size));
             buf_ctrl.write(rmw);
 
             ep_hard.awaiting_rx_set();
@@ -306,56 +371,13 @@ pub fn Usb(comptime config: UsbConfig) type {
             ep_hard.awaiting_rx_clr();
         }
 
-        /// Check which interrupt flags are set
-        pub fn get_interrupts() usb.InterruptStatus {
-            const ints = peri_usb.INTS.read();
-            return .{
-                .BuffStatus = ints.BUFF_STATUS == 1,
-                .BusReset = ints.BUS_RESET == 1,
-                .DevConnDis = ints.DEV_CONN_DIS == 1,
-                .DevSuspend = ints.DEV_SUSPEND == 1,
-                .DevResumeFromHost = ints.DEV_RESUME_FROM_HOST == 1,
-                .SetupReq = ints.SETUP_REQ == 1,
-            };
-        }
-
-        /// Returns a received USB setup packet
-        ///
-        /// Side effect: The setup request status flag will be cleared
-        ///
-        /// One can assume that this function is only called if the
-        /// setup request falg is set.
-        pub fn get_setup_packet() usb.types.SetupPacket {
-            // Clear the status flag (write-one-to-clear)
-            var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
-            sie_status.SETUP_REC = 1;
-            peri_usb.SIE_STATUS.write(sie_status);
-
-            // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
-            // to an IN on EP0 needs to use PID DATA1, and this line will ensure
-            // that.
-            defer peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
-
-            // This assumes that the setup packet is arriving on EP0, our
-            // control endpoint. Which it should be. We don't have any other
-            // Control endpoints.
-
-            // Copy the setup packet out of its dedicated buffer at the base of
-            // USB SRAM. The PAC models this buffer as two 32-bit registers,
-            return @bitCast([2]u32{ peri_dpram.SETUP_PACKET_LOW.raw, peri_dpram.SETUP_PACKET_HIGH.raw });
-        }
-
         /// Called on a bus reset interrupt
-        pub fn bus_reset() void {
+        pub fn bus_reset_clear() void {
             // Acknowledge by writing the write-one-to-clear status bit.
             var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
             sie_status.BUS_RESET = 1;
             peri_usb.SIE_STATUS.write(sie_status);
             peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = 0 });
-        }
-
-        pub fn set_address(addr: u7) void {
-            peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
         }
 
         pub fn endpoint_open(ep: Endpoint, transfer_type: usb.types.TransferType, buf_size_hint: usize) error{OutOfBufferMemory}!?[]u8 {
@@ -379,33 +401,5 @@ pub fn Usb(comptime config: UsbConfig) type {
             } else DpramBuffer.Index.ep0buf0.start();
             return start[0..max_transfer_size];
         }
-
-        pub fn get_unhandled_endpoints() UnhandledEndpointIterator {
-            const mask = peri_usb.BUFF_STATUS.raw;
-            return .{
-                .initial_unhandled_mask = mask,
-                .currently_unhandled_mask = mask,
-            };
-        }
-
-        pub const UnhandledEndpointIterator = struct {
-            initial_unhandled_mask: u32,
-            currently_unhandled_mask: u32,
-
-            pub fn next(this: *@This()) ?usb.EndpointAndBuffer {
-                const idx = std.math.cast(u5, @ctz(this.currently_unhandled_mask)) orelse {
-                    if (this.initial_unhandled_mask != 0)
-                        peri_usb.BUFF_STATUS.write_raw(this.initial_unhandled_mask);
-                    return null;
-                };
-                this.currently_unhandled_mask &= this.currently_unhandled_mask -% 1; // clear lowest bit
-                const ep: HardwareEndpoint = .from_idx(idx);
-                const buf = ep.buffer();
-                if (ep.is_out) {
-                    const len = ep.buf_ctrl().read().LENGTH_0;
-                    return .{ .Out = .{ .ep_num = ep.num, .buffer = buf[0..len] } };
-                } else return .{ .In = .{ .ep_num = ep.num, .buffer = buf } };
-            }
-        };
     };
 }
