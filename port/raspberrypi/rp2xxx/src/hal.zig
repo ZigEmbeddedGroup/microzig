@@ -103,8 +103,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     {
         var cpacr: u32 = microzig.cpu.peripherals.scb.CPACR;
 
-        // TODO: maybe put this in cpu at some point
-        if (microzig.options.hal.auto_enable_fpu) {
+        if (microzig.options.hal.enable_fpu) {
             if (is_fpu_used) {
                 // enable lazy state preservation
                 microzig.cpu.peripherals.fpu.FPCCR.modify(.{
