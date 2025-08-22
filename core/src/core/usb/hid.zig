@@ -142,67 +142,69 @@ pub const HidClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn mount(this: *@This(), _: usb.DeviceInterface, desc: *const InOutDescriptor) anyerror!void {
-        this.hid_descriptor = std.mem.asBytes(&desc.hid);
-        this.ep_in = desc.ep_in.endpoint.num;
-        this.ep_out = desc.ep_out.endpoint.num;
+    pub fn init(_: usb.DeviceInterface, desc: *const InOutDescriptor) @This() {
+        return .{
+            .hid_descriptor = std.mem.asBytes(&desc.hid),
+            .report_descriptor = undefined,
+            .ep_in = desc.ep_in.endpoint.num,
+            .ep_out = desc.ep_out.endpoint.num,
+        };
     }
 
-    pub fn class_control(ptr: *@This(), controller: usb.DeviceInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+    pub fn interface_setup(ptr: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
         const self: *@This() = @ptrCast(@alignCast(ptr));
 
         switch (setup.request_type.type) {
-            .Standard => if (stage == .Setup) {
-                const hid_desc_type = enumFromInt(descriptor.hid.SubType, (setup.value >> 8) & 0xff) catch return false;
-                const request_code = enumFromInt(types.SetupRequest, setup.request) catch return false;
+            .Standard => {
+                const hid_desc_type = enumFromInt(descriptor.hid.SubType, (setup.value >> 8) & 0xff) catch return null;
+                const request_code = enumFromInt(types.SetupRequest, setup.request) catch return null;
 
-                if (request_code != .GetDescriptor) return false;
+                if (request_code != .GetDescriptor) return usb.ACK;
 
                 const data = switch (hid_desc_type) {
                     .Hid => self.hid_descriptor,
                     .Report => self.report_descriptor,
-                    else => return false,
+                    else => return null,
                 };
 
-                controller.control_transfer(data[0..@min(data.len, setup.length)]);
+                return data[0..@min(data.len, setup.length)];
             },
-            .Class => switch (enumFromInt(descriptor.hid.RequestType, setup.request) catch return false) {
-                .SetIdle => if (stage == .Setup) {
-                    // TODO: The host is attempting to limit bandwidth by requesting that
-                    // the device only return report data when its values actually change,
-                    // or when the specified duration elapses. In practice, the device can
-                    // still send reports as often as it wants, but for completeness this
-                    // should be implemented eventually.
-                    //
-                    // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                    controller.control_ack();
-                },
-                .SetProtocol => if (stage == .Setup) {
-                    // TODO: The device should switch the format of its reports from the
-                    // boot keyboard/mouse protocol to the format described in its report descriptor,
-                    // or vice versa.
-                    //
-                    // For now, this request is ACKed without doing anything; in practice,
-                    // the OS will reuqest the report protocol anyway, so usually only one format is needed.
-                    // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
-                    // our device might not work in a limited BIOS environment.
-                    //
-                    // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                    controller.control_ack();
-                },
-                .SetReport => if (stage == .Setup) {
-                    // TODO: This request sends a feature or output report to the device,
-                    // e.g. turning on the caps lock LED. This must be handled in an
-                    // application-specific way, so notify the application code of the event.
-                    //
-                    // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                    controller.control_ack();
-                },
-                else => return false,
+            .Class => return switch (enumFromInt(
+                descriptor.hid.RequestType,
+                setup.request,
+            ) catch return null) {
+                // TODO: The host is attempting to limit bandwidth by requesting that
+                // the device only return report data when its values actually change,
+                // or when the specified duration elapses. In practice, the device can
+                // still send reports as often as it wants, but for completeness this
+                // should be implemented eventually.
+                //
+                // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                .SetIdle => usb.ACK,
+
+                // TODO: The device should switch the format of its reports from the
+                // boot keyboard/mouse protocol to the format described in its report descriptor,
+                // or vice versa.
+                //
+                // For now, this request is ACKed without doing anything; in practice,
+                // the OS will reuqest the report protocol anyway, so usually only one format is needed.
+                // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
+                // our device might not work in a limited BIOS environment.
+                //
+                // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                .SetProtocol => usb.ACK,
+
+                // TODO: This request sends a feature or output report to the device,
+                // e.g. turning on the caps lock LED. This must be handled in an
+                // application-specific way, so notify the application code of the event.
+                //
+                // https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                .SetReport => usb.ACK,
+                else => null,
             },
-            else => return false,
+            else => return null,
         }
-        return true;
+        return usb.ACK;
     }
 
     pub fn on_tx_ready(_: *@This(), _: usb.DeviceInterface, _: []u8) void {}

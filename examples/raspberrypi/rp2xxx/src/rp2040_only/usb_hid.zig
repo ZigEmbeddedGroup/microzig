@@ -6,13 +6,26 @@ const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 
-const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
-const uart_tx_pin = gpio.num(0);
+const logger_baud_rate = 1_000_000;
+
+pub const microzig_options = microzig.Options{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
+};
+
+const pin_config: rp2xxx.pins.GlobalConfiguration = .{
+    .GPIO12 = .{ .function = .UART0_TX },
+    .GPIO25 = .{ .name = "led", .direction = .out },
+};
+const pins = pin_config.pins();
 
 // This is our device configuration
 const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
+    .strings = rp2xxx.usb.default.strings,
+    .vid = rp2xxx.usb.default.vid,
+    .pid = rp2xxx.usb.default.pid,
+    .max_transfer_size = rp2xxx.usb.default.transfer_size,
     .device_triple = .{
         .class = .Miscellaneous,
         .subclass = 2,
@@ -29,44 +42,32 @@ const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
 }) });
 var usb: Usb = undefined;
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
-};
-
 pub fn main() !void {
+    pin_config.apply();
+
     // init uart logging
-    uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
+        .baud_rate = logger_baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);
 
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
-
     // Then initialize the USB device using the configuration defined above
     usb = .init();
-    usb.controller.driver_data = .{ .report_descriptor = &microzig.core.usb.descriptor.hid.report.GenericInOut };
 
-    var old: u64 = time.get_time_since_boot().to_us();
-    var new: u64 = 0;
+    pins.led.put(1);
+    var last_led_toggle: u64 = time.get_time_since_boot().to_us();
+    const delay_us = 500_000;
+
     while (true) {
+        usb.controller.driver_data.report_descriptor = &microzig.core.usb.descriptor.hid.report.GenericInOut;
         // You can now poll for USB events
         usb.interface().task();
 
-        new = time.get_time_since_boot().to_us();
-        if (new - old > 500000) {
-            old = new;
-            led.toggle();
+        const now = time.get_time_since_boot().to_us();
+        if (now - last_led_toggle > delay_us) {
+            last_led_toggle += delay_us;
+            pins.led.toggle();
         }
     }
 }

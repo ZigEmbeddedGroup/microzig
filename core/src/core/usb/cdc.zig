@@ -1,4 +1,5 @@
 const std = @import("std");
+const enumFromInt = std.meta.intToEnum;
 
 const usb = @import("../usb.zig");
 const descriptor = usb.descriptor;
@@ -122,15 +123,17 @@ pub const CdcClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn mount(this: *@This(), controller: usb.DeviceInterface, desc: *const Descriptor) anyerror!void {
-        this.line_coding = .init;
-        this.awaiting_data = false;
-        this.rx_buf = null;
-        this.tx_buf = null;
-        this.ep_in_notif = desc.ep_notifi.endpoint.num;
-        this.ep_out = desc.ep_out.endpoint.num;
-        this.ep_in = desc.ep_in.endpoint.num;
-        controller.signal_rx_ready(this.ep_out, std.math.maxInt(usize));
+    pub fn init(controller: usb.DeviceInterface, desc: *const Descriptor) @This() {
+        controller.signal_rx_ready(desc.ep_out.endpoint.num, std.math.maxInt(usize));
+        return .{
+            .line_coding = .init,
+            .awaiting_data = false,
+            .rx_buf = null,
+            .tx_buf = null,
+            .ep_in_notif = desc.ep_notifi.endpoint.num,
+            .ep_out = desc.ep_out.endpoint.num,
+            .ep_in = desc.ep_in.endpoint.num,
+        };
     }
 
     pub fn available(this: *@This()) usize {
@@ -179,18 +182,21 @@ pub const CdcClassDriver = struct {
         }
     }
 
-    pub fn class_control(ptr: *@This(), controller: usb.DeviceInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+    pub fn interface_setup(ptr: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
         var this: *@This() = @ptrCast(@alignCast(ptr));
-        if (stage != .Setup) return true;
 
-        if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| switch (request) {
-            .SetLineCoding => controller.control_ack(),
-            .GetLineCoding => controller.control_transfer(std.mem.asBytes(&this.line_coding)[0..@min(@sizeOf(LineCoding), setup.length)]),
-            .SetControlLineState => controller.control_ack(),
-            .SendBreak => controller.control_ack(),
-        } else |_| {}
-
-        return true;
+        return if (enumFromInt(
+            ManagementRequestType,
+            setup.request,
+        )) |request| switch (request) {
+            .SetLineCoding => usb.ACK,
+            .GetLineCoding => {
+                const data = std.mem.asBytes(&this.line_coding);
+                return data[0..@min(@sizeOf(LineCoding), setup.length)];
+            },
+            .SetControlLineState => usb.ACK,
+            .SendBreak => usb.ACK,
+        } else |_| usb.ACK;
     }
 
     pub fn on_tx_ready(ptr: *@This(), _: usb.DeviceInterface, data: []u8) void {
