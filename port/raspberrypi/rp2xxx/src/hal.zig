@@ -74,7 +74,7 @@ pub const HAL_Options = switch (compatibility.chip) {
         /// riscv.
         enable_fpu: bool = is_fpu_used,
 
-        /// Enable the DSP and export intrinsics. Leads to faster double
+        /// Enable the DCP and export intrinsics. Leads to faster double
         /// precision floating point arithmetic. Ignored on riscv.
         use_dcp: bool = true,
     },
