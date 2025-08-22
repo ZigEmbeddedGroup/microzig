@@ -189,9 +189,7 @@ pub const startup_logic = struct {
     }
 
     pub fn _start_c() callconv(.c) noreturn {
-        if (!microzig.config.ram_image) {
-            microzig.utilities.initialize_system_memories();
-        }
+        microzig.utilities.initialize_system_memories(.auto);
 
         microzig_main();
     }

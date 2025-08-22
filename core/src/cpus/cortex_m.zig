@@ -564,9 +564,7 @@ pub const startup_logic = struct {
     }
 
     pub fn _start() callconv(.c) noreturn {
-        if (!is_ram_image) {
-            microzig.utilities.initialize_system_memories();
-        }
+        microzig.utilities.initialize_system_memories(.auto);
 
         if (using_ram_vector_table or is_ram_image) {
             asm volatile (

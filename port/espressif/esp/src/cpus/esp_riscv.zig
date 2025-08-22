@@ -257,6 +257,10 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
         extern fn microzig_main() noreturn;
 
         fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
+            if (microzig.config.ram_image) {
+                @compileError("RAM images are not supported in direct boot mode");
+            }
+
             interrupt.disable_interrupts();
 
             const eos = comptime microzig.utilities.get_end_of_stack();
@@ -272,7 +276,7 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
                 \\.option pop
             );
 
-            microzig.utilities.initialize_system_memories();
+            microzig.utilities.initialize_system_memories(.all);
 
             init_interrupts();
 
@@ -312,13 +316,7 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
             );
 
             // fill .bss with zeroes
-            {
-                const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
-                const bss_end: [*]u8 = @ptrCast(&sections.microzig_bss_end);
-                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
-
-                @memset(bss_start[0..bss_len], 0);
-            }
+            microzig.utilities.initialize_system_memories(.bss_only);
 
             init_interrupts();
 

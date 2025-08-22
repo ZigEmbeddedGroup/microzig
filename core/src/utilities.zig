@@ -1,9 +1,23 @@
 const std = @import("std");
 const microzig = @import("microzig.zig");
 
-/// Fills .bss with zeroes and copies .data from flash into ram. May be called
-/// by the cpu module at startup.
-pub fn initialize_system_memories() void {
+/// Fills .bss with zeroes and *maybe* copies .data from flash into ram. May be
+/// called by the cpu module at startup.
+pub inline fn initialize_system_memories(which: enum {
+    /// Decides between .all and .bss_only based on whether we are in a RAM
+    /// image or not. `initialize_system_memories(.auto)` is equivalent to:
+    /// ```zig
+    /// if (!microzig.config.ram_image) {
+    ///     microzig.utilities.initialize_system_memories(.all);
+    /// } else {
+    ///     microzig.utilities.initialize_system_memories(.bss_only);
+    /// }
+    /// ```
+    pub const auto: @This() = if (!microzig.config.ram_image) .all else .bss_only;
+
+    all,
+    bss_only,
+}) void {
 
     // Contains references to the microzig .data and .bss sections, also
     // contains the initial load address for .data if it is in flash.
@@ -25,7 +39,7 @@ pub fn initialize_system_memories() void {
     }
 
     // load .data from flash
-    {
+    if (which != .bss_only) {
         const data_start: [*]u8 = @ptrCast(&sections.microzig_data_start);
         const data_end: [*]u8 = @ptrCast(&sections.microzig_data_end);
         const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);

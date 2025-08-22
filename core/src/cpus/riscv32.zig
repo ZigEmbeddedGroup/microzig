@@ -34,7 +34,7 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
-        microzig.utilities.initialize_system_memories();
+        microzig.utilities.initialize_system_memories(.all);
 
         microzig_main();
     }
