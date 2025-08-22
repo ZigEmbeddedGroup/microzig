@@ -432,7 +432,7 @@ pub const ICM_20948 = struct {
     }
 
     /// Read the register and modify the matching fields as provided
-    pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) Error!void {
+    pub inline fn modify_register(self: *Self, reg: Self.Register, T: type, fields: anytype) Error!void {
         // Read the current value
         const current_val = self.read_byte(reg) catch |err| {
             log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
@@ -440,7 +440,7 @@ pub const ICM_20948 = struct {
         };
 
         // Cast to the correct type and modify the named fields
-        var val: reg_t = @bitCast(current_val);
+        var val: T = @bitCast(current_val);
         inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
             @field(val, field.name) = @field(fields, field.name);
         }
