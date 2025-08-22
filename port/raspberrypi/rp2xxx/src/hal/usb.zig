@@ -117,7 +117,10 @@ pub fn Usb(comptime config: Config) type {
                         return null;
                     };
                     this.pending &= this.pending -% 1; // Clear lowest bit.
-                    const ep: HardwareEndpoint = .from_idx(idx);
+                    const ep: HardwareEndpoint = .{
+                        .num = @enumFromInt(idx >> 1),
+                        .is_out = (idx & 1) == 1,
+                    };
                     const buf = ep.buffer();
                     if (ep.is_out) {
                         const len = ep.buf_ctrl().read().LENGTH_0;
@@ -133,7 +136,7 @@ pub fn Usb(comptime config: Config) type {
             setup_packet: ?usb.types.SetupPacket,
         };
 
-        const HardwareEndpoint = packed struct(u7) {
+        pub const HardwareEndpoint = packed struct(u7) {
             const ep_ctrl_all: *volatile [2 * (max_endpoints_count - 1)]EpCtrl =
                 @ptrCast(&peri_dpram.EP1_IN_CONTROL);
 
@@ -150,31 +153,11 @@ pub fn Usb(comptime config: Config) type {
                 return @intCast(@shrExact(@as(u7, @bitCast(this)), 2));
             }
 
-            inline fn from_idx(idx: u5) @This() {
-                return @bitCast(@shlExact(@as(u7, idx), 2));
-            }
-
-            inline fn mask(this: @This()) u32 {
-                return @as(u32, 1) << this.to_idx();
-            }
-
-            inline fn awaiting_rx_get(this: @This()) bool {
-                return (this.mask() & @atomicLoad(u32, &awaiting_rx, .seq_cst)) != 0;
-            }
-
-            inline fn awaiting_rx_set(this: @This()) void {
-                _ = @atomicRmw(u32, &awaiting_rx, .Or, this.mask(), .seq_cst);
-            }
-
-            inline fn awaiting_rx_clr(this: @This()) void {
-                _ = @atomicRmw(u32, &awaiting_rx, .And, ~this.mask(), .seq_cst);
-            }
-
             fn from(ep: Endpoint) @This() {
                 return .{ .num = ep.num, .is_out = ep.dir == .Out };
             }
 
-            fn in(num: Endpoint.Num) @This() {
+            pub fn in(num: Endpoint.Num) @This() {
                 return .{ .num = num, .is_out = false };
             }
 
@@ -191,7 +174,7 @@ pub fn Usb(comptime config: Config) type {
                 return &buf_ctrl_all[this.to_idx()];
             }
 
-            fn buffer(this: @This()) []u8 {
+            pub fn buffer(this: @This()) []u8 {
                 const buf: DpramBuffer.Index = if (this.ep_ctrl()) |reg|
                     .from_reg(reg.read())
                 else
@@ -297,25 +280,6 @@ pub fn Usb(comptime config: Config) type {
             };
         }
 
-        /// Configures a given endpoint to send data (device-to-host, IN) when the host
-        /// next asks for it.
-        ///
-        /// The contents of each of the slices in `data` will be _copied_ into USB SRAM,
-        /// so you can reuse them immediately after this returns.
-        /// No need to wait for the packet to be sent.
-        pub fn usb_start_tx(ep_in: Endpoint.Num, data: []const u8) usize {
-            const ep_hard: HardwareEndpoint = .in(ep_in);
-            const buf = ep_hard.buffer();
-
-            const len = @min(buf.len, data.len);
-            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-            std.mem.copyForwards(u8, buf[0..len], data[0..len]);
-
-            submit_tx_buffer(ep_in, buf.ptr + len);
-
-            return len;
-        }
-
         pub fn submit_tx_buffer(ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
             const ep_hard: HardwareEndpoint = .in(ep_in);
             const buf = ep_hard.buffer();
@@ -353,22 +317,12 @@ pub fn Usb(comptime config: Config) type {
             // Configure the OUT:
             const buf_ctrl = ep_hard.buf_ctrl();
             var rmw = buf_ctrl.read();
-            if (ep_hard.awaiting_rx_get()) {
-                std.log.err("should not be called twice {} {}", .{ rmw.FULL_0, rmw.AVAILABLE_0 });
-                return;
-            }
+
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 0; // Buffer is empty
             rmw.AVAILABLE_0 = 1; // And ready to be filled
             rmw.LENGTH_0 = @intCast(@min(len, max_transfer_size));
             buf_ctrl.write(rmw);
-
-            ep_hard.awaiting_rx_set();
-        }
-
-        pub fn endpoint_reset_rx(ep_out: Endpoint.Num) void {
-            const ep_hard: HardwareEndpoint = .out(ep_out);
-            ep_hard.awaiting_rx_clr();
         }
 
         /// Called on a bus reset interrupt
@@ -386,7 +340,6 @@ pub fn Usb(comptime config: Config) type {
             const ep_hard: HardwareEndpoint = .from(ep);
 
             assert(ep.num.to_int() < max_endpoints_count);
-            ep_hard.awaiting_rx_clr();
 
             const start = if (ep.num != .ep0) blk: {
                 const buf = try config.dpram_allocator.alloc(1);

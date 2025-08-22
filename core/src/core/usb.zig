@@ -28,7 +28,7 @@ pub const ControllerInterface = struct {
     vtable: *const Vtable,
 
     pub fn task(this: @This()) void {
-        return this.vtable.task(this.ptr);
+        this.vtable.task(this.ptr);
     }
     pub fn control_transfer(this: @This(), data: []const u8) void {
         assert(data.len != 0);
@@ -38,10 +38,10 @@ pub const ControllerInterface = struct {
         this.vtable.control_transfer(this.ptr, "");
     }
     pub fn submit_tx_buffer(this: @This(), ep_in: EpNum, buffer_end: [*]const u8) void {
-        return this.vtable.submit_tx_buffer(this.ptr, ep_in, buffer_end);
+        this.vtable.submit_tx_buffer(this.ptr, ep_in, buffer_end);
     }
     pub fn signal_rx_ready(this: @This(), ep_out: EpNum, max_len: usize) void {
-        return this.vtable.signal_rx_ready(this.ptr, ep_out, max_len);
+        this.vtable.signal_rx_ready(this.ptr, ep_out, max_len);
     }
 };
 
@@ -220,6 +220,49 @@ pub fn Controller(comptime config: Config) type {
             };
         };
 
+        const ACK = "";
+
+        pub const ControlEndpointDriver = union(enum) {
+            sending: []const u8, // Slice of data left to be sent.
+            no_buffer,
+            ready: []u8, // Buffer for next transaction. Always empty if available.
+
+            fn submit(this: *@This(), tx_buf: []u8, data: []const u8) void {
+                const len = @min(tx_buf.len, data.len);
+                if (len == 0)
+                    this.* = .no_buffer
+                else {
+                    std.mem.copyForwards(u8, tx_buf, data[0..len]);
+                    this.* = .{ .sending = data[len..] };
+                }
+                config.Device.submit_tx_buffer(.ep0, tx_buf.ptr + len);
+            }
+
+            pub fn send(this: *@This(), data: []const u8) void {
+                switch (this.*) {
+                    .sending => |residual| {
+                        std.log.err("residual data: {any}", .{residual});
+                        this.* = .{ .sending = data };
+                    },
+                    .no_buffer => this.* = .{ .sending = data },
+                    .ready => |tx_buf| this.submit(tx_buf, data),
+                }
+            }
+
+            pub fn on_tx_ready(this: *@This(), tx_buf: []u8) bool {
+                switch (this.*) {
+                    .sending => |data| {
+                        const ret = data.len == 0;
+                        this.submit(tx_buf, data);
+                        return ret;
+                    },
+                    .no_buffer => this.* = .{ .ready = tx_buf },
+                    .ready => |_| std.log.err("Got buffer twice!", .{}),
+                }
+                return false;
+            }
+        };
+
         driver_by_interface: [16]?*config.Driver,
         driver_by_endpoint_in: [config.Device.max_endpoints_count]?*config.Driver,
         driver_by_endpoint_out: [config.Device.max_endpoints_count]?*config.Driver,
@@ -231,10 +274,8 @@ pub fn Controller(comptime config: Config) type {
         new_address: ?u7,
         // Last setup packet request
         setup_packet: types.SetupPacket,
-        // Configuration data still pending to be sent over endpoint 0.
-        now_sending_ep0: ?[]const u8,
-        // Empty endpoint 0 tx buffer, if available.
-        ep0_tx: ?[]u8,
+        //
+        ep0_driver: ControlEndpointDriver,
         // 0 - no config set
         cfg_num: u16,
         driver_data: config.Driver,
@@ -246,14 +287,14 @@ pub fn Controller(comptime config: Config) type {
             .driver = null,
             .new_address = null,
             .setup_packet = undefined,
-            .now_sending_ep0 = null,
-            .ep0_tx = null,
+            .ep0_driver = .no_buffer,
             .cfg_num = 0,
             .driver_data = undefined,
         };
 
         pub fn init_device(this: *@This()) void {
-            this.ep0_tx = config.Device.usb_init_device();
+            if (config.Device.usb_init_device()) |tx_buf|
+                this.ep0_driver = .{ .ready = tx_buf };
         }
 
         pub fn interface(this: *@This()) ControllerInterface {
@@ -263,32 +304,14 @@ pub fn Controller(comptime config: Config) type {
             };
         }
 
-        fn send_cmd_response(this: *@This(), data: []const u8) void {
-            if (this.now_sending_ep0) |residual|
-                std.log.err("residual data: {any}", .{residual});
-
-            const len = config.Device.usb_start_tx(.ep0, data);
-            if (len != 0)
-                this.now_sending_ep0 = data[len..];
-        }
-
         fn control_transfer(ptr: *anyopaque, data: []const u8) void {
             const this: *@This() = @alignCast(@ptrCast(ptr));
-            this.send_cmd_response(data);
-        }
-
-        fn ep0_ack(this: *@This()) void {
-            if (this.now_sending_ep0) |residual|
-                std.log.err("residual data!: {any}", .{residual});
-            if (this.ep0_tx) |tx| {
-                config.Device.submit_tx_buffer(.ep0, tx.ptr);
-                this.ep0_tx = null;
-            } else this.now_sending_ep0 = "";
+            this.ep0_driver.send(data);
         }
 
         fn submit_tx_buffer(ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void {
             _ = ptr;
-            return config.Device.submit_tx_buffer(ep_in, buffer_end);
+            config.Device.submit_tx_buffer(ep_in, buffer_end);
         }
 
         fn signal_rx_ready(ptr: *anyopaque, ep_out: EpNum, max_len: usize) void {
@@ -301,10 +324,10 @@ pub fn Controller(comptime config: Config) type {
             switch (enumFromInt(types.SetupRequest, setup.request) catch return) {
                 .SetAddress => {
                     this.new_address = @intCast(setup.value);
-                    this.ep0_ack();
+                    this.ep0_driver.send(ACK);
                 },
                 .SetConfiguration => {
-                    defer this.ep0_ack();
+                    defer this.ep0_driver.send(ACK);
                     if (this.cfg_num == setup.value) return;
                     defer this.cfg_num = setup.value;
 
@@ -378,11 +401,11 @@ pub fn Controller(comptime config: Config) type {
                         else => break :blk,
                     };
                     const len = @min(data.len, setup.length);
-                    this.send_cmd_response(data[0..len]);
+                    this.ep0_driver.send(data[0..len]);
                 } else |_| {},
                 .SetFeature => if (enumFromInt(types.FeatureSelector, setup.value >> 8)) |feature|
                     switch (feature) {
-                        .DeviceRemoteWakeup, .EndpointHalt => this.ep0_ack(),
+                        .DeviceRemoteWakeup, .EndpointHalt => this.ep0_driver.send(ACK),
                         // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                         .TestMode => {},
                     }
@@ -420,53 +443,47 @@ pub fn Controller(comptime config: Config) type {
                 // will be whatever was sent by the host. For IN, it's a new
                 // transmit buffer that has become available.
                 while (iter.next()) |result| switch (result) {
-                    .In => |in| if (in.ep_num == .ep0) {
-                        // We use this opportunity to finish the delayed
-                        // SetAddress request, if there is one:
-                        if (this.new_address) |addr| {
-                            // Change our address:
-                            config.Device.set_address(addr);
-                            this.new_address = null;
-                        }
+                    .In => |in| {
+                        if (in.ep_num == .ep0) {
 
-                        const data = this.now_sending_ep0 orelse {
-                            // Save the buffer for the next transfer.
-                            this.ep0_tx = in.buffer;
-                            continue;
-                        };
+                            // We use this opportunity to finish the delayed
+                            // SetAddress request, if there is one:
+                            if (this.new_address) |addr| {
+                                // Change our address:
+                                config.Device.set_address(addr);
+                                this.new_address = null;
+                            }
 
-                        if (data.len > 0) {
-                            const len = @min(in.buffer.len, data.len);
-                            std.mem.copyForwards(u8, in.buffer[0..len], data[0..len]);
-                            config.Device.submit_tx_buffer(.ep0, in.buffer.ptr + len);
-                            this.now_sending_ep0 = data[len..];
-                        } else {
-                            // Otherwise, we've just finished sending
-                            // something to the host. We expect an ensuing
-                            // status phase where the host sends us (via EP0
-                            // OUT) a zero-byte DATA packet.
-                            config.Device.signal_rx_ready(.ep0, 0);
-                            if (this.driver) |drv|
-                                _ = drv.class_control(this.interface(), .Ack, &this.setup_packet);
+                            if (this.ep0_driver.on_tx_ready(in.buffer)) {
+                                // Otherwise, we've just finished sending
+                                // something to the host. We expect an ensuing
+                                // status phase where the host sends us (via EP0
+                                // OUT) a zero-byte DATA packet, so, set that
+                                // up:
+                                config.Device.signal_rx_ready(.ep0, 0);
+                                if (this.driver) |drv|
+                                    _ = drv.class_control(this.interface(), .Ack, &this.setup_packet);
 
-                            this.now_sending_ep0 = null;
-                        }
-                        // TODO: Route different endpoints to different functions.
-                    } else if (this.driver_by_endpoint_in[in.ep_num.to_int()]) |drv|
-                        drv.on_tx_ready(this.interface(), in.buffer),
+                                // I believe this is incorrect but reality disagrees.
+                                this.ep0_driver = .{ .ready = in.buffer };
+                            }
+                            // TODO: Route different endpoints to different functions.
+                        } else if (this.driver_by_endpoint_in[in.ep_num.to_int()]) |drv|
+                            drv.on_tx_ready(this.interface(), in.buffer);
+                    },
                     .Out => |out| {
                         // TODO: Route different endpoints to different functions.
                         if (this.driver_by_endpoint_out[out.ep_num.to_int()]) |drv|
                             drv.on_data_rx(this.interface(), out.buffer);
-
-                        config.Device.endpoint_reset_rx(out.ep_num);
                     },
                 };
             }
 
             if (events.bus_reset) {
                 // TODO: call umount callback if any
+                const tmp = this.ep0_driver;
                 this.* = .init;
+                this.ep0_driver = tmp;
                 config.Device.bus_reset_clear();
             }
         }
