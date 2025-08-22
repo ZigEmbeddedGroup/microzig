@@ -688,7 +688,7 @@ pub const peripherals = struct {
     pub const fpu: *volatile types.peripherals.FloatingPointUnit = if (fpu_present)
         @ptrFromInt(fpu_base)
     else
-        @compileError("this CPU does not have a FPU");
+        @compileError("this CPU does not have an FPU");
 
     /// Nested Vector Interrupt Controller (NVIC).
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
@@ -700,7 +700,7 @@ pub const peripherals = struct {
     pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
         @ptrFromInt(mpu_base)
     else
-        @compileError("this CPU does not have a MPU");
+        @compileError("this CPU does not have an MPU");
 
     pub const dbg: (if (@hasDecl(core, "DebugRegisters"))
         *volatile core.DebugRegisters
@@ -727,7 +727,7 @@ pub const types = struct {
         pub const FloatingPointUnit = if (@hasDecl(core, "FloatingPointUnit"))
             core.FloatingPointUnit
         else
-            @compileError("this CPU does not have a FPU definition");
+            @compileError("this CPU does not have an FPU definition");
 
         /// Nested Vector Interrupt Controller (NVIC).
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
@@ -793,6 +793,6 @@ pub const types = struct {
         pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
             core.MemoryProtectionUnit
         else
-            @compileError("this CPU does not have a MPU definition");
+            @compileError("this CPU does not have an MPU definition");
     };
 };
