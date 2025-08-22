@@ -71,9 +71,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
             .os_tag = .freestanding,
             .abi = .eabihf,
-            .cpu_features_add = std.Target.arm.featureSet(&.{
-                .fp_armv8d16sp
-            }),
+            .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
         },
         .chip = .{
             .name = "RP2350",

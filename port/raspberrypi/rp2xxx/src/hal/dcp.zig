@@ -13,8 +13,7 @@
 //! assembly is taken from the rust RP2350 hal.
 //!
 //! If you set `use_dcp` to true in `HAL_Options`, we will replace the standard
-//! `__aeabi_dadd` and `__aeabi_dmul` functions with versions that complete
-//! around 3x to 6x faster.
+//! `__aeabi_dadd` and `__aeabi_dmul` functions with faster versions.
 
 /// Perform a fast add of two f64 values, using the DCP.
 pub fn dadd(x: f64, y: f64) f64 {
