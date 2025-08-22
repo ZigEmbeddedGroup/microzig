@@ -260,8 +260,7 @@ pub fn clock_device() Clock_Device {
         };
 
         fn get_time_since_boot_fn(_: *anyopaque) time.Absolute {
-            const t = hal.time.get_time_since_boot().to_us();
-            return @enumFromInt(t);
+            return hal.time.get_time_since_boot();
         }
     };
 
