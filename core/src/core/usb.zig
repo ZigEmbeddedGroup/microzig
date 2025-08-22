@@ -17,8 +17,8 @@ test "tests" {
 
 const EpNum = types.Endpoint.Num;
 
-pub const ControllerInterface = struct {
-    const Vtable = struct {
+pub const DeviceInterface = struct {
+    pub const Vtable = struct {
         task: *const fn (ptr: *anyopaque) void,
         control_transfer: *const fn (ptr: *anyopaque, data: []const u8) void,
         submit_tx_buffer: *const fn (ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void,
@@ -31,7 +31,7 @@ pub const ControllerInterface = struct {
         this.vtable.task(this.ptr);
     }
     pub fn control_transfer(this: @This(), data: []const u8) void {
-        assert(data.len != 0);
+        // assert(data.len != 0);
         this.vtable.control_transfer(this.ptr, data);
     }
     pub fn control_ack(this: @This()) void {
@@ -45,40 +45,36 @@ pub const ControllerInterface = struct {
     }
 };
 
+/// Vendor ID and product ID combo.
+pub const VidPid = struct { product: u16, vendor: u16 };
+
+/// Manufacturer, product and serial number strings.
+pub const Strings = struct {
+    manufacturer: []const u8,
+    product: []const u8,
+    serial: []const u8,
+};
+
 pub const Config = struct {
     pub fn NameValue(T: type) type {
         return struct { name: [:0]const u8, value: T };
     }
-    /// Vendor ID and product ID combo.
-    pub const VidPid = struct { product: u16, vendor: u16 };
 
-    /// Manufacturer, product and serial number strings.
-    pub const Strings = struct {
-        manufacturer: []const u8,
-        product: []const u8,
-        serial: []const u8,
-    };
     /// String descriptor language.
     pub const Language = enum(u16) {
         English = 0x0409,
     };
 
-    /// Underlying USB device.
-    Device: type,
-    /// Class, subclass and protocol of device.
-    device_triple: descriptor.Device.DeviceTriple = .unspecified,
-    /// Vendor ID and product ID combo.
-    id: ?VidPid = null,
-    /// Device version number as Binary Coded Decimal.
-    bcd_device: u16 = 0x01_00,
-    /// Manufacturer, product and serial number strings.
-    strings: ?Strings = null,
     /// Bit set of device attributes.
     attributes: descriptor.Configuration.Attributes,
     /// Maximum device current consumption..
     max_current: descriptor.Configuration.MaxCurrent = .from_ma(100),
     /// String descriptor language.
     language: Language = .English,
+    /// Device version number as Binary Coded Decimal.
+    bcd_device: u16 = 0x01_00,
+    /// Class, subclass and protocol of device.
+    device_triple: descriptor.Device.DeviceTriple = .unspecified,
     // Eventually the fields below could be in an array to support multiple drivers.
     Driver: type,
     driver_endpoints: []const NameValue(EpNum),
@@ -89,6 +85,12 @@ pub const Config = struct {
 pub const EndpointAndBuffer = union(types.Dir) {
     Out: struct { ep_num: EpNum, buffer: []const u8 },
     In: struct { ep_num: EpNum, buffer: []u8 },
+};
+
+pub const ControlEndpointState = union(enum) {
+    sending: []const u8, // Slice of data left to be sent.
+    no_buffer: ?u7, // Optionally a new address.
+    ready: []u8, // Buffer for next transaction. Always empty if available.
 };
 
 /// Create a USB device controller.
@@ -113,221 +115,141 @@ pub const EndpointAndBuffer = union(types.Dir) {
 pub fn Controller(comptime config: Config) type {
     return struct {
         pub const max_packet_size = config.Device.max_packet_size;
-
-        pub const interface_vtable: ControllerInterface.Vtable = .{
-            .task = &task,
-            .control_transfer = &control_transfer,
-            .signal_rx_ready = &signal_rx_ready,
-            .submit_tx_buffer = &submit_tx_buffer,
-        };
-
-        const device_descriptor: descriptor.Device = .{
-            .bcd_usb = .from(config.Device.bcd_usb),
-            .device_triple = config.device_triple,
-            .max_packet_size0 = config.Device.max_transfer_size,
-            .vendor = .from(if (config.id) |id| id.vendor else config.Device.default_vid_pid.vendor),
-            .product = .from(if (config.id) |id| id.product else config.Device.default_vid_pid.product),
-            .bcd_device = .from(config.bcd_device),
-            .manufacturer_s = 1,
-            .product_s = 2,
-            .serial_s = 3,
-            .num_configurations = 1,
-        };
-
-        const config_descriptor = blk: {
-            const Field = std.builtin.Type.StructField;
-            var fields: []const Field = &.{};
-            for (config.driver_endpoints) |fld| {
-                fields = fields ++ .{Field{
-                    .name = fld.name,
-                    .type = @TypeOf(fld.value),
-                    .default_value_ptr = @ptrCast(&fld.value),
-                    .is_comptime = true,
-                    .alignment = @alignOf(@TypeOf(fld.value)),
-                }};
-            }
-            const endpoints_struct = @Type(.{ .@"struct" = .{
-                .layout = .auto,
-                .fields = fields,
-                .decls = &.{},
-                .is_tuple = false,
-            } });
-
-            const driver = config.Driver.config_descriptor(0, string.ids{}, endpoints_struct{});
-            assert(@alignOf(@TypeOf(driver)) == 1);
-            assert(@typeInfo(@TypeOf(driver)).@"struct".layout == .@"extern");
-
-            const Ret = extern struct {
-                first: descriptor.Configuration,
-                driver: @TypeOf(driver),
-
-                fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-                    return @bitCast(this);
-                }
-            };
-
-            break :blk Ret{
-                .first = .{
-                    .total_length = .from(@sizeOf(Ret)),
-                    .num_interfaces = config.Driver.num_interfaces,
-                    .configuration_value = 1,
-                    .configuration_s = 0,
-                    .attributes = config.attributes,
-                    .max_current = config.max_current,
-                },
-                .driver = driver,
-            };
-        };
-
-        const string = blk: {
-            const Dev = config.Device;
-
-            // String 0 indicates language. First byte is length.
-            const lang: types.U16Le = .from(@intFromEnum(config.language));
-            var desc: []const []const u8 = &.{&.{
-                0x04,
-                @intFromEnum(descriptor.Type.String),
-                lang.lo,
-                lang.hi,
-            }};
-
-            const device_strings = config.strings orelse Dev.default_strings;
-            desc = desc ++ .{descriptor.string(device_strings.manufacturer)};
-            desc = desc ++ .{descriptor.string(device_strings.product)};
-            desc = desc ++ .{descriptor.string(device_strings.serial)};
-
-            const Field = std.builtin.Type.StructField;
-            var fields: []const Field = &.{};
-            for (config.driver_strings) |fld| {
-                const id: u8 = desc.len;
-                fields = fields ++ .{Field{
-                    .name = fld.name,
-                    .type = @TypeOf(id),
-                    .default_value_ptr = @ptrCast(&id),
-                    .is_comptime = true,
-                    .alignment = @alignOf(@TypeOf(id)),
-                }};
-                desc = desc ++ .{descriptor.string(fld.value)};
-            }
-            break :blk .{
-                .descriptors = desc,
-                .ids = @Type(.{ .@"struct" = .{
-                    .layout = .auto,
-                    .fields = fields,
-                    .decls = &.{},
-                    .is_tuple = false,
-                } }),
-            };
-        };
+        const max_endpoints_count = 16;
 
         const ACK = "";
 
-        pub const ControlEndpointDriver = union(enum) {
-            sending: []const u8, // Slice of data left to be sent.
-            no_buffer,
-            ready: []u8, // Buffer for next transaction. Always empty if available.
-
-            fn submit(this: *@This(), tx_buf: []u8, data: []const u8) void {
-                const len = @min(tx_buf.len, data.len);
-                if (len == 0)
-                    this.* = .no_buffer
-                else {
-                    std.mem.copyForwards(u8, tx_buf, data[0..len]);
-                    this.* = .{ .sending = data[len..] };
-                }
-                config.Device.submit_tx_buffer(.ep0, tx_buf.ptr + len);
-            }
-
-            pub fn send(this: *@This(), data: []const u8) void {
-                switch (this.*) {
-                    .sending => |residual| {
-                        std.log.err("residual data: {any}", .{residual});
-                        this.* = .{ .sending = data };
-                    },
-                    .no_buffer => this.* = .{ .sending = data },
-                    .ready => |tx_buf| this.submit(tx_buf, data),
-                }
-            }
-
-            pub fn on_tx_ready(this: *@This(), tx_buf: []u8) bool {
-                switch (this.*) {
-                    .sending => |data| {
-                        const ret = data.len == 0;
-                        this.submit(tx_buf, data);
-                        return ret;
-                    },
-                    .no_buffer => this.* = .{ .ready = tx_buf },
-                    .ready => |_| std.log.err("Got buffer twice!", .{}),
-                }
-                return false;
-            }
-        };
-
         driver_by_interface: [16]?*config.Driver,
-        driver_by_endpoint_in: [config.Device.max_endpoints_count]?*config.Driver,
-        driver_by_endpoint_out: [config.Device.max_endpoints_count]?*config.Driver,
+        driver_by_endpoint_in: [max_endpoints_count]?*config.Driver,
+        driver_by_endpoint_out: [max_endpoints_count]?*config.Driver,
         // Class driver associated with last setup request if any
         driver: ?*config.Driver,
-        // When the host gives us a new address, we can't just slap it into
-        // registers right away, because we have to do an acknowledgement step using
-        // our _old_ address.
-        new_address: ?u7,
         // Last setup packet request
         setup_packet: types.SetupPacket,
-        //
-        ep0_driver: ControlEndpointDriver,
         // 0 - no config set
         cfg_num: u16,
         driver_data: config.Driver,
 
-        pub const init: @This() = .{
+        pub const default: @This() = .{
             .driver_by_interface = @splat(null),
             .driver_by_endpoint_in = @splat(null),
             .driver_by_endpoint_out = @splat(null),
             .driver = null,
-            .new_address = null,
             .setup_packet = undefined,
-            .ep0_driver = .no_buffer,
             .cfg_num = 0,
             .driver_data = undefined,
         };
 
-        pub fn init_device(this: *@This()) void {
-            if (config.Device.usb_init_device()) |tx_buf|
-                this.ep0_driver = .{ .ready = tx_buf };
+        pub fn init() @This() {
+            return .default;
         }
 
-        pub fn interface(this: *@This()) ControllerInterface {
-            return .{
-                .ptr = this,
-                .vtable = &interface_vtable,
+        pub fn deinit(_: *@This()) void {}
+
+        pub fn process_device_setup_request(this: *@This(), setup: *const types.SetupPacket, device: anytype) anyerror!void {
+            const device_descriptor: descriptor.Device = comptime .{
+                .bcd_usb = .from(@TypeOf(device.*).bcd_usb),
+                .device_triple = config.device_triple,
+                .max_packet_size0 = @TypeOf(device.*).max_transfer_size,
+                .vendor = .from(@TypeOf(device.*).id.vendor),
+                .product = .from(@TypeOf(device.*).id.product),
+                .bcd_device = .from(config.bcd_device),
+                .manufacturer_s = 1,
+                .product_s = 2,
+                .serial_s = 3,
+                .num_configurations = 1,
             };
-        }
 
-        fn control_transfer(ptr: *anyopaque, data: []const u8) void {
-            const this: *@This() = @alignCast(@ptrCast(ptr));
-            this.ep0_driver.send(data);
-        }
+            const string = comptime blk: {
+                const Dev = @TypeOf(device.*);
 
-        fn submit_tx_buffer(ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void {
-            _ = ptr;
-            config.Device.submit_tx_buffer(ep_in, buffer_end);
-        }
+                // String 0 indicates language. First byte is length.
+                const lang: types.U16Le = .from(@intFromEnum(config.language));
+                var desc: []const []const u8 = &.{&.{
+                    0x04,
+                    @intFromEnum(descriptor.Type.String),
+                    lang.lo,
+                    lang.hi,
+                }};
 
-        fn signal_rx_ready(ptr: *anyopaque, ep_out: EpNum, max_len: usize) void {
-            _ = ptr;
-            config.Device.signal_rx_ready(ep_out, max_len);
-        }
+                desc = desc ++ .{descriptor.string(Dev.strings.manufacturer)};
+                desc = desc ++ .{descriptor.string(Dev.strings.product)};
+                desc = desc ++ .{descriptor.string(Dev.strings.serial)};
 
-        fn process_device_setup_request(this: *@This(), setup: *const types.SetupPacket) anyerror!void {
+                const Field = std.builtin.Type.StructField;
+                var fields: []const Field = &.{};
+                for (config.driver_strings) |fld| {
+                    const id: u8 = desc.len;
+                    fields = fields ++ .{Field{
+                        .name = fld.name,
+                        .type = @TypeOf(id),
+                        .default_value_ptr = @ptrCast(&id),
+                        .is_comptime = true,
+                        .alignment = @alignOf(@TypeOf(id)),
+                    }};
+                    desc = desc ++ .{descriptor.string(fld.value)};
+                }
+                break :blk .{
+                    .descriptors = desc,
+                    .ids = @Type(.{ .@"struct" = .{
+                        .layout = .auto,
+                        .fields = fields,
+                        .decls = &.{},
+                        .is_tuple = false,
+                    } }),
+                };
+            };
+
+            const config_descriptor = comptime blk: {
+                const Field = std.builtin.Type.StructField;
+                var fields: []const Field = &.{};
+                for (config.driver_endpoints) |fld| {
+                    fields = fields ++ .{Field{
+                        .name = fld.name,
+                        .type = @TypeOf(fld.value),
+                        .default_value_ptr = @ptrCast(&fld.value),
+                        .is_comptime = true,
+                        .alignment = @alignOf(@TypeOf(fld.value)),
+                    }};
+                }
+                const endpoints_struct = @Type(.{ .@"struct" = .{
+                    .layout = .auto,
+                    .fields = fields,
+                    .decls = &.{},
+                    .is_tuple = false,
+                } });
+
+                const driver = config.Driver.config_descriptor(0, string.ids{}, endpoints_struct{});
+                assert(@alignOf(@TypeOf(driver)) == 1);
+                assert(@typeInfo(@TypeOf(driver)).@"struct".layout == .@"extern");
+
+                const Ret = extern struct {
+                    first: descriptor.Configuration,
+                    driver: @TypeOf(driver),
+
+                    fn serialize(x: @This()) [@sizeOf(@This())]u8 {
+                        return @bitCast(x);
+                    }
+                };
+
+                break :blk Ret{
+                    .first = .{
+                        .total_length = .from(@sizeOf(Ret)),
+                        .num_interfaces = config.Driver.num_interfaces,
+                        .configuration_value = 1,
+                        .configuration_s = 0,
+                        .attributes = config.attributes,
+                        .max_current = config.max_current,
+                    },
+                    .driver = driver,
+                };
+            };
+
             if (setup.request_type.type != .Standard) return;
             switch (enumFromInt(types.SetupRequest, setup.request) catch return) {
-                .SetAddress => {
-                    this.new_address = @intCast(setup.value);
-                    this.ep0_driver.send(ACK);
-                },
+                .SetAddress => device.set_address(@intCast(setup.value)),
                 .SetConfiguration => {
-                    defer this.ep0_driver.send(ACK);
+                    defer device.interface().control_transfer(ACK);
                     if (this.cfg_num == setup.value) return;
                     defer this.cfg_num = setup.value;
 
@@ -365,14 +287,14 @@ pub fn Controller(comptime config: Config) type {
                             if (desc_ep.endpoint.dir != .Out) continue;
 
                             this.driver_by_endpoint_out[desc_ep.endpoint.num.to_int()] = &this.driver_data;
-                            _ = try config.Device.endpoint_open(
+                            try device.endpoint_open(
                                 desc_ep.endpoint,
                                 desc_ep.attributes.transfer_type,
                                 desc_ep.max_packet_size.into(),
                             );
                         }
 
-                        try this.driver_data.mount(this.interface(), &driver);
+                        try this.driver_data.mount(device.interface(), &driver);
 
                         inline for (fields) |fld| {
                             if (fld.type != descriptor.Endpoint) continue;
@@ -380,12 +302,12 @@ pub fn Controller(comptime config: Config) type {
                             if (desc_ep.endpoint.dir != .In) continue;
 
                             this.driver_by_endpoint_in[desc_ep.endpoint.num.to_int()] = &this.driver_data;
-                            if (try config.Device.endpoint_open(
+                            if (try device.endpoint_open(
                                 desc_ep.endpoint,
                                 desc_ep.attributes.transfer_type,
                                 desc_ep.max_packet_size.into(),
                             )) |buf|
-                                this.driver_data.on_tx_ready(this.interface(), buf);
+                                this.driver_data.on_tx_ready(device.interface(), buf);
                         }
                     }
                 },
@@ -401,11 +323,11 @@ pub fn Controller(comptime config: Config) type {
                         else => break :blk,
                     };
                     const len = @min(data.len, setup.length);
-                    this.ep0_driver.send(data[0..len]);
+                    device.interface().control_transfer(data[0..len]);
                 } else |_| {},
                 .SetFeature => if (enumFromInt(types.FeatureSelector, setup.value >> 8)) |feature|
                     switch (feature) {
-                        .DeviceRemoteWakeup, .EndpointHalt => this.ep0_driver.send(ACK),
+                        .DeviceRemoteWakeup, .EndpointHalt => device.interface().control_transfer(ACK),
                         // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                         .TestMode => {},
                     }
@@ -417,19 +339,16 @@ pub fn Controller(comptime config: Config) type {
         /// initializing the device.
         ///
         /// You have to ensure the device has been initialized.
-        fn task(ptr: *anyopaque) void {
-            const this: *@This() = @alignCast(@ptrCast(ptr));
-            const events = config.Device.get_events();
-
+        pub fn task(this: *@This(), events: anytype, device: anytype) void {
             if (events.setup_packet) |setup| {
                 this.setup_packet = setup;
                 this.driver = null;
 
                 switch (setup.request_type.recipient) {
-                    .Device => this.process_device_setup_request(&setup) catch unreachable,
+                    .Device => this.process_device_setup_request(&setup, device) catch unreachable,
                     .Interface => if (this.driver_by_interface[setup.index & 0xFF]) |drv| {
                         this.driver = drv;
-                        if (drv.class_control(this.interface(), .Setup, &setup) == false) {
+                        if (drv.class_control(device.interface(), .Setup, &setup) == false) {
                             // TODO
                         }
                     },
@@ -444,47 +363,18 @@ pub fn Controller(comptime config: Config) type {
                 // transmit buffer that has become available.
                 while (iter.next()) |result| switch (result) {
                     .In => |in| {
-                        if (in.ep_num == .ep0) {
-
-                            // We use this opportunity to finish the delayed
-                            // SetAddress request, if there is one:
-                            if (this.new_address) |addr| {
-                                // Change our address:
-                                config.Device.set_address(addr);
-                                this.new_address = null;
-                            }
-
-                            if (this.ep0_driver.on_tx_ready(in.buffer)) {
-                                // Otherwise, we've just finished sending
-                                // something to the host. We expect an ensuing
-                                // status phase where the host sends us (via EP0
-                                // OUT) a zero-byte DATA packet, so, set that
-                                // up:
-                                config.Device.signal_rx_ready(.ep0, 0);
-                                if (this.driver) |drv|
-                                    _ = drv.class_control(this.interface(), .Ack, &this.setup_packet);
-
-                                // I believe this is incorrect but reality disagrees.
-                                this.ep0_driver = .{ .ready = in.buffer };
-                            }
+                        if (in.ep_num == .ep0)
+                            unreachable
+                        else if (this.driver_by_endpoint_in[in.ep_num.to_int()]) |drv|
                             // TODO: Route different endpoints to different functions.
-                        } else if (this.driver_by_endpoint_in[in.ep_num.to_int()]) |drv|
-                            drv.on_tx_ready(this.interface(), in.buffer);
+                            drv.on_tx_ready(device.interface(), in.buffer);
                     },
                     .Out => |out| {
-                        // TODO: Route different endpoints to different functions.
-                        if (this.driver_by_endpoint_out[out.ep_num.to_int()]) |drv|
-                            drv.on_data_rx(this.interface(), out.buffer);
+                        if (out.ep_num == .ep0) {} else if (this.driver_by_endpoint_out[out.ep_num.to_int()]) |drv|
+                            // TODO: Route different endpoints to different functions.
+                            drv.on_data_rx(device.interface(), out.buffer);
                     },
                 };
-            }
-
-            if (events.bus_reset) {
-                // TODO: call umount callback if any
-                const tmp = this.ep0_driver;
-                this.* = .init;
-                this.ep0_driver = tmp;
-                config.Device.bus_reset_clear();
             }
         }
     };

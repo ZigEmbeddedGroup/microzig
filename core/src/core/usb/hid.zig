@@ -142,13 +142,13 @@ pub const HidClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn mount(this: *@This(), _: usb.ControllerInterface, desc: *const InOutDescriptor) anyerror!void {
+    pub fn mount(this: *@This(), _: usb.DeviceInterface, desc: *const InOutDescriptor) anyerror!void {
         this.hid_descriptor = std.mem.asBytes(&desc.hid);
         this.ep_in = desc.ep_in.endpoint.num;
         this.ep_out = desc.ep_out.endpoint.num;
     }
 
-    pub fn class_control(ptr: *@This(), controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+    pub fn class_control(ptr: *@This(), controller: usb.DeviceInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
         const self: *@This() = @ptrCast(@alignCast(ptr));
 
         switch (setup.request_type.type) {
@@ -205,6 +205,6 @@ pub const HidClassDriver = struct {
         return true;
     }
 
-    pub fn on_tx_ready(_: *@This(), _: usb.ControllerInterface, _: []u8) void {}
-    pub fn on_data_rx(_: *@This(), _: usb.ControllerInterface, _: []const u8) void {}
+    pub fn on_tx_ready(_: *@This(), _: usb.DeviceInterface, _: []u8) void {}
+    pub fn on_data_rx(_: *@This(), _: usb.DeviceInterface, _: []const u8) void {}
 };

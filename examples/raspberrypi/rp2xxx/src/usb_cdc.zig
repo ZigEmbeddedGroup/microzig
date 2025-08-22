@@ -13,8 +13,7 @@ const uart_tx_pin = gpio.num(12);
 const uart_rx_pin = gpio.num(1);
 
 // This is our device configuration
-const Usb = microzig.core.usb.Controller(.{
-    .Device = rp2xxx.usb.Usb(.{}),
+const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
     .attributes = .{ .self_powered = true },
     .Driver = microzig.core.usb.cdc.CdcClassDriver,
     .driver_endpoints = &.{
@@ -24,8 +23,8 @@ const Usb = microzig.core.usb.Controller(.{
     .driver_strings = &.{
         .{ .name = "name", .value = "Board CDC" },
     },
-});
-var usb: Usb = .init;
+}) });
+var usb: Usb = undefined;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -39,8 +38,6 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    usb.driver_data = .{};
-
     led.set_function(.sio);
     led.set_direction(.out);
     led.put(1);
@@ -56,7 +53,9 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     // Then initialize the USB device using the configuration defined above
-    usb.init_device();
+    usb = .init();
+    usb.controller.driver_data = .{};
+
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
@@ -74,16 +73,16 @@ pub fn main() !void {
 
             var tx_buf: [1024]u8 = undefined;
             const text = try std.fmt.bufPrint(&tx_buf, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
-            usb.driver_data.writeAll(usb.interface(), text);
+            usb.controller.driver_data.writeAll(usb.interface(), text);
         }
 
         // read and print host command if present
         var rx_buf: [64]u8 = undefined;
-        const len = usb.driver_data.read(usb.interface(), &rx_buf);
+        const len = usb.controller.driver_data.read(usb.interface(), &rx_buf);
         if (len > 0) {
-            usb.driver_data.writeAll(usb.interface(), "Your message to me was: '");
-            usb.driver_data.writeAll(usb.interface(), rx_buf[0..len]);
-            usb.driver_data.writeAll(usb.interface(), "'\r\n");
+            usb.controller.driver_data.writeAll(usb.interface(), "Your message to me was: '");
+            usb.controller.driver_data.writeAll(usb.interface(), rx_buf[0..len]);
+            usb.controller.driver_data.writeAll(usb.interface(), "'\r\n");
         }
     }
 }

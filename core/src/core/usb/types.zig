@@ -143,40 +143,12 @@ pub const RequestType = packed struct(u8) {
         Other,
     };
 
-    /// RequestType is created from raw bytes using std.mem.bytesToValue, we need to support all potential values if we don't want to crash such conversion
     const Recipient = enum(u5) {
         Device,
         Interface,
         Endpoint,
         Other,
-        Reserved1,
-        Reserved2,
-        Reserved3,
-        Reserved4,
-        Reserved5,
-        Reserved6,
-        Reserved7,
-        Reserved8,
-        Reserved9,
-        Reserved10,
-        Reserved11,
-        Reserved12,
-        Reserved13,
-        Reserved14,
-        Reserved15,
-        Reserved16,
-        Reserved17,
-        Reserved18,
-        Reserved19,
-        Reserved20,
-        Reserved21,
-        Reserved22,
-        Reserved23,
-        Reserved24,
-        Reserved25,
-        Reserved26,
-        Reserved27,
-        Reserved28,
+        _, // Reserved
     };
 };
 

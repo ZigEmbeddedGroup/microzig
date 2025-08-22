@@ -122,7 +122,7 @@ pub const CdcClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn mount(this: *@This(), controller: usb.ControllerInterface, desc: *const Descriptor) anyerror!void {
+    pub fn mount(this: *@This(), controller: usb.DeviceInterface, desc: *const Descriptor) anyerror!void {
         this.line_coding = .init;
         this.awaiting_data = false;
         this.rx_buf = null;
@@ -137,7 +137,7 @@ pub const CdcClassDriver = struct {
         return if (this.rx_buf) |rx| rx.len else 0;
     }
 
-    pub fn read(this: *@This(), controller: usb.ControllerInterface, dst: []u8) usize {
+    pub fn read(this: *@This(), controller: usb.DeviceInterface, dst: []u8) usize {
         if (this.rx_buf) |rx| {
             const len = @min(rx.len, dst.len);
             // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
@@ -162,14 +162,14 @@ pub const CdcClassDriver = struct {
         } else return 0;
     }
 
-    pub fn flush(this: *@This(), controller: usb.ControllerInterface) void {
+    pub fn flush(this: *@This(), controller: usb.DeviceInterface) void {
         if (this.tx_buf) |tx| {
             defer this.tx_buf = null;
             controller.submit_tx_buffer(this.ep_in, tx.ptr);
         }
     }
 
-    pub fn writeAll(this: *@This(), controller: usb.ControllerInterface, data: []const u8) void {
+    pub fn writeAll(this: *@This(), controller: usb.DeviceInterface, data: []const u8) void {
         var offset: usize = 0;
         while (offset < data.len) {
             offset += this.write(data[offset..]);
@@ -179,7 +179,7 @@ pub const CdcClassDriver = struct {
         }
     }
 
-    pub fn class_control(ptr: *@This(), controller: usb.ControllerInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+    pub fn class_control(ptr: *@This(), controller: usb.DeviceInterface, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         if (stage != .Setup) return true;
 
@@ -193,12 +193,12 @@ pub const CdcClassDriver = struct {
         return true;
     }
 
-    pub fn on_tx_ready(ptr: *@This(), _: usb.ControllerInterface, data: []u8) void {
+    pub fn on_tx_ready(ptr: *@This(), _: usb.DeviceInterface, data: []u8) void {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         this.tx_buf = data;
     }
 
-    pub fn on_data_rx(ptr: *@This(), _: usb.ControllerInterface, data: []const u8) void {
+    pub fn on_data_rx(ptr: *@This(), _: usb.DeviceInterface, data: []const u8) void {
         var this: *@This() = @ptrCast(@alignCast(ptr));
         this.rx_buf = data;
     }

@@ -18,7 +18,19 @@ pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 pub const Config = struct {
     synchronization_nops: comptime_int = 3,
     dpram_allocator: type = DpramAllocatorBump,
+    Controller: type,
     // swap_dpdm: bool = false,
+    /// Vendor ID and product ID combo.
+    id: usb.VidPid = .{
+        .vendor = 0x2E8A,
+        .product = 0x000a,
+    },
+    /// Manufacturer, product and serial number strings.
+    strings: usb.Strings = .{
+        .manufacturer = "Raspberry Pi",
+        .product = "Pico Test Device",
+        .serial = "someserial",
+    },
 };
 
 const Endpoint = usb.types.Endpoint;
@@ -91,18 +103,18 @@ pub const DpramAllocatorBump = struct {
 /// are used by the abstract USB impl of microzig.
 pub fn Usb(comptime config: Config) type {
     return struct {
+        pub const interface_vtable: usb.DeviceInterface.Vtable = .{
+            .task = &task,
+            .control_transfer = &control_transfer,
+            .signal_rx_ready = &signal_rx_ready,
+            .submit_tx_buffer = &submit_tx_buffer,
+        };
+
         pub const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
         pub const max_transfer_size = 64; // TODO: Support other buffer sizes.
         pub const bcd_usb = 0x02_00;
-        pub const default_strings: usb.Config.Strings = .{
-            .manufacturer = "Raspberry Pi",
-            .product = "Pico Test Device",
-            .serial = "someserial",
-        };
-        pub const default_vid_pid: usb.Config.VidPid = .{
-            .vendor = 0x2E8A,
-            .product = 0x000a,
-        };
+        pub const id = config.id;
+        pub const strings = config.strings;
 
         pub const Events = struct {
             pub const BufferIterator = struct {
@@ -143,18 +155,12 @@ pub fn Usb(comptime config: Config) type {
             const buf_ctrl_all: *volatile [2 * (max_endpoints_count)]BufCtrl =
                 @ptrCast(&peri_dpram.EP0_IN_BUFFER_CONTROL);
 
-            var awaiting_rx: u32 = 0;
-
             _padding: u2 = 0, // 2 bits of padding so that address generation is a nop.
             is_out: bool,
             num: Endpoint.Num,
 
             inline fn to_idx(this: @This()) u5 {
                 return @intCast(@shrExact(@as(u7, @bitCast(this)), 2));
-            }
-
-            fn from(ep: Endpoint) @This() {
-                return .{ .num = ep.num, .is_out = ep.dir == .Out };
             }
 
             pub fn in(num: Endpoint.Num) @This() {
@@ -183,7 +189,18 @@ pub fn Usb(comptime config: Config) type {
             }
         };
 
-        pub fn usb_init_device() ?[]u8 {
+        //
+        ep0_state: usb.ControlEndpointState,
+        controller: config.Controller,
+
+        pub fn interface(this: *@This()) usb.DeviceInterface {
+            return .{
+                .ptr = this,
+                .vtable = &interface_vtable,
+            };
+        }
+
+        pub fn init() @This() {
             if (chip == .RP2350)
                 peri_usb.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
 
@@ -236,51 +253,135 @@ pub fn Usb(comptime config: Config) type {
                 .SETUP_REQ = 1,
             });
 
-            const ret = endpoint_open(.in(.ep0), .Control, 0) catch unreachable;
-            _ = endpoint_open(.out(.ep0), .Control, 0) catch unreachable;
+            var this: @This() = .{
+                .ep0_state = .{ .no_buffer = null },
+                .controller = .init(),
+            };
+
+            if (this.endpoint_open(.in(.ep0), .Control, 0) catch unreachable) |tx|
+                this.ep0_state = .{ .ready = tx };
+
+            this.endpoint_open(.out(.ep0), .Control, 0) catch unreachable;
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
             peri_usb.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
-            return ret;
+            return this;
         }
 
-        pub fn set_address(addr: u7) void {
-            peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
+        fn ep0_send(this: *@This(), tx_buf: []u8, data: []const u8) void {
+            const len = @min(tx_buf.len, data.len);
+            if (len == 0)
+                this.ep0_state = .{ .no_buffer = null }
+            else {
+                std.mem.copyForwards(u8, tx_buf, data[0..len]);
+                this.ep0_state = .{ .sending = data[len..] };
+            }
+            this.interface().submit_tx_buffer(.ep0, tx_buf.ptr + len);
+        }
+
+        pub fn set_address(this: *@This(), new_address: u7) void {
+            switch (this.ep0_state) {
+                .ready => |tx| {
+                    this.interface().submit_tx_buffer(.ep0, tx.ptr);
+                    this.ep0_state = .{ .no_buffer = new_address };
+                },
+                else => unreachable,
+            }
+        }
+
+        fn control_transfer(ptr: *anyopaque, data: []const u8) void {
+            const this: *@This() = @alignCast(@ptrCast(ptr));
+            switch (this.ep0_state) {
+                .sending => |residual| {
+                    std.log.err("residual data: {any}", .{residual});
+                    this.ep0_state = .{ .sending = data };
+                },
+                .no_buffer => |new_address| {
+                    if (new_address) |_|
+                        std.log.err("missed address change!", .{});
+                    this.ep0_state = .{ .sending = data };
+                },
+                .ready => |tx_buf| this.ep0_send(tx_buf, data),
+            }
         }
 
         /// Check which interrupt flags are set
-        pub fn get_events() Events {
+        pub fn task(ptr: *anyopaque) void {
+            const this: *@This() = @alignCast(@ptrCast(ptr));
             const ints = peri_usb.INTS.read();
-            return .{
-                .unhandled_buffers = if (ints.BUFF_STATUS != 0) blk: {
-                    const mask = peri_usb.BUFF_STATUS.raw;
-                    break :blk .{ .initial = mask, .pending = mask };
-                } else null,
+
+            var events: Events = .{
+                .unhandled_buffers = null,
                 .bus_reset = ints.BUS_RESET == 1,
                 .device_suspend = ints.DEV_SUSPEND == 1,
                 .host_resume = ints.DEV_RESUME_FROM_HOST == 1,
-                .setup_packet = if (ints.SETUP_REQ != 0) blk: {
-                    // Clear the status flag (write-one-to-clear)
-                    var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
-                    sie_status.SETUP_REC = 1;
-                    peri_usb.SIE_STATUS.write(sie_status);
-
-                    // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
-                    // to an IN on EP0 needs to use PID DATA1.
-                    defer peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
-
-                    // Copy the setup packet out of its dedicated buffer at the base of
-                    // USB SRAM. The PAC models this buffer as two 32-bit registers.
-                    break :blk @bitCast([2]u32{
-                        peri_dpram.SETUP_PACKET_LOW.raw,
-                        peri_dpram.SETUP_PACKET_HIGH.raw,
-                    });
-                } else null,
+                .setup_packet = null,
             };
+
+            if (ints.BUFF_STATUS != 0) blk: {
+                const initial = peri_usb.BUFF_STATUS.raw;
+                const pending = initial & ~(@as(u32, 1)); // ep0 in is handled here.
+                events.unhandled_buffers = .{ .initial = initial, .pending = pending };
+                if (initial == pending) break :blk;
+
+                const tx_buf = HardwareEndpoint.in(.ep0).buffer();
+                switch (this.ep0_state) {
+                    .sending => |data| {
+                        this.ep0_send(tx_buf, data);
+
+                        if (data.len == 0) {
+                            this.interface().signal_rx_ready(.ep0, 0);
+                            // I believe this is incorrect but reality disagrees.
+                            this.ep0_state = .{ .ready = tx_buf };
+                        }
+                    },
+                    .no_buffer => |new_address| {
+                        // We use this opportunity to finish the delayed
+                        // SetAddress request, if there is one:
+                        if (new_address) |addr| {
+                            // Change our address:
+                            peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
+                        }
+                        this.ep0_state = .{ .ready = tx_buf };
+                    },
+                    .ready => |_| std.log.err("Got buffer twice!", .{}),
+                }
+            }
+            if (ints.SETUP_REQ != 0) {
+                // Clear the status flag (write-one-to-clear)
+                var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
+                sie_status.SETUP_REC = 1;
+                peri_usb.SIE_STATUS.write(sie_status);
+
+                // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
+                // to an IN on EP0 needs to use PID DATA1.
+                defer peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
+
+                // Copy the setup packet out of its dedicated buffer at the base of
+                // USB SRAM. The PAC models this buffer as two 32-bit registers.
+                const setup: usb.types.SetupPacket = @bitCast([2]u32{
+                    peri_dpram.SETUP_PACKET_LOW.raw,
+                    peri_dpram.SETUP_PACKET_HIGH.raw,
+                });
+
+                events.setup_packet = setup;
+            }
+
+            this.controller.task(events, this);
+
+            if (events.bus_reset) {
+                this.controller.deinit();
+                this.controller = .init();
+
+                var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
+                sie_status.BUS_RESET = 1;
+                peri_usb.SIE_STATUS.write(sie_status);
+                peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = 0 });
+            }
         }
 
-        pub fn submit_tx_buffer(ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
+        pub fn submit_tx_buffer(_: *anyopaque, ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
             const ep_hard: HardwareEndpoint = .in(ep_in);
             const buf = ep_hard.buffer();
 
@@ -311,7 +412,7 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
-        pub fn signal_rx_ready(ep_out: Endpoint.Num, len: usize) void {
+        pub fn signal_rx_ready(_: *anyopaque, ep_out: Endpoint.Num, len: usize) void {
             const ep_hard: HardwareEndpoint = .out(ep_out);
 
             // Configure the OUT:
@@ -325,19 +426,21 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
-        /// Called on a bus reset interrupt
-        pub fn bus_reset_clear() void {
-            // Acknowledge by writing the write-one-to-clear status bit.
-            var sie_status: @TypeOf(peri_usb.SIE_STATUS).underlying_type = @bitCast(@as(u32, 0));
-            sie_status.BUS_RESET = 1;
-            peri_usb.SIE_STATUS.write(sie_status);
-            peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = 0 });
-        }
-
-        pub fn endpoint_open(ep: Endpoint, transfer_type: usb.types.TransferType, buf_size_hint: usize) error{OutOfBufferMemory}!?[]u8 {
+        pub fn endpoint_open(
+            _: *@This(),
+            comptime ep: Endpoint,
+            transfer_type: usb.types.TransferType,
+            buf_size_hint: usize,
+        ) error{OutOfBufferMemory}!switch (ep.dir) {
+            .In => ?[]u8,
+            .Out => void,
+        } {
             _ = buf_size_hint;
 
-            const ep_hard: HardwareEndpoint = .from(ep);
+            const ep_hard: HardwareEndpoint = .{
+                .num = ep.num,
+                .is_out = ep.dir == .Out,
+            };
 
             assert(ep.num.to_int() < max_endpoints_count);
 
@@ -352,7 +455,8 @@ pub fn Usb(comptime config: Config) type {
                 ep_ctrl.write(rmw);
                 break :blk buf.start();
             } else DpramBuffer.Index.ep0buf0.start();
-            return start[0..max_transfer_size];
+            if (ep.dir == .In)
+                return start[0..max_transfer_size];
         }
     };
 }
