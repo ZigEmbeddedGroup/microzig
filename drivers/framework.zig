@@ -43,10 +43,11 @@ pub const led = struct {
 };
 
 pub const sensor = struct {
-    pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
     pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
     pub const MLX90640 = @import("sensor/MLX90640.zig").MLX90640;
+    pub const MPU_6050 = @import("sensor/MPU-6050.zig").MPU_6050;
     pub const TLV493D = @import("sensor/TLV493D.zig").TLV493D;
+    pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
 };
 
 pub const stepper = struct {
