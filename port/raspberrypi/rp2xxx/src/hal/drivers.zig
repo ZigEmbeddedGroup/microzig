@@ -70,6 +70,10 @@ pub const I2C_Device = struct {
         _ = dev;
     }
 
+    // NOTE: Because this function doesn't have an address arg (needed for datagram), the concrete
+    // implementation cannot be passed in to a driver that expects an i2c device, because that
+    // interface has a different signature.
+    // (e.g. hal.i2c.I2C_Device (here) vs mdf.I2C_Device (which has addr in the sig)
     pub fn write(dev: I2C_Device, datagram: []const u8) !void {
         try dev.bus.write_blocking(dev.address.?, datagram, dev.timeout);
     }

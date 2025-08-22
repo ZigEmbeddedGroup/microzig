@@ -10,7 +10,6 @@ const WriteError = Digital_IO.WriteError;
 pub const PCF8574_Config = struct {
     // NOTE: This is a TYPE. Somehow allows direct dispatch
     I2C_Device: type = mdf.base.I2C_Device,
-    // Could add default
     Address: type = mdf.base.I2C_Device.Address,
 };
 

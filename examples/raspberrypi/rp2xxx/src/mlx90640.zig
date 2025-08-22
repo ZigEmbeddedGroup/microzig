@@ -29,10 +29,10 @@ pub fn main() !void {
     try init();
 
     var cd = ClockDevice{};
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x33), null);
+    var i2c_device = I2C_Device.init(i2c0, null);
 
     var camera = try MLX90640.init(.{
-        .i2c = i2c_device.datagram_device(),
+        .i2c = i2c_device.datagram_device(@enumFromInt(0x33)),
         .clock = cd.clock_device(),
     });
 
