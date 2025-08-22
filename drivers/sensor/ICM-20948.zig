@@ -401,7 +401,7 @@ pub const ICM_20948 = struct {
         log.debug("Device health check passed", .{});
     }
 
-    pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) Error!void {
+    pub inline fn read_reg(self: *Self, reg: Self.Register, buf: []u8) Error!void {
         if (buf.len == 0) return Error.InvalidParameter;
 
         try self.set_bank(reg.bank());
@@ -416,7 +416,7 @@ pub const ICM_20948 = struct {
 
     pub inline fn read_byte(self: *Self, reg: Self.Register) Error!u8 {
         var buf: [1]u8 = undefined;
-        try self.read_register(reg, &buf);
+        try self.read_reg(reg, &buf);
         return buf[0];
     }
 
@@ -432,7 +432,7 @@ pub const ICM_20948 = struct {
     }
 
     /// Read the register and modify the matching fields as provided
-    pub inline fn modify_register(self: *Self, reg: Self.Register, T: type, fields: anytype) Error!void {
+    pub inline fn modify_reg(self: *Self, reg: Self.Register, T: type, fields: anytype) Error!void {
         // Read the current value
         const current_val = self.read_byte(reg) catch |err| {
             log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
@@ -476,7 +476,7 @@ pub const ICM_20948 = struct {
         // Reset the slave address as well
         self.slave_address = 0;
 
-        self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true }) catch
+        self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true }) catch
             return Error.ResetFailed;
 
         // Sleep longer after reset to ensure device is ready
@@ -487,15 +487,15 @@ pub const ICM_20948 = struct {
     }
 
     pub fn sleep(self: *Self, on: bool) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
     }
 
     pub fn low_power(self: *Self, on: bool) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
     }
 
     pub fn set_clocks(self: *Self) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
             // 1 = Auto select
             .CLKSEL = 1,
             .SLEEP = false,
@@ -506,7 +506,7 @@ pub const ICM_20948 = struct {
     pub fn set_sample_mode(self: *Self) Error!void {
         // TODO: Support setting these individually. Could set based on if ODR fields are set (make
         // optional?)
-        try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
+        try self.modify_reg(.{ .bank0 = .lp_config }, lp_config, .{
             // Use I2C_MST_ODR_CONFIG, unless gyro or accel set their own data rate
             .I2C_MST_CYCLE = 1,
             // NOTE: We seem to need this set to 0?
@@ -540,7 +540,7 @@ pub const ICM_20948 = struct {
     }
 
     pub fn disable_accelerometer(self: *Self) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
             .DISABLE_ACCEL = .disable,
         });
     }
@@ -554,7 +554,7 @@ pub const ICM_20948 = struct {
     pub fn get_accel_data_unscaled(self: *Self) Error!Accel_data_unscaled {
         var raw_data: Accel_data_unscaled = .{};
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read accelerometer data: {}", .{err});
             return err;
         };
@@ -604,7 +604,7 @@ pub const ICM_20948 = struct {
     }
 
     pub fn disable_gyroscope(self: *Self) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
             .DISABLE_GYRO = .disable,
         });
     }
@@ -618,7 +618,7 @@ pub const ICM_20948 = struct {
     pub fn get_gyro_data_unscaled(self: *Self) Error!Gyro_data_unscaled {
         var raw_data: Gyro_data_unscaled = .{};
 
-        self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read gyroscope data: {}", .{err});
             return err;
         };
@@ -664,7 +664,7 @@ pub const ICM_20948 = struct {
             temp: i16 = 0,
         }{};
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read combined accel/gyro data: {}", .{err});
             return err;
         };
@@ -698,7 +698,7 @@ pub const ICM_20948 = struct {
             mag: Mag_data_unscaled = .{},
         }{};
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read combined accel/gyro/mag data: {}", .{err});
             return err;
         };
@@ -729,7 +729,7 @@ pub const ICM_20948 = struct {
     pub fn get_temp(self: *Self) Error!f32 {
         var raw_data: i16 = undefined;
 
-        self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read temperature data: {}", .{err});
             return err;
         };
@@ -748,7 +748,7 @@ pub const ICM_20948 = struct {
         try self.write_byte(.{ .bank3 = .i2c_mst_odr_config }, config.mag_i2c_mst_odr_config);
 
         // Enable I2C master on this device
-        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
+        try self.modify_reg(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
         // We need to sleep here
         self.clock.sleep_ms(10);
 
@@ -806,7 +806,7 @@ pub const ICM_20948 = struct {
         // Give the device time to hit the magnetometer
         self.clock.sleep_us(MAG_READ_DELAY_US);
         // Read the data the master read in
-        return try self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
+        return try self.read_reg(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
     }
 
     pub inline fn mag_read_byte(self: *Self, reg: MagRegister) Error!u8 {
@@ -834,7 +834,7 @@ pub const ICM_20948 = struct {
         self.clock.sleep_us(MAG_RESET_DELAY_US);
 
         // Reset I2C master on device
-        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
+        try self.modify_reg(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
     }
 
     const Mag_data_unscaled = packed struct {
@@ -864,7 +864,7 @@ pub const ICM_20948 = struct {
         try self.mag_set_sensor_read();
         var raw_data: Mag_data_unscaled = .{};
 
-        self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read magnetometer data: {}", .{err});
             return err;
         };
