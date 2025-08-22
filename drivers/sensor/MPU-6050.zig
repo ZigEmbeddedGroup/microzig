@@ -74,12 +74,15 @@ pub const MPU_6050 = struct {
     }
 
     /// Resets the device. On reset, the device will be in a sleep state.
-    pub fn reset(self: MPU_6050) Error!void {
+    pub fn reset(self: *MPU_6050) Error!void {
         try self.modify_reg(.pwr_mgmt_1, regs.PWR_MGMT_1, .{
             .DEVICE_RESET = true,
         });
 
         self.clock.sleep_ms(100);
+
+        self.accel_range = .@"2G";
+        self.gyro_range = .@"250d";
 
         while ((try self.read_reg(.pwr_mgmt_1, regs.PWR_MGMT_1)).DEVICE_RESET) {}
 
@@ -233,17 +236,22 @@ pub const MPU_6050 = struct {
         });
     }
 
-    pub fn read_accel_raw(self: MPU_6050) Error![3]i16 {
-        return try self.read_raw_data(.acc_regx_h, 3);
+    pub fn read_accel_raw(self: MPU_6050) Error!AccelDataRaw {
+        const data = try self.read_raw_data(.acc_regx_h, 3);
+        return .{
+            .x = data[0],
+            .y = data[1],
+            .z = data[2],
+        };
     }
 
-    pub fn read_accel(self: MPU_6050) Error![3]f32 {
+    pub fn read_accel(self: MPU_6050) Error!AccelData {
         const raw = try self.read_accel_raw();
         const scale = self.accel_range.scale();
         return .{
-            @as(f32, @floatFromInt(raw[0])) * scale,
-            @as(f32, @floatFromInt(raw[1])) * scale,
-            @as(f32, @floatFromInt(raw[2])) * scale,
+            .x = @as(f32, @floatFromInt(raw.x)) * scale,
+            .y = @as(f32, @floatFromInt(raw.y)) * scale,
+            .z = @as(f32, @floatFromInt(raw.z)) * scale,
         };
     }
 
@@ -255,55 +263,92 @@ pub const MPU_6050 = struct {
         return @as(f32, @floatFromInt(try self.read_temp_raw())) * TEMP_SCALE + TEMP_OFFSET;
     }
 
-    pub fn read_gyro_raw(self: MPU_6050) Error![3]i16 {
-        return try self.read_raw_data(.gyro_regx_h, 3);
+    pub fn read_gyro_raw(self: MPU_6050) Error!GyroDataRaw {
+        const data = try self.read_raw_data(.gyro_regx_h, 3);
+        return .{
+            .x = data[0],
+            .y = data[1],
+            .z = data[2],
+        };
     }
 
-    pub fn read_gyro(self: MPU_6050) Error![3]f32 {
+    pub fn read_gyro(self: MPU_6050) Error!GyroData {
         const raw = try self.read_gyro_raw();
         const scale = self.gyro_range.scale();
         return .{
-            @as(f32, @floatFromInt(raw[0])) * scale,
-            @as(f32, @floatFromInt(raw[1])) * scale,
-            @as(f32, @floatFromInt(raw[2])) * scale,
+            .x = @as(f32, @floatFromInt(raw.x)) * scale,
+            .y = @as(f32, @floatFromInt(raw.y)) * scale,
+            .z = @as(f32, @floatFromInt(raw.z)) * scale,
         };
     }
 
     pub fn read_accel_temp_gyro_raw(self: MPU_6050) Error!struct {
-        accel: [3]i16,
+        accel: AccelDataRaw,
         temp: i16,
-        gyro: [3]i16,
+        gyro: GyroDataRaw,
     } {
         const data = try self.read_raw_data(.acc_regx_h, 7);
         return .{
-            .accel = .{ data[0], data[1], data[2] },
+            .accel = .{
+                .x = data[0],
+                .y = data[1],
+                .z = data[2],
+            },
             .temp = data[3],
-            .gyro = .{ data[4], data[5], data[6] },
+            .gyro = .{
+                .x = data[4],
+                .y = data[5],
+                .z = data[6],
+            },
         };
     }
 
     pub fn read_accel_temp_gyro(self: MPU_6050) Error!struct {
-        accel: [3]f32,
+        accel: AccelData,
         temp: f32,
-        gyro: [3]f32,
+        gyro: GyroData,
     } {
-        const data = try self.read_accel_temp_gyro_raw();
+        const raw = try self.read_accel_temp_gyro_raw();
         const accel_scale = self.accel_range.scale();
         const gyro_scale = self.gyro_range.scale();
         return .{
             .accel = .{
-                @as(f32, @floatFromInt(data.accel[0])) * accel_scale,
-                @as(f32, @floatFromInt(data.accel[1])) * accel_scale,
-                @as(f32, @floatFromInt(data.accel[2])) * accel_scale,
+                .x = @as(f32, @floatFromInt(raw.accel.x)) * accel_scale,
+                .y = @as(f32, @floatFromInt(raw.accel.y)) * accel_scale,
+                .z = @as(f32, @floatFromInt(raw.accel.z)) * accel_scale,
             },
-            .temp = @as(f32, @floatFromInt(data.temp)) * TEMP_SCALE + TEMP_OFFSET,
+            .temp = @as(f32, @floatFromInt(raw.temp)) * TEMP_SCALE + TEMP_OFFSET,
             .gyro = .{
-                @as(f32, @floatFromInt(data.gyro[0])) * gyro_scale,
-                @as(f32, @floatFromInt(data.gyro[1])) * gyro_scale,
-                @as(f32, @floatFromInt(data.gyro[2])) * gyro_scale,
+                .x = @as(f32, @floatFromInt(raw.gyro.x)) * gyro_scale,
+                .y = @as(f32, @floatFromInt(raw.gyro.y)) * gyro_scale,
+                .z = @as(f32, @floatFromInt(raw.gyro.z)) * gyro_scale,
             },
         };
     }
+
+    pub const AccelDataRaw = struct {
+        x: i16,
+        y: i16,
+        z: i16,
+    };
+
+    pub const AccelData = struct {
+        x: f32,
+        y: f32,
+        z: f32,
+    };
+
+    pub const GyroDataRaw = struct {
+        x: i16,
+        y: i16,
+        z: i16,
+    };
+
+    pub const GyroData = struct {
+        x: f32,
+        y: f32,
+        z: f32,
+    };
 
     fn write_byte(self: MPU_6050, reg: Register, value: u8) Error!void {
         try self.dev.connect();
@@ -370,7 +415,7 @@ pub const MPU_6050 = struct {
         pub const CONFIG = packed struct(u8) {
             DLPF_CFG: Digital_LPF,
             EXT_SYNC_SET: u3,
-            reserved0: u2,
+            reserved6: u2,
         };
 
         pub const GYRO_CONFIG = packed struct(u8) {
@@ -393,17 +438,17 @@ pub const MPU_6050 = struct {
             SIG_COND_RESET: bool,
             I2C_MST_RESET: bool,
             FIFO_RESET: bool,
-            reserved0: u1,
+            reserved3: u1,
             I2C_IF_DIS: bool,
             I2C_MST_EN: bool,
             FIFO_EN: bool,
-            reserved1: u1,
+            reserved7: u1,
         };
 
         pub const PWR_MGMT_1 = packed struct(u8) {
             CLK_SEL: ClockSource,
             TEMP_DIS: bool,
-            reserved0: u1,
+            reserved4: u1,
             CYCLE: bool,
             SLEEP: bool,
             DEVICE_RESET: bool,
