@@ -38,7 +38,7 @@ pub const MPU_6050 = struct {
     pub const TEMP_SCALE: f32 = 1.0 / TEMP_SENSITIVITY;
 
     pub const Error = Datagram_Device.AnyError;
-    pub const VerifyError = error{DeviceNotResponding, UnexpectedDeviceId};
+    pub const VerifyError = error{ DeviceNotResponding, UnexpectedDeviceId };
     pub const InitError = Error || VerifyError;
 
     pub fn init(dev: Datagram_Device, clock: Clock_Device) InitError!MPU_6050 {
