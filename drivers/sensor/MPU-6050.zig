@@ -4,6 +4,7 @@
 //!
 //! Datasheet:
 //! * https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf
+//! * https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
 //!
 //! Example usage:
 //! ```zig
@@ -20,6 +21,7 @@
 //! * Add missing functionality (maybe also getters for some registers)
 //! * DMP support
 
+const std = @import("std");
 const mdf = @import("../framework.zig");
 const Datagram_Device = mdf.base.Datagram_Device;
 const Clock_Device = mdf.base.Clock_Device;
@@ -35,7 +37,11 @@ pub const MPU_6050 = struct {
     pub const TEMP_OFFSET: f32 = 36.53;
     pub const TEMP_SCALE: f32 = 1.0 / TEMP_SENSITIVITY;
 
-    pub fn init(dev: Datagram_Device, clock: Clock_Device) !MPU_6050 {
+    pub const Error = Datagram_Device.AnyError;
+    pub const VerifyError = error{DeviceNotResponding, UnexpectedDeviceId};
+    pub const InitError = Error || VerifyError;
+
+    pub fn init(dev: Datagram_Device, clock: Clock_Device) InitError!MPU_6050 {
         var self: MPU_6050 = .{
             .dev = dev,
             .clock = clock,
@@ -43,31 +49,80 @@ pub const MPU_6050 = struct {
             .gyro_range = undefined,
         };
 
+        try self.verify();
+
+        try self.reset();
+
         try self.modify_reg(.pwr_mgmt_1, regs.PWR_MGMT_1, .{
-            .CLK_SEL = 0x1, // Set clock source to be PLL with x-axis gyroscope reference
+            .CLK_SEL = .x_ref,
             .TEMP_DIS = false,
             .CYCLE = false,
-            .SLEEP = false,
+            .SLEEP = false, // disable sleep
         });
-        clock.sleep_ms(100);
-
-        try self.verify();
-        try self.set_digital_lpf(.@"256Hz");
-        try self.set_accel_range(.@"2G");
-        try self.set_accel_hpf(.none);
-        try self.set_gyro_range(.@"250d");
 
         return self;
     }
 
-    fn verify(self: MPU_6050) !void {
-        const address = try self.read_byte(.whoami);
+    pub fn verify(self: MPU_6050) VerifyError!void {
+        const address = self.read_byte(.whoami) catch {
+            return VerifyError.DeviceNotResponding;
+        };
+
         if (address != DEFAULT_SLAVE_ADDRESS) {
-            return error.DeviceNotRecognized;
+            return VerifyError.UnexpectedDeviceId;
         }
     }
 
-    pub fn set_digital_lpf(self: MPU_6050, dlpf: Digital_LPF) !void {
+    /// Resets the device. On reset, the device will be in a sleep state.
+    pub fn reset(self: MPU_6050) Error!void {
+        try self.modify_reg(.pwr_mgmt_1, regs.PWR_MGMT_1, .{
+            .DEVICE_RESET = true,
+        });
+
+        self.clock.sleep_ms(100);
+
+        while ((try self.read_reg(.pwr_mgmt_1, regs.PWR_MGMT_1)).DEVICE_RESET) {}
+
+        try self.modify_reg(.user_ctrl, regs.USER_CTRL, .{
+            .SIG_COND_RESET = true,
+            .I2C_MST_RESET = true,
+            .FIFO_RESET = true,
+        });
+
+        self.clock.sleep_ms(100);
+    }
+
+    pub fn set_clock_source(self: MPU_6050, source: ClockSource) Error!void {
+        try self.modify_reg(.pwr_mgmt_1, regs.PWR_MGMT_1, .{
+            .CLK_SEL = source,
+        });
+    }
+
+    pub const ClockSource = enum(u3) {
+        /// Internal 8MHz oscillator. This is the default on reset but not
+        /// recommended.
+        internal = 0,
+        /// PLL with X axis gyroscope reference. This is set by `init`.
+        x_ref = 1,
+        /// PLL with Y axis gyroscope reference.
+        y_ref = 2,
+        /// PLL with Z axis gyroscope reference.
+        z_ref = 3,
+        /// PLL with external 32.768kHz reference.
+        ext_32k = 4,
+        /// PLL with external 19.2MHz reference.
+        ext_19m = 5,
+        /// Stops the clock and keeps the timing generator in reset.
+        stop = 7,
+    };
+
+    pub fn set_sleep_enabled(self: MPU_6050, enabled: bool) Error!void {
+        try self.modify_reg(.pwr_mgmt_1, regs.PWR_MGMT_1, .{
+            .SLEEP = enabled,
+        });
+    }
+
+    pub fn set_digital_lpf(self: MPU_6050, dlpf: Digital_LPF) Error!void {
         try self.modify_reg(.config, regs.CONFIG, .{
             .DLPF_CFG = dlpf,
         });
@@ -83,24 +138,12 @@ pub const MPU_6050 = struct {
         @"5Hz" = 6,
     };
 
-    pub fn set_accel_range(self: *MPU_6050, range: AccelRange) !void {
+    pub fn set_accel_range(self: *MPU_6050, range: AccelRange) Error!void {
         try self.modify_reg(.accel_config, regs.ACCEL_CONFIG, .{
             .AFS_SEL = range,
         });
 
         self.accel_range = range;
-    }
-
-    pub fn set_accel_self_test(self: MPU_6050, enable: packed struct(u3) {
-        x: bool,
-        y: bool,
-        z: bool,
-    }) !void {
-        try self.modify_reg(.accel_config, regs.ACCEL_CONFIG, .{
-            .XA_ST = enable.x,
-            .YA_ST = enable.y,
-            .ZA_ST = enable.z,
-        });
     }
 
     pub const AccelRange = enum(u2) {
@@ -123,7 +166,7 @@ pub const MPU_6050 = struct {
         }
     };
 
-    pub fn set_accel_hpf(self: MPU_6050, filter: Accel_HPF) !void {
+    pub fn set_accel_hpf(self: MPU_6050, filter: Accel_HPF) Error!void {
         try self.modify_reg(.accel_config, regs.ACCEL_CONFIG, .{
             .HPF_CFG = filter,
         });
@@ -138,7 +181,19 @@ pub const MPU_6050 = struct {
         hold = 7,
     };
 
-    pub fn set_gyro_range(self: *MPU_6050, range: GyroRange) !void {
+    pub fn set_accel_self_test(self: MPU_6050, enable: packed struct(u3) {
+        x: bool,
+        y: bool,
+        z: bool,
+    }) Error!void {
+        try self.modify_reg(.accel_config, regs.ACCEL_CONFIG, .{
+            .XA_ST = enable.x,
+            .YA_ST = enable.y,
+            .ZA_ST = enable.z,
+        });
+    }
+
+    pub fn set_gyro_range(self: *MPU_6050, range: GyroRange) Error!void {
         try self.modify_reg(.gyro_config, regs.GYRO_CONFIG, .{
             .FS_SEL = range,
         });
@@ -170,7 +225,7 @@ pub const MPU_6050 = struct {
         x: bool,
         y: bool,
         z: bool,
-    }) !void {
+    }) Error!void {
         try self.modify_reg(.gyro_config, regs.GYRO_CONFIG, .{
             .XG_ST = enable.x,
             .YG_ST = enable.y,
@@ -178,11 +233,11 @@ pub const MPU_6050 = struct {
         });
     }
 
-    pub fn read_accel_raw(self: MPU_6050) ![3]i16 {
+    pub fn read_accel_raw(self: MPU_6050) Error![3]i16 {
         return try self.read_raw_data(.acc_regx_h, 3);
     }
 
-    pub fn read_accel(self: MPU_6050) ![3]f32 {
+    pub fn read_accel(self: MPU_6050) Error![3]f32 {
         const raw = try self.read_accel_raw();
         const scale = self.accel_range.scale();
         return .{
@@ -192,19 +247,19 @@ pub const MPU_6050 = struct {
         };
     }
 
-    pub fn read_temp_raw(self: MPU_6050) !i16 {
+    pub fn read_temp_raw(self: MPU_6050) Error!i16 {
         return try self.read_raw_data(.temp_out_h, 1)[0];
     }
 
-    pub fn read_temp(self: MPU_6050) !f32 {
+    pub fn read_temp(self: MPU_6050) Error!f32 {
         return @as(f32, @floatFromInt(try self.read_temp_raw())) * TEMP_SCALE + TEMP_OFFSET;
     }
 
-    pub fn read_gyro_raw(self: MPU_6050) ![3]i16 {
+    pub fn read_gyro_raw(self: MPU_6050) Error![3]i16 {
         return try self.read_raw_data(.gyro_regx_h, 3);
     }
 
-    pub fn read_gyro(self: MPU_6050) ![3]f32 {
+    pub fn read_gyro(self: MPU_6050) Error![3]f32 {
         const raw = try self.read_gyro_raw();
         const scale = self.gyro_range.scale();
         return .{
@@ -214,7 +269,7 @@ pub const MPU_6050 = struct {
         };
     }
 
-    pub fn read_accel_temp_gyro_raw(self: MPU_6050) !struct {
+    pub fn read_accel_temp_gyro_raw(self: MPU_6050) Error!struct {
         accel: [3]i16,
         temp: i16,
         gyro: [3]i16,
@@ -227,7 +282,7 @@ pub const MPU_6050 = struct {
         };
     }
 
-    pub fn read_accel_temp_gyro(self: MPU_6050) !struct {
+    pub fn read_accel_temp_gyro(self: MPU_6050) Error!struct {
         accel: [3]f32,
         temp: f32,
         gyro: [3]f32,
@@ -250,7 +305,26 @@ pub const MPU_6050 = struct {
         };
     }
 
-    fn read_raw_data(self: MPU_6050, reg: Register, comptime n: usize) ![n]i16 {
+    fn write_byte(self: MPU_6050, reg: Register, value: u8) Error!void {
+        try self.dev.connect();
+        defer self.dev.disconnect();
+
+        try self.dev.write(&.{ @intFromEnum(reg), value });
+    }
+
+    fn read_byte(self: MPU_6050, reg: Register) Error!u8 {
+        try self.dev.connect();
+        defer self.dev.disconnect();
+
+        var value: u8 = undefined;
+        try self.dev.write_then_read(&.{@intFromEnum(reg)}, (&value)[0..1]);
+        return value;
+    }
+
+    fn read_raw_data(self: MPU_6050, reg: Register, comptime n: usize) Error![n]i16 {
+        try self.dev.connect();
+        defer self.dev.disconnect();
+
         var buf: [2 * n]u8 = undefined;
         try self.dev.write_then_read(&.{@intFromEnum(reg)}, &buf);
         var out: [n]i16 = undefined;
@@ -260,21 +334,11 @@ pub const MPU_6050 = struct {
         return out;
     }
 
-    fn write_byte(self: MPU_6050, reg: Register, value: u8) !void {
-        try self.dev.write(&.{ @intFromEnum(reg), value });
-    }
-
-    fn read_byte(self: MPU_6050, reg: Register) !u8 {
-        var value: u8 = undefined;
-        try self.dev.write_then_read(&.{@intFromEnum(reg)}, (&value)[0..1]);
-        return value;
-    }
-
-    inline fn read_reg(self: MPU_6050, reg: Register, T: type) !T {
+    inline fn read_reg(self: MPU_6050, reg: Register, T: type) Error!T {
         return @bitCast(try self.read_byte(reg));
     }
 
-    inline fn modify_reg(self: MPU_6050, reg: Register, T: type, fields: anytype) !void {
+    inline fn modify_reg(self: MPU_6050, reg: Register, T: type, fields: anytype) Error!void {
         const current_val = try self.read_reg(reg, T);
 
         var val: T = @bitCast(current_val);
@@ -296,6 +360,7 @@ pub const MPU_6050 = struct {
         gyro_regz_h = 0x47,
         acc_regx_h = 0x3b,
         temp_out_h = 0x41,
+        user_ctrl = 0x6a,
         pwr_mgmt_1 = 0x6b,
         whoami = 0x75,
         _,
@@ -324,8 +389,19 @@ pub const MPU_6050 = struct {
             XA_ST: bool,
         };
 
+        pub const USER_CTRL = packed struct(u8) {
+            SIG_COND_RESET: bool,
+            I2C_MST_RESET: bool,
+            FIFO_RESET: bool,
+            reserved0: u1,
+            I2C_IF_DIS: bool,
+            I2C_MST_EN: bool,
+            FIFO_EN: bool,
+            reserved1: u1,
+        };
+
         pub const PWR_MGMT_1 = packed struct(u8) {
-            CLK_SEL: u3,
+            CLK_SEL: ClockSource,
             TEMP_DIS: bool,
             reserved0: u1,
             CYCLE: bool,
