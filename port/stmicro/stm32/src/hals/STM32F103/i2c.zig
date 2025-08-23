@@ -8,6 +8,7 @@ const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
 const F_S = microzig.chip.types.peripherals.i2c_v1.F_S;
 const peripherals = microzig.chip.peripherals;
 const mdf = microzig.drivers;
+const drivers = mdf.base;
 
 pub const Mode = enum {
     standard,
@@ -24,9 +25,11 @@ pub const Address = struct {
     addr: u10,
 
     pub fn new(addr: u7) Address {
-        return .{
-            .addr = addr,
-        };
+        return .{ .addr = addr };
+    }
+
+    pub fn from_generic(addr: mdf.base.I2C_Device.Address) Address {
+        return .{ .addr = @intFromEnum(addr) };
     }
 
     pub fn new_10bits(addr: u10) Address {
@@ -55,12 +58,10 @@ pub const ConfigError = error{
     InvalidCCR,
 };
 
-pub const IOError = error{
-    AckFailure,
+pub const Error = drivers.I2C_Device.Error || error{
     ArbitrationLoss,
     BusError,
     BusTimeout,
-    Timeout,
 
     //https://www.st.com/content/ccc/resource/technical/document/errata_sheet/f5/50/c9/46/56/db/4a/f6/CD00197763.pdf/files/CD00197763.pdf/jcr:content/translations/en.CD00197763.pdf
     //Timeout during start and stop may indicate that the bus is stuck, therefore it is necessary to reset the I2C
@@ -203,23 +204,23 @@ pub const I2C = struct {
         regs.CR1.modify(.{ .SWRST = 0 });
     }
 
-    fn check_error(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+    fn check_error(i2c: *const I2C, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
         const status = regs.SR1.read();
 
-        var io_err: ?IOError = null;
+        var io_err: ?Error = null;
 
         if (status.AF == 1) {
-            io_err = IOError.AckFailure;
+            io_err = Error.NoAcknowledge;
         } else if (status.ARLO == 1) {
-            io_err = IOError.ArbitrationLoss;
+            io_err = Error.ArbitrationLoss;
         } else if (status.BERR == 1) {
-            io_err = IOError.BusError;
+            io_err = Error.BusError;
         } else if (status.TIMEOUT == 1) {
-            io_err = IOError.BusTimeout;
+            io_err = Error.BusTimeout;
         } else if (timeout) |check| {
             if (check.check_timeout()) {
-                io_err = IOError.Timeout;
+                io_err = Error.Timeout;
             }
         }
 
@@ -240,7 +241,7 @@ pub const I2C = struct {
         });
     }
 
-    fn START(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+    fn START(i2c: *const I2C, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
 
         regs.CR1.modify(.{
@@ -251,11 +252,11 @@ pub const I2C = struct {
         //if start condition is not generated in time, i2c bus need to be reset
         //NOTE: this is a workaround for the errata 2.9.4
         while (regs.SR1.read().START != 1) {
-            i2c.check_error(timeout) catch return IOError.UnrecoverableError;
+            i2c.check_error(timeout) catch return Error.UnrecoverableError;
         }
     }
 
-    fn STOP(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+    fn STOP(i2c: *const I2C, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
 
         //if stop is already set, just wait for it to be cleared
@@ -270,7 +271,7 @@ pub const I2C = struct {
         //if the bus still busy after stop condition, it means that the bus is in an error state, errata: 2.9.7
         while ((regs.CR1.read().STOP != 0) or i2c.is_busy()) {
             if (timeout) |check| {
-                if (check.check_timeout()) return IOError.UnrecoverableError;
+                if (check.check_timeout()) return Error.UnrecoverableError;
             }
         }
     }
@@ -282,7 +283,7 @@ pub const I2C = struct {
         std.mem.doNotOptimizeAway(regs.SR2.raw);
     }
 
-    fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
+    fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
         const addr7 = @as(u8, @intCast(addr));
         const byte: u8 = (addr7 << 1) + IO;
@@ -295,7 +296,7 @@ pub const I2C = struct {
         i2c.clear_flags();
     }
 
-    fn send_10bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
+    fn send_10bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
 
         //10 bits address is sent in 2 bytes
@@ -329,14 +330,14 @@ pub const I2C = struct {
         }
     }
 
-    fn set_addr(i2c: *const I2C, address: Address, rw: u1, timeout: ?Timeout) IOError!void {
+    fn set_addr(i2c: *const I2C, address: Address, rw: u1, timeout: ?Timeout) Error!void {
         switch (address.mode) {
             .@"7bits" => try i2c.send_7bits_addr(address.addr, rw, timeout),
             .@"10bits" => try i2c.send_10bits_addr(address.addr, rw, timeout),
         }
     }
 
-    pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) IOError!void {
+    pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
 
         try i2c.START(timeout);
@@ -368,7 +369,7 @@ pub const I2C = struct {
         try i2c.STOP(timeout);
     }
 
-    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
+    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) Error!void {
         const regs = i2c.regs;
 
         try i2c.START(timeout);
@@ -393,11 +394,11 @@ pub const I2C = struct {
         try i2c.STOP(timeout);
     }
 
-    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Timeout) IOError!void {
+    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Timeout) Error!void {
         return i2c.writev_blocking(address, &.{data}, timeout);
     }
 
-    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Timeout) IOError!void {
+    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Timeout) Error!void {
         return i2c.readv_blocking(address, &.{data}, timeout);
     }
 
