@@ -376,3 +376,23 @@ pub const SPI_Device = struct {
         return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
     }
 };
+
+///
+/// Implementation of a `Clock_Device` that uses the HAL's `time` module.
+///
+pub fn clock_device() Clock_Device {
+    const S = struct {
+        const vtable: Clock_Device.VTable = .{
+            .get_time_since_boot = get_time_since_boot_fn,
+        };
+
+        fn get_time_since_boot_fn(_: *anyopaque) time.Absolute {
+            return hal.time.get_time_since_boot();
+        }
+    };
+
+    return .{
+        .ptr = undefined,
+        .vtable = &S.vtable,
+    };
+}

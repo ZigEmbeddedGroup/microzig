@@ -9,7 +9,6 @@ const i2c = nrf.i2c;
 // TODO: Try the DMA one?
 const i2cdma = nrf.i2cdma;
 
-const ClockDevice = nrf.drivers.ClockDevice;
 const I2C_Device = nrf.drivers.I2C_Device;
 const uart = nrf.uart.num(0);
 const i2c0 = i2c.num(0);
@@ -46,11 +45,10 @@ pub fn main() !void {
     // var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x1F), null);
     var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c device to driver to create sensor instance
-    var cd = ClockDevice{};
     var dev = try TLV493D.init(
         i2c_device.i2c_device(),
         @enumFromInt(0x5E),
-        cd.clock_device(),
+        nrf.drivers.clock_device(),
         .{
             .reset = false,
         },

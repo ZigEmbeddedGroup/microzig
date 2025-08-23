@@ -6,7 +6,6 @@ const nrf = microzig.hal;
 const gpio = nrf.gpio;
 const i2c = nrf.i2c;
 
-const ClockDevice = nrf.drivers.ClockDevice;
 const I2C_Device = nrf.drivers.I2C_Device;
 const ICM_20948 = microzig.drivers.sensor.ICM_20948;
 
@@ -40,12 +39,11 @@ pub fn main() !void {
 
     // Create i2c and clock devices
     var i2c_device = I2C_Device.init(i2c0, null);
-    var cd = ClockDevice{};
     // Pass devices to driver to create sensor instance
     var dev = try ICM_20948.init(
         i2c_device.i2c_device(),
         @enumFromInt(0x69),
-        cd.clock_device(),
+        nrf.drivers.clock_device(),
         .{
             .accel_dlp = .@"6Hz",
             .gyro_dlp = .@"6Hz",
