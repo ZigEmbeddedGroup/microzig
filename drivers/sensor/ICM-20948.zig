@@ -8,6 +8,7 @@
 //! ```zig
 //! var sensor = try ICM_20948.init(
 //!     i2c_device.i2c_device(),
+//!     @enumFromInt(0x69),
 //!     clock.clock_device(),
 //!     .{
 //!         .accel_range = .gs4,
