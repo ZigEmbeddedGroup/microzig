@@ -20,7 +20,8 @@ const Mlx90649Error = error{
 };
 
 pub const MLX90640_Config = struct {
-    i2c: mdf.base.Datagram_Device,
+    i2c: mdf.base.I2C_Device,
+    address: mdf.base.I2C_Device.Address,
     clock: mdf.base.Clock_Device,
     open_air_shift: f32 = 8,
     emissivity: f32 = 0.95,
@@ -89,7 +90,8 @@ pub const MLX90640 = struct {
     frame: [834]u16 = undefined,
     frame_data: [834 * 2]u8 = undefined,
     scratch_data: [768]f32 = undefined,
-    i2c: mdf.base.Datagram_Device,
+    i2c: mdf.base.I2C_Device,
+    address: mdf.base.I2C_Device.Address,
     clock_device: mdf.base.Clock_Device,
     params: parameters,
     emissivity: f32,
@@ -98,6 +100,7 @@ pub const MLX90640 = struct {
     pub fn init(cfg: MLX90640_Config) !Self {
         return .{
             .i2c = cfg.i2c,
+            .address = cfg.address,
             .clock_device = cfg.clock,
             .open_air_shift = cfg.open_air_shift,
             .emissivity = cfg.emissivity,
@@ -112,14 +115,14 @@ pub const MLX90640 = struct {
             .val_be = std.mem.nativeToBig(u16, val),
         };
 
-        try self.i2c.write(std.mem.asBytes(&req));
+        try self.i2c.write(self.address, std.mem.asBytes(&req));
         self.clock_device.sleep_ms(100);
     }
 
     fn write_then_read(self: *Self, reg: Self.registers, buf: []u16) !void {
         const addr: u16 = std.mem.nativeToBig(u16, @intFromEnum(reg));
         const req = std.mem.asBytes(&addr);
-        try self.i2c.write_then_read(req, self.frame_data[0 .. buf.len * 2]);
+        try self.i2c.write_then_read(self.address, req, self.frame_data[0 .. buf.len * 2]);
         for (0.., buf) |i, _| {
             buf[i] = std.mem.readInt(u16, self.frame_data[i * 2 .. (i * 2) + 2][0..2], .big);
         }

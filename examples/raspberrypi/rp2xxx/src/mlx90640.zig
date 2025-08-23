@@ -32,7 +32,8 @@ pub fn main() !void {
     var i2c_device = I2C_Device.init(i2c0, null);
 
     var camera = try MLX90640.init(.{
-        .i2c = i2c_device.datagram_device(@enumFromInt(0x33)),
+        .i2c = i2c_device.i2c_device(),
+        .address = @enumFromInt(0x33),
         .clock = cd.clock_device(),
     });
 

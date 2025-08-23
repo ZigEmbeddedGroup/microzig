@@ -7,17 +7,17 @@ const SetBiasError = Digital_IO.SetBiasError;
 const SetDirError = Digital_IO.SetDirError;
 const WriteError = Digital_IO.WriteError;
 
+const I2CAddress = mdf.base.I2C_Device.Address;
+
 pub const PCF8574_Config = struct {
-    // NOTE: This is a TYPE. Somehow allows direct dispatch
     I2C_Device: type = mdf.base.I2C_Device,
-    Address: type = mdf.base.I2C_Device.Address,
 };
 
 pub fn PCF8574(comptime config: PCF8574_Config) type {
     return struct {
         const Self = @This();
         interface: config.I2C_Device,
-        address: config.Address,
+        address: mdf.base.I2C_Device.Address,
         pins: u8 = 0,
         pin_arr: [8]u8 = undefined,
 
@@ -49,7 +49,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
             return if (read_value & mask != 0) State.high else State.low;
         }
 
-        pub fn init(datagram: config.I2C_Device, address: config.Address) Self {
+        pub fn init(datagram: config.I2C_Device, address: I2CAddress) Self {
             var obj = Self{ .interface = datagram, .address = address };
             for (0..obj.pin_arr.len) |index| {
                 obj.pin_arr[index] = @intCast(index);
