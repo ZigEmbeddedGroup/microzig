@@ -7,12 +7,12 @@
 //!
 const std = @import("std");
 const mdf = @import("../framework.zig");
-const Datagram_Device = mdf.base.Datagram_Device;
+const I2C_Device = mdf.base.I2C_Device;
 const Clock_Device = mdf.base.Clock_Device;
 
 /// TLV493D I2C addresses
-pub const TLV493D_ADDRESS0: u8 = 0x1F;
-pub const TLV493D_ADDRESS1: u8 = 0x5E; // Default
+pub const TLV493D_ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
+pub const TLV493D_ADDRESS1: I2C_Device.Address = @enumFromInt(0x5E); // Default
 
 /// Startup delay in milliseconds
 pub const TLV493D_STARTUPDELAY_MS: u32 = 40;
@@ -35,8 +35,6 @@ pub const Values = struct {
 
 /// TLV493D configuration
 pub const Config = struct {
-    // TODO: With an i2c interface we'd use this to set up the peripheral
-    addr: u8, // No default to force user to set it
     reset: bool = true,
     enable_temp: bool = false,
 };
@@ -145,9 +143,9 @@ const ACCESS_MODE_CONFIGS = [_]AccessModeConfig{
 pub const TLV493D = struct {
     const Self = @This();
 
-    dev: Datagram_Device,
+    dev: I2C_Device,
+    address: I2C_Device.Address,
     clock: Clock_Device,
-    config: Config,
     read_data: ReadRegister,
     write_data: WriteRegister,
     x_data: i12 = 0,
@@ -158,11 +156,11 @@ pub const TLV493D = struct {
     expected_frame_count: u8,
 
     /// Create a new TLV493D instance
-    pub fn init(dev: Datagram_Device, clock: Clock_Device, config: Config) Error!Self {
+    pub fn init(dev: I2C_Device, address: I2C_Device.Address, clock: Clock_Device, config: Config) Error!Self {
         var self = Self{
             .dev = dev,
+            .address = address,
             .clock = clock,
-            .config = config,
             .read_data = @bitCast([_]u8{0} ** 10),
             .write_data = @bitCast([_]u8{0} ** 4),
             // TODO: Add to config
@@ -218,35 +216,31 @@ pub const TLV493D = struct {
 
     /// Reset the sensor using recovery sequence
     fn reset_sensor(self: *Self) Error!void {
-        // TODO: To do this we have to write to the i2c address 0, which we can't do with a datagram
-        // device.
         // On startup the SDA line is sampled. If the line is high, it will listen on address 0x5E.
         // Otherwise, it will listen on 0x1F. The line must be kept stable for 200us.
         // Because we shouldn't be touching the line that early, and SDA is pulled high, it should
         // be assigned 0x5E, but it is better if we can explicitly set it.
         // We can explicitly set the address by writing either 0xFF ox 0x00 to address 0
-        // var reset_data: [1]u8 = undefined;
-        // if (self.config.addr == TLV493D_ADDRESS1)
-        //     reset_data[0] = 0xFF // Set SDA high for address 0x5E
-        // else
-        //     reset_data[0] = 0x00; // Set SDA low for address 0x1F
-        // self.dev.writev(&.{&reset_data}) catch return Error.DatagramError;
+        var reset_data: u8 = 0x00;
+        if (self.address == TLV493D_ADDRESS1)
+            reset_data = 0xFF; // Set SDA high for address 0x5E
 
         // Send recovery frame, clearing bad state
-        self.dev.writev(&.{&.{0xFF}}) catch return Error.DatagramError;
+        self.dev.writev(.general_call, &.{&.{reset_data}}) catch return Error.DatagramError;
     }
 
     /// Read all registers from sensor
     fn read_out(self: *Self) Error!void {
         // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
-        const bytes_read = self.dev.readv(&.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
         if (bytes_read != 10) return Error.InvalidData;
     }
 
     /// Write configuration to sensor
     fn write_out(self: *Self) Error!void {
         self.calc_parity();
-        self.dev.writev(&.{std.mem.asBytes(&self.write_data)}) catch return Error.DatagramError;
+        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch
+            return Error.DatagramError;
     }
 
     /// Set access mode

@@ -44,16 +44,14 @@ pub fn main() !void {
 
     // Create i2c datagram device
     // var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x1F), null);
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x5E), null);
+    var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c device to driver to create sensor instance
     var cd = ClockDevice{};
     var dev = try TLV493D.init(
-        i2c_device.datagram_device(),
+        i2c_device.i2c_device(),
+        @enumFromInt(0x5E),
         cd.clock_device(),
         .{
-            // The device needs to know the address because apparently it has a
-            // different protocol to reset it if the address isn't the default
-            .addr = 0x5E,
             .reset = false,
         },
     );
