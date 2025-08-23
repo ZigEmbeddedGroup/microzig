@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) !void {
         // configuration
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/microzig.zig"),
+            .target = b.graph.host,
         }),
     });
 
