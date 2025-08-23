@@ -201,10 +201,6 @@ pub const Flags = packed struct(u32) {
     md5_checksum_present: bool,
     extension_tags_present: bool,
     padding: u16 = 0,
-
-    comptime {
-        assert(@sizeOf(Flags) == @sizeOf(u32));
-    }
 };
 
 const first_magic = 0x0a324655;
