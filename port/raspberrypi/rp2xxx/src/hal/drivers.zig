@@ -216,7 +216,7 @@ pub const I2C_Device = struct {
         address: I2CAddress,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
-    ) !void {
+    ) I2CError!void {
         return dev.bus.writev_then_readv_blocking(address, write_chunks, read_chunks, dev.timeout) catch |err| switch (err) {
             error.TxFifoFlushed => I2CError.UnknownAbort,
             else => |e| e,
