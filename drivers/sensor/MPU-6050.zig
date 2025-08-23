@@ -23,11 +23,12 @@
 
 const std = @import("std");
 const mdf = @import("../framework.zig");
-const Datagram_Device = mdf.base.Datagram_Device;
+const I2C_Device = mdf.base.I2C_Device;
 const Clock_Device = mdf.base.Clock_Device;
 
 pub const MPU_6050 = struct {
-    dev: Datagram_Device,
+    dev: I2C_Device,
+    address: I2C_Device.Address,
     clock: Clock_Device,
     accel_range: AccelRange,
     gyro_range: GyroRange,
@@ -37,13 +38,14 @@ pub const MPU_6050 = struct {
     pub const TEMP_OFFSET: f32 = 36.53;
     pub const TEMP_SCALE: f32 = 1.0 / TEMP_SENSITIVITY;
 
-    pub const Error = Datagram_Device.AnyError;
+    pub const Error = I2C_Device.Error;
     pub const VerifyError = error{ DeviceNotResponding, UnexpectedDeviceId };
     pub const InitError = Error || VerifyError;
 
-    pub fn init(dev: Datagram_Device, clock: Clock_Device) InitError!MPU_6050 {
+    pub fn init(dev: I2C_Device, address: I2C_Device.Address, clock: Clock_Device) InitError!MPU_6050 {
         var self: MPU_6050 = .{
             .dev = dev,
+            .address = address,
             .clock = clock,
             .accel_range = undefined,
             .gyro_range = undefined,
@@ -351,27 +353,18 @@ pub const MPU_6050 = struct {
     };
 
     fn write_byte(self: MPU_6050, reg: Register, value: u8) Error!void {
-        try self.dev.connect();
-        defer self.dev.disconnect();
-
-        try self.dev.write(&.{ @intFromEnum(reg), value });
+        try self.dev.write(self.address, &.{ @intFromEnum(reg), value });
     }
 
     fn read_byte(self: MPU_6050, reg: Register) Error!u8 {
-        try self.dev.connect();
-        defer self.dev.disconnect();
-
         var value: u8 = undefined;
-        try self.dev.write_then_read(&.{@intFromEnum(reg)}, (&value)[0..1]);
+        try self.dev.write_then_read(self.address, &.{@intFromEnum(reg)}, (&value)[0..1]);
         return value;
     }
 
     fn read_raw_data(self: MPU_6050, reg: Register, comptime n: usize) Error![n]i16 {
-        try self.dev.connect();
-        defer self.dev.disconnect();
-
         var buf: [2 * n]u8 = undefined;
-        try self.dev.write_then_read(&.{@intFromEnum(reg)}, &buf);
+        try self.dev.write_then_read(self.address, &.{@intFromEnum(reg)}, &buf);
         var out: [n]i16 = undefined;
         inline for (0..n) |i| {
             out[i] = @bitCast(@as(u16, buf[2 * i]) << 8 | buf[2 * i + 1]);
