@@ -157,34 +157,34 @@ pub const I2C_Device = struct {
     }
 
     pub fn read(dev: I2C_Device, address: I2CAddress, buf: []u8) I2CError!usize {
-        dev.bus.read_blocking(address, buf, dev.timeout) catch |err| switch (err) {
-            error.FifoExceeded => return I2CError.UnknownAbort,
-            error.ArbitrationLost => return I2CError.UnknownAbort,
-            error.ExecutionIncomplete => return I2CError.UnknownAbort,
-            error.CommandNumberExceeded => return I2CError.UnknownAbort,
-            else => |e| return e,
+        dev.bus.read_blocking(address, buf, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
         };
         return buf.len;
     }
 
     pub fn readv(dev: I2C_Device, address: I2CAddress, chunks: []const []u8) I2CError!usize {
-        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| switch (err) {
-            error.FifoExceeded => return I2CError.UnknownAbort,
-            error.ArbitrationLost => return I2CError.UnknownAbort,
-            error.ExecutionIncomplete => return I2CError.UnknownAbort,
-            error.CommandNumberExceeded => return I2CError.UnknownAbort,
-            else => |e| return e,
+        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
         };
         return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
     }
 
     pub fn write_then_read(dev: I2C_Device, address: I2CAddress, src: []const u8, dst: []u8) I2CError!void {
-        dev.bus.write_then_read_blocking(address, src, dst, dev.timeout) catch |err| switch (err) {
-            error.FifoExceeded => return I2CError.UnknownAbort,
-            error.ArbitrationLost => return I2CError.UnknownAbort,
-            error.ExecutionIncomplete => return I2CError.UnknownAbort,
-            error.CommandNumberExceeded => return I2CError.UnknownAbort,
-            else => |e| return e,
+        dev.bus.write_then_read_blocking(address, src, dst, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
         };
     }
 
@@ -195,19 +195,21 @@ pub const I2C_Device = struct {
         read_chunks: []const []u8,
     ) I2CError!void {
         // TODO: When writev_then_readv_blocking is implemented in the HAL, use that.
-        dev.bus.writev_blocking(address, write_chunks, dev.timeout) catch |err| switch (err) {
-            error.FifoExceeded => return I2CError.UnknownAbort,
-            error.ArbitrationLost => return I2CError.UnknownAbort,
-            error.ExecutionIncomplete => return I2CError.UnknownAbort,
-            error.CommandNumberExceeded => return I2CError.UnknownAbort,
-            else => |e| return e,
+        // NOTE: Since we are making two calls with the same timeout, we are effectively doubling
+        // the timeout here.
+        dev.bus.writev_blocking(address, write_chunks, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
         };
-        dev.bus.readv_blocking(address, read_chunks, dev.timeout) catch |err| switch (err) {
-            error.FifoExceeded => return I2CError.UnknownAbort,
-            error.ArbitrationLost => return I2CError.UnknownAbort,
-            error.ExecutionIncomplete => return I2CError.UnknownAbort,
-            error.CommandNumberExceeded => return I2CError.UnknownAbort,
-            else => |e| return e,
+        dev.bus.readv_blocking(address, read_chunks, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
         };
     }
 

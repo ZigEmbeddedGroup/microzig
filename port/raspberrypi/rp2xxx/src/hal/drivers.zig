@@ -192,17 +192,17 @@ pub const I2C_Device = struct {
     }
 
     pub fn read(dev: I2C_Device, address: I2CAddress, buf: []u8) I2CError!usize {
-        dev.bus.read_blocking(address, buf, dev.timeout) catch |err| switch (err) {
-            error.TxFifoFlushed => return I2CError.UnknownAbort,
-            else => |e| return e,
+        dev.bus.read_blocking(address, buf, dev.timeout) catch |err| return switch (err) {
+            error.TxFifoFlushed => I2CError.UnknownAbort,
+            else => |e| e,
         };
         return buf.len;
     }
 
     pub fn readv(dev: I2C_Device, address: I2CAddress, chunks: []const []u8) I2CError!usize {
-        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| switch (err) {
-            error.TxFifoFlushed => return I2CError.UnknownAbort,
-            else => |e| return e,
+        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| return switch (err) {
+            error.TxFifoFlushed => I2CError.UnknownAbort,
+            else => |e| e,
         };
         return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
     }
