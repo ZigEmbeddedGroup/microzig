@@ -5,7 +5,6 @@ const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
-const ClockDevice = rp2xxx.drivers.ClockDevice;
 const ULN2003 = microzig.drivers.stepper.ULN2003;
 
 const uart = rp2xxx.uart.instance.num(0);
@@ -31,8 +30,6 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    var cd = ClockDevice{};
-
     // Setup all pins for the stepper driver
     var pins: struct {
         in1: GPIO_Device,
@@ -51,7 +48,7 @@ pub fn main() !void {
         .in2_pin = pins.in2.digital_io(),
         .in3_pin = pins.in3.digital_io(),
         .in4_pin = pins.in4.digital_io(),
-        .clock_device = cd.clock_device(),
+        .clock_device = rp2xxx.drivers.clock_device(),
         .max_rpm = 30,
     });
 
