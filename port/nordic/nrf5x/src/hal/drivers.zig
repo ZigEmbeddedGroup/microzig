@@ -16,7 +16,6 @@ const Digital_IO = drivers.Digital_IO;
 const Clock_Device = drivers.Clock_Device;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
-const I2CAddressError = drivers.I2C_Device.Address.Error;
 
 ///
 /// A datagram device attached to an I²C bus.
