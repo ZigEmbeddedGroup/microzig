@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const util = @import("util.zig");
 
 const spi_f1 = microzig.chip.types.peripherals.spi_f1;
-const SpiRegs = *volatile spi_f1.SPI;
+const spi_t = spi_f1.SPI;
 
 const ChipSelect = enum {
     NSS, //hardware slave management using NSS pin
@@ -21,13 +21,13 @@ const Config = struct {
 };
 
 pub const Instances = util.create_peripheral_enum("SPI", "spi_f1");
-fn get_regs(instance: Instances) SpiRegs {
+fn get_regs(comptime instance: Instances) *volatile spi_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
 ///TODO: 3-Wire mode, Slave mode, bidirectional mode
 pub const SPI = struct {
-    spi: SpiRegs,
+    spi: *volatile spi_t,
 
     pub fn apply(self: *const SPI, config: Config) void {
         self.spi.CR1.raw = 0; // Disable SPI end clear configs before configuration
@@ -98,8 +98,8 @@ pub const SPI = struct {
     }
 
     ///this function is full-duplex only and does not support 3-wire mode and data burst
-    /// if the revice buffer is bigger than the transmit buffer dummy bytes will be sent until the receive buffer is full
-    /// if the transmit buffer is bigger than the receive buffer, all additional bytes will be ignored
+    ///if the revice buffer is bigger than the transmit buffer dummy bytes will be sent until the receive buffer is full
+    ///if the transmit buffer is bigger than the receive buffer, all additional bytes will be ignored
     pub fn transceive_blocking(self: *const SPI, out: []const u8, in: []u8) void {
         const out_len = out.len;
         const in_len = in.len;
@@ -134,7 +134,7 @@ pub const SPI = struct {
         self.busy_wait();
     }
 
-    pub fn init(spi_inst: Instances) SPI {
+    pub fn init(comptime spi_inst: Instances) SPI {
         return .{ .spi = get_regs(spi_inst) };
     }
 };

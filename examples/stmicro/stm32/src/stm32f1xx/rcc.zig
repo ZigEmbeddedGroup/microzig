@@ -24,7 +24,7 @@ const clk_config = rcc.Config{
 };
 
 pub fn main() !void {
-    try rcc.clock_init(clk_config);
+    try rcc.apply_clock(clk_config);
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.AFIO);
     rcc.enable_clock(.USART1);
