@@ -656,10 +656,12 @@ const systick_base = scs_base + 0x0010;
 const nvic_base = scs_base + 0x0100;
 const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
+const fpu_base = scs_base + 0x0F34;
 
 const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
-const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
+const mpu_present = @hasDecl(properties, "cpu.mpuPresent") and std.mem.eql(u8, properties.@"cpu.mpuPresent", "true");
+const fpu_present = @hasDecl(properties, "cpu.fpuPresent") and std.mem.eql(u8, properties.@"cpu.fpuPresent", "true");
 
 const core = blk: {
     break :blk switch (cortex_m) {
@@ -682,6 +684,12 @@ pub const peripherals = struct {
     /// System Control Block (SCB).
     pub const scb: *volatile types.peripherals.SystemControlBlock = @ptrFromInt(scb_base);
 
+    /// Floating Point Unit (FPU).
+    pub const fpu: *volatile types.peripherals.FloatingPointUnit = if (fpu_present)
+        @ptrFromInt(fpu_base)
+    else
+        @compileError("this CPU does not have an FPU");
+
     /// Nested Vector Interrupt Controller (NVIC).
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
 
@@ -692,7 +700,7 @@ pub const peripherals = struct {
     pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
         @ptrFromInt(mpu_base)
     else
-        @compileError("This chip does not have a MPU.");
+        @compileError("this CPU does not have an MPU");
 
     pub const dbg: (if (@hasDecl(core, "DebugRegisters"))
         *volatile core.DebugRegisters
@@ -714,6 +722,12 @@ pub const types = struct {
     pub const peripherals = struct {
         /// System Control Block (SCB).
         pub const SystemControlBlock = core.SystemControlBlock;
+
+        /// Floating Point Unit (FPU).
+        pub const FloatingPointUnit = if (@hasDecl(core, "FloatingPointUnit"))
+            core.FloatingPointUnit
+        else
+            @compileError("this CPU does not have an FPU definition");
 
         /// Nested Vector Interrupt Controller (NVIC).
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
@@ -779,6 +793,6 @@ pub const types = struct {
         pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
             core.MemoryProtectionUnit
         else
-            @compileError("This cpu does not have a MPU.");
+            @compileError("this CPU does not have an MPU definition");
     };
 };
