@@ -17,31 +17,28 @@ pub const Options = struct {
 pub const Archive = struct {
     allocator: Allocator,
     blocks: std.ArrayList(Block),
-    families: std.AutoHashMap(FamilyId, void),
+    families: std.AutoHashMapUnmanaged(FamilyId, void),
     // TODO: keep track of contained files
 
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Archive {
-        return Self{
+        return .{
             .allocator = allocator,
-            .blocks = std.ArrayList(Block).init(allocator),
-            .families = std.AutoHashMap(FamilyId, void).init(allocator),
+            .blocks = .empty,
+            .families = .empty,
         };
     }
 
     pub fn deinit(self: *Self) void {
-        self.blocks.deinit();
-        self.families.deinit();
+        self.blocks.deinit(self.allocator);
+        self.families.deinit(self.allocator);
     }
 
-    pub fn add_elf(self: *Self, path: []const u8, opts: Options) !void {
+    pub fn add_elf(self: *Self, reader: *std.fs.File.Reader, opts: Options) !void {
         // TODO: ensures this reports an error if there is a collision
         if (opts.family_id) |family_id|
-            try self.families.putNoClobber(family_id, {});
-
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+            try self.families.putNoClobber(self.allocator, family_id, {});
 
         const Segment = struct {
             addr: u32,
@@ -53,15 +50,15 @@ pub const Archive = struct {
             }
         };
 
-        var segments = std.ArrayList(Segment).init(self.allocator);
-        defer segments.deinit();
+        var segments: std.ArrayList(Segment) = .empty;
+        defer segments.deinit(self.allocator);
 
-        const header = try std.elf.Header.read(file);
-        var it = header.program_header_iterator(file);
+        const header = try std.elf.Header.read(&reader.interface);
+        var it = header.iterateProgramHeaders(reader);
         while (try it.next()) |prog_hdr|
             if (prog_hdr.p_type == std.elf.PT_LOAD and prog_hdr.p_memsz > 0 and prog_hdr.p_filesz > 0) {
                 std.log.debug("segment: {}", .{prog_hdr});
-                try segments.append(.{
+                try segments.append(self.allocator, .{
                     .addr = @as(u32, @intCast(prog_hdr.p_paddr)),
                     .file_offset = @as(u32, @intCast(prog_hdr.p_offset)),
                     .size = @as(u32, @intCast(prog_hdr.p_memsz)),
@@ -80,7 +77,7 @@ pub const Archive = struct {
             while (segment_offset < segment.size) {
                 const addr = segment.addr + segment_offset;
                 if (first or addr >= self.blocks.items[self.blocks.items.len - 1].target_addr + prog_page_size) {
-                    try self.blocks.append(.{
+                    try self.blocks.append(self.allocator, .{
                         .flags = .{
                             .not_main_flash = false,
                             .file_container = false,
@@ -107,8 +104,8 @@ pub const Archive = struct {
                 const block_offset = addr - block.target_addr;
                 const n_bytes = @min(prog_page_size - block_offset, segment.size - segment_offset);
 
-                try file.seekTo(segment.file_offset + segment_offset);
-                try file.reader().readNoEof(block.data[block_offset..][0..n_bytes]);
+                try reader.seekTo(segment.file_offset + segment_offset);
+                try reader.interface.readSliceAll(block.data[block_offset..][0..n_bytes]);
 
                 segment_offset += n_bytes;
             }
@@ -118,7 +115,7 @@ pub const Archive = struct {
             @panic("TODO: bundle source in UF2 file");
     }
 
-    pub fn write_to(self: *Self, writer: anytype) !void {
+    pub fn write_to(self: *Self, writer: *std.Io.Writer) !void {
         for (self.blocks.items, 0..) |*block, i| {
             block.block_number = @as(u32, @intCast(i));
             block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
@@ -139,7 +136,7 @@ pub const Archive = struct {
 
         var target_addr: u32 = 0;
         while (true) {
-            try self.blocks.append(.{
+            try self.blocks.append(self.allocator, .{
                 .flags = .{
                     .not_main_flash = true,
                     .file_container = true,
@@ -258,7 +255,7 @@ pub const Block = extern struct {
         return block;
     }
 
-    pub fn write_to(self: Block, writer: anytype) !void {
+    pub fn write_to(self: Block, writer: *std.Io.Writer) !void {
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
                 u32 => try writer.writeInt(u32, @field(self, field.name), .little),

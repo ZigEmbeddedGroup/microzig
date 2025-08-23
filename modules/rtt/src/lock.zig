@@ -16,7 +16,7 @@ pub fn GenericLock(
         }
 
         fn type_erased_lock(context: *anyopaque) void {
-            const ptr: *const Context = @alignCast(@ptrCast(context));
+            const ptr: *const Context = @ptrCast(@alignCast(context));
             return lock_fn(ptr.*);
         }
 
@@ -25,7 +25,7 @@ pub fn GenericLock(
         }
 
         fn type_erased_unlock(context: *anyopaque) void {
-            const ptr: *const Context = @alignCast(@ptrCast(context));
+            const ptr: *const Context = @ptrCast(@alignCast(context));
             return unlock_fn(ptr.*);
         }
 
@@ -64,7 +64,7 @@ pub const default = struct {
                 \\msr   primask, r1
                 : [val] "=r" (val),
                 :
-                : "r1", "cc"
+                : .{ .r1 = true, .cc = true }
             );
             context.isr_reg_value = val;
         }
@@ -89,7 +89,7 @@ pub const default = struct {
                 \\msr   basepri, r1
                 : [val] "=r" (val),
                 : [MAX_ISR_PRIORITY] "i" (MAX_ISR_PRIORITY),
-                : "r1", "cc"
+                : .{ .r1 = true, .cc = true }
             );
             context.isr_reg_value = val;
         }
@@ -113,7 +113,7 @@ pub const default = struct {
                 \\msr CPSR_C, r1
                 : [val] "=r" (val),
                 :
-                : "r1", "cc"
+                : .{ .r1 = true, .cc = true }
             );
             context.isr_reg_value = val;
         }
@@ -129,7 +129,7 @@ pub const default = struct {
                 \\msr CPSR_C, r1
                 :
                 : [val] "r" (val),
-                : "r0", "r1", "cc"
+                : .{ .r0 = true, .r1 = true, .cc = true }
             );
         }
     };

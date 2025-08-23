@@ -6,7 +6,7 @@ pub const MemoryBarrierFn = fn () callconv(.Inline) void;
 pub inline fn empty_memory_barrier() void {}
 
 inline fn arm_memory_barrier() void {
-    asm volatile ("DMB" ::: "memory");
+    asm volatile ("DMB" ::: .{ .memory = true });
 }
 
 inline fn error_memory_barrier() void {

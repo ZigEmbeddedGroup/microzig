@@ -263,6 +263,5 @@ fn busy_wait_at_least(delay_cycles: u32) void {
         }
         : [cycles] "+r" (_cycles),
         :
-        : "cc", "memory"
-    );
+        : .{ .memory = true });
 }
