@@ -23,6 +23,7 @@ pub const lookup_function = chip_specific.lookup_function;
 
 pub fn lookup_and_cache_data(comptime code: Data) ?*const anyopaque {
     const S = struct {
+        const _code = code;
         var data: ?*const anyopaque = null;
     };
 
@@ -32,6 +33,7 @@ pub fn lookup_and_cache_data(comptime code: Data) ?*const anyopaque {
 
 pub fn lookup_and_cache_function(comptime code: Function) ?*const anyopaque {
     const S = struct {
+        const _code = code;
         var f: ?*const anyopaque = null;
     };
 
@@ -110,7 +112,7 @@ pub fn memset(dest: []u8, c: u8) []u8 {
     switch (chip) {
         .RP2040 => {
             const f: *const signatures.memset = @alignCast(@ptrCast(lookup_and_cache_function(.memset)));
-            return f(dest.ptr, c, dest.len);
+            return f(dest.ptr, c, dest.len)[0..dest.len];
         },
         .RP2350 => {
             @memset(dest, c);
@@ -119,12 +121,13 @@ pub fn memset(dest: []u8, c: u8) []u8 {
     }
 }
 
-/// Copies n bytes from src to dest. The number of bytes copied is the size of the smaller slice.
+/// Copies bytes from src to dest (must have the same length).
 pub fn memcpy(dest: []u8, src: []const u8) []u8 {
+    std.debug.assert(dest.len == src.len);
     switch (chip) {
         .RP2040 => {
             const f: *const signatures.memcpy = @alignCast(@ptrCast(lookup_and_cache_function(.memcpy)));
-            return f(dest.ptr, src.ptr, dest.len);
+            return f(dest.ptr, src.ptr, dest.len)[0..dest.len];
         },
         .RP2350 => {
             @memcpy(dest, src);
@@ -209,9 +212,4 @@ pub fn reset_to_usb_boot() void {
             unreachable;
         },
     }
-}
-
-comptime {
-    // export intrinsics
-    _ = chip_specific;
 }
