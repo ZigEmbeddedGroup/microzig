@@ -13,7 +13,7 @@ pub const RGB888 = Color(.{ u8, u8, u8 });
 
 /// Provides a namespace with the default colors for the given `Color` type.
 pub fn Color(comptime Ts: [3]type) type {
-    return extern struct {
+    return packed struct {
         const Self = @This();
 
         r: Ts[0],
