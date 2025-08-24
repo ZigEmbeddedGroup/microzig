@@ -68,8 +68,7 @@ pub fn main() !void {
                 "gyro: x {d: >6.2} y {d: >6.2} z {d: >6.2} (rads) " ++
                 "temp: {d: >5.2}°C " ++
                 "mag: x {d: >6.2} y {d: >6.2} z {d: >6.2} (µT)",
-            .{ data.accel.x, data.accel.y, data.accel.z, data.gyro.x, data.gyro.y, data.gyro.z, \
-                data.temp, data.mag.x, data.mag.y, data.mag.z },
+            .{ data.accel.x, data.accel.y, data.accel.z, data.gyro.x, data.gyro.y, data.gyro.z, data.temp, data.mag.x, data.mag.y, data.mag.z },
         );
 
         sleep_ms(500);
