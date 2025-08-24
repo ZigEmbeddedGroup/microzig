@@ -17,7 +17,10 @@ pub fn main() !void {
         const elf_file = try std.fs.cwd().openFile(data.elf_path, .{});
         defer elf_file.close();
 
-        var elf = try printer.Elf.init(allocator, elf_file);
+        var buf: [4096]u8 = undefined;
+        var file_reader = elf_file.reader(&buf);
+
+        var elf = try printer.Elf.init(allocator, &file_reader);
         defer elf.deinit(allocator);
 
         var debug_info = try printer.DebugInfo.init(allocator, elf);
