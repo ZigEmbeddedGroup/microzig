@@ -3,6 +3,7 @@
 //!
 
 const std = @import("std");
+const Datagram = @import("Datagram_Device.zig");
 
 /// Error is a set of errors that make sense for I2C at the protocol level
 pub const Error = error{
@@ -66,6 +67,12 @@ pub const Address = enum(u7) {
     }
 };
 
+pub const I2C_Datagram = struct {
+    addr: Address,
+    bus: *const I2C_Device,
+    interface: Datagram,
+};
+
 const I2C_Device = @This();
 
 /// Pointer to the object implementing the driver.
@@ -116,6 +123,34 @@ pub fn readv(dev: I2C_Device, address: Address, datagrams: []const []u8) Interfa
     const readv_fn = dev.vtable.readv_fn orelse return InterfaceError.Unsupported;
     return readv_fn(dev.ptr, address, datagrams);
 }
+
+//just a test, no error return yet
+fn datagram_readv(dd: *const Datagram, datagrams: []const []u8) Datagram.ReadError!usize {
+    const dev: *const I2C_Datagram = @alignCast(@fieldParentPtr("interface", dd));
+    return dev.bus.readv(dev.addr, datagrams) catch Datagram.ReadError.Timeout;
+}
+
+//just a test, no error return yet
+fn datagram_writev(dd: *const Datagram, datagrams: []const []const u8) Datagram.WriteError!void {
+    const dev: *const I2C_Datagram = @alignCast(@fieldParentPtr("interface", dd));
+    dev.bus.writev(dev.addr, datagrams) catch {};
+}
+
+pub fn Datagram_Device(dev: *const I2C_Device, addr: Address) I2C_Datagram {
+    return I2C_Datagram{
+        .bus = dev,
+        .addr = addr,
+        .interface = Datagram{ .vtable = &Datagram_Vtable },
+    };
+}
+
+const Datagram_Vtable = Datagram.VTable{
+    .connect_fn = null,
+    .disconnect_fn = null,
+    .writev_then_readv_fn = null,
+    .readv_fn = datagram_readv,
+    .writev_fn = datagram_writev,
+};
 
 pub const VTable = struct {
     writev_fn: ?*const fn (*anyopaque, Address, datagrams: []const []const u8) InterfaceError!void,
