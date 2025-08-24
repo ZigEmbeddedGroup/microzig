@@ -20,7 +20,7 @@ pub fn main() !void {
         const file = try std.fs.cwd().openFile(args[1], .{});
         defer file.close();
 
-        var blocks = std.ArrayList(uf2.Block).init(std.heap.page_allocator);
+        var blocks = std.array_list.Managed(uf2.Block).init(std.heap.page_allocator);
         defer blocks.deinit();
 
         while (true) {

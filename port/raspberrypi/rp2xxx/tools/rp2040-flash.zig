@@ -230,7 +230,7 @@ fn auto_detect_pico(allocator: std.mem.Allocator) !?[]const u8 {
                 path: []const u8,
             };
 
-            var picos = std.ArrayList(Device).init(allocator);
+            var picos = std.array_list.Managed(Device).init(allocator);
             defer picos.deinit();
 
             var base_dir = try std.fs.openIterableDirAbsolute("/sys/block/", .{});

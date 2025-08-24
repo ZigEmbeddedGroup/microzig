@@ -16,7 +16,7 @@ pub const Options = struct {
 
 pub const Archive = struct {
     allocator: Allocator,
-    blocks: std.ArrayList(Block),
+    blocks: std.array_list.Managed(Block),
     families: std.AutoHashMapUnmanaged(FamilyId, void),
     // TODO: keep track of contained files
 
@@ -50,7 +50,7 @@ pub const Archive = struct {
             }
         };
 
-        var segments: std.ArrayList(Segment) = .empty;
+        var segments: std.array_list.Managed(Segment) = .empty;
         defer segments.deinit(self.allocator);
 
         const header = try std.elf.Header.read(&reader.interface);

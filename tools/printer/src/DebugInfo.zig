@@ -1,6 +1,6 @@
 const std = @import("std");
 const dwarf = std.dwarf;
-const ArrayListUnmanaged = std.ArrayListUnmanaged;
+const array_list.ManagedUnmanaged = std.ArrayListUnmanaged;
 const Elf = @import("Elf.zig");
 
 const DebugInfo = @This();
@@ -121,11 +121,11 @@ pub fn query(self: *DebugInfo, address: u64) QueryResult {
 
 const Parser = struct {
     arena: std.mem.Allocator,
-    directories: ArrayListUnmanaged([]const u8) = .empty,
-    files: ArrayListUnmanaged(File) = .empty,
-    loc_list: ArrayListUnmanaged(SourceLocation) = .empty,
-    compile_unit_names: ArrayListUnmanaged([]const u8) = .empty,
-    functions: ArrayListUnmanaged(Function) = .empty,
+    directories: array_list.ManagedUnmanaged([]const u8) = .empty,
+    files: array_list.ManagedUnmanaged(File) = .empty,
+    loc_list: array_list.ManagedUnmanaged(SourceLocation) = .empty,
+    compile_unit_names: array_list.ManagedUnmanaged([]const u8) = .empty,
+    functions: array_list.ManagedUnmanaged(Function) = .empty,
 
     fn parse_elf(self: *Parser, elf: Elf) !void {
         var reader: std.debug.FixedBufferReader = .{
@@ -272,7 +272,7 @@ const Parser = struct {
             const tag = try reader.readUleb128(u64);
             const has_children = try reader.readByte();
 
-            var attrs: ArrayListUnmanaged(AbbrevDecl.Attrib) = .empty;
+            var attrs: array_list.ManagedUnmanaged(AbbrevDecl.Attrib) = .empty;
 
             while (true) {
                 const id = try reader.readUleb128(u64);

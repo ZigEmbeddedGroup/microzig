@@ -22,7 +22,7 @@ pub fn main() !void {
     var out = try std.fs.cwd().createFile(argv[1], .{});
     defer out.close();
 
-    var buf = std.ArrayList(u8).init(allocator);
+    var buf = std.array_list.Managed(u8).init(allocator);
     defer buf.deinit();
 
     const writer = buf.writer();
@@ -114,7 +114,7 @@ pub fn main() !void {
             }
         };
 
-        var items = std.ArrayList(BitSet).init(allocator);
+        var items = std.array_list.Managed(BitSet).init(allocator);
         defer items.deinit();
 
         var it = map.iterator();

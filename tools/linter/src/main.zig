@@ -16,7 +16,7 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    var issues: std.ArrayList(Issue) = .init(allocator);
+    var issues: std.array_list.Managed(Issue) = .init(allocator);
     defer issues.deinit();
 
     for (args[1..]) |path| {
@@ -115,7 +115,7 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
     if (str.len == 0)
         return str;
 
-    var ret = std.ArrayList(u8).init(arena);
+    var ret = std.array_list.Managed(u8).init(arena);
     errdefer ret.deinit();
 
     if (std.ascii.isUpper(str[0])) {

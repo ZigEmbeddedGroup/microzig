@@ -382,7 +382,7 @@ fn add_test_suite_update(
 }
 
 fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
-    var code = std.ArrayList(u8).init(b.allocator);
+    var code = std.array_list.Managed(u8).init(b.allocator);
     defer code.deinit();
 
     var line_buffer: [4096]u8 = undefined;

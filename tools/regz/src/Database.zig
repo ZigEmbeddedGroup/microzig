@@ -951,7 +951,7 @@ pub fn get_nested_struct_fields_with_calculated_size(
     gpa: Allocator,
     struct_id: StructID,
 ) ![]NestedStructField {
-    var ret: std.ArrayList(NestedStructField) = .{};
+    var ret: std.array_list.Managed(NestedStructField) = .{};
     defer ret.deinit(gpa);
 
     const nested_struct_fields = try db.get_nested_struct_fields(gpa, struct_id);
@@ -2109,7 +2109,7 @@ pub fn cleanup_unused_enums(db: *Database) !void {
 }
 
 pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
-    var list: std.ArrayList(std.json.Parsed(Patch)) = .{};
+    var list: std.array_list.Managed(std.json.Parsed(Patch)) = .{};
     defer {
         for (list.items) |*entry| entry.deinit();
         list.deinit(db.gpa);

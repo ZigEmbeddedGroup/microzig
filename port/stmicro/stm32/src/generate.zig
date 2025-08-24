@@ -30,7 +30,7 @@ pub fn main() !void {
     var data_dir = try package_dir.openDir("data", .{});
     defer data_dir.close();
 
-    var chip_files = std.ArrayList(std.json.Parsed(ChipFile)).init(allocator);
+    var chip_files = std.array_list.Managed(std.json.Parsed(ChipFile)).init(allocator);
     defer {
         for (chip_files.items) |chip_file|
             chip_file.deinit();
@@ -174,7 +174,7 @@ fn generate_chips_file(
         );
 
         {
-            var chip_memory = try std.ArrayList(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
+            var chip_memory = try std.array_list.Managed(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
             defer chip_memory.deinit();
 
             // Some flash bank regions are not merged so we better do that.

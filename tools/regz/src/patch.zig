@@ -47,7 +47,7 @@ pub const Patch = union(enum) {
 
 /// List for assembling patches in build scripts
 pub const PatchList = struct {
-    entries: std.ArrayList(Patch),
+    entries: std.array_list.Managed(Patch),
 
     pub fn append(list: *PatchList, patch: Patch) void {
         list.append(patch) catch @panic("OOM");

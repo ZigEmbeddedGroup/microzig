@@ -326,7 +326,7 @@ const TypeID = union(enum) {
 // code. Since this is only used in code generation, just going to stuff it in
 // the arena allocator
 fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]const u8 {
-    var full_name_components: std.ArrayList([]const u8) = .{};
+    var full_name_components: std.array_list.Managed([]const u8) = .{};
     defer full_name_components.deinit(allocator);
 
     var current_id = type_id;
@@ -734,7 +734,7 @@ fn write_mode_enum_and_fn(
     );
 
     for (modes) |mode| {
-        var components: std.ArrayList([]const u8) = .{};
+        var components: std.array_list.Managed([]const u8) = .{};
         defer components.deinit(db.gpa);
 
         var tok_it = std.mem.tokenizeScalar(u8, mode.qualifier, '.');
@@ -1158,7 +1158,7 @@ fn write_fields(
 ) !void {
     // We first expand every 'array field' into its consituent fields,
     // named e.g. `@OISN[0]`, `@OISN[1]`, etc. for `field.name` OISN.
-    var expanded_fields: std.ArrayList(Database.StructField) = .empty;
+    var expanded_fields: std.array_list.Managed(Database.StructField) = .empty;
     for (fields) |field| {
         if (field.count) |count| {
             var stride = field.stride orelse field.size_bits;
@@ -1552,7 +1552,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_instantiation(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1593,7 +1593,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1635,7 +1635,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_modes(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1707,7 +1707,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_enum(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1743,7 +1743,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1778,7 +1778,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_named_enum(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1817,7 +1817,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1854,7 +1854,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.namespaced_register_groups(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1908,7 +1908,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1950,7 +1950,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_count(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1992,7 +1992,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2035,7 +2035,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.register_with_count(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2077,7 +2077,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.register_with_count_and_fields(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2122,7 +2122,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2160,7 +2160,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2195,7 +2195,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.interrupts_avr(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2235,7 +2235,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2271,7 +2271,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.enums_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2314,7 +2314,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //
 //    try db.backup("value_collision.regz");
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2350,7 +2350,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2386,7 +2386,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2424,7 +2424,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //
 //    try db.backup("nested_struct_field_in_a_peripheral.regz");
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2464,7 +2464,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2506,7 +2506,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2548,7 +2548,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2591,7 +2591,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });

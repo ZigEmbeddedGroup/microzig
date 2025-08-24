@@ -94,7 +94,7 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.fs.File.Reader) !Elf
         }
     }
 
-    var loaded_regions: std.ArrayListUnmanaged(Region) = .empty;
+    var loaded_regions: std.array_list.ManagedUnmanaged(Region) = .empty;
     defer loaded_regions.deinit(allocator);
 
     var program_header_iterator = elf_header.iterateProgramHeaders(file_reader);
