@@ -25,7 +25,7 @@ const InterruptGroupEntry = struct {
 const Context = struct {
     db: *Database,
     arena: std.heap.ArenaAllocator,
-    interrupt_groups: std.StringHashMapUnmanaged(std.array_list.ManagedUnmanaged(InterruptGroupEntry)) = .{},
+    interrupt_groups: std.StringHashMapUnmanaged(std.ArrayList(InterruptGroupEntry)) = .empty,
     inferred_register_group_offsets: std.AutoArrayHashMapUnmanaged(StructID, u64) = .{},
 
     fn init(db: *Database) Context {
@@ -270,7 +270,7 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
         break :blk max_value;
     };
 
-    var field_sizes: std.array_list.Managed(u64) = .{};
+    var field_sizes: std.ArrayList(u64) = .empty;
     defer field_sizes.deinit(allocator);
 
     var register_it = module_node.iterate(&.{"register-group"}, &.{"register"});

@@ -156,7 +156,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
     const allocator = arena.allocator();
 
-    var chip_files: std.array_list.Managed(std.json.Parsed(ChipFile)) = .{};
+    var chip_files: std.ArrayList(std.json.Parsed(ChipFile)) = .empty;
     defer {
         for (chip_files.items) |chip_file|
             chip_file.deinit();

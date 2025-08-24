@@ -76,20 +76,20 @@ pub fn main() !void {
 
     const entry_point: u32 = @intCast(elf_header.entry);
 
-    var flash_segments: std.array_list.Managed(Segment) = .empty;
+    var flash_segments: std.ArrayList(Segment) = .empty;
     defer flash_segments.deinit(allocator);
     defer for (flash_segments.items) |segment| {
         segment.deinit(allocator);
     };
 
-    var ram_segments: std.array_list.Managed(Segment) = .empty;
+    var ram_segments: std.ArrayList(Segment) = .empty;
     defer ram_segments.deinit(allocator);
     defer for (ram_segments.items) |segment| {
         segment.deinit(allocator);
     };
 
     {
-        var info_list: std.array_list.Managed(SegmentInfo) = .empty;
+        var info_list: std.ArrayList(SegmentInfo) = .empty;
         defer info_list.deinit(allocator);
 
         if (use_segments) {
@@ -147,7 +147,7 @@ pub fn main() !void {
         std.log.debug("ram segment at addr 0x{x} of size 0x{x}", .{ segment.addr, segment.size });
     }
 
-    var segment_data: std.array_list.Managed(u8) = .empty;
+    var segment_data: std.ArrayList(u8) = .empty;
     defer segment_data.deinit(allocator);
 
     var segment_count: u8 = 0;
@@ -223,7 +223,7 @@ pub fn main() !void {
     }
 }
 
-fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.array_list.Managed(Segment)) !void {
+fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.ArrayList(Segment)) !void {
     if (segment_list.items.len >= 2) {
         var i: usize = segment_list.items.len - 1;
         while (i > 0) : (i -= 1) {

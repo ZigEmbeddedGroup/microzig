@@ -326,7 +326,7 @@ const TypeID = union(enum) {
 // code. Since this is only used in code generation, just going to stuff it in
 // the arena allocator
 fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]const u8 {
-    var full_name_components: std.array_list.Managed([]const u8) = .{};
+    var full_name_components: std.ArrayList([]const u8) = .empty;
     defer full_name_components.deinit(allocator);
 
     var current_id = type_id;
@@ -734,7 +734,7 @@ fn write_mode_enum_and_fn(
     );
 
     for (modes) |mode| {
-        var components: std.array_list.Managed([]const u8) = .{};
+        var components: std.ArrayList([]const u8) = .empty;
         defer components.deinit(db.gpa);
 
         var tok_it = std.mem.tokenizeScalar(u8, mode.qualifier, '.');
@@ -1158,7 +1158,7 @@ fn write_fields(
 ) !void {
     // We first expand every 'array field' into its consituent fields,
     // named e.g. `@OISN[0]`, `@OISN[1]`, etc. for `field.name` OISN.
-    var expanded_fields: std.array_list.Managed(Database.StructField) = .empty;
+    var expanded_fields: std.ArrayList(Database.StructField) = .empty;
     for (fields) |field| {
         if (field.count) |count| {
             var stride = field.stride orelse field.size_bits;

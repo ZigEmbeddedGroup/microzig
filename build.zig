@@ -460,7 +460,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches: std.array_list.Managed(regz.patch.Patch) = .empty;
+                    var patches: std.ArrayList(regz.patch.Patch) = .empty;
 
                     // From chip definition
                     patches.appendSlice(b.allocator, target.chip.patches) catch @panic("OOM");
@@ -491,7 +491,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches: std.array_list.Managed(regz.patch.Patch) = .empty;
+                    var patches: std.ArrayList(regz.patch.Patch) = .empty;
 
                     // From chip definition
                     patches.appendSlice(b.allocator, target.chip.patches) catch @panic("OOM");
