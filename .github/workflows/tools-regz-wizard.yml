@@ -23,7 +23,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: master
+          version: 0.15.1
 
       - name: Build
         working-directory: tools/regz-wizard
