@@ -7,7 +7,8 @@
 //! Example usage:
 //! ```zig
 //! var sensor = try ICM_20948.init(
-//!     i2c_device.datagram_device(),
+//!     i2c_device.i2c_device(),
+//!     @enumFromInt(0x69),
 //!     clock.clock_device(),
 //!     .{
 //!         .accel_range = .gs4,
@@ -62,7 +63,8 @@ pub const ICM_20948 = struct {
     const MAG_READ_DELAY_US = 10_000;
     const MAG_RESET_DELAY_US = 100_000;
 
-    dev: mdf.base.Datagram_Device,
+    dev: mdf.base.I2C_Device,
+    address: mdf.base.I2C_Device.Address,
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
@@ -320,8 +322,13 @@ pub const ICM_20948 = struct {
         i2c_slv0_en: u1 = 0,
     };
 
-    pub fn init(dev: mdf.base.Datagram_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
-        return Self{ .dev = dev, .clock = clock, .config = config };
+    pub fn init(
+        dev: mdf.base.I2C_Device,
+        address: mdf.base.I2C_Device.Address,
+        clock: mdf.base.Clock_Device,
+        config: Config,
+    ) Error!Self {
+        return Self{ .dev = dev, .address = address, .clock = clock, .config = config };
     }
 
     pub fn setup(self: *Self) Error!void {
@@ -399,7 +406,7 @@ pub const ICM_20948 = struct {
 
         try self.set_bank(reg.bank());
 
-        self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf}) catch |err| {
+        self.dev.writev_then_readv(self.address, &.{&.{reg.value()}}, &.{buf}) catch |err| {
             log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
             return Error.ReadError;
         };
@@ -416,7 +423,7 @@ pub const ICM_20948 = struct {
     pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) Error!void {
         try self.set_bank(reg.bank());
 
-        self.dev.write(&.{ reg.value(), val }) catch |err| {
+        self.dev.write(self.address, &.{ reg.value(), val }) catch |err| {
             log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
             return Error.WriteError;
         };
@@ -452,7 +459,7 @@ pub const ICM_20948 = struct {
         if (bank == self.current_bank) return;
 
         // Bits 5:4 - directly write to bank0 register without recursion
-        self.dev.write(&.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
+        self.dev.write(self.address, &.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
             log.err("Failed to switch to bank {}: {}", .{ bank, err });
             return Error.BankSwitchFailed;
         };
@@ -889,17 +896,16 @@ pub const ICM_20948 = struct {
 };
 
 // Testing
-const TestDatagramDevice = mdf.base.Datagram_Device.Test_Device;
+const TestI2CDevice = mdf.base.I2C_Device.Test_Device;
 const TestTime = mdf.base.Clock_Device.Test_Device;
 
 test "set_bank" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -923,12 +929,11 @@ test "set_bank" {
 
 test "reset" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -942,12 +947,11 @@ test "reset" {
 
 test "read_byte" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Read byte will set the bank
     // -- Put in the values it expects to read
@@ -960,12 +964,11 @@ test "read_byte" {
 
 test "error handling in setup" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Test wrong WHO_AM_I response, first byte is read during reset()
     d.input_sequence = &.{ &.{0x00}, &.{0xFF} }; // Wrong ID after reset
@@ -975,12 +978,11 @@ test "error handling in setup" {
 
 test "device responsiveness check" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Test with correct WHO_AM_I
     d.input_sequence = &.{&.{ICM_20948.WHOAMI}};

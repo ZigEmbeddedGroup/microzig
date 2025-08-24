@@ -28,9 +28,9 @@ pub fn main() !void {
     );
 
     // Create i2c datagram device
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x48), null);
+    var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c device to driver to create sensor instance
-    const temp_sensor = try TMP117.init(i2c_device.datagram_device());
+    const temp_sensor = try TMP117.init(i2c_device.i2c_device(), @enumFromInt(0x48));
 
     // Configure device
     try temp_sensor.write_configuration(.{});

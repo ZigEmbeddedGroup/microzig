@@ -1,6 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
+const drivers = mdf.base;
 const peripherals = microzig.chip.peripherals;
 pub const I2C0 = peripherals.I2C0;
 
@@ -16,45 +17,13 @@ pub const ConfigError = error{
     PeripheralDisabled,
 };
 
-pub const Error = error{
+pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
+pub const Error = drivers.I2C_Device.Error || error{
     FifoExceeded,
-    AcknowledgeCheckFailed,
-    Timeout,
     ArbitrationLost,
     ExecutionIncomplete,
     CommandNumberExceeded,
-    ZeroLengthInvalid,
-    TargetAddressReserved,
-};
-
-///
-/// 7-bit I²C address, without the read/write bit.
-///
-pub const Address = enum(u7) {
-    _,
-
-    pub fn new(addr: u7) Address {
-        var a = @as(Address, @enumFromInt(addr));
-        std.debug.assert(!a.is_reserved());
-        return a;
-    }
-
-    ///
-    /// Returns `true` if the Address is a reserved I²C address.
-    ///
-    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
-    ///
-    /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
-        const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
-    }
-
-    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
-    }
 };
 
 const Opcode = enum(u4) {
@@ -346,11 +315,11 @@ pub const I2C = enum(u1) {
         if (interrupts.TIME_OUT_INT_RAW == 1) {
             return Error.Timeout;
         } else if (interrupts.NACK_INT_RAW == 1) {
-            return Error.AcknowledgeCheckFailed;
+            return Error.NoAcknowledge;
         } else if (interrupts.ARBITRATION_LOST_INT_RAW == 1) {
             return Error.ArbitrationLost;
         } else if (interrupts.TRANS_COMPLETE_INT_RAW == 1 and self.get_regs().SR.read().RESP_REC == 0) {
-            return Error.AcknowledgeCheckFailed;
+            return Error.NoAcknowledge;
         }
     }
     /// Propagate configuration to the peripheral
@@ -397,7 +366,7 @@ pub const I2C = enum(u1) {
         cmd_start_idx: *usize,
     ) !void {
         if (buffer.len == 0)
-            return Error.ZeroLengthInvalid;
+            return Error.NoData;
 
         const max_len = if (will_continue) I2C_CHUNK_SIZE else I2C_CHUNK_SIZE + 1;
         const initial_len: u8 = @truncate(if (will_continue) buffer.len else buffer.len - 1);
@@ -595,8 +564,8 @@ pub const I2C = enum(u1) {
         will_continue: bool,
         deadline: mdf.time.Deadline,
     ) !void {
-        if (addr.is_reserved())
-            return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.TargetAddressReserved;
+
         self.clear_interrupts();
 
         // Short circuit for zero length reads as that would be an invalid operation.
@@ -699,8 +668,10 @@ pub const I2C = enum(u1) {
         stop: bool,
         deadline: mdf.time.Deadline,
     ) Error!void {
-        if (addr.is_reserved())
-            return Error.TargetAddressReserved;
+        addr.check_reserved() catch |err| switch (err) {
+            AddressError.GeneralCall => {},
+            else => return Error.TargetAddressReserved,
+        };
 
         // Short circuit for zero length writes without start or end as that would be an
         // invalid operation. Write lengths in the TRM are 1-255.
