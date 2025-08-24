@@ -448,7 +448,7 @@ test "Segment.get_padding_len" {
 test "do_segment_merge" {
     var allocator = std.testing.allocator;
 
-    var segment_list: std.array_list.Managed(Segment) = .empty;
+    var segment_list: std.ArrayList(Segment) = .empty;
     defer segment_list.deinit(allocator);
     defer for (segment_list.items) |segment| {
         segment.deinit(allocator);
@@ -487,7 +487,7 @@ test "Segment.write_to" {
 
     @memset(segment.data, 'a');
 
-    var segment_data: std.array_list.Managed(u8) = .empty;
+    var segment_data: std.ArrayList(u8) = .empty;
     defer segment_data.deinit(allocator);
     const writer = segment_data.writer(allocator);
 
