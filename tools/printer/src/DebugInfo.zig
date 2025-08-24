@@ -1,6 +1,5 @@
 const std = @import("std");
 const dwarf = std.dwarf;
-const array_list.ManagedUnmanaged = std.ArrayListUnmanaged;
 const Elf = @import("Elf.zig");
 
 const DebugInfo = @This();
