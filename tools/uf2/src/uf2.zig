@@ -16,7 +16,7 @@ pub const Options = struct {
 
 pub const Archive = struct {
     allocator: Allocator,
-    blocks: std.array_list.Managed(Block),
+    blocks: std.ArrayList(Block),
     families: std.AutoHashMapUnmanaged(FamilyId, void),
     // TODO: keep track of contained files
 
@@ -50,7 +50,7 @@ pub const Archive = struct {
             }
         };
 
-        var segments: std.array_list.Managed(Segment) = .empty;
+        var segments: std.ArrayList(Segment) = .empty;
         defer segments.deinit(self.allocator);
 
         const header = try std.elf.Header.read(&reader.interface);
@@ -121,6 +121,7 @@ pub const Archive = struct {
             block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
             try block.write_to(writer);
         }
+        try writer.flush();
     }
 
     pub fn add_file(self: *Self, path: []const u8) !void {
@@ -234,20 +235,20 @@ pub const Block = extern struct {
         assert(512 == @sizeOf(Block));
     }
 
-    pub fn from_reader(reader: anytype) !Block {
+    pub fn from_reader(reader: *std.Io.Reader) !Block {
         var block: Block = undefined;
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
-                u32 => @field(block, field.name) = try reader.readInt(u32, .little),
+                u32 => @field(block, field.name) = try reader.adaptToOldInterface().readInt(u32, .little),
                 [476]u8 => {
-                    const n = try reader.readAll(&@field(block, field.name));
+                    const n = try reader.adaptToOldInterface().readAll(&@field(block, field.name));
                     if (n != @sizeOf(field.type))
                         return error.EndOfStream;
                 },
                 else => {
                     assert(4 == @sizeOf(field.type));
                     @field(block, field.name) =
-                        @as(field.type, @bitCast(try reader.readInt(u32, .little)));
+                        @as(field.type, @bitCast(try reader.adaptToOldInterface().readInt(u32, .little)));
                 },
             }
         }
@@ -270,6 +271,8 @@ pub const Block = extern struct {
                 },
             }
         }
+
+        try writer.flush();
     }
 };
 
@@ -313,11 +316,16 @@ test "Block loopback" {
     };
     rand.bytes(&expected.data);
 
-    try expected.write_to(fbs.writer());
+    var writer_buf: [4096]u8 = undefined;
+    var writer = fbs.writer().adaptToNewApi(&writer_buf);
+    try expected.write_to(&writer.new_interface);
 
     // needs to be reset for reader
     fbs.reset();
-    const actual = try Block.from_reader(fbs.reader());
+
+    var reader_buf: [4096]u8 = undefined;
+    var reader = fbs.reader().adaptToNewApi(&reader_buf);
+    const actual = try Block.from_reader(&reader.new_interface);
 
     try expect_equal_block(expected, actual);
 }
