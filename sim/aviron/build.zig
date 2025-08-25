@@ -401,15 +401,12 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
     var file_reader = file.reader(&read_buf);
     const reader = &file_reader.interface;
 
-    var line_buf: [4096]u8 = undefined;
     while (true) {
-        var writer: std.Io.Writer = .fixed(&line_buf);
-        const n = reader.streamDelimiter(&writer, '\n') catch |err| switch (err) {
+        const line = reader.takeDelimiterExclusive('\n') catch |err| switch (err) {
             error.EndOfStream => break,
             else => |e| return e,
         };
 
-        const line = line_buf[0..n];
         if (std.mem.startsWith(u8, line, "//!")) {
             try code.appendSlice(line[3..]);
             try code.appendSlice("\n");
@@ -419,6 +416,8 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
     const json_text = std.mem.trim(u8, code.items, "\r\n\t ");
     if (json_text.len == 0)
         return TestSuiteConfig{};
+
+    std.log.err("json_text: {s}", .{json_text});
 
     return try std.json.parseFromSliceLeaky(
         TestSuiteConfig,
