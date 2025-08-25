@@ -14,7 +14,7 @@ const Datagram_Device = @This();
 ///
 /// If the implementation requires no `ptr` pointer,
 /// you can safely use `undefined` here.
-ptr: *anyopaque,
+//ptr: *anyopaque, no more CTX prt
 
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
@@ -27,33 +27,33 @@ pub const AnyError = ConnectError || WriteError || ReadError;
 
 /// Establishes a connection to the device (like activating a chip-select lane or similar).
 /// NOTE: Call `.disconnect()` when the usage of the device is done to release it.
-pub fn connect(dd: Datagram_Device) ConnectError!void {
+pub fn connect(dd: *const Datagram_Device) ConnectError!void {
     if (dd.vtable.connect_fn) |connectFn| {
-        return connectFn(dd.ptr);
+        return connectFn(dd);
     }
 }
 
 /// Releases a device from the connection.
-pub fn disconnect(dd: Datagram_Device) void {
+pub fn disconnect(dd: *const Datagram_Device) void {
     if (dd.vtable.disconnect_fn) |disconnectFn| {
-        return disconnectFn(dd.ptr);
+        return disconnectFn(dd);
     }
 }
 
 /// Writes a single `datagram` to the device.
-pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
+pub fn write(dd: *const Datagram_Device, datagram: []const u8) WriteError!void {
     return try dd.writev(&.{datagram});
 }
 
 /// Writes multiple `datagrams` to the device.
-pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!void {
+pub fn writev(dd: *const Datagram_Device, datagrams: []const []const u8) WriteError!void {
     const writev_fn = dd.vtable.writev_fn orelse return error.Unsupported;
-    return writev_fn(dd.ptr, datagrams);
+    return writev_fn(dd, datagrams);
 }
 
 /// Writes then reads a single `datagram` to the device.
 pub fn write_then_read(
-    dd: Datagram_Device,
+    dd: *const Datagram_Device,
     src: []const u8,
     dst: []u8,
 ) (WriteError || ReadError)!void {
@@ -62,12 +62,12 @@ pub fn write_then_read(
 
 /// Writes a slice of datagrams to the device, then reads back into another slice of datagrams
 pub fn writev_then_readv(
-    dd: Datagram_Device,
+    dd: *const Datagram_Device,
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) (WriteError || ReadError)!void {
     const writev_then_readv_fn = dd.vtable.writev_then_readv_fn orelse return error.Unsupported;
-    return writev_then_readv_fn(dd.ptr, write_chunks, read_chunks);
+    return writev_then_readv_fn(dd, write_chunks, read_chunks);
 }
 
 /// Reads a single `datagram` from the device.
@@ -75,7 +75,7 @@ pub fn writev_then_readv(
 ///
 /// If `error.BufferOverrun` is returned, the `datagram` will still be fully filled with the data
 /// that was received up till the overrun. The rest of the datagram will be discarded.
-pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
+pub fn read(dd: *const Datagram_Device, datagram: []u8) ReadError!usize {
     return try dd.readv(&.{datagram});
 }
 
@@ -84,18 +84,18 @@ pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
 ///
 /// If `error.BufferOverrun` is returned, the `datagrams` will still be fully filled with the data
 /// that was received up till the overrun. The rest of the datagram will be discarded.
-pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!usize {
+pub fn readv(dd: *const Datagram_Device, datagrams: []const []u8) ReadError!usize {
     const readv_fn = dd.vtable.readv_fn orelse return error.Unsupported;
-    return readv_fn(dd.ptr, datagrams);
+    return readv_fn(dd, datagrams);
 }
 
 pub const VTable = struct {
-    connect_fn: ?*const fn (*anyopaque) ConnectError!void,
-    disconnect_fn: ?*const fn (*anyopaque) void,
-    writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
-    readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
+    connect_fn: ?*const fn (*const Datagram_Device) ConnectError!void,
+    disconnect_fn: ?*const fn (*const Datagram_Device) void,
+    writev_fn: ?*const fn (*const Datagram_Device, datagrams: []const []const u8) WriteError!void,
+    readv_fn: ?*const fn (*const Datagram_Device, datagrams: []const []u8) ReadError!usize,
     writev_then_readv_fn: ?*const fn (
-        *anyopaque,
+        *const Datagram_Device,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
     ) (WriteError || ReadError)!void = null,
