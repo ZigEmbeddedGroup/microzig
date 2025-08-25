@@ -64,8 +64,7 @@ pub const default = struct {
                 \\msr   primask, r1
                 : [val] "=r" (val),
                 :
-                : .{ .r1 = true, .cpsr = true }
-            );
+                : .{ .r1 = true, .cpsr = true });
             context.isr_reg_value = val;
         }
 
@@ -89,8 +88,7 @@ pub const default = struct {
                 \\msr   basepri, r1
                 : [val] "=r" (val),
                 : [MAX_ISR_PRIORITY] "i" (MAX_ISR_PRIORITY),
-                : .{ .r1 = true, .cpsr = true }
-            );
+                : .{ .r1 = true, .cpsr = true });
             context.isr_reg_value = val;
         }
 
@@ -113,8 +111,7 @@ pub const default = struct {
                 \\msr CPSR_C, r1
                 : [val] "=r" (val),
                 :
-                : .{ .r1 = true, .cpsr = true }
-            );
+                : .{ .r1 = true, .cpsr = true });
             context.isr_reg_value = val;
         }
 
@@ -129,8 +126,7 @@ pub const default = struct {
                 \\msr CPSR_C, r1
                 :
                 : [val] "r" (val),
-                : .{ .r0 = true, .r1 = true, .cpsr = true }
-            );
+                : .{ .r0 = true, .r1 = true, .cpsr = true });
         }
     };
 
