@@ -70,7 +70,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
     };
 
-    var available_examples: std.array_list.Managed(Example) = .empty;
+    var available_examples: std.ArrayList(Example) = .empty;
     available_examples.appendSlice(b.allocator, specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         available_examples.append(b.allocator, .{
