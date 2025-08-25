@@ -64,12 +64,8 @@ pub const default = struct {
                 \\msr   primask, r1
                 : [val] "=r" (val),
                 :
-<<<<<<< HEAD
-                : .{ .r1 = true, .cc = true });
-=======
                 : .{ .r1 = true, .cpsr = true }
             );
->>>>>>> 05d495de (Mostly inline asm clobber updating)
             context.isr_reg_value = val;
         }
 
@@ -117,12 +113,8 @@ pub const default = struct {
                 \\msr CPSR_C, r1
                 : [val] "=r" (val),
                 :
-<<<<<<< HEAD
-                : .{ .r1 = true, .cc = true });
-=======
                 : .{ .r1 = true, .cpsr = true }
             );
->>>>>>> 05d495de (Mostly inline asm clobber updating)
             context.isr_reg_value = val;
         }
 
@@ -137,12 +129,8 @@ pub const default = struct {
                 \\msr CPSR_C, r1
                 :
                 : [val] "r" (val),
-<<<<<<< HEAD
-                : .{ .r0 = true, .r1 = true, .cc = true });
-=======
                 : .{ .r0 = true, .r1 = true, .cpsr = true }
             );
->>>>>>> 05d495de (Mostly inline asm clobber updating)
         }
     };
 
