@@ -79,6 +79,10 @@ pub const InDescriptor = extern struct {
             },
         };
     }
+
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
 };
 
 pub const InOutDescriptor = extern struct {
@@ -118,6 +122,10 @@ pub const InOutDescriptor = extern struct {
             },
         };
     }
+
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
 };
 
 pub const HidClassDriver = struct {
@@ -128,17 +136,24 @@ pub const HidClassDriver = struct {
     hid_descriptor: []const u8 = &.{},
     report_descriptor: []const u8,
 
-    pub fn config_descriptor(first_interface: u8, string_ids: anytype, endpoints: anytype) InOutDescriptor {
-        return .create(
-            first_interface,
-            string_ids.name,
-            0,
-            descriptor.hid.report.GenericInOut.len,
-            endpoints.main,
-            endpoints.main,
-            64,
-            0,
-        );
+    pub fn info(first_interface: u8, string_ids: anytype, endpoints: anytype) usb.DriverInfo(@This(), InOutDescriptor) {
+        return .{
+            .interface_handlers = &.{
+                .{ .itf = first_interface, .func = interface_setup },
+            },
+            .endpoint_in_handlers = &.{},
+            .endpoint_out_handlers = &.{},
+            .descriptors = .create(
+                first_interface,
+                string_ids.name,
+                0,
+                descriptor.hid.report.GenericInOut.len,
+                endpoints.main,
+                endpoints.main,
+                64,
+                0,
+            ),
+        };
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
@@ -151,19 +166,19 @@ pub const HidClassDriver = struct {
         };
     }
 
-    pub fn interface_setup(ptr: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
-        const self: *@This() = @ptrCast(@alignCast(ptr));
+    pub fn deinit(_: *@This()) void {}
 
+    pub fn interface_setup(this: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
         switch (setup.request_type.type) {
             .Standard => {
-                const hid_desc_type = enumFromInt(descriptor.hid.SubType, (setup.value >> 8) & 0xff) catch return null;
-                const request_code = enumFromInt(types.SetupRequest, setup.request) catch return null;
+                const hid_desc_type = enumFromInt(descriptor.hid.SubType, (setup.value >> 8) & 0xff) catch return usb.NAK;
+                const request_code = enumFromInt(types.SetupRequest, setup.request) catch return usb.NAK;
 
                 if (request_code != .GetDescriptor) return usb.ACK;
 
                 const data = switch (hid_desc_type) {
-                    .Hid => self.hid_descriptor,
-                    .Report => self.report_descriptor,
+                    .Hid => this.hid_descriptor,
+                    .Report => this.report_descriptor,
                     else => return null,
                 };
 
@@ -172,7 +187,7 @@ pub const HidClassDriver = struct {
             .Class => return switch (enumFromInt(
                 descriptor.hid.RequestType,
                 setup.request,
-            ) catch return null) {
+            ) catch return usb.NAK) {
                 // TODO: The host is attempting to limit bandwidth by requesting that
                 // the device only return report data when its values actually change,
                 // or when the specified duration elapses. In practice, the device can
@@ -200,13 +215,13 @@ pub const HidClassDriver = struct {
                 //
                 // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                 .SetReport => usb.ACK,
-                else => null,
+                else => usb.NAK,
             },
-            else => return null,
+            else => return usb.NAK,
         }
         return usb.ACK;
     }
 
-    pub fn on_tx_ready(_: *@This(), _: usb.DeviceInterface, _: []u8) void {}
-    pub fn on_data_rx(_: *@This(), _: usb.DeviceInterface, _: []const u8) void {}
+    pub fn on_tx_ready(_: *@This(), _: []u8) void {}
+    pub fn on_data_rx(_: *@This(), _: []const u8) void {}
 };

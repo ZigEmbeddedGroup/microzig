@@ -32,13 +32,16 @@ const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
         .protocol = 1,
     },
     .attributes = .{ .self_powered = true },
-    .Driver = microzig.core.usb.hid.HidClassDriver,
-    .driver_endpoints = &.{
-        .{ .name = "main", .value = .ep1 },
-    },
-    .driver_strings = &.{
-        .{ .name = "name", .value = "Board HID" },
-    },
+    .drivers = &.{.{
+        .name = "hid",
+        .Type = microzig.core.usb.hid.HidClassDriver,
+        .endpoints = &.{
+            .{ .name = "main", .value = .ep1 },
+        },
+        .strings = &.{
+            .{ .name = "name", .value = "Board HID" },
+        },
+    }},
 }) });
 var usb: Usb = undefined;
 
@@ -60,9 +63,14 @@ pub fn main() !void {
     const delay_us = 500_000;
 
     while (true) {
-        usb.controller.driver_data.report_descriptor = &microzig.core.usb.descriptor.hid.report.GenericInOut;
         // You can now poll for USB events
         usb.interface().task();
+
+        const hid = if (usb.controller.drivers) |*drivers|
+            &drivers.hid
+        else // This means the USB connection has not yet been established
+            continue;
+        hid.report_descriptor = &microzig.core.usb.descriptor.hid.report.GenericInOut;
 
         const now = time.get_time_since_boot().to_us();
         if (now - last_led_toggle > delay_us) {

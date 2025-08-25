@@ -230,7 +230,7 @@ pub fn Usb(comptime config: Config) type {
 
             var this: @This() = .{
                 .state = .{ .no_buffer = null },
-                .controller = .init(),
+                .controller = .init,
             };
 
             if (this.interface().endpoint_open(.in(.ep0), .Control, 0) catch unreachable) |tx|
@@ -372,9 +372,9 @@ pub fn Usb(comptime config: Config) type {
                             },
                         }
                     } else if (ep.is_out)
-                        this.controller.on_data_rx(this.interface(), ep.num, buf[0..ep.len()])
+                        this.controller.on_data_rx(ep.num, buf[0..ep.len()])
                     else
-                        this.controller.on_tx_ready(this.interface(), ep.num, buf);
+                        this.controller.on_tx_ready(ep.num, buf);
 
                     result catch {
                         std.log.warn("unhandled usb packet: ep{}{s}", .{ ep.num, if (ep.is_out) "out" else "in" });
@@ -387,7 +387,7 @@ pub fn Usb(comptime config: Config) type {
 
             if (ints.BUS_RESET != 0) {
                 this.controller.deinit();
-                this.controller = .init();
+                this.controller = .init;
 
                 var sie_status: SieStatus = @bitCast(@as(u32, 0));
                 sie_status.BUS_RESET = 1;

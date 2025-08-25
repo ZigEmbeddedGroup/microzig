@@ -61,63 +61,75 @@ pub const CdcClassDriver = struct {
     rx_buf: ?[]const u8 = null,
     tx_buf: ?[]u8 = null,
 
-    pub fn config_descriptor(first_interface: u8, string_ids: anytype, endpoints: anytype) Descriptor {
+    pub fn info(first_interface: u8, string_ids: anytype, endpoints: anytype) usb.DriverInfo(@This(), Descriptor) {
         const endpoint_notifi_size = 8;
         const endpoint_size = 64;
         return .{
-            .desc1 = .{
-                .first_interface = first_interface,
-                .interface_count = 2,
-                .function_class = 2,
-                .function_subclass = 2,
-                .function_protocol = 0,
-                .function = 0,
+            .interface_handlers = &.{
+                .{ .itf = first_interface, .func = interface_setup },
+                .{ .itf = first_interface + 1, .func = interface_setup },
             },
-            .desc2 = .{
-                .interface_number = first_interface,
-                .alternate_setting = 0,
-                .num_endpoints = 1,
-                .interface_class = 2,
-                .interface_subclass = 2,
-                .interface_protocol = 0,
-                .interface_s = string_ids.name,
+            .endpoint_in_handlers = &.{
+                .{ .ep_num = endpoints.data, .func = on_tx_ready },
             },
-            .desc3 = .{ .bcd_cdc = .from(0x0120) },
-            .desc4 = .{
-                .capabilities = 0,
-                .data_interface = first_interface + 1,
+            .endpoint_out_handlers = &.{
+                .{ .ep_num = endpoints.data, .func = on_data_rx },
             },
-            .desc5 = .{ .capabilities = 6 },
-            .desc6 = .{
-                .master_interface = first_interface,
-                .slave_interface_0 = first_interface + 1,
-            },
-            .ep_notifi = .{
-                .endpoint = .in(endpoints.notifi),
-                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
-                .max_packet_size = .from(endpoint_notifi_size),
-                .interval = 16,
-            },
-            .desc8 = .{
-                .interface_number = first_interface + 1,
-                .alternate_setting = 0,
-                .num_endpoints = 2,
-                .interface_class = 10,
-                .interface_subclass = 0,
-                .interface_protocol = 0,
-                .interface_s = 0,
-            },
-            .ep_out = .{
-                .endpoint = .out(endpoints.data),
-                .attributes = .{ .transfer_type = .Bulk, .usage = .data },
-                .max_packet_size = .from(endpoint_size),
-                .interval = 0,
-            },
-            .ep_in = .{
-                .endpoint = .in(endpoints.data),
-                .attributes = .{ .transfer_type = .Bulk, .usage = .data },
-                .max_packet_size = .from(endpoint_size),
-                .interval = 0,
+            .descriptors = .{
+                .desc1 = .{
+                    .first_interface = first_interface,
+                    .interface_count = 2,
+                    .function_class = 2,
+                    .function_subclass = 2,
+                    .function_protocol = 0,
+                    .function = 0,
+                },
+                .desc2 = .{
+                    .interface_number = first_interface,
+                    .alternate_setting = 0,
+                    .num_endpoints = 1,
+                    .interface_class = 2,
+                    .interface_subclass = 2,
+                    .interface_protocol = 0,
+                    .interface_s = string_ids.name,
+                },
+                .desc3 = .{ .bcd_cdc = .from(0x0120) },
+                .desc4 = .{
+                    .capabilities = 0,
+                    .data_interface = first_interface + 1,
+                },
+                .desc5 = .{ .capabilities = 6 },
+                .desc6 = .{
+                    .master_interface = first_interface,
+                    .slave_interface_0 = first_interface + 1,
+                },
+                .ep_notifi = .{
+                    .endpoint = .in(endpoints.notifi),
+                    .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                    .max_packet_size = .from(endpoint_notifi_size),
+                    .interval = 16,
+                },
+                .desc8 = .{
+                    .interface_number = first_interface + 1,
+                    .alternate_setting = 0,
+                    .num_endpoints = 2,
+                    .interface_class = 10,
+                    .interface_subclass = 0,
+                    .interface_protocol = 0,
+                    .interface_s = 0,
+                },
+                .ep_out = .{
+                    .endpoint = .out(endpoints.data),
+                    .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                    .max_packet_size = .from(endpoint_size),
+                    .interval = 0,
+                },
+                .ep_in = .{
+                    .endpoint = .in(endpoints.data),
+                    .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                    .max_packet_size = .from(endpoint_size),
+                    .interval = 0,
+                },
             },
         };
     }
@@ -135,6 +147,8 @@ pub const CdcClassDriver = struct {
             .ep_in = desc.ep_in.endpoint.num,
         };
     }
+
+    pub fn deinit(_: *@This()) void {}
 
     pub fn available(this: *@This()) usize {
         return if (this.rx_buf) |rx| rx.len else 0;
@@ -182,9 +196,7 @@ pub const CdcClassDriver = struct {
         }
     }
 
-    pub fn interface_setup(ptr: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
-        var this: *@This() = @ptrCast(@alignCast(ptr));
-
+    pub fn interface_setup(this: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
         return if (enumFromInt(
             ManagementRequestType,
             setup.request,
@@ -199,13 +211,11 @@ pub const CdcClassDriver = struct {
         } else |_| usb.ACK;
     }
 
-    pub fn on_tx_ready(ptr: *@This(), _: usb.DeviceInterface, data: []u8) void {
-        var this: *@This() = @ptrCast(@alignCast(ptr));
+    pub fn on_tx_ready(this: *@This(), data: []u8) void {
         this.tx_buf = data;
     }
 
-    pub fn on_data_rx(ptr: *@This(), _: usb.DeviceInterface, data: []const u8) void {
-        var this: *@This() = @ptrCast(@alignCast(ptr));
+    pub fn on_data_rx(this: *@This(), data: []const u8) void {
         this.rx_buf = data;
     }
 };
