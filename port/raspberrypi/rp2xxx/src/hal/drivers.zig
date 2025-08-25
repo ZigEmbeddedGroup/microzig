@@ -336,27 +336,24 @@ pub const GPIO_Device = struct {
 };
 
 ///
-/// Implementation of a time device
+/// Implementation of a `Clock_Device` that uses the HAL's `time` module.
 ///
-// TODO What do we call this concrete implementation?
-pub const ClockDevice = struct {
-    pub fn clock_device(td: *ClockDevice) Clock_Device {
-        _ = td;
-        return Clock_Device{
-            .ptr = undefined,
-            .vtable = &vtable,
+pub fn clock_device() Clock_Device {
+    const S = struct {
+        const vtable: Clock_Device.VTable = .{
+            .get_time_since_boot = get_time_since_boot_fn,
         };
-    }
-    const vtable = Clock_Device.VTable{
-        .get_time_since_boot = get_time_since_boot_fn,
+
+        fn get_time_since_boot_fn(_: *anyopaque) time.Absolute {
+            return hal.time.get_time_since_boot();
+        }
     };
 
-    fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
-        _ = td;
-        const t = hal.time.get_time_since_boot().to_us();
-        return @enumFromInt(t);
-    }
-};
+    return .{
+        .ptr = undefined,
+        .vtable = &S.vtable,
+    };
+}
 
 const Cyw43PioSpi = microzig.hal.cyw49_pio_spi.Cyw43PioSpi;
 const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;

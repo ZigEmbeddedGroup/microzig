@@ -20,14 +20,13 @@ pub fn main() !void {
     });
 
     const spi_dev: hal.drivers.SPI_Device = .init(spi_bus, .single_one_wire, null);
-    var clock_dev: hal.drivers.ClockDevice = .{};
 
     var ws2812: WS2812(.{
         .max_led_count = 1,
         .Datagram_Device = hal.drivers.SPI_Device,
     }) = .init(
         spi_dev,
-        clock_dev.clock_device(),
+        hal.drivers.clock_device(),
     );
 
     const red: Color = .{ .r = 10, .g = 0, .b = 0 };
