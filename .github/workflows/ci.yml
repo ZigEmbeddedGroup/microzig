@@ -173,6 +173,7 @@ jobs:
             microchip/atsam,
             nordic/nrf5x,
             nxp/lpc,
+            nxp/mcx,
             stmicro/stm32,
             raspberrypi/rp2xxx,
             wch/ch32v,
