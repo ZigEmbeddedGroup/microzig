@@ -62,7 +62,7 @@ pub const boot2 = struct {
             \\blx r0
             :
             : [copyout] "{r0}" (@intFromPtr(&copyout)),
-            : .{ .r0 = true, .lr = true });
+            : .{ .r0 = true, .r14 = true };
     }
 };
 

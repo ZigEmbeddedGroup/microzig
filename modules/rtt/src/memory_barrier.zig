@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-pub const MemoryBarrierFn = fn () callconv(.Inline) void;
+pub const MemoryBarrierFn = fn () callconv(.@"inline") void;
 
 pub inline fn empty_memory_barrier() void {}
 
