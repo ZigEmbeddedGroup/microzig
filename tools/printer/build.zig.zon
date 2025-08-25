@@ -5,10 +5,10 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .serial = .{
-            .url = "git+https://github.com/ZigEmbeddedGroup/serial#ad338133eda8d86332718bbdc58c641a66307c84",
-            .hash = "serial-0.0.1-PoeRzI20AABcp4FffI6HXKOL6LcGPKmeqfN4Bna4-YYm",
+            .url = "git+https://github.com/ZigEmbeddedGroup/serial#9473fc7a29e4f986d02cf08dfe01b0d22293a306",
+            .hash = "serial-0.0.1-PoeRzD61AACY75Xpwn2iX7r3qWKDoYAMP9-4FME2LjDn",
         },
-        // use to compile the test program
+        // used to compile the test program
         .microzig = .{ .path = "../..", .lazy = true },
     },
     .paths = .{

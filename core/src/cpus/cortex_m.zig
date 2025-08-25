@@ -576,8 +576,7 @@ pub const startup_logic = struct {
                 :
                 : [_vector_table] "r" (&ram_vector_table),
                   [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
-                : "memory", "r0", "r1"
-            );
+                : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
         microzig_main();

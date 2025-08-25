@@ -378,8 +378,7 @@ fn call(number: Syscalls, param: *const anyopaque) isize {
         : [ret] "=r" (-> isize),
         : [num] "r" (number),
           [p] "r" (param),
-        : "memory", "r0", "r1"
-    );
+        : .{ .memory = true, .r0 = true, .r1 = true });
 }
 
 //WriteC does not have return

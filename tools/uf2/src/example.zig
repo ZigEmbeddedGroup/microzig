@@ -9,22 +9,32 @@ pub fn main() !void {
         var archive = uf2.Archive.init(std.heap.page_allocator);
         defer archive.deinit();
 
-        try archive.add_elf(args[1], .{
+        const file = try std.fs.cwd().openFile(args[1], .{});
+        defer file.close();
+
+        var buf: [4096]u8 = undefined;
+        var reader = file.reader(&buf);
+
+        try archive.add_elf(&reader, .{
             .family_id = .RP2040,
         });
         const out_file = try std.fs.cwd().createFile(args[2], .{});
         defer out_file.close();
 
-        try archive.write_to(out_file.writer());
+        var write_buf: [4096]u8 = undefined;
+        var writer = out_file.writer(&write_buf);
+        try archive.write_to(&writer.interface);
     } else if (args.len == 2) {
         const file = try std.fs.cwd().openFile(args[1], .{});
         defer file.close();
 
-        var blocks = std.ArrayList(uf2.Block).init(std.heap.page_allocator);
+        var blocks = std.array_list.Managed(uf2.Block).init(std.heap.page_allocator);
         defer blocks.deinit();
 
+        var buf: [4096]u8 = undefined;
+        var reader = file.reader(&buf);
         while (true) {
-            const block = uf2.Block.from_reader(file.reader()) catch |err| switch (err) {
+            const block = uf2.Block.from_reader(&reader.interface) catch |err| switch (err) {
                 error.EndOfStream => break,
                 else => return err,
             };

@@ -62,7 +62,7 @@ pub fn main() !void {
         try recursive_characterize(&arena, root_element, &.{}, &found, &results);
     }
 
-    var ordered = std.ArrayList(PrintedResult).init(gpa.allocator());
+    var ordered = std.array_list.Managed(PrintedResult).init(gpa.allocator());
     defer {
         for (ordered.items) |*item|
             item.attrs.deinit(gpa.allocator());
@@ -125,7 +125,7 @@ fn recursive_characterize(
     results: *Results,
 ) CharacterizeError!void {
     const allocator = arena.child_allocator;
-    var location = std.ArrayList([]const u8).init(allocator);
+    var location = std.array_list.Managed([]const u8).init(allocator);
     defer location.deinit();
 
     if (node.name) |name| {
