@@ -11,12 +11,11 @@ pub fn main() !u8 {
     defer cli.deinit();
 
     if (cli.options.help or (cli.positionals.len == 0 and !cli.options.info)) {
-        var stderr = std.io.getStdErr();
-
+        var stderr_writer = std.fs.File.stderr().writer(&.{});
         try args_parser.printHelp(
             Cli,
             cli.executable_name orelse "aviron",
-            stderr.writer(),
+            &stderr_writer.interface,
         );
 
         return if (cli.options.help) @as(u8, 0) else 1;
@@ -63,13 +62,14 @@ pub fn main() !u8 {
     io.sreg = &cpu.sreg;
 
     if (cli.options.info) {
-        var stdout = std.io.getStdOut().writer();
-        try stdout.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
-        try stdout.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
-        try stdout.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
-        try stdout.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
-        try stdout.print("  RAM:        {d: >5} bytes\n", .{cpu.sram.size});
-        try stdout.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom.size});
+        var stdout = std.fs.File.stdout().writer(&.{});
+        try stdout.interface.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
+        try stdout.interface.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
+        try stdout.interface.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
+        try stdout.interface.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
+        try stdout.interface.print("  RAM:        {d: >5} bytes\n", .{cpu.sram.size});
+        try stdout.interface.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom.size});
+        try stdout.interface.flush();
         return 0;
     }
 
@@ -80,10 +80,10 @@ pub fn main() !u8 {
 
         switch (cli.options.format) {
             .elf => {
-                var source = std.io.StreamSource{ .file = file };
-                var header = try std.elf.Header.read(&source);
+                var reader = file.reader(&.{});
+                var header = try std.elf.Header.read(&reader.interface);
 
-                var pheaders = header.program_header_iterator(&source);
+                var pheaders = header.iterateProgramHeaders(&reader);
                 while (try pheaders.next()) |phdr| {
                     if (phdr.p_type != std.elf.PT_LOAD)
                         continue; // Header isn't lodead
@@ -95,8 +95,8 @@ pub fn main() !u8 {
 
                     const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
 
-                    try source.seekTo(phdr.p_offset);
-                    try source.reader().readNoEof(dest_mem[addr_masked..][0..phdr.p_filesz]);
+                    try reader.seekTo(phdr.p_offset);
+                    try reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
                     @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
                 }
             },
@@ -110,7 +110,8 @@ pub fn main() !u8 {
                         @memcpy(flash.data[offset .. offset + data.len], data);
                     }
                 };
-                _ = try ihex.parseData(file.reader(), .{ .pedantic = true }, &flash_storage, anyerror, ihex_processor.process);
+                var reader = file.reader(&.{});
+                _ = try ihex.parseData(&reader.interface, .{ .pedantic = true }, &flash_storage, anyerror, ihex_processor.process);
             },
         }
     }
@@ -221,7 +222,12 @@ const IO = struct {
         const reg: Register = @enumFromInt(addr);
         return switch (reg) {
             .exit => 0,
-            .stdio => std.io.getStdIn().reader().readByte() catch 0xFF, // 0xFF = EOF
+            .stdio => blk: {
+                var stdin = std.fs.File.stdin().reader(&.{});
+                var buf: [1]u8 = undefined;
+                stdin.interface.readSliceAll(&buf) catch break :blk 0xFF; // 0xFF = EOF
+                break :blk buf[0];
+            },
             .stderr => 0,
 
             .scratch_0 => io.scratch_regs[0x0],
@@ -256,8 +262,14 @@ const IO = struct {
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
             .exit => std.process.exit(value & mask),
-            .stdio => std.io.getStdOut().writer().writeByte(value & mask) catch @panic("i/o failure"),
-            .stderr => std.io.getStdErr().writer().writeByte(value & mask) catch @panic("i/o failure"),
+            .stdio => {
+                var stdout = std.fs.File.stdout().writer(&.{});
+                stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
+            },
+            .stderr => {
+                var stderr = std.fs.File.stderr().writer(&.{});
+                stderr.interface.writeByte(value & mask) catch @panic("i/o failure");
+            },
 
             .scratch_0 => write_masked(&io.scratch_regs[0x0], mask, value),
             .scratch_1 => write_masked(&io.scratch_regs[0x1], mask, value),
