@@ -15,17 +15,11 @@ const types = usb.types;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
-pub const Config = struct {
-    synchronization_nops: comptime_int = 3,
-    dpram_allocator: type = DpramAllocatorBump,
-    controller_config: usb.Config,
-};
-
 pub const default = struct {
-    pub const strings: usb.Strings = .{
+    pub const strings: usb.Config.DeviceStrings = .{
         .manufacturer = "Raspberry Pi",
         .product = "Pico Test Device",
-        .serial = "someserial",
+        .serial = "00000000",
     };
     pub const vid: u16 = 0x2E8A;
     pub const pid: u16 = 0x000a;
@@ -33,76 +27,45 @@ pub const default = struct {
     pub const transfer_size = 64;
 };
 
-const Endpoint = usb.types.Endpoint;
+const EpNum = usb.types.Endpoint.Num;
 const EpCtrl = @TypeOf(USB_DPRAM.EP1_IN_CONTROL);
 const BufCtrl = @TypeOf(USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const dpram_size = 4096;
-pub const DpramBuffer = struct {
-    const chunk_len = 1 << Index.ignored_lsbs;
-    const start_align = chunk_len;
+const dpram_buffer_len = 64;
+// `@volatileCast` is sound because the USB hardware only modifies the buffers
+// after we transfer ownership by accesing a volatile register.
+const dpram_buffers: *[4096 / dpram_buffer_len][dpram_buffer_len]u8 = @volatileCast(@ptrCast(USB_DPRAM));
+// First 0x100 bytes are registers
+const dpram_ep0buf_idx = 0x100 / dpram_buffer_len;
 
-    const Chunk = struct { data: [chunk_len]u8 align(start_align) = undefined };
-
-    const memory_raw: *[dpram_size / chunk_len]Chunk =
-        @alignCast(@volatileCast(@ptrCast(USB_DPRAM)));
-
-    pub const Len =
-        std.meta.Int(.unsigned, std.math.log2_int_ceil(u16, dpram_size));
-
-    pub const Index = enum(Len) {
-        const ignored_lsbs = 6;
-
-        invalid = 0,
-        ep0buf0 = (0x100 >> ignored_lsbs),
-        ep0buf1,
-        data_start,
-        _,
-
-        fn from_reg(reg: EpCtrl.underlying_type) @This() {
-            return @enumFromInt(@shrExact(reg.BUFFER_ADDRESS, ignored_lsbs));
-        }
-
-        fn to_u16(this: @This()) u16 {
-            return @as(u16, @intFromEnum(this)) << ignored_lsbs;
-        }
-
-        fn start(this: @This()) [*]align(start_align) u8 {
-            return @ptrCast(&memory_raw[@intFromEnum(this)]);
-        }
-    };
-};
-
+/// Keeps track of how many buffers have been allocated.
 pub const DpramAllocatorBump = struct {
-    // First 0x100 bytes contain control registers and first 2 buffers are for endpoint 0.
-    var top: DpramBuffer.Index = .data_start;
+    top: u16,
 
-    fn alloc(len: DpramBuffer.Len) error{OutOfBufferMemory}!DpramBuffer.Index {
-        if (top == .invalid) return error.OutOfBufferMemory;
+    // First 2 buffers are for endpoint 0.
+    const init: @This() = .{ .top = dpram_ep0buf_idx + 2 };
 
-        const next, const ovf = @addWithOverflow(len, @intFromEnum(top));
-        if (ovf != 0 and next != 0)
+    /// Allocate a new buffer in dpram, `len` is in units of 64 bytes.
+    fn alloc(this: *@This(), len: u16) error{OutOfBufferMemory}!u16 {
+        const next, const ovf = @addWithOverflow(len, this.top);
+        if (ovf != 0 or next > dpram_buffers.len)
             return error.OutOfBufferMemory;
 
-        const ret: DpramBuffer.Index = @enumFromInt(next);
-        defer top = ret;
-        return ret;
+        defer this.top = next;
+        return this.top;
     }
 };
 
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Code
-// +++++++++++++++++++++++++++++++++++++++++++++++++
+pub const Config = struct {
+    /// How many nops to insert for synchronization with the USB hardware.
+    synchronization_nops: comptime_int = 3,
+    /// USB controller configuration.
+    controller_config: usb.Config,
+};
 
-/// The rp2040 usb device impl
-///
-/// We create a concrete implementaion by passing a handful
-/// of system specific functions to Usb(). Those functions
-/// are used by the abstract USB impl of microzig.
 pub fn Usb(comptime config: Config) type {
     return struct {
         pub const interface_vtable: usb.DeviceInterface.Vtable = .{
-            .control_transfer = &control_transfer,
             .signal_rx_ready = &signal_rx_ready,
             .submit_tx_buffer = &submit_tx_buffer,
             .endpoint_open = &endpoint_open,
@@ -118,17 +81,17 @@ pub fn Usb(comptime config: Config) type {
                 @ptrCast(&USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
             is_out: bool,
-            num: Endpoint.Num,
+            num: EpNum,
 
             inline fn to_idx(this: @This()) u5 {
                 return @bitCast(this);
             }
 
-            fn in(num: Endpoint.Num) @This() {
+            fn in(num: EpNum) @This() {
                 return .{ .num = num, .is_out = false };
             }
 
-            fn out(num: Endpoint.Num) @This() {
+            fn out(num: EpNum) @This() {
                 return .{ .num = num, .is_out = true };
             }
 
@@ -142,11 +105,11 @@ pub fn Usb(comptime config: Config) type {
             }
 
             fn buffer(this: @This()) []u8 {
-                const buf: DpramBuffer.Index = if (this.ep_ctrl()) |reg|
-                    .from_reg(reg.read())
+                const buf: u16 = if (this.ep_ctrl()) |reg|
+                    @divExact(reg.read().BUFFER_ADDRESS, dpram_buffer_len)
                 else
-                    .ep0buf0;
-                return buf.start()[0..DpramBuffer.chunk_len];
+                    dpram_ep0buf_idx;
+                return &dpram_buffers[buf];
             }
 
             fn len(this: @This()) u16 {
@@ -172,6 +135,7 @@ pub fn Usb(comptime config: Config) type {
         };
 
         state: State,
+        dpram_allocator: DpramAllocatorBump,
         controller: Controller,
 
         pub fn interface(this: *@This()) usb.DeviceInterface {
@@ -181,6 +145,7 @@ pub fn Usb(comptime config: Config) type {
             };
         }
 
+        /// Initialize USB hardware and request enumertation from USB host.
         pub fn init() @This() {
             if (chip == .RP2350)
                 USB.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
@@ -239,13 +204,13 @@ pub fn Usb(comptime config: Config) type {
             USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
             return .{
-                .state = .{
-                    .ready = DpramBuffer.Index.ep0buf0.start()[0..default.transfer_size],
-                },
+                .state = .{ .ready = &dpram_buffers[dpram_ep0buf_idx] },
+                .dpram_allocator = .init,
                 .controller = .init,
             };
         }
 
+        /// Helper function that breaks up long strings.
         fn ep0_send(this: *@This(), tx_buf: []u8, data: []const u8) void {
             const len = @min(tx_buf.len, data.len);
             if (len == 0)
@@ -257,23 +222,7 @@ pub fn Usb(comptime config: Config) type {
             this.interface().submit_tx_buffer(.ep0, tx_buf.ptr + len);
         }
 
-        fn control_transfer(ptr: *anyopaque, data: []const u8) void {
-            const this: *@This() = @alignCast(@ptrCast(ptr));
-            switch (this.state) {
-                .sending => |residual| {
-                    std.log.err("residual data: {any}", .{residual});
-                    this.state = .{ .sending = data };
-                },
-                .no_buffer => |new_address| {
-                    if (new_address) |_|
-                        std.log.err("missed address change!", .{});
-                    this.state = .{ .sending = data };
-                },
-                .ready => |tx_buf| this.ep0_send(tx_buf, data),
-                .waiting_ack => unreachable,
-            }
-        }
-
+        /// Called when a setup packet is received.
         fn process_setup(this: *@This(), tx_buf: []u8) void {
             // Copy the setup packet out of its dedicated buffer at the base of
             // USB SRAM. The PAC models this buffer as two 32-bit registers.
@@ -297,7 +246,8 @@ pub fn Usb(comptime config: Config) type {
                             this.ep0_send(tx_buf, usb.ACK);
                             this.state = .{ .no_buffer = @intCast(setup.value) };
                         },
-                        .SetConfiguration => this.controller.set_configuration(this.interface(), &setup),
+                        .SetConfiguration => if (this.controller.set_configuration(this.interface(), &setup))
+                            this.ep0_send(tx_buf, usb.ACK),
                         .GetDescriptor => if (Controller.get_descriptor(&setup)) |desc|
                             this.ep0_send(tx_buf, desc),
                         .SetFeature => if (this.controller.set_feature(
@@ -387,8 +337,7 @@ pub fn Usb(comptime config: Config) type {
             if (ints.BUS_RESET != 0) {
                 this.controller.deinit();
                 this.controller = .init;
-
-                // TODO: Reset allocator.
+                this.dpram_allocator = .init;
 
                 var sie_status: SieStatus = @bitCast(@as(u32, 0));
                 sie_status.BUS_RESET = 1;
@@ -397,7 +346,8 @@ pub fn Usb(comptime config: Config) type {
             }
         }
 
-        pub fn submit_tx_buffer(_: *anyopaque, ep_in: Endpoint.Num, buffer_end: [*]const u8) void {
+        /// See interface description.
+        pub fn submit_tx_buffer(_: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void {
             const ep_hard: HardwareEndpoint = .in(ep_in);
             const buf = ep_hard.buffer();
 
@@ -428,7 +378,8 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
-        pub fn signal_rx_ready(_: *anyopaque, ep_out: Endpoint.Num, len: usize) void {
+        /// See interface description.
+        pub fn signal_rx_ready(_: *anyopaque, ep_out: EpNum, len: usize) void {
             const ep_hard: HardwareEndpoint = .out(ep_out);
 
             // Configure the OUT:
@@ -442,9 +393,9 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
+        /// See interface description.
         pub fn endpoint_open(ptr: *anyopaque, desc: *const usb.descriptor.Endpoint) ?[]u8 {
             const this: *@This() = @alignCast(@ptrCast(ptr));
-            _ = this;
 
             assert(@intFromEnum(desc.endpoint.num) < max_endpoints_count);
 
@@ -454,18 +405,19 @@ pub fn Usb(comptime config: Config) type {
             };
 
             const start = if (desc.endpoint.num != .ep0) blk: {
-                const buf = config.dpram_allocator.alloc(1) catch unreachable;
+                const buf = this.dpram_allocator.alloc(1) catch
+                    std.debug.panic("USB controller out of memory.", .{});
                 var ep_ctrl = ep_hard.ep_ctrl().?;
                 var rmw = ep_ctrl.read();
                 rmw.ENABLE = 1;
                 rmw.INTERRUPT_PER_BUFF = 1;
                 rmw.ENDPOINT_TYPE = @enumFromInt(desc.attributes.transfer_type.as_number());
-                rmw.BUFFER_ADDRESS = buf.to_u16();
+                rmw.BUFFER_ADDRESS = buf * dpram_buffer_len;
                 ep_ctrl.write(rmw);
-                break :blk buf.start();
-            } else DpramBuffer.Index.ep0buf0.start();
+                break :blk buf;
+            } else dpram_ep0buf_idx;
 
-            return start[0..default.transfer_size];
+            return &dpram_buffers[start];
         }
     };
 }

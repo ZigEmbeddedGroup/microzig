@@ -39,6 +39,7 @@ const Usb = rp2xxx.usb.Usb(.{ .controller_config = .{
 } });
 var usb: Usb = undefined;
 
+// Poll the USB device for events until all data is sent.
 fn write_all(serial: *CdcDriver, data: []const u8) void {
     var offset: usize = 0;
     while (offset < data.len) {

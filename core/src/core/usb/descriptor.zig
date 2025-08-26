@@ -167,7 +167,7 @@ pub const Configuration = extern struct {
     /// Maximum device power consumption in units of 2mA.
     max_current: MaxCurrent,
 
-    pub fn serialize(this: @This()) [9]u8 {
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
         return @bitCast(this);
     }
 };
@@ -176,6 +176,26 @@ pub fn string(comptime value: []const u8) []const u8 {
     const encoded: []const u8 = @ptrCast(std.unicode.utf8ToUtf16LeStringLiteral(value));
     return &[2]u8{ encoded.len + 2, @intFromEnum(Type.String) } ++ encoded;
 }
+
+/// String descriptor 0.
+pub const Language = extern struct {
+    comptime {
+        assert(@alignOf(@This()) == 1);
+        assert(@sizeOf(@This()) == 4);
+    }
+
+    length: u8 = @sizeOf(@This()),
+    /// Type of this descriptor, must be `String`.
+    descriptor_type: Type = .String,
+    /// See definitions below for possible values.
+    lang: types.U16Le,
+
+    pub const English: @This() = .{ .lang = .from(0x0409) };
+
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
+};
 
 /// Describes an endpoint within an interface
 pub const Endpoint = extern struct {

@@ -19,7 +19,6 @@ const EpNum = types.Endpoint.Num;
 
 pub const DeviceInterface = struct {
     pub const Vtable = struct {
-        control_transfer: *const fn (ptr: *anyopaque, data: []const u8) void,
         submit_tx_buffer: *const fn (ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void,
         signal_rx_ready: *const fn (ptr: *anyopaque, ep_out: EpNum, max_len: usize) void,
         endpoint_open: *const fn (ptr: *anyopaque, desc: *const descriptor.Endpoint) ?[]u8,
@@ -27,39 +26,34 @@ pub const DeviceInterface = struct {
     ptr: *anyopaque,
     vtable: *const Vtable,
 
-    pub fn control_transfer(this: @This(), data: []const u8) void {
-        assert(data.len != 0);
-        this.vtable.control_transfer(this.ptr, data);
-    }
-    pub fn control_ack(this: @This()) void {
-        this.vtable.control_transfer(this.ptr, "");
-    }
+    /// Called by drivers when a tx buffer is filled.
+    /// Submitting an empty buffer signals an ACK.
+    /// A buffer can only be submitted once.
     pub fn submit_tx_buffer(this: @This(), ep_in: EpNum, buffer_end: [*]const u8) void {
         this.vtable.submit_tx_buffer(this.ptr, ep_in, buffer_end);
     }
+    /// Called by drivers to report readiness to receive up to `len` bytes.
+    /// Must be called exactly once before each packet.
     pub fn signal_rx_ready(this: @This(), ep_out: EpNum, max_len: usize) void {
         this.vtable.signal_rx_ready(this.ptr, ep_out, max_len);
     }
+    /// Opens an endpoint according to the descriptor.
     pub fn endpoint_open(this: @This(), desc: *const descriptor.Endpoint) ?[]u8 {
         return this.vtable.endpoint_open(this.ptr, desc);
     }
 };
-/// Manufacturer, product and serial number strings.
-pub const Strings = struct {
-    manufacturer: []const u8,
-    product: []const u8,
-    serial: []const u8,
-};
 
 pub const Config = struct {
+    /// Manufacturer, product and serial number strings.
+    pub const DeviceStrings = struct {
+        manufacturer: []const u8,
+        product: []const u8,
+        serial: []const u8,
+    };
+
     pub fn NameValue(T: type) type {
         return struct { name: [:0]const u8, value: T };
     }
-
-    /// String descriptor language.
-    pub const Language = enum(u16) {
-        English = 0x0409,
-    };
 
     pub const Driver = struct {
         name: [:0]const u8,
@@ -73,13 +67,13 @@ pub const Config = struct {
     /// Maximum device current consumption..
     max_current: descriptor.Configuration.MaxCurrent = .from_ma(100),
     /// String descriptor language.
-    language: Language = .English,
+    language: descriptor.Language = .English,
     /// Device version number as Binary Coded Decimal.
     bcd_device: u16 = 0x01_00,
     /// Class, subclass and protocol of device.
     device_triple: descriptor.Device.DeviceTriple = .unspecified,
     /// Manufacturer, product and serial number strings. Leave at null for device default.
-    strings: ?Strings = null,
+    strings: ?DeviceStrings = null,
     /// Vendor ID. Leave at null for device default.
     vid: ?u16 = null,
     /// Product ID. Leave at null for device default.
@@ -92,46 +86,29 @@ pub const Config = struct {
     drivers: []const Driver,
 };
 
+/// Information about a usb driver, each is required to return this struct via `.info()`.
 pub fn DriverInfo(T: type, Descriptors: type) type {
     return struct {
+        /// All configuration descriptors concatenated in an extern struct.
         descriptors: Descriptors,
+        /// Handlers of setup packets for each used interface.
         interface_handlers: []const struct { itf: u8, func: fn (*T, *const types.SetupPacket) ?[]const u8 },
+        /// Functions called an endpoint is ready to send.
         endpoint_in_handlers: []const struct { ep_num: EpNum, func: fn (*T, []u8) void },
+        /// Functions called when data is received on an endpoint.
         endpoint_out_handlers: []const struct { ep_num: EpNum, func: fn (*T, []const u8) void },
     };
 }
-
-/// And endpoint and its corresponding buffer.
-pub const EndpointAndBuffer = union(types.Dir) {
-    Out: struct { ep_num: EpNum, buffer: []const u8 },
-    In: struct { ep_num: EpNum, buffer: []u8 },
-};
 
 pub const PacketUnhandled = error{UsbPacketUnhandled};
 pub const ACK = "";
 pub const NAK = null;
 
-/// Create a USB device controller.
-///
-/// This is an abstract USB device controller implementation that requires
-/// the USB device driver to implement a handful of functions to work correctly:
-///
-/// * `usb_init_device() ?[]u8` - Initialize the USB device controller (e.g. enable interrupts, etc.). Returns the ep0 tx buffer, if any.
-/// * `set_address(addr: u7) void` - Set device address.
-/// * `get_events() anytype` - Returns what events need to be handled (rx/tx completed, bus reset etc., specific to device).
-/// * `submit_tx_buffer(ep_in: EpNum, buffer_end: [*]const u8) void` - Send the specified buffer to the host.
-/// * `signal_rx_ready(ep_out: EpNum, len: usize) void` - Receive n bytes over the specified endpoint.
-/// * `bus_reset_clear() void` - Called after handling a bus reset.
-///
-/// As well as some declarations:
-///
-/// * `max_endpoints_count` - How many endpoints are supported, up to 16.
-/// * `max_transfer_size` - How many bytes can be transferred in one packet.
-/// * `bcd_usb` - Version of USB specification supported by device.
-/// * `default_strings` - Default manufacturer, product and serial (optional).
-/// * `default_vid_pid` - Default VID and PID (optional).
+/// This is an abstract USB device controller that gets events from
+/// a usb device and distributes them to usb drivers, depending on config.
 pub fn Controller(comptime config: Config) type {
     return struct {
+        /// Driver data is stored within the controller.
         const DriverData = blk: {
             const Field = std.builtin.Type.StructField;
             var fields: []const Field = &.{};
@@ -154,15 +131,9 @@ pub fn Controller(comptime config: Config) type {
 
         drivers: ?DriverData,
 
+        /// String descriptors. Each driver can add its own, and its `.init()` gets the list of IDs.
         const string = blk: {
-            // String 0 indicates language. First byte is length.
-            const lang: types.U16Le = .from(@intFromEnum(config.language));
-            var desc: []const []const u8 = &.{&.{
-                0x04,
-                @intFromEnum(descriptor.Type.String),
-                lang.lo,
-                lang.hi,
-            }};
+            var desc: []const []const u8 = &.{&config.language.serialize()};
 
             desc = desc ++ .{descriptor.string(config.strings.?.manufacturer)};
             desc = desc ++ .{descriptor.string(config.strings.?.product)};
@@ -211,6 +182,7 @@ pub fn Controller(comptime config: Config) type {
             };
         };
 
+        /// Used descriptors and endpoint handlers.
         const driver_info = blk: {
             const Field = std.builtin.Type.StructField;
             var fields: []const Field = &.{};
@@ -262,6 +234,7 @@ pub fn Controller(comptime config: Config) type {
 
         pub const init: @This() = .{ .drivers = null };
 
+        /// Deinitializes the drivers if the controller has been configured.
         pub fn deinit(this: *@This()) void {
             if (this.drivers) |*drivers| {
                 inline for (config.drivers) |drv|
@@ -270,6 +243,7 @@ pub fn Controller(comptime config: Config) type {
             this.* = .init;
         }
 
+        /// Called whenever a GET_DESCRIPTOR request is received.
         pub fn get_descriptor(setup: *const types.SetupPacket) ?[]const u8 {
             const device_descriptor: descriptor.Device = comptime .{
                 .bcd_usb = .from(config.bcd_usb.?),
@@ -322,14 +296,14 @@ pub fn Controller(comptime config: Config) type {
             } else |_| return null;
         }
 
-        pub fn set_configuration(this: *@This(), device: DeviceInterface, setup: *const types.SetupPacket) void {
-            defer device.control_ack();
+        /// Called whenever a SET_CONFIGURATION request is received.
+        pub fn set_configuration(this: *@This(), device: DeviceInterface, setup: *const types.SetupPacket) bool {
             if (setup.value == 0) {
                 this.deinit();
-                return;
+                return true;
             }
 
-            if (setup.value != 1 or this.drivers != null) return;
+            if (setup.value != 1 or this.drivers != null) return true;
 
             this.drivers = undefined;
             inline for (config.drivers) |drv| {
@@ -356,8 +330,10 @@ pub fn Controller(comptime config: Config) type {
                         };
                 }
             }
+            return true;
         }
 
+        /// Called whenever a SET_FEATURE request is received.
         pub fn set_feature(this: *@This(), feature_selector: u8, index: u16, value: bool) bool {
             _ = this;
             _ = index;
@@ -369,6 +345,7 @@ pub fn Controller(comptime config: Config) type {
             }
         }
 
+        /// Called whenever a setup packet is received.
         pub fn interface_setup(this: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
             if (this.drivers) |*drivers| {
                 inline for (config.drivers) |drv| {
@@ -382,6 +359,7 @@ pub fn Controller(comptime config: Config) type {
             return NAK;
         }
 
+        /// Called whenever a tx buffer is ready.
         pub fn on_tx_ready(this: *@This(), ep_num: EpNum, buf: []u8) PacketUnhandled!void {
             if (this.drivers) |*drivers| {
                 inline for (config.drivers) |drv| {
@@ -395,6 +373,7 @@ pub fn Controller(comptime config: Config) type {
             return error.UsbPacketUnhandled;
         }
 
+        /// Called whenever a packet is received from the host.
         pub fn on_data_rx(this: *@This(), ep_num: EpNum, buf: []const u8) PacketUnhandled!void {
             if (this.drivers) |*drivers| {
                 inline for (config.drivers) |drv| {
