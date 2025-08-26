@@ -16,56 +16,56 @@ pub fn build(b: *std.Build) void {
 
     const specific_examples: []const Example = &.{
         // RaspberryPi Boards:
-        // .{ .target = raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
-        // .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
-        // .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
-        // .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
-        // .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+        .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
 
-        // .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_random_data", .file = "src/rp2350_only/random_data.zig" },
-        // .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_random_data", .file = "src/rp2350_only/random_data.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_random_data", .file = "src/rp2350_only/random_data.zig" },
+        .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_random_data", .file = "src/rp2350_only/random_data.zig" },
 
-        // .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
-        // .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
+        .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
 
-        // // WaveShare Boards:
-        // .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040_matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
+        // WaveShare Boards:
+        .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040_matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
         // .{ .target = "board:waveshare/rp2040_eth", .name = "rp2040-eth" },
         // .{ .target = "board:waveshare/rp2040_plus_4m", .name = "rp2040-plus-4m" },
         // .{ .target = "board:waveshare/rp2040_plus_16m", .name = "rp2040-plus-16m" },
     };
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
-        // .{ .name = "adc", .file = "src/adc.zig" },
-        // .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
-        // .{ .name = "pwm", .file = "src/pwm.zig" },
-        // .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
-        // .{ .name = "uart-log", .file = "src/uart_log.zig" },
-        // .{ .name = "rtt-log", .file = "src/rtt_log.zig", .works_with_riscv = false },
-        // .{ .name = "spi-master", .file = "src/spi_master.zig" },
-        // .{ .name = "spi-slave", .file = "src/spi_slave.zig" },
-        // .{ .name = "spi-loopback-dma", .file = "src/spi_loopback_dma.zig" },
-        // .{ .name = "squarewave", .file = "src/squarewave.zig" },
-        // .{ .name = "ws2812", .file = "src/ws2812.zig" },
-        // .{ .name = "blinky", .file = "src/blinky.zig" },
-        // .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
-        // .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
-        // .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
-        // .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
-        // .{ .name = "interrupts", .file = "src/interrupts.zig" },
-        // .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
-        // .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
+        .{ .name = "adc", .file = "src/adc.zig" },
+        .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
+        .{ .name = "pwm", .file = "src/pwm.zig" },
+        .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
+        .{ .name = "uart-log", .file = "src/uart_log.zig" },
+        .{ .name = "rtt-log", .file = "src/rtt_log.zig", .works_with_riscv = false },
+        .{ .name = "spi-master", .file = "src/spi_master.zig" },
+        .{ .name = "spi-slave", .file = "src/spi_slave.zig" },
+        .{ .name = "spi-loopback-dma", .file = "src/spi_loopback_dma.zig" },
+        .{ .name = "squarewave", .file = "src/squarewave.zig" },
+        .{ .name = "ws2812", .file = "src/ws2812.zig" },
+        .{ .name = "blinky", .file = "src/blinky.zig" },
+        .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
+        .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
+        .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
+        .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
+        .{ .name = "interrupts", .file = "src/interrupts.zig" },
+        .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
+        .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
-        // .{ .name = "dma", .file = "src/dma.zig" },
-        // .{ .name = "cyw43", .file = "src/cyw43.zig" },
-        // .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
+        .{ .name = "dma", .file = "src/dma.zig" },
+        .{ .name = "cyw43", .file = "src/cyw43.zig" },
+        .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);
@@ -92,12 +92,6 @@ pub fn build(b: *std.Build) void {
         }
     }
 
-    const no_bin = b.option(
-        bool,
-        "no-bin",
-        "skip emitting binaries",
-    ) orelse false;
-
     for (available_examples.items) |example| {
         // If we specify example, only select the ones that match
         if (maybe_example) |selected_example|
@@ -116,19 +110,14 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(example.file),
         });
 
-        if (no_bin) {
-            // Skip emitting binaries to get compile errors faster (great with --watch)
-            b.getInstallStep().dependOn(&firmware.artifact.step);
-        } else {
-            // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
-            // and allows installing the firmware as a typical firmware file.
-            //
-            // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-            mb.install_firmware(firmware, .{});
+        // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
+        // and allows installing the firmware as a typical firmware file.
+        //
+        // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
+        mb.install_firmware(firmware, .{});
 
-            // For debugging, we also always install the firmware as an ELF file
-            mb.install_firmware(firmware, .{ .format = .elf });
-        }
+        // For debugging, we also always install the firmware as an ELF file
+        mb.install_firmware(firmware, .{ .format = .elf });
     }
 }
 
