@@ -52,10 +52,10 @@ pub const I2C_Device = struct {
     pub const WriteError = Datagram_Device.WriteError;
     pub const ReadError = Datagram_Device.ReadError;
 
-    /// Selects I²C bus should be used.
+    ///Selects I²C bus should be used.
     bus: I2c.I2C,
 
-    /// The address of our I²C device.
+    ///The address of our I²C device.
     address: I2c.Address,
 
     //for the Datagram device

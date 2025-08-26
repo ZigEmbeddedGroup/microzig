@@ -23,6 +23,7 @@ const BaseError = error{ IoError, Timeout };
 pub const ConnectError = BaseError || error{DeviceBusy};
 pub const WriteError = BaseError || error{ Unsupported, NotConnected };
 pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
+pub const AnyError = ConnectError || WriteError || ReadError;
 
 /// Establishes a connection to the device (like activating a chip-select lane or similar).
 /// NOTE: Call `.disconnect()` when the usage of the device is done to release it.

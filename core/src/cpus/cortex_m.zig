@@ -2,6 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
+const VectorTable = microzig.chip.VectorTable;
 
 const Core = enum {
     cortex_m0,
@@ -362,23 +363,6 @@ pub const interrupt = struct {
 
             return @enumFromInt(raw);
         }
-
-        pub fn set_handler(comptime excpt: Exception, handler: Handler) Handler {
-            if (@intFromEnum(excpt) == 0) {
-                @compileError("Cannot set handler for slot 0 (initial stack pointer)");
-            }
-
-            if (!interrupt.has_ram_vectors()) {
-                @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
-            }
-
-            var vector_table: *volatile [vector_count]Handler = @ptrFromInt(peripherals.scb.VTOR);
-
-            // The Exception enum value is the vector table slot number.
-            const old_handler = vector_table[@intFromEnum(excpt)];
-            vector_table[@intFromEnum(excpt)] = handler;
-            return old_handler;
-        }
     };
 
     const nvic = peripherals.nvic;
@@ -488,7 +472,6 @@ pub const interrupt = struct {
         }
     }
 
-    // TODO: also for exceptions
     pub fn clear_pending(comptime int: ExternalInterrupt) void {
         const num: comptime_int = @intFromEnum(int);
         switch (cortex_m) {
@@ -516,27 +499,6 @@ pub const interrupt = struct {
 
     pub fn get_priority(comptime int: ExternalInterrupt) Priority {
         return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
-    }
-
-    pub inline fn has_ram_vectors() bool {
-        return @hasField(@TypeOf(microzig.options.cpu), "ram_vectors") and microzig.options.cpu.ram_vectors;
-    }
-
-    pub inline fn has_ram_vectors_section() bool {
-        return @hasField(@TypeOf(microzig.options.cpu), "has_ram_vectors_section") and microzig.options.cpu.has_ram_vectors_section;
-    }
-
-    pub fn set_handler(int: ExternalInterrupt, handler: ?Handler) ?Handler {
-        if (!has_ram_vectors()) {
-            @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
-        }
-
-        var vector_table: *volatile [vector_count]Handler = @ptrFromInt(peripherals.scb.VTOR);
-
-        // ExternalInterrupt vectors start at table slot number 16.
-        const old_handler = vector_table[@intFromEnum(int) + 16];
-        vector_table[@intFromEnum(int) + 16] = handler orelse microzig.interrupt.unhandled;
-        return if (old_handler.c == microzig.interrupt.unhandled.c) null else old_handler;
     }
 };
 
@@ -576,96 +538,76 @@ pub fn clrex() void {
     asm volatile ("clrex");
 }
 
-const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
-
-var ram_vectors: [vector_count]usize align(256) = undefined;
+/// The RAM vector table used. You can swap interrupt handlers at runtime here.
+/// Available when using a RAM vector table or a RAM image.
+pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
+    startup_logic.generate_vector_table()
+else
+    @compileError("`ram_vector_table` is not available. Consider adding .cpu = .{ .ram_vector_table = true }" ++
+        " to your microzig_options or using a RAM image");
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    // it looks odd to just use a u8 here, but in C it's common to use a
-    // char when linking these values from the linkerscript. What's
-    // important is the addresses of these values.
-    extern var microzig_data_start: u8;
-    extern var microzig_data_end: u8;
-    extern var microzig_bss_start: u8;
-    extern var microzig_bss_end: u8;
-    extern const microzig_data_load_start: u8;
-
-    pub fn ram_image_entry_point() linksection("microzig_ram_start") callconv(.naked) void {
+    pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) void {
+        const eos = comptime microzig.utilities.get_end_of_stack();
         asm volatile (
             \\
-            // Set VTOR to point to ram table
-            \\mov r0, %[_vector_table]
-            \\mov r1, %[_VTOR_ADDRESS]
-            \\str r0, [r1]
             // Set up stack and jump to _start
-            \\ldm r0!, {r1, r2}
-            \\msr msp, r1
-            \\bx r2
+            \\msr msp, %[eos]
+            // using bx instead of b because the _start function might be too far away
+            \\bx %[start_fn]
             :
-            : [_vector_table] "r" (&startup_logic._vector_table),
-              [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
-            : "memory", "r0", "r1", "r2"
+            : [eos] "r" (@as(u32, @intFromPtr(eos))),
+              [start_fn] "r" (@as(u32, @intFromPtr(&_start))),
         );
     }
 
     pub fn _start() callconv(.c) noreturn {
-        if (comptime !is_ramimage()) {
-            // fill .bss with zeroes
-            {
-                const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
-                const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
-                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+        microzig.utilities.initialize_system_memories(.auto);
 
-                @memset(bss_start[0..bss_len], 0);
-            }
-
-            // load .data from flash
-            {
-                const data_start: [*]u8 = @ptrCast(&microzig_data_start);
-                const data_end: [*]u8 = @ptrCast(&microzig_data_end);
-                const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-                const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
-
-                @memcpy(data_start[0..data_len], data_src[0..data_len]);
-            }
-
-            // Move vector table to RAM if requested
-            if (interrupt.has_ram_vectors()) {
-                // Copy vector table to RAM and set VTOR to point to it
-
-                if (comptime interrupt.has_ram_vectors_section()) {
-                    @export(&ram_vectors, .{
-                        .name = "_ram_vectors",
-                        .section = "ram_vectors",
-                        .linkage = .strong,
-                    });
-                } else {
-                    @export(&ram_vectors, .{
-                        .name = "_ram_vectors",
-                        .linkage = .strong,
-                    });
-                }
-
-                const flash_vector: [*]const usize = @ptrCast(&_vector_table);
-
-                @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
-
-                const vtor_addr: u32 = @intFromPtr(&ram_vectors);
-                std.debug.assert(std.mem.isAligned(vtor_addr, 256));
-                peripherals.scb.VTOR = vtor_addr;
-            }
+        if (using_ram_vector_table or is_ram_image) {
+            asm volatile (
+                \\
+                // Set VTOR to point to ram table
+                \\mov r0, %[_vector_table]
+                \\mov r1, %[_VTOR_ADDRESS]
+                \\str r0, [r1]
+                :
+                : [_vector_table] "r" (&ram_vector_table),
+                  [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
+                : "memory", "r0", "r1"
+            );
         }
 
         microzig_main();
     }
 
-    const VectorTable = microzig.chip.VectorTable;
+    const DummyVectorTable = extern struct {
+        initial_stack_pointer: usize,
+        Reset: Handler,
+    };
 
-    // will be imported by microzig.zig to allow system startup.
-    // must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
-    pub const _vector_table: VectorTable align(256) = blk: {
+    const FlashVectorTable = if (using_ram_vector_table)
+        DummyVectorTable
+    else
+        VectorTable;
+
+    // If we are using a RAM vector table, we can use a dummy one (only 8
+    // bytes) that only provides the reset vector and the initial stack
+    // pointer.
+    // Must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
+    const _vector_table: FlashVectorTable align(256) = if (is_ram_image)
+        @compileError("`_vector_table` is not available in a RAM image")
+    else if (using_ram_vector_table)
+        .{
+            .initial_stack_pointer = microzig.config.end_of_stack,
+            .Reset = .{ .c = microzig.cpu.startup_logic._start },
+        }
+    else
+        generate_vector_table();
+
+    fn generate_vector_table() VectorTable {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.utilities.get_end_of_stack(),
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
@@ -678,26 +620,26 @@ pub const startup_logic = struct {
             }
         }
 
-        break :blk tmp;
-    };
+        return tmp;
+    }
 };
 
-fn is_ramimage() bool {
-    return microzig.config.ram_image;
-}
+const is_ram_image = microzig.config.ram_image;
+const using_ram_vector_table = @hasField(CPU_Options, "ram_vector_table") and microzig.options.cpu.ram_vector_table;
 
 pub fn export_startup_logic() void {
-    if (is_ramimage())
-        @export(&startup_logic.ram_image_entry_point, .{
+    if (is_ram_image) {
+        @export(&startup_logic.ram_image_start, .{
             .name = "_entry_point",
             .linkage = .strong,
-        })
-    else
+        });
+    } else {
         @export(&startup_logic._vector_table, .{
             .name = "_vector_table",
             .section = "microzig_flash_start",
             .linkage = .strong,
         });
+    }
 
     @export(&startup_logic._start, .{
         .name = "_start",
@@ -714,10 +656,12 @@ const systick_base = scs_base + 0x0010;
 const nvic_base = scs_base + 0x0100;
 const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
+const fpu_base = scs_base + 0x0F34;
 
 const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
-const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
+const mpu_present = @hasDecl(properties, "cpu.mpuPresent") and std.mem.eql(u8, properties.@"cpu.mpuPresent", "true");
+const fpu_present = @hasDecl(properties, "cpu.fpuPresent") and std.mem.eql(u8, properties.@"cpu.fpuPresent", "true");
 
 const core = blk: {
     break :blk switch (cortex_m) {
@@ -740,6 +684,12 @@ pub const peripherals = struct {
     /// System Control Block (SCB).
     pub const scb: *volatile types.peripherals.SystemControlBlock = @ptrFromInt(scb_base);
 
+    /// Floating Point Unit (FPU).
+    pub const fpu: *volatile types.peripherals.FloatingPointUnit = if (fpu_present)
+        @ptrFromInt(fpu_base)
+    else
+        @compileError("this CPU does not have an FPU");
+
     /// Nested Vector Interrupt Controller (NVIC).
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
 
@@ -750,7 +700,7 @@ pub const peripherals = struct {
     pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
         @ptrFromInt(mpu_base)
     else
-        @compileError("This chip does not have a MPU.");
+        @compileError("this CPU does not have an MPU");
 
     pub const dbg: (if (@hasDecl(core, "DebugRegisters"))
         *volatile core.DebugRegisters
@@ -772,6 +722,12 @@ pub const types = struct {
     pub const peripherals = struct {
         /// System Control Block (SCB).
         pub const SystemControlBlock = core.SystemControlBlock;
+
+        /// Floating Point Unit (FPU).
+        pub const FloatingPointUnit = if (@hasDecl(core, "FloatingPointUnit"))
+            core.FloatingPointUnit
+        else
+            @compileError("this CPU does not have an FPU definition");
 
         /// Nested Vector Interrupt Controller (NVIC).
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
@@ -837,6 +793,6 @@ pub const types = struct {
         pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
             core.MemoryProtectionUnit
         else
-            @compileError("This cpu does not have a MPU.");
+            @compileError("this CPU does not have an MPU definition");
     };
 };

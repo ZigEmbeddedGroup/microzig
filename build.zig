@@ -27,6 +27,7 @@ const port_list: []const struct {
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
+    .{ .name = "mcx", .dep_name = "port/nxp/mcx" },
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
@@ -208,6 +209,16 @@ var port_cache: PortCache = .{};
 /// ```
 pub fn MicroBuild(port_select: PortSelect) type {
     return struct {
+        builder: *Build,
+        dep: *Build.Dependency,
+        core_dep: *Build.Dependency,
+        drivers_dep: *Build.Dependency,
+
+        /// Contains all the ports you selected.
+        ports: SelectedPorts,
+
+        const Self = @This();
+
         const SelectedPorts = blk: {
             var fields: []const std.builtin.Type.StructField = &.{};
 
@@ -233,16 +244,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 },
             });
         };
-
-        const Self = @This();
-
-        builder: *Build,
-        dep: *Build.Dependency,
-        core_dep: *Build.Dependency,
-        drivers_dep: *Build.Dependency,
-
-        /// Contains all the ports you selected.
-        ports: SelectedPorts,
 
         const InitReturnType = blk: {
             @setEvalBranchQuota(2000);

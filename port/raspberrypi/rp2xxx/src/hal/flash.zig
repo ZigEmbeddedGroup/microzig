@@ -83,10 +83,10 @@ export fn _range_erase(offset: u32, count: u32) linksection(".ram_text") void {
 
     boot2.flash_init();
 
-    rom.connect_internal_flash()();
-    rom.flash_exit_xip()();
-    rom.flash_range_erase()(offset, count, BLOCK_SIZE, @intFromEnum(Command.block_erase));
-    rom.flash_flush_cache()();
+    rom.connect_internal_flash();
+    rom.flash_exit_xip();
+    rom.flash_range_erase(offset, count, BLOCK_SIZE, @intFromEnum(Command.block_erase));
+    rom.flash_flush_cache();
 
     boot2.flash_enable_xip();
 }
@@ -107,10 +107,10 @@ export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection
 
     boot2.flash_init();
 
-    rom.connect_internal_flash()();
-    rom.flash_exit_xip()();
-    rom.flash_range_program()(offset, data, len);
-    rom.flash_flush_cache()();
+    rom.connect_internal_flash();
+    rom.flash_exit_xip();
+    rom.flash_range_program(offset, data[0..len]);
+    rom.flash_flush_cache();
 
     boot2.flash_enable_xip();
 }
@@ -145,8 +145,8 @@ pub inline fn cmd(tx_buf: []const u8, rx_buf: []u8) void {
 fn _cmd(tx_buf: []const u8, rx_buf: []u8) linksection(".ram_text") void {
     boot2.flash_init();
     asm volatile ("" ::: "memory"); // memory barrier
-    rom.connect_internal_flash()();
-    rom.flash_exit_xip()();
+    rom.connect_internal_flash();
+    rom.flash_exit_xip();
     force_cs(false);
 
     // can't use peripherals, because its functions are not in ram
@@ -172,7 +172,7 @@ fn _cmd(tx_buf: []const u8, rx_buf: []u8) linksection(".ram_text") void {
     }
 
     force_cs(true);
-    rom.flash_flush_cache()();
+    rom.flash_flush_cache();
     boot2.flash_enable_xip();
 }
 

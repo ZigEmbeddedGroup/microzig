@@ -3,8 +3,7 @@ const microzig = @import("microzig");
 const riscv32_common = @import("riscv32-common");
 
 pub const CPU_Options = struct {
-    ram_vectors: bool = true,
-    has_ram_vectors_section: bool = false,
+    ram_vector_table: bool = false,
 };
 
 pub const Exception = enum(u32) {
@@ -125,24 +124,6 @@ pub const interrupt = struct {
         const mask: u16 = @as(u16, 0xf) << shift;
         return @enumFromInt((csr.meipra.read_set(.{ .index = index }).window & mask) >> shift);
     }
-
-    pub inline fn has_ram_vectors() bool {
-        return @hasField(@TypeOf(microzig.options.cpu), "ram_vectors") and microzig.options.cpu.ram_vectors;
-    }
-
-    pub inline fn has_ram_vectors_section() bool {
-        return @hasField(@TypeOf(microzig.options.cpu), "has_ram_vectors_section") and microzig.options.cpu.has_ram_vectors_section;
-    }
-
-    pub fn set_handler(int: ExternalInterrupt, handler: ?Handler) ?Handler {
-        if (!has_ram_vectors()) {
-            @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
-        }
-
-        const old_handler = ram_vectors[@intFromEnum(int)];
-        ram_vectors[@intFromEnum(int)] = handler orelse microzig.interrupt.unhandled;
-        return if (old_handler.naked == microzig.interrupt.unhandled.naked) null else old_handler;
-    }
 };
 
 pub const nop = riscv32_common.nop;
@@ -160,17 +141,24 @@ pub fn sev() void {
     asm volatile ("slt zero, zero, x1");
 }
 
-const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
-
-var ram_vectors: [vector_count]Handler = undefined;
+// NOTE: Technically the vector table is always in RAM in ram images no
+// matter the section but put it in .ram_text just to be consistent.
+/// The section in which the vector table is located. Core interrupts should be
+/// part of this section as otherwise you can get relocation errors.
+pub const vector_table_section = if (microzig.options.cpu.ram_vector_table or microzig.config.ram_image)
+    ".ram_text"
+else
+    ".text";
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub export fn _start() linksection(if (microzig.config.ram_image)
+    const start_section = if (microzig.config.ram_image)
         "microzig_ram_start"
     else
-        "microzig_flash_start") callconv(.naked) noreturn {
+        "microzig_flash_start";
+
+    pub fn _start() linksection(start_section) callconv(.naked) noreturn {
         asm volatile (
             \\.option push
             \\.option norelax
@@ -200,37 +188,17 @@ pub const startup_logic = struct {
         );
     }
 
-    pub export fn _start_c() callconv(.c) noreturn {
-        if (!microzig.config.ram_image) {
-            microzig.utilities.initialize_system_memories();
-        }
-
-        // Move vector table to RAM if requested
-        if (interrupt.has_ram_vectors()) {
-            if (interrupt.has_ram_vectors_section()) {
-                @export(&ram_vectors, .{
-                    .name = "_ram_vectors",
-                    .section = "ram_vectors",
-                    .linkage = .strong,
-                });
-            } else {
-                @export(&ram_vectors, .{
-                    .name = "_ram_vectors",
-                    .linkage = .strong,
-                });
-            }
-
-            @memcpy(&ram_vectors, &startup_logic.external_interrupt_table);
-        }
+    pub fn _start_c() callconv(.c) noreturn {
+        microzig.utilities.initialize_system_memories(.auto);
 
         microzig_main();
     }
 
-    fn unhandled_interrupt() callconv(riscv_calling_convention) void {
+    fn unhandled_interrupt() linksection(vector_table_section) callconv(riscv_calling_convention) void {
         @panic("unhandled core interrupt");
     }
 
-    pub export fn _vector_table() align(64) linksection("core_vectors") callconv(.naked) noreturn {
+    fn _vector_table() align(64) linksection(vector_table_section) callconv(.naked) noreturn {
         comptime {
             // NOTE: using the union variant .naked here is fine because both variants have the same layout
             @export(if (microzig.options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
@@ -241,21 +209,26 @@ pub const startup_logic = struct {
 
         asm volatile (
             \\j _exception_handler
+            \\.balign 4
             \\.word 0
             \\.word 0
             \\j _machine_software_handler
+            \\.balign 4
             \\.word 0
             \\.word 0
             \\.word 0
             \\j _machine_timer_handler
+            \\.balign 4
             \\.word 0
             \\.word 0
             \\.word 0
             \\j _machine_external_handler
+            \\.balign 4
         );
     }
 
     const external_interrupt_table = blk: {
+        const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
         var temp: [vector_count]Handler = @splat(microzig.interrupt.unhandled);
 
         for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
@@ -267,7 +240,7 @@ pub const startup_logic = struct {
         break :blk temp;
     };
 
-    pub export fn machine_external_interrupt() callconv(riscv_calling_convention) void {
+    fn machine_external_interrupt() linksection(vector_table_section) callconv(riscv_calling_convention) void {
         if (microzig.hal.compatibility.arch == .riscv) {
             // MAGIC: This is to work around a bug in the compiler.
             //        If it is not here the compiler fails to generate
@@ -277,51 +250,44 @@ pub const startup_logic = struct {
             x += 1;
         }
 
-        if (interrupt.has_ram_vectors()) {
-            asm volatile (
-                \\csrrsi a0, 0xbe4, 1
-                \\bltz a0, no_more_irqs
-                \\
-                \\dispatch_irq:
-                \\lui a1, %hi(_ram_vectors)
-                \\add a1, a1, a0
-                \\lw a1, %lo(_ram_vectors)(a1)
-                \\jalr ra, a1
-                \\
-                \\get_next_irq:
-                \\csrr a0, 0xbe4
-                \\bgez a0, dispatch_irq
-                \\
-                \\no_more_irqs:
-            );
-        } else {
-            asm volatile (
-                \\csrrsi a0, 0xbe4, 1
-                \\bltz a0, no_more_irqs
-                \\
-                \\dispatch_irq:
-                \\lui a1, %hi(_external_interrupt_table)
-                \\add a1, a1, a0
-                \\lw a1, %lo(_external_interrupt_table)(a1)
-                \\jalr ra, a1
-                \\
-                \\get_next_irq:
-                \\csrr a0, 0xbe4
-                \\bgez a0, dispatch_irq
-                \\
-                \\no_more_irqs:
-            );
-        }
+        asm volatile (
+            \\csrrsi a0, 0xbe4, 1
+            \\bltz a0, no_more_irqs
+            \\
+            \\dispatch_irq:
+            \\lui a1, %hi(_external_interrupt_table)
+            \\add a1, a1, a0
+            \\lw a1, %lo(_external_interrupt_table)(a1)
+            \\jalr ra, a1
+            \\
+            \\get_next_irq:
+            \\csrr a0, 0xbe4
+            \\bgez a0, dispatch_irq
+            \\
+            \\no_more_irqs:
+        );
     }
 };
 
 pub fn export_startup_logic() void {
-    std.testing.refAllDecls(startup_logic);
+    @export(&startup_logic._start, .{
+        .name = "_start",
+    });
+
+    @export(&startup_logic._start_c, .{
+        .name = "_start_c",
+    });
+
+    @export(&startup_logic._vector_table, .{
+        .name = "_vector_table",
+    });
 
     @export(&startup_logic.external_interrupt_table, .{
         .name = "_external_interrupt_table",
-        .section = if (!microzig.config.ram_image) "flash_vectors" else null,
-        .linkage = .strong,
+        .section = if (microzig.options.cpu.ram_vector_table or microzig.config.ram_image)
+            ".data"
+        else
+            ".rodata",
     });
 }
 

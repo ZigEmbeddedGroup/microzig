@@ -8,7 +8,6 @@ pub const clocks = @import("hal/clocks.zig");
 pub const dma = @import("hal/dma.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
-pub const irq = @import("hal/irq.zig");
 pub const multicore = @import("hal/multicore.zig");
 pub const mutex = @import("hal/mutex.zig");
 pub const pins = @import("hal/pins.zig");
@@ -31,11 +30,22 @@ pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const bootmeta = @import("hal/bootmeta.zig");
+pub const dcp = switch (compatibility.chip) {
+    .RP2040 => @compileError("RP2040 doesn't support DCP"),
+    .RP2350 => switch (compatibility.arch) {
+        .arm => @import("hal/dcp.zig"),
+        .riscv => @compileError("RP2350 riscv doesn't support DCP"),
+    },
+};
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test and compatibility.chip == .RP2350) {
         _ = bootmeta;
+
+        if (compatibility.arch == .arm and microzig.options.hal.use_dcp) {
+            _ = dcp;
+        }
     }
 
     // On the RP2040, we need to import the `atomic.zig` file to export some global
@@ -52,11 +62,21 @@ pub const HAL_Options = switch (compatibility.chip) {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
 
-            /// Next metadata block to link after image_def. **Last block in the
-            /// chain must link back to the first one** (to
+            /// Next metadata block to link after image_def. **Last block in
+            /// the chain must link back to the first one** (to
             /// `bootmeta.image_def_block`).
             next_block: ?*const anyopaque = null,
         } = .{},
+
+        /// Enable the FPU and lazy state preservation. Leads to much faster
+        /// single precision floating point arithmetic. If you want a custom
+        /// setup set this to false and configure the fpu yourself. Ignored on
+        /// riscv.
+        enable_fpu: bool = is_fpu_used,
+
+        /// Enable the DCP and export intrinsics. Leads to faster double
+        /// precision floating point arithmetic. Ignored on riscv.
+        use_dcp: bool = true,
     },
 };
 
@@ -73,9 +93,39 @@ pub inline fn init() void {
     init_sequence(clock_config);
 }
 
+const is_fpu_used: bool = builtin.abi.float() == .hard;
+
 /// Allows user to easily swap in their own clock config while still
 /// using the reccomended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
+    if (compatibility.chip == .RP2350 and
+        compatibility.arch == .arm)
+    {
+        var cpacr: u32 = microzig.cpu.peripherals.scb.CPACR;
+
+        if (microzig.options.hal.enable_fpu) {
+            if (is_fpu_used) {
+                // enable lazy state preservation
+                microzig.cpu.peripherals.fpu.FPCCR.modify(.{
+                    .ASPEN = 1,
+                    .LSPEN = 1,
+                });
+
+                // enable the FPU
+                cpacr |= 0xF << 20;
+            } else {
+                @compileError("target doesn't have FPU features enabled");
+            }
+        }
+
+        if (microzig.options.hal.use_dcp) {
+            // enable the DCP
+            cpacr |= 0b11 << 8;
+        }
+
+        microzig.cpu.peripherals.scb.CPACR = cpacr;
+    }
+
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 

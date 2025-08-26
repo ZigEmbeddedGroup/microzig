@@ -1035,12 +1035,16 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
     try write_doc_comment(arena, offset_str, writer);
 
     try writer.print("{}: ", .{std.zig.fmtId(nsf.name)});
+    var array_prefix_buf: [80]u8 = undefined;
+    const array_prefix: []const u8 = if (nsf.count) |count|
+        try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
+    else
+        "";
+    try writer.print("{s}", .{array_prefix});
 
     // TODO: if it's a struct decl then refer to it by name
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
-        if (struct_decl.parent_id != nsf.parent_id)
-            return error.TodoDifferentParentStructDecl;
-
+        // TODO full reference?
         try writer.print("{},\n", .{std.zig.fmtId(struct_decl.name)});
     } else {
         try write_struct(db, arena, null, nsf.struct_id, writer);
@@ -1056,6 +1060,7 @@ fn write_registers_and_nested_structs_base(
     nested_struct_fields: []NestedStructField,
     out_writer: anytype,
 ) !void {
+    log.debug("registers.len={} nested_struct_fields.len={}", .{ registers.len, nested_struct_fields.len });
     var it: StructFieldIterator = .init(registers, nested_struct_fields);
 
     var buffer = std.ArrayList(u8).init(arena);
@@ -1186,6 +1191,7 @@ fn write_fields(
     var offset: u64 = 0;
 
     for (expanded_fields.items) |field| {
+        log.debug("next field: offset={} field.offset_bits={}", .{ offset, field.offset_bits });
         if (offset > field.offset_bits) {
             // It's possible there are fields that overlap so
             // we're going to filter out some fields so there's no overlap.
@@ -1217,7 +1223,12 @@ fn write_fields(
 
         if (field.enum_id) |enum_id| {
             const e = try db.get_enum(arena, enum_id);
-            if (e.name) |enum_name| {
+            if (e.size_bits != field.size_bits) {
+                log.warn("{}: fails to match the size of {s}, with sizes of {} and {} respectively. Not assigning type.", .{
+                    enum_id, field.name, e.size_bits, field.size_bits,
+                });
+                try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
+            } else if (e.name) |enum_name| {
                 if (e.struct_id == null or try db.enum_has_name_collision(enum_id)) {
                     try writer.print(
                         \\{}: enum(u{}) {{
@@ -1254,12 +1265,18 @@ fn write_fields(
             try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
         }
 
+        log.debug("adding size bits to offset: offset={} field.size_bits={}", .{ offset, field.size_bits });
         offset += field.size_bits;
     }
 
+    log.debug("before padding: offset={} register_size_bits={}", .{ offset, register_size_bits });
     assert(offset <= register_size_bits);
-    if (offset < register_size_bits)
+    if (offset < register_size_bits) {
+        log.debug("writing padding", .{});
         try writer.print("padding: u{} = 0,\n", .{register_size_bits - offset});
+    } else {
+        log.debug("No padding", .{});
+    }
 
     try out_writer.writeAll(buffer.items);
 }

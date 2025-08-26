@@ -68,7 +68,7 @@ pub const CapturePrescaler = enum(u2) {
     div_8 = 3,
 };
 
-pub const SlaveTriggerSource = enum(u3) {
+pub const SyncTriggerSource = enum(u3) {
     ITR0, // Internal Trigger 0
     ITR1, // Internal Trigger 1
     ITR2, // Internal Trigger 2
@@ -79,8 +79,8 @@ pub const SlaveTriggerSource = enum(u3) {
     ETRF, // External Trigger input (TIM2 is the only general-purpose timer that has the ETR pin)
 };
 
-pub const SlaveMode = enum(u3) {
-    Disabled, // Slave mode disabled
+pub const SyncMode = enum(u3) {
+    Disabled, // Sync mode disabled
     EncoderMode1, // Counter counts up/down on TI2FP1 edge depending on TI1FP2 level
     EncoderMode2, // Counter counts up/down on TI1FP2 edge depending on TI2FP1 level
     EncoderMode3, // Counter counts up/down on both TI1FP1 and TI2FP2 edges depending on the level of the other input
@@ -122,13 +122,13 @@ pub const CCConfig = struct {
 ///NOTE:The gated mode must not be used if TI1F_ED is selected as the trigger input (TS=100).
 //Indeed, TI1F_ED outputs 1 pulse for each transition on TI1F, whereas the gated mode
 //checks the level of the trigger signal.
-//The clock of the slave timer must be enabled prior to receiving events from the master
-//timer, and must not be changed on-the-fly while triggers are received from the master
+//The clock of the sync timer must be enabled prior to receiving events from the TRGI
+//timer, and must not be changed on-the-fly while triggers are received from the TRGI
 //timer.
 //Reference Manual 008 | page: 408
-pub const SlaveModeConfig = struct {
-    mode: SlaveMode = .Disabled,
-    trigger_source: SlaveTriggerSource = .ITR0,
+pub const SyncModeConfig = struct {
+    mode: SyncMode = .Disabled,
+    trigger_source: SyncTriggerSource = .ITR0,
     sync: MSM = .NoSync,
     //external trigger configs
     ext_trig_polarity: ETP = .NotInverted,
@@ -151,30 +151,30 @@ pub const TimerGenealConfig = struct {
     enable_update_dma_request: bool = false, //if true, timer will generate a DMA request on update event
     channel_dma_trigger: CCDS = .OnCompare, //selects when the DMA request is generated, applies to all channels
     trigger_output: MMS = .Reset,
-    slave_config: ?SlaveModeConfig = null,
+    sync_config: ?SyncModeConfig = null,
 };
 
-fn get_regs(instance: Instances) *volatile TIM_GP16 {
+fn get_regs(comptime instance: Instances) *volatile TIM_GP16 {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
-/// General Purpose Timer (GPTimer) driver for STM32F1xx series,
+///General Purpose Timer (GPTimer) driver for STM32F1xx series,
 ///
-/// This driver provides a low-level interface for the  16bits general-purpose timers.
-/// but, it does provide a high-level API for basic counter mode and PWM mode.
+///This driver provides a low-level interface for the  16bits general-purpose timers.
+///but, it does provide a high-level API for basic counter mode and PWM mode.
 ///
-/// This driver supports the following modes:
-/// - Basic counter mode.
-/// - Capture mode.
-/// - Compare mode <- includes PWM mode.
-/// - slave and master modes for synchronization with other timers (TODO).
-/// - DMA support for update and compare events.
-/// - Interrupt support for update and compare events.
-/// - DMA burst support for update and compare events (TODO).
+///This driver supports the following modes:
+///- Basic counter mode.
+///- Capture mode.
+///- Compare mode <- includes PWM mode.
+///- sync and TRGI modes for synchronization with other timers (TODO).
+///- DMA support for update and compare events.
+///- Interrupt support for update and compare events.
+///- DMA burst support for update and compare events (TODO).
 pub const GPTimer = struct {
     regs: *volatile TIM_GP16,
     //=============== Modes ================
-    pub fn init(instance: Instances) GPTimer {
+    pub fn init(comptime instance: Instances) GPTimer {
         return .{ .regs = get_regs(instance) };
     }
 
@@ -217,12 +217,12 @@ pub const GPTimer = struct {
             .TIE = enable_interrupt,
             .TDE = enable_dma,
         });
-        if (config.slave_config) |s_conf| self.config_slave_mode(s_conf);
+        if (config.sync_config) |s_conf| self.config_sync_mode(s_conf);
         self.set_update_event(true); //enable update event
         self.software_update();
     }
 
-    /// This function clears all control registers of the timer.
+    ///This function clears all control registers of the timer.
     pub fn clear_all_control_registers(self: *const GPTimer) void {
         const regs = self.regs;
         regs.CR1.raw = 0;
@@ -390,8 +390,8 @@ pub const GPTimer = struct {
         self.regs.SR.raw = 0;
     }
 
-    //=============== slave mode Functions ================
-    pub fn config_slave_mode(self: *const GPTimer, config: SlaveModeConfig) void {
+    //=============== sync mode Functions ================
+    pub fn config_sync_mode(self: *const GPTimer, config: SyncModeConfig) void {
         self.regs.SMCR.modify(.{
             .ETP = config.ext_trig_polarity,
             .ECE = @as(u1, @intFromBool(config.ext_clock_mode2)),
@@ -586,7 +586,7 @@ pub const Counter = struct {
         self.gptimer.timer_general_config(config);
     }
 
-    /// This function sets the prescaler, auto-reload value and optionally forces an update event.
+    ///This function sets the prescaler, auto-reload value and optionally forces an update event.
     pub fn set_values(self: *const Counter, prescaler: u32, auto_reload: u16, force_update: bool) void {
         const timer = self.gptimer;
         timer.set_prescaler(prescaler);
@@ -633,7 +633,7 @@ pub const PWM = struct {
         timer.start();
     }
 
-    /// This function configures the output channel for PWM mode.
+    ///This function configures the output channel for PWM mode.
     pub fn configure_channel(self: *const PWM, channel: u2, config: PWMChConfig) void {
         const timer = self.gptimer;
         timer.configure_ccr(channel, .{

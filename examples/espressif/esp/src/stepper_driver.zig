@@ -5,7 +5,6 @@ const gpio = hal.gpio;
 const time = hal.time;
 
 const GPIO_Device = hal.drivers.GPIO_Device;
-const ClockDevice = hal.drivers.ClockDevice;
 const A4988 = microzig.drivers.stepper.A4988;
 
 const usb_serial_jtag = hal.usb_serial_jtag;
@@ -15,8 +14,6 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    var cd = ClockDevice{};
-
     // Setup all pins for the stepper driver
     var pins: struct {
         ms1: GPIO_Device,
@@ -38,7 +35,7 @@ pub fn main() !void {
         .ms3_pin = pins.ms3.digital_io(),
         .dir_pin = pins.dir.digital_io(),
         .step_pin = pins.step.digital_io(),
-        .clock_device = cd.clock_device(),
+        .clock_device = hal.drivers.clock_device(),
     });
 
     try stepper.begin(100, 1);

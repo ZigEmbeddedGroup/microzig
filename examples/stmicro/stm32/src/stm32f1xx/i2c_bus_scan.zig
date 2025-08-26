@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;

@@ -1,39 +1,37 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const sensor = microzig.drivers.sensor;
-const rpxxxx = microzig.hal;
-const gpio = rpxxxx.gpio;
-const i2c = rpxxxx.i2c;
-const I2C_Device = rpxxxx.drivers.I2C_Device;
-const ClockDevice = rpxxxx.drivers.ClockDevice;
+const rp2xxx = microzig.hal;
+const gpio = rp2xxx.gpio;
+const i2c = rp2xxx.i2c;
+const I2C_Device = rp2xxx.drivers.I2C_Device;
 const MLX90640 = sensor.MLX90640;
 
-const time = rpxxxx.time;
+const time = rp2xxx.time;
 
-const uart = rpxxxx.uart.instance.num(0);
+const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 var i2c0 = i2c.instance.num(0);
 
-const pin_config = rpxxxx.pins.GlobalConfiguration{
+const pin_config = rp2xxx.pins.GlobalConfiguration{
     .GPIO0 = .{ .name = "gpio0", .function = .UART0_TX },
 };
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = rpxxxx.uart.log,
+    .logFn = rp2xxx.uart.log,
 };
 
 pub fn main() !void {
     try init();
 
-    var cd = ClockDevice{};
     var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x33), null);
 
     var camera = try MLX90640.init(.{
         .i2c = i2c_device.datagram_device(),
-        .clock = cd.clock_device(),
+        .clock = rp2xxx.drivers.clock_device(),
     });
 
     const sn = try camera.serial_number();
@@ -73,12 +71,12 @@ fn init() !void {
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .baud_rate = baud_rate,
-        .clock_config = rpxxxx.clock_config,
+        .clock_config = rp2xxx.clock_config,
     });
 
-    i2c0.apply(i2c.Config{ .clock_config = rpxxxx.clock_config });
+    i2c0.apply(i2c.Config{ .clock_config = rp2xxx.clock_config });
 
-    rpxxxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart);
     pin_config.apply();
 
     std.log.info("Hello from mlx90640", .{});

@@ -146,28 +146,6 @@ pub const I2C_Device = struct {
 };
 
 ///
-/// Implementation of a time device
-///
-pub const ClockDevice = struct {
-    pub fn clock_device(td: *ClockDevice) Clock_Device {
-        _ = td;
-        return Clock_Device{
-            .ptr = undefined,
-            .vtable = &vtable,
-        };
-    }
-    const vtable = Clock_Device.VTable{
-        .get_time_since_boot = get_time_since_boot_fn,
-    };
-
-    fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
-        _ = td;
-        const t = hal.time.get_time_since_boot().to_us();
-        return @enumFromInt(t);
-    }
-};
-
-///
 /// A datagram device attached to an SPI bus.
 ///
 pub const SPI_Device = struct {
@@ -271,3 +249,23 @@ pub const SPI_Device = struct {
         return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
     }
 };
+
+///
+/// Implementation of a `Clock_Device` that uses the HAL's `time` module.
+///
+pub fn clock_device() Clock_Device {
+    const S = struct {
+        const vtable: Clock_Device.VTable = .{
+            .get_time_since_boot = get_time_since_boot_fn,
+        };
+
+        fn get_time_since_boot_fn(_: *anyopaque) time.Absolute {
+            return hal.time.get_time_since_boot();
+        }
+    };
+
+    return .{
+        .ptr = undefined,
+        .vtable = &S.vtable,
+    };
+}
