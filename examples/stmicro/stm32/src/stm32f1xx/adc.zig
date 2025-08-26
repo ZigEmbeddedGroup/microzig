@@ -56,7 +56,7 @@ pub fn main() !void {
     while (true) {
         const adc_buf: []const u16 = try adc.read_multiple_channels(&adc_out_buf);
         counter.sleep_ms(100);
-        std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
+        std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(adc_buf[0])});
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});

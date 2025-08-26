@@ -4,7 +4,8 @@ const assert = std.debug.assert;
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
 
-const GPIO = @TypeOf(peripherals.GPIOA);
+const GPIO = microzig.chip.types.peripherals.gpio_v1.GPIO;
+const AFIO = microzig.chip.peripherals.AFIO;
 
 const log = std.log.scoped(.gpio);
 
@@ -96,7 +97,7 @@ pub const Pin = enum(usize) {
     //so just check if the field exists
 
     //NOTE: should invalid pins panic or just be ignored?
-    pub fn get_port(gpio: Pin) GPIO {
+    pub fn get_port(gpio: Pin) *volatile GPIO {
         const pin: usize = @divFloor(@intFromEnum(gpio), 16);
         switch (pin) {
             0 => return if (@hasDecl(peripherals, "GPIOA")) peripherals.GPIOA else @panic("Invalid Pin"),
@@ -168,3 +169,91 @@ pub const Pin = enum(usize) {
         return @enumFromInt(value);
     }
 };
+
+/// Enables the EVENTOUT Cortex® output on the selected pin.
+/// NOTE: not available for GPIO F and G
+pub fn enable_cortex_EVENTOUT(pin: Pin) void {
+    const port: u3 = @intCast(@divFloor(@intFromEnum(pin), 16));
+    const ev_pin: u4 = @intCast(@intFromEnum(pin) % 16);
+
+    AFIO.EVCR.modify(.{
+        .PIN = ev_pin,
+        .PORT = port,
+        .EVOE = 1,
+    });
+}
+
+pub inline fn disable_cortex_EVENTOUT() void {
+    AFIO.EVCR.modify_one("EVOE", 0);
+}
+
+pub const PartialRemap = enum(u2) {
+    Normal,
+    Partial_Remap_1,
+    Partial_Remap_2,
+    Full_Remap,
+};
+
+pub const DebugRemap = enum(u3) {
+    Full_SWJ,
+    Full_SWJ_No_NJTRST,
+    Only_SWDP,
+    Off = 0b100,
+};
+
+///low-, medium- high- and XL-density devices only
+pub const Remap = union(enum) {
+    SPI1: bool,
+    I2C1: bool,
+    USART1: bool,
+    USART2: bool,
+    USART3: PartialRemap,
+    TIM1: PartialRemap,
+    TIM2: PartialRemap,
+    TIM3: PartialRemap,
+    TIM4: bool,
+    CAN: PartialRemap,
+    PD01: bool,
+    TIM5CH4: bool,
+    ADC1_ETRGINJ: bool,
+    ADC1_ETRGREG: bool,
+    ADC2_ETRGINJ: bool,
+    ADC2_ETRGREG: bool,
+    SWJ: DebugRemap,
+
+    // MAPR2
+    TIM9_CH1: bool,
+    TIM10_CH1: bool,
+    TIM11_CH1: bool,
+    TIM13_CH1: bool,
+    TIM14_CH1: bool,
+    FSMC_NADV: bool,
+};
+
+pub fn apply_remap(map: Remap) void {
+    switch (map) {
+        .SPI1 => |val| AFIO.MAPR.modify_one("SPI1_REMAP", @intFromBool(val)),
+        .I2C1 => |val| AFIO.MAPR.modify_one("I2C1_REMAP", @intFromBool(val)),
+        .USART1 => |val| AFIO.MAPR.modify_one("USART1_REMAP", @intFromBool(val)),
+        .USART2 => |val| AFIO.MAPR.modify_one("USART2_REMAP", @intFromBool(val)),
+        .USART3 => |val| AFIO.MAPR.modify_one("USART3_REMAP", @intFromEnum(val)),
+        .TIM1 => |val| AFIO.MAPR.modify_one("TIM1_REMAP", @intFromEnum(val)),
+        .TIM2 => |val| AFIO.MAPR.modify_one("TIM2_REMAP", @intFromEnum(val)),
+        .TIM3 => |val| AFIO.MAPR.modify_one("TIM3_REMAP", @intFromEnum(val)),
+        .TIM4 => |val| AFIO.MAPR.modify_one("TIM4_REMAP", @intFromBool(val)),
+        .CAN => |val| AFIO.MAPR.modify_one("CAN1_REMAP", @intFromEnum(val)),
+        .PD01 => |val| AFIO.MAPR.modify_one("PD01_REMAP", @intFromBool(val)),
+        .TIM5CH4 => |val| AFIO.MAPR.modify_one("TIM5CH4_IREMAP", @intFromBool(val)),
+        .ADC1_ETRGINJ => |val| AFIO.MAPR.modify_one("ADC1_ETRGINJ_REMAP", @intFromBool(val)),
+        .ADC1_ETRGREG => |val| AFIO.MAPR.modify_one("ADC1_ETRGREG_REMAP", @intFromBool(val)),
+        .ADC2_ETRGINJ => |val| AFIO.MAPR.modify_one("ADC2_ETRGINJ_REMAP", @intFromBool(val)),
+        .ADC2_ETRGREG => |val| AFIO.MAPR.modify_one("ADC2_ETRGREG_REMAP", @intFromBool(val)),
+        .SWJ => |val| AFIO.MAPR.modify_one("SWJ_CFG", @intFromEnum(val)),
+        .TIM9_CH1 => |val| AFIO.MAPR2.modify_one("TIM9_REMAP", @intFromBool(val)),
+        .TIM10_CH1 => |val| AFIO.MAPR2.modify_one("TIM10_REMAP", @intFromBool(val)),
+        .TIM11_CH1 => |val| AFIO.MAPR2.modify_one("TIM11_REMAP", @intFromBool(val)),
+        .TIM13_CH1 => |val| AFIO.MAPR2.modify_one("TIM13_REMAP", @intFromBool(val)),
+        .TIM14_CH1 => |val| AFIO.MAPR2.modify_one("TIM14_REMAP", @intFromBool(val)),
+        .FSMC_NADV => |val| AFIO.MAPR2.modify_one("FSMC_NADV", @intFromBool(val)),
+    }
+}
