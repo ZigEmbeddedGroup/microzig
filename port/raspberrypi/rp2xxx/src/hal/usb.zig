@@ -8,19 +8,17 @@ const enumFromInt = std.meta.intToEnum;
 
 const microzig = @import("microzig");
 const chip = microzig.hal.compatibility.chip;
-const peri_dpram = microzig.chip.peripherals.USB_DPRAM;
-const peri_usb = microzig.chip.peripherals.USB;
+const USB_DPRAM = microzig.chip.peripherals.USB_DPRAM;
+const USB = microzig.chip.peripherals.USB;
 const usb = microzig.core.usb;
-
-const resets = @import("resets.zig");
+const types = usb.types;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
 pub const Config = struct {
     synchronization_nops: comptime_int = 3,
     dpram_allocator: type = DpramAllocatorBump,
-    Controller: type,
-    // swap_dpdm: bool = false,
+    controller_config: usb.Config,
 };
 
 pub const default = struct {
@@ -31,12 +29,13 @@ pub const default = struct {
     };
     pub const vid: u16 = 0x2E8A;
     pub const pid: u16 = 0x000a;
+    pub const bcd_usb = 0x02_00;
     pub const transfer_size = 64;
 };
 
 const Endpoint = usb.types.Endpoint;
-const EpCtrl = @TypeOf(peri_dpram.EP1_IN_CONTROL);
-const BufCtrl = @TypeOf(peri_dpram.EP0_IN_BUFFER_CONTROL);
+const EpCtrl = @TypeOf(USB_DPRAM.EP1_IN_CONTROL);
+const BufCtrl = @TypeOf(USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
 const dpram_size = 4096;
 pub const DpramBuffer = struct {
@@ -46,7 +45,7 @@ pub const DpramBuffer = struct {
     const Chunk = struct { data: [chunk_len]u8 align(start_align) = undefined };
 
     const memory_raw: *[dpram_size / chunk_len]Chunk =
-        @alignCast(@volatileCast(@ptrCast(peri_dpram)));
+        @alignCast(@volatileCast(@ptrCast(USB_DPRAM)));
 
     pub const Len =
         std.meta.Int(.unsigned, std.math.log2_int_ceil(u16, dpram_size));
@@ -103,23 +102,20 @@ pub const DpramAllocatorBump = struct {
 pub fn Usb(comptime config: Config) type {
     return struct {
         pub const interface_vtable: usb.DeviceInterface.Vtable = .{
-            .task = &task,
             .control_transfer = &control_transfer,
             .signal_rx_ready = &signal_rx_ready,
             .submit_tx_buffer = &submit_tx_buffer,
             .endpoint_open = &endpoint_open,
         };
 
-        pub const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
-        pub const bcd_usb = 0x02_00;
-        pub const id = config.id;
+        const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
 
         pub const HardwareEndpoint = packed struct(u5) {
             const ep_ctrl_all: *volatile [2 * (max_endpoints_count - 1)]EpCtrl =
-                @ptrCast(&peri_dpram.EP1_IN_CONTROL);
+                @ptrCast(&USB_DPRAM.EP1_IN_CONTROL);
 
             const buf_ctrl_all: *volatile [2 * (max_endpoints_count)]BufCtrl =
-                @ptrCast(&peri_dpram.EP0_IN_BUFFER_CONTROL);
+                @ptrCast(&USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
             is_out: bool,
             num: Endpoint.Num,
@@ -158,6 +154,16 @@ pub fn Usb(comptime config: Config) type {
             }
         };
 
+        const Controller = usb.Controller(blk: {
+            var cfg = config.controller_config;
+            cfg.strings = cfg.strings orelse default.strings;
+            cfg.vid = cfg.vid orelse default.vid;
+            cfg.pid = cfg.pid orelse default.pid;
+            cfg.bcd_usb = cfg.bcd_usb orelse default.bcd_usb;
+            cfg.max_transfer_size = cfg.max_transfer_size orelse default.transfer_size;
+            break :blk cfg;
+        });
+
         const State = union(enum) {
             sending: []const u8, // Slice of data left to be sent.
             no_buffer: ?u7, // Optionally a new address.
@@ -166,7 +172,7 @@ pub fn Usb(comptime config: Config) type {
         };
 
         state: State,
-        controller: config.Controller,
+        controller: Controller,
 
         pub fn interface(this: *@This()) usb.DeviceInterface {
             return .{
@@ -177,12 +183,12 @@ pub fn Usb(comptime config: Config) type {
 
         pub fn init() @This() {
             if (chip == .RP2350)
-                peri_usb.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
+                USB.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
-            peri_dpram.SETUP_PACKET_LOW.write_raw(0);
-            peri_dpram.SETUP_PACKET_HIGH.write_raw(0);
+            USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
+            USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
 
             for (HardwareEndpoint.ep_ctrl_all) |*ep_ctrl|
                 ep_ctrl.write_raw(0);
@@ -191,7 +197,7 @@ pub fn Usb(comptime config: Config) type {
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are
             // alternatives to this, but, there are.
-            peri_usb.USB_MUXING.modify(.{
+            USB.USB_MUXING.modify(.{
                 .TO_PHY = 1,
                 // This bit is also set in the SDK example, without any discussion. It's
                 // undocumented (being named does not count as being documented).
@@ -202,24 +208,24 @@ pub fn Usb(comptime config: Config) type {
             // let us detect being plugged into a host (the Pi Pico, to its credit,
             // does). For maximum compatibility, we'll set the hardware to always
             // pretend VBUS has been detected.
-            peri_usb.USB_PWR.modify(.{
+            USB.USB_PWR.modify(.{
                 .VBUS_DETECT = 1,
                 .VBUS_DETECT_OVERRIDE_EN = 1,
             });
 
             // Enable controller in device mode.
-            peri_usb.MAIN_CTRL.modify(.{
+            USB.MAIN_CTRL.modify(.{
                 .CONTROLLER_EN = 1,
                 .HOST_NDEVICE = 0,
             });
 
             // Request to have an interrupt (which really just means setting a bit in
             // the `buff_status` register) every time a buffer moves through EP0.
-            peri_usb.SIE_CTRL.modify(.{ .EP0_INT_1BUF = 1 });
+            USB.SIE_CTRL.modify(.{ .EP0_INT_1BUF = 1 });
 
             // Enable interrupts (bits set in the `ints` register) for other conditions
             // we use:
-            peri_usb.INTE.modify(.{
+            USB.INTE.modify(.{
                 // A buffer is done
                 .BUFF_STATUS = 1,
                 // The host has reset us
@@ -228,20 +234,16 @@ pub fn Usb(comptime config: Config) type {
                 .SETUP_REQ = 1,
             });
 
-            var this: @This() = .{
-                .state = .{ .no_buffer = null },
-                .controller = .init,
-            };
-
-            if (this.interface().endpoint_open(.in(.ep0), .Control, 0) catch unreachable) |tx|
-                this.state = .{ .ready = tx };
-
-            _ = this.interface().endpoint_open(.out(.ep0), .Control, 0) catch unreachable;
-
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
-            peri_usb.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
-            return this;
+            USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
+
+            return .{
+                .state = .{
+                    .ready = DpramBuffer.Index.ep0buf0.start()[0..default.transfer_size],
+                },
+                .controller = .init,
+            };
         }
 
         fn ep0_send(this: *@This(), tx_buf: []u8, data: []const u8) void {
@@ -276,13 +278,13 @@ pub fn Usb(comptime config: Config) type {
             // Copy the setup packet out of its dedicated buffer at the base of
             // USB SRAM. The PAC models this buffer as two 32-bit registers.
             const setup: usb.types.SetupPacket = @bitCast([2]u32{
-                peri_dpram.SETUP_PACKET_LOW.raw,
-                peri_dpram.SETUP_PACKET_HIGH.raw,
+                USB_DPRAM.SETUP_PACKET_LOW.raw,
+                USB_DPRAM.SETUP_PACKET_HIGH.raw,
             });
 
             // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
             // to an IN on EP0 needs to use PID DATA1.
-            peri_dpram.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
+            USB_DPRAM.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
 
             switch (setup.request_type.recipient) {
                 .Device => blk: {
@@ -296,7 +298,7 @@ pub fn Usb(comptime config: Config) type {
                             this.state = .{ .no_buffer = @intCast(setup.value) };
                         },
                         .SetConfiguration => this.controller.set_configuration(this.interface(), &setup),
-                        .GetDescriptor => if (config.Controller.get_descriptor(&setup)) |desc|
+                        .GetDescriptor => if (Controller.get_descriptor(&setup)) |desc|
                             this.ep0_send(tx_buf, desc),
                         .SetFeature => if (this.controller.set_feature(
                             @intCast(setup.value >> 8),
@@ -311,27 +313,24 @@ pub fn Usb(comptime config: Config) type {
             }
         }
 
-        // fn ep0_handler(this: *@This(), ep: HardwareEndpoint, buf: []u8) usb.PacketUnhandled!void {}
-
         /// Usb task function meant to be executed in regular intervals after
         /// initializing the device.
-        pub fn task(ptr: *anyopaque) void {
-            const this: *@This() = @alignCast(@ptrCast(ptr));
-            const ints = peri_usb.INTS.read();
-            const SieStatus = @TypeOf(peri_usb.SIE_STATUS).underlying_type;
+        pub fn task(this: *@This()) void {
+            const ints = USB.INTS.read();
+            const SieStatus = @TypeOf(USB.SIE_STATUS).underlying_type;
 
             switch (this.state) {
                 .ready => |tx_buf| if (ints.SETUP_REQ != 0) {
                     // Clear the status flag (write one to clear)
                     var sie_status: SieStatus = @bitCast(@as(u32, 0));
                     sie_status.SETUP_REC = 1;
-                    peri_usb.SIE_STATUS.write(sie_status);
+                    USB.SIE_STATUS.write(sie_status);
                     this.process_setup(tx_buf);
                 },
                 else => {},
             }
             if (ints.BUFF_STATUS != 0) {
-                const unhandled_initial = peri_usb.BUFF_STATUS.raw;
+                const unhandled_initial = USB.BUFF_STATUS.raw;
                 var unhandled_pending = unhandled_initial;
 
                 while (std.math.cast(u5, @ctz(unhandled_pending))) |idx| {
@@ -357,7 +356,7 @@ pub fn Usb(comptime config: Config) type {
                                 if (ep.is_out) break :blk error.UsbPacketUnhandled;
                                 // Finish the delayed SetAddress request, if there is one:
                                 if (new_address) |addr|
-                                    peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
+                                    USB.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
 
                                 this.state = .{ .ready = buf };
                             },
@@ -382,17 +381,19 @@ pub fn Usb(comptime config: Config) type {
                             std.log.warn("{any}", .{buf[0..ep.len()]});
                     };
                 }
-                peri_usb.BUFF_STATUS.write_raw(unhandled_initial);
+                USB.BUFF_STATUS.write_raw(unhandled_initial);
             }
 
             if (ints.BUS_RESET != 0) {
                 this.controller.deinit();
                 this.controller = .init;
 
+                // TODO: Reset allocator.
+
                 var sie_status: SieStatus = @bitCast(@as(u32, 0));
                 sie_status.BUS_RESET = 1;
-                peri_usb.SIE_STATUS.write(sie_status);
-                peri_usb.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = 0 });
+                USB.SIE_STATUS.write(sie_status);
+                USB.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = 0 });
             }
         }
 
@@ -441,28 +442,24 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
-        pub fn endpoint_open(
-            _: *anyopaque,
-            ep: Endpoint,
-            transfer_type: usb.types.TransferType,
-            buf_size_hint: usize,
-        ) error{OutOfBufferMemory}!?[]u8 {
-            _ = buf_size_hint;
+        pub fn endpoint_open(ptr: *anyopaque, desc: *const usb.descriptor.Endpoint) ?[]u8 {
+            const this: *@This() = @alignCast(@ptrCast(ptr));
+            _ = this;
+
+            assert(@intFromEnum(desc.endpoint.num) < max_endpoints_count);
 
             const ep_hard: HardwareEndpoint = .{
-                .num = ep.num,
-                .is_out = ep.dir == .Out,
+                .num = desc.endpoint.num,
+                .is_out = desc.endpoint.dir == .Out,
             };
 
-            assert(ep.num.to_int() < max_endpoints_count);
-
-            const start = if (ep.num != .ep0) blk: {
-                const buf = try config.dpram_allocator.alloc(1);
+            const start = if (desc.endpoint.num != .ep0) blk: {
+                const buf = config.dpram_allocator.alloc(1) catch unreachable;
                 var ep_ctrl = ep_hard.ep_ctrl().?;
                 var rmw = ep_ctrl.read();
                 rmw.ENABLE = 1;
                 rmw.INTERRUPT_PER_BUFF = 1;
-                rmw.ENDPOINT_TYPE = @enumFromInt(transfer_type.as_number());
+                rmw.ENDPOINT_TYPE = @enumFromInt(desc.attributes.transfer_type.as_number());
                 rmw.BUFFER_ADDRESS = buf.to_u16();
                 ep_ctrl.write(rmw);
                 break :blk buf.start();

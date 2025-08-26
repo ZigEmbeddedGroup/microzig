@@ -100,27 +100,11 @@ pub const Endpoint = packed struct(u8) {
         ep13,
         ep14,
         ep15,
-
-        pub fn from_int(int: u4) @This() {
-            return @enumFromInt(int);
-        }
-
-        pub fn to_int(this: @This()) u4 {
-            return @intFromEnum(this);
-        }
     };
 
     num: Num,
     _padding: u3 = 0,
     dir: Dir,
-
-    pub inline fn to_address(this: @This()) u8 {
-        return @bitCast(this);
-    }
-
-    pub inline fn from_address(addr: u8) @This() {
-        return @bitCast(addr & 0x8F);
-    }
 
     pub inline fn out(num: Num) @This() {
         return .{ .num = num, .dir = .Out };

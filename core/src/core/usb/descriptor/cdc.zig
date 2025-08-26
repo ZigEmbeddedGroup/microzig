@@ -23,10 +23,6 @@ pub const Header = extern struct {
     // USB Class Definitions for Communication Devices Specification release
     // number in binary-coded decimal. Typically 0x01_10.
     bcd_cdc: types.U16Le,
-
-    pub fn serialize(this: *const @This()) *const [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 pub const CallManagement = extern struct {
@@ -44,10 +40,6 @@ pub const CallManagement = extern struct {
     capabilities: u8,
     // Data interface number.
     data_interface: u8,
-
-    pub fn serialize(this: *const @This()) *const [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 pub const AbstractControlModel = extern struct {
@@ -63,10 +55,6 @@ pub const AbstractControlModel = extern struct {
     descriptor_subtype: SubType = .AbstractControlModel,
     // Capabilities. Should be 0x02 for use as a serial device.
     capabilities: u8,
-
-    pub fn serialize(this: *const @This()) *const [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 pub const Union = extern struct {
@@ -86,8 +74,4 @@ pub const Union = extern struct {
     // The interface number of the first slave or associated interface in the
     // union.
     slave_interface_0: u8,
-
-    pub fn serialize(this: *const @This()) *const [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };

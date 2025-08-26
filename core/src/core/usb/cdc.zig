@@ -24,21 +24,17 @@ pub const LineCoding = extern struct {
         .parity = 0,
         .data_bits = 8,
     };
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 pub const Descriptor = extern struct {
-    desc1: descriptor.InterfaceAssociation,
-    desc2: descriptor.Interface,
-    desc3: descriptor.cdc.Header,
-    desc4: descriptor.cdc.CallManagement,
-    desc5: descriptor.cdc.AbstractControlModel,
-    desc6: descriptor.cdc.Union,
+    itf_assoc: descriptor.InterfaceAssociation,
+    itf_notifi: descriptor.Interface,
+    cdc_header: descriptor.cdc.Header,
+    cdc_call_mgmt: descriptor.cdc.CallManagement,
+    cdc_acm: descriptor.cdc.AbstractControlModel,
+    cdc_union: descriptor.cdc.Union,
     ep_notifi: descriptor.Endpoint,
-    desc8: descriptor.Interface,
+    itf_data: descriptor.Interface,
     ep_out: descriptor.Endpoint,
     ep_in: descriptor.Endpoint,
 
@@ -48,9 +44,6 @@ pub const Descriptor = extern struct {
 };
 
 pub const CdcClassDriver = struct {
-    pub const num_interfaces = 2;
-    const max_packet_size = 64;
-
     ep_in_notif: types.Endpoint.Num = .ep0,
     ep_in: types.Endpoint.Num = .ep0,
     ep_out: types.Endpoint.Num = .ep0,
@@ -76,7 +69,7 @@ pub const CdcClassDriver = struct {
                 .{ .ep_num = endpoints.data, .func = on_data_rx },
             },
             .descriptors = .{
-                .desc1 = .{
+                .itf_assoc = .{
                     .first_interface = first_interface,
                     .interface_count = 2,
                     .function_class = 2,
@@ -84,7 +77,7 @@ pub const CdcClassDriver = struct {
                     .function_protocol = 0,
                     .function = 0,
                 },
-                .desc2 = .{
+                .itf_notifi = .{
                     .interface_number = first_interface,
                     .alternate_setting = 0,
                     .num_endpoints = 1,
@@ -93,13 +86,13 @@ pub const CdcClassDriver = struct {
                     .interface_protocol = 0,
                     .interface_s = string_ids.name,
                 },
-                .desc3 = .{ .bcd_cdc = .from(0x0120) },
-                .desc4 = .{
+                .cdc_header = .{ .bcd_cdc = .from(0x0120) },
+                .cdc_call_mgmt = .{
                     .capabilities = 0,
                     .data_interface = first_interface + 1,
                 },
-                .desc5 = .{ .capabilities = 6 },
-                .desc6 = .{
+                .cdc_acm = .{ .capabilities = 6 },
+                .cdc_union = .{
                     .master_interface = first_interface,
                     .slave_interface_0 = first_interface + 1,
                 },
@@ -109,7 +102,7 @@ pub const CdcClassDriver = struct {
                     .max_packet_size = .from(endpoint_notifi_size),
                     .interval = 16,
                 },
-                .desc8 = .{
+                .itf_data = .{
                     .interface_number = first_interface + 1,
                     .alternate_setting = 0,
                     .num_endpoints = 2,
@@ -135,8 +128,8 @@ pub const CdcClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn init(controller: usb.DeviceInterface, desc: *const Descriptor) @This() {
-        controller.signal_rx_ready(desc.ep_out.endpoint.num, std.math.maxInt(usize));
+    pub fn init(device: usb.DeviceInterface, desc: *const Descriptor) @This() {
+        device.signal_rx_ready(desc.ep_out.endpoint.num, std.math.maxInt(usize));
         return .{
             .line_coding = .init,
             .awaiting_data = false,
@@ -148,13 +141,16 @@ pub const CdcClassDriver = struct {
         };
     }
 
+    /// On bus reset, this function is called followed by init().
     pub fn deinit(_: *@This()) void {}
 
+    /// How many bytes in rx buffer?
     pub fn available(this: *@This()) usize {
         return if (this.rx_buf) |rx| rx.len else 0;
     }
 
-    pub fn read(this: *@This(), controller: usb.DeviceInterface, dst: []u8) usize {
+    /// Read data from rx buffer into dst.
+    pub fn read(this: *@This(), device: usb.DeviceInterface, dst: []u8) usize {
         if (this.rx_buf) |rx| {
             const len = @min(rx.len, dst.len);
             // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
@@ -162,13 +158,14 @@ pub const CdcClassDriver = struct {
             if (len < rx.len)
                 this.rx_buf = rx[len..]
             else {
-                controller.signal_rx_ready(this.ep_out, std.math.maxInt(usize));
+                device.signal_rx_ready(this.ep_out, std.math.maxInt(usize));
                 this.rx_buf = null;
             }
             return len;
         } else return 0;
     }
 
+    /// Write data from src into tx buffer.
     pub fn write(this: *@This(), src: []const u8) usize {
         if (this.tx_buf) |tx| {
             const len = @min(tx.len, src.len);
@@ -179,23 +176,15 @@ pub const CdcClassDriver = struct {
         } else return 0;
     }
 
-    pub fn flush(this: *@This(), controller: usb.DeviceInterface) void {
+    /// Submit tx buffer to the device.
+    pub fn flush(this: *@This(), device: usb.DeviceInterface) void {
         if (this.tx_buf) |tx| {
             defer this.tx_buf = null;
-            controller.submit_tx_buffer(this.ep_in, tx.ptr);
+            device.submit_tx_buffer(this.ep_in, tx.ptr);
         }
     }
 
-    pub fn writeAll(this: *@This(), controller: usb.DeviceInterface, data: []const u8) void {
-        var offset: usize = 0;
-        while (offset < data.len) {
-            offset += this.write(data[offset..]);
-            // TODO: Interrupt-safe.
-            this.flush(controller);
-            controller.task();
-        }
-    }
-
+    /// Callback for setup packets.
     pub fn interface_setup(this: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
         return if (enumFromInt(
             ManagementRequestType,

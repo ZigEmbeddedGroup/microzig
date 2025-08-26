@@ -129,8 +129,6 @@ pub const InOutDescriptor = extern struct {
 };
 
 pub const HidClassDriver = struct {
-    pub const num_interfaces = 1;
-
     ep_in: types.Endpoint.Num = .ep0,
     ep_out: types.Endpoint.Num = .ep0,
     hid_descriptor: []const u8 = &.{},
@@ -166,8 +164,10 @@ pub const HidClassDriver = struct {
         };
     }
 
+    /// On bus reset, this function is called followed by init().
     pub fn deinit(_: *@This()) void {}
 
+    /// Callback for setup packets.
     pub fn interface_setup(this: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
         switch (setup.request_type.type) {
             .Standard => {
@@ -221,7 +221,4 @@ pub const HidClassDriver = struct {
         }
         return usb.ACK;
     }
-
-    pub fn on_tx_ready(_: *@This(), _: []u8) void {}
-    pub fn on_data_rx(_: *@This(), _: []const u8) void {}
 };

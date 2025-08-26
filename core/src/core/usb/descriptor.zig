@@ -28,27 +28,6 @@ pub const Type = enum(u8) {
     _,
 };
 
-// pub const Any = union(Type) {
-//     Device: Device,
-//     Configuration: Configuration,
-//     String,
-//     Interface: Interface,
-//     Endpoint: Endpoint,
-//     DeviceQualifier: Device.Qualifier,
-//     InterfaceAssociation: InterfaceAssociation,
-//     CsDevice,
-//     CsConfig,
-//     CsString,
-//     CsInterface,
-//     CsEndpoint,
-
-//     pub fn serialize(comptime this: @This()) []const u8 {
-//         return comptime switch (this) {
-//             .Interface => |d| d.serialize(),
-//         };
-//     }
-// };
-
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
 pub const Device = extern struct {
@@ -140,8 +119,6 @@ pub const Device = extern struct {
 
 /// Description of a single available device configuration.
 pub const Configuration = extern struct {
-    pub const const_descriptor_type: Type = .Configuration;
-
     /// Maximum device current consumption.
     pub const MaxCurrent = extern struct {
         multiple_of_2ma: u8,
@@ -202,8 +179,6 @@ pub fn string(comptime value: []const u8) []const u8 {
 
 /// Describes an endpoint within an interface
 pub const Endpoint = extern struct {
-    pub const const_descriptor_type: Type = .Endpoint;
-
     pub const Attributes = packed struct(u8) {
         pub const Synchronisation = enum(u2) {
             none = 0,
@@ -244,16 +219,10 @@ pub const Endpoint = extern struct {
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 /// Description of an interface within a configuration.
 pub const Interface = extern struct {
-    pub const const_descriptor_type: Type = .Interface;
-
     comptime {
         assert(@alignOf(@This()) == 1);
         assert(@sizeOf(@This()) == 9);
@@ -278,16 +247,10 @@ pub const Interface = extern struct {
     interface_protocol: u8,
     /// Index of interface name within string descriptor table.
     interface_s: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 /// USB interface association descriptor (IAD) allows the device to group interfaces that belong to a function.
 pub const InterfaceAssociation = extern struct {
-    pub const const_descriptor_type: Type = .InterfaceAssociation;
-
     comptime {
         assert(@alignOf(@This()) == 1);
         assert(@sizeOf(@This()) == 8);
@@ -310,8 +273,4 @@ pub const InterfaceAssociation = extern struct {
     function_protocol: u8,
     // Index of the string descriptor describing the associated interfaces.
     function: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };

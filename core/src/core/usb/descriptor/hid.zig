@@ -40,11 +40,14 @@ pub const RequestType = enum(u8) {
 
 /// USB HID descriptor
 pub const Hid = extern struct {
-    pub const const_descriptor_type = .Hid;
+    comptime {
+        assert(@alignOf(@This()) == 1);
+        assert(@sizeOf(@This()) == 9);
+    }
 
-    length: u8 = 9,
+    length: u8 = @sizeOf(@This()),
     /// Type of this descriptor
-    descriptor_type: SubType = const_descriptor_type,
+    descriptor_type: SubType = .Hid,
     /// Numeric expression identifying the HID Class Specification release
     bcd_hid: types.U16Le,
     /// Numeric expression identifying country code of the localized hardware
@@ -55,20 +58,6 @@ pub const Hid = extern struct {
     report_type: SubType = .Report,
     /// The total size of the Report descriptor
     report_length: types.U16Le,
-
-    pub fn serialize(self: *const @This()) [9]u8 {
-        var out: [9]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = self.bcd_hid.lo;
-        out[3] = self.bcd_hid.hi;
-        out[4] = self.country_code;
-        out[5] = self.num_descriptors;
-        out[6] = @intFromEnum(self.report_type);
-        out[7] = self.report_length.lo;
-        out[8] = self.report_length.hi;
-        return out;
-    }
 };
 
 /// HID interface Subclass (for UsbInterfaceDescriptor)

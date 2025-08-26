@@ -19,18 +19,14 @@ const EpNum = types.Endpoint.Num;
 
 pub const DeviceInterface = struct {
     pub const Vtable = struct {
-        task: *const fn (ptr: *anyopaque) void,
         control_transfer: *const fn (ptr: *anyopaque, data: []const u8) void,
         submit_tx_buffer: *const fn (ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void,
         signal_rx_ready: *const fn (ptr: *anyopaque, ep_out: EpNum, max_len: usize) void,
-        endpoint_open: *const fn (ptr: *anyopaque, ep: types.Endpoint, transfer_type: types.TransferType, buf_size_hint: usize) anyerror!?[]u8,
+        endpoint_open: *const fn (ptr: *anyopaque, desc: *const descriptor.Endpoint) ?[]u8,
     };
     ptr: *anyopaque,
     vtable: *const Vtable,
 
-    pub fn task(this: @This()) void {
-        this.vtable.task(this.ptr);
-    }
     pub fn control_transfer(this: @This(), data: []const u8) void {
         assert(data.len != 0);
         this.vtable.control_transfer(this.ptr, data);
@@ -44,8 +40,8 @@ pub const DeviceInterface = struct {
     pub fn signal_rx_ready(this: @This(), ep_out: EpNum, max_len: usize) void {
         this.vtable.signal_rx_ready(this.ptr, ep_out, max_len);
     }
-    pub fn endpoint_open(this: @This(), ep: types.Endpoint, transfer_type: types.TransferType, buf_size_hint: usize) anyerror!?[]u8 {
-        return this.vtable.endpoint_open(this.ptr, ep, transfer_type, buf_size_hint);
+    pub fn endpoint_open(this: @This(), desc: *const descriptor.Endpoint) ?[]u8 {
+        return this.vtable.endpoint_open(this.ptr, desc);
     }
 };
 /// Manufacturer, product and serial number strings.
@@ -82,16 +78,16 @@ pub const Config = struct {
     bcd_device: u16 = 0x01_00,
     /// Class, subclass and protocol of device.
     device_triple: descriptor.Device.DeviceTriple = .unspecified,
-    /// Manufacturer, product and serial number strings.
-    strings: Strings,
-    /// Vendor ID.
-    vid: u16,
-    /// Product ID.
-    pid: u16,
-    /// Device version number as Binary Coded Decimal.
-    bcd_usb: u16 = 0x02_00,
-    /// Maximum endpoint size.
-    max_transfer_size: comptime_int,
+    /// Manufacturer, product and serial number strings. Leave at null for device default.
+    strings: ?Strings = null,
+    /// Vendor ID. Leave at null for device default.
+    vid: ?u16 = null,
+    /// Product ID. Leave at null for device default.
+    pid: ?u16 = null,
+    /// Device version number as Binary Coded Decimal. Leave at null for device default.
+    bcd_usb: ?u16 = null,
+    /// Maximum endpoint size. Leave at null for device default.
+    max_transfer_size: ?comptime_int = null,
     // Eventually the fields below could be in an array to support multiple drivers.
     drivers: []const Driver,
 };
@@ -168,9 +164,9 @@ pub fn Controller(comptime config: Config) type {
                 lang.hi,
             }};
 
-            desc = desc ++ .{descriptor.string(config.strings.manufacturer)};
-            desc = desc ++ .{descriptor.string(config.strings.product)};
-            desc = desc ++ .{descriptor.string(config.strings.serial)};
+            desc = desc ++ .{descriptor.string(config.strings.?.manufacturer)};
+            desc = desc ++ .{descriptor.string(config.strings.?.product)};
+            desc = desc ++ .{descriptor.string(config.strings.?.serial)};
 
             const Field = std.builtin.Type.StructField;
             var fields: []const Field = &.{};
@@ -219,7 +215,7 @@ pub fn Controller(comptime config: Config) type {
             const Field = std.builtin.Type.StructField;
             var fields: []const Field = &.{};
 
-            var interface = 0;
+            var next_interface = 0;
 
             for (config.drivers) |drv| {
                 var ep_fields: []const Field = &.{};
@@ -242,7 +238,7 @@ pub fn Controller(comptime config: Config) type {
                 } });
 
                 const string_ids = @field(string.ids{}, drv.name);
-                const info = drv.Type.info(interface, string_ids, ep_struct{});
+                const info = drv.Type.info(next_interface, string_ids, ep_struct{});
                 fields = fields ++ .{Field{
                     .name = drv.name,
                     .type = @TypeOf(info),
@@ -250,7 +246,10 @@ pub fn Controller(comptime config: Config) type {
                     .is_comptime = false,
                     .alignment = @alignOf(@TypeOf(info)),
                 }};
-                interface += drv.Type.num_interfaces;
+                for (@typeInfo(@TypeOf(info.descriptors)).@"struct".fields) |fld| {
+                    if (fld.type == descriptor.Interface)
+                        next_interface += 1;
+                }
             }
 
             break :blk @Type(.{ .@"struct" = .{
@@ -273,11 +272,11 @@ pub fn Controller(comptime config: Config) type {
 
         pub fn get_descriptor(setup: *const types.SetupPacket) ?[]const u8 {
             const device_descriptor: descriptor.Device = comptime .{
-                .bcd_usb = .from(config.bcd_usb),
+                .bcd_usb = .from(config.bcd_usb.?),
                 .device_triple = config.device_triple,
-                .max_packet_size0 = config.max_transfer_size,
-                .vendor = .from(config.vid),
-                .product = .from(config.pid),
+                .max_packet_size0 = config.max_transfer_size.?,
+                .vendor = .from(config.vid.?),
+                .product = .from(config.pid.?),
                 .bcd_device = .from(config.bcd_device),
                 .manufacturer_s = 1,
                 .product_s = 2,
@@ -291,7 +290,10 @@ pub fn Controller(comptime config: Config) type {
 
                 for (config.drivers) |drv| {
                     const info = @field(driver_info, drv.name);
-                    num_interfaces += drv.Type.num_interfaces;
+                    for (@typeInfo(@TypeOf(info.descriptors)).@"struct".fields) |fld| {
+                        if (fld.type == descriptor.Interface)
+                            num_interfaces += 1;
+                    }
                     ret = ret ++ info.descriptors.serialize();
                 }
 
@@ -331,40 +333,24 @@ pub fn Controller(comptime config: Config) type {
 
             this.drivers = undefined;
             inline for (config.drivers) |drv| {
-                const info = @field(driver_info, drv.name);
-
-                const descriptors = info.descriptors;
+                const descriptors = @field(driver_info, drv.name).descriptors;
                 const fields = @typeInfo(@TypeOf(descriptors)).@"struct".fields;
 
-                var assoc_itf_count: u8 = 1;
-                // New class starts optionally from InterfaceAssociation followed by mandatory Interface
-                if (fields[0].type == descriptor.InterfaceAssociation)
-                    assoc_itf_count = @field(descriptors, fields[0].name).interface_count;
+                inline for (fields) |fld| {
+                    if (fld.type != descriptor.Endpoint) continue;
+                    const desc_ep = @field(descriptors, fld.name);
+                    if (desc_ep.endpoint.dir != .Out) continue;
+                    _ = device.endpoint_open(&desc_ep);
+                }
 
                 @field(this.drivers.?, drv.name) = .init(device, &descriptors);
 
                 inline for (fields) |fld| {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
-                    if (desc_ep.endpoint.dir != .Out) continue;
-
-                    _ = device.endpoint_open(
-                        desc_ep.endpoint,
-                        desc_ep.attributes.transfer_type,
-                        desc_ep.max_packet_size.into(),
-                    ) catch unreachable;
-                }
-
-                inline for (fields) |fld| {
-                    if (fld.type != descriptor.Endpoint) continue;
-                    const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .In) continue;
 
-                    if (device.endpoint_open(
-                        desc_ep.endpoint,
-                        desc_ep.attributes.transfer_type,
-                        desc_ep.max_packet_size.into(),
-                    ) catch unreachable) |buf|
+                    if (device.endpoint_open(&desc_ep)) |buf|
                         this.on_tx_ready(desc_ep.endpoint.num, buf) catch {
                             std.log.warn("initial buffer unhandled on {any}", .{desc_ep.endpoint.num});
                         };

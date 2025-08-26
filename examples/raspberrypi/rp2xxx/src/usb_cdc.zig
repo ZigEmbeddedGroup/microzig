@@ -20,16 +20,14 @@ const pin_config: rp2xxx.pins.GlobalConfiguration = .{
 };
 const pins = pin_config.pins();
 
+const CdcDriver = microzig.core.usb.cdc.CdcClassDriver;
+
 // This is our device configuration
-const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
-    .strings = rp2xxx.usb.default.strings,
-    .vid = rp2xxx.usb.default.vid,
-    .pid = rp2xxx.usb.default.pid,
-    .max_transfer_size = rp2xxx.usb.default.transfer_size,
-    .attributes = .{ .self_powered = true },
+const Usb = rp2xxx.usb.Usb(.{ .controller_config = .{
+    .attributes = .{ .self_powered = false },
     .drivers = &.{.{
         .name = "serial",
-        .Type = microzig.core.usb.cdc.CdcClassDriver,
+        .Type = CdcDriver,
         .endpoints = &.{
             .{ .name = "notifi", .value = .ep1 },
             .{ .name = "data", .value = .ep2 },
@@ -38,8 +36,17 @@ const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
             .{ .name = "name", .value = "Board CDC" },
         },
     }},
-}) });
+} });
 var usb: Usb = undefined;
+
+fn write_all(serial: *CdcDriver, data: []const u8) void {
+    var offset: usize = 0;
+    while (offset < data.len) {
+        offset += serial.write(data[offset..]);
+        serial.flush(usb.interface());
+        usb.task();
+    }
+}
 
 pub fn main() !void {
     pin_config.apply();
@@ -60,7 +67,7 @@ pub fn main() !void {
     var i: u32 = 0;
     while (true) {
         // You can now poll for USB events
-        usb.interface().task();
+        usb.task();
 
         const usb_serial = if (usb.controller.drivers) |*drivers|
             &drivers.serial
@@ -77,16 +84,16 @@ pub fn main() !void {
 
             var tx_buf: [1024]u8 = undefined;
             const text = try std.fmt.bufPrint(&tx_buf, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
-            usb_serial.writeAll(usb.interface(), text);
+            write_all(usb_serial, text);
         }
 
         // read and print host command if present
         var rx_buf: [64]u8 = undefined;
         const len = usb_serial.read(usb.interface(), &rx_buf);
         if (len > 0) {
-            usb_serial.writeAll(usb.interface(), "Your message to me was: '");
-            usb_serial.writeAll(usb.interface(), rx_buf[0..len]);
-            usb_serial.writeAll(usb.interface(), "'\r\n");
+            write_all(usb_serial, "Your message to me was: '");
+            write_all(usb_serial, rx_buf[0..len]);
+            write_all(usb_serial, "'\r\n");
         }
     }
 }

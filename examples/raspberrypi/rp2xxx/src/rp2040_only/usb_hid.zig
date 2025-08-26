@@ -21,17 +21,13 @@ const pin_config: rp2xxx.pins.GlobalConfiguration = .{
 const pins = pin_config.pins();
 
 // This is our device configuration
-const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
-    .strings = rp2xxx.usb.default.strings,
-    .vid = rp2xxx.usb.default.vid,
-    .pid = rp2xxx.usb.default.pid,
-    .max_transfer_size = rp2xxx.usb.default.transfer_size,
+const Usb = rp2xxx.usb.Usb(.{ .controller_config = .{
     .device_triple = .{
         .class = .Miscellaneous,
         .subclass = 2,
         .protocol = 1,
     },
-    .attributes = .{ .self_powered = true },
+    .attributes = .{ .self_powered = false },
     .drivers = &.{.{
         .name = "hid",
         .Type = microzig.core.usb.hid.HidClassDriver,
@@ -42,7 +38,7 @@ const Usb = rp2xxx.usb.Usb(.{ .Controller = microzig.core.usb.Controller(.{
             .{ .name = "name", .value = "Board HID" },
         },
     }},
-}) });
+} });
 var usb: Usb = undefined;
 
 pub fn main() !void {
@@ -64,7 +60,7 @@ pub fn main() !void {
 
     while (true) {
         // You can now poll for USB events
-        usb.interface().task();
+        usb.task();
 
         const hid = if (usb.controller.drivers) |*drivers|
             &drivers.hid
