@@ -430,12 +430,19 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
 }
 
 fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
+    const bounded_array_dep = b.dependency("bounded-array", .{});
     const generate_tables_exe = b.addExecutable(.{
         .name = "aviron-generate-tables",
         .root_module = b.createModule(.{
             .root_source_file = b.path("tools/generate-tables.zig"),
             .target = b.graph.host,
             .optimize = .Debug,
+            .imports = &.{
+                .{
+                    .name = "bounded-array",
+                    .module = bounded_array_dep.module("bounded-array"),
+                },
+            },
         }),
     });
     generate_tables_exe.root_module.addImport("isa", isa_mod);

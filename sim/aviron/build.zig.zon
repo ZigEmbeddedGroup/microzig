@@ -11,6 +11,7 @@
             .url = "git+https://github.com/ikskuh/zig-ihex#2c399fc3ab2669df8b0c8a514ca194757f41f826",
             .hash = "ihex-0.1.0-1POu20MyAABXXjtXpHXpEZXrNYl34xVCTO8ye1BHOtF_",
         },
+        .@"bounded-array" = .{ .path = "../../modules/bounded-array" },
     },
     .paths = .{
         "README.md",

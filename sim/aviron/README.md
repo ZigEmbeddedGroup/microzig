@@ -51,7 +51,7 @@ File extensions marked *compile* will be compiled or assembled with the Zig comp
 //! }
 const testsuite = @import("testsuite");
 
-export fn _start() callconv(.C) noreturn {
+export fn _start() callconv(.a) noreturn {
     testsuite.write(.stdout, "hello");
     testsuite.write(.stderr, "world");
     testsuite.exit(0);

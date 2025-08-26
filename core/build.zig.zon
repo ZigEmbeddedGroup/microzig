@@ -2,6 +2,11 @@
     .name = .mz_core,
     .fingerprint = 0x2d3edeb5b42fbb10,
     .version = "0.0.1",
+    .dependencies = .{
+        .@"bounded-array" = .{
+            .path = "../modules/bounded-array",
+        },
+    },
     .paths = .{
         "thoughts.md",
         "build.zig",
