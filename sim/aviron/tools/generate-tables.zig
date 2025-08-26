@@ -104,7 +104,7 @@ pub fn main() !void {
     for (positionals.values, 0..) |map, i| {
         const opcode = std.enums.EnumIndexer(isa.Opcode).keyForIndex(i);
 
-        try writer.print("{}: ", .{std.zig.fmtId(@tagName(opcode))});
+        try writer.print("{f}: ", .{std.zig.fmtId(@tagName(opcode))});
 
         const BitSet = struct {
             name: u8,
@@ -146,7 +146,7 @@ pub fn main() !void {
     try writer.writeAll("pub const lookup = [65536]isa.Opcode {");
 
     for (lut, 0..) |v, i| {
-        try writer.print(".{},", .{std.zig.fmtId(@tagName(v))});
+        try writer.print(".{f},", .{std.zig.fmtId(@tagName(v))});
         if ((i + 1) % 16 == 0) {
             try writer.print("\n", .{});
         }
@@ -155,7 +155,7 @@ pub fn main() !void {
     try writer.writeAll("};\n\npub const positionals = .{");
 
     for (positionals.values, 0..) |map, i| {
-        try writer.print(".{} = .{{", .{std.zig.fmtId(@tagName(std.enums.EnumIndexer(isa.Opcode).keyForIndex(i)))});
+        try writer.print(".{f} = .{{", .{std.zig.fmtId(@tagName(std.enums.EnumIndexer(isa.Opcode).keyForIndex(i)))});
         var it = map.iterator();
         while (it.next()) |entry| {
             try writer.print(".{{'{c}', .{{", .{entry.key_ptr.*});
@@ -188,15 +188,22 @@ pub fn main() !void {
     var tree = try std.zig.Ast.parse(allocator, txt, .zig);
     defer tree.deinit(allocator);
 
+    var stdout_buf: [4096]u8 = undefined;
+    var stdout = std.fs.File.stdout();
+    var stdout_writer = stdout.writer(&stdout_buf);
+
+    var out_buf: [4096]u8 = undefined;
+    var out_writer = out.writer(&out_buf);
+
     if (tree.errors.len != 0) {
         for (tree.errors) |err| {
-            try tree.renderError(err, std.io.getStdErr().writer());
+            try tree.renderError(err, &stdout_writer.interface);
         }
-        try out.writer().writeAll(txt);
+        try out_writer.interface.writeAll(txt);
     } else {
-        const render_result = try tree.render(allocator);
-        defer allocator.free(render_result);
-
-        try out.writer().writeAll(render_result);
+        const fixups: std.zig.Ast.Render.Fixups = .{};
+        try tree.render(allocator, &out_writer.interface, fixups);
     }
+
+    try out_writer.interface.flush();
 }
