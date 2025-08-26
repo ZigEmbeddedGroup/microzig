@@ -173,6 +173,7 @@ pub const Configuration = extern struct {
 };
 
 pub fn string(comptime value: []const u8) []const u8 {
+    @setEvalBranchQuota(10000);
     const encoded: []const u8 = @ptrCast(std.unicode.utf8ToUtf16LeStringLiteral(value));
     return &[2]u8{ encoded.len + 2, @intFromEnum(Type.String) } ++ encoded;
 }
