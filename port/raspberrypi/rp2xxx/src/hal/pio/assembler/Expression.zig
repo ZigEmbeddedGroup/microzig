@@ -16,9 +16,11 @@ const Diagnostics = assembler.Diagnostics;
 const encoder = @import("encoder.zig");
 const DefineWithIndex = encoder.DefineWithIndex;
 
+const BoundedArray = @import("bounded-array").BoundedArray;
+
 const Expression = @This();
-const BoundedOperations = std.BoundedArray(OperationWithIndex, 32);
-const BoundedValues = std.BoundedArray(Value, 32);
+const BoundedOperations = BoundedArray(OperationWithIndex, 32);
+const BoundedValues = BoundedArray(Value, 32);
 
 const Value = struct {
     str: []const u8,
@@ -268,7 +270,7 @@ pub fn evaluate(
     define_lists: []const []const DefineWithIndex,
     diags: *?Diagnostics,
 ) !i128 {
-    var values = std.BoundedArray(EvaluatedValue, 32).init(0) catch unreachable;
+    var values = BoundedArray(EvaluatedValue, 32).init(0) catch unreachable;
     // parse/extract values into numbers
     for (self.values.slice()) |entry| {
         const value: EvaluatedValue = if (std.fmt.parseInt(i128, entry.str, 0)) |num| .{

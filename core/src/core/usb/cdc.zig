@@ -3,6 +3,8 @@ const std = @import("std");
 const types = @import("types.zig");
 const utils = @import("utils.zig");
 
+const utilities = @import("../../utilities.zig");
+
 const DescType = types.DescType;
 const bos = utils.BosConfig;
 
@@ -126,7 +128,7 @@ pub const CdcLineCoding = extern struct {
 };
 
 pub fn CdcClassDriver(comptime usb: anytype) type {
-    const fifo = std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size });
+    const FIFO = utilities.CircularBuffer(u8, usb.max_packet_size);
 
     return struct {
         device: ?types.UsbDevice = null,
@@ -136,13 +138,13 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
         line_coding: CdcLineCoding = undefined,
 
-        rx: fifo = fifo.init(),
-        tx: fifo = fifo.init(),
+        rx: FIFO = .empty,
+        tx: FIFO = .empty,
 
         epin_buf: [usb.max_packet_size]u8 = undefined,
 
         pub fn available(self: *@This()) usize {
-            return self.rx.readableLength();
+            return self.rx.get_readable_len();
         }
 
         pub fn read(self: *@This(), dst: []u8) usize {
@@ -152,15 +154,15 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         }
 
         pub fn write(self: *@This(), data: []const u8) []const u8 {
-            const write_count = @min(self.tx.writableLength(), data.len);
+            const write_count = @min(self.tx.get_writable_len(), data.len);
 
             if (write_count > 0) {
-                self.tx.writeAssumeCapacity(data[0..write_count]);
+                self.tx.write_assume_capacity(data[0..write_count]);
             } else {
                 return data[0..];
             }
 
-            if (self.tx.writableLength() == 0) {
+            if (self.tx.get_writable_len() == 0) {
                 _ = self.write_flush();
             }
 
@@ -171,7 +173,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             if (self.device.?.ready() == false) {
                 return 0;
             }
-            if (self.tx.readableLength() == 0) {
+            if (self.tx.get_readable_len() == 0) {
                 return 0;
             }
             const len = self.tx.read(&self.epin_buf);
@@ -180,7 +182,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         }
 
         fn prep_out_transaction(self: *@This()) void {
-            if (self.rx.writableLength() >= usb.max_packet_size) {
+            if (self.rx.get_writable_len() >= usb.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
                 self.device.?.endpoint_transfer(self.ep_out, &.{});
             }
@@ -291,7 +293,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 if (self.write_flush() == 0) {
                     // If there is no data left, a empty packet should be sent if
                     // data len is multiple of EP Packet size and not zero
-                    if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
+                    if (self.tx.get_readable_len() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
                         self.device.?.endpoint_transfer(self.ep_in, &.{});
                     }
                 }

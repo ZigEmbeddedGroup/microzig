@@ -29,14 +29,22 @@ boards: struct {
     },
 },
 
+var imports: [1]std.Build.Module.Import = undefined;
+
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const pico_sdk = b.dependency("pico-sdk", .{});
+    const bounded_array_dep = b.dependency("bounded-array", .{});
+    imports[0] = .{
+        .name = "bounded-array",
+        .module = bounded_array_dep.module("bounded-array"),
+    };
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
+        .imports = &imports,
     };
 
     const chip_rp2040: microzig.Target = .{

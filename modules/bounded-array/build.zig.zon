@@ -1,0 +1,7 @@
+.{
+    .name = .bounded_array,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.15.1",
+    .paths = .{""},
+    .fingerprint = 0x7cda5953ee9270c,
+}

@@ -7,6 +7,8 @@ const Diagnostics = assembler.Diagnostics;
 const Expression = @import("Expression.zig");
 const Chip = @import("../../chip.zig").Chip;
 
+const BoundedArray = @import("bounded-array").BoundedArray;
+
 pub const Options = struct {
     capacity: u32 = 256,
 };
@@ -16,8 +18,8 @@ pub fn tokenize(
     source: []const u8,
     diags: *?assembler.Diagnostics,
     comptime options: Options,
-) !std.BoundedArray(Token(chip), options.capacity) {
-    var tokens = std.BoundedArray(Token(chip), options.capacity).init(0) catch unreachable;
+) !BoundedArray(Token(chip), options.capacity) {
+    var tokens = BoundedArray(Token(chip), options.capacity).init(0) catch unreachable;
     var tokenizer = Tokenizer(chip).init(source);
     while (try tokenizer.next(diags)) |token|
         try tokens.append(token);
@@ -617,11 +619,11 @@ pub fn Tokenizer(chip: Chip) type {
         }
 
         /// get the lowercase of a string, returns an error if it's too big
-        fn lowercase_bounded(comptime max_size: usize, str: []const u8) TokenizeError!std.BoundedArray(u8, max_size) {
+        fn lowercase_bounded(comptime max_size: usize, str: []const u8) TokenizeError!BoundedArray(u8, max_size) {
             if (str.len > max_size)
                 return error.TooBig;
 
-            var ret = std.BoundedArray(u8, max_size).init(0) catch unreachable;
+            var ret = BoundedArray(u8, max_size).init(0) catch unreachable;
             for (str) |c|
                 try ret.append(std.ascii.toLower(c));
 
@@ -1683,7 +1685,7 @@ fn expect_instr_irq(comptime chip: Chip, expected: ExpectedIrqInstr(chip), actua
     }
 }
 
-fn bounded_tokenize(comptime chip: Chip, source: []const u8) !std.BoundedArray(Token(chip), 256) {
+fn bounded_tokenize(comptime chip: Chip, source: []const u8) !BoundedArray(Token(chip), 256) {
     var diags: ?assembler.Diagnostics = null;
     return tokenize(chip, source, &diags, .{}) catch |err| if (diags) |d| blk: {
         std.log.err("error with chip {s} at index {}: {s}", .{ @tagName(chip), d.index, d.message.slice() });

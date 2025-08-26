@@ -2,6 +2,8 @@ const std = @import("std");
 const isa_def = @embedFile("isa.txt");
 const isa = @import("isa");
 
+const BoundedArray = @import("bounded-array").BoundedArray;
+
 fn string_to_enum(comptime T: type, str: []const u8) ?T {
     inline for (@typeInfo(T).@"enum".fields) |enumField| {
         if (std.mem.eql(u8, str, enumField.name)) {
@@ -30,11 +32,11 @@ pub fn main() !void {
     var lut = [_]isa.Opcode{.unknown} ** (std.math.maxInt(u16) + 1);
 
     var base_number_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
-    var unknown_indices = try std.BoundedArray(u8, 16).init(0);
+    var unknown_indices = try BoundedArray(u8, 16).init(0);
     var unknown_indices_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
     var result_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
 
-    var positionals = std.enums.EnumArray(isa.Opcode, std.AutoArrayHashMapUnmanaged(u8, std.BoundedArray(u8, 16))).initFill(.{});
+    var positionals = std.enums.EnumArray(isa.Opcode, std.AutoArrayHashMapUnmanaged(u8, BoundedArray(u8, 16))).initFill(.{});
     defer for (&positionals.values) |*map| {
         map.deinit(allocator);
     };
@@ -62,7 +64,7 @@ pub fn main() !void {
                 else => {
                     const gop = try positionals.getPtr(opcode).getOrPut(allocator, r);
                     if (!gop.found_existing) {
-                        gop.value_ptr.* = try std.BoundedArray(u8, 16).init(0);
+                        gop.value_ptr.* = try BoundedArray(u8, 16).init(0);
                     }
                     try gop.value_ptr.*.append(@intCast(index));
 
