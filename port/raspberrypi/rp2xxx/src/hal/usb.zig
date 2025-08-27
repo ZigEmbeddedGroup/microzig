@@ -394,7 +394,7 @@ pub fn Usb(comptime config: Config) type {
         }
 
         /// See interface description.
-        pub fn endpoint_open(ptr: *anyopaque, desc: *const usb.descriptor.Endpoint) ?[]u8 {
+        pub fn endpoint_open(ptr: *anyopaque, desc: *const usb.descriptor.Endpoint) void {
             const this: *@This() = @alignCast(@ptrCast(ptr));
 
             assert(@intFromEnum(desc.endpoint.num) < max_endpoints_count);
@@ -404,7 +404,7 @@ pub fn Usb(comptime config: Config) type {
                 .is_out = desc.endpoint.dir == .Out,
             };
 
-            const start = if (desc.endpoint.num != .ep0) blk: {
+            if (desc.endpoint.num != .ep0) {
                 const buf = this.dpram_allocator.alloc(1) catch
                     std.debug.panic("USB controller out of memory.", .{});
                 var ep_ctrl = ep_hard.ep_ctrl().?;
@@ -414,10 +414,16 @@ pub fn Usb(comptime config: Config) type {
                 rmw.ENDPOINT_TYPE = @enumFromInt(desc.attributes.transfer_type.as_number());
                 rmw.BUFFER_ADDRESS = buf * dpram_buffer_len;
                 ep_ctrl.write(rmw);
-                break :blk buf;
-            } else dpram_ep0buf_idx;
 
-            return &dpram_buffers[start];
+                if (desc.endpoint.dir == .In) {
+                    // The tx buffer is ready.
+                    this.controller.on_tx_ready(desc.endpoint.num, &dpram_buffers[buf]) catch
+                        std.log.warn(
+                            "USB controller ignored inital tx buffer for ep{}",
+                            .{@intFromEnum(desc.endpoint.num)},
+                        );
+                }
+            }
         }
     };
 }

@@ -21,7 +21,7 @@ pub const DeviceInterface = struct {
     pub const Vtable = struct {
         submit_tx_buffer: *const fn (ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void,
         signal_rx_ready: *const fn (ptr: *anyopaque, ep_out: EpNum, max_len: usize) void,
-        endpoint_open: *const fn (ptr: *anyopaque, desc: *const descriptor.Endpoint) ?[]u8,
+        endpoint_open: *const fn (ptr: *anyopaque, desc: *const descriptor.Endpoint) void,
     };
     ptr: *anyopaque,
     vtable: *const Vtable,
@@ -37,8 +37,11 @@ pub const DeviceInterface = struct {
     pub fn signal_rx_ready(this: @This(), ep_out: EpNum, max_len: usize) void {
         this.vtable.signal_rx_ready(this.ptr, ep_out, max_len);
     }
-    /// Opens an endpoint according to the descriptor.
-    pub fn endpoint_open(this: @This(), desc: *const descriptor.Endpoint) ?[]u8 {
+    /// Opens an endpoint according to the descriptor. Note that if the endpoint
+    /// direction is IN this may call the controller's `on_tx_ready` function,
+    /// so driver initialization must be done before this function is called
+    /// on IN endpoint descriptors.
+    pub fn endpoint_open(this: @This(), desc: *const descriptor.Endpoint) void {
         return this.vtable.endpoint_open(this.ptr, desc);
     }
 };
@@ -310,11 +313,12 @@ pub fn Controller(comptime config: Config) type {
                 const descriptors = @field(driver_info, drv.name).descriptors;
                 const fields = @typeInfo(@TypeOf(descriptors)).@"struct".fields;
 
+                // Driver's init may call `signal_rx_ready()`, so the OUT endpoint is configured first.
                 inline for (fields) |fld| {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .Out) continue;
-                    _ = device.endpoint_open(&desc_ep);
+                    device.endpoint_open(&desc_ep);
                 }
 
                 @field(this.drivers.?, drv.name) = .init(device, &descriptors);
@@ -323,11 +327,7 @@ pub fn Controller(comptime config: Config) type {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .In) continue;
-
-                    if (device.endpoint_open(&desc_ep)) |buf|
-                        this.on_tx_ready(desc_ep.endpoint.num, buf) catch {
-                            std.log.warn("initial buffer unhandled on {any}", .{desc_ep.endpoint.num});
-                        };
+                    device.endpoint_open(&desc_ep);
                 }
             }
             return true;
