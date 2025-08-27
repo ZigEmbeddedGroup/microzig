@@ -116,17 +116,25 @@ pub const I2C_Datagram_Device = struct {
         const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
         const timeout = if (dev.counter_device) |counter| counter.make_ms_timeout(dev.timeout) else null;
         return dev.writev(chunks, timeout) catch |err| switch (err) {
-            I2C.Error.AckFailure,
+            error.TargetAddressReserved,
+            error.IllegalAddress,
+            => error.Unsupported,
+
             I2C.Error.BusError,
             I2C.Error.BusTimeout,
             I2C.Error.ArbitrationLoss,
-            => error.Error,
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
+            error.UnknownAbort,
+            => error.IoError,
 
             I2C.Error.Timeout => return error.Timeout,
             I2C.Error.UnrecoverableError => {
                 dev.bus.runtime_apply(dev.config) catch {};
-                return error.Error;
+                return error.IoError;
             },
+            error.NoData => {},
         };
     }
 
@@ -135,16 +143,24 @@ pub const I2C_Datagram_Device = struct {
         const timeout = if (dev.counter_device) |counter| counter.make_ms_timeout(dev.timeout) else null;
 
         return dev.readv(chunks, timeout) catch |err| switch (err) {
-            I2C.Error.AckFailure,
+            error.TargetAddressReserved,
+            error.IllegalAddress,
+            => error.Unsupported,
+
             I2C.Error.BusError,
             I2C.Error.BusTimeout,
             I2C.Error.ArbitrationLoss,
-            => error.Error,
+            error.BufferOverrun,
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
+            error.UnknownAbort,
+            error.NoData,
+            => error.IoError,
 
             I2C.Error.Timeout => return error.Timeout,
             I2C.Error.UnrecoverableError => {
                 dev.bus.runtime_apply(dev.config) catch {};
-                return error.Error;
+                return error.IoError;
             },
         };
     }
@@ -208,7 +224,6 @@ pub const I2C_Device = struct {
             I2C.Error.ArbitrationLoss => return I2CError.UnknownAbort,
             I2C.Error.BusError => return I2CError.UnknownAbort,
             I2C.Error.BusTimeout => return I2CError.Timeout,
-            I2C.Error.Timeout => return I2CError.Timeout,
             I2C.Error.UnrecoverableError => {
                 dev.bus.runtime_apply(dev.config) catch {};
                 return I2CError.UnknownAbort;
@@ -224,7 +239,6 @@ pub const I2C_Device = struct {
             I2C.Error.ArbitrationLoss => return I2CError.UnknownAbort,
             I2C.Error.BusError => return I2CError.UnknownAbort,
             I2C.Error.BusTimeout => return I2CError.Timeout,
-            I2C.Error.Timeout => return I2CError.Timeout,
             I2C.Error.UnrecoverableError => {
                 dev.bus.runtime_apply(dev.config) catch {};
                 return I2CError.UnknownAbort;
@@ -240,7 +254,6 @@ pub const I2C_Device = struct {
             I2C.Error.ArbitrationLoss => I2CError.UnknownAbort,
             I2C.Error.BusError => I2CError.UnknownAbort,
             I2C.Error.BusTimeout => I2CError.Timeout,
-            I2C.Error.Timeout => I2CError.Timeout,
             I2C.Error.UnrecoverableError => {
                 dev.bus.runtime_apply(dev.config) catch {};
                 return I2CError.UnknownAbort;
