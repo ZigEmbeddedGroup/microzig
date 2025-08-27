@@ -7,7 +7,7 @@ const Timeout = @import("drivers.zig").Timeout;
 const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
 
 const peripherals = microzig.chip.peripherals;
-const UartReg = *volatile microzig.chip.types.peripherals.usart_v1.USART;
+const usart_t = microzig.chip.types.peripherals.usart_v1.USART;
 const M0 = microzig.chip.types.peripherals.usart_v1.M0;
 const PS = microzig.chip.types.peripherals.usart_v1.PS;
 const STOP = microzig.chip.types.peripherals.usart_v1.STOP;
@@ -80,7 +80,7 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
 }
 
 pub const Instances = create_peripheral_enum("ART", null);
-fn get_regs(instance: Instances) UartReg {
+fn get_regs(comptime instance: Instances) *volatile usart_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
@@ -88,8 +88,8 @@ pub const UART = struct {
     pub const Writer = std.io.GenericWriter(*const UART, TransmitError, generic_writer_fn);
     pub const Reader = std.io.GenericReader(*const UART, ReceiveError, generic_reader_fn);
 
-    regs: UartReg,
-    /// Returns an error at runtime, and raises a compile error at comptime.
+    regs: *volatile usart_t,
+    ///Returns an error at runtime, and raises a compile error at comptime.
     fn validate_baudrate(baud_rate: u32, peri_freq: u32) ConfigError!void {
         const val: f32 = @as(f32, @floatFromInt(peri_freq)) / (@as(f32, @floatFromInt(baud_rate)) * 16);
         if (val > 4095) {
@@ -307,19 +307,19 @@ pub const UART = struct {
         return buffer.len;
     }
 
-    pub fn init(uart: Instances) UART {
+    pub fn init(comptime uart: Instances) UART {
         return .{ .regs = get_regs(uart) };
     }
 };
 
 var uart_logger: ?UART.Writer = null;
 
-/// Set a specific uart instance to be used for logging.
+///Set a specific uart instance to be used for logging.
 ///
-/// Allows system logging over uart via:
-/// pub const microzig_options = .{
-///     .logFn = hal.uart.log,
-/// };
+///Allows system logging over uart via:
+///pub const microzig_options = .{
+///    .logFn = hal.uart.log,
+///};
 pub fn init_logger(uart: *const UART) void {
     uart_logger = uart.writer();
     if (uart_logger) |logger| {
@@ -327,7 +327,7 @@ pub fn init_logger(uart: *const UART) void {
     }
 }
 
-/// Disables logging via the uart instance.
+///Disables logging via the uart instance.
 pub fn deinit_logger() void {
     uart_logger = null;
 }
