@@ -153,8 +153,7 @@ pub const CdcClassDriver = struct {
     pub fn read(this: *@This(), device: usb.DeviceInterface, dst: []u8) usize {
         if (this.rx_buf) |rx| {
             const len = @min(rx.len, dst.len);
-            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-            std.mem.copyForwards(u8, dst, rx[0..len]);
+            @memcpy(dst[0..len], rx[0..len]);
             if (len < rx.len)
                 this.rx_buf = rx[len..]
             else {
@@ -169,8 +168,7 @@ pub const CdcClassDriver = struct {
     pub fn write(this: *@This(), src: []const u8) usize {
         if (this.tx_buf) |tx| {
             const len = @min(tx.len, src.len);
-            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-            std.mem.copyForwards(u8, tx, src[0..len]);
+            @memcpy(tx[0..len], src[0..len]);
             this.tx_buf = tx[len..];
             return len;
         } else return 0;

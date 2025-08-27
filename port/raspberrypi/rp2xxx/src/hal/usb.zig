@@ -216,7 +216,7 @@ pub fn Usb(comptime config: Config) type {
             if (len == 0)
                 this.state = .{ .no_buffer = null }
             else {
-                std.mem.copyForwards(u8, tx_buf, data[0..len]);
+                @memcpy(tx_buf[0..len], data[0..len]);
                 this.state = .{ .sending = data[len..] };
             }
             this.interface().submit_tx_buffer(.ep0, tx_buf.ptr + len);
