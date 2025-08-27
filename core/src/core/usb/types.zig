@@ -82,7 +82,7 @@ pub const Dir = enum(u1) {
 };
 
 pub const Endpoint = packed struct(u8) {
-    // There are up to 15 endpoints for eqch direction.
+    // There are up to 15 endpoints for each direction.
     pub const Num = enum(u4) {
         ep0 = 0,
         ep1,

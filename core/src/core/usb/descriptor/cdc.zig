@@ -31,7 +31,7 @@ pub const CallManagement = extern struct {
         assert(@sizeOf(@This()) == 5);
     }
 
-    length: u8 = 5,
+    length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
     descriptor_type: Type = .CsInterface,
     // Subtype of this descriptor, must be `CallManagement`.
@@ -63,7 +63,7 @@ pub const Union = extern struct {
         assert(@sizeOf(@This()) == 5);
     }
 
-    length: u8 = 5,
+    length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
     descriptor_type: Type = .CsInterface,
     // Subtype of this descriptor, must be `Union`.
