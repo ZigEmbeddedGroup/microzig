@@ -537,7 +537,7 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
         }
 
         pub fn is_empty(buffer: *const Self) bool {
-            return buffer.start == buffer.end;
+            return !buffer.full and (buffer.start == buffer.end);
         }
 
         pub fn get_readable_len(buffer: *const Self) usize {
@@ -583,6 +583,32 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
 
             if (buffer.start == buffer.end)
                 buffer.full = true;
+        }
+
+        pub fn read(buffer: *Self, out: []u8) usize {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            var count: usize = 0;
+            while (!buffer.is_empty() and count < out.len) {
+                out[count] = buffer.pop().?;
+                count += 1;
+            }
+
+            return count;
+        }
+
+        pub fn write(buffer: *Self, data: []const u8) error{Full}!void {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            for (data) |d| {
+                if (buffer.full)
+                    return error.Full;
+
+                buffer.items[buffer.end] = d;
+                buffer.increment_end();
+            }
         }
 
         /// Pop item from front of buffer. Return null if empty
