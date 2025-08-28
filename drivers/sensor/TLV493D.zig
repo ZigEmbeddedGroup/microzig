@@ -43,8 +43,6 @@ pub const Config = struct {
 
 /// TLV493D related errors
 pub const Error = error{
-    // TODO: We can only detect NoDevice if we get a NACK, which we can only tell with a proper i2c
-    // interface
     NoDevice,
     BusError,
     FrameError,
@@ -176,7 +174,7 @@ pub const TLV493D = struct {
 
         // The first thing we have to do is read out the factory calibration and pack it into the
         // write register so that we don't clear it on the first write.
-        self.setup_write_buffer() catch return Error.BusError;
+        try self.setup_write_buffer();
 
         // Sleep for startup delay
         // TODO: Needed?
@@ -201,7 +199,7 @@ pub const TLV493D = struct {
         return self;
     }
 
-    fn setup_write_buffer(self: *Self) !void {
+    fn setup_write_buffer(self: *Self) Error!void {
         self.read_out() catch |e| switch (e) {
             // The FRAMECOUNTER doesn't seem to correctly reset to 0, so since this is the first
             // read we do, we ignore it
@@ -238,7 +236,12 @@ pub const TLV493D = struct {
         const reset_data: u8 = if (self.address == ADDRESS1) 0xFF else 0x00;
 
         // Send recovery frame, clearing bad state
-        self.dev.writev(.general_call, &.{&.{reset_data}}) catch return Error.DatagramError;
+        self.dev.writev(.general_call, &.{&.{reset_data}}) catch |e| return switch (e) {
+            I2C_Device.Error.NoAcknowledge,
+            I2C_Device.Error.Timeout,
+            => Error.NoDevice,
+            else => Error.BusError,
+        };
         self.clock.sleep_ms(RESETDELAY_MS);
 
         // It seems that this resets the count to 1
@@ -248,7 +251,12 @@ pub const TLV493D = struct {
     /// Read all registers from sensor
     fn read_out(self: *Self) Error!void {
         // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
-        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e| return switch (e) {
+            I2C_Device.Error.NoAcknowledge,
+            I2C_Device.Error.Timeout,
+            => Error.NoDevice,
+            else => Error.BusError,
+        };
         if (bytes_read != 10) return Error.InvalidData;
 
         if (self.expected_frame_count != self.read_data.FRAMECOUNTER) {
@@ -263,12 +271,16 @@ pub const TLV493D = struct {
     /// Write configuration to sensor
     fn write_out(self: *Self) Error!void {
         self.calc_parity();
-        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch
-            return Error.DatagramError;
+        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch |e| return switch (e) {
+            I2C_Device.Error.NoAcknowledge,
+            I2C_Device.Error.Timeout,
+            => Error.NoDevice,
+            else => Error.BusError,
+        };
     }
 
     /// Synchronize the expected_frame_count with whatever the device thinks we're on.
-    fn synchronize_frame_count(self: *Self) !void {
+    fn synchronize_frame_count(self: *Self) Error!void {
         const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch
             return Error.DatagramError;
         if (bytes_read != 10) return Error.InvalidData;
@@ -334,7 +346,7 @@ pub const TLV493D = struct {
         }
 
         // Read measurement data
-        self.read_out() catch return Error.BusError;
+        try self.read_out();
 
         // Construct results from registers
         self.x_data = @as(i12, self.read_data.BxH) << 4 | self.read_data.BxL;
