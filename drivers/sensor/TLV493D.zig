@@ -47,6 +47,7 @@ pub const Error = error{
     FrameError,
     DatagramError,
     InvalidData,
+    Unsupported,
 };
 
 const ReadRegister = packed struct(u80) {
@@ -169,7 +170,7 @@ pub const TLV493D = struct {
 
         // We don't support setting the I2C bits for the extra 6 addresses
         if (address != ADDRESS0 and address != ADDRESS1)
-            return Error.InvalidData;
+            return Error.Unsupported;
 
         // The first thing we have to do is read out the factory calibration and pack it into the
         // write register so that we don't clear it on the first write.
@@ -180,9 +181,11 @@ pub const TLV493D = struct {
         self.clock.sleep_ms(STARTUPDELAY_MS);
 
         // Reset sensor if requested
-        // TODO: When using the broadcast address, the subsequent reads seem to hang
-        // if (config.reset)
-        //     try self.reset_sensor();
+        // TODO: Figure out why when using the broadcast address, the subsequent reads seem to hang
+        if (config.reset) {
+            return Error.Unsupported;
+            // try self.reset_sensor();
+        }
 
         // try self.synchronize_frame_count();
 
@@ -225,6 +228,7 @@ pub const TLV493D = struct {
     }
 
     /// Reset the sensor using recovery sequence
+    // TODO: Figure out why this causes the device to stop responding
     fn reset_sensor(self: *Self) Error!void {
         // On startup the SDA line is sampled. If the line is high, it will listen on address 0x5E.
         // Otherwise, it will listen on 0x1F. The line must be kept stable for 200us.
@@ -252,7 +256,6 @@ pub const TLV493D = struct {
 
         if (self.expected_frame_count != self.read_data.FRAMECOUNTER) {
             // Section 5.6: Corrective action: Reset sensor
-            // TODO: Figure out why this causes the device to stop responding
             // try self.reset_sensor();
         }
 
