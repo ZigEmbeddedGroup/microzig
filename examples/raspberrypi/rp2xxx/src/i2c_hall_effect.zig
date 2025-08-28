@@ -54,7 +54,7 @@ pub fn main() !void {
         var rx_data: [1]u8 = undefined;
         _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
             if (e != I2CError.DeviceNotPresent and
-                e != I2CError.TargetAddressReserved)
+                e != I2CError.IllegalAddress)
                 std.log.info("Error {any}", .{e});
             continue;
         };
