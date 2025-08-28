@@ -237,9 +237,7 @@ pub const Block = extern struct {
             switch (field.type) {
                 u32 => @field(block, field.name) = try reader.takeInt(u32, .little),
                 [476]u8 => {
-                    const n = try reader.readSliceAll(&@field(block, field.name));
-                    if (n != @sizeOf(field.type))
-                        return error.EndOfStream;
+                    try reader.readSliceAll(&@field(block, field.name));
                 },
                 else => {
                     assert(4 == @sizeOf(field.type));
