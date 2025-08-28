@@ -93,7 +93,6 @@ pub const I2C_Datagram_Device = struct {
     };
 
     const i2c_vtable = drivers.I2C_Device.VTable{
-        .set_address_fn = set_address_fn,
         .writev_fn = i2c_writev_fn,
         .readv_fn = i2c_readv_fn,
         .writev_then_readv_fn = i2c_writev_then_readv_fn,
@@ -158,20 +157,6 @@ pub const I2C_Datagram_Device = struct {
             error.Timeout => error.Timeout,
             error.NoData => {},
         };
-    }
-
-    pub fn set_address_fn(
-        dd: *anyopaque,
-        addr: drivers.I2C_Device.Address,
-        allow_reserved: drivers.I2C_Device.Allow_Reserved,
-    ) I2CError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        if (allow_reserved == .dont_allow_reserved)
-            addr.check_reserved() catch return I2CError.IllegalAddress
-        else if (allow_reserved == .allow_general)
-            addr.check_reserved() catch |err| if (err != I2CAddressError.GeneralCall)
-                return drivers.I2C_Device.Error.IllegalAddress;
-        dev.address = addr;
     }
 
     fn i2c_writev_fn(dd: *anyopaque, chunks: []const []const u8) I2CError!void {
