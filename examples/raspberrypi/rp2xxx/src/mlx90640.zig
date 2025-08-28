@@ -10,7 +10,6 @@ const MLX90640 = sensor.MLX90640;
 const time = rp2xxx.time;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 var i2c0 = i2c.instance.num(0);
@@ -71,7 +70,6 @@ pub fn main() !void {
 fn init() !void {
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
 

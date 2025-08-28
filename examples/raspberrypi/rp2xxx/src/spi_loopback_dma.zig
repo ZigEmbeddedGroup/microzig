@@ -7,7 +7,6 @@ const gpio = rp2xxx.gpio;
 const dma = rp2xxx.dma;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 const BUF_LEN = 0x100;
@@ -22,7 +21,6 @@ pub fn main() !void {
     uart_tx_pin.set_function(.uart);
 
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
 

@@ -50,7 +50,6 @@ pub fn main() !void {
     i2c2.apply(config);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 

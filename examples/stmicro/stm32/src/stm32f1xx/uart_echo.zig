@@ -22,7 +22,6 @@ pub fn main() !void {
     RX.set_input_mode(.pull);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 
