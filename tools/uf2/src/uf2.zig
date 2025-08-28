@@ -313,7 +313,7 @@ test "Block loopback" {
 
     {
         var writer: std.io.Writer = .fixed(&buf);
-        try expected.write_to(&writer.new_interface);
+        try expected.write_to(&writer);
     }
 
     {
