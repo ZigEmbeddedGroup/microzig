@@ -155,17 +155,15 @@ pub const SetupPacket = extern struct {
 };
 
 pub const U16Le = extern struct {
-    lo: u8,
-    hi: u8,
+    value: [2]u8,
 
     pub fn from(val: u16) @This() {
-        return .{
-            .lo = @truncate(val),
-            .hi = @intCast(val >> 8),
-        };
+        var this: @This() = undefined;
+        std.mem.writeInt(u16, &this.value, val, .little);
+        return this;
     }
 
     pub fn into(this: @This()) u16 {
-        return (@as(u16, this.hi) << 8) | @as(u16, this.lo);
+        return std.mem.readInt(U16Le, &this.value, .little);
     }
 };
