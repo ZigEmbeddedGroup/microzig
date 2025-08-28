@@ -27,7 +27,6 @@ pub fn main() !void {
     uart.apply(.{
         .tx_pin = board.uart_tx,
         .rx_pin = board.uart_rx,
-        .baud_rate = .@"115200",
     });
 
     nrf.uart.init_logger(uart);

@@ -69,7 +69,6 @@ pub fn main() !void {
     ADC_pin2.set_input_mode(.analog);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 

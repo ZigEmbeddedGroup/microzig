@@ -119,7 +119,6 @@ pub fn main() !void {
     i2c.apply(config);
 
     uart.apply(.{
-        .baud_rate = 115200,
         .clock_speed = 8_000_000,
     });
 

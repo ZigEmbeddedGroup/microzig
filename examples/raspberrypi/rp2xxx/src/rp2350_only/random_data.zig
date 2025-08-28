@@ -16,7 +16,6 @@ const pin_config = hal.pins.GlobalConfiguration{
 };
 
 const pins = pin_config.pins();
-const baud_rate = 115200;
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
@@ -27,7 +26,6 @@ pub fn main() !void {
     pin_config.apply();
 
     uart0.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = hal.clock_config,
     });
 

@@ -45,7 +45,7 @@ pub const ConfigError = error{
 
 pub const Config = struct {
     clock_speed: u32,
-    baud_rate: u32,
+    baud_rate: u32 = 115200,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
     parity: Parity = .none,

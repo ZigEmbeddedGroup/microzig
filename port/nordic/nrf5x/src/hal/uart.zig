@@ -71,7 +71,7 @@ pub const Config = struct {
         rts_pin: gpio.Pin,
     } = null,
     parity: Parity = .exclude,
-    baud_rate: BaudRate = .@"9600",
+    baud_rate: BaudRate = .@"115200",
 };
 
 pub const Parity = enum {

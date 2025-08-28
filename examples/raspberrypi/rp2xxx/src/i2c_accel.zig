@@ -10,7 +10,6 @@ const I2C_Device = rp2xxx.drivers.I2C_Device;
 const ICM_20948 = microzig.drivers.sensor.ICM_20948;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const i2c0 = i2c.instance.num(0);
 
@@ -25,7 +24,6 @@ pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);
