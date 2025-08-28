@@ -58,7 +58,7 @@ pub fn main() !u8 {
 
         var i: usize = 0;
         while (i < boot_sector_items - 1) : (i += 1) {
-            const item = try file_reader.interface.adaptToOldInterface().readInt(u32, .little);
+            const item = try file_reader.interface.takeInt(u32, .little);
             checksum -%= item;
         }
 
