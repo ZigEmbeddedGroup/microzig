@@ -47,7 +47,6 @@ const enumFromInt = std.meta.intToEnum;
 const usb = @import("../usb.zig");
 const descriptor = usb.descriptor;
 const types = usb.types;
-const bos = usb.utils.BosConfig;
 
 pub const InDescriptor = extern struct {
     desc1: descriptor.Interface,
