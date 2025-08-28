@@ -19,7 +19,6 @@ const I2CAddress = drivers.I2C_Device.Address;
 
 ///
 /// A datagram device attached to an I²C bus.
-/// Can also return an I2C_Device interface.
 ///
 pub const I2C_Datagram_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
@@ -92,12 +91,6 @@ pub const I2C_Datagram_Device = struct {
         .writev_then_readv_fn = writev_then_readv_fn,
     };
 
-    const i2c_vtable = drivers.I2C_Device.VTable{
-        .writev_fn = i2c_writev_fn,
-        .readv_fn = i2c_readv_fn,
-        .writev_then_readv_fn = i2c_writev_then_readv_fn,
-    };
-
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
         const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |err| switch (err) {
@@ -156,34 +149,6 @@ pub const I2C_Datagram_Device = struct {
 
             error.Timeout => error.Timeout,
             error.NoData => {},
-        };
-    }
-
-    fn i2c_writev_fn(dd: *anyopaque, chunks: []const []const u8) I2CError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.writev(chunks) catch |err| switch (err) {
-            error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-    }
-
-    fn i2c_readv_fn(dd: *anyopaque, chunks: []const []u8) I2CError!usize {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.readv(chunks) catch |err| switch (err) {
-            error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-    }
-
-    fn i2c_writev_then_readv_fn(
-        dd: *anyopaque,
-        write_chunks: []const []const u8,
-        read_chunks: []const []u8,
-    ) I2CError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
-            error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
         };
     }
 };
