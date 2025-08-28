@@ -45,24 +45,6 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    // ------------------------ BUS SCAN ------------------------
-    std.log.info("I2C bus scan", .{});
-
-    for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2c.Address = @enumFromInt(addr);
-
-        var rx_data: [1]u8 = undefined;
-        _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
-            if (e != I2CError.DeviceNotPresent and
-                e != I2CError.IllegalAddress)
-                std.log.info("Error {any}", .{e});
-            continue;
-        };
-
-        std.log.info("I2C device found at address {X}.", .{addr});
-    }
-
-    // ------------------------ TLV ------------------------
     // Create i2c and clock devices
     var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c device to driver to create sensor instance
@@ -74,13 +56,12 @@ pub fn main() !void {
             .enable_temp = true,
         },
     );
-    std.log.info("Done init", .{}); // DELETEME
 
     while (true) {
         const data = try dev.read();
         std.log.info(
-            "accel: x {d: >6.2} y {d: >6.2} z {d: >6.2} temp {d: >4.2}",
-            .{ data.x, data.y, data.z, data.temp },
+            "accel: x {d: >6.2}mT y {d: >6.2}mT z {d: >6.2}mT",
+            .{ data.x, data.y, data.z },
         );
 
         sleep_ms(500);
