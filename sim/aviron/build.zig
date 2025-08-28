@@ -417,8 +417,6 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
     if (json_text.len == 0)
         return TestSuiteConfig{};
 
-    std.log.err("json_text: {s}", .{json_text});
-
     return try std.json.parseFromSliceLeaky(
         TestSuiteConfig,
         b.allocator,
