@@ -5,7 +5,6 @@ const time = microzig.drivers.time;
 const rp2xxx = microzig.hal;
 const i2c = rp2xxx.i2c;
 const gpio = rp2xxx.gpio;
-const peripherals = microzig.chip.peripherals;
 
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
