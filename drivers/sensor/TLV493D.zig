@@ -244,7 +244,7 @@ pub const TLV493D = struct {
 
         // Send recovery frame, clearing bad state
         self.dev.writev(.general_call, &.{&.{reset_data}}) catch |e|
-            return mapError(e);
+            return map_error(e);
         self.clock.sleep_ms(RESETDELAY_MS);
 
         // It seems that this resets the count to 1
@@ -255,7 +255,7 @@ pub const TLV493D = struct {
     fn read_out(self: *Self) Error!void {
         // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
         const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e|
-            return mapError(e);
+            return map_error(e);
         if (bytes_read != 10) return Error.InvalidData;
 
         if (self.expected_frame_count != self.read_data.FRAMECOUNTER) {
@@ -270,13 +270,13 @@ pub const TLV493D = struct {
     fn write_out(self: *Self) Error!void {
         self.calc_parity();
         self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch |e|
-            return mapError(e);
+            return map_error(e);
     }
 
     /// Synchronize the expected_frame_count with whatever the device thinks we're on.
     fn synchronize_frame_count(self: *Self) Error!void {
         const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e|
-            return mapError(e);
+            return map_error(e);
         if (bytes_read != 10) return Error.InvalidData;
         self.expected_frame_count = @truncate(@as(u8, self.read_data.FRAMECOUNTER) + 1);
     }
@@ -432,7 +432,7 @@ pub const TLV493D = struct {
 };
 
 /// Map I2C_Device errors to device errors
-fn mapError(err: I2C_Device.InterfaceError) Error {
+fn map_error(err: I2C_Device.InterfaceError) Error {
     return switch (err) {
         I2C_Device.Error.NoAcknowledge,
         I2C_Device.Error.Timeout,
