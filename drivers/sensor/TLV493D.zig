@@ -11,19 +11,20 @@ const I2C_Device = mdf.base.I2C_Device;
 const Clock_Device = mdf.base.Clock_Device;
 
 /// TLV493D I2C addresses
-pub const TLV493D_ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
-pub const TLV493D_ADDRESS1: I2C_Device.Address = @enumFromInt(0x5E); // Default
+pub const ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
+pub const ADDRESS1: I2C_Device.Address = @enumFromInt(0x5E); // Default
 
 /// Startup delay in milliseconds
-pub const TLV493D_STARTUPDELAY_MS: u32 = 40;
+pub const STARTUPDELAY_MS: u32 = 40;
+pub const RESETDELAY_MS: u32 = 200;
 
 /// Conversion factors
-pub const TLV493D_B_MULT: f32 = 0.098; // mT per LSB
-pub const TLV493D_TEMP_MULT: f32 = 1.1; // °C per LSB
-pub const TLV493D_TEMP_OFFSET = 340; // Temperature offset (in LSB)
+const B_MULT: f32 = 0.098; // mT per LSB
+const TEMP_MULT: f32 = 1.1; // °C per LSB
+const TEMP_OFFSET = 340; // Temperature offset (in LSB)
 
 /// Default mode for sensor operation
-pub const TLV493D_DEFAULTMODE = AccessMode.master_controlled;
+pub const DEFAULTMODE = AccessMode.master_controlled;
 
 /// TLV493D Measurement values
 pub const Values = struct {
@@ -35,19 +36,19 @@ pub const Values = struct {
 
 /// TLV493D configuration
 pub const Config = struct {
-    reset: bool = true,
+    reset: bool = false,
     enable_temp: bool = false,
+    access_mode: AccessMode = DEFAULTMODE,
 };
 
 /// TLV493D related errors
 pub const Error = error{
-    // TODO: We can only detect NoDevice if we get a NACK, which we can only tell with a proper i2c
-    // interface
     NoDevice,
     BusError,
     FrameError,
     DatagramError,
     InvalidData,
+    Unsupported,
 };
 
 const ReadRegister = packed struct(u80) {
@@ -153,7 +154,7 @@ pub const TLV493D = struct {
     z_data: i12 = 0,
     temp_data: i12 = 0,
     mode: AccessMode,
-    expected_frame_count: u8,
+    expected_frame_count: u2 = 0,
 
     /// Create a new TLV493D instance
     pub fn init(dev: I2C_Device, address: I2C_Device.Address, clock: Clock_Device, config: Config) Error!Self {
@@ -163,23 +164,34 @@ pub const TLV493D = struct {
             .clock = clock,
             .read_data = @bitCast([_]u8{0} ** 10),
             .write_data = @bitCast([_]u8{0} ** 4),
-            // TODO: Add to config
-            // .mode = .fast,
-            .mode = TLV493D_DEFAULTMODE,
-            .expected_frame_count = 0,
+            .mode = config.access_mode,
         };
+
+        // We don't support setting the I2C bits for the extra 6 addresses
+        // In fact, we don't support anything other than the default, since reseting seems to cause
+        // the device to hang.
+        if (address != ADDRESS1)
+            return Error.Unsupported;
+
+        // TODO: Support other modes
+        if (self.mode != DEFAULTMODE)
+            return Error.Unsupported;
 
         // The first thing we have to do is read out the factory calibration and pack it into the
         // write register so that we don't clear it on the first write.
-        self.setup_write_buffer() catch return Error.BusError;
+        try self.setup_write_buffer();
 
         // Sleep for startup delay
-        // TODO: Needed?
-        self.clock.sleep_ms(TLV493D_STARTUPDELAY_MS);
+        self.clock.sleep_ms(STARTUPDELAY_MS);
 
         // Reset sensor if requested
-        if (config.reset)
-            try self.reset_sensor();
+        // TODO: Figure out why when using the broadcast address, the subsequent reads seem to hang
+        if (config.reset) {
+            return Error.Unsupported;
+            // try self.reset_sensor();
+        }
+
+        // try self.synchronize_frame_count();
 
         // Get all register data from sensor
         try self.read_out();
@@ -193,8 +205,13 @@ pub const TLV493D = struct {
         return self;
     }
 
-    fn setup_write_buffer(self: *Self) !void {
-        try self.read_out();
+    fn setup_write_buffer(self: *Self) Error!void {
+        self.read_out() catch |e| switch (e) {
+            // The FRAMECOUNTER doesn't seem to correctly reset to 0, so since this is the first
+            // read we do, we ignore it
+            Error.FrameError => {},
+            else => return e,
+        };
 
         // Section 5.2 of the user manual:
         // > After that byte 7, 8 & 9 have to be read out at least one time and stored for later use
@@ -211,36 +228,57 @@ pub const TLV493D = struct {
     /// Deinitialize the device
     pub fn deinit(self: *Self) void {
         self.disable_interrupt() catch {};
-        self.set_access_mode(AccessMode.powerdown) catch {};
+        self.set_access_mode(.powerdown) catch {};
     }
 
     /// Reset the sensor using recovery sequence
+    // TODO: Figure out why this causes the device to stop responding
     fn reset_sensor(self: *Self) Error!void {
         // On startup the SDA line is sampled. If the line is high, it will listen on address 0x5E.
         // Otherwise, it will listen on 0x1F. The line must be kept stable for 200us.
         // Because we shouldn't be touching the line that early, and SDA is pulled high, it should
         // be assigned 0x5E, but it is better if we can explicitly set it.
         // We can explicitly set the address by writing either 0xFF ox 0x00 to address 0
-        var reset_data: u8 = 0x00;
-        if (self.address == TLV493D_ADDRESS1)
-            reset_data = 0xFF; // Set SDA high for address 0x5E
+        // Set SDA high for address 0x5E, low for 0x1F
+        const reset_data: u8 = if (self.address == ADDRESS1) 0xFF else 0x00;
 
         // Send recovery frame, clearing bad state
-        self.dev.writev(.general_call, &.{&.{reset_data}}) catch return Error.DatagramError;
+        self.dev.writev(.general_call, &.{&.{reset_data}}) catch |e|
+            return map_error(e);
+        self.clock.sleep_ms(RESETDELAY_MS);
+
+        // It seems that this resets the count to 1
+        self.expected_frame_count = 1;
     }
 
     /// Read all registers from sensor
     fn read_out(self: *Self) Error!void {
         // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
-        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e|
+            return map_error(e);
         if (bytes_read != 10) return Error.InvalidData;
+
+        if (self.expected_frame_count != self.read_data.FRAMECOUNTER) {
+            // Section 5.6: Corrective action: Reset sensor
+            // try self.reset_sensor();
+        }
+
+        self.expected_frame_count = @truncate(@as(u8, self.expected_frame_count) + 1);
     }
 
     /// Write configuration to sensor
     fn write_out(self: *Self) Error!void {
         self.calc_parity();
-        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch
-            return Error.DatagramError;
+        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch |e|
+            return map_error(e);
+    }
+
+    /// Synchronize the expected_frame_count with whatever the device thinks we're on.
+    fn synchronize_frame_count(self: *Self) Error!void {
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e|
+            return map_error(e);
+        if (bytes_read != 10) return Error.InvalidData;
+        self.expected_frame_count = @truncate(@as(u8, self.read_data.FRAMECOUNTER) + 1);
     }
 
     /// Set access mode
@@ -292,7 +330,7 @@ pub const TLV493D = struct {
         var powerdown = false;
 
         // In POWERDOWNMODE, sensor has to be switched on for one measurement
-        if (self.mode == AccessMode.powerdown) {
+        if (self.mode == .powerdown) {
             self.set_access_mode(AccessMode.master_controlled) catch return Error.BusError;
 
             // Wait for measurement delay
@@ -302,7 +340,7 @@ pub const TLV493D = struct {
         }
 
         // Read measurement data
-        self.read_out() catch return Error.BusError;
+        try self.read_out();
 
         // Construct results from registers
         self.x_data = @as(i12, self.read_data.BxH) << 4 | self.read_data.BxL;
@@ -311,14 +349,12 @@ pub const TLV493D = struct {
         self.temp_data = @as(i12, self.read_data.TEMPH) << 8 | self.read_data.TEMPL;
 
         // Switch sensor back to POWERDOWNMODE if it was in POWERDOWNMODE before
-        if (powerdown)
-            self.set_access_mode(AccessMode.powerdown) catch return Error.BusError;
+        if (self.mode == .powerdown)
+            self.set_access_mode(.powerdown) catch return Error.BusError;
 
         // Check for frame errors
         if (self.read_data.CHANNEL != 0)
             return Error.FrameError;
-
-        self.expected_frame_count = self.read_data.FRAMECOUNTER;
     }
 
     /// Read magnetic field and temperature values
@@ -326,31 +362,31 @@ pub const TLV493D = struct {
         try self.update_data();
 
         return Values{
-            .x = @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT,
-            .y = @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT,
-            .z = @as(f32, @floatFromInt(self.z_data)) * TLV493D_B_MULT,
-            .temp = (@as(f32, @floatFromInt(self.temp_data - TLV493D_TEMP_OFFSET))) * TLV493D_TEMP_MULT,
+            .x = self.get_x(),
+            .y = self.get_y(),
+            .z = self.get_z(),
+            .temp = self.get_temp(),
         };
     }
 
     /// Get X-axis magnetic field
-    pub fn get_x(self: *Self) f32 {
-        return @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT;
+    pub inline fn get_x(self: *Self) f32 {
+        return @as(f32, @floatFromInt(self.x_data)) * B_MULT;
     }
 
     /// Get Y-axis magnetic field
-    pub fn get_y(self: *Self) f32 {
-        return @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT;
+    pub inline fn get_y(self: *Self) f32 {
+        return @as(f32, @floatFromInt(self.y_data)) * B_MULT;
     }
 
     /// Get Z-axis magnetic field
-    pub fn get_z(self: *Self) f32 {
-        return @as(f32, @floatFromInt(self.z_data)) * TLV493D_B_MULT;
+    pub inline fn get_z(self: *Self) f32 {
+        return @as(f32, @floatFromInt(self.z_data)) * B_MULT;
     }
 
     /// Get temperature in °C
-    pub fn get_temp(self: *Self) f32 {
-        return (@as(f32, @floatFromInt(self.temp_data)) - TLV493D_TEMP_OFFSET) * TLV493D_TEMP_MULT;
+    pub inline fn get_temp(self: *Self) f32 {
+        return (@as(f32, @floatFromInt(self.temp_data)) - TEMP_OFFSET) * TEMP_MULT;
     }
 
     /// Get magnetic field magnitude
@@ -358,7 +394,7 @@ pub const TLV493D = struct {
         const x: f32 = @floatFromInt(self.x_data);
         const y: f32 = @floatFromInt(self.y_data);
         const z: f32 = @floatFromInt(self.z_data);
-        return TLV493D_B_MULT * @sqrt(x * x + y * y + z * z);
+        return B_MULT * @sqrt(x * x + y * y + z * z);
     }
 
     /// Get azimuth angle (atan2(y, x))
@@ -394,3 +430,13 @@ pub const TLV493D = struct {
         self.write_data.PARITY = @truncate(y & 0x01);
     }
 };
+
+/// Map I2C_Device errors to device errors
+fn map_error(err: I2C_Device.InterfaceError) Error {
+    return switch (err) {
+        I2C_Device.Error.NoAcknowledge,
+        I2C_Device.Error.Timeout,
+        => Error.NoDevice,
+        else => Error.BusError,
+    };
+}
