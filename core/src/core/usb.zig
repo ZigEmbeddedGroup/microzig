@@ -308,7 +308,10 @@ pub fn Controller(comptime config: Config) type {
 
             if (setup.value != 1 or this.drivers != null) return true;
 
-            this.drivers = undefined;
+            // Driver data undefined, but present (not null).
+            const drv_udf: DriverData = undefined;
+            this.drivers = drv_udf;
+
             inline for (config.drivers) |drv| {
                 const descriptors = @field(driver_info, drv.name).descriptors;
                 const fields = @typeInfo(@TypeOf(descriptors)).@"struct".fields;
