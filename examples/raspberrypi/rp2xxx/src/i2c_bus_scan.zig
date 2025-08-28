@@ -43,7 +43,12 @@ pub fn main() !void {
         const a: i2c.Address = @enumFromInt(addr);
 
         var rx_data: [1]u8 = undefined;
-        _ = i2c0.read_blocking(a, &rx_data, time.Duration.from_ms(100)) catch continue;
+        _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
+            if (e != i2c.Error.DeviceNotPresent and
+                e != i2c.Error.IllegalAddress)
+                std.log.info("Error {any}", .{e});
+            continue;
+        };
 
         std.log.info("I2C device found at address {X}.", .{addr});
     }
