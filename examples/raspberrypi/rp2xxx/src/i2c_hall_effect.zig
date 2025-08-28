@@ -1,12 +1,13 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
-
 const rp2xxx = microzig.hal;
-const i2c = rp2xxx.i2c;
+
 const gpio = rp2xxx.gpio;
+const i2c = rp2xxx.i2c;
 
 const I2C_Device = rp2xxx.drivers.I2C_Device;
+const i2c0 = i2c.instance.num(0);
 
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
@@ -20,8 +21,6 @@ pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
 };
-
-const i2c0 = i2c.instance.num(0);
 
 pub fn main() !void {
     // init uart logging
@@ -57,12 +56,10 @@ pub fn main() !void {
     while (true) {
         const data = try dev.read();
         std.log.info(
-            "accel: x {d: >6.2}mT y {d: >6.2}mT z {d: >6.2}mT",
+            "accel: x {d: >6.2} y {d: >6.2} z {d: >6.2} (mT)",
             .{ data.x, data.y, data.z },
         );
 
         sleep_ms(250);
     }
-
-    std.log.info("Done!", .{});
 }

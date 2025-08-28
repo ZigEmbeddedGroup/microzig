@@ -8,8 +8,9 @@ const gpio = nrf.gpio;
 const i2c = nrf.i2c;
 
 const I2C_Device = nrf.drivers.I2C_Device;
-const uart = nrf.uart.num(0);
 const i2c0 = i2c.num(0);
+
+const uart = nrf.uart.num(0);
 
 const TLV493D = microzig.drivers.sensor.TLV493D;
 
@@ -57,6 +58,4 @@ pub fn main() !void {
 
         sleep_ms(250);
     }
-
-    std.log.info("Done!", .{});
 }
