@@ -7,7 +7,6 @@ const i2c = rp2xxx.i2c;
 const gpio = rp2xxx.gpio;
 
 const I2C_Device = rp2xxx.drivers.I2C_Device;
-const I2CError = microzig.drivers.base.I2C_Device.Error;
 
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
@@ -33,6 +32,7 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
+    // Configure i2c peripheral
     const sda_pin = gpio.num(4);
     const scl_pin = gpio.num(5);
     inline for (&.{ scl_pin, sda_pin }) |pin| {
@@ -40,19 +40,18 @@ pub fn main() !void {
         pin.set_schmitt_trigger_enabled(true);
         pin.set_function(.i2c);
     }
-
     i2c0.apply(.{
         .clock_config = rp2xxx.clock_config,
     });
 
+    // Create I2C_Device
+    var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c and clock_device to driver to create sensor instance
     var dev = try TLV493D.init(
-        I2C_Device.init(i2c0, null).i2c_device(),
+        i2c_device.i2c_device(),
         @enumFromInt(0x5E),
         rp2xxx.drivers.clock_device(),
-        .{
-            .enable_temp = true,
-        },
+        .{},
     );
 
     while (true) {
@@ -62,7 +61,7 @@ pub fn main() !void {
             .{ data.x, data.y, data.z },
         );
 
-        sleep_ms(500);
+        sleep_ms(250);
     }
 
     std.log.info("Done!", .{});

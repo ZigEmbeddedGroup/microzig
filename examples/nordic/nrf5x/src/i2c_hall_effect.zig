@@ -6,13 +6,10 @@ const nrf = microzig.hal;
 
 const gpio = nrf.gpio;
 const i2c = nrf.i2c;
-// TODO: Try the DMA one?
-const i2cdma = nrf.i2cdma;
 
 const I2C_Device = nrf.drivers.I2C_Device;
 const uart = nrf.uart.num(0);
 const i2c0 = i2c.num(0);
-const i2c0d = i2cdma.num(0);
 
 const TLV493D = microzig.drivers.sensor.TLV493D;
 
@@ -34,24 +31,21 @@ pub fn main() !void {
 
     nrf.uart.init_logger(uart);
 
-    defer i2c0.reset();
-
+    // Configure i2c peripheral
     try i2c0.apply(.{
         .scl_pin = gpio.num(0, 9),
         .sda_pin = gpio.num(0, 10),
     });
+    defer i2c0.reset();
 
-    // Create i2c datagram device
-    // var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x1F), null);
+    // Create I2C_Device
     var i2c_device = I2C_Device.init(i2c0, null);
-    // Pass i2c device to driver to create sensor instance
+    // Pass i2c and clock device to driver to create sensor instance
     var dev = try TLV493D.init(
         i2c_device.i2c_device(),
         @enumFromInt(0x5E),
         nrf.drivers.clock_device(),
-        .{
-            .reset = false,
-        },
+        .{},
     );
 
     while (true) {
@@ -60,9 +54,8 @@ pub fn main() !void {
             "accel: x {d: >6.2} y {d: >6.2} z {d: >6.2} (mT)",
             .{ data.x, data.y, data.z },
         );
-        std.log.info("temp: {d: >6.2}°C", .{data.temp});
 
-        sleep_ms(500);
+        sleep_ms(250);
     }
 
     std.log.info("Done!", .{});

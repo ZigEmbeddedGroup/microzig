@@ -174,7 +174,7 @@ pub const TLV493D = struct {
             return Error.Unsupported;
 
         // TODO: Support other modes
-        if (self.access_mode != DEFAULTMODE)
+        if (self.mode != DEFAULTMODE)
             return Error.Unsupported;
 
         // The first thing we have to do is read out the factory calibration and pack it into the
