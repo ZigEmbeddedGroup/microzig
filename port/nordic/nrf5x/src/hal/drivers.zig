@@ -29,7 +29,7 @@ pub const I2C_Datagram_Device = struct {
     bus: hal.i2c.I2C,
 
     /// The address of our I²C device.
-    address: drivers.I2C_Datagram_Device.Address,
+    address: I2CAddress,
 
     /// Default timeout duration
     timeout: ?mdf.time.Duration = null,
