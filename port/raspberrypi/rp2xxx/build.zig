@@ -308,7 +308,7 @@ fn get_bootrom(b: *std.Build, target: *const microzig.Target, rom: BootROM) std.
     zig_target.abi = .eabi;
 
     const rom_exe = b.addExecutable(.{
-        .name = b.fmt("stage2-{s}", .{@tagName(rom)}),
+        .name = b.fmt("stage2-{t}", .{rom}),
         .root_module = b.createModule(.{
             .optimize = .ReleaseSmall,
             .target = b.resolveTargetQuery(zig_target),
