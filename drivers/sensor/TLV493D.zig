@@ -12,20 +12,20 @@ const I2CAddress = mdf.base.I2C_Device.Address;
 const Clock_Device = mdf.base.Clock_Device;
 
 /// TLV493D I2C addresses
-pub const TLV493D_ADDRESS0: I2CAddress = @enumFromInt(0x1F);
-pub const TLV493D_ADDRESS1: I2CAddress = @enumFromInt(0x5E); // Default
+pub const ADDRESS0: I2CAddress = @enumFromInt(0x1F);
+pub const ADDRESS1: I2CAddress = @enumFromInt(0x5E); // Default
 
 /// Startup delay in milliseconds
-pub const TLV493D_STARTUPDELAY_MS: u32 = 40;
-pub const TLV493D_RESETDELAY_MS: u32 = 200;
+pub const STARTUPDELAY_MS: u32 = 40;
+pub const RESETDELAY_MS: u32 = 200;
 
 /// Conversion factors
-pub const TLV493D_B_MULT: f32 = 0.098; // mT per LSB
-pub const TLV493D_TEMP_MULT: f32 = 1.1; // °C per LSB
-pub const TLV493D_TEMP_OFFSET = 340; // Temperature offset (in LSB)
+const B_MULT: f32 = 0.098; // mT per LSB
+const TEMP_MULT: f32 = 1.1; // °C per LSB
+const TEMP_OFFSET = 340; // Temperature offset (in LSB)
 
 /// Default mode for sensor operation
-pub const TLV493D_DEFAULTMODE = AccessMode.master_controlled;
+pub const DEFAULTMODE = AccessMode.master_controlled;
 
 /// TLV493D Measurement values
 pub const Values = struct {
@@ -167,11 +167,11 @@ pub const TLV493D = struct {
             .write_data = @bitCast([_]u8{0} ** 4),
             // TODO: Add to config
             // .mode = .fast,
-            .mode = TLV493D_DEFAULTMODE,
+            .mode = DEFAULTMODE,
         };
 
         // We don't support setting the I2C bits for the extra 6 addresses
-        if (address != TLV493D_ADDRESS0 and address != TLV493D_ADDRESS1)
+        if (address != ADDRESS0 and address != ADDRESS1)
             return Error.InvalidData;
 
         // The first thing we have to do is read out the factory calibration and pack it into the
@@ -180,7 +180,7 @@ pub const TLV493D = struct {
 
         // Sleep for startup delay
         // TODO: Needed?
-        self.clock.sleep_ms(TLV493D_STARTUPDELAY_MS);
+        self.clock.sleep_ms(STARTUPDELAY_MS);
 
         // Reset sensor if requested
         // TODO: When using the broadcast address, the subsequent reads seem to hang
@@ -235,11 +235,11 @@ pub const TLV493D = struct {
         // be assigned 0x5E, but it is better if we can explicitly set it.
         // We can explicitly set the address by writing either 0xFF ox 0x00 to address 0
         // Set SDA high for address 0x5E
-        const reset_data: u8 = if (self.address == TLV493D_ADDRESS1) 0xFF else 0x00;
+        const reset_data: u8 = if (self.address == ADDRESS1) 0xFF else 0x00;
 
         // Send recovery frame, clearing bad state
         self.dev.writev(.general_call, &.{&.{reset_data}}) catch return Error.DatagramError;
-        self.clock.sleep_ms(TLV493D_RESETDELAY_MS);
+        self.clock.sleep_ms(RESETDELAY_MS);
 
         // It seems that this resets the count to 1
         self.expected_frame_count = 1;
@@ -365,22 +365,22 @@ pub const TLV493D = struct {
 
     /// Get X-axis magnetic field
     pub inline fn get_x(self: *Self) f32 {
-        return @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT;
+        return @as(f32, @floatFromInt(self.x_data)) * B_MULT;
     }
 
     /// Get Y-axis magnetic field
     pub inline fn get_y(self: *Self) f32 {
-        return @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT;
+        return @as(f32, @floatFromInt(self.y_data)) * B_MULT;
     }
 
     /// Get Z-axis magnetic field
     pub inline fn get_z(self: *Self) f32 {
-        return @as(f32, @floatFromInt(self.z_data)) * TLV493D_B_MULT;
+        return @as(f32, @floatFromInt(self.z_data)) * B_MULT;
     }
 
     /// Get temperature in °C
     pub inline fn get_temp(self: *Self) f32 {
-        return (@as(f32, @floatFromInt(self.temp_data)) - TLV493D_TEMP_OFFSET) * TLV493D_TEMP_MULT;
+        return (@as(f32, @floatFromInt(self.temp_data)) - TEMP_OFFSET) * TEMP_MULT;
     }
 
     /// Get magnetic field magnitude
@@ -388,7 +388,7 @@ pub const TLV493D = struct {
         const x: f32 = @floatFromInt(self.x_data);
         const y: f32 = @floatFromInt(self.y_data);
         const z: f32 = @floatFromInt(self.z_data);
-        return TLV493D_B_MULT * @sqrt(x * x + y * y + z * z);
+        return B_MULT * @sqrt(x * x + y * y + z * z);
     }
 
     /// Get azimuth angle (atan2(y, x))
