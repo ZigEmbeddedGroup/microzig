@@ -235,16 +235,16 @@ pub const Block = extern struct {
         var block: Block = undefined;
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
-                u32 => @field(block, field.name) = try reader.adaptToOldInterface().readInt(u32, .little),
+                u32 => @field(block, field.name) = try reader.takeInt(u32, .little),
                 [476]u8 => {
-                    const n = try reader.adaptToOldInterface().readAll(&@field(block, field.name));
+                    const n = try reader.readSliceAll(&@field(block, field.name));
                     if (n != @sizeOf(field.type))
                         return error.EndOfStream;
                 },
                 else => {
                     assert(4 == @sizeOf(field.type));
                     @field(block, field.name) =
-                        @as(field.type, @bitCast(try reader.adaptToOldInterface().readInt(u32, .little)));
+                        @as(field.type, @bitCast(try reader.takeInt(u32, .little)));
                 },
             }
         }
@@ -295,7 +295,6 @@ fn expect_equal_block(expected: Block, actual: Block) !void {
 
 test "Block loopback" {
     var buf: [512]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
 
     var prng = std.Random.DefaultPrng.init(0xf163bfab);
     var rand = prng.random();
@@ -312,18 +311,17 @@ test "Block loopback" {
     };
     rand.bytes(&expected.data);
 
-    var writer_buf: [4096]u8 = undefined;
-    var writer = fbs.writer().adaptToNewApi(&writer_buf);
-    try expected.write_to(&writer.new_interface);
+    {
+        var writer: std.io.Writer = .fixed(&buf);
+        try expected.write_to(&writer.new_interface);
+    }
 
-    // needs to be reset for reader
-    fbs.reset();
+    {
+        var reader: std.io.Reader = .fixed(&buf);
+        const actual = try Block.from_reader(&reader);
 
-    var reader_buf: [4096]u8 = undefined;
-    var reader = fbs.reader().adaptToNewApi(&reader_buf);
-    const actual = try Block.from_reader(&reader.new_interface);
-
-    try expect_equal_block(expected, actual);
+        try expect_equal_block(expected, actual);
+    }
 }
 
 pub const FamilyId = enum(u32) {
