@@ -175,6 +175,7 @@ pub const TLV493D = struct {
         if (address != TLV493D_ADDRESS0 and address != TLV493D_ADDRESS1)
             return Error.InvalidData;
 
+        std.log.info("Setting up write buffer", .{}); // DELETEME
         // The first thing we have to do is read out the factory calibration and pack it into the
         // write register so that we don't clear it on the first write.
         self.setup_write_buffer() catch return Error.BusError;
@@ -185,17 +186,25 @@ pub const TLV493D = struct {
 
         // Reset sensor if requested
         // TODO: When using the broadcast address, the subsequent reads seem to hang
-        if (config.reset)
+        if (config.reset) {
+            std.log.info("Resetting", .{}); // DELETEME
             try self.reset_sensor();
+        }
 
+        std.log.info("Synchronizing FC", .{}); // DELETEME
+        try self.synchronize_frame_count();
+        std.log.info("Reading out", .{}); // DELETEME
         // Get all register data from sensor
         try self.read_out();
 
+        std.log.info("Setting access mode", .{}); // DELETEME
         // We must set the mode, as it powers up in power-down mode.
         try self.set_access_mode(self.mode);
 
-        if (config.enable_temp)
+        if (config.enable_temp) {
+            std.log.info("Enabling temp", .{}); // DELETEME
             try self.enable_temp();
+        }
 
         return self;
     }
@@ -205,7 +214,7 @@ pub const TLV493D = struct {
             // The FRAMECOUNTER doesn't seem to correctly reset to 0, so since this is the first
             // read we do, we can catch the frame error and synchronize with it.
             Error.FrameError => {
-                std.log.debug("Syncronizing EFC", .{}); // DELETEME
+                std.log.debug("Syncronizing FC", .{}); // DELETEME
                 self.expected_frame_count = @truncate(@as(u8, self.read_data.FRAMECOUNTER) + 1);
             },
             else => return e,
@@ -250,9 +259,7 @@ pub const TLV493D = struct {
         const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
         if (bytes_read != 10) return Error.InvalidData;
 
-        // NOTE: The FRAMECOUNTER seems unreliable
-        // std.log.debug("{x}", .{std.mem.asBytes(&self.read_data)[0..10]}); // DELETEME
-        std.log.debug("ex {d} fc {d}", .{ self.expected_frame_count, self.read_data.FRAMECOUNTER }); // DELETEME
+        std.log.debug("readout ex {d} fc {d}", .{ self.expected_frame_count, self.read_data.FRAMECOUNTER }); // DELETEME
         if (self.expected_frame_count != self.read_data.FRAMECOUNTER)
             return error.FrameError;
 
@@ -264,6 +271,14 @@ pub const TLV493D = struct {
         self.calc_parity();
         self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch
             return Error.DatagramError;
+    }
+
+    /// Synchronize the expected_frame_count with whatever the device thinks we're on.
+    fn synchronize_frame_count(self: *Self) !void {
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch return Error.DatagramError;
+        if (bytes_read != 10) return Error.InvalidData;
+        std.log.debug("sync ex {d} fc {d}", .{ self.expected_frame_count, self.read_data.FRAMECOUNTER }); // DELETEME
+        self.expected_frame_count = @truncate(@as(u8, self.read_data.FRAMECOUNTER) + 1);
     }
 
     /// Set access mode
@@ -340,8 +355,6 @@ pub const TLV493D = struct {
         // Check for frame errors
         if (self.read_data.CHANNEL != 0)
             return Error.FrameError;
-
-        self.expected_frame_count = self.read_data.FRAMECOUNTER;
     }
 
     /// Read magnetic field and temperature values
