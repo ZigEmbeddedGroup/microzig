@@ -461,13 +461,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches: std.ArrayList(regz.patch.Patch) = .empty;
+                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
                     // From chip definition
-                    patches.appendSlice(b.allocator, target.chip.patches) catch @panic("OOM");
+                    patches.appendSlice(target.chip.patches) catch @panic("OOM");
 
                     // From user invoking `add_firmware`
-                    patches.appendSlice(b.allocator, options.patches) catch @panic("OOM");
+                    patches.appendSlice(options.patches) catch @panic("OOM");
 
                     if (patches.items.len > 0) {
                         // write patches to file
@@ -492,13 +492,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches: std.ArrayList(regz.patch.Patch) = .empty;
+                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
                     // From chip definition
-                    patches.appendSlice(b.allocator, target.chip.patches) catch @panic("OOM");
+                    patches.appendSlice(target.chip.patches) catch @panic("OOM");
 
                     // From user invoking `add_firmware`
-                    patches.appendSlice(b.allocator, options.patches) catch @panic("OOM");
+                    patches.appendSlice(options.patches) catch @panic("OOM");
 
                     if (patches.items.len > 0) {
                         // write patches to file
