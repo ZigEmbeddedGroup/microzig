@@ -8,12 +8,11 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 const I2C_Device = mdf.base.I2C_Device;
-const I2CAddress = mdf.base.I2C_Device.Address;
 const Clock_Device = mdf.base.Clock_Device;
 
 /// TLV493D I2C addresses
-pub const ADDRESS0: I2CAddress = @enumFromInt(0x1F);
-pub const ADDRESS1: I2CAddress = @enumFromInt(0x5E); // Default
+pub const ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
+pub const ADDRESS1: I2C_Device.Address = @enumFromInt(0x5E); // Default
 
 /// Startup delay in milliseconds
 pub const STARTUPDELAY_MS: u32 = 40;
