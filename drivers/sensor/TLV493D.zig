@@ -232,16 +232,12 @@ pub const TLV493D = struct {
         // Because we shouldn't be touching the line that early, and SDA is pulled high, it should
         // be assigned 0x5E, but it is better if we can explicitly set it.
         // We can explicitly set the address by writing either 0xFF ox 0x00 to address 0
-        // Set SDA high for address 0x5E
+        // Set SDA high for address 0x5E, low for 0x1F
         const reset_data: u8 = if (self.address == ADDRESS1) 0xFF else 0x00;
 
         // Send recovery frame, clearing bad state
-        self.dev.writev(.general_call, &.{&.{reset_data}}) catch |e| return switch (e) {
-            I2C_Device.Error.NoAcknowledge,
-            I2C_Device.Error.Timeout,
-            => Error.NoDevice,
-            else => Error.BusError,
-        };
+        self.dev.writev(.general_call, &.{&.{reset_data}}) catch |e|
+            return mapError(e);
         self.clock.sleep_ms(RESETDELAY_MS);
 
         // It seems that this resets the count to 1
@@ -251,12 +247,8 @@ pub const TLV493D = struct {
     /// Read all registers from sensor
     fn read_out(self: *Self) Error!void {
         // Due to padding on the structure, the slice is 16 bytes long, so we have to slice it to 10
-        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e| return switch (e) {
-            I2C_Device.Error.NoAcknowledge,
-            I2C_Device.Error.Timeout,
-            => Error.NoDevice,
-            else => Error.BusError,
-        };
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e|
+            return mapError(e);
         if (bytes_read != 10) return Error.InvalidData;
 
         if (self.expected_frame_count != self.read_data.FRAMECOUNTER) {
@@ -271,18 +263,14 @@ pub const TLV493D = struct {
     /// Write configuration to sensor
     fn write_out(self: *Self) Error!void {
         self.calc_parity();
-        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch |e| return switch (e) {
-            I2C_Device.Error.NoAcknowledge,
-            I2C_Device.Error.Timeout,
-            => Error.NoDevice,
-            else => Error.BusError,
-        };
+        self.dev.writev(self.address, &.{std.mem.asBytes(&self.write_data)}) catch |e|
+            return mapError(e);
     }
 
     /// Synchronize the expected_frame_count with whatever the device thinks we're on.
     fn synchronize_frame_count(self: *Self) Error!void {
-        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch
-            return Error.DatagramError;
+        const bytes_read = self.dev.readv(self.address, &.{std.mem.asBytes(&self.read_data)[0..10]}) catch |e|
+            return mapError(e);
         if (bytes_read != 10) return Error.InvalidData;
         self.expected_frame_count = @truncate(@as(u8, self.read_data.FRAMECOUNTER) + 1);
     }
@@ -436,3 +424,13 @@ pub const TLV493D = struct {
         self.write_data.PARITY = @truncate(y & 0x01);
     }
 };
+
+/// Map I2C_Device errors to device errors
+fn mapError(err: I2C_Device.InterfaceError) Error {
+    return switch (err) {
+        I2C_Device.Error.NoAcknowledge,
+        I2C_Device.Error.Timeout,
+        => Error.NoDevice,
+        else => Error.BusError,
+    };
+}
