@@ -71,9 +71,7 @@ pub fn main() !void {
         @enumFromInt(0x5E),
         rp2xxx.drivers.clock_device(),
         .{
-            .reset = false,
             .enable_temp = true,
-            // .mode = .fast,
         },
     );
     std.log.info("Done init", .{}); // DELETEME
