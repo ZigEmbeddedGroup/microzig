@@ -371,30 +371,30 @@ pub const TLV493D = struct {
 
         // std.log.debug("Temp LSB: {d}", .{self.temp_data}); // DELETEME
         return Values{
-            .x = @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT,
-            .y = @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT,
-            .z = @as(f32, @floatFromInt(self.z_data)) * TLV493D_B_MULT,
-            .temp = (@as(f32, @floatFromInt(self.temp_data - TLV493D_TEMP_OFFSET))) * TLV493D_TEMP_MULT,
+            .x = self.get_x(),
+            .y = self.get_y(),
+            .z = self.get_z(),
+            .temp = self.get_temp(),
         };
     }
 
     /// Get X-axis magnetic field
-    pub fn get_x(self: *Self) f32 {
+    pub inline fn get_x(self: *Self) f32 {
         return @as(f32, @floatFromInt(self.x_data)) * TLV493D_B_MULT;
     }
 
     /// Get Y-axis magnetic field
-    pub fn get_y(self: *Self) f32 {
+    pub inline fn get_y(self: *Self) f32 {
         return @as(f32, @floatFromInt(self.y_data)) * TLV493D_B_MULT;
     }
 
     /// Get Z-axis magnetic field
-    pub fn get_z(self: *Self) f32 {
+    pub inline fn get_z(self: *Self) f32 {
         return @as(f32, @floatFromInt(self.z_data)) * TLV493D_B_MULT;
     }
 
     /// Get temperature in °C
-    pub fn get_temp(self: *Self) f32 {
+    pub inline fn get_temp(self: *Self) f32 {
         return (@as(f32, @floatFromInt(self.temp_data)) - TLV493D_TEMP_OFFSET) * TLV493D_TEMP_MULT;
     }
 
