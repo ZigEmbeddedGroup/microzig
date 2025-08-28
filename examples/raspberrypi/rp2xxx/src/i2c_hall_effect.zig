@@ -45,11 +45,9 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    // Create i2c and clock devices
-    var i2c_device = I2C_Device.init(i2c0, null);
-    // Pass i2c device to driver to create sensor instance
+    // Pass i2c and clock_device to driver to create sensor instance
     var dev = try TLV493D.init(
-        i2c_device.i2c_device(),
+        I2C_Device.init(i2c0, null).i2c_device(),
         @enumFromInt(0x5E),
         rp2xxx.drivers.clock_device(),
         .{

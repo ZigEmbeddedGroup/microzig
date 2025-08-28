@@ -38,6 +38,7 @@ pub const Values = struct {
 pub const Config = struct {
     reset: bool = false,
     enable_temp: bool = false,
+    access_mode: AccessMode = DEFAULTMODE,
 };
 
 /// TLV493D related errors
@@ -163,13 +164,17 @@ pub const TLV493D = struct {
             .clock = clock,
             .read_data = @bitCast([_]u8{0} ** 10),
             .write_data = @bitCast([_]u8{0} ** 4),
-            // TODO: Add to config
-            // .mode = .fast,
-            .mode = DEFAULTMODE,
+            .mode = config.access_mode,
         };
 
         // We don't support setting the I2C bits for the extra 6 addresses
-        if (address != ADDRESS0 and address != ADDRESS1)
+        // In fact, we don't support anything other than the default, since reseting seems to cause
+        // the device to hang.
+        if (address != ADDRESS1)
+            return Error.Unsupported;
+
+        // TODO: Support other modes
+        if (self.access_mode != DEFAULTMODE)
             return Error.Unsupported;
 
         // The first thing we have to do is read out the factory calibration and pack it into the
@@ -177,7 +182,6 @@ pub const TLV493D = struct {
         try self.setup_write_buffer();
 
         // Sleep for startup delay
-        // TODO: Needed?
         self.clock.sleep_ms(STARTUPDELAY_MS);
 
         // Reset sensor if requested
