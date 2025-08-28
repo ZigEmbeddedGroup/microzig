@@ -181,6 +181,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .ram_image = true,
                     // we can use the default generated linker script
                     .linker_script = .{},
+                    .entry = .{ .symbol_name = "_entry_point" },
                     .board = .{
                         .name = "RaspberryPi Pico (ram image)",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
@@ -199,6 +200,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .linker_script = .{
                         .file = b.path("ld/rp2350/arm_ram_image_sections.ld"),
                     },
+                    .entry = .{ .symbol_name = "_entry_point" },
                     .board = .{
                         .name = "RaspberryPi Pico 2 (ram image)",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
