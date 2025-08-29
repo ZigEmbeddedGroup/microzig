@@ -8,7 +8,7 @@ pub const spim = @import("hal/spim.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const drivers = @import("hal/drivers.zig");
-// TODO: adc, timers, pwm, rng, rtc, interrupts, i2c, wdt, wifi, nfc, bt, zigbee
+// TODO: adc, timers, pwm, rng, rtc alarms, interrupts, wdt, wifi, nfc, bt, zigbee
 
 pub fn init() void {
     time.init();
