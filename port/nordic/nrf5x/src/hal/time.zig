@@ -27,6 +27,7 @@ const interrupts = microzig.chip.peripherals.interrupts;
 const COMPARE_INDEX = 3;
 const TIMER_BITS = 23;
 
+// Must use @atomic to load an store from here.
 var period: u32 = 0;
 
 pub fn init() void {
@@ -75,9 +76,19 @@ pub fn init() void {
     rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
-    rtc.TASKS_CLEAR.write_raw(1);
-    rtc.TASKS_START.write_raw(1);
-    // TODO: Wait for clear? for some reason
+    switch (version) {
+        .nrf51 => {
+            rtc.TASKS_CLEAR = 1;
+            rtc.TASKS_START = 1;
+        },
+        .nrf52 => {
+            rtc.TASKS_CLEAR.write_raw(1);
+            rtc.TASKS_START.write_raw(1);
+        },
+    }
+
+    // Wait for clear
+    while (rtc.COUNTER.read().COUNTER != 0) {}
     // TODO: Set priority
     // Enable interrupt
     // TODO: Use an interrupt hal
@@ -99,22 +110,21 @@ pub fn rtc_overflow_interrupt() callconv(.c) void {
 }
 
 inline fn next_period() void {
-    const cs = microzig.interrupt.enter_critical_section();
-    defer cs.leave();
-    period += 1;
+    _ = @atomicRmw(u32, &period, .Add, 1, .monotonic);
 }
 
-// TODO: Rename arg to period, but it shadows
-fn calc_now(p: u64, counter: u24) u64 {
+// TODO: Rename arg to period, but it shadows the global
+/// Calculate the full 56 bit value of the RTC. We have to take into account whether the period
+/// counter is odd or even, flipping the top bit of the counter when it's off.
+fn calc_now(p: u32, counter: u24) u64 {
     return (@as(u64, p) << TIMER_BITS) + @as(u64, counter ^ ((p & 1) << TIMER_BITS));
 }
 
 pub fn get_time_since_boot() time.Absolute {
     // TODO: Scale. This is counting ticks, which update at 32768Hz
-    const cs = microzig.interrupt.enter_critical_section();
-    const p = period;
+    const p = @atomicLoad(u32, &period, .acquire);
+
     const counter = rtc.COUNTER.read().COUNTER;
-    cs.leave();
 
     return @enumFromInt(calc_now(p, counter));
 }
