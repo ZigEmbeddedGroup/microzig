@@ -127,44 +127,45 @@ const Parser = struct {
     functions: std.ArrayList(Function) = .empty,
 
     fn parse_elf(self: *Parser, elf: Elf) !void {
-        var reader: std.debug.FixedBufferReader = .{
-            .buf = elf.sections.get(.@".debug_info") orelse return bad(),
-            .endian = elf.endian,
-        };
+        const buf = elf.sections.get(.@".debug_info") orelse return bad();
+        var reader: std.Io.Reader = .fixed(buf);
 
         var current_cu_index: ?usize = null;
 
-        while (reader.pos < reader.buf.len) {
-            var length: u64 = try reader.readInt(u32);
+        while (reader.seek < reader.buffer.len) {
+            var length: u64 = try reader.takeInt(u32, elf.endian);
             var dwarf_format: dwarf.Format = .@"32";
 
             if (length == std.math.maxInt(u32)) {
-                length = try reader.readInt(u64);
+                length = try reader.takeInt(u64, elf.endian);
                 dwarf_format = .@"64";
             }
 
-            const version = try reader.readInt(u16);
+            if (length == 0) break;
+
+            const version = try reader.takeInt(u16, elf.endian);
+            if (version < 2 or version > 5) return bad();
 
             var address_size: u8 = 0;
             var abbrev_table_offset: u64 = 0;
             if (version >= 5) {
-                const unit_type = try reader.readByte();
+                const unit_type = try reader.takeByte();
                 if (unit_type != dwarf.UT.compile) return bad();
 
-                address_size = try reader.readByte();
-                abbrev_table_offset = try reader.readAddress(dwarf_format);
+                address_size = try reader.takeByte();
+                abbrev_table_offset = try read_address(&reader, dwarf_format, elf.endian);
             } else {
-                abbrev_table_offset = try reader.readAddress(dwarf_format);
-                address_size = try reader.readByte();
+                abbrev_table_offset = try read_address(&reader, dwarf_format, elf.endian);
+                address_size = try reader.takeByte();
             }
 
             var abbrev_table = try self.get_abbrev_table(elf, abbrev_table_offset);
 
             var depth: usize = 0;
             while (true) {
-                const abbrev_code = try reader.readUleb128(u64);
+                const abbrev_code = try reader.takeLeb128(u64);
                 if (abbrev_code == 0) {
-                    if (depth == 1) {
+                    if (depth <= 1) {
                         break;
                     }
                     depth -= 1;
@@ -178,7 +179,7 @@ const Parser = struct {
                     const form_value = try FormValue.parse(
                         &reader,
                         attr.form_id,
-                        elf.format,
+                        elf,
                         dwarf_format,
                         attr.implicit_const_val,
                     );
@@ -254,35 +255,32 @@ const Parser = struct {
     }
 
     fn get_abbrev_table(self: *Parser, elf: Elf, offset: usize) !AbbrevTable {
-        var reader: std.debug.FixedBufferReader = .{
-            .buf = elf.sections.get(.@".debug_abbrev") orelse return bad(),
-            .pos = offset,
-            .endian = elf.endian,
-        };
+        const buf = elf.sections.get(.@".debug_abbrev") orelse return bad();
+        var reader: std.Io.Reader = .fixed(buf[offset..]);
 
         var abbrev_table: std.AutoHashMapUnmanaged(u64, AbbrevDecl) = .empty;
 
         while (true) {
-            const code = try reader.readUleb128(u64);
+            const code = try reader.takeLeb128(u64);
             if (code == 0) {
                 break;
             }
 
-            const tag = try reader.readUleb128(u64);
-            const has_children = try reader.readByte();
+            const tag = try reader.takeLeb128(u64);
+            const has_children = try reader.takeByte();
 
             var attrs: std.ArrayList(AbbrevDecl.Attrib) = .empty;
 
             while (true) {
-                const id = try reader.readUleb128(u64);
-                const form_id = try reader.readUleb128(u64);
+                const id = try reader.takeLeb128(u64);
+                const form_id = try reader.takeLeb128(u64);
                 if (id == 0 and form_id == 0) {
                     break;
                 }
 
                 var implicit_const_val: ?i64 = null;
                 if (form_id == dwarf.FORM.implicit_const) {
-                    implicit_const_val = try reader.readIleb128(i64);
+                    implicit_const_val = try reader.takeLeb128(i64);
                 }
 
                 try attrs.append(self.arena, .{
@@ -322,51 +320,48 @@ const Parser = struct {
         offset: usize,
         cu_cwd: []const u8,
     ) !void {
-        var reader: std.debug.FixedBufferReader = .{
-            .buf = elf.sections.get(.@".debug_line") orelse return bad(),
-            .pos = offset,
-            .endian = elf.endian,
-        };
+        const buf = elf.sections.get(.@".debug_line") orelse return bad();
+        var reader: std.Io.Reader = .fixed(buf[offset..]);
 
-        var unit_length: u64 = try reader.readInt(u32);
+        var unit_length: u64 = try reader.takeInt(u32, elf.endian);
         var dwarf_format: dwarf.Format = .@"32";
         if (unit_length == std.math.maxInt(u32)) {
-            unit_length = try reader.readInt(u64);
+            unit_length = try reader.takeInt(u64, elf.endian);
             dwarf_format = .@"64";
         }
         if (unit_length == 0) {
             return;
         }
 
-        const next_unit_offset = reader.pos + unit_length;
+        const next_unit_offset = reader.seek + unit_length;
 
-        const version = try reader.readInt(u16);
+        const version = try reader.takeInt(u16, elf.endian);
         if (version < 2) return bad();
 
         if (version >= 5) {
-            _ = try reader.readByte(); // address size
-            _ = try reader.readByte(); // segment size
+            _ = try reader.takeByte(); // address size
+            _ = try reader.takeByte(); // segment size
         }
 
-        const prologue_length = try reader.readAddress(dwarf_format);
-        const prog_start_offset = reader.pos + prologue_length;
+        const prologue_length = try read_address(&reader, dwarf_format, elf.endian);
+        const prog_start_offset = reader.seek + prologue_length;
 
-        const minimum_instruction_length = try reader.readByte();
+        const minimum_instruction_length = try reader.takeByte();
         if (minimum_instruction_length == 0) return bad();
 
         if (version >= 4) {
-            _ = try reader.readByte();
+            _ = try reader.takeByte();
         }
 
-        const default_is_stmt = (try reader.readByte()) != 0;
-        const line_base = try reader.readByteSigned();
+        const default_is_stmt = (try reader.takeByte()) != 0;
+        const line_base = try reader.takeByteSigned();
 
-        const line_range = try reader.readByte();
+        const line_range = try reader.takeByte();
         if (line_range == 0) return bad();
 
-        const opcode_base = try reader.readByte();
+        const opcode_base = try reader.takeByte();
 
-        const standard_opcode_lengths = try reader.readBytes(opcode_base - 1);
+        const standard_opcode_lengths = try reader.take(opcode_base - 1);
 
         const dir_index_offset = self.directories.items.len;
         const file_index_offset = self.files.items.len;
@@ -375,17 +370,17 @@ const Parser = struct {
             try self.directories.append(self.arena, cu_cwd);
 
             while (true) {
-                const dir = try reader.readBytesTo(0);
+                const dir = try reader.takeSentinel(0);
                 if (dir.len == 0) break;
                 try self.directories.append(self.arena, dir);
             }
 
             while (true) {
-                const file_name = try reader.readBytesTo(0);
+                const file_name = try reader.takeSentinel(0);
                 if (file_name.len == 0) break;
-                const dir_index = try reader.readUleb128(usize);
-                _ = try reader.readUleb128(u64); // timestamp
-                _ = try reader.readUleb128(u64); // size
+                const dir_index = try reader.takeLeb128(usize);
+                _ = try reader.takeLeb128(u64); // timestamp
+                _ = try reader.takeLeb128(u64); // size
                 try self.files.append(self.arena, .{
                     .path = file_name,
                     .dir_index = dir_index_offset + dir_index,
@@ -401,17 +396,17 @@ const Parser = struct {
             };
 
             {
-                const directory_entry_format_count = try reader.readByte();
+                const directory_entry_format_count = try reader.takeByte();
                 const dir_ent_fmt_buf = try self.arena.alloc(FileEntFmt, directory_entry_format_count);
 
                 for (dir_ent_fmt_buf[0..directory_entry_format_count]) |*ent_fmt| {
                     ent_fmt.* = .{
-                        .content_type_code = try reader.readUleb128(u8),
-                        .form_code = try reader.readUleb128(u16),
+                        .content_type_code = try reader.takeLeb128(u8),
+                        .form_code = try reader.takeLeb128(u16),
                     };
                 }
 
-                const directories_count = try reader.readUleb128(usize);
+                const directories_count = try reader.takeLeb128(usize);
 
                 for (try self.directories.addManyAsSlice(self.arena, directories_count)) |*e| {
                     e.* = &.{};
@@ -419,7 +414,7 @@ const Parser = struct {
                         const form_value = try FormValue.parse(
                             &reader,
                             ent_fmt.form_code,
-                            elf.format,
+                            elf,
                             dwarf_format,
                             null,
                         );
@@ -433,17 +428,17 @@ const Parser = struct {
             }
 
             {
-                const file_entry_format_count = try reader.readByte();
+                const file_entry_format_count = try reader.takeByte();
                 const file_ent_fmt_buf = try self.arena.alloc(FileEntFmt, file_entry_format_count);
 
                 for (file_ent_fmt_buf[0..file_entry_format_count]) |*ent_fmt| {
                     ent_fmt.* = .{
-                        .content_type_code = try reader.readUleb128(u16),
-                        .form_code = try reader.readUleb128(u16),
+                        .content_type_code = try reader.takeLeb128(u16),
+                        .form_code = try reader.takeLeb128(u16),
                     };
                 }
 
-                const file_names_count = try reader.readUleb128(usize);
+                const file_names_count = try reader.takeLeb128(usize);
 
                 for (try self.files.addManyAsSlice(self.arena, file_names_count)) |*e| {
                     e.* = .{ .path = &.{}, .dir_index = 0 };
@@ -451,7 +446,7 @@ const Parser = struct {
                         const form_value = try FormValue.parse(
                             &reader,
                             ent_fmt.form_code,
-                            elf.format,
+                            elf,
                             dwarf_format,
                             null,
                         );
@@ -472,18 +467,18 @@ const Parser = struct {
 
         var prog = LineNumberProgram.init(default_is_stmt, version);
 
-        try reader.seekTo(prog_start_offset);
+        reader.seek = prog_start_offset;
 
         const LNE = dwarf.LNE;
         const LNS = dwarf.LNS;
 
-        while (reader.pos < next_unit_offset) {
-            const opcode = try reader.readByte();
+        while (reader.seek < next_unit_offset) {
+            const opcode = try reader.takeByte();
 
             if (opcode == LNS.extended_op) {
-                const op_size = try reader.readUleb128(u64);
+                const op_size = try reader.takeLeb128(u64);
                 if (op_size < 1) return bad();
-                const sub_op = try reader.readByte();
+                const sub_op = try reader.takeByte();
                 switch (sub_op) {
                     LNE.end_sequence => {
                         // The row being added here is an "end" address, meaning
@@ -501,23 +496,23 @@ const Parser = struct {
                     },
                     LNE.set_address => {
                         const addr = switch (elf.format) {
-                            .@"32" => try reader.readInt(u32),
-                            .@"64" => try reader.readInt(u64),
+                            .@"32" => try reader.takeInt(u32, elf.endian),
+                            .@"64" => try reader.takeInt(u64, elf.endian),
                         };
                         prog.address = addr;
                     },
                     LNE.define_file => {
-                        const path = try reader.readBytesTo(0);
-                        const dir_index = try reader.readUleb128(usize);
-                        _ = try reader.readUleb128(u64);
-                        _ = try reader.readUleb128(u64);
+                        const path = try reader.takeSentinel(0);
+                        const dir_index = try reader.takeLeb128(usize);
+                        _ = try reader.takeLeb128(u64);
+                        _ = try reader.takeLeb128(u64);
                         try self.files.append(self.arena, .{
                             .path = path,
                             .dir_index = dir_index_offset + dir_index,
                             // .timestamp = timestamp,
                         });
                     },
-                    else => try reader.seekForward(op_size - 1),
+                    else => reader.toss(op_size - 1),
                 }
             } else if (opcode >= opcode_base) {
                 // special opcodes
@@ -535,19 +530,19 @@ const Parser = struct {
                         prog.basic_block = false;
                     },
                     LNS.advance_pc => {
-                        const arg = try reader.readUleb128(usize);
+                        const arg = try reader.takeLeb128(usize);
                         prog.address += arg * minimum_instruction_length;
                     },
                     LNS.advance_line => {
-                        const arg = try reader.readIleb128(i64);
+                        const arg = try reader.takeLeb128(i64);
                         prog.line += arg;
                     },
                     LNS.set_file => {
-                        const arg = try reader.readUleb128(usize);
+                        const arg = try reader.takeLeb128(usize);
                         prog.file = arg;
                     },
                     LNS.set_column => {
-                        const arg = try reader.readUleb128(u64);
+                        const arg = try reader.takeLeb128(u64);
                         prog.column = arg;
                     },
                     LNS.negate_stmt => {
@@ -561,13 +556,13 @@ const Parser = struct {
                         prog.address += inc_addr;
                     },
                     LNS.fixed_advance_pc => {
-                        const arg = try reader.readInt(u16);
+                        const arg = try reader.takeInt(u16, elf.endian);
                         prog.address += arg;
                     },
                     LNS.set_prologue_end => {},
                     else => {
                         if (opcode - 1 >= standard_opcode_lengths.len) return bad();
-                        try reader.seekForward(standard_opcode_lengths[opcode - 1]);
+                        reader.toss(standard_opcode_lengths[opcode - 1]);
                     },
                 }
             }
@@ -654,9 +649,9 @@ const Parser = struct {
         rnglistx: u64,
 
         fn parse(
-            reader: anytype,
+            reader: *std.Io.Reader,
             form_id: u64,
-            elf_format: Elf.Format,
+            elf: Elf,
             dwarf_format: dwarf.Format,
             implicit_const_val: ?i64,
         ) !FormValue {
@@ -664,60 +659,60 @@ const Parser = struct {
 
             // TODO: check the use of `readAddress`
             return switch (form_id) {
-                FORM.addr => .{ .addr = switch (elf_format) {
-                    .@"32" => try reader.readInt(u32),
-                    .@"64" => try reader.readInt(u64),
+                FORM.addr => .{ .addr = switch (elf.format) {
+                    .@"32" => try reader.takeInt(u32, elf.endian),
+                    .@"64" => try reader.takeInt(u64, elf.endian),
                 } },
-                FORM.addrx1 => .{ .addrx = try reader.readInt(u8) },
-                FORM.addrx2 => .{ .addrx = try reader.readInt(u16) },
-                FORM.addrx3 => .{ .addrx = try reader.readInt(u24) },
-                FORM.addrx4 => .{ .addrx = try reader.readInt(u32) },
-                FORM.addrx => .{ .addrx = try reader.readUleb128(u64) },
+                FORM.addrx1 => .{ .addrx = try reader.takeInt(u8, elf.endian) },
+                FORM.addrx2 => .{ .addrx = try reader.takeInt(u16, elf.endian) },
+                FORM.addrx3 => .{ .addrx = try reader.takeInt(u24, elf.endian) },
+                FORM.addrx4 => .{ .addrx = try reader.takeInt(u32, elf.endian) },
+                FORM.addrx => .{ .addrx = try reader.takeLeb128(u64) },
 
                 FORM.block1,
                 FORM.block2,
                 FORM.block4,
                 FORM.block,
-                => .{ .block = try reader.readBytes(switch (form_id) {
-                    FORM.block1 => try reader.readInt(u8),
-                    FORM.block2 => try reader.readInt(u16),
-                    FORM.block4 => try reader.readInt(u32),
-                    FORM.block => try reader.readUleb128(u64),
+                => .{ .block = try reader.take(switch (form_id) {
+                    FORM.block1 => try reader.takeInt(u8, elf.endian),
+                    FORM.block2 => try reader.takeInt(u16, elf.endian),
+                    FORM.block4 => try reader.takeInt(u32, elf.endian),
+                    FORM.block => try reader.takeLeb128(u64),
                     else => unreachable,
                 }) },
 
-                FORM.data1 => .{ .udata = try reader.readInt(u8) },
-                FORM.data2 => .{ .udata = try reader.readInt(u16) },
-                FORM.data4 => .{ .udata = try reader.readInt(u32) },
-                FORM.data8 => .{ .udata = try reader.readInt(u64) },
-                FORM.data16 => .{ .data16 = (try reader.readBytes(16))[0..16] },
-                FORM.udata => .{ .udata = try reader.readUleb128(u64) },
-                FORM.sdata => .{ .sdata = try reader.readIleb128(i64) },
-                FORM.exprloc => .{ .exprloc = try reader.readBytes(try reader.readUleb128(u64)) },
-                FORM.flag => .{ .flag = (try reader.readByte()) != 0 },
+                FORM.data1 => .{ .udata = try reader.takeInt(u8, elf.endian) },
+                FORM.data2 => .{ .udata = try reader.takeInt(u16, elf.endian) },
+                FORM.data4 => .{ .udata = try reader.takeInt(u32, elf.endian) },
+                FORM.data8 => .{ .udata = try reader.takeInt(u64, elf.endian) },
+                FORM.data16 => .{ .data16 = (try reader.take(16))[0..16] },
+                FORM.udata => .{ .udata = try reader.takeLeb128(u64) },
+                FORM.sdata => .{ .sdata = try reader.takeLeb128(i64) },
+                FORM.exprloc => .{ .exprloc = try reader.take(try reader.takeLeb128(u64)) },
+                FORM.flag => .{ .flag = (try reader.takeByte()) != 0 },
                 FORM.flag_present => .{ .flag = true },
-                FORM.sec_offset => .{ .sec_offset = try reader.readAddress(dwarf_format) },
+                FORM.sec_offset => .{ .sec_offset = try read_address(reader, dwarf_format, elf.endian) },
 
-                FORM.ref1 => .{ .ref = try reader.readInt(u8) },
-                FORM.ref2 => .{ .ref = try reader.readInt(u16) },
-                FORM.ref4 => .{ .ref = try reader.readInt(u32) },
-                FORM.ref8 => .{ .ref = try reader.readInt(u64) },
-                FORM.ref_udata => .{ .ref = try reader.readUleb128(u64) },
+                FORM.ref1 => .{ .ref = try reader.takeInt(u8, elf.endian) },
+                FORM.ref2 => .{ .ref = try reader.takeInt(u16, elf.endian) },
+                FORM.ref4 => .{ .ref = try reader.takeInt(u32, elf.endian) },
+                FORM.ref8 => .{ .ref = try reader.takeInt(u64, elf.endian) },
+                FORM.ref_udata => .{ .ref = try reader.takeLeb128(u64) },
 
-                FORM.ref_addr => .{ .ref_addr = try reader.readAddress(dwarf_format) },
-                FORM.ref_sig8 => .{ .ref = try reader.readInt(u64) },
+                FORM.ref_addr => .{ .ref_addr = try read_address(reader, dwarf_format, elf.endian) },
+                FORM.ref_sig8 => .{ .ref = try reader.takeInt(u64, elf.endian) },
 
-                FORM.string => .{ .string = try reader.readBytesTo(0) },
-                FORM.strp => .{ .strp = try reader.readAddress(dwarf_format) },
-                FORM.strx1 => .{ .strx = try reader.readInt(u8) },
-                FORM.strx2 => .{ .strx = try reader.readInt(u16) },
-                FORM.strx3 => .{ .strx = try reader.readInt(u24) },
-                FORM.strx4 => .{ .strx = try reader.readInt(u32) },
-                FORM.strx => .{ .strx = try reader.readUleb128(u64) },
-                FORM.line_strp => .{ .line_strp = try reader.readAddress(dwarf_format) },
+                FORM.string => .{ .string = try reader.takeSentinel(0) },
+                FORM.strp => .{ .strp = try read_address(reader, dwarf_format, elf.endian) },
+                FORM.strx1 => .{ .strx = try reader.takeInt(u8, elf.endian) },
+                FORM.strx2 => .{ .strx = try reader.takeInt(u16, elf.endian) },
+                FORM.strx3 => .{ .strx = try reader.takeInt(u24, elf.endian) },
+                FORM.strx4 => .{ .strx = try reader.takeInt(u32, elf.endian) },
+                FORM.strx => .{ .strx = try reader.takeLeb128(u64) },
+                FORM.line_strp => .{ .line_strp = try read_address(reader, dwarf_format, elf.endian) },
                 FORM.implicit_const => .{ .sdata = implicit_const_val orelse return bad() },
-                FORM.loclistx => .{ .loclistx = try reader.readUleb128(u64) },
-                FORM.rnglistx => .{ .rnglistx = try reader.readUleb128(u64) },
+                FORM.loclistx => .{ .loclistx = try reader.takeLeb128(u64) },
+                FORM.rnglistx => .{ .rnglistx = try reader.takeLeb128(u64) },
                 else => {
                     std.log.err("unimplemented form id: 0x{x}", .{form_id});
                     return unimplemented();
@@ -733,19 +728,11 @@ const Parser = struct {
                 .string => |value| return value,
                 .strp => |offset| {
                     const data = sections.get(.@".debug_str") orelse return bad();
-                    var reader: std.debug.FixedBufferReader = .{
-                        .buf = data[offset..],
-                        .endian = .little,
-                    };
-                    return try reader.readBytesTo(0);
+                    return std.mem.sliceTo(data[offset..], 0);
                 },
                 .line_strp => |offset| {
                     const data = sections.get(.@".debug_line_str") orelse return bad();
-                    var reader: std.debug.FixedBufferReader = .{
-                        .buf = data[offset..],
-                        .endian = .little,
-                    };
-                    return try reader.readBytesTo(0);
+                    return std.mem.sliceTo(data[offset..], 0);
                 },
                 .strx => |index| {
                     _ = index;
@@ -788,6 +775,13 @@ const Parser = struct {
             };
         }
     };
+
+    fn read_address(reader: *std.Io.Reader, dwarf_format: dwarf.Format, endian: std.builtin.Endian) !u64 {
+        return switch (dwarf_format) {
+            .@"32" => try reader.takeInt(u32, endian),
+            .@"64" => try reader.takeInt(u64, endian),
+        };
+    }
 };
 
 fn bad() error{InvalidDebugInfo} {
