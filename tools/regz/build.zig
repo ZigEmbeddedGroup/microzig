@@ -55,6 +55,7 @@ pub fn build(b: *Build) !void {
             .root_source_file = b.path("src/contextualize-fields.zig"),
             .target = b.graph.host,
         }),
+        .use_llvm = true,
     });
     contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
     const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
@@ -70,6 +71,7 @@ pub fn build(b: *Build) !void {
             .root_source_file = b.path("src/characterize.zig"),
             .target = b.graph.host,
         }),
+        .use_llvm = true,
     });
     characterize.linkLibrary(libxml2_dep.artifact("xml2"));
     const characterize_run = b.addRunArtifact(characterize);
@@ -82,6 +84,7 @@ pub fn build(b: *Build) !void {
             .target = target,
             .optimize = optimize,
         }),
+        .use_llvm = true,
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
     tests.root_module.addImport("sqlite", sqlite);
