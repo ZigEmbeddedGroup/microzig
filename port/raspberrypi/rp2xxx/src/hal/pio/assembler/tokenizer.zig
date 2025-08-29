@@ -36,12 +36,8 @@ pub const Value = union(enum) {
 
     pub fn format(
         value: Value,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
+        writer: *std.Io.Writer,
     ) !void {
-        _ = fmt;
-        _ = options;
         switch (value) {
             .string => |str| try writer.print("\"{s}\"", .{str}),
             .expression => |expr| try writer.print("{s}", .{expr}),
@@ -74,13 +70,8 @@ pub fn Tokenizer(chip: Chip) type {
 
         pub fn format(
             self: Self,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
+            writer: *std.Io.Writer,
         ) !void {
-            _ = fmt;
-            _ = options;
-
             try writer.print(
                 \\parser:
                 \\  index: {}
@@ -93,7 +84,7 @@ pub fn Tokenizer(chip: Chip) type {
             while (line_it.next()) |line| {
                 try writer.print("{s}\n", .{line});
                 if (!printed_cursor and line_it.index > self.index) {
-                    try writer.writeByteNTimes(' ', line.len - (line_it.index - self.index));
+                    try writer.splatByteAll(' ', line.len - (line_it.index - self.index));
                     try writer.writeAll("\x1b[30;42;1m^\x1b[0m\n");
                     printed_cursor = true;
                 }
@@ -1145,7 +1136,7 @@ pub fn Token(comptime chip: Chip) type {
             instruction: Instruction,
         },
 
-        pub const Tag = std.meta.Tag(std.meta.FieldType(Token(chip), .data));
+        pub const Tag = std.meta.Tag(@FieldType(Token(chip), "data"));
 
         pub const Label = struct {
             name: []const u8,
@@ -2283,7 +2274,7 @@ test "tokenize.instr.comment with no whitespace" {
 
 test "format tokenizer" {
     const test_tokenizer = Tokenizer(.RP2040).init("out 1");
-    const string = try std.fmt.allocPrint(std.testing.allocator, "{}", .{test_tokenizer});
+    const string = try std.fmt.allocPrint(std.testing.allocator, "{f}", .{test_tokenizer});
     defer std.testing.allocator.free(string);
     try expectEqualStrings(
         \\parser:
