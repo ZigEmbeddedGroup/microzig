@@ -73,7 +73,7 @@ pub const I2C_Datagram_Device = struct {
     pub fn readv(dev: I2C_Datagram_Device, datagrams: []const []u8) !usize {
         try dev.bus.readv_blocking(dev.address, datagrams, dev.timeout);
 
-        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+        return microzig.utilities.SliceVector([]u8).init(datagrams).size();
     }
 
     const vtable = Datagram_Device.VTable{
@@ -175,7 +175,7 @@ pub const I2C_Device = struct {
             error.CommandNumberExceeded => I2CError.UnknownAbort,
             else => |e| e,
         };
-        return microzig.utilities.Slice_Vector([]u8).init(chunks).size();
+        return microzig.utilities.SliceVector([]u8).init(chunks).size();
     }
 
     pub fn write_then_read(dev: I2C_Device, address: I2CAddress, src: []const u8, dst: []u8) I2CError!void {

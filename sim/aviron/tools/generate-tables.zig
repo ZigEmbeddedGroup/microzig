@@ -2,6 +2,8 @@ const std = @import("std");
 const isa_def = @embedFile("isa.txt");
 const isa = @import("isa");
 
+const BoundedArray = @import("bounded-array").BoundedArray;
+
 fn string_to_enum(comptime T: type, str: []const u8) ?T {
     inline for (@typeInfo(T).@"enum".fields) |enumField| {
         if (std.mem.eql(u8, str, enumField.name)) {
@@ -22,7 +24,7 @@ pub fn main() !void {
     var out = try std.fs.cwd().createFile(argv[1], .{});
     defer out.close();
 
-    var buf = std.ArrayList(u8).init(allocator);
+    var buf = std.array_list.Managed(u8).init(allocator);
     defer buf.deinit();
 
     const writer = buf.writer();
@@ -30,11 +32,11 @@ pub fn main() !void {
     var lut = [_]isa.Opcode{.unknown} ** (std.math.maxInt(u16) + 1);
 
     var base_number_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
-    var unknown_indices = try std.BoundedArray(u8, 16).init(0);
+    var unknown_indices = try BoundedArray(u8, 16).init(0);
     var unknown_indices_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
     var result_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
 
-    var positionals = std.enums.EnumArray(isa.Opcode, std.AutoArrayHashMapUnmanaged(u8, std.BoundedArray(u8, 16))).initFill(.{});
+    var positionals = std.enums.EnumArray(isa.Opcode, std.AutoArrayHashMapUnmanaged(u8, BoundedArray(u8, 16))).initFill(.{});
     defer for (&positionals.values) |*map| {
         map.deinit(allocator);
     };
@@ -62,7 +64,7 @@ pub fn main() !void {
                 else => {
                     const gop = try positionals.getPtr(opcode).getOrPut(allocator, r);
                     if (!gop.found_existing) {
-                        gop.value_ptr.* = try std.BoundedArray(u8, 16).init(0);
+                        gop.value_ptr.* = try BoundedArray(u8, 16).init(0);
                     }
                     try gop.value_ptr.*.append(@intCast(index));
 
@@ -102,7 +104,7 @@ pub fn main() !void {
     for (positionals.values, 0..) |map, i| {
         const opcode = std.enums.EnumIndexer(isa.Opcode).keyForIndex(i);
 
-        try writer.print("{}: ", .{std.zig.fmtId(@tagName(opcode))});
+        try writer.print("{f}: ", .{std.zig.fmtId(@tagName(opcode))});
 
         const BitSet = struct {
             name: u8,
@@ -114,7 +116,7 @@ pub fn main() !void {
             }
         };
 
-        var items = std.ArrayList(BitSet).init(allocator);
+        var items = std.array_list.Managed(BitSet).init(allocator);
         defer items.deinit();
 
         var it = map.iterator();
@@ -144,7 +146,7 @@ pub fn main() !void {
     try writer.writeAll("pub const lookup = [65536]isa.Opcode {");
 
     for (lut, 0..) |v, i| {
-        try writer.print(".{},", .{std.zig.fmtId(@tagName(v))});
+        try writer.print(".{f},", .{std.zig.fmtId(@tagName(v))});
         if ((i + 1) % 16 == 0) {
             try writer.print("\n", .{});
         }
@@ -153,7 +155,7 @@ pub fn main() !void {
     try writer.writeAll("};\n\npub const positionals = .{");
 
     for (positionals.values, 0..) |map, i| {
-        try writer.print(".{} = .{{", .{std.zig.fmtId(@tagName(std.enums.EnumIndexer(isa.Opcode).keyForIndex(i)))});
+        try writer.print(".{f} = .{{", .{std.zig.fmtId(@tagName(std.enums.EnumIndexer(isa.Opcode).keyForIndex(i)))});
         var it = map.iterator();
         while (it.next()) |entry| {
             try writer.print(".{{'{c}', .{{", .{entry.key_ptr.*});
@@ -186,15 +188,22 @@ pub fn main() !void {
     var tree = try std.zig.Ast.parse(allocator, txt, .zig);
     defer tree.deinit(allocator);
 
+    var stdout_buf: [4096]u8 = undefined;
+    var stdout = std.fs.File.stdout();
+    var stdout_writer = stdout.writer(&stdout_buf);
+
+    var out_buf: [4096]u8 = undefined;
+    var out_writer = out.writer(&out_buf);
+
     if (tree.errors.len != 0) {
         for (tree.errors) |err| {
-            try tree.renderError(err, std.io.getStdErr().writer());
+            try tree.renderError(err, &stdout_writer.interface);
         }
-        try out.writer().writeAll(txt);
+        try out_writer.interface.writeAll(txt);
     } else {
-        const render_result = try tree.render(allocator);
-        defer allocator.free(render_result);
-
-        try out.writer().writeAll(render_result);
+        const fixups: std.zig.Ast.Render.Fixups = .{};
+        try tree.render(allocator, &out_writer.interface, fixups);
     }
+
+    try out_writer.interface.flush();
 }

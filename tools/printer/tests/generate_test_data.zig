@@ -29,7 +29,7 @@ pub fn main() !void {
     var test_data_file = try std.fs.cwd().createFile("tests/test_data.zon", .{});
     defer test_data_file.close();
 
-    var all_data: std.ArrayListUnmanaged(common.Data) = .empty;
+    var all_data: std.ArrayList(common.Data) = .empty;
 
     for (elf_paths) |elf_path| {
         const elf_file = try std.fs.cwd().openFile(elf_path, .{});
@@ -38,7 +38,7 @@ pub fn main() !void {
         const elf = try printer.Elf.init(allocator, elf_file);
         var debug_info = try printer.DebugInfo.init(allocator, elf);
 
-        var tests: std.ArrayListUnmanaged(common.Test) = .empty;
+        var tests: std.ArrayList(common.Test) = .empty;
         for (elf.loaded_regions) |region| {
             if (!region.flags.exec) continue;
 

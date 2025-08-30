@@ -10,7 +10,7 @@ pub const microzig_options = microzig.Options{
     .interrupts = .{ .RTC = .{ .c = rtc_handler } },
 };
 
-pub fn rtc_handler() callconv(.C) void {
+pub fn rtc_handler() callconv(.c) void {
     const events = rtc.read_events();
     if (events.second) {
         led.toggle();

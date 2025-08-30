@@ -6,6 +6,9 @@ pub const std_options: std.Options = .{
     .log_level = .warn,
 };
 
+var elf_file_reader_buf: [1024]u8 = undefined;
+var output_writer_buf: [1024]u8 = undefined;
+
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
     defer _ = debug_allocator.deinit();
@@ -26,7 +29,10 @@ pub fn main() !void {
         \\
     );
 
-    var diag = clap.Diagnostic{};
+    const stderr = std.fs.File.stderr();
+    var stderr_writer = stderr.writer(&.{});
+
+    var diag: clap.Diagnostic = .{};
     var res = clap.parse(clap.Help, &args, .{
         .u16 = clap.parsers.int(u16, 10),
         .str = clap.parsers.string,
@@ -38,13 +44,14 @@ pub fn main() !void {
         .diagnostic = &diag,
         .allocator = allocator,
     }) catch |err| {
-        diag.report(std.io.getStdErr().writer(), err) catch {};
+        diag.report(&stderr_writer.interface, err) catch {};
         return err;
     };
     defer res.deinit();
 
-    if (res.args.help != 0)
-        return clap.help(std.io.getStdErr().writer(), clap.Help, &args, .{});
+    if (res.args.help != 0) {
+        return clap.help(&stderr_writer.interface, clap.Help, &args, .{});
+    }
 
     const elf_path = res.positionals[0] orelse return error.MissingInputFile;
     const output_path = res.args.output orelse return error.MissingOutputFile;
@@ -64,28 +71,29 @@ pub fn main() !void {
 
     const elf_file = try std.fs.cwd().openFile(elf_path, .{});
     defer elf_file.close();
-    const elf_header = try std.elf.Header.read(elf_file);
+    var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
+    const elf_header = try std.elf.Header.read(&elf_file_reader.interface);
 
     const entry_point: u32 = @intCast(elf_header.entry);
 
-    var flash_segments: std.ArrayListUnmanaged(Segment) = .empty;
+    var flash_segments: std.ArrayList(Segment) = .empty;
     defer flash_segments.deinit(allocator);
     defer for (flash_segments.items) |segment| {
         segment.deinit(allocator);
     };
 
-    var ram_segments: std.ArrayListUnmanaged(Segment) = .empty;
+    var ram_segments: std.ArrayList(Segment) = .empty;
     defer ram_segments.deinit(allocator);
     defer for (ram_segments.items) |segment| {
         segment.deinit(allocator);
     };
 
     {
-        var info_list: std.ArrayListUnmanaged(SegmentInfo) = .empty;
+        var info_list: std.ArrayList(SegmentInfo) = .empty;
         defer info_list.deinit(allocator);
 
         if (use_segments) {
-            var it = elf_header.program_header_iterator(elf_file);
+            var it = elf_header.iterateProgramHeaders(&elf_file_reader);
             while (try it.next()) |hdr| {
                 if (hdr.p_type == std.elf.PT_LOAD and hdr.p_memsz > 0 and hdr.p_filesz > 0) {
                     try info_list.append(allocator, .{
@@ -96,7 +104,7 @@ pub fn main() !void {
                 }
             }
         } else {
-            var it = elf_header.section_header_iterator(elf_file);
+            var it = elf_header.iterateSectionHeaders(&elf_file_reader);
             while (try it.next()) |hdr| {
                 if (hdr.sh_type == std.elf.SHT_PROGBITS and hdr.sh_flags & std.elf.SHF_ALLOC != 0 and hdr.sh_size > 0) {
                     try info_list.append(allocator, .{
@@ -139,7 +147,7 @@ pub fn main() !void {
         std.log.debug("ram segment at addr 0x{x} of size 0x{x}", .{ segment.addr, segment.size });
     }
 
-    var segment_data: std.ArrayListUnmanaged(u8) = .empty;
+    var segment_data: std.ArrayList(u8) = .empty;
     defer segment_data.deinit(allocator);
 
     var segment_count: u8 = 0;
@@ -175,12 +183,9 @@ pub fn main() !void {
 
     const output_file = try std.fs.cwd().createFile(output_path, .{});
     defer output_file.close();
-    const output_file_writer = output_file.writer();
+    var output_file_writer = output_file.writer(&.{});
 
-    var sha256: Sha256 = .init(.{});
-
-    var multi_writer = std.io.multiWriter(.{ output_file_writer, sha256.writer() });
-    const multi_writer_writer = multi_writer.writer();
+    var sha256_hasher = output_file_writer.interface.hashed(Sha256.init(.{}), &output_writer_buf);
 
     const file_header: FileHeader = .{
         .number_of_segments = segment_count,
@@ -199,24 +204,26 @@ pub fn main() !void {
         .hash = !no_digest,
     };
 
-    try file_header.write_to(multi_writer_writer);
-    try extended_file_header.write_to(multi_writer_writer);
+    try file_header.write_to(&sha256_hasher.writer);
+    try extended_file_header.write_to(&sha256_hasher.writer);
 
-    try multi_writer_writer.writeAll(segment_data.items);
+    try sha256_hasher.writer.writeAll(segment_data.items);
 
     // TODO: Add secure boot option (v1 or v2) and append a signature if enabled.
 
-    const position = try output_file.getPos();
-    const padding: [16]u8 = @splat(0);
-    try multi_writer_writer.writeAll(padding[0 .. 15 - position % 16]);
-    try multi_writer_writer.writeByte(checksum);
+    try sha256_hasher.writer.flush(); // flush before getting the position
+    try sha256_hasher.writer.splatByteAll(0, 15 - output_file_writer.pos % 16);
+    try sha256_hasher.writer.writeByte(checksum);
+
+    try sha256_hasher.writer.flush();
 
     if (!no_digest) {
-        try output_file_writer.writeAll(&sha256.finalResult());
+        try output_file_writer.interface.writeAll(&sha256_hasher.hasher.finalResult());
+        try output_file_writer.interface.flush();
     }
 }
 
-fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.ArrayListUnmanaged(Segment)) !void {
+fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.ArrayList(Segment)) !void {
     if (segment_list.items.len >= 2) {
         var i: usize = segment_list.items.len - 1;
         while (i > 0) : (i -= 1) {
@@ -292,7 +299,7 @@ const FileHeader = struct {
     flash_freq: FlashFreq,
     entry_point: u32,
 
-    pub fn write_to(self: FileHeader, writer: anytype) !void {
+    pub fn write_to(self: FileHeader, writer: *std.Io.Writer) !void {
         try writer.writeAll(&.{
             0xE9,
             self.number_of_segments,
@@ -315,7 +322,7 @@ const ExtendedFileHeader = struct {
     max_rev: u16,
     hash: bool,
 
-    pub fn write_to(self: ExtendedFileHeader, writer: anytype) !void {
+    pub fn write_to(self: ExtendedFileHeader, writer: *std.Io.Writer) !void {
         try writer.writeByte(@intFromEnum(self.wp));
         try writer.writeInt(u24, self.flash_pins_drive_settings, .little);
         try writer.writeInt(u16, @intFromEnum(self.chip_id), .little);
@@ -441,7 +448,7 @@ test "Segment.get_padding_len" {
 test "do_segment_merge" {
     var allocator = std.testing.allocator;
 
-    var segment_list: std.ArrayListUnmanaged(Segment) = .empty;
+    var segment_list: std.ArrayList(Segment) = .empty;
     defer segment_list.deinit(allocator);
     defer for (segment_list.items) |segment| {
         segment.deinit(allocator);
@@ -480,7 +487,7 @@ test "Segment.write_to" {
 
     @memset(segment.data, 'a');
 
-    var segment_data: std.ArrayListUnmanaged(u8) = .empty;
+    var segment_data: std.ArrayList(u8) = .empty;
     defer segment_data.deinit(allocator);
     const writer = segment_data.writer(allocator);
 

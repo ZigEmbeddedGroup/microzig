@@ -184,7 +184,7 @@ const SerialState = packed struct(u8) {
 
 //=============== USB DATA =================
 var USB_RX_BUFFER: [64]u8 = undefined;
-var CDC_fifo: std.fifo.LinearFifo(u8, .{ .Static = 64 }) = undefined;
+var CDC_fifo: microzig.utilities.CircularBuffer(u8, 64) = .empty;
 var device_addr: ?u7 = null;
 var remain_pkg: ?[]const u8 = null;
 var config: bool = false;
@@ -315,9 +315,9 @@ fn ep2_tx(_: EpControl, _: ?*anyopaque) void {
 
 fn ep3_rx(epc: EpControl, _: ?*anyopaque) void {
     const recv = epc.USB_read(.no_change) catch unreachable;
-    const free_data = CDC_fifo.writableLength();
+    const free_data = CDC_fifo.get_writable_len();
     const to_write = @min(recv.len, free_data);
-    CDC_fifo.writeAssumeCapacity(recv[0..to_write]);
+    CDC_fifo.write_assume_capacity(recv[0..to_write]);
 }
 
 //=============== USB FUNC =================
@@ -392,14 +392,14 @@ fn CDC_write(msg: []const u8) void {
 }
 
 fn CDC_read(buf: []u8, timeout: Timeout) ![]const u8 {
-    const fifo: *std.fifo.LinearFifo(u8, .{ .Static = 64 }) = &CDC_fifo;
+    const fifo = &CDC_fifo;
     var index: usize = 0;
     reader: for (buf) |*byte| {
-        while (fifo.readableLength() == 0) {
+        while (fifo.get_readable_len() == 0) {
             if (timeout.check_timeout()) break :reader;
         }
 
-        byte.* = fifo.readItem().?;
+        byte.* = fifo.pop().?;
         index += 1;
     }
     if (index == 0) {
@@ -426,7 +426,7 @@ pub fn main() !void {
 
     const led = gpio.Pin.from_port(.B, 2);
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-    CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
+    CDC_fifo.reset();
 
     Counter = timer.counter_device(rcc.get_clock(.TIM2));
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally

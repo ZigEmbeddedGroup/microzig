@@ -8,7 +8,7 @@ pub inline fn lookup_data(data: Data) ?*const anyopaque {
         ROM_DATA_LOOKUP_A1.*
     else
         ROM_DATA_LOOKUP_A2.*);
-    return @alignCast(@ptrCast(rom_data_lookup_fn(@intFromEnum(data), 0x40))); // 0x40 = data mask
+    return @ptrCast(@alignCast(rom_data_lookup_fn(@intFromEnum(data), 0x40))); // 0x40 = data mask
 }
 
 /// Asserts that a function with the given code exists in the bootrom.
@@ -22,7 +22,7 @@ pub inline fn lookup_function(function: Function) ?*const anyopaque {
         .arm => if (is_secure_mode()) masks.arm_s else masks.arm_ns,
         .riscv => masks.riscv,
     };
-    return @alignCast(@ptrCast(rom_table_lookup_fn(@intFromEnum(function), mask)));
+    return @ptrCast(@alignCast(rom_table_lookup_fn(@intFromEnum(function), mask)));
 }
 
 fn is_secure_mode() bool {

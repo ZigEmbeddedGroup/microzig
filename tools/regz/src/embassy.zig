@@ -156,11 +156,11 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
     const allocator = arena.allocator();
 
-    var chip_files = std.ArrayList(std.json.Parsed(ChipFile)).init(allocator);
+    var chip_files: std.ArrayList(std.json.Parsed(ChipFile)) = .empty;
     defer {
         for (chip_files.items) |chip_file|
             chip_file.deinit();
-        chip_files.deinit();
+        chip_files.deinit(allocator);
     }
 
     var register_files = std.StringArrayHashMap(std.json.Parsed(std.json.Value)).init(allocator);
@@ -198,7 +198,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         });
         errdefer chips_file.deinit();
 
-        try chip_files.append(chips_file);
+        try chip_files.append(allocator, chips_file);
     }
 
     var registers_dir = try data_dir.openDir("registers", .{ .iterate = true });

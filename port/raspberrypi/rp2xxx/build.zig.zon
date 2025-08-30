@@ -9,6 +9,7 @@
             .url = "https://github.com/raspberrypi/pico-sdk/archive/refs/tags/2.1.1.tar.gz",
             .hash = "N-V-__8AAPtGbwGQkp_3ej_icp5z6qgvjmwoE1AvAcZlh57Z",
         },
+        .@"bounded-array" = .{ .path = "../../../modules/bounded-array" },
     },
     .paths = .{
         "README.md",

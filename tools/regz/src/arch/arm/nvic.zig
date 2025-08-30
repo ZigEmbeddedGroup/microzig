@@ -108,7 +108,7 @@ pub fn load(db: *Database, device_id: EntityId) !void {
     // TODO: cpu module specific NVIC registers
 
     // destroy registers that line up with NVIC registers
-    var unique_peripherals = std.ArrayList(EntityId).init(db.gpa);
+    var unique_peripherals = std.array_list.Managed(EntityId).init(db.gpa);
     defer unique_peripherals.deinit();
 
     for (db.types.peripherals.keys()) |peripheral_id| outer: {

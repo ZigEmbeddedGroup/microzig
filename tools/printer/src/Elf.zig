@@ -2,6 +2,7 @@ const std = @import("std");
 
 const Elf = @This();
 
+endian: std.builtin.Endian,
 format: Format,
 sections: Sections,
 loaded_regions: []const Region,
@@ -34,18 +35,18 @@ pub const Region = struct {
     };
 };
 
-pub fn init(allocator: std.mem.Allocator, source: anytype) !Elf {
-    var elf_header = try std.elf.Header.read(source);
+pub fn init(allocator: std.mem.Allocator, file_reader: *std.fs.File.Reader) !Elf {
+    var elf_header = try std.elf.Header.read(&file_reader.interface);
 
     const format: Format = if (elf_header.is_64) .@"64" else .@"32";
 
     const string_table_data = blk: {
         var shdr: std.elf.Elf64_Shdr = undefined;
         if (format == .@"32") {
-            var shdr32: std.elf.Elf32_Shdr = undefined;
+            // var shdr32: std.elf.Elf32_Shdr = undefined;
             const offset = elf_header.shoff + @sizeOf(std.elf.Elf32_Shdr) * elf_header.shstrndx;
-            try source.seekableStream().seekTo(offset);
-            try source.reader().readNoEof(std.mem.asBytes(&shdr32));
+            try file_reader.seekTo(offset);
+            const shdr32 = try file_reader.interface.takeStruct(std.elf.Elf32_Shdr, elf_header.endian);
 
             shdr = .{
                 .sh_name = shdr32.sh_name,
@@ -61,17 +62,12 @@ pub fn init(allocator: std.mem.Allocator, source: anytype) !Elf {
             };
         } else {
             const offset = elf_header.shoff + @sizeOf(std.elf.Elf64_Shdr) * elf_header.shstrndx;
-            try source.seekableStream().seekTo(offset);
-            try source.reader().readNoEof(std.mem.asBytes(&shdr));
+            try file_reader.seekTo(offset);
+            shdr = try file_reader.interface.takeStruct(std.elf.Elf64_Shdr, elf_header.endian);
         }
 
-        const section_data = try allocator.alloc(u8, shdr.sh_size);
-        errdefer allocator.free(section_data);
-
-        try source.seekableStream().seekTo(shdr.sh_offset);
-        try source.reader().readNoEof(section_data);
-
-        break :blk section_data;
+        try file_reader.seekTo(shdr.sh_offset);
+        break :blk try file_reader.interface.readAlloc(allocator, shdr.sh_size);
     };
     defer allocator.free(string_table_data);
 
@@ -83,26 +79,25 @@ pub fn init(allocator: std.mem.Allocator, source: anytype) !Elf {
         }
     }
 
-    var section_header_it = elf_header.section_header_iterator(source);
+    var section_header_it = elf_header.iterateSectionHeaders(file_reader);
     while (try section_header_it.next()) |shdr| {
         const name = std.mem.span(@as([*:0]const u8, @ptrCast(string_table_data[shdr.sh_name..])));
         inline for (@typeInfo(SectionTypes).@"enum".fields) |section_field| {
             if (std.mem.eql(u8, name, section_field.name)) {
-                const section_data = try allocator.alloc(u8, shdr.sh_size);
-                errdefer allocator.free(section_data);
+                try file_reader.seekTo(shdr.sh_offset);
 
-                try source.seekableStream().seekTo(shdr.sh_offset);
-                try source.reader().readNoEof(section_data);
+                const section_data = try file_reader.interface.readAlloc(allocator, shdr.sh_size);
+                errdefer allocator.free(section_data);
 
                 sections.put(@enumFromInt(section_field.value), section_data);
             }
         }
     }
 
-    var loaded_regions: std.ArrayListUnmanaged(Region) = .empty;
+    var loaded_regions: std.ArrayList(Region) = .empty;
     defer loaded_regions.deinit(allocator);
 
-    var program_header_iterator = elf_header.program_header_iterator(source);
+    var program_header_iterator = elf_header.iterateProgramHeaders(file_reader);
     while (try program_header_iterator.next()) |phdr| {
         if (phdr.p_type != std.elf.PT_LOAD) continue;
 
@@ -118,6 +113,7 @@ pub fn init(allocator: std.mem.Allocator, source: anytype) !Elf {
     }
 
     return .{
+        .endian = elf_header.endian,
         .format = format,
         .sections = sections,
         .loaded_regions = try loaded_regions.toOwnedSlice(allocator),

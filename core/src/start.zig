@@ -49,7 +49,7 @@ export fn microzig_main() noreturn {
 
     const return_type = info.@"fn".return_type orelse @compileError(invalid_main_msg);
 
-    if (info.@"fn".calling_convention == .@"async")
+    if (info.@"fn".calling_convention == .async)
         @compileError("TODO: Embedded event loop not supported yet. Please try again later.");
 
     // A hal can export a default init function that runs before main for
