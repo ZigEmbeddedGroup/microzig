@@ -69,15 +69,15 @@ fn validate_syste_and_exit(exit_mode: ExitMode) noreturn {
 
     if (!std.mem.eql(u8, ts.io.stdout.items, ts.config.stdout)) {
         std.debug.print("stdout mismatch:\n", .{});
-        std.debug.print("expected: '{}'\n", .{std.fmt.fmtSliceEscapeLower(ts.config.stdout)});
-        std.debug.print("actual:   '{}'\n", .{std.fmt.fmtSliceEscapeLower(ts.io.stdout.items)});
+        std.debug.print("expected: '{x}'\n", .{ts.config.stdout});
+        std.debug.print("actual:   '{x}'\n", .{ts.io.stdout.items});
         ok = false;
     }
 
     if (!std.mem.eql(u8, ts.io.stderr.items, ts.config.stderr)) {
         std.debug.print("stderr mismatch:\n", .{});
-        std.debug.print("expected: '{}'\n", .{std.fmt.fmtSliceEscapeLower(ts.config.stderr)});
-        std.debug.print("actual:   '{}'\n", .{std.fmt.fmtSliceEscapeLower(ts.io.stderr.items)});
+        std.debug.print("expected: '{x}'\n", .{ts.config.stderr});
+        std.debug.print("actual:   '{x}'\n", .{ts.io.stderr.items});
         ok = false;
     }
 
@@ -190,10 +190,12 @@ pub fn main() !u8 {
         var elf_file = try std.fs.cwd().openFile(file_path, .{});
         defer elf_file.close();
 
-        var source = std.io.StreamSource{ .file = elf_file };
-        var header = try std.elf.Header.read(&source);
+        var buf: [4096]u8 = undefined;
+        var file_reader = elf_file.reader(&buf);
 
-        var pheaders = header.program_header_iterator(&source);
+        var header = try std.elf.Header.read(&file_reader.interface);
+
+        var pheaders = header.iterateProgramHeaders(&file_reader);
         while (try pheaders.next()) |phdr| {
             if (phdr.p_type != std.elf.PT_LOAD)
                 continue; // Header isn't lodead
@@ -206,8 +208,8 @@ pub fn main() !u8 {
             const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
             if (phdr.p_filesz > 0) {
-                try source.seekTo(phdr.p_offset);
-                try source.reader().readNoEof(dest_mem[addr_masked..][0..phdr.p_filesz]);
+                try file_reader.seekTo(phdr.p_offset);
+                try file_reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
             }
             if (phdr.p_memsz > phdr.p_filesz) {
                 @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
