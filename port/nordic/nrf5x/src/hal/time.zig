@@ -27,7 +27,7 @@ const TIMER_BITS = 23;
 
 // Must use @atomic to load an store from here.
 /// Stored the high bits of the current time, giving us 55 (23+32) instead of just 24 bits
-var period: u32 = 0;
+pub var period: u32 = 0;
 
 pub fn init() void {
     // We only use 23 of 24 bits of the RTC to avoid a race condition where time_since_boot() is
@@ -48,7 +48,9 @@ pub fn init() void {
         .OVRFLW = .Enabled,
     });
     // Set the comparator to trigger on overflow of bottom 23 bits
-    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
+    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x8000 }); // DELETEME Just to not have to wait too
+    // long for the interrupt to fire
+    // rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
     switch (version) {
@@ -75,11 +77,13 @@ pub fn init() void {
 pub fn rtc_overflow_interrupt() callconv(.c) void {
     if (rtc.EVENTS_OVRFLW.raw == 1) {
         rtc.EVENTS_OVRFLW.raw = 0;
+        std.log.info("overflow!", .{}); // DELETEME
         next_period();
     }
 
     if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
         rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
+        std.log.info("compare!", .{}); // DELETEME
         next_period();
     }
 }
