@@ -71,6 +71,7 @@ pub fn build(b: *Build) !void {
             .target = target,
             .optimize = optimize,
         }),
+        .use_llvm = true,
     });
     aviron_exe.root_module.addImport("args", args_module);
     aviron_exe.root_module.addImport("ihex", ihex_module);
@@ -96,6 +97,7 @@ pub fn build(b: *Build) !void {
                 .optimize = .ReleaseSmall,
                 .strip = false,
             }),
+            .use_llvm = true,
         });
         sample.bundle_compiler_rt = false;
         sample.setLinkerScript(b.path("linker.ld"));
@@ -239,6 +241,7 @@ fn add_test_suite(
                             .strip = false,
                             .link_libc = false,
                         }),
+                        .use_llvm = true,
                     });
                     test_payload.want_lto = false; // AVR has no LTO support!
                     test_payload.verbose_link = true;
