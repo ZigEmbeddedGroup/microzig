@@ -128,6 +128,7 @@ fn add_test_suite(
             .root_source_file = b.path("src/main.zig"),
             .target = host_target,
             .optimize = optimize,
+            .use_llvm = true,
         }),
     });
     test_step.dependOn(&b.addRunArtifact(unit_tests).step);
@@ -138,6 +139,7 @@ fn add_test_suite(
             .root_source_file = b.path("src/testrunner.zig"),
             .target = host_target,
             .optimize = optimize,
+            .use_llvm = true,
         }),
     });
     testrunner_exe.root_module.addImport("args", args_module);
@@ -318,6 +320,7 @@ fn add_test_suite_update(
         .root_module = b.createModule(.{
             .root_source_file = b.path("tools/no-avr-gcc.zig"),
             .target = b.graph.host,
+            .use_llvm = true,
         }),
     }).getEmittedBin();
 
@@ -434,6 +437,7 @@ fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
         .root_module = b.createModule(.{
             .root_source_file = b.path("tools/generate-tables.zig"),
             .target = b.graph.host,
+            .use_llvm = true,
             .optimize = .Debug,
             .imports = &.{
                 .{
