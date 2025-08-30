@@ -7,10 +7,7 @@
             .url = "git+https://github.com/MasterQ32/zig-args#8ae26b44a884ff20dca98ee84c098e8f8e94902f",
             .hash = "args-0.0.0-CiLiqojRAACGzDRO7A9dw7kWSchNk29caJZkXuMCb0Cn",
         },
-        .ihex = .{
-            .url = "git+https://github.com/ikskuh/zig-ihex#2c399fc3ab2669df8b0c8a514ca194757f41f826",
-            .hash = "ihex-0.1.0-1POu20MyAABXXjtXpHXpEZXrNYl34xVCTO8ye1BHOtF_",
-        },
+        .ihex = .{ .path = "../../tools/ihex" },
         .@"bounded-array" = .{ .path = "../../modules/bounded-array" },
     },
     .paths = .{

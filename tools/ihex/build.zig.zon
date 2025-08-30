@@ -1,0 +1,12 @@
+.{
+    .name = .ihex,
+    .fingerprint = 0x67fa9be1dbaef3d4,
+    .version = "0.1.0",
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "ihex.zig",
+        "LICENSE",
+    },
+}
