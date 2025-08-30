@@ -10,9 +10,7 @@ const uart = nrf.uart.num(0);
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = nrf.uart.log,
-    .interrupts = .{
-        .RTC0 = .{ .c = rtc_overflow_interrupt },
-    },
+    .interrupts = .{ .RTC0 = .{ .c = rtc_interrupt } },
 };
 
 pub fn main() !void {

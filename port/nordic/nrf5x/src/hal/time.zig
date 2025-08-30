@@ -25,7 +25,7 @@ const TIMER_BITS = 23;
 
 // Must use @atomic to load an store from here.
 /// Stored the high bits of the current time, giving us 55 (23+32) instead of just 24 bits
-pub var period: u32 = 0;
+var period: u32 = 0;
 
 pub fn init() void {
     // We only use 23 of 24 bits of the RTC to avoid a race condition where time_since_boot() is
@@ -68,7 +68,7 @@ pub fn init() void {
 
 /// Handle both overflow and compare interrupts. Update the period which acts as the high bits of
 /// the elapsed time.
-pub fn rtc_overflow_interrupt() callconv(.c) void {
+pub fn rtc_interrupt() callconv(.c) void {
     if (rtc.EVENTS_OVRFLW.raw == 1) {
         rtc.EVENTS_OVRFLW.write_raw(0);
         next_period();
