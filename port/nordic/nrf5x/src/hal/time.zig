@@ -1,7 +1,7 @@
 ///
 /// Basic timekeeping for the nRF5x series MCUs.
 ///
-/// This module uses RTC0 and hogs CC[3]
+/// This module uses RTC0 and hogs CC[2]
 /// It also sets up an interrupt to fire at certain values so that we are able to count them and
 /// keep time for centuries.
 const std = @import("std");
@@ -18,10 +18,9 @@ const version: enum {
     else => compatibility.unsupported_chip("time"),
 };
 
-const timer = microzig.chip.peripherals.TIMER0; // DELETEME
 const rtc = microzig.chip.peripherals.RTC0;
 const interrupts = microzig.chip.peripherals.interrupts;
-const COMPARE_INDEX = 3;
+const COMPARE_INDEX = 2;
 const TIMER_BITS = 23;
 
 // Must use @atomic to load an store from here.
@@ -35,26 +34,21 @@ pub fn init() void {
     // 'period' on two different events:
     // First, when it hits the halfway point, and again on overflow.
 
-    // TODO: Put this in clocks hal
-    // Set clock source
+    // TODO: Use clocks hal
+    // Set clock source and start clock
     microzig.chip.peripherals.CLOCK.LFCLKSRC.modify(.{ .SRC = .RC });
     // Start LFCLK
     microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART.write_raw(1);
+    // Enable RTC0 interrupt
     microzig.cpu.interrupt.enable(.RTC0);
-    microzig.cpu.interrupt.enable_interrupts();
-    // microzip.cpu
 
     // Enable interrupt firing on compare AND on overflow
-    rtc.INTENSET.write_raw(0x00080002);
-    // rtc.INTENSET.modify(.{
-    //     // .TICK = .Enabled, // This triggers!
-    //     .COMPARE3 = .Enabled,
-    //     .OVRFLW = .Enabled,
-    // });
+    rtc.INTENSET.modify(.{
+        .COMPARE2 = .Enabled,
+        .OVRFLW = .Enabled,
+    });
     // Set the comparator to trigger on overflow of bottom 23 bits
-    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x8000 }); // DELETEME Just to not have to wait too
-    // long for the interrupt to fire
-    // rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
+    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
     switch (version) {
@@ -70,27 +64,20 @@ pub fn init() void {
 
     // Wait for clear
     while (rtc.COUNTER.read().COUNTER != 0) {}
-    // TODO: Set priority
-    // Enable interrupt
-    // TODO: Use an interrupt hal
-    // VectorTable.RTC0 = rtc_overflow_interrupt;
 }
 
 /// Handle both overflow and compare interrupts. Update the period which acts as the high bits of
 /// the elapsed time.
 pub fn rtc_overflow_interrupt() callconv(.c) void {
     if (rtc.EVENTS_OVRFLW.raw == 1) {
-        rtc.EVENTS_OVRFLW.raw = 0;
-        std.log.info("overflow!", .{}); // DELETEME
+        rtc.EVENTS_OVRFLW.write_raw(0);
         next_period();
     }
 
     if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
         rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
-        std.log.info("compare!", .{}); // DELETEME
         next_period();
     }
-    @panic("lol");
 }
 
 inline fn next_period() void {
