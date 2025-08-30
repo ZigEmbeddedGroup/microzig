@@ -51,15 +51,18 @@ pub const Record = union(enum) {
     };
 };
 
-/// Parses intel hex records from the stream, using `mode` as parser configuration.
+/// Parses intel hex records from the reader, using `mode` as parser configuration.
 /// For each record, `loader` is called with `context` as the first parameter.
-pub fn parseRaw(stream: anytype, mode: ParseMode, context: anytype, comptime Errors: type, loader: fn (@TypeOf(context), record: Record) Errors!void) (Errors || @TypeOf(stream).Error || error{ EndOfStream, InvalidCharacter, InvalidRecord, InvalidChecksum })!void {
+pub fn parseRaw(reader: *std.Io.Reader, mode: ParseMode, context: anytype, comptime Errors: type, loader: fn (@TypeOf(context), record: Record) Errors!void) (Errors || std.Io.Reader.Error || error{ EndOfStream, InvalidCharacter, InvalidRecord, InvalidChecksum })!void {
     while (true) {
-        const b = stream.readByte() catch |err| {
+        var buf: [1]u8 = undefined;
+        reader.readSliceAll(&buf) catch |err| {
             if (err == error.EndOfStream and !mode.pedantic)
                 return;
             return err;
         };
+
+        const b = buf[0];
         if (b != ':') {
             if (b != '\n' and b != '\r' and mode.pedantic) {
                 return error.InvalidCharacter;
@@ -70,13 +73,13 @@ pub fn parseRaw(stream: anytype, mode: ParseMode, context: anytype, comptime Err
 
         var line_buffer: [520]u8 = undefined;
 
-        try stream.readNoEof(line_buffer[0..2]);
+        try reader.readSliceAll(line_buffer[0..2]);
 
         const byte_count = std.fmt.parseInt(u8, line_buffer[0..2], 16) catch return error.InvalidRecord;
 
         const end_index = 10 + 2 * byte_count;
 
-        try stream.readNoEof(line_buffer[2..end_index]);
+        try reader.readSliceAll(line_buffer[2..end_index]);
         const line = line_buffer[0..end_index];
 
         const address = std.fmt.parseInt(u16, line[2..6], 16) catch return error.InvalidRecord;
@@ -148,9 +151,9 @@ pub fn parseRaw(stream: anytype, mode: ParseMode, context: anytype, comptime Err
     }
 }
 
-/// Parses intel hex data segments from the stream, using `mode` as parser configuration.
+/// Parses intel hex data segments from the reader, using `mode` as parser configuration.
 /// For each data record, `loader` is called with `context` as the first parameter.
-pub fn parseData(stream: anytype, mode: ParseMode, context: anytype, comptime Errors: type, loader: *const fn (@TypeOf(context), offset: u32, record: []const u8) Errors!void) !?u32 {
+pub fn parseData(reader: *std.Io.Reader, mode: ParseMode, context: anytype, comptime Errors: type, loader: *const fn (@TypeOf(context), offset: u32, record: []const u8) Errors!void) !?u32 {
     const Parser = struct {
         entry_point: ?u32,
         current_offset: u32,
@@ -182,7 +185,7 @@ pub fn parseData(stream: anytype, mode: ParseMode, context: anytype, comptime Er
         ._loader = loader,
     };
 
-    try parseRaw(stream, mode, &parser, Errors, Parser.load);
+    try parseRaw(reader, mode, &parser, Errors, Parser.load);
 
     return parser.entry_point;
 }
@@ -232,17 +235,17 @@ const TestVerifier = struct {
 };
 
 test "ihex pedantic" {
-    var stream = std.io.fixedBufferStream(pedanticTestData);
+    var reader: std.Io.Reader = .fixed(&pedanticTestData);
 
     var verifier = TestVerifier{};
-    try parseRaw(stream.reader(), ParseMode{ .pedantic = true }, &verifier, error{ TestUnexpectedResult, TestExpectedEqual }, TestVerifier.process);
+    try parseRaw(&reader, ParseMode{ .pedantic = true }, &verifier, error{ TestUnexpectedResult, TestExpectedEqual }, TestVerifier.process);
 }
 
 test "ihex lax" {
-    var stream = std.io.fixedBufferStream(laxTestData);
+    var reader: std.Io.Reader = .fixed(laxTestData);
 
     var verifier = TestVerifier{};
-    try parseRaw(stream.reader(), ParseMode{ .pedantic = false }, &verifier, error{ TestUnexpectedResult, TestExpectedEqual }, TestVerifier.process);
+    try parseRaw(&reader, ParseMode{ .pedantic = false }, &verifier, error{ TestUnexpectedResult, TestExpectedEqual }, TestVerifier.process);
 }
 
 test "huge file parseRaw" {
@@ -267,12 +270,14 @@ test "huge file parseData" {
     var file = try std.fs.cwd().openFile("data/huge.ihex", .{ .mode = .read_only });
     defer file.close();
 
-    _ = try parseData(file.reader(), ParseMode{ .pedantic = true }, {}, EmptyErrorSet, ignoreRecords);
+    var reader = file.reader(&.{});
+
+    _ = try parseData(&reader, ParseMode{ .pedantic = true }, {}, EmptyErrorSet, ignoreRecords);
 }
 
 test "parseData" {
-    var stream = std.io.fixedBufferStream(pedanticTestData);
-    const ep = try parseData(stream.reader(), ParseMode{ .pedantic = true }, {}, EmptyErrorSet, ignoreRecords);
+    var reader: std.Io.Reader = .fixed(pedanticTestData);
+    const ep = try parseData(&reader, ParseMode{ .pedantic = true }, {}, EmptyErrorSet, ignoreRecords);
 
     try std.testing.expectEqual(@as(u32, 205), ep.?);
 }

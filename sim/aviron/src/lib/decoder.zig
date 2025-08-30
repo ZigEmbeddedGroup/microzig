@@ -17,9 +17,9 @@ pub fn decode(inst_val: u16) !Instruction {
     const opcode = lookup[inst_val];
     switch (opcode) {
         inline else => |tag| {
-            @setEvalBranchQuota(10_000);
+            @setEvalBranchQuota(20_000);
 
-            const Result = std.meta.FieldType(Instruction, tag);
+            const Result = @FieldType(Instruction, tag.to_string());
             if (Result == void) {
                 return @unionInit(Instruction, @tagName(tag), {});
             }
