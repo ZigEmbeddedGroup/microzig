@@ -17,14 +17,18 @@ pub fn main() !void {
 
     while (true) {
         board.led1.toggle();
-        time.sleep_ms(500);
+        // std.log.info("Now: {}", .{time.get_time_since_boot()});
+        std.log.info("Counter: {}", .{microzig.chip.peripherals.RTC0.COUNTER});
+        // time.sleep_ms(500);
 
         board.led1.toggle();
         board.led2.toggle();
-        time.sleep_ms(500);
+        // std.log.info("Now: {}", .{time.get_time_since_boot()});
+        // time.sleep_ms(500);
 
         board.led2.toggle();
         board.led3.toggle();
-        time.sleep_ms(500);
+        // std.log.info("Now: {}", .{time.get_time_since_boot()});
+        // time.sleep_ms(500);
     }
 }

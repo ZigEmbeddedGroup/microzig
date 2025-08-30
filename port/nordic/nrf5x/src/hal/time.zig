@@ -3,10 +3,8 @@
 ///
 /// This module hogs TIMER0.
 /// It uses CC1 as the register to read the current count from.
-/// It also sets up an interrupt to fire when the 32 bit timer overflows, so that we are able to
-/// count them and keep time for centuries.
-/// It does this by setting up a comparator in CC0, and configures it to fire an interrupt when this
-/// happen. This interrupt handler simply increments the high value.
+/// It also sets up an interrupt to fire at certain values so that we are able to count them and
+/// keep time for centuries.
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
@@ -28,52 +26,24 @@ const COMPARE_INDEX = 3;
 const TIMER_BITS = 23;
 
 // Must use @atomic to load an store from here.
+/// Stored the high bits of the current time, giving us 55 (23+32) instead of just 24 bits
 var period: u32 = 0;
 
 pub fn init() void {
-    // Stop timer while we set it up
-    // switch (version) {
-    //     .nrf51 => {
-    //         timer.TASKS_STOP = 1;
-    //         defer timer.TASKS_START = 1;
-    //
-    //         // Clear the time
-    //         timer.TASKS_CLEAR = 1;
-    //
-    //         timer.MODE.write(.{ .MODE = .Timer });
-    //         timer.BITMODE.write(.{ .BITMODE = .@"32Bit" });
-    //         // 16Mhz / 2^4 = 1MHz: us resolution
-    //         timer.PRESCALER.write(.{ .PRESCALER = 4 });
-    //     },
-    //     .nrf52 => {
-    //         timer.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
-    //         defer timer.TASKS_START.write(.{ .TASKS_START = .Trigger });
-    //
-    //         // Clear the time
-    //         timer.TASKS_CLEAR.write(.{ .TASKS_CLEAR = .Trigger });
-    //
-    //         timer.MODE.write(.{ .MODE = .Timer });
-    //         timer.BITMODE.write(.{ .BITMODE = .@"32Bit" });
-    //         // 16Mhz / 2^4 = 1MHz: us resolution
-    //         timer.PRESCALER.write(.{ .PRESCALER = 4 });
-    //     },
-    // }
-
-    // TODO: embassy uses RTC instead?
-    // https://github.com/embassy-rs/embassy/blob/main/embassy-nrf/src/time_driver.rs
     // We only use 23 of 24 bits of the RTC to avoid a race condition where time_since_boot() is
-    // called after an overflow but before we can update the high value. This means that we have to
-    // increment the 'period' on two different events:
+    // called during an overflow, where we read the high bits, then an overflow occurs, then we read
+    // the low bits, which overlowed and would be near 0. This means that we have to increment the
+    // 'period' on two different events:
     // First, when it hits the halfway point, and again on overflow.
 
-    // TODO: Tuck into version prong
     // Enable interrupt firing on compare AND on overflow
     rtc.INTENSET.modify(.{
         .COMPARE3 = .Enabled,
         .OVRFLW = .Enabled,
     });
     // Set the comparator to trigger on overflow of bottom 23 bits
-    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
+    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x8000 });
+    // rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
     switch (version) {
@@ -113,20 +83,18 @@ inline fn next_period() void {
     _ = @atomicRmw(u32, &period, .Add, 1, .monotonic);
 }
 
-// TODO: Rename arg to period, but it shadows the global
-/// Calculate the full 56 bit value of the RTC. We have to take into account whether the period
+/// Calculate the full 55 bit value of the RTC. We have to take into account whether the period
 /// counter is odd or even, flipping the top bit of the counter when it's off.
-fn calc_now(p: u32, counter: u24) u64 {
+fn calc_ticks(p: u32, counter: u24) u64 {
     return (@as(u64, p) << TIMER_BITS) + @as(u64, counter ^ ((p & 1) << TIMER_BITS));
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    // TODO: Scale. This is counting ticks, which update at 32768Hz
     const p = @atomicLoad(u32, &period, .acquire);
-
     const counter = rtc.COUNTER.read().COUNTER;
-
-    return @enumFromInt(calc_now(p, counter));
+    const ticks = calc_ticks(p, counter);
+    // RTC updates at 32768 hertz, so we can just multiply by 1M, then shift 15
+    return @enumFromInt((ticks * 1_000_000) >> 15);
 }
 
 pub fn sleep_ms(time_ms: u32) void {
@@ -139,15 +107,15 @@ pub fn sleep_us(time_us: u64) void {
 }
 
 test "tick calculations" {
-    try std.testing.expectEqual(calc_now(0, 0x000000), 0x0_000000);
-    try std.testing.expectEqual(calc_now(0, 0x000001), 0x0_000001);
-    try std.testing.expectEqual(calc_now(0, 0x7FFFFF), 0x0_7FFFFF);
-    try std.testing.expectEqual(calc_now(1, 0x7FFFFF), 0x1_7FFFFF);
-    try std.testing.expectEqual(calc_now(0, 0x800000), 0x0_800000);
-    try std.testing.expectEqual(calc_now(1, 0x800000), 0x0_800000);
-    try std.testing.expectEqual(calc_now(1, 0x800001), 0x0_800001);
-    try std.testing.expectEqual(calc_now(1, 0xFFFFFF), 0x0_FFFFFF);
-    try std.testing.expectEqual(calc_now(2, 0xFFFFFF), 0x1_FFFFFF);
-    try std.testing.expectEqual(calc_now(1, 0x000000), 0x1_000000);
-    try std.testing.expectEqual(calc_now(2, 0x000000), 0x1_000000);
+    try std.testing.expectEqual(calc_ticks(0, 0x000000), 0x0_000000);
+    try std.testing.expectEqual(calc_ticks(0, 0x000001), 0x0_000001);
+    try std.testing.expectEqual(calc_ticks(0, 0x7FFFFF), 0x0_7FFFFF);
+    try std.testing.expectEqual(calc_ticks(1, 0x7FFFFF), 0x1_7FFFFF);
+    try std.testing.expectEqual(calc_ticks(0, 0x800000), 0x0_800000);
+    try std.testing.expectEqual(calc_ticks(1, 0x800000), 0x0_800000);
+    try std.testing.expectEqual(calc_ticks(1, 0x800001), 0x0_800001);
+    try std.testing.expectEqual(calc_ticks(1, 0xFFFFFF), 0x0_FFFFFF);
+    try std.testing.expectEqual(calc_ticks(2, 0xFFFFFF), 0x1_FFFFFF);
+    try std.testing.expectEqual(calc_ticks(1, 0x000000), 0x1_000000);
+    try std.testing.expectEqual(calc_ticks(2, 0x000000), 0x1_000000);
 }
