@@ -1,8 +1,7 @@
 ///
 /// Basic timekeeping for the nRF5x series MCUs.
 ///
-/// This module hogs TIMER0.
-/// It uses CC1 as the register to read the current count from.
+/// This module uses RTC0 and hogs CC[3]
 /// It also sets up an interrupt to fire at certain values so that we are able to count them and
 /// keep time for centuries.
 const std = @import("std");
@@ -41,12 +40,17 @@ pub fn init() void {
     microzig.chip.peripherals.CLOCK.LFCLKSRC.modify(.{ .SRC = .RC });
     // Start LFCLK
     microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART.write_raw(1);
+    microzig.cpu.interrupt.enable(.RTC0);
+    microzig.cpu.interrupt.enable_interrupts();
+    // microzip.cpu
 
     // Enable interrupt firing on compare AND on overflow
-    rtc.INTENSET.modify(.{
-        .COMPARE3 = .Enabled,
-        .OVRFLW = .Enabled,
-    });
+    rtc.INTENSET.write_raw(0x00080002);
+    // rtc.INTENSET.modify(.{
+    //     // .TICK = .Enabled, // This triggers!
+    //     .COMPARE3 = .Enabled,
+    //     .OVRFLW = .Enabled,
+    // });
     // Set the comparator to trigger on overflow of bottom 23 bits
     rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x8000 }); // DELETEME Just to not have to wait too
     // long for the interrupt to fire
@@ -86,6 +90,7 @@ pub fn rtc_overflow_interrupt() callconv(.c) void {
         std.log.info("compare!", .{}); // DELETEME
         next_period();
     }
+    @panic("lol");
 }
 
 inline fn next_period() void {
