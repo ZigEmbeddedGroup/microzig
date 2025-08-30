@@ -7,8 +7,11 @@
             .url = "git+https://github.com/MasterQ32/zig-args#8ae26b44a884ff20dca98ee84c098e8f8e94902f",
             .hash = "args-0.0.0-CiLiqojRAACGzDRO7A9dw7kWSchNk29caJZkXuMCb0Cn",
         },
-        .ihex = .{ .path = "git+https://github.com/mattnite/zig-ihex#522caa5972cbb728feb42d4af0fc85efd08f011b", },
         .@"bounded-array" = .{ .path = "../../modules/bounded-array" },
+        .ihex = .{
+            .url = "git+https://github.com/mattnite/zig-ihex#9deb291104ecd7dcaab0db27bf05252764600947",
+            .hash = "ihex-0.1.0-1POu25EyAADaasaxKmaex5A6D_4cohzZkOW4qpn_mav0",
+        },
     },
     .paths = .{
         "README.md",
