@@ -4,13 +4,12 @@ const board = microzig.board;
 const nrf = microzig.hal;
 const time = nrf.time;
 
-const rtc_overflow_interrupt = nrf.time.rtc_overflow_interrupt;
 const uart = nrf.uart.num(0);
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = nrf.uart.log,
-    .interrupts = .{ .RTC0 = .{ .c = rtc_interrupt } },
+    .interrupts = .{ .RTC0 = .{ .c = nrf.time.rtc_interrupt } },
 };
 
 pub fn main() !void {

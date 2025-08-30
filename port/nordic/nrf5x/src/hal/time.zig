@@ -19,12 +19,11 @@ const version: enum {
 };
 
 const rtc = microzig.chip.peripherals.RTC0;
-const interrupts = microzig.chip.peripherals.interrupts;
 const COMPARE_INDEX = 2;
 const TIMER_BITS = 23;
 
-// Must use @atomic to load an store from here.
 /// Stored the high bits of the current time, giving us 55 (23+32) instead of just 24 bits
+/// Must use @atomic to load an store from here.
 var period: u32 = 0;
 
 pub fn init() void {
@@ -38,7 +37,14 @@ pub fn init() void {
     // Set clock source and start clock
     microzig.chip.peripherals.CLOCK.LFCLKSRC.modify(.{ .SRC = .RC });
     // Start LFCLK
-    microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART.write_raw(1);
+    switch (version) {
+        .nrf51 => {
+            microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART = 1;
+        },
+        .nrf52 => {
+            microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART.write_raw(1);
+        },
+    }
     // Enable RTC0 interrupt
     microzig.cpu.interrupt.enable(.RTC0);
 
