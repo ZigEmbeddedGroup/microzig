@@ -25,17 +25,19 @@ pub fn main() !void {
 
     while (true) {
         board.led1.toggle();
-        std.log.info("Now: {}", .{time.get_time_since_boot()});
+        std.log.info("Now: {}uS", .{time.get_time_since_boot().to_us()});
+        std.log.info("period: {x}", .{time.period});
+        std.log.info("Counter: {x:0>6}", .{microzig.chip.peripherals.RTC0.COUNTER.read().COUNTER});
         time.sleep_ms(500);
 
-        board.led1.toggle();
-        board.led2.toggle();
-        std.log.info("Now: {}", .{time.get_time_since_boot()});
-        time.sleep_ms(500);
-
-        board.led2.toggle();
-        board.led3.toggle();
-        std.log.info("Now: {}", .{time.get_time_since_boot()});
-        time.sleep_ms(500);
+        // board.led1.toggle();
+        // board.led2.toggle();
+        // std.log.info("Now: {}", .{time.get_time_since_boot()});
+        // time.sleep_ms(500);
+        //
+        // board.led2.toggle();
+        // board.led3.toggle();
+        // std.log.info("Now: {}", .{time.get_time_since_boot()});
+        // time.sleep_ms(500);
     }
 }
