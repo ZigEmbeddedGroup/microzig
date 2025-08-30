@@ -36,14 +36,19 @@ pub fn init() void {
     // 'period' on two different events:
     // First, when it hits the halfway point, and again on overflow.
 
+    // TODO: Put this in clocks hal
+    // Set clock source
+    microzig.chip.peripherals.CLOCK.LFCLKSRC.modify(.{ .SRC = .RC });
+    // Start LFCLK
+    microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART.write_raw(1);
+
     // Enable interrupt firing on compare AND on overflow
     rtc.INTENSET.modify(.{
         .COMPARE3 = .Enabled,
         .OVRFLW = .Enabled,
     });
     // Set the comparator to trigger on overflow of bottom 23 bits
-    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x8000 });
-    // rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
+    rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
     switch (version) {
