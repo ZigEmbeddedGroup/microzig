@@ -78,9 +78,11 @@ pub fn main() !u8 {
         var file = try std.fs.cwd().openFile(file_path, .{});
         defer file.close();
 
+        var file_buf: [4096]u8 = undefined;
+        var reader = file.reader(&file_buf);
+
         switch (cli.options.format) {
             .elf => {
-                var reader = file.reader(&.{});
                 var header = try std.elf.Header.read(&reader.interface);
 
                 var pheaders = header.iterateProgramHeaders(&reader);
@@ -110,7 +112,6 @@ pub fn main() !u8 {
                         @memcpy(flash.data[offset .. offset + data.len], data);
                     }
                 };
-                var reader = file.reader(&.{});
                 _ = try ihex.parseData(&reader.interface, .{ .pedantic = true }, &flash_storage, anyerror, ihex_processor.process);
             },
         }
