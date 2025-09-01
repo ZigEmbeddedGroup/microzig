@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    if: false
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -23,7 +24,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.1
 
       - name: Build
         working-directory: tools/regz-wizard

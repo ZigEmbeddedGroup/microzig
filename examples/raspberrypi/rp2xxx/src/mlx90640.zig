@@ -61,7 +61,7 @@ pub fn main() !void {
         }
 
         for (0..24) |i| {
-            std.log.debug("{d:.3}\n", .{x[i]});
+            std.log.debug("{any:.3}\n", .{x[i]});
         }
         time.sleep_ms(100);
     }

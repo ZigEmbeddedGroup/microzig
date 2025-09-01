@@ -374,7 +374,7 @@ fn stop_IR_timer() usize {
 var ir_val: u64 = 0;
 var ir_index: u6 = 0;
 
-fn IR_handler() callconv(.C) void {
+fn IR_handler() callconv(.c) void {
     const pin_state = IR_pin.read();
     if (pin_state == 0) {
         const val = stop_IR_timer();
@@ -406,7 +406,7 @@ fn IR_handler() callconv(.C) void {
 
 var nec_report: NecPkg = undefined;
 var nec_send: bool = false;
-fn IR_timer_handler() callconv(.C) void {
+fn IR_timer_handler() callconv(.c) void {
     const val: u32 = @truncate(ir_val);
     const nec: NecPkg = @bitCast(val);
     if (val == 0) {

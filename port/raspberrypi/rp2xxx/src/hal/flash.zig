@@ -62,8 +62,7 @@ pub const boot2 = struct {
             \\blx r0
             :
             : [copyout] "{r0}" (@intFromPtr(&copyout)),
-            : "r0", "lr"
-        );
+            : .{ .r0 = true, .r14 = true });
     }
 };
 
@@ -79,7 +78,7 @@ pub inline fn range_erase(offset: u32, count: u32) void {
 export fn _range_erase(offset: u32, count: u32) linksection(".ram_text") void {
     // TODO: add sanity checks, e.g., offset + count < flash size
 
-    asm volatile ("" ::: "memory"); // memory barrier
+    asm volatile ("" ::: .{ .memory = true }); // memory barrier
 
     boot2.flash_init();
 
@@ -103,7 +102,7 @@ pub inline fn range_program(offset: u32, data: []const u8) void {
 export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection(".ram_text") void {
     // TODO: add sanity checks, e.g., offset + count < flash size
 
-    asm volatile ("" ::: "memory"); // memory barrier
+    asm volatile ("" ::: .{ .memory = true }); // memory barrier
 
     boot2.flash_init();
 
@@ -144,7 +143,7 @@ pub inline fn cmd(tx_buf: []const u8, rx_buf: []u8) void {
 
 fn _cmd(tx_buf: []const u8, rx_buf: []u8) linksection(".ram_text") void {
     boot2.flash_init();
-    asm volatile ("" ::: "memory"); // memory barrier
+    asm volatile ("" ::: .{ .memory = true }); // memory barrier
     rom.connect_internal_flash();
     rom.flash_exit_xip();
     force_cs(false);

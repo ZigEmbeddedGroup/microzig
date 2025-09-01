@@ -66,9 +66,12 @@ pub fn build(b: *Build) !void {
     // Main emulator executable
     const aviron_exe = b.addExecutable(.{
         .name = "aviron",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+        .use_llvm = true,
     });
     aviron_exe.root_module.addImport("args", args_module);
     aviron_exe.root_module.addImport("ihex", ihex_module);
@@ -88,10 +91,13 @@ pub fn build(b: *Build) !void {
     for (samples) |sample_name| {
         const sample = b.addExecutable(.{
             .name = sample_name,
-            .root_source_file = b.path(b.fmt("samples/{s}.zig", .{sample_name})),
-            .target = avr_target,
-            .optimize = .ReleaseSmall,
-            .strip = false,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(b.fmt("samples/{s}.zig", .{sample_name})),
+                .target = avr_target,
+                .optimize = .ReleaseSmall,
+                .strip = false,
+            }),
+            .use_llvm = true,
         });
         sample.bundle_compiler_rt = false;
         sample.setLinkerScript(b.path("linker.ld"));
@@ -120,17 +126,23 @@ fn add_test_suite(
     aviron_module: *Build.Module,
 ) !void {
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = host_target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = host_target,
+            .optimize = optimize,
+        }),
+        .use_llvm = true,
     });
     test_step.dependOn(&b.addRunArtifact(unit_tests).step);
 
     const testrunner_exe = b.addExecutable(.{
         .name = "aviron-test-runner",
-        .root_source_file = b.path("src/testrunner.zig"),
-        .target = host_target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/testrunner.zig"),
+            .target = host_target,
+            .optimize = optimize,
+        }),
+        .use_llvm = true,
     });
     testrunner_exe.root_module.addImport("args", args_module);
     testrunner_exe.root_module.addImport("aviron", aviron_module);
@@ -222,11 +234,14 @@ fn add_test_suite(
 
                     const test_payload = b.addExecutable(.{
                         .name = std.fs.path.stem(entry.basename),
-                        .target = custom_target,
-                        .optimize = config.optimize,
-                        .strip = false,
-                        .root_source_file = if (is_zig_test) root_file else null,
-                        .link_libc = false,
+                        .root_module = b.createModule(.{
+                            .root_source_file = if (is_zig_test) root_file else null,
+                            .target = custom_target,
+                            .optimize = config.optimize,
+                            .strip = false,
+                            .link_libc = false,
+                        }),
+                        .use_llvm = true,
                     });
                     test_payload.want_lto = false; // AVR has no LTO support!
                     test_payload.verbose_link = true;
@@ -305,8 +320,11 @@ fn add_test_suite_update(
         .cwd_relative = path,
     } else |_| b.addExecutable(.{
         .name = "no-avr-gcc",
-        .target = b.graph.host,
-        .root_source_file = b.path("tools/no-avr-gcc.zig"),
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/no-avr-gcc.zig"),
+            .target = b.graph.host,
+        }),
+        .use_llvm = true,
     }).getEmittedBin();
 
     {
@@ -382,18 +400,18 @@ fn add_test_suite_update(
 }
 
 fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
-    var code = std.ArrayList(u8).init(b.allocator);
+    var code = std.array_list.Managed(u8).init(b.allocator);
     defer code.deinit();
 
-    var line_buffer: [4096]u8 = undefined;
+    var read_buf: [4096]u8 = undefined;
+    var file_reader = file.reader(&read_buf);
+    const reader = &file_reader.interface;
 
     while (true) {
-        var fbs = std.io.fixedBufferStream(&line_buffer);
-        file.reader().streamUntilDelimiter(fbs.writer(), '\n', null) catch |err| switch (err) {
+        const line = reader.takeDelimiterExclusive('\n') catch |err| switch (err) {
             error.EndOfStream => break,
             else => |e| return e,
         };
-        const line = fbs.getWritten();
 
         if (std.mem.startsWith(u8, line, "//!")) {
             try code.appendSlice(line[3..]);
@@ -416,11 +434,21 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
 }
 
 fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
+    const bounded_array_dep = b.dependency("bounded-array", .{});
     const generate_tables_exe = b.addExecutable(.{
         .name = "aviron-generate-tables",
-        .root_source_file = b.path("tools/generate-tables.zig"),
-        .target = b.graph.host,
-        .optimize = .Debug,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/generate-tables.zig"),
+            .target = b.graph.host,
+            .optimize = .Debug,
+            .imports = &.{
+                .{
+                    .name = "bounded-array",
+                    .module = bounded_array_dep.module("bounded-array"),
+                },
+            },
+        }),
+        .use_llvm = true,
     });
     generate_tables_exe.root_module.addImport("isa", isa_mod);
 

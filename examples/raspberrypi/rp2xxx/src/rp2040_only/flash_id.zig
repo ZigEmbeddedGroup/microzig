@@ -30,7 +30,7 @@ pub fn main() !void {
 
     while (true) {
         const serial_number = flash.id();
-        const hex_serial_number = std.fmt.fmtSliceHexLower(&serial_number);
+        const hex_serial_number = std.fmt.bytesToHex(&serial_number, .lower);
         std.log.info("serial number: {s}", .{hex_serial_number});
         time.sleep_ms(1000);
     }

@@ -18,7 +18,7 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-fn EXTI_handler() callconv(.C) void {
+fn EXTI_handler() callconv(.c) void {
     // we have only one line configured, so we can just clear it
     // if you have more than one line configured, you should check the pending lines
     exti.clear_pending(exti.pending());

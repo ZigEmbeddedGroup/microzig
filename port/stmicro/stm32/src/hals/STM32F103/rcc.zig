@@ -192,13 +192,13 @@ fn set_flash(clock: u32) void {
 fn secure_enable() void {
     rcc.CR.modify(.{ .HSION = 1 });
     while (rcc.CR.read().HSIRDY != 1) {
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 
     rcc.BDCR.raw = 0;
     rcc.CFGR.raw = 0;
     while (rcc.CFGR.read().SWS != .HSI) {
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 
     rcc.CR.modify(.{
@@ -216,14 +216,14 @@ fn config_HSI(value: usize) void {
 
     //wait for the HSI to stabilize
     for (0..16) |_| {
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 
 fn config_LSI() void {
     rcc.CSR.modify(.{ .LSION = 1 });
     while (rcc.CSR.read().LSIRDY == 0) {
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 
@@ -235,7 +235,7 @@ fn config_HSE(comptime config: ClockTree.Config) ClockInitError!void {
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == max_wait - 1) return error.HSETimeout;
         ticks += 1;
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 
@@ -246,7 +246,7 @@ fn config_LSE(comptime config: ClockTree.Config) ClockInitError!void {
     while (rcc.BDCR.read().LSERDY == 0) {
         if (ticks == max_wait - 1) return error.LSETimeout;
         ticks += 1;
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 
@@ -323,7 +323,7 @@ fn config_system_clock(comptime config: ClockTree.Config) ClockInitError!void {
         while (true) {
             const sws = rcc.CFGR.read().SWS;
             if (sws == e_val) break;
-            asm volatile ("" ::: "memory");
+            asm volatile ("" ::: .{ .memory = true });
         }
     }
 }
@@ -331,7 +331,7 @@ fn config_system_clock(comptime config: ClockTree.Config) ClockInitError!void {
 fn init_pll() void {
     rcc.CR.modify(.{ .PLLON = 1 });
     while (rcc.CR.read().PLLRDY == 0) {
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 

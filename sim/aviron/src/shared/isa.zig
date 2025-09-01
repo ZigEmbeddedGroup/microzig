@@ -102,6 +102,15 @@ pub const Opcode = enum(u8) {
     xch,
 
     unknown,
+
+    pub fn to_string(opcode: Opcode) []const u8 {
+        inline for (@typeInfo(Opcode).@"enum".fields) |field| {
+            if (opcode == @field(Opcode, field.name))
+                return field.name;
+        }
+
+        unreachable;
+    }
 };
 
 pub const opinfo = struct {
@@ -139,9 +148,7 @@ pub const Register3 = enum(u3) {
     r22 = 6,
     r23 = 7,
 
-    pub fn format(r: Register3, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(r: Register3, writer: *std.Io.Writer) !void {
         try writer.print("r{}", .{
             16 + @as(u32, @intFromEnum(r)),
         });
@@ -180,9 +187,7 @@ pub const Register4 = enum(u4) {
     r30 = 14,
     r31 = 15,
 
-    pub fn format(reg4: Register4, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(reg4: Register4, writer: *std.Io.Writer) !void {
         try writer.print("r{}", .{
             16 + @as(u32, @intFromEnum(reg4)),
         });
@@ -221,9 +226,7 @@ pub const Register4_pair = enum(u4) {
     r29_r28 = 14,
     r31_r30 = 15,
 
-    pub fn format(reg4: Register4_pair, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(reg4: Register4_pair, writer: *std.Io.Writer) !void {
         try writer.print("r{}:r{}", .{
             @as(u32, @intFromEnum(reg4)) * 2 + 1,
             @as(u32, @intFromEnum(reg4)) * 2,
@@ -279,9 +282,7 @@ pub const Register = enum(u5) {
     r30 = 30,
     r31 = 31,
 
-    pub fn format(reg5: Register, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(reg5: Register, writer: *std.Io.Writer) !void {
         try writer.print("r{}", .{@intFromEnum(reg5)});
     }
 
@@ -309,9 +310,7 @@ pub const StatusRegisterBit = enum(u3) {
     T = 6,
     I = 7,
 
-    pub fn format(bit: StatusRegisterBit, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(bit: StatusRegisterBit, writer: *std.Io.Writer) !void {
         try writer.print("{s}", .{@tagName(bit)});
     }
 
@@ -329,9 +328,7 @@ pub const StatusRegisterBit = enum(u3) {
 pub const DataBit = enum(u3) {
     _,
 
-    pub fn format(bit: DataBit, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(bit: DataBit, writer: anytype) !void {
         try writer.print("{}", .{@intFromEnum(bit)});
     }
 

@@ -414,7 +414,7 @@ fn load_cluster(
     while (cluster_it.next()) |cluster_node|
         try load_cluster(ctx, cluster_node, struct_id);
 
-    log.debug("loaded cluster name: {s} description={?s} offset={?s}", .{ name, description, address_offset_str });
+    log.debug("loaded cluster name: {s} description={?s} offset={s}", .{ name, description, address_offset_str });
 }
 
 fn get_name_without_suffix(node: xml.Node, suffix: []const u8) ![]const u8 {
@@ -474,7 +474,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
                 DimType.list => blk: {
                     const replacement = try dim_elements.dim_index_value(ctx, i);
                     const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", replacement);
-                    break :blk try std.fmt.allocPrintZ(ctx.arena.allocator(), "{s}", .{new_name});
+                    break :blk try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{s}", .{new_name}, 0);
                 },
             },
             .description = node.get_value("description"),
@@ -566,7 +566,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
                     DimType.list => listblk: {
                         const replacement = try elements.dim_index_value(ctx, i);
                         const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), node.get_value("name").?, "%s", replacement);
-                        break :listblk try std.fmt.allocPrintZ(ctx.arena.allocator(), "{s}", .{new_name});
+                        break :listblk try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{s}", .{new_name}, 0);
                     },
                 };
             } else try get_name_without_suffix(node, "%s"),
@@ -795,10 +795,10 @@ const DimElements = struct {
         const start_index = iter.next().?;
         const parse_start = std.fmt.parseInt(usize, start_index, 0);
         if (parse_start) |start| {
-            return try std.fmt.allocPrintZ(ctx.arena.allocator(), "{d}", .{start + index});
+            return try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{d}", .{start + index}, 0);
         } else |_| {
             if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
-                return std.fmt.allocPrintZ(ctx.arena.allocator(), "{c}", .{start_index[0] + @as(u8, @truncate(index))});
+                return std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{c}", .{start_index[0] + @as(u8, @truncate(index))}, 0);
             }
             return error.DimIndexInvalid;
         }
@@ -815,7 +815,7 @@ const DimElements = struct {
         const start_index = iter_value.?;
         const parse_start = std.fmt.parseInt(usize, start_index, 0);
         if (parse_start) |start| {
-            return try std.fmt.allocPrintZ(ctx.arena.allocator(), "{d}", .{start});
+            return try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{d}", .{start}, 0);
         } else |_| {
             if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
                 return start_index;

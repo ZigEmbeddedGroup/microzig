@@ -36,7 +36,7 @@ const Arguments = struct {
     }
 };
 
-fn print_usage(writer: anytype) !void {
+fn print_usage(writer: *std.Io.Writer) !void {
     try writer.writeAll(
         \\regz
         \\  --help                Display this help and exit
@@ -48,6 +48,7 @@ fn print_usage(writer: anytype) !void {
         \\<str>
         \\
     );
+    try writer.flush();
 }
 
 fn parse_args(allocator: Allocator) !Arguments {
@@ -88,7 +89,10 @@ fn parse_args(allocator: Allocator) !Arguments {
             ret.patch_path = try allocator.dupe(u8, args[i]);
         } else if (std.mem.startsWith(u8, args[i], "-")) {
             std.log.err("Unknown argument '{s}'", .{args[i]});
-            try print_usage(std.io.getStdErr().writer());
+
+            var buf: [80]u8 = undefined;
+            var writer = std.fs.File.stderr().writer(&buf);
+            try print_usage(&writer.interface);
             return error.Explained;
         } else if (ret.input_path != null) {
             std.log.err("Input path is already set to '{s}', you are trying to set it to '{s}'", .{
@@ -115,7 +119,9 @@ fn main_impl() anyerror!void {
     defer args.deinit();
 
     if (args.help) {
-        try print_usage(std.io.getStdOut().writer());
+        var buf: [80]u8 = undefined;
+        var writer = std.fs.File.stdout().writer(&buf);
+        try print_usage(&writer.interface);
         return;
     }
 

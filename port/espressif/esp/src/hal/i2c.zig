@@ -531,7 +531,7 @@ pub const I2C = enum(u1) {
     pub fn readv_blocking(self: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) !void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(chunks);
 
         var is_first_chunk = true;
         // Always saving room for the address byte. With a custom iterator we could make sure only the first chunk is 31 (room for address)
@@ -618,7 +618,7 @@ pub const I2C = enum(u1) {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         // TODO: Write a new utility that does similar but that will coalesce into a specified size
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(chunks);
         if (write_vec.size() == 0)
             return self.write_operation_blocking(addr, &.{}, start, stop, deadline);
 
