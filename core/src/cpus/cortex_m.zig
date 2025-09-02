@@ -622,7 +622,9 @@ pub const startup_logic = struct {
             }
         }
 
-        // User options override chip defaults
+        // Apply user-set interrupts
+        // TODO: We might want to fail compilation if any interruptt is already set, since that
+        // could e.g. disable timekeeping
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);
             if (maybe_handler) |handler| {
