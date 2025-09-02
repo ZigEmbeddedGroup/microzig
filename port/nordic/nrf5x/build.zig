@@ -52,7 +52,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patches = @import("patches/nrf51.zig").patches,
         },
-        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+        .hal = hal,
     };
 
     const chip_nrf52832: microzig.Target = .{
@@ -76,7 +76,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patches = @import("patches/nrf528xx.zig").patches,
         },
-        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+        .hal = hal,
     };
 
     const chip_nrf52833: microzig.Target = .{
@@ -100,7 +100,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patches = @import("patches/nrf528xx.zig").patches,
         },
-        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+        .hal = hal,
     };
 
     const chip_nrf52840: microzig.Target = .{
