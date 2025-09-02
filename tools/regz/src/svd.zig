@@ -923,15 +923,15 @@ const RegisterProperties = struct {
 };
 
 fn parse_access(str: []const u8) !Access {
-    return if (std.mem.eql(u8, "read-only", str))
+    return if (std.ascii.eqlIgnoreCase("read-only", str))
         Access.read_only
-    else if (std.mem.eql(u8, "write-only", str))
+    else if (std.ascii.eqlIgnoreCase("write-only", str))
         Access.write_only
-    else if (std.mem.eql(u8, "read-write", str))
+    else if (std.ascii.eqlIgnoreCase("read-write", str))
         Access.read_write
-    else if (std.mem.eql(u8, "writeOnce", str))
+    else if (std.ascii.eqlIgnoreCase("writeOnce", str))
         Access.write_once
-    else if (std.mem.eql(u8, "read-writeOnce", str))
+    else if (std.ascii.eqlIgnoreCase("read-writeOnce", str))
         Access.read_write_once
     else blk: {
         log.warn("invalid access type: '{s}'", .{str});
