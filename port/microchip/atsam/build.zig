@@ -37,6 +37,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .name = "NVM_USER_ROW", .offset = 0x00804000, .length = 512, .access = .r }, // NVM User Row
             },
         },
+        .hal = .{ .root_source_file = b.path("src/hal.zig") },
     };
 
     return .{
