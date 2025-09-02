@@ -75,14 +75,29 @@ pub fn init() void {
 /// Handle both overflow and compare interrupts. Update the period which acts as the high bits of
 /// the elapsed time.
 pub fn rtc_interrupt() callconv(.c) void {
-    if (rtc.EVENTS_OVRFLW.raw == 1) {
-        rtc.EVENTS_OVRFLW.write_raw(0);
-        next_period();
-    }
+    switch (version) {
+        .nrf51 => {
+            if (rtc.EVENTS_OVRFLW == 1) {
+                rtc.EVENTS_OVRFLW = 0;
+                next_period();
+            }
 
-    if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
-        rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
-        next_period();
+            if (rtc.EVENTS_COMPARE[COMPARE_INDEX] == 1) {
+                rtc.EVENTS_COMPARE[COMPARE_INDEX] = 0;
+                next_period();
+            }
+        },
+        .nrf52 => {
+            if (rtc.EVENTS_OVRFLW.raw == 1) {
+                rtc.EVENTS_OVRFLW.write_raw(0);
+                next_period();
+            }
+
+            if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
+                rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
+                next_period();
+            }
+        },
     }
 }
 
