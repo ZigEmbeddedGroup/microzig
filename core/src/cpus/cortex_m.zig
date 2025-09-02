@@ -538,6 +538,88 @@ pub fn clrex() void {
     asm volatile ("clrex");
 }
 
+/// Atomic operations with fallback to critical sections for Cortex-M0/M0+
+pub const atomic = struct {
+    pub const has_native_atomics = switch (cortex_m) {
+        .cortex_m0, .cortex_m0plus => false,
+        else => true,
+    };
+
+    /// Atomic add
+    pub fn add(comptime T: type, ptr: *T, delta: T) T {
+        if (comptime has_native_atomics) {
+            return @atomicRmw(T, ptr, .Add, delta, .monotonic);
+        } else {
+            interrupt.disable_interrupts();
+            defer interrupt.enable_interrupts();
+            const old_value = ptr.*;
+            ptr.* = old_value +% delta;
+            return old_value;
+        }
+    }
+
+    /// Atomic load
+    pub fn load(comptime T: type, ptr: *const T, comptime ordering: std.builtin.AtomicOrder) T {
+        if (comptime has_native_atomics) {
+            return @atomicLoad(T, ptr, ordering);
+        } else {
+            interrupt.disable_interrupts();
+            defer interrupt.enable_interrupts();
+            return ptr.*;
+        }
+    }
+
+    /// Atomic store
+    pub fn store(comptime T: type, ptr: *T, value: T, comptime ordering: std.builtin.AtomicOrder) void {
+        if (comptime has_native_atomics) {
+            @atomicStore(T, ptr, value, ordering);
+        } else {
+            interrupt.disable_interrupts();
+            defer interrupt.enable_interrupts();
+            ptr.* = value;
+        }
+    }
+
+    /// Atomic compare and swap
+    pub fn cmpxchg(comptime T: type, ptr: *T, expected_value: T, new_value: T, comptime success_ordering: std.builtin.AtomicOrder, comptime failure_ordering: std.builtin.AtomicOrder) ?T {
+        if (comptime has_native_atomics) {
+            return @cmpxchgWeak(T, ptr, expected_value, new_value, success_ordering, failure_ordering);
+        } else {
+            interrupt.disable_interrupts();
+            defer interrupt.enable_interrupts();
+            const current = ptr.*;
+            if (current == expected_value) {
+                ptr.* = new_value;
+                return null;
+            }
+            return current;
+        }
+    }
+
+    /// Atomic read-modify-write
+    pub fn rmw(comptime T: type, ptr: *T, comptime op: std.builtin.AtomicRmwOp, operand: T, comptime ordering: std.builtin.AtomicOrder) T {
+        if (comptime has_native_atomics) {
+            return @atomicRmw(T, ptr, op, operand, ordering);
+        } else {
+            interrupt.disable_interrupts();
+            defer interrupt.enable_interrupts();
+            const old_value = ptr.*;
+            ptr.* = switch (op) {
+                .Xchg => operand,
+                .Add => old_value +% operand,
+                .Sub => old_value -% operand,
+                .And => old_value & operand,
+                .Nand => ~(old_value & operand),
+                .Or => old_value | operand,
+                .Xor => old_value ^ operand,
+                .Max => @max(old_value, operand),
+                .Min => @min(old_value, operand),
+            };
+            return old_value;
+        }
+    }
+};
+
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.
 /// Available when using a RAM vector table or a RAM image.
 pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
@@ -624,7 +706,7 @@ pub const startup_logic = struct {
         }
 
         // Apply user-set interrupts
-        // TODO: We might want to fail compilation if any interruptt is already set, since that
+        // TODO: We might want to fail compilation if any interrupt is already set, since that
         // could e.g. disable timekeeping
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);

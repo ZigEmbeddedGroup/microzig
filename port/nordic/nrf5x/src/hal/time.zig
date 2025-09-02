@@ -23,7 +23,7 @@ const COMPARE_INDEX = 2;
 const TIMER_BITS = 23;
 
 /// Stored the high bits of the current time, giving us 55 (23+32) instead of just 24 bits
-/// Must use @atomic to load an store from here.
+/// Must use atomic operations to load/store
 var period: u32 = 0;
 
 pub fn init() void {
@@ -102,7 +102,7 @@ pub fn rtc_interrupt() callconv(.c) void {
 }
 
 inline fn next_period() void {
-    _ = @atomicRmw(u32, &period, .Add, 1, .monotonic);
+    _ = microzig.cpu.atomic.add(u32, &period, 1);
 }
 
 /// Calculate the full 55 bit value of the RTC. We have to take into account whether the period
@@ -112,7 +112,7 @@ fn calc_ticks(p: u32, counter: u24) u64 {
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    const p = @atomicLoad(u32, &period, .acquire);
+    const p = microzig.cpu.atomic.load(u32, &period, .acquire);
     const counter = rtc.COUNTER.read().COUNTER;
     const ticks = calc_ticks(p, counter);
     // RTC updates at 32768 hertz, so we can just multiply by 1M, then shift 15
