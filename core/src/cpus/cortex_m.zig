@@ -612,6 +612,15 @@ pub const startup_logic = struct {
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
+        // Apply HAL-level default interrupts first (if any)
+        if (@hasDecl(microzig.hal, "default_interrupts")) {
+            for (@typeInfo(@TypeOf(microzig.hal.default_interrupts)).@"struct".fields) |field| {
+                const handler = @field(microzig.hal.default_interrupts, field.name);
+                    @field(tmp, field.name) = handler;
+            }
+        }
+
+        // User options override chip defaults
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);
             if (maybe_handler) |handler| {
