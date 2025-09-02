@@ -615,8 +615,10 @@ pub const startup_logic = struct {
         // Apply HAL-level default interrupts first (if any)
         if (@hasDecl(microzig.hal, "default_interrupts")) {
             for (@typeInfo(@TypeOf(microzig.hal.default_interrupts)).@"struct".fields) |field| {
-                const handler = @field(microzig.hal.default_interrupts, field.name);
+                const maybe_handler = @field(microzig.hal.default_interrupts, field.name);
+            if (maybe_handler) |handler| {
                     @field(tmp, field.name) = handler;
+            }
             }
         }
 

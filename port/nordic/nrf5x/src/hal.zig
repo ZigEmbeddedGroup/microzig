@@ -10,7 +10,7 @@ pub const uart = @import("hal/uart.zig");
 pub const drivers = @import("hal/drivers.zig");
 // TODO: adc, timers, pwm, rng, rtc alarms, interrupts, wdt, wifi, nfc, bt, zigbee
 
-pub const default_interrupts = .{
+pub const default_interrupts: microzig.cpu.InterruptOptions = .{
     // Required for timekeeping longer than 512 seconds
     .RTC0 = microzig.interrupt.Handler{ .c = time.rtc_interrupt },
 };
