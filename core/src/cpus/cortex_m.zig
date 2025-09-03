@@ -547,7 +547,7 @@ pub const atomic = struct {
 
     /// Atomic add
     pub fn add(comptime T: type, ptr: *T, delta: T) T {
-        if (comptime has_native_atomics) {
+        if (has_native_atomics) {
             return @atomicRmw(T, ptr, .Add, delta, .monotonic);
         } else {
             interrupt.disable_interrupts();
@@ -560,7 +560,7 @@ pub const atomic = struct {
 
     /// Atomic load
     pub fn load(comptime T: type, ptr: *const T, comptime ordering: std.builtin.AtomicOrder) T {
-        if (comptime has_native_atomics) {
+        if (has_native_atomics) {
             return @atomicLoad(T, ptr, ordering);
         } else {
             interrupt.disable_interrupts();
@@ -571,7 +571,7 @@ pub const atomic = struct {
 
     /// Atomic store
     pub fn store(comptime T: type, ptr: *T, value: T, comptime ordering: std.builtin.AtomicOrder) void {
-        if (comptime has_native_atomics) {
+        if (has_native_atomics) {
             @atomicStore(T, ptr, value, ordering);
         } else {
             interrupt.disable_interrupts();
@@ -582,7 +582,7 @@ pub const atomic = struct {
 
     /// Atomic compare and swap
     pub fn cmpxchg(comptime T: type, ptr: *T, expected_value: T, new_value: T, comptime success_ordering: std.builtin.AtomicOrder, comptime failure_ordering: std.builtin.AtomicOrder) ?T {
-        if (comptime has_native_atomics) {
+        if (has_native_atomics) {
             return @cmpxchgWeak(T, ptr, expected_value, new_value, success_ordering, failure_ordering);
         } else {
             interrupt.disable_interrupts();
@@ -598,7 +598,7 @@ pub const atomic = struct {
 
     /// Atomic read-modify-write
     pub fn rmw(comptime T: type, ptr: *T, comptime op: std.builtin.AtomicRmwOp, operand: T, comptime ordering: std.builtin.AtomicOrder) T {
-        if (comptime has_native_atomics) {
+        if (has_native_atomics) {
             return @atomicRmw(T, ptr, op, operand, ordering);
         } else {
             interrupt.disable_interrupts();

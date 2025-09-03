@@ -12,7 +12,7 @@ pub const drivers = @import("hal/drivers.zig");
 
 pub const default_interrupts: microzig.cpu.InterruptOptions = .{
     // Required for timekeeping longer than 512 seconds
-    .RTC0 = microzig.interrupt.Handler{ .c = time.rtc_interrupt },
+    .RTC0 = .{ .c = time.rtc_interrupt },
 };
 
 pub fn init() void {
