@@ -1,9 +1,10 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const printer = @import("printer");
 
 var elf_file_reader_buf: [1024]u8 = undefined;
+var in_stream_buf: [1024]u8 = undefined;
 var out_stream_buf: [1024]u8 = undefined;
-var printer_writer_buf: [512]u8 = undefined;
 
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
@@ -22,10 +23,10 @@ pub fn main() !void {
     defer elf_file.close();
     var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
 
-    var elf = try printer.Elf.init(allocator, &elf_file_reader);
+    var elf: printer.Elf = try .init(allocator, &elf_file_reader);
     defer elf.deinit(allocator);
 
-    var debug_info = try printer.DebugInfo.init(allocator, elf);
+    var debug_info: printer.DebugInfo = try .init(allocator, elf);
     defer debug_info.deinit(allocator);
 
     const input_file = if (args.len <= 2 or std.mem.eql(u8, args[2], "-"))
@@ -33,26 +34,17 @@ pub fn main() !void {
     else
         try std.fs.cwd().openFile(args[2], .{});
     defer input_file.close();
-    var in_stream = input_file.reader(&.{});
+    var in_stream = input_file.reader(&in_stream_buf);
 
     const stdout = std.fs.File.stdout();
     var out_stream = stdout.writer(&out_stream_buf);
     const out_tty_config = std.io.tty.detectConfig(stdout);
 
-    var printer_writer: printer.Writer = .init(
-        &printer_writer_buf,
+    try printer.annotate(
+        &in_stream.interface,
         &out_stream.interface,
         out_tty_config,
         elf,
         &debug_info,
     );
-
-    while (true) {
-        _ = try in_stream.interface.stream(&printer_writer.interface, .unlimited);
-
-        // flush the writers
-        // TODO: Is there a better way to do this?
-        try printer_writer.interface.flush();
-        try out_stream.interface.flush();
-    }
 }

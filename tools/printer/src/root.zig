@@ -4,177 +4,63 @@ const Io = std.Io;
 pub const Elf = @import("Elf.zig");
 pub const DebugInfo = @import("DebugInfo.zig");
 
-// TODO: defmt
-/// Forwards data to the output writer with annotated stack traces.
-pub const Writer = struct {
-    interface: Io.Writer,
-
-    annotator: Annotator = .init,
+/// Reads lines one by one from in_stream and outputs them with annotated
+/// addresses to out_stream. Returns after it reaches the end of the stream.
+pub fn annotate(
+    in_stream: *Io.Reader,
     out_stream: *Io.Writer,
     out_tty_config: std.io.tty.Config,
     elf: Elf,
     debug_info: *DebugInfo,
-
-    pub fn init(
-        buffer: []u8,
-        out_stream: *Io.Writer,
-        out_tty_config: std.io.tty.Config,
-        elf: Elf,
-        debug_info: *DebugInfo,
-    ) Writer {
-        return .{
-            .interface = init_interface(buffer),
-            .out_stream = out_stream,
-            .out_tty_config = out_tty_config,
-            .elf = elf,
-            .debug_info = debug_info,
+) !void {
+    while (true) {
+        const line = in_stream.takeDelimiterInclusive('\n') catch |err| switch (err) {
+            error.ReadFailed => return error.ReadFailed,
+            error.EndOfStream => {
+                try output_line(in_stream.buffered(), out_stream, out_tty_config, elf, debug_info);
+                try out_stream.flush();
+                return;
+            },
+            error.StreamTooLong => return error.StreamTooLong,
         };
+
+        try output_line(line, out_stream, out_tty_config, elf, debug_info);
+        try out_stream.flush();
     }
+}
 
-    pub fn init_interface(buffer: []u8) Io.Writer {
-        return .{
-            .vtable = &.{
-                .drain = drain,
-                .sendFile = Io.Writer.unimplementedSendFile,
-            },
-            .buffer = buffer,
-        };
-    }
+fn output_line(
+    line: []const u8,
+    out_stream: *Io.Writer,
+    out_tty_config: std.io.tty.Config,
+    elf: Elf,
+    debug_info: *DebugInfo,
+) !void {
+    try out_stream.writeAll(line);
 
-    pub fn drain(io_w: *Io.Writer, data: []const []const u8, splat: usize) Io.Writer.Error!usize {
-        const w: *Writer = @alignCast(@fieldParentPtr("interface", io_w));
+    const prefix_index = std.mem.indexOf(u8, line, "0x") orelse return;
+    var after_prefix = line[prefix_index + 2 ..];
 
-        var len: usize = 0;
-
-        const buffered = io_w.buffered();
-        if (buffered.len != 0) {
-            errdefer _ = io_w.consume(len);
-
-            len += try w.process(buffered);
+    var hex_digit_count: u32 = 0;
+    for (after_prefix) |c| {
+        if (!std.ascii.isHex(c) or hex_digit_count > 16) {
+            break;
+        } else {
+            hex_digit_count += 1;
         }
-
-        for (data[0 .. data.len - 1]) |buf| {
-            if (buf.len == 0) continue;
-
-            errdefer _ = io_w.consume(len);
-
-            len += try w.process(buf);
-        }
-
-        const pattern = data[data.len - 1];
-        if (pattern.len == 0 or splat == 0) return io_w.consume(len);
-
-        for (0..splat) |_| {
-            errdefer _ = io_w.consume(len);
-
-            len += try w.process(pattern);
-        }
-
-        return io_w.consume(len);
     }
 
-    fn process(w: *Writer, buf: []const u8) Io.Writer.Error!usize {
-        w.annotator.process(buf, w.out_stream, w.out_tty_config, w.elf, w.debug_info) catch
-            return error.WriteFailed;
-        return buf.len;
-    }
-};
+    if (hex_digit_count != 8 and hex_digit_count != 16) return;
 
-/// Stack traces annotator.
-pub const Annotator = struct {
-    state: State,
-
-    pub const init: Annotator = .{ .state = .waiting };
-
-    pub const State = union(enum) {
-        waiting,
-        reading_address: struct {
-            buf: [16]u8,
-            digit_count: usize,
-        },
-        print_address: u64,
-    };
-
-    /// Forwards data to the output writer with annotated stack traces.
-    pub fn process(
-        self: *Annotator,
-        data: []const u8,
-        out_stream: *Io.Writer,
-        out_tty_config: std.io.tty.Config,
-        elf: Elf,
-        debug_info: *DebugInfo,
-    ) !void {
-        var index: usize = 0;
-
-        loop: switch (self.state) {
-            .waiting => {
-                if (std.mem.indexOf(u8, data[index..], "0x")) |start_hex_index| {
-                    try out_stream.writeAll(data[index..][0 .. start_hex_index + 2]);
-                    index += start_hex_index + 2;
-
-                    continue :loop .{ .reading_address = .{
-                        .buf = undefined,
-                        .digit_count = 0,
-                    } };
-                }
-                self.state = .waiting;
-            },
-            .reading_address => |old_state| {
-                var new_state = old_state;
-
-                while (index < data.len) : ({
-                    index += 1;
-                    new_state.digit_count += 1;
-                }) {
-                    if (std.ascii.isHex(data[index])) {
-                        if (new_state.digit_count >= 16) {
-                            continue :loop .waiting;
-                        }
-
-                        new_state.buf[new_state.digit_count] = data[index];
-                    } else {
-                        if (new_state.digit_count == 8 or new_state.digit_count == 16) {
-                            const address = std.fmt.parseInt(
-                                u64,
-                                new_state.buf[0..new_state.digit_count],
-                                16,
-                            ) catch unreachable; // we know this is valid
-
-                            continue :loop .{ .print_address = address };
-                        } else {
-                            continue :loop .waiting;
-                        }
-                    }
-
-                    try out_stream.writeByte(data[index]);
-                }
-
-                self.state = .{ .reading_address = new_state };
-            },
-            .print_address => |address| {
-                if (std.mem.indexOfScalar(u8, data[index..], '\n')) |new_line_index| {
-                    if (elf.is_address_executable(address)) {
-                        const query_result = debug_info.query(address);
-
-                        try out_stream.writeAll(data[index..][0 .. new_line_index + 1]);
-                        index += new_line_index + 1;
-
-                        try output_location_info(out_stream, out_tty_config, address, query_result);
-                        if (query_result.source_location) |src_loc| {
-                            try output_source_line(out_stream, out_tty_config, src_loc);
-                        }
-                    }
-
-                    continue :loop .waiting;
-                }
-
-                self.state = .{ .print_address = address };
-            },
+    const address = std.fmt.parseInt(u64, after_prefix[0..hex_digit_count], 16) catch unreachable;
+    if (elf.is_address_executable(address)) {
+        const query_result = debug_info.query(address);
+        try output_location_info(out_stream, out_tty_config, address, query_result);
+        if (query_result.source_location) |src_loc| {
+            try output_source_line(out_stream, out_tty_config, src_loc);
         }
-
-        try out_stream.writeAll(data[index..]);
     }
-};
+}
 
 fn output_location_info(
     out_stream: *Io.Writer,
