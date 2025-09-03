@@ -77,7 +77,7 @@ pub const lfclk = struct {
         }
     }
 
-    pub fn set_source(source: Source) !void {
+    pub fn set_source(comptime source: Source) !void {
         switch (version) {
             .nrf51 => {
                 CLOCK.LFCLKSRC.write(.{
@@ -85,7 +85,7 @@ pub const lfclk = struct {
                 });
             },
             .nrf52 => {
-                try source.validate();
+                try comptime source.validate();
                 switch (source) {
                     .RC => CLOCK.LFCLKSRC.write(
                         .{ .SRC = .RC, .BYPASS = .Disabled, .EXTERNAL = .Disabled },
