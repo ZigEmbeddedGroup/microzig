@@ -27,7 +27,7 @@ const TIMER_BITS = 23;
 /// Must use atomic operations to load/store
 var period: u32 = 0;
 
-pub fn init() void {
+pub fn init() !void {
     // We only use 23 of 24 bits of the RTC to avoid a race condition where time_since_boot() is
     // called during an overflow, where we read the high bits, then an overflow occurs, then we read
     // the low bits, which overlowed and would be near 0. This means that we have to increment the
@@ -35,7 +35,7 @@ pub fn init() void {
     // First, when it hits the halfway point, and again on overflow.
 
     // Set clock source and start clock
-    clocks.lfclk.set_source(.RC);
+    try clocks.lfclk.set_source(.RC);
     clocks.lfclk.start();
     clocks.lfclk.calibrate();
 

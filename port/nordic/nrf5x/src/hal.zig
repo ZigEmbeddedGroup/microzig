@@ -17,7 +17,7 @@ pub const default_interrupts: microzig.cpu.InterruptOptions = .{
 };
 
 pub fn init() void {
-    time.init();
+    time.init() catch @panic("cannot init time");
 }
 
 test "hal tests" {
