@@ -8,7 +8,12 @@ pub const spim = @import("hal/spim.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const drivers = @import("hal/drivers.zig");
-// TODO: adc, timers, pwm, rng, rtc, interrupts, i2c, wdt, wifi, nfc, bt, zigbee
+// TODO: adc, timers, pwm, rng, rtc alarms, interrupts, wdt, wifi, nfc, bt, zigbee
+
+pub const default_interrupts: microzig.cpu.InterruptOptions = .{
+    // Required for timekeeping longer than 512 seconds
+    .RTC0 = .{ .c = time.rtc_interrupt },
+};
 
 pub fn init() void {
     time.init();
