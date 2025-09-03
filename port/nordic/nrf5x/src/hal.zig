@@ -1,6 +1,7 @@
 const microzig = @import("microzig");
 
 pub const compatibility = @import("hal/compatibility.zig");
+pub const clocks = @import("hal/clocks.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const i2c = @import("hal/i2c.zig");
 pub const i2cdma = @import("hal/i2cdma.zig");
@@ -20,6 +21,7 @@ pub fn init() void {
 }
 
 test "hal tests" {
+    _ = clocks;
     _ = gpio;
     _ = i2c;
     _ = i2cdma;

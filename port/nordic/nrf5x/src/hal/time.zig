@@ -7,6 +7,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+const clocks = microzig.hal.clocks;
 const compatibility = microzig.hal.compatibility;
 
 const version: enum {
@@ -33,18 +34,11 @@ pub fn init() void {
     // 'period' on two different events:
     // First, when it hits the halfway point, and again on overflow.
 
-    // TODO: Use clocks hal
     // Set clock source and start clock
-    microzig.chip.peripherals.CLOCK.LFCLKSRC.modify(.{ .SRC = .RC });
-    // Start LFCLK
-    switch (version) {
-        .nrf51 => {
-            microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART = 1;
-        },
-        .nrf52 => {
-            microzig.chip.peripherals.CLOCK.TASKS_LFCLKSTART.write_raw(1);
-        },
-    }
+    clocks.lfclk.set_source(.RC);
+    clocks.lfclk.start();
+    clocks.lfclk.calibrate();
+
     // Enable RTC0 interrupt
     microzig.cpu.interrupt.enable(.RTC0);
 
