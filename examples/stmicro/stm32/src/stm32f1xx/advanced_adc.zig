@@ -37,7 +37,7 @@ const v25 = 1.43;
 const avg_slope = 0.0043; //4.3mV/°C
 
 var ovf_flag: bool = false;
-pub fn watchdog_handler() callconv(.C) void {
+pub fn watchdog_handler() callconv(.c) void {
     ovf_flag = true;
     adc.clear_flags(adc.read_flags()); //clear all active flags
 }
@@ -80,7 +80,6 @@ pub fn main() !void {
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
     stm32.uart.init_logger(&uart);

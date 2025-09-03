@@ -87,7 +87,7 @@ pub const VTable = struct {
 /// A device implementation that can be used to write unit tests for datagram devices.
 pub const Test_Device = struct {
     input: ?std.io.FixedBufferStream([]const u8),
-    output: ?std.ArrayList(u8),
+    output: ?std.array_list.Managed(u8),
 
     connected: bool,
 
@@ -103,7 +103,7 @@ pub const Test_Device = struct {
                 null,
 
             .output = if (write_enabled)
-                std.ArrayList(u8).init(std.testing.allocator)
+                std.array_list.Managed(u8).init(std.testing.allocator)
             else
                 null,
         };

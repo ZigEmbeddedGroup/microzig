@@ -20,7 +20,7 @@ pub fn main() !void {
     if (args.next() != null)
         return error.TooManyArgs;
 
-    var components = std.ArrayList([]const u8).init(gpa.allocator());
+    var components = std.array_list.Managed([]const u8).init(gpa.allocator());
     defer components.deinit();
 
     {

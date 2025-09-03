@@ -7,7 +7,6 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 
 const uart = rp2xxx.uart.instance.num(0);
-const logger_baud_rate = 1_000_000;
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
@@ -53,7 +52,6 @@ pub fn main() !void {
     pin_config.apply();
 
     uart.apply(.{
-        .baud_rate = logger_baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);

@@ -35,7 +35,7 @@ pub fn dir(fs: *VirtualFilesystem) Directory {
 }
 
 fn create_file(ctx: *anyopaque, path: []const u8, content: []const u8) Directory.CreateFileError!void {
-    const fs: *VirtualFilesystem = @alignCast(@ptrCast(ctx));
+    const fs: *VirtualFilesystem = @ptrCast(@alignCast(ctx));
     const path_copy = try fs.gpa.dupe(u8, path);
     const content_copy = try fs.gpa.dupe(u8, content);
     // TODO: clean up collisions

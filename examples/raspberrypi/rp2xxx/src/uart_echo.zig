@@ -8,7 +8,6 @@ const clocks = rp2xxx.clocks;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
@@ -21,7 +20,6 @@ pub fn main() !void {
     }
 
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
 

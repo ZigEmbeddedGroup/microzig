@@ -46,7 +46,9 @@ pub fn build(b: *std.Build) void {
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
+        .{ .name = "i2c-accel", .file = "src/i2c_accel.zig" },
         .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
+        .{ .name = "i2c-hall-effect", .file = "src/i2c_hall_effect.zig" },
         .{ .name = "pwm", .file = "src/pwm.zig" },
         .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
@@ -70,7 +72,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
     };
 
-    var available_examples = std.ArrayList(Example).init(b.allocator);
+    var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         available_examples.append(.{

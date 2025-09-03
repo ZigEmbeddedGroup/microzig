@@ -45,11 +45,15 @@ const exe_targets: []const std.Target.Query = &.{
 pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
-    const generate_linker_script_exe = b.addExecutable(.{
-        .name = "generate_linker_script",
+    const generate_linker_script_mod = b.createModule(.{
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.graph.host,
         .optimize = optimize,
+    });
+
+    const generate_linker_script_exe = b.addExecutable(.{
+        .name = "generate_linker_script",
+        .root_module = generate_linker_script_mod,
     });
 
     generate_linker_script_exe.root_module.addImport(
@@ -366,11 +370,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
         };
 
         fn serialize_patches(b: *Build, patches: []const regz.patch.Patch) []const u8 {
-            var buf = std.ArrayList(u8).init(b.allocator);
+            var buf: std.Io.Writer.Allocating = .init(b.allocator);
 
             for (patches) |patch| {
-                std.json.stringify(patch, .{}, buf.writer()) catch @panic("OOM");
-                buf.writer().writeByte('\n') catch @panic("OOM");
+                buf.writer.print("{f}", .{std.json.fmt(patch, .{})}) catch @panic("OOM");
+                buf.writer.writeByte('\n') catch @panic("OOM");
             }
 
             return buf.toOwnedSlice() catch @panic("OOM");
@@ -457,7 +461,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
+                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
                     // From chip definition
                     patches.appendSlice(target.chip.patches) catch @panic("OOM");
@@ -488,7 +492,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
+                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
                     // From chip definition
                     patches.appendSlice(target.chip.patches) catch @panic("OOM");
@@ -597,7 +601,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .ram_image = target.ram_image,
                 };
 
-                const args_str = std.json.stringifyAlloc(
+                const args_str = std.json.Stringify.valueAlloc(
                     b.allocator,
                     generate_linker_script_args,
                     .{},

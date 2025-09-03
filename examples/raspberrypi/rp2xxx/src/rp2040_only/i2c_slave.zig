@@ -6,7 +6,6 @@ const i2c = rp2xxx.i2c;
 const time = rp2xxx.time;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 const pin_config = rp2xxx.pins.GlobalConfiguration{
@@ -35,7 +34,6 @@ pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);

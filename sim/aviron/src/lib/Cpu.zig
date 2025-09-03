@@ -111,7 +111,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             //     fmtInstruction(inst),
             // });
 
-            std.debug.print("TRACE {s} {} [", .{
+            std.debug.print("TRACE {s} {f} [", .{
                 if (skip) "SKIP" else "    ",
                 cpu.sreg,
             });
@@ -122,7 +122,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                 std.debug.print("{X:0>2}", .{reg});
             }
 
-            std.debug.print("] 0x{X:0>6}: {}\n", .{
+            std.debug.print("] 0x{X:0>6}: {f}\n", .{
                 pc,
                 fmt_instruction(inst),
             });
@@ -1545,9 +1545,7 @@ pub const SREG = packed struct(u8) {
         sreg.* = @bitCast(val);
     }
 
-    pub fn format(sreg: SREG, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = opt;
-        _ = fmt;
+    pub fn format(sreg: SREG, writer: *std.Io.Writer) !void {
         try writer.print("[{c}{c}{c}{c}{c}{c}{c}{c}]", .{
             if (sreg.c) @as(u8, 'C') else '-',
             if (sreg.z) @as(u8, 'Z') else '-',
@@ -1661,13 +1659,11 @@ fn decompose16(value: u16) [2]u8 {
     };
 }
 
-fn fmt_instruction(inst: isa.Instruction) std.fmt.Formatter(format_instruction) {
+fn fmt_instruction(inst: isa.Instruction) std.fmt.Alt(isa.Instruction, format_instruction) {
     return .{ .data = inst };
 }
 
-fn format_instruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-    _ = opt;
-    _ = fmt;
+fn format_instruction(inst: isa.Instruction, writer: *std.Io.Writer) !void {
     try writer.print(" {s: <8}", .{@tagName(inst)});
 
     switch (inst) {
@@ -1676,11 +1672,17 @@ fn format_instruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.Forma
             if (T != void) {
                 const info = @typeInfo(T).@"struct";
 
-                inline for (info.fields, 0..) |fld, i| {
+                inline for (info.fields, 0..) |field, i| {
                     if (i > 0) {
                         try writer.writeAll(", ");
                     }
-                    try writer.print("{s}={}", .{ fld.name, @field(args, fld.name) });
+
+                    const field_info = @typeInfo(field.type);
+                    if (field_info == .int) {
+                        try writer.print("{s}={}", .{ field.name, @field(args, field.name) });
+                    } else {
+                        try writer.print("{s}={f}", .{ field.name, @field(args, field.name) });
+                    }
                 }
             }
         },

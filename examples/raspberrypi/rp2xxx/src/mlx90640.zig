@@ -10,7 +10,6 @@ const MLX90640 = sensor.MLX90640;
 const time = rp2xxx.time;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 var i2c0 = i2c.instance.num(0);
@@ -27,10 +26,11 @@ pub const microzig_options = microzig.Options{
 pub fn main() !void {
     try init();
 
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x33), null);
+    var i2c_device = I2C_Device.init(i2c0, null);
 
     var camera = try MLX90640.init(.{
-        .i2c = i2c_device.datagram_device(),
+        .i2c = i2c_device.i2c_device(),
+        .address = @enumFromInt(0x33),
         .clock = rp2xxx.drivers.clock_device(),
     });
 
@@ -61,7 +61,7 @@ pub fn main() !void {
         }
 
         for (0..24) |i| {
-            std.log.debug("{d:.3}\n", .{x[i]});
+            std.log.debug("{any:.3}\n", .{x[i]});
         }
         time.sleep_ms(100);
     }
@@ -70,7 +70,6 @@ pub fn main() !void {
 fn init() !void {
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
 

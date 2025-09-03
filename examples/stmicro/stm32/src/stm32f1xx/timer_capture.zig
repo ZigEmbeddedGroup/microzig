@@ -38,7 +38,7 @@ var duty_cycle: f32 = 0;
 //since the timer is reset at each rising edge,
 //the value of ch2 marks the moment when the signal went from high to low, indicating the duty cycle.
 //the value of ch1 marks the point when the signal goes back to high before the timer resets, indicating the period.
-fn isr_tim2() callconv(.C) void {
+fn isr_tim2() callconv(.c) void {
     const flags = comp.get_interrupt_flags();
     if (flags.channel2) {
         const rev_ch1 = comp.read_ccr(0);
@@ -78,7 +78,6 @@ pub fn main() !void {
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 

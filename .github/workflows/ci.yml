@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.14.1
+  ZIG_VERSION: 0.15.1
 
 jobs:
   formatting-check:
@@ -221,7 +221,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.1
       - name: Build Website
         run: zig build
         working-directory: website

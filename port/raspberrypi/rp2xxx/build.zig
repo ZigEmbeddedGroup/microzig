@@ -34,9 +34,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const pico_sdk = b.dependency("pico-sdk", .{});
+    const bounded_array_dep = b.dependency("bounded-array", .{});
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
+        .imports = b.allocator.dupe(std.Build.Module.Import, &.{.{
+            .name = "bounded-array",
+            .module = bounded_array_dep.module("bounded-array"),
+        }}) catch @panic("OOM"),
     };
 
     const chip_rp2040: microzig.Target = .{
@@ -181,6 +186,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .ram_image = true,
                     // we can use the default generated linker script
                     .linker_script = .{},
+                    .entry = .{ .symbol_name = "_entry_point" },
                     .board = .{
                         .name = "RaspberryPi Pico (ram image)",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
@@ -199,6 +205,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .linker_script = .{
                         .file = b.path("ld/rp2350/arm_ram_image_sections.ld"),
                     },
+                    .entry = .{ .symbol_name = "_entry_point" },
                     .board = .{
                         .name = "RaspberryPi Pico 2 (ram image)",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
@@ -266,10 +273,20 @@ pub fn build(b: *std.Build) !void {
     // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
 
     const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
+
+    const bounded_array_dep = b.dependency("bounded-array", .{});
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/hal.zig"),
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hal.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{
+                .name = "bounded-array",
+                .module = bounded_array_dep.module("bounded-array"),
+            }},
+        }),
     });
     unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
 
@@ -294,9 +311,11 @@ fn get_bootrom(b: *std.Build, target: *const microzig.Target, rom: BootROM) std.
     zig_target.abi = .eabi;
 
     const rom_exe = b.addExecutable(.{
-        .name = b.fmt("stage2-{s}", .{@tagName(rom)}),
-        .optimize = .ReleaseSmall,
-        .target = b.resolveTargetQuery(zig_target),
+        .name = b.fmt("stage2-{t}", .{rom}),
+        .root_module = b.createModule(.{
+            .optimize = .ReleaseSmall,
+            .target = b.resolveTargetQuery(zig_target),
+        }),
     });
 
     //rom_exe.linkage = .static;

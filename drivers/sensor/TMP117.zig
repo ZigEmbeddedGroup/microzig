@@ -10,7 +10,8 @@ const mdf = @import("../framework.zig");
 
 pub const TMP117 = struct {
     const Self = @This();
-    dev: mdf.base.Datagram_Device,
+    dev: mdf.base.I2C_Device,
+    address: mdf.base.I2C_Device.Address,
 
     const register = enum(u8) {
         temp_result = 0x00,
@@ -45,20 +46,21 @@ pub const TMP117 = struct {
         revision: u4,
     };
 
-    pub fn init(dev: mdf.base.Datagram_Device) !Self {
-        return Self{ .dev = dev };
+    pub fn init(dev: mdf.base.I2C_Device, address: mdf.base.I2C_Device.Address) !Self {
+        return Self{ .dev = dev, .address = address };
     }
 
     pub inline fn read_raw(self: *const Self, reg: Self.register) !u16 {
-        try self.dev.write(&[_]u8{@intFromEnum(reg)});
+        try self.dev.write(self.address, &[_]u8{@intFromEnum(reg)});
         var buf: [2]u8 = undefined;
-        const size = try self.dev.read(&buf);
+        const size = try self.dev.read(self.address, &buf);
         if (size != 2) return error.ReadError;
         return std.mem.readInt(u16, &buf, .big);
     }
 
     pub inline fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
         return self.dev.write(
+            self.address,
             &([1]u8{@intFromEnum(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
         );
     }

@@ -28,7 +28,7 @@ pub const Events = packed struct(u3) {
 };
 
 pub fn enter_config_mode() void {
-    while (rtc.CRL.read().RTOFF == .Ongoing) asm volatile ("" ::: "memory");
+    while (rtc.CRL.read().RTOFF == .Ongoing) asm volatile ("" ::: .{ .memory = true });
     //enter in config mode
     rtc.CRL.modify_one("CNF", 1);
 }
@@ -37,7 +37,7 @@ pub fn exit_config_mode() void {
     //exit config mode
     rtc.CRL.modify_one("CNF", 0);
     //wait for the config to finish
-    while (rtc.CRL.read().RTOFF == .Ongoing) asm volatile ("" ::: "memory");
+    while (rtc.CRL.read().RTOFF == .Ongoing) asm volatile ("" ::: .{ .memory = true });
 }
 
 pub fn apply(config: Config) void {
@@ -85,7 +85,7 @@ pub fn apply_interrupts(config: InterruptConfig) void {
 ///After a reset, reading RTC registers may return unsynchronized or corrupted data.
 pub fn busy_sync() void {
     const cr = rtc.CRL.read();
-    while (cr.RSF == 0) asm volatile ("" ::: "memory");
+    while (cr.RSF == 0) asm volatile ("" ::: .{ .memory = true });
     rtc.CRL.modify_one("RSF", 0);
 }
 

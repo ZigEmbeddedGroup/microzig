@@ -47,7 +47,7 @@ fn write_device_files(
     }
 }
 
-fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8, writer: anytype) !void {
+fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8, writer: *std.Io.Writer) !void {
     const public: []const u8 = if (types_public) "pub" else "";
     if (opts.for_microzig) {
         try writer.print(
@@ -75,10 +75,9 @@ fn write_device_file(
     dir: Directory,
     opts: ToZigOptions,
 ) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
-    const writer = buffer.writer();
     if (device.description) |description| {
         try write_file_comment(arena, description, writer);
     }
@@ -99,7 +98,7 @@ fn write_device_file(
     if (properties.len > 0) {
         try writer.writeAll("pub const properties = struct {\n");
         for (properties) |prop| {
-            try writer.print("pub const {} = ", .{
+            try writer.print("pub const {f} = ", .{
                 std.zig.fmtId(prop.key),
             });
 
@@ -128,27 +127,31 @@ fn write_device_file(
         try writer.writeAll("};\n");
     }
 
-    try buffer.writer().writeByte(0);
-    var ast = try std.zig.Ast.parse(arena, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
+    try writer.writeByte(0);
+
+    var ast = try std.zig.Ast.parse(arena, to_zero_sentinel(buf.written()), .zig);
     defer ast.deinit(arena);
 
     if (ast.errors.len > 0) {
-        log.err("Failed to parse:\n{s}", .{buffer.items});
+        log.err("Failed to parse:\n{s}", .{buf.written()});
         //try out_writer.writeAll(buffer.items);
         for (ast.errors) |err| {
             std.log.err("err: {}", .{err});
-            var err_msg = std.ArrayList(u8).init(arena);
+            var err_msg: std.Io.Writer.Allocating = .init(arena);
             defer err_msg.deinit();
 
-            try ast.renderError(err, err_msg.writer());
-            std.log.err("  {s}", .{err_msg.items});
+            try ast.renderError(err, &err_msg.writer);
+            std.log.err("  {s}", .{err_msg.written()});
         }
         return error.FailedToParse;
     }
 
-    const text = try ast.render(arena);
+    var rendered_buffer: std.Io.Writer.Allocating = .init(arena);
+    const fixups: std.zig.Ast.Render.Fixups = .{};
+    try ast.render(arena, &rendered_buffer.writer, fixups);
+
     const filename = try std.fmt.allocPrint(arena, "{s}.zig", .{device.name});
-    try dir.create_file(filename, text);
+    try dir.create_file(filename, rendered_buffer.written());
 }
 
 fn write_types_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZigOptions) !void {
@@ -161,12 +164,14 @@ fn write_types_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZi
 }
 
 fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZigOptions) !void {
-    var index_content = std.ArrayList(u8).init(arena);
-    const index_writer = index_content.writer();
+    var index_content: std.Io.Writer.Allocating = .init(arena);
+    const index_writer = &index_content.writer;
+
     const peripherals = try db.get_peripherals(arena);
     for (peripherals) |peripheral| {
-        var periph_content = std.ArrayList(u8).init(arena);
-        const writer = periph_content.writer();
+        var periph_content: std.Io.Writer.Allocating = .init(arena);
+        const writer = &periph_content.writer;
+
         try write_imports(opts, false, "../../types.zig", writer);
         write_peripheral(db, arena, &peripheral, writer) catch |err| {
             log.warn("failed to generate peripheral '{s}': {}", .{
@@ -182,15 +187,18 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
         });
 
         try writer.writeByte(0);
-        var ast = try std.zig.Ast.parse(arena, periph_content.items[0 .. periph_content.items.len - 1 :0], .zig);
+        var ast = try std.zig.Ast.parse(arena, to_zero_sentinel(periph_content.written()), .zig);
         defer ast.deinit(arena);
 
-        const text = try ast.render(arena);
-        try dir.create_file(path, text);
+        var rendered_buffer: std.Io.Writer.Allocating = .init(arena);
+        const fixups: std.zig.Ast.Render.Fixups = .{};
+        try ast.render(arena, &rendered_buffer.writer, fixups);
+
+        try dir.create_file(path, rendered_buffer.written());
 
         if (try db.struct_is_zero_sized(arena, peripheral.struct_id)) {
             try index_writer.print(
-                \\pub const {} = @import("peripherals/{s}.zig");
+                \\pub const {f} = @import("peripherals/{s}.zig");
                 \\
             , .{
                 std.zig.fmtId(peripheral.name),
@@ -198,7 +206,7 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
             });
         } else {
             try index_writer.print(
-                \\pub const {} = @import("peripherals/{s}.zig").{};
+                \\pub const {f} = @import("peripherals/{s}.zig").{f};
                 \\
             , .{
                 std.zig.fmtId(peripheral.name),
@@ -208,24 +216,25 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
         }
     }
 
-    try dir.create_file("types/peripherals.zig", index_content.items);
+    try dir.create_file("types/peripherals.zig", index_content.written());
 }
 
-pub fn write_file_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+pub fn write_file_comment(allocator: Allocator, comment: []const u8, writer: *std.Io.Writer) !void {
     try write_comment(allocator, "//!", comment, writer);
 }
 
-pub fn write_doc_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+pub fn write_doc_comment(allocator: Allocator, comment: []const u8, writer: *std.Io.Writer) !void {
     try write_comment(allocator, "///", comment, writer);
 }
 
-pub fn write_regular_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+pub fn write_regular_comment(allocator: Allocator, comment: []const u8, writer: *std.Io.Writer) !void {
     try write_comment(allocator, "//", comment, writer);
 }
 
-fn write_comment(allocator: Allocator, comptime comment_prefix: []const u8, comment: []const u8, writer: anytype) !void {
-    var tokenized = std.ArrayList(u8).init(allocator);
+fn write_comment(allocator: Allocator, comptime comment_prefix: []const u8, comment: []const u8, writer: *std.Io.Writer) !void {
+    var tokenized: std.Io.Writer.Allocating = .init(allocator);
     defer tokenized.deinit();
+    const tokenized_writer = &tokenized.writer;
 
     var first = true;
     var tok_it = std.mem.tokenizeAny(u8, comment, "\n\r \t");
@@ -233,12 +242,12 @@ fn write_comment(allocator: Allocator, comptime comment_prefix: []const u8, comm
         if (!first)
             first = false
         else
-            try tokenized.writer().writeByte(' ');
+            try tokenized_writer.writeByte(' ');
 
-        try tokenized.writer().writeAll(token);
+        try tokenized_writer.writeAll(token);
     }
 
-    const unescaped = try std.mem.replaceOwned(u8, allocator, tokenized.items, "\\n", "\n");
+    const unescaped = try std.mem.replaceOwned(u8, allocator, tokenized.written(), "\\n", "\n");
     defer allocator.free(unescaped);
 
     var line_it = std.mem.tokenizeScalar(u8, unescaped, '\n');
@@ -246,7 +255,7 @@ fn write_comment(allocator: Allocator, comptime comment_prefix: []const u8, comm
         try writer.print("{s}{s}\n", .{ comment_prefix, line });
 }
 
-fn write_string(str: []const u8, writer: anytype) !void {
+fn write_string(str: []const u8, writer: *std.Io.Writer) !void {
     if (std.mem.containsAtLeast(u8, str, 1, "\n")) {
         try writer.writeByte('\n');
         var line_it = std.mem.splitScalar(u8, str, '\n');
@@ -257,11 +266,10 @@ fn write_string(str: []const u8, writer: anytype) !void {
     }
 }
 
-fn write_device(db: *Database, arena: Allocator, device: *const Database.Device, out_writer: anytype) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
+fn write_device(db: *Database, arena: Allocator, device: *const Database.Device, out_writer: *std.Io.Writer) !void {
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
-    const writer = buffer.writer();
     if (device.description) |description| {
         try write_doc_comment(arena, description, writer);
     }
@@ -306,7 +314,7 @@ fn write_device(db: *Database, arena: Allocator, device: *const Database.Device,
 
     try writer.writeAll("};\n");
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 const TypeID = union(enum) {
@@ -318,8 +326,8 @@ const TypeID = union(enum) {
 // code. Since this is only used in code generation, just going to stuff it in
 // the arena allocator
 fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]const u8 {
-    var full_name_components = std.ArrayList([]const u8).init(allocator);
-    defer full_name_components.deinit();
+    var full_name_components: std.ArrayList([]const u8) = .empty;
+    defer full_name_components.deinit(allocator);
 
     var current_id = type_id;
 
@@ -342,7 +350,7 @@ fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]cons
                 const name_copy = try allocator.dupe(u8, e.name.?);
                 errdefer allocator.free(name_copy);
 
-                try full_name_components.insert(0, name_copy);
+                try full_name_components.insert(allocator, 0, name_copy);
             },
             .@"struct" => |id| if (try db.get_struct_decl(allocator, id)) |struct_decl| {
                 defer struct_decl.deinit(allocator);
@@ -351,7 +359,7 @@ fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]cons
                 const name_copy = try allocator.dupe(u8, struct_decl.name);
                 errdefer allocator.free(name_copy);
 
-                try full_name_components.insert(0, name_copy);
+                try full_name_components.insert(allocator, 0, name_copy);
                 current_id = .{ .@"struct" = struct_decl.parent_id };
             } else if (try db.get_peripheral_by_struct_id(allocator, id)) |peripheral| {
                 defer peripheral.deinit(allocator);
@@ -359,7 +367,7 @@ fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]cons
                 const name_copy = try allocator.dupe(u8, peripheral.name);
                 errdefer allocator.free(name_copy);
 
-                try full_name_components.insert(0, name_copy);
+                try full_name_components.insert(allocator, 0, name_copy);
                 break;
             } else @panic("A struct should have some sort of decl entry"),
         }
@@ -368,31 +376,29 @@ fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]cons
     if (full_name_components.items.len == 0)
         return error.CantReference;
 
-    var full_name = std.ArrayList(u8).init(allocator);
+    var full_name: std.Io.Writer.Allocating = .init(allocator);
     defer full_name.deinit();
+    const writer = &full_name.writer;
 
-    const writer = full_name.writer();
     try writer.writeAll("types.peripherals");
 
     for (full_name_components.items) |component|
-        try writer.print(".{}", .{
+        try writer.print(".{f}", .{
             std.zig.fmtId(component),
         });
 
-    log.debug("generated type ref: {s}", .{full_name.items});
-    return full_name.toOwnedSlice();
+    log.debug("generated type ref: {s}", .{full_name.written()});
+    return try full_name.toOwnedSlice();
 }
 
 fn write_interrupt_list(
     db: *Database,
     arena: Allocator,
     device: *const Device,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
-
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
     const interrupts = try db.get_interrupts(arena, device.id);
     defer {
@@ -449,19 +455,17 @@ fn write_interrupt_list(
         try writer.writeAll("};\n");
     }
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 fn write_vector_table(
     db: *Database,
     arena: Allocator,
     device: *const Device,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
-
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
     if (device.arch.is_arm())
         try arm.write_interrupt_vector(db, arena, device, writer)
@@ -474,7 +478,7 @@ fn write_vector_table(
     else
         unreachable;
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 fn get_device_peripheral_description(
@@ -496,13 +500,13 @@ fn write_device_peripheral(
     db: *Database,
     arena: Allocator,
     instance: *const DevicePeripheral,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("writing periph instance", .{});
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
 
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
+
     const type_ref = try types_reference(db, arena, .{ .@"struct" = instance.struct_id });
 
     if (try get_device_peripheral_description(db, arena, instance)) |description|
@@ -518,14 +522,14 @@ fn write_device_peripheral(
     else
         "";
 
-    try writer.print("pub const {}: *volatile {s}{s} = @ptrFromInt(0x{x});\n", .{
+    try writer.print("pub const {f}: *volatile {s}{s} = @ptrFromInt(0x{x});\n", .{
         std.zig.fmtId(instance.name),
         array_prefix,
         type_ref,
         instance.offset_bytes,
     });
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 fn write_struct(
@@ -533,7 +537,7 @@ fn write_struct(
     arena: Allocator,
     block_size_bytes: ?u64,
     struct_id: StructID,
-    writer: anytype,
+    writer: *std.Io.Writer,
 ) anyerror!void {
     const registers = try db.get_struct_registers(arena, struct_id);
     const nested_struct_fields = try db.get_nested_struct_fields_with_calculated_size(arena, struct_id);
@@ -558,7 +562,7 @@ fn write_struct_body(
     arena: Allocator,
     block_size_bytes: ?u64,
     struct_id: StructID,
-    writer: anytype,
+    writer: *std.Io.Writer,
 ) !void {
     const registers = try db.get_struct_registers(arena, struct_id);
     const nested_struct_fields = try db.get_nested_struct_fields_with_calculated_size(arena, struct_id);
@@ -601,31 +605,32 @@ fn write_struct_decl(
     description: ?[]const u8,
     block_size_bytes: ?u64,
     struct_id: StructID,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("writing struct decl: name='{s}'", .{name});
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
 
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
+
     try writer.writeByte('\n');
     if (description) |d|
         try write_doc_comment(arena, d, writer);
 
-    try writer.print("pub const {} = ", .{
+    try writer.print("pub const {f} = ", .{
         std.zig.fmtId(name),
     });
 
     try write_struct(db, arena, block_size_bytes, struct_id, writer);
     try writer.writeAll(";\n");
-    try out_writer.writeAll(buffer.items);
+
+    try out_writer.writeAll(buf.written());
 }
 
 fn write_peripheral(
     db: *Database,
     arena: Allocator,
     peripheral: *const Peripheral,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("writing peripheral: name='{s}'", .{peripheral.name});
     if (try db.struct_is_zero_sized(arena, peripheral.struct_id)) {
@@ -649,18 +654,16 @@ fn write_peripheral(
     }
 }
 
-fn write_newline_if_written(writer: anytype, written: *bool) !void {
+fn write_newline_if_written(writer: *std.Io.Writer, written: *bool) !void {
     if (written.*)
         try writer.writeByte('\n')
     else
         written.* = true;
 }
 
-fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: anytype) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
-
-    const writer = buffer.writer();
+fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: *std.Io.Writer) !void {
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
     // TODO: handle this instead of assert
     // assert(std.math.ceilPowerOfTwo(field_set.count()) <= size);
@@ -668,21 +671,20 @@ fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: anyty
     if (e.description) |description|
         try write_doc_comment(arena, description, writer);
 
-    try writer.print("pub const {} = enum(u{}) {{\n", .{
+    try writer.print("pub const {f} = enum(u{}) {{\n", .{
         std.zig.fmtId(e.name.?),
         e.size_bits,
     });
     try write_enum_fields(db, arena, e, writer);
     try writer.writeAll("};\n");
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
-fn write_enum_fields(db: *Database, arena: Allocator, e: *const Enum, out_writer: anytype) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
+fn write_enum_fields(db: *Database, arena: Allocator, e: *const Enum, out_writer: *std.Io.Writer) !void {
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
-    const writer = buffer.writer();
     const enum_fields = try db.get_enum_fields(arena, e.id, .{ .distinct = true });
 
     for (enum_fields) |enum_field|
@@ -692,37 +694,36 @@ fn write_enum_fields(db: *Database, arena: Allocator, e: *const Enum, out_writer
     if (enum_fields.len < std.math.pow(u64, 2, e.size_bits))
         try writer.writeAll("_,\n");
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 fn write_enum_field(
     arena: Allocator,
     enum_field: *const EnumField,
     size: u64,
-    writer: anytype,
+    writer: *std.Io.Writer,
 ) !void {
     // TODO: use size to print the hex value (pad with zeroes accordingly)
     _ = size;
     if (enum_field.description) |description|
         try write_doc_comment(arena, description, writer);
 
-    try writer.print("{} = 0x{x},\n", .{ std.zig.fmtId(enum_field.name), enum_field.value });
+    try writer.print("{f} = 0x{x},\n", .{ std.zig.fmtId(enum_field.name), enum_field.value });
 }
 
 fn write_mode_enum_and_fn(
     db: *Database,
     arena: Allocator,
     modes: []const Mode,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
-    const writer = buffer.writer();
     try writer.writeAll("pub const Mode = enum {\n");
 
     for (modes) |mode| {
-        try writer.print("{},\n", .{std.zig.fmtId(mode.name)});
+        try writer.print("{f},\n", .{std.zig.fmtId(mode.name)});
     }
 
     try writer.writeAll(
@@ -733,12 +734,12 @@ fn write_mode_enum_and_fn(
     );
 
     for (modes) |mode| {
-        var components = std.ArrayList([]const u8).init(db.gpa);
-        defer components.deinit();
+        var components: std.ArrayList([]const u8) = .empty;
+        defer components.deinit(db.gpa);
 
         var tok_it = std.mem.tokenizeScalar(u8, mode.qualifier, '.');
         while (tok_it.next()) |token|
-            try components.append(token);
+            try components.append(db.gpa, token);
 
         const field_name = components.items[components.items.len - 1];
         const access_path = try std.mem.join(arena, ".", components.items[1 .. components.items.len - 1]);
@@ -754,7 +755,7 @@ fn write_mode_enum_and_fn(
             const value = try std.fmt.parseInt(u64, token, 0);
             try writer.print("{},\n", .{value});
         }
-        try writer.print("=> return .{},\n", .{std.zig.fmtId(mode.name)});
+        try writer.print("=> return .{f},\n", .{std.zig.fmtId(mode.name)});
         try writer.writeAll("else => {},\n");
         try writer.writeAll("}\n");
         try writer.writeAll("}\n");
@@ -763,7 +764,7 @@ fn write_mode_enum_and_fn(
     try writer.writeAll("\nunreachable;\n");
     try writer.writeAll("}\n");
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 fn write_registers_and_nested_structs(
@@ -774,7 +775,7 @@ fn write_registers_and_nested_structs(
     modes: []const Mode,
     registers: []Register,
     nested_struct_fields: []NestedStructField,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("write_registers: modes.len={}", .{modes.len});
     if (modes.len > 0)
@@ -789,16 +790,16 @@ fn write_registers_with_modes(
     struct_id: StructID,
     block_size_bytes: ?u64,
     modes: []const Mode,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("write_registers_with_modes", .{});
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
 
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
+
     for (modes) |mode| {
         const registers = try db.get_registers_with_mode(arena, struct_id, mode.id);
-        try writer.print("{}: extern struct {{\n", .{
+        try writer.print("{f}: extern struct {{\n", .{
             std.zig.fmtId(mode.name),
         });
 
@@ -808,7 +809,7 @@ fn write_registers_with_modes(
         try writer.writeAll("},\n");
     }
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 const StructFieldIterator = struct {
@@ -822,7 +823,7 @@ const StructFieldIterator = struct {
     fn init(registers: []const Register, nested_struct_fields: []const NestedStructField) StructFieldIterator {
         assert(std.sort.isSorted(Register, registers, {}, Register.less_than));
         assert(std.sort.isSorted(NestedStructField, nested_struct_fields, {}, NestedStructField.less_than));
-        return StructFieldIterator{
+        return .{
             .registers = registers,
             .nested_struct_fields = nested_struct_fields,
         };
@@ -1025,7 +1026,7 @@ const StructFieldIterator = struct {
     }
 };
 
-fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const NestedStructField, writer: anytype) !void {
+fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const NestedStructField, writer: *std.Io.Writer) !void {
     if (nsf.description) |description|
         try write_doc_comment(arena, description, writer);
 
@@ -1034,7 +1035,7 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
         try std.fmt.bufPrint(&offset_buf, "offset: 0x{x:0>2}", .{nsf.offset_bytes});
     try write_doc_comment(arena, offset_str, writer);
 
-    try writer.print("{}: ", .{std.zig.fmtId(nsf.name)});
+    try writer.print("{f}: ", .{std.zig.fmtId(nsf.name)});
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix: []const u8 = if (nsf.count) |count|
         try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
@@ -1045,7 +1046,7 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
     // TODO: if it's a struct decl then refer to it by name
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
         // TODO full reference?
-        try writer.print("{},\n", .{std.zig.fmtId(struct_decl.name)});
+        try writer.print("{f},\n", .{std.zig.fmtId(struct_decl.name)});
     } else {
         try write_struct(db, arena, null, nsf.struct_id, writer);
         try writer.writeAll(",\n");
@@ -1058,15 +1059,14 @@ fn write_registers_and_nested_structs_base(
     block_size_bytes: ?u64,
     registers: []Register,
     nested_struct_fields: []NestedStructField,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("registers.len={} nested_struct_fields.len={}", .{ registers.len, nested_struct_fields.len });
     var it: StructFieldIterator = .init(registers, nested_struct_fields);
 
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
 
-    const writer = buffer.writer();
     var minimum_size: u64 = 0;
     while (it.next()) |entry| {
         switch (entry) {
@@ -1092,20 +1092,20 @@ fn write_registers_and_nested_structs_base(
             });
     }
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 fn write_register(
     db: *Database,
     arena: Allocator,
     register: *const Register,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     log.debug("write_register: {}", .{register.*});
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
 
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
+
     if (register.description) |description|
         try write_doc_comment(arena, description, writer);
 
@@ -1124,7 +1124,7 @@ fn write_register(
     // TODO: named struct type
     const fields = try db.get_register_fields(arena, register.id, .{});
     if (fields.len > 0) {
-        try writer.print("{}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
+        try writer.print("{f}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
             std.zig.fmtId(register.name),
             array_prefix,
             register.size_bits,
@@ -1133,14 +1133,14 @@ fn write_register(
         try write_fields(db, arena, fields, register.size_bits, writer);
         try writer.writeAll("}),\n");
     } else {
-        try writer.print("{}: {s}u{},\n", .{
+        try writer.print("{f}: {s}u{},\n", .{
             std.zig.fmtId(register.name),
             array_prefix,
             register.size_bits,
         });
     }
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
 }
 
 /// Determine if a field comes before another, i.e. has a lower bit offset in the register
@@ -1154,11 +1154,11 @@ fn write_fields(
     arena: Allocator,
     fields: []const Database.StructField,
     register_size_bits: u64,
-    out_writer: anytype,
+    out_writer: *std.Io.Writer,
 ) !void {
     // We first expand every 'array field' into its consituent fields,
     // named e.g. `@OISN[0]`, `@OISN[1]`, etc. for `field.name` OISN.
-    var expanded_fields = std.ArrayList(Database.StructField).init(arena);
+    var expanded_fields: std.ArrayList(Database.StructField) = .empty;
     for (fields) |field| {
         if (field.count) |count| {
             var stride = field.stride orelse field.size_bits;
@@ -1173,9 +1173,9 @@ fn write_fields(
                 subfield.offset_bits = field.offset_bits + @as(u8, @intCast(stride * i));
                 subfield.name = try std.fmt.allocPrint(arena, "{s}[{d}]", .{ field.name, i });
                 subfield.description = try std.fmt.allocPrint(arena, "({d}/{d} of {s}) {s}", .{ i + 1, count, field.name, field.description orelse "" });
-                try expanded_fields.append(subfield);
+                try expanded_fields.append(arena, subfield);
             }
-        } else try expanded_fields.append(field);
+        } else try expanded_fields.append(arena, field);
     }
     // the 'count' and 'stride' of each entry of `expanded_fields` are never used below
 
@@ -1185,9 +1185,9 @@ fn write_fields(
     // where both have stride > size_bits: Above those are appended out of order.)
     std.sort.insertion(Database.StructField, expanded_fields.items, {}, field_comes_before);
 
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
-    const writer = buffer.writer();
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
+
     var offset: u64 = 0;
 
     for (expanded_fields.items) |field| {
@@ -1224,14 +1224,14 @@ fn write_fields(
         if (field.enum_id) |enum_id| {
             const e = try db.get_enum(arena, enum_id);
             if (e.size_bits != field.size_bits) {
-                log.warn("{}: fails to match the size of {s}, with sizes of {} and {} respectively. Not assigning type.", .{
+                log.warn("{f}: fails to match the size of {s}, with sizes of {} and {} respectively. Not assigning type.", .{
                     enum_id, field.name, e.size_bits, field.size_bits,
                 });
-                try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
+                try writer.print("{f}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
             } else if (e.name) |enum_name| {
                 if (e.struct_id == null or try db.enum_has_name_collision(enum_id)) {
                     try writer.print(
-                        \\{}: enum(u{}) {{
+                        \\{f}: enum(u{}) {{
                         \\
                     , .{
                         std.zig.fmtId(field.name),
@@ -1242,7 +1242,7 @@ fn write_fields(
                     try writer.writeAll("},\n");
                 } else {
                     try writer.print(
-                        \\{}:  {},
+                        \\{f}:  {f},
                         \\
                     , .{
                         std.zig.fmtId(field.name),
@@ -1251,7 +1251,7 @@ fn write_fields(
                 }
             } else {
                 try writer.print(
-                    \\{}: enum(u{}) {{
+                    \\{f}: enum(u{}) {{
                     \\
                 , .{
                     std.zig.fmtId(field.name),
@@ -1262,7 +1262,7 @@ fn write_fields(
                 try writer.writeAll("},\n");
             }
         } else {
-            try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
+            try writer.print("{f}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
         }
 
         log.debug("adding size bits to offset: offset={} field.size_bits={}", .{ offset, field.size_bits });
@@ -1278,7 +1278,11 @@ fn write_fields(
         log.debug("No padding", .{});
     }
 
-    try out_writer.writeAll(buffer.items);
+    try out_writer.writeAll(buf.written());
+}
+
+fn to_zero_sentinel(buf: []const u8) [:0]const u8 {
+    return buf[0 .. buf.len - 1 :0];
 }
 
 const tests = @import("output_tests.zig");
@@ -1548,7 +1552,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_instantiation(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1589,7 +1593,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1631,7 +1635,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_modes(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1703,7 +1707,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_enum(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1739,7 +1743,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1774,7 +1778,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_named_enum(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1813,7 +1817,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1850,7 +1854,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.namespaced_register_groups(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1904,7 +1908,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1946,7 +1950,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_count(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -1988,7 +1992,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2031,7 +2035,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.register_with_count(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2073,7 +2077,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.register_with_count_and_fields(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2118,7 +2122,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2156,7 +2160,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2191,7 +2195,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.interrupts_avr(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2231,7 +2235,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2267,7 +2271,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.enums_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2310,7 +2314,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //
 //    try db.backup("value_collision.regz");
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2346,7 +2350,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2382,7 +2386,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2420,7 +2424,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //
 //    try db.backup("nested_struct_field_in_a_peripheral.regz");
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2460,7 +2464,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2502,7 +2506,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2544,7 +2548,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
@@ -2587,7 +2591,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
 //    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
 //    defer buffer.deinit();
 //
 //    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
