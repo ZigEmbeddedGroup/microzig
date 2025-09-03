@@ -31,7 +31,7 @@ const gpa = debug_allocator.allocator();
 var vfs: VirtualFilesystem = undefined;
 var current_gen_file: usize = 0;
 
-pub fn init(win: *dvui.Window) void {
+pub fn init(win: *dvui.Window) anyerror!void {
     _ = win;
     vfs = .init(gpa);
 }
@@ -49,13 +49,15 @@ pub fn deinit() void {
 
 // Run each frame to do normal UI
 pub fn frame() !dvui.App.Result {
-    var scaler = try dvui.scale(@src(), .{ .scale = &dvui.currentWindow().content_scale, .pinch_zoom = .global }, .{ .rect = .cast(dvui.windowRect()) });
-    scaler.deinit();
+    var scaler = dvui.scale(@src(), .{ .scale = &dvui.currentWindow().content_scale, .pinch_zoom = .global }, .{ .rect = .cast(dvui.windowRect()) });
+    defer scaler.deinit();
 
-    var scroll = try dvui.scrollArea(@src(), .{}, .{ .expand = .both, .color_fill = .fill_window });
+    var scroll = dvui.scrollArea(@src(), .{}, .{
+        .expand = .both,
+    });
     defer scroll.deinit();
 
-    var vbox = try dvui.box(@src(), .vertical, .{ .expand = .both, .margin = .{ .x = 4 } });
+    var vbox = try dvui.box(@src(), .{ .vertical = true }, .{ .expand = .both, .margin = .{ .x = 4 } });
     defer vbox.deinit();
 
     {
