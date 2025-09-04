@@ -44,6 +44,9 @@ const InstructionEffect = enum {
     sleep,
 
     watchdog_reset,
+
+    /// Detected infinite loop (typically __stop_program after main returns)
+    infinite_loop,
 };
 
 // Options:
@@ -77,6 +80,7 @@ pub const RunResult = enum {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
 };
 
 pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
@@ -97,6 +101,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                 .breakpoint => return .breakpoint,
                 .sleep => return .enter_sleep_mode,
                 .watchdog_reset => return .reset_watchdog,
+                .infinite_loop => return .infinite_loop,
             };
         };
 
@@ -868,7 +873,14 @@ const instructions = struct {
     /// Program memory not exceeding 4K words (8KB) this instruction can address the entire memory from
     /// every address location. See also JMP.
     inline fn rjmp(cpu: *Cpu, bits: isa.opinfo.k12) void {
-        cpu.shift_program_counter(@as(i12, @bitCast(bits.k)));
+        const offset = @as(i12, @bitCast(bits.k));
+        // Detect infinite loop pattern (rjmp .-2, which is rjmp with k=-1)
+        // This is commonly used in __stop_program after main returns
+        if (offset == -1) {
+            cpu.instr_effect = .infinite_loop;
+            return;
+        }
+        cpu.shift_program_counter(offset);
     }
 
     /// RCALL – Relative Call to Subroutine
