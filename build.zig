@@ -250,7 +250,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
         };
 
         const InitReturnType = blk: {
-            @setEvalBranchQuota(2000);
+            @setEvalBranchQuota(5000);
 
             var ok = true;
             for (port_list) |port| {
@@ -882,7 +882,7 @@ pub inline fn custom_lazy_import(
 }
 
 inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []const u8 {
-    @setEvalBranchQuota(2000);
+    @setEvalBranchQuota(5000);
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
 
