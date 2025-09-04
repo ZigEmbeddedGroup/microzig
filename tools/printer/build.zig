@@ -62,7 +62,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const test_exe = b.addExecutable(.{
+    const test_runner_exe = b.addExecutable(.{
         .name = "test",
         .root_module = b.createModule(.{
             .root_source_file = b.path("tests/test.zig"),
@@ -75,39 +75,67 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const generate_test_data_run = b.addRunArtifact(generate_test_data_exe);
-    if (b.option(bool, "rebuild-test-elf", "rebuild the test program elf") == true) {
-        const mz_dep = b.lazyDependency("microzig", .{}) orelse return;
+    const test_dwarf32_exe = b.addExecutable(.{
+        .name = "test_program.dwarf32",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/test_program.zig"),
+            .optimize = .Debug,
+            .target = b.resolveTargetQuery(.{
+                .os_tag = .linux,
+                .cpu_arch = .x86_64,
+                .abi = .gnu,
+                .ofmt = .elf,
+            }),
+            .dwarf_format = .@"32",
+            .strip = false,
+        }),
+    });
 
-        const mb = b.lazyImport(@This(), "microzig").?.MicroBuild(.{
-            .rp2xxx = true,
-        }).init(b, mz_dep) orelse return;
+    const test_dwarf64_exe = b.addExecutable(.{
+        .name = "test_program.dwarf64",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/test_program.zig"),
+            .optimize = .Debug,
+            .target = b.resolveTargetQuery(.{
+                .os_tag = .linux,
+                .cpu_arch = .x86_64,
+                .abi = .gnu,
+                .ofmt = .elf,
+            }),
+            .dwarf_format = .@"64",
+        }),
+    });
 
-        generate_test_data_run.addFileArg(blk: {
-            break :blk mb.add_firmware(.{
-                .name = "test_program.dwarf32",
-                .root_source_file = b.path("tests/test_program.zig"),
-                .optimize = .Debug,
-                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
-                .dwarf_format = .@"32",
-            }).get_emitted_elf();
-        });
+    const generate_test_data_step = b.step("generate-test-data", "regenerate test data");
+    const test_step = b.step("test", "test printer");
 
-        generate_test_data_run.addFileArg(blk: {
-            break :blk mb.add_firmware(.{
-                .name = "test_program.dwarf64",
-                .root_source_file = b.path("tests/test_program.zig"),
-                .optimize = .Debug,
-                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
-                .dwarf_format = .@"64",
-            }).get_emitted_elf();
-        });
+    inline for (&.{ test_dwarf32_exe, test_dwarf64_exe }) |exe| {
+        register_test(
+            b,
+            generate_test_data_step,
+            generate_test_data_exe,
+            test_step,
+            test_runner_exe,
+            exe,
+        );
     }
+}
 
-    const generate_test_results_step = b.step("generate-test-data", "regenerate test data");
-    generate_test_results_step.dependOn(&generate_test_data_run.step);
+pub fn register_test(
+    b: *std.Build,
+    generate_test_data_step: *std.Build.Step,
+    generate_test_data_exe: *std.Build.Step.Compile,
+    test_step: *std.Build.Step,
+    test_runner_exe: *std.Build.Step.Compile,
+    test_exe: *std.Build.Step.Compile,
+) void {
+    const generate_test_data_run = b.addRunArtifact(generate_test_data_exe);
+    generate_test_data_run.addFileArg(test_exe.getEmittedBin());
+    generate_test_data_run.addFileArg(b.path(b.fmt("tests/{s}.zon", .{test_exe.name})));
+    generate_test_data_step.dependOn(&generate_test_data_run.step);
 
-    const run_tests_run = b.addRunArtifact(test_exe);
-    const run_tests_step = b.step("test", "test printer");
-    run_tests_step.dependOn(&run_tests_run.step);
+    const test_runner_run = b.addRunArtifact(test_runner_exe);
+    test_runner_run.addFileArg(test_exe.getEmittedBin());
+    test_runner_run.addFileArg(b.path(b.fmt("tests/{s}.zon", .{test_exe.name})));
+    test_step.dependOn(&test_runner_run.step);
 }
