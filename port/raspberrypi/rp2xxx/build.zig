@@ -270,8 +270,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) !void {
-    // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
-
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 

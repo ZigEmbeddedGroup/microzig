@@ -28,7 +28,7 @@ Assuming you've initialized a zig project with `zig init`, or have set one up
 yourself, you can add microzig as a dependency with the following command:
 
 ```sh
-zig fetch --save https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.14.3/microzig.tar.gz
+zig fetch --save https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.15.0/microzig.tar.gz
 ```
 
 Then in your `build.zig`:
@@ -116,4 +116,4 @@ Copy the uf2 file into the mounted drive. Execution should take place immediatel
 
 ## Further Resources
 
-- [Zig Language Reference](https://ziglang.org/documentation/0.14.1/)
+- [Zig Language Reference](https://ziglang.org/documentation/0.15.1/)

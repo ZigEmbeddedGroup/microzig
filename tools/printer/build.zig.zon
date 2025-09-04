@@ -2,7 +2,7 @@
     .name = .tools_printer,
     .version = "0.0.0",
     .fingerprint = 0x72009d00e5692d30,
-    .minimum_zig_version = "0.14.1",
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .serial = .{
             .url = "git+https://github.com/ZigEmbeddedGroup/serial#fbd7389ff8bbc9fa362aa74081588755b5d028a0",
