@@ -120,12 +120,20 @@ pub const RAM = struct {
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return mem.data[addr];
+                // ATmega328P memory map: SRAM starts at 0x0100
+                // Map logical addresses 0x0100-0x08FF to array indices 0x0000-0x07FF
+                const sram_offset: Address = if (addr >= 0x100) addr - 0x100 else addr;
+                if (sram_offset >= size) return 0; // Return 0 for out-of-bounds reads
+                return mem.data[sram_offset];
             }
 
             fn mem_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                mem.data[addr] = value;
+                // ATmega328P memory map: SRAM starts at 0x0100
+                // Map logical addresses 0x0100-0x08FF to array indices 0x0000-0x07FF
+                const sram_offset: Address = if (addr >= 0x100) addr - 0x100 else addr;
+                if (sram_offset >= size) return; // Ignore out-of-bounds writes
+                mem.data[sram_offset] = value;
             }
         };
     }
