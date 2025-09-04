@@ -1,9 +1,7 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
-const CLOCK = peripherals.CLOCK;
+const CLOCK = microzig.chip.peripherals.CLOCK;
 
 const compatibility = microzig.hal.compatibility;
 
