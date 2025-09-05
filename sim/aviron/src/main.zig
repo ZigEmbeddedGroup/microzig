@@ -124,7 +124,7 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(null);
+    const result = try cpu.run(cli.options.gas, cli.options.break_pc);
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
 
@@ -156,9 +156,11 @@ const Cli = struct {
     log_pushpop: bool = false,
     // Debug: adjust Y so first va_arg reads from expected address
     // Breakpoints / halting aids
-    break_pc: ?u32 = null,
+    break_pc: ?u24 = null,
     break_on_first_va_read: bool = false,
     break_on_va_mismatch: bool = false,
+    // Stop after N instructions
+    gas: ?u64 = null,
 
     pub const shorthands = .{
         .h = "help",
@@ -171,6 +173,7 @@ const Cli = struct {
         .B = "break_pc",
         .V = "break_on_first_va_read",
         .M = "break_on_va_mismatch",
+        .G = "gas",
     };
     pub const meta = .{
         .summary = "[-h] [-t] [-m <mcu>] <file> ...",
@@ -193,6 +196,7 @@ const Cli = struct {
             .break_pc = "Break when PC reaches this address (hex or dec)",
             .break_on_first_va_read = "Break at first LD Y+7/Y+8 when expected address is known",
             .break_on_va_mismatch = "Break at first LD Y+7/Y+8 mismatch when expected address is known",
+            .gas = "Stop after N instructions executed",
         },
     };
 };
