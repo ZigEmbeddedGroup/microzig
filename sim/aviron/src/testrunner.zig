@@ -41,7 +41,7 @@ fn validate_reg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void
 
     const actual = ts.cpu.regs[reg.num()];
     if (expected != actual) {
-        std.debug.print("Invalid register value for register {s}: Expected {}, but got {}.\n", .{
+        std.debug.print("Invalid register value for register {s}: Expected 0x{X:0>2}, but got 0x{X:0>2}.\n", .{
             @tagName(reg),
             expected,
             actual,
