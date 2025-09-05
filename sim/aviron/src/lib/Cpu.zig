@@ -65,6 +65,7 @@ io: IO,
 pc: u24 = 0,
 regs: [32]u8 = [1]u8{0} ** 32,
 sreg: SREG = @bitCast(@as(u8, 0)),
+instr_count: u64 = 0,
 
 instr_effect: InstructionEffect = .none,
 
@@ -155,6 +156,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
         }
 
         const inst = try isa.decode(cpu.fetch_code());
+        cpu.instr_count += 1;
 
         if (cpu.trace) {
             // std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
@@ -164,7 +166,8 @@ pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
             //     fmtInstruction(inst),
             // });
 
-            std.debug.print("TRACE {s} {f} [", .{
+            std.debug.print("TRACE #{d: >6} {s} {f} [", .{
+                cpu.instr_count,
                 if (skip) "SKIP" else "    ",
                 cpu.sreg,
             });
