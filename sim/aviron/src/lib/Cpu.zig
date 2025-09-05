@@ -700,7 +700,7 @@ const instructions = struct {
             .carry => if (cpu.sreg.c) 0x80 else 0x00,
             .sticky => (src & 0x80),
         };
-        const res: u8 = (src >> 7) | msb;
+        const res: u8 = (src >> 1) | msb;
 
         cpu.regs[info.d.num()] = res;
 
