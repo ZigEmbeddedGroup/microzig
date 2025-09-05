@@ -83,7 +83,7 @@ pub const RunResult = enum {
     infinite_loop,
 };
 
-pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
+pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
     var rest_gas = mileage;
 
     while (true) {
@@ -106,6 +106,14 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
         };
 
         const pc = cpu.pc;
+
+        // Check breakpoint
+        if (break_pc) |bp_addr| {
+            if (pc == bp_addr) {
+                return .breakpoint;
+            }
+        }
+
         const inst = try isa.decode(cpu.fetch_code());
 
         if (cpu.trace) {

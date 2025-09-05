@@ -32,6 +32,7 @@ const ExitMode = union(testconfig.ExitType) {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
     system_exit: u8,
 };
 
@@ -218,7 +219,7 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try test_system.cpu.run(null);
+    const result = try test_system.cpu.run(null, null);
     validate_syste_and_exit(switch (result) {
         inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
     });
