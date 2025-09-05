@@ -1320,13 +1320,13 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Y) ← Rr, Y ← Y+1
-        generic_indexed_store(cpu, .y, info.r, 0, .none);
+        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Y ← Y - 1, (Y) ← Rr
-        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
+        generic_indexed_store(cpu, .y, info.r, 0, .pre_decr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
@@ -1340,13 +1340,13 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rr, Z ← Z+1
-        generic_indexed_store(cpu, .z, info.r, 0, .none);
+        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Z ← Z - 1, (Z) ← Rr
-        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
+        generic_indexed_store(cpu, .z, info.r, 0, .pre_decr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
