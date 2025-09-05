@@ -279,10 +279,8 @@ const IO = struct {
         switch (reg) {
             .exit => std.process.exit(value & mask),
             .stdio => {
-                // Debug what value is being written to stdout
-                std.debug.print("STDIO_WRITE: value=0x{X:0>2} (decimal {})\n", .{ value & mask, value & mask });
-                // var stdout = std.fs.File.stdout().writer(&.{});
-                // stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
+                var stdout = std.fs.File.stdout().writer(&.{});
+                stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
             },
             .stderr => {
                 var stderr = std.fs.File.stderr().writer(&.{});
