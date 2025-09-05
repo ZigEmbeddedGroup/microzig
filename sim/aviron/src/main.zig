@@ -29,9 +29,12 @@ pub fn main() !u8 {
     var flash_storage = aviron.Flash.Static(32768){};
     var sram = aviron.RAM.Static(2048){};
     var eeprom = aviron.EEPROM.Static(1024){};
+    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM starts at 0x0100.
+    // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
+    // For ATmega328P with 2KB SRAM, RAMEND = 0x08FF.
     var io = IO{
         .sreg = undefined,
-        .sp = sram.data.len - 1,
+        .sp = @as(u16, 0x0100) + @as(u16, sram.data.len - 1),
     };
 
     var cpu = aviron.Cpu{
@@ -60,6 +63,10 @@ pub fn main() !u8 {
     };
 
     io.sreg = &cpu.sreg;
+
+    if (cli.options.log_pushpop) {
+        std.debug.print("Debug: PUSH/POP logging enabled.\n", .{});
+    }
 
     if (cli.options.info) {
         var stdout = std.fs.File.stdout().writer(&.{});
@@ -140,16 +147,30 @@ pub const FileFormat = enum {
 const Cli = struct {
     help: bool = false,
     trace: bool = false,
+    // Dump full register state every instruction
+    trace_regs: bool = false,
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
+    // Debug: verbose push/pop logging
+    log_pushpop: bool = false,
+    // Debug: adjust Y so first va_arg reads from expected address
+    // Breakpoints / halting aids
+    break_pc: ?u32 = null,
+    break_on_first_va_read: bool = false,
+    break_on_va_mismatch: bool = false,
 
     pub const shorthands = .{
         .h = "help",
         .t = "trace",
+        .R = "trace_regs",
         .m = "mcu",
         .I = "info",
         .f = "format",
+        .P = "log_pushpop",
+        .B = "break_pc",
+        .V = "break_on_first_va_read",
+        .M = "break_on_va_mismatch",
     };
     pub const meta = .{
         .summary = "[-h] [-t] [-m <mcu>] <file> ...",
@@ -163,9 +184,15 @@ const Cli = struct {
         .option_docs = .{
             .help = "Prints this help text.",
             .trace = "Trace all executed instructions.",
+            .trace_regs = "Dump r0..r31, X/Y/Z, SP every instruction.",
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
+            .dump_len = "Number of bytes to dump (default 32)",
+            .log_pushpop = "Debug: log PUSH/POP instructions with SP and opcodes",
+            .break_pc = "Break when PC reaches this address (hex or dec)",
+            .break_on_first_va_read = "Break at first LD Y+7/Y+8 when expected address is known",
+            .break_on_va_mismatch = "Break at first LD Y+7/Y+8 mismatch when expected address is known",
         },
     };
 };
@@ -264,8 +291,10 @@ const IO = struct {
         switch (reg) {
             .exit => std.process.exit(value & mask),
             .stdio => {
-                var stdout = std.fs.File.stdout().writer(&.{});
-                stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
+                // Debug what value is being written to stdout
+                std.debug.print("STDIO_WRITE: value=0x{X:0>2} (decimal {})\n", .{ value & mask, value & mask });
+                // var stdout = std.fs.File.stdout().writer(&.{});
+                // stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
             },
             .stderr => {
                 var stderr = std.fs.File.stderr().writer(&.{});

@@ -67,12 +67,14 @@ pub const RAM = struct {
     size: usize,
 
     pub fn read(mem: RAM, addr: Address) u8 {
-        std.debug.assert(addr < mem.size);
+        // Logical RAM addresses include SRAM base (e.g., 0x0100..)
+        // Perform bounds checks inside the backend where we map to array indices.
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     pub fn write(mem: RAM, addr: Address, value: u8) void {
-        std.debug.assert(addr < mem.size);
+        // Logical RAM addresses include SRAM base (e.g., 0x0100..)
+        // Perform bounds checks inside the backend where we map to array indices.
         return mem.vtable.writeFn(mem.ctx, addr, value);
     }
 
