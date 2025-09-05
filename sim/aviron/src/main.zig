@@ -64,10 +64,6 @@ pub fn main() !u8 {
 
     io.sreg = &cpu.sreg;
 
-    if (cli.options.log_pushpop) {
-        std.debug.print("Debug: PUSH/POP logging enabled.\n", .{});
-    }
-
     if (cli.options.info) {
         var stdout = std.fs.File.stdout().writer(&.{});
         try stdout.interface.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
@@ -152,13 +148,8 @@ const Cli = struct {
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
-    // Debug: verbose push/pop logging
-    log_pushpop: bool = false,
-    // Debug: adjust Y so first va_arg reads from expected address
     // Breakpoints / halting aids
     break_pc: ?u24 = null,
-    break_on_first_va_read: bool = false,
-    break_on_va_mismatch: bool = false,
     // Stop after N instructions
     gas: ?u64 = null,
 
@@ -169,10 +160,7 @@ const Cli = struct {
         .m = "mcu",
         .I = "info",
         .f = "format",
-        .P = "log_pushpop",
         .B = "break_pc",
-        .V = "break_on_first_va_read",
-        .M = "break_on_va_mismatch",
         .G = "gas",
     };
     pub const meta = .{
@@ -191,11 +179,7 @@ const Cli = struct {
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
-            .dump_len = "Number of bytes to dump (default 32)",
-            .log_pushpop = "Debug: log PUSH/POP instructions with SP and opcodes",
             .break_pc = "Break when PC reaches this address (hex or dec)",
-            .break_on_first_va_read = "Break at first LD Y+7/Y+8 when expected address is known",
-            .break_on_va_mismatch = "Break at first LD Y+7/Y+8 mismatch when expected address is known",
             .gas = "Stop after N instructions executed",
         },
     };
