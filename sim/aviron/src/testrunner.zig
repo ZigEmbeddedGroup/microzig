@@ -139,7 +139,8 @@ pub fn main() !u8 {
 
         .io = IO{
             .sreg = &test_system.cpu.sreg,
-            .sp = 2047,
+            // Initialize SP to RAMEND (0x0100 + SRAM size - 1)
+            .sp = @as(u16, 0x0100) + @as(u16, test_system.sram.data.len - 1),
             .config = config,
 
             .stdin = config.stdin,

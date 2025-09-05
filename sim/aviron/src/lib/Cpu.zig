@@ -162,12 +162,16 @@ fn fetch_code(cpu: *Cpu) u16 {
 }
 
 fn push(cpu: *Cpu, val: u8) void {
+    // AVR PUSH: Write to [SP] first, then decrement SP
     const sp = cpu.get_sp();
+    // AVR convention: write to [SP] first, then decrement SP
+    // SP points to the first unused location
     cpu.sram.write(sp, val);
     cpu.set_sp(sp -% 1);
 }
 
 fn pop(cpu: *Cpu) u8 {
+    // AVR POP: Increment SP first, then read from [SP]
     const sp = cpu.get_sp() +% 1;
     cpu.set_sp(sp);
     return cpu.sram.read(sp);
@@ -177,6 +181,8 @@ fn push_code_loc(cpu: *Cpu, val: u24) void {
     const pc: u24 = val;
     const mask: u24 = @intFromEnum(cpu.code_model);
 
+    // AVR pushes return address bytes so that RET pops low byte first.
+    // With write-then-decrement PUSH, we push least significant byte first.
     if ((mask & 0x0000FF) != 0) {
         cpu.push(@truncate(pc >> 0));
     }
@@ -191,6 +197,7 @@ fn push_code_loc(cpu: *Cpu, val: u24) void {
 fn pop_code_loc(cpu: *Cpu) u24 {
     const mask = @intFromEnum(cpu.code_model);
 
+    // With increment-then-read POP, we pop most significant byte first.
     var pc: u24 = 0;
     if ((mask & 0xFF0000) != 0) {
         pc |= (@as(u24, cpu.pop()) << 16);
@@ -201,7 +208,6 @@ fn pop_code_loc(cpu: *Cpu) u24 {
     if ((mask & 0x0000FF) != 0) {
         pc |= (@as(u24, cpu.pop()) << 0);
     }
-
     return pc;
 }
 
