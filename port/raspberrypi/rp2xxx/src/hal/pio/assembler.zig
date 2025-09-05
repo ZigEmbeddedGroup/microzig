@@ -49,7 +49,7 @@ pub const Output = struct {
         comptime name: []const u8,
     ) u32 {
         return for (output.defines) |define| {
-            if (std.mem.eql(u8, define.name, define))
+            if (std.mem.eql(u8, name, define.name))
                 break define;
         } else @panic(std.fmt.comptimePrint("define '{s}' not found", .{name}));
     }
