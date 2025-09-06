@@ -10,6 +10,9 @@ SECTIONS
     {
         KEEP(*(.vectors))
 
+        /* Ensure _start comes first */
+        KEEP(*(.text._start))
+
         *(.text*)
     } > flash
 
