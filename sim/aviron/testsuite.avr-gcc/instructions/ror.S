@@ -12,7 +12,7 @@
 //!     "r17": 171,
 //!     "r18": 42,
 //!     "r19": 170,
-//!     "sreg": { "c": false } }
+//!     "sreg": { "c": false, "n": true, "s": false } }
 //! }
 
     ; Precondition: r16 = 0x55, c true

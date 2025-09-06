@@ -773,13 +773,13 @@ const instructions = struct {
 
         // Set if MSB of the result is set; cleared otherwise.
         // N = R7
-        cpu.sreg.n = (src & 0x80) != 0;
+        cpu.sreg.n = (res & 0x80) != 0;
 
         // V = N ⊕ C, for N and C after the shift.
         cpu.sreg.v = (cpu.sreg.n != cpu.sreg.c);
 
-        // N ⊕ V, for signed tests.
-        cpu.sreg.n = (cpu.sreg.n != cpu.sreg.v);
+        // S = N ⊕ V, for signed tests.
+        cpu.sreg.s = (cpu.sreg.n != cpu.sreg.v);
     }
 
     /// Shifts all bits in Rd one place to the right. Bit 7 is held constant. Bit 0 is loaded into the C Flag of the
