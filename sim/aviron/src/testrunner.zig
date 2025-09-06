@@ -135,47 +135,55 @@ pub fn main() !u8 {
     var stderr = std.array_list.Managed(u8).init(allocator);
     defer stderr.deinit();
 
+    // Initialize test_system with partial initialization to break circular dependency
     test_system = SystemState{
         .options = cli.options,
         .config = config,
+        .io = undefined, // Will be initialized below
+        .cpu = undefined, // Will be initialized below
+    };
 
-        .io = IO{
-            .sreg = &test_system.cpu.sreg,
-            // Initialize SP to RAMEND (0x0100 + SRAM size - 1)
-            .sp = @as(u16, 0x0100) + @as(u16, test_system.sram.data.len - 1),
-            .config = config,
+    // Initialize IO first
+    test_system.io = IO{
+        .sreg = undefined, // Will be set after CPU initialization
+        // Initialize SP to RAMEND (0x0100 + SRAM size - 1)
+        .sp = @as(u16, 0x0100) + @as(u16, test_system.sram.data.len - 1),
+        .config = config,
 
-            .stdin = config.stdin,
-            .stdout = &stdout,
-            .stderr = &stderr,
-        },
+        .stdin = config.stdin,
+        .stdout = &stdout,
+        .stderr = &stderr,
+    };
 
-        .cpu = aviron.Cpu{
-            .trace = cli.options.trace,
+    // Initialize CPU
+    test_system.cpu = aviron.Cpu{
+        .trace = cli.options.trace,
 
-            .instruction_set = .avr5,
+        .instruction_set = .avr5,
 
-            .flash = test_system.flash_storage.memory(),
-            .sram = test_system.sram.memory(),
-            .eeprom = test_system.eeprom.memory(),
-            .io = test_system.io.memory(),
+        .flash = test_system.flash_storage.memory(),
+        .sram = test_system.sram.memory(),
+        .eeprom = test_system.eeprom.memory(),
+        .io = test_system.io.memory(),
 
-            .code_model = .code16,
+        .code_model = .code16,
 
-            .sio = .{
-                .ramp_x = null,
-                .ramp_y = null,
-                .ramp_z = null,
-                .ramp_d = null,
-                .e_ind = null,
+        .sio = .{
+            .ramp_x = null,
+            .ramp_y = null,
+            .ramp_z = null,
+            .ramp_d = null,
+            .e_ind = null,
 
-                .sp_l = @intFromEnum(IO.Register.sp_l),
-                .sp_h = @intFromEnum(IO.Register.sp_h),
+            .sp_l = @intFromEnum(IO.Register.sp_l),
+            .sp_h = @intFromEnum(IO.Register.sp_h),
 
-                .sreg = @intFromEnum(IO.Register.sreg),
-            },
+            .sreg = @intFromEnum(IO.Register.sreg),
         },
     };
+
+    // Now link the sreg after both are initialized
+    test_system.io.sreg = &test_system.cpu.sreg;
 
     // Initialize CPU state:
     inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
