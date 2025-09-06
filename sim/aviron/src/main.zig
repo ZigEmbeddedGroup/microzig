@@ -121,6 +121,11 @@ pub fn main() !u8 {
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
 
+    // Handle program exit - the defer block will still run
+    if (result == .program_exit) {
+        return io.exit_code;
+    }
+
     return 0;
 }
 
@@ -182,6 +187,10 @@ const IO = struct {
     sp: u16,
     sreg: *aviron.Cpu.SREG,
 
+    // Exit status tracking
+    exit_requested: bool = false,
+    exit_code: u8 = 0,
+
     pub fn memory(self: *IO) aviron.IO {
         return aviron.IO{
             .ctx = self,
@@ -192,6 +201,7 @@ const IO = struct {
     pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
+        .checkExitFn = check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -268,7 +278,10 @@ const IO = struct {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
-            .exit => std.process.exit(value & mask),
+            .exit => {
+                io.exit_requested = true;
+                io.exit_code = value & mask;
+            },
             .stdio => {
                 var stdout = std.fs.File.stdout().writer(&.{});
                 stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
@@ -322,5 +335,13 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn check_exit(ctx: ?*anyopaque) ?u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx.?));
+        if (io.exit_requested) {
+            return io.exit_code;
+        }
+        return null;
     }
 };

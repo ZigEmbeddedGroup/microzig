@@ -82,6 +82,7 @@ pub const RunResult = enum {
     reset_watchdog,
     out_of_gas,
     infinite_loop,
+    program_exit,
 };
 
 pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
@@ -156,6 +157,12 @@ pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
                         @field(instructions, @tagName(tag))(cpu, info);
                     }
                 },
+            }
+
+            // Check if the program requested exit via I/O
+            if (cpu.io.check_exit()) |exit_code| {
+                _ = exit_code; // The exit code is stored in the IO context for main() to use
+                return .program_exit;
             }
         }
     }

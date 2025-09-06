@@ -154,14 +154,23 @@ pub const IO = struct {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
+    pub fn check_exit(mem: IO) ?u8 {
+        return mem.vtable.checkExitFn(mem.ctx);
+    }
+
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
+        checkExitFn: *const fn (ctx: ?*anyopaque) ?u8,
     };
 
     pub const empty = IO{
         .ctx = null,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
+        .vtable = &VTable{
+            .readFn = empty_read,
+            .writeFn = empty_write,
+            .checkExitFn = empty_check_exit,
+        },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
@@ -175,5 +184,10 @@ pub const IO = struct {
         _ = value;
         _ = addr;
         _ = ctx;
+    }
+
+    fn empty_check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null;
     }
 };
