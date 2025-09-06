@@ -17,22 +17,21 @@ const avr_target_query = std.Target.Query{
     .abi = .none,
 };
 
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
 pub fn build(b: *Build) !void {
     // Targets
     const test_step = b.step("test", "Run test suite");
     const run_step = b.step("run", "Run the app");
     const debug_testsuite_step = b.step("debug-testsuite", "Installs all testsuite examples");
-    const update_testsuite_step = b.step("update-testsuite", "Updates the folder testsuite with the data in testsuite.avr-gcc. Requires avr-gcc to be present!");
+    const update_testsuite_step = b.step(
+        "update-testsuite",
+        "Updates the folder testsuite with the data in testsuite.avr-gcc. Requires avr-gcc to be present!",
+    );
 
     // Deps
     const args_dep = b.dependency("args", .{});
     const ihex_dep = b.dependency("ihex", .{});
 
     // Dep modules
-
     const args_module = args_dep.module("args");
     const ihex_module = ihex_dep.module("ihex");
 
@@ -41,10 +40,7 @@ pub fn build(b: *Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Modules
-
-    const isa_module = b.createModule(.{
-        .root_source_file = b.path("src/shared/isa.zig"),
-    });
+    const isa_module = b.createModule(.{ .root_source_file = b.path("src/shared/isa.zig") });
     const isa_tables_module = b.createModule(.{
         .root_source_file = generate_isa_tables(b, isa_module),
         .imports = &.{
@@ -109,9 +105,7 @@ pub fn build(b: *Build) !void {
     }
 
     // Test suite:
-
     try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
-
     try add_test_suite_update(b, update_testsuite_step);
 }
 
@@ -149,166 +143,167 @@ fn add_test_suite(
 
     debug_step.dependOn(&b.addInstallArtifact(testrunner_exe, .{}).step);
 
-    {
-        var walkdir = try b.build_root.handle.openDir("testsuite", .{
-            .iterate = true,
-        });
-        defer walkdir.close();
+    // Scan the testsuite directory for files. Based on the extension, either load or compile them.
+    // Files in testsuite.avr-gcc will be compiled with avr-gcc and have the output copied to
+    // this directory.
+    var walkdir = try b.build_root.handle.openDir("testsuite", .{ .iterate = true });
+    defer walkdir.close();
 
-        var walker = try walkdir.walk(b.allocator);
-        defer walker.deinit();
+    var walker = try walkdir.walk(b.allocator);
+    defer walker.deinit();
 
-        while (try walker.next()) |entry| {
-            if (entry.kind != .file)
-                continue;
+    while (try walker.next()) |entry| {
+        if (entry.kind != .file)
+            continue;
 
-            if (std.mem.eql(u8, entry.path, "dummy.zig")) {
-                // This file is not interesting to test.
-                continue;
-            }
+        // This file is just used as a root, and should not be tested
+        if (std.mem.eql(u8, entry.path, "dummy.zig"))
+            continue;
 
-            const FileAction = union(enum) {
-                compile,
-                load,
-                ignore,
-                unknown,
-            };
+        const FileAction = union(enum) {
+            compile,
+            load,
+            ignore,
+            unknown,
+        };
 
-            const extension_to_action = .{
-                .c = .compile,
-                .cpp = .compile,
-                .S = .compile,
-                .zig = .compile,
+        const extension_to_action = .{
+            .c = .compile,
+            .cpp = .compile,
+            .S = .compile,
+            .zig = .compile,
 
-                .bin = .load,
-                .elf = .load,
+            .bin = .load,
+            .elf = .load,
 
-                .inc = .ignore,
-                .h = .ignore,
-                .json = .ignore,
-            };
+            .inc = .ignore,
+            .h = .ignore,
+            .json = .ignore,
+        };
 
-            const ext = std.fs.path.extension(entry.basename);
-            const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
-                const action: FileAction = @field(extension_to_action, fld.name);
+        const ext = std.fs.path.extension(entry.basename);
+        const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
+            const action: FileAction = @field(extension_to_action, fld.name);
 
-                if (std.mem.eql(u8, ext, "." ++ fld.name))
-                    break action;
-            } else .unknown;
+            if (std.mem.eql(u8, ext, "." ++ fld.name))
+                break action;
+        } else .unknown;
 
-            const ConfigAndExe = struct {
-                binary: LazyPath,
-                config: TestSuiteConfig,
-            };
+        const ConfigAndExe = struct {
+            binary: LazyPath,
+            config: TestSuiteConfig,
+        };
 
-            const cae: ConfigAndExe = switch (action) {
-                .unknown => std.debug.panic("Unknown test action on file testsuite/{s}, please fix the build script.", .{entry.path}),
-                .ignore => continue,
+        const cae: ConfigAndExe = switch (action) {
+            .unknown => std.debug.panic(
+                "Unknown test action on file testsuite/{s}, please fix the build script.",
+                .{entry.path},
+            ),
+            .ignore => continue,
 
-                .compile => blk: {
-                    var file = try entry.dir.openFile(entry.basename, .{});
-                    defer file.close();
+            .compile => blk: {
+                var file = try entry.dir.openFile(entry.basename, .{});
+                defer file.close();
 
-                    const config = try parse_test_suite_config(b, file);
+                const config = try parse_test_suite_config(b, file);
 
-                    const custom_target = if (config.cpu) |cpu|
-                        b.resolveTargetQuery(std.Target.Query.parse(.{
-                            .arch_os_abi = "avr-freestanding-eabi",
-                            .cpu_features = cpu,
-                        }) catch @panic(cpu))
-                    else
-                        avr_target;
+                const custom_target = if (config.cpu) |cpu|
+                    b.resolveTargetQuery(std.Target.Query.parse(.{
+                        .arch_os_abi = "avr-freestanding-eabi",
+                        .cpu_features = cpu,
+                    }) catch @panic(cpu))
+                else
+                    avr_target;
 
-                    const file_ext = std.fs.path.extension(entry.path);
-                    const is_zig_test = std.mem.eql(u8, file_ext, ".zig");
-                    const is_c_test = std.mem.eql(u8, file_ext, ".c");
-                    const is_asm_test = std.mem.eql(u8, file_ext, ".S");
+                const file_ext = std.fs.path.extension(entry.path);
+                const is_zig_test = std.mem.eql(u8, file_ext, ".zig");
+                const is_c_test = std.mem.eql(u8, file_ext, ".c");
+                const is_asm_test = std.mem.eql(u8, file_ext, ".S");
 
-                    std.debug.assert(is_zig_test or is_c_test or is_asm_test);
+                std.debug.assert(is_zig_test or is_c_test or is_asm_test);
 
-                    const source_file = b.path(b.fmt("testsuite/{s}", .{entry.path}));
-                    const root_file = if (is_zig_test)
-                        source_file
-                    else
-                        b.path("testsuite/dummy.zig");
+                const source_file = b.path(b.fmt("testsuite/{s}", .{entry.path}));
+                const root_file = if (is_zig_test)
+                    source_file
+                else
+                    b.path("testsuite/dummy.zig");
 
-                    const test_payload = b.addExecutable(.{
-                        .name = std.fs.path.stem(entry.basename),
-                        .root_module = b.createModule(.{
-                            .root_source_file = if (is_zig_test) root_file else null,
-                            .target = custom_target,
-                            .optimize = config.optimize,
-                            .strip = false,
-                            .link_libc = false,
-                        }),
-                        .use_llvm = true,
+                const test_payload = b.addExecutable(.{
+                    .name = std.fs.path.stem(entry.basename),
+                    .root_module = b.createModule(.{
+                        .root_source_file = if (is_zig_test) root_file else null,
+                        .target = custom_target,
+                        .optimize = config.optimize,
+                        .strip = false,
+                        .link_libc = false,
+                    }),
+                    .use_llvm = true,
+                });
+                test_payload.want_lto = false; // AVR has no LTO support!
+                test_payload.verbose_link = true;
+                test_payload.verbose_cc = true;
+                test_payload.bundle_compiler_rt = false;
+
+                test_payload.setLinkerScript(b.path("linker.ld"));
+
+                if (is_c_test or is_asm_test) {
+                    test_payload.addIncludePath(b.path("testsuite"));
+                }
+                if (is_c_test) {
+                    test_payload.addCSourceFile(.{
+                        .file = source_file,
+                        .flags = &.{},
                     });
-                    test_payload.want_lto = false; // AVR has no LTO support!
-                    test_payload.verbose_link = true;
-                    test_payload.verbose_cc = true;
-                    test_payload.bundle_compiler_rt = false;
+                }
+                if (is_asm_test) {
+                    test_payload.addAssemblyFile(source_file);
+                }
+                if (is_zig_test) {
+                    test_payload.root_module.addAnonymousImport("testsuite", .{
+                        .root_source_file = b.path("src/libtestsuite/lib.zig"),
+                    });
+                }
 
-                    test_payload.setLinkerScript(b.path("linker.ld"));
+                debug_step.dependOn(&b.addInstallFile(
+                    test_payload.getEmittedBin(),
+                    b.fmt("testsuite/{s}/{s}.elf", .{
+                        std.fs.path.dirname(entry.path).?,
+                        std.fs.path.stem(entry.basename),
+                    }),
+                ).step);
 
-                    if (is_c_test or is_asm_test) {
-                        test_payload.addIncludePath(b.path("testsuite"));
-                    }
-                    if (is_c_test) {
-                        test_payload.addCSourceFile(.{
-                            .file = source_file,
-                            .flags = &.{},
-                        });
-                    }
-                    if (is_asm_test) {
-                        test_payload.addAssemblyFile(source_file);
-                    }
-                    if (is_zig_test) {
-                        test_payload.root_module.addAnonymousImport("testsuite", .{
-                            .root_source_file = b.path("src/libtestsuite/lib.zig"),
-                        });
-                    }
+                break :blk .{
+                    .binary = test_payload.getEmittedBin(),
+                    .config = config,
+                };
+            },
+            .load => blk: {
+                const config_path = b.fmt("{s}.json", .{entry.basename});
+                const config = if (entry.dir.openFile(config_path, .{})) |file| cfg: {
+                    defer file.close();
+                    break :cfg try TestSuiteConfig.load(b.allocator, file);
+                } else |_| @panic(config_path);
 
-                    debug_step.dependOn(&b.addInstallFile(
-                        test_payload.getEmittedBin(),
-                        b.fmt("testsuite/{s}/{s}.elf", .{
-                            std.fs.path.dirname(entry.path).?,
-                            std.fs.path.stem(entry.basename),
-                        }),
-                    ).step);
+                break :blk .{
+                    .binary = b.path(b.fmt("testsuite/{s}", .{entry.path})),
+                    .config = config,
+                };
+            },
+        };
 
-                    break :blk ConfigAndExe{
-                        .binary = test_payload.getEmittedBin(),
-                        .config = config,
-                    };
-                },
-                .load => blk: {
-                    const config_path = b.fmt("{s}.json", .{entry.basename});
-                    const config = if (entry.dir.openFile(config_path, .{})) |file| cfg: {
-                        defer file.close();
-                        break :cfg try TestSuiteConfig.load(b.allocator, file);
-                    } else |_| @panic(config_path);
+        const write_file = b.addWriteFile("config.json", cae.config.to_string(b));
 
-                    break :blk ConfigAndExe{
-                        .binary = b.path(b.fmt("testsuite/{s}", .{entry.path})),
-                        .config = config,
-                    };
-                },
-            };
+        const test_run = b.addRunArtifact(testrunner_exe);
+        test_run.addArg("--config");
+        test_run.addFileArg(write_file.getDirectory().path(b, "config.json"));
+        test_run.addArg("--name");
+        test_run.addArg(entry.path);
 
-            const write_file = b.addWriteFile("config.json", cae.config.to_string(b));
+        test_run.addFileArg(cae.binary);
 
-            const test_run = b.addRunArtifact(testrunner_exe);
-            test_run.addArg("--config");
-            test_run.addFileArg(write_file.getDirectory().path(b, "config.json"));
-            test_run.addArg("--name");
-            test_run.addArg(entry.path);
+        test_run.expectExitCode(0);
 
-            test_run.addFileArg(cae.binary);
-
-            test_run.expectExitCode(0);
-
-            test_step.dependOn(&test_run.step);
-        }
+        test_step.dependOn(&test_run.step);
     }
 }
 
@@ -327,78 +322,81 @@ fn add_test_suite_update(
         .use_llvm = true,
     }).getEmittedBin();
 
-    {
-        var walkdir = try b.build_root.handle.openDir("testsuite.avr-gcc", .{ .iterate = true });
-        defer walkdir.close();
+    var walkdir = try b.build_root.handle.openDir("testsuite.avr-gcc", .{ .iterate = true });
+    defer walkdir.close();
 
-        var walker = try walkdir.walk(b.allocator);
-        defer walker.deinit();
+    var walker = try walkdir.walk(b.allocator);
+    defer walker.deinit();
 
-        while (try walker.next()) |entry| {
-            if (entry.kind != .file)
-                continue;
+    while (try walker.next()) |entry| {
+        if (entry.kind != .file)
+            continue;
 
-            const FileAction = union(enum) {
-                compile,
-                ignore,
-                unknown,
-            };
+        const FileAction = union(enum) {
+            compile,
+            ignore,
+            unknown,
+        };
 
-            const extension_to_action = .{
-                .c = .compile,
-                .cpp = .compile,
-                .S = .compile,
+        const extension_to_action = .{
+            .c = .compile,
+            .cpp = .compile,
+            .S = .compile,
 
-                .inc = .ignore,
-                .h = .ignore,
-                .json = .ignore,
-                .md = .ignore,
-            };
+            .inc = .ignore,
+            .h = .ignore,
+            .json = .ignore,
+            .md = .ignore,
+        };
 
-            const ext = std.fs.path.extension(entry.basename);
-            const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
-                const action: FileAction = @field(extension_to_action, fld.name);
-                if (std.mem.eql(u8, ext, "." ++ fld.name))
-                    break action;
-            } else .unknown;
+        const ext = std.fs.path.extension(entry.basename);
+        const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
+            const action: FileAction = @field(extension_to_action, fld.name);
+            if (std.mem.eql(u8, ext, "." ++ fld.name))
+                break action;
+        } else .unknown;
 
-            switch (action) {
-                .unknown => std.debug.panic("Unknown test action on file testsuite/{s}, please fix the build script.", .{entry.path}),
-                .ignore => continue,
+        switch (action) {
+            .unknown => std.debug.panic(
+                "Unknown test action on file testsuite/{s}, please fix the build script.",
+                .{entry.path},
+            ),
+            .ignore => continue,
 
-                .compile => {
-                    var file = try entry.dir.openFile(entry.basename, .{});
-                    defer file.close();
+            .compile => {
+                var file = try entry.dir.openFile(entry.basename, .{});
+                defer file.close();
 
-                    const config = try parse_test_suite_config(b, file);
+                const config = try parse_test_suite_config(b, file);
 
-                    const gcc_invocation = Build.Step.Run.create(b, "run avr-gcc");
-                    gcc_invocation.addFileArg(avr_gcc);
-                    gcc_invocation.addArg("-o");
-                    gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) }));
-                    gcc_invocation.addArg(b.fmt("-mmcu={s}", .{config.cpu orelse @panic("Uknown MCU!")}));
-                    //avr_target.cpu_model.explicit.llvm_name orelse @panic("Unknown MCU!")}));
-                    for (config.gcc_flags) |opt| {
-                        gcc_invocation.addArg(opt);
-                    }
-                    gcc_invocation.addArg("-I");
-                    gcc_invocation.addArg("testsuite");
-                    gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
+                const gcc_invocation = Build.Step.Run.create(b, "run avr-gcc");
+                gcc_invocation.addFileArg(avr_gcc);
+                gcc_invocation.addArg("-o");
+                gcc_invocation.addArg(b.fmt(
+                    "testsuite/{s}/{s}.elf",
+                    .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
+                ));
+                gcc_invocation.addArg(b.fmt("-mmcu={s}", .{config.cpu orelse @panic("Unknown MCU!")}));
+                for (config.gcc_flags) |opt| {
+                    gcc_invocation.addArg(opt);
+                }
+                gcc_invocation.addArg("-I");
+                gcc_invocation.addArg("testsuite");
+                gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
 
-                    const write_file = b.addWriteFile("config.json", config.to_string(b));
+                const write_file = b.addWriteFile("config.json", config.to_string(b));
 
-                    _ = write_file.addCopyFile(
-                        write_file.getDirectory().path(b, "config.json"),
-                        b.fmt(
-                            "testsuite/{s}/{s}.elf.json",
-                            .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
-                        ),
-                    );
+                _ = write_file.addCopyFile(
+                    write_file.getDirectory().path(b, "config.json"),
+                    b.fmt(
+                        "testsuite/{s}/{s}.elf.json",
+                        .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
+                    ),
+                );
 
-                    invoke_step.dependOn(&gcc_invocation.step);
-                    invoke_step.dependOn(&write_file.step);
-                },
-            }
+                invoke_step.dependOn(&gcc_invocation.step);
+                invoke_step.dependOn(&write_file.step);
+            },
         }
     }
 }
