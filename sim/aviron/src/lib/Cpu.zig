@@ -44,6 +44,9 @@ const InstructionEffect = enum {
     sleep,
 
     watchdog_reset,
+
+    /// Detected infinite loop (typically __stop_program after main returns)
+    infinite_loop,
 };
 
 // Options:
@@ -62,6 +65,7 @@ io: IO,
 pc: u24 = 0,
 regs: [32]u8 = [1]u8{0} ** 32,
 sreg: SREG = @bitCast(@as(u8, 0)),
+instr_count: u64 = 0,
 
 instr_effect: InstructionEffect = .none,
 
@@ -77,10 +81,52 @@ pub const RunResult = enum {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
+    program_exit,
 };
 
-pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
+pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
     var rest_gas = mileage;
+    defer {
+        // Dump complete system state
+        std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
+        std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
+        std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
+        std.debug.print("SREG: {any}\n", .{cpu.sreg});
+
+        // Dump all registers
+        std.debug.print("\nREGISTERS:\n", .{});
+        for (cpu.regs, 0..) |reg, i| {
+            if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
+            std.debug.print("{X:0>2} ", .{reg});
+            if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
+        }
+
+        // Dump X, Y, Z pointer registers
+        const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
+        const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
+        const z_reg = (@as(u16, cpu.regs[31]) << 8) | cpu.regs[30];
+        std.debug.print("\nPOINTER REGISTERS:\n", .{});
+        std.debug.print("X (r27:r26): 0x{X:0>4}\n", .{x_reg});
+        std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
+        std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
+
+        // Dump SRAM
+        std.debug.print("\nSRAM DUMP (0x0100-0x08FF, {} bytes):\n", .{cpu.sram.size});
+        for (0..cpu.sram.size) |i| {
+            if (i % 16 == 0) {
+                std.debug.print("0x{X:0>4}: ", .{0x0100 + i});
+            }
+            std.debug.print("{X:0>2} ", .{cpu.sram.read(@as(u24, @intCast(0x0100 + i)))});
+            if ((i + 1) % 16 == 0) {
+                std.debug.print("\n", .{});
+            }
+        }
+        if (cpu.sram.size % 16 != 0) {
+            std.debug.print("\n", .{});
+        }
+        std.debug.print("=== END DUMP ===\n", .{});
+    }
 
     while (true) {
         if (rest_gas) |*rg| {
@@ -97,11 +143,21 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                 .breakpoint => return .breakpoint,
                 .sleep => return .enter_sleep_mode,
                 .watchdog_reset => return .reset_watchdog,
+                .infinite_loop => return .infinite_loop,
             };
         };
 
         const pc = cpu.pc;
+
+        // Check breakpoint
+        if (break_pc) |bp_addr| {
+            if (pc == bp_addr) {
+                return .breakpoint;
+            }
+        }
+
         const inst = try isa.decode(cpu.fetch_code());
+        cpu.instr_count += 1;
 
         if (cpu.trace) {
             // std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
@@ -111,7 +167,8 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             //     fmtInstruction(inst),
             // });
 
-            std.debug.print("TRACE {s} {f} [", .{
+            std.debug.print("TRACE #{d: >6} {s} {f} [", .{
+                cpu.instr_count,
                 if (skip) "SKIP" else "    ",
                 cpu.sreg,
             });
@@ -141,6 +198,12 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                     }
                 },
             }
+
+            // Check if the program requested exit via I/O
+            if (cpu.io.check_exit()) |exit_code| {
+                _ = exit_code; // The exit code is stored in the IO context for main() to use
+                return .program_exit;
+            }
         }
     }
 }
@@ -157,12 +220,16 @@ fn fetch_code(cpu: *Cpu) u16 {
 }
 
 fn push(cpu: *Cpu, val: u8) void {
+    // AVR PUSH: Write to [SP] first, then decrement SP
     const sp = cpu.get_sp();
+    // AVR convention: write to [SP] first, then decrement SP
+    // SP points to the first unused location
     cpu.sram.write(sp, val);
     cpu.set_sp(sp -% 1);
 }
 
 fn pop(cpu: *Cpu) u8 {
+    // AVR POP: Increment SP first, then read from [SP]
     const sp = cpu.get_sp() +% 1;
     cpu.set_sp(sp);
     return cpu.sram.read(sp);
@@ -172,6 +239,8 @@ fn push_code_loc(cpu: *Cpu, val: u24) void {
     const pc: u24 = val;
     const mask: u24 = @intFromEnum(cpu.code_model);
 
+    // AVR pushes return address bytes so that RET pops low byte first.
+    // With write-then-decrement PUSH, we push least significant byte first.
     if ((mask & 0x0000FF) != 0) {
         cpu.push(@truncate(pc >> 0));
     }
@@ -186,6 +255,7 @@ fn push_code_loc(cpu: *Cpu, val: u24) void {
 fn pop_code_loc(cpu: *Cpu) u24 {
     const mask = @intFromEnum(cpu.code_model);
 
+    // With increment-then-read POP, we pop most significant byte first.
     var pc: u24 = 0;
     if ((mask & 0xFF0000) != 0) {
         pc |= (@as(u24, cpu.pop()) << 16);
@@ -196,7 +266,6 @@ fn pop_code_loc(cpu: *Cpu) u24 {
     if ((mask & 0x0000FF) != 0) {
         pc |= (@as(u24, cpu.pop()) << 0);
     }
-
     return pc;
 }
 
@@ -690,7 +759,7 @@ const instructions = struct {
             .carry => if (cpu.sreg.c) 0x80 else 0x00,
             .sticky => (src & 0x80),
         };
-        const res: u8 = (src >> 7) | msb;
+        const res: u8 = (src >> 1) | msb;
 
         cpu.regs[info.d.num()] = res;
 
@@ -704,13 +773,13 @@ const instructions = struct {
 
         // Set if MSB of the result is set; cleared otherwise.
         // N = R7
-        cpu.sreg.n = (src & 0x80) != 0;
+        cpu.sreg.n = (res & 0x80) != 0;
 
         // V = N ⊕ C, for N and C after the shift.
         cpu.sreg.v = (cpu.sreg.n != cpu.sreg.c);
 
-        // N ⊕ V, for signed tests.
-        cpu.sreg.n = (cpu.sreg.n != cpu.sreg.v);
+        // S = N ⊕ V, for signed tests.
+        cpu.sreg.s = (cpu.sreg.n != cpu.sreg.v);
     }
 
     /// Shifts all bits in Rd one place to the right. Bit 7 is held constant. Bit 0 is loaded into the C Flag of the
@@ -868,7 +937,14 @@ const instructions = struct {
     /// Program memory not exceeding 4K words (8KB) this instruction can address the entire memory from
     /// every address location. See also JMP.
     inline fn rjmp(cpu: *Cpu, bits: isa.opinfo.k12) void {
-        cpu.shift_program_counter(@as(i12, @bitCast(bits.k)));
+        const offset = @as(i12, @bitCast(bits.k));
+        // Detect infinite loop pattern (rjmp .-2, which is rjmp with k=-1)
+        // This is commonly used in __stop_program after main returns
+        if (offset == -1) {
+            cpu.instr_effect = .infinite_loop;
+            return;
+        }
+        cpu.shift_program_counter(offset);
     }
 
     /// RCALL – Relative Call to Subroutine
@@ -1303,13 +1379,13 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Y) ← Rr, Y ← Y+1
-        generic_indexed_store(cpu, .y, info.r, 0, .none);
+        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Y ← Y - 1, (Y) ← Rr
-        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
+        generic_indexed_store(cpu, .y, info.r, 0, .pre_decr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
@@ -1323,13 +1399,13 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rr, Z ← Z+1
-        generic_indexed_store(cpu, .z, info.r, 0, .none);
+        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Z ← Z - 1, (Z) ← Rr
-        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
+        generic_indexed_store(cpu, .z, info.r, 0, .pre_decr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z

@@ -387,12 +387,16 @@ fn add_test_suite_update(
 
                     const write_file = b.addWriteFile("config.json", config.to_string(b));
 
-                    const copy_file = b.addSystemCommand(&.{"cp"}); // todo make this cross-platform!
-                    copy_file.addFileArg(write_file.getDirectory().path(b, "config.json"));
-                    copy_file.addArg(b.fmt("testsuite/{s}/{s}.elf.json", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) }));
+                    _ = write_file.addCopyFile(
+                        write_file.getDirectory().path(b, "config.json"),
+                        b.fmt(
+                            "testsuite/{s}/{s}.elf.json",
+                            .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
+                        ),
+                    );
 
                     invoke_step.dependOn(&gcc_invocation.step);
-                    invoke_step.dependOn(&copy_file.step);
+                    invoke_step.dependOn(&write_file.step);
                 },
             }
         }

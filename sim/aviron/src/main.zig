@@ -29,9 +29,12 @@ pub fn main() !u8 {
     var flash_storage = aviron.Flash.Static(32768){};
     var sram = aviron.RAM.Static(2048){};
     var eeprom = aviron.EEPROM.Static(1024){};
+    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM starts at 0x0100.
+    // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
+    // For ATmega328P with 2KB SRAM, RAMEND = 0x08FF.
     var io = IO{
         .sreg = undefined,
-        .sp = sram.data.len - 1,
+        .sp = @as(u16, 0x0100) + @as(u16, sram.data.len - 1),
     };
 
     var cpu = aviron.Cpu{
@@ -117,9 +120,14 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(null);
+    const result = try cpu.run(cli.options.gas, cli.options.break_pc);
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
+
+    // Handle program exit - the defer block will still run
+    if (result == .program_exit) {
+        return io.exit_code;
+    }
 
     return 0;
 }
@@ -140,16 +148,25 @@ pub const FileFormat = enum {
 const Cli = struct {
     help: bool = false,
     trace: bool = false,
+    // Dump full register state every instruction
+    trace_regs: bool = false,
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
+    // Breakpoints / halting aids
+    break_pc: ?u24 = null,
+    // Stop after N instructions
+    gas: ?u64 = null,
 
     pub const shorthands = .{
         .h = "help",
         .t = "trace",
+        .R = "trace_regs",
         .m = "mcu",
         .I = "info",
         .f = "format",
+        .B = "break_pc",
+        .G = "gas",
     };
     pub const meta = .{
         .summary = "[-h] [-t] [-m <mcu>] <file> ...",
@@ -163,9 +180,12 @@ const Cli = struct {
         .option_docs = .{
             .help = "Prints this help text.",
             .trace = "Trace all executed instructions.",
+            .trace_regs = "Dump r0..r31, X/Y/Z, SP every instruction.",
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
+            .break_pc = "Break when PC reaches this address (hex or dec)",
+            .gas = "Stop after N instructions executed",
         },
     };
 };
@@ -175,6 +195,10 @@ const IO = struct {
 
     sp: u16,
     sreg: *aviron.Cpu.SREG,
+
+    // Exit status tracking
+    exit_requested: bool = false,
+    exit_code: u8 = 0,
 
     pub fn memory(self: *IO) aviron.IO {
         return aviron.IO{
@@ -186,6 +210,7 @@ const IO = struct {
     pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
+        .checkExitFn = check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -262,7 +287,10 @@ const IO = struct {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
-            .exit => std.process.exit(value & mask),
+            .exit => {
+                io.exit_requested = true;
+                io.exit_code = value & mask;
+            },
             .stdio => {
                 var stdout = std.fs.File.stdout().writer(&.{});
                 stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
@@ -316,5 +344,13 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn check_exit(ctx: ?*anyopaque) ?u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx.?));
+        if (io.exit_requested) {
+            return io.exit_code;
+        }
+        return null;
     }
 };
