@@ -291,11 +291,17 @@ fn add_test_suite(
             },
         };
 
-        const write_file = b.addWriteFile("config.json", cae.config.to_string(b));
+        const write_file = b.addWriteFile(
+            b.fmt("test-config-{s}.json", .{std.fs.path.stem(entry.basename)}),
+            cae.config.to_string(b),
+        );
 
         const test_run = b.addRunArtifact(testrunner_exe);
         test_run.addArg("--config");
-        test_run.addFileArg(write_file.getDirectory().path(b, "config.json"));
+        test_run.addFileArg(write_file.getDirectory().path(b, b.fmt(
+            "test-config-{s}.json",
+            .{std.fs.path.stem(entry.basename)},
+        )));
         test_run.addArg("--name");
         test_run.addArg(entry.path);
 
@@ -384,15 +390,10 @@ fn add_test_suite_update(
                 gcc_invocation.addArg("testsuite");
                 gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
 
-                const write_file = b.addWriteFile("config.json", config.to_string(b));
-
-                _ = write_file.addCopyFile(
-                    write_file.getDirectory().path(b, "config.json"),
-                    b.fmt(
-                        "testsuite/{s}/{s}.elf.json",
-                        .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
-                    ),
-                );
+                const write_file = b.addWriteFile(b.fmt(
+                    "testsuite/{s}/{s}.elf.json",
+                    .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
+                ), config.to_string(b));
 
                 invoke_step.dependOn(&gcc_invocation.step);
                 invoke_step.dependOn(&write_file.step);
@@ -425,14 +426,17 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
     if (json_text.len == 0)
         return TestSuiteConfig{};
 
-    return try std.json.parseFromSliceLeaky(
+    return std.json.parseFromSliceLeaky(
         TestSuiteConfig,
         b.allocator,
         json_text,
         .{
             .allocate = .alloc_always,
         },
-    );
+    ) catch |e| {
+        std.log.info("json: {s}", .{json_text});
+        return e;
+    };
 }
 
 fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
