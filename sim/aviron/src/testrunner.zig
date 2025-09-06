@@ -33,6 +33,7 @@ const ExitMode = union(testconfig.ExitType) {
     reset_watchdog,
     out_of_gas,
     infinite_loop,
+    program_exit,
     system_exit: u8,
 };
 
@@ -248,6 +249,7 @@ const IO = struct {
     pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
+        .checkExitFn = check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -374,5 +376,10 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null; // Testrunner handles exits differently via validate_syste_and_exit
     }
 };
