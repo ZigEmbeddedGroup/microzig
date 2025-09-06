@@ -218,14 +218,23 @@ pub fn main() !u8 {
 
             const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
+            // For SRAM sections, adjust for aviron's SRAM base address (0x100)
+            const target_addr = if (phdr.p_vaddr >= 0x0080_0000)
+                addr_masked - 0x100 // SRAM data should be relative to SRAM start
+            else
+                addr_masked;
+
             if (phdr.p_filesz > 0) {
                 try file_reader.seekTo(phdr.p_offset);
-                try file_reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
+                try file_reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
             }
             if (phdr.p_memsz > phdr.p_filesz) {
-                @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
             }
         }
+
+        // Set PC to entry point
+        test_system.cpu.pc = @intCast(header.entry);
     }
 
     const result = try test_system.cpu.run(null, null);
