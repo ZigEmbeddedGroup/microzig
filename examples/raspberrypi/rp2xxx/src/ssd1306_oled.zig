@@ -53,7 +53,7 @@ pub fn main() void {
     while (true) : (time.sleep_ms(1000)) {
         var allocator = fba.allocator();
         var temp_buf: [7]u8 = undefined;
-        const str = std.fmt.bufPrint(&temp_buf, "{s}{}", .{ "Try #", counter }) catch unreachable;
+        const str = std.fmt.bufPrint(&temp_buf, "Try #{}", .{ counter }) catch unreachable;
         var counter_buf: [80]u8 = undefined;
         const text_centered = center(&counter_buf, str);
 
