@@ -6,6 +6,7 @@ pub const ExitType = enum {
     reset_watchdog,
     out_of_gas,
     infinite_loop,
+    program_exit,
     system_exit,
 };
 
