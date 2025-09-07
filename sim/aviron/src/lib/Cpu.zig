@@ -85,53 +85,52 @@ pub const RunResult = enum {
     program_exit,
 };
 
+pub fn dump_system_state(cpu: *Cpu) void {
+    // Dump complete system state
+    std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
+    std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
+    std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
+    std.debug.print("SREG: {any}\n", .{cpu.sreg});
+
+    // Dump all registers
+    std.debug.print("\nREGISTERS:\n", .{});
+    for (cpu.regs, 0..) |reg, i| {
+        if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
+        std.debug.print("{X:0>2} ", .{reg});
+        if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
+    }
+
+    // Dump X, Y, Z pointer registers
+    const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
+    const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
+    const z_reg = (@as(u16, cpu.regs[31]) << 8) | cpu.regs[30];
+    std.debug.print("\nPOINTER REGISTERS:\n", .{});
+    std.debug.print("X (r27:r26): 0x{X:0>4}\n", .{x_reg});
+    std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
+    std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
+
+    // Dump SRAM
+    std.debug.print("\nSRAM DUMP (0x0100-0x08FF, {} bytes):\n", .{cpu.sram.size});
+    for (0..cpu.sram.size) |i| {
+        if (i % 16 == 0) {
+            std.debug.print("0x{X:0>4}: ", .{0x0100 + i});
+        }
+        std.debug.print("{X:0>2} ", .{cpu.sram.read(@as(u24, @intCast(0x0100 + i)))});
+        if ((i + 1) % 16 == 0) {
+            std.debug.print("\n", .{});
+        }
+    }
+    if (cpu.sram.size % 16 != 0) {
+        std.debug.print("\n", .{});
+    }
+    std.debug.print("=== END DUMP ===\n", .{});
+}
+
 pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
     var rest_gas = mileage;
 
-    if (cpu.trace) {
-        defer {
-            // Dump complete system state
-            std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
-            std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
-            std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
-            std.debug.print("SREG: {any}\n", .{cpu.sreg});
-
-            // Dump all registers
-            std.debug.print("\nREGISTERS:\n", .{});
-            for (cpu.regs, 0..) |reg, i| {
-                if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
-                std.debug.print("{X:0>2} ", .{reg});
-                if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
-            }
-
-            // Dump X, Y, Z pointer registers
-            const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
-            const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
-            const z_reg = (@as(u16, cpu.regs[31]) << 8) | cpu.regs[30];
-            std.debug.print("\nPOINTER REGISTERS:\n", .{});
-            std.debug.print("X (r27:r26): 0x{X:0>4}\n", .{x_reg});
-            std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
-            std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
-
-            // Dump SRAM
-            std.debug.print("\nSRAM DUMP (0x0100-0x08FF, {} bytes):\n", .{cpu.sram.size});
-            for (0..cpu.sram.size) |i| {
-                if (i % 16 == 0) {
-                    std.debug.print("0x{X:0>4}: ", .{0x0100 + i});
-                }
-                std.debug.print("{X:0>2} ", .{cpu.sram.read(@as(u24, @intCast(0x0100 + i)))});
-                if ((i + 1) % 16 == 0) {
-                    std.debug.print("\n", .{});
-                }
-            }
-            if (cpu.sram.size % 16 != 0) {
-                std.debug.print("\n", .{});
-            }
-            std.debug.print("=== END DUMP ===\n", .{});
-        }
-    }
-
     while (true) {
+        
         if (rest_gas) |*rg| {
             if (rg.* == 0)
                 return .out_of_gas;
