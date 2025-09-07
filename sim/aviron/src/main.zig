@@ -126,7 +126,7 @@ pub fn main() !u8 {
         cpu.dump_system_state();
     }
 
-    std.debug.print("STOP: {s}\n", .{@tagName(result)});
+    std.debug.print("\nSTOP: {s}\n", .{@tagName(result)});
 
     // Handle program exit - the defer block will still run
     if (result == .program_exit) {
@@ -153,7 +153,6 @@ const Cli = struct {
     help: bool = false,
     trace: bool = false,
     // Dump full register state every instruction
-    trace_regs: bool = false,
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
@@ -165,7 +164,6 @@ const Cli = struct {
     pub const shorthands = .{
         .h = "help",
         .t = "trace",
-        .R = "trace_regs",
         .m = "mcu",
         .I = "info",
         .f = "format",
@@ -184,7 +182,6 @@ const Cli = struct {
         .option_docs = .{
             .help = "Prints this help text.",
             .trace = "Trace all executed instructions.",
-            .trace_regs = "Dump r0..r31, X/Y/Z, SP every instruction.",
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
