@@ -122,6 +122,10 @@ pub fn main() !u8 {
 
     const result = try cpu.run(cli.options.gas, cli.options.break_pc);
 
+    if (cli.options.trace) {
+        cpu.dump_system_state();
+    }
+
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
 
     // Handle program exit - the defer block will still run
