@@ -90,7 +90,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
     std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
     std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
     std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
-    std.debug.print("SREG: {any}\n", .{cpu.sreg});
+    std.debug.print("SREG: {f}\n", .{cpu.sreg});
 
     // Dump all registers
     std.debug.print("\nREGISTERS:\n", .{});
@@ -130,7 +130,6 @@ pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
     var rest_gas = mileage;
 
     while (true) {
-        
         if (rest_gas) |*rg| {
             if (rg.* == 0)
                 return .out_of_gas;
