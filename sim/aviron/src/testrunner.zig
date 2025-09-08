@@ -139,11 +139,10 @@ pub fn main() !u8 {
     test_system = SystemState{
         .options = cli.options,
         .config = config,
-        .io = undefined, // Will be initialized below
-        .cpu = undefined, // Will be initialized below
+        .io = undefined, // Initialized below
+        .cpu = undefined, // Initialized below
     };
 
-    // Initialize IO first
     test_system.io = IO{
         .sreg = undefined, // Will be set after CPU initialization
         // Initialize SP to RAMEND (0x0100 + SRAM size - 1)
@@ -155,7 +154,6 @@ pub fn main() !u8 {
         .stderr = &stderr,
     };
 
-    // Initialize CPU
     test_system.cpu = aviron.Cpu{
         .trace = cli.options.trace,
 
@@ -182,7 +180,6 @@ pub fn main() !u8 {
         },
     };
 
-    // Now link the sreg after both are initialized
     test_system.io.sreg = &test_system.cpu.sreg;
 
     // Initialize CPU state:
