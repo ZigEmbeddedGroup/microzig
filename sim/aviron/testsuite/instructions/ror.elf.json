@@ -52,9 +52,9 @@
     "sreg": {
       "c": false,
       "z": null,
-      "n": null,
+      "n": true,
       "v": null,
-      "s": null,
+      "s": false,
       "h": null,
       "t": null,
       "i": null
