@@ -128,7 +128,7 @@ pub fn main() !u8 {
 
     std.debug.print("\nSTOP: {s}\n", .{@tagName(result)});
 
-    // Handle program exit - the defer block will still run
+    // Handle program exit
     if (result == .program_exit) {
         return io.exit_code;
     }
@@ -152,13 +152,10 @@ pub const FileFormat = enum {
 const Cli = struct {
     help: bool = false,
     trace: bool = false,
-    // Dump full register state every instruction
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
-    // Breakpoints / halting aids
     break_pc: ?u24 = null,
-    // Stop after N instructions
     gas: ?u64 = null,
 
     pub const shorthands = .{
