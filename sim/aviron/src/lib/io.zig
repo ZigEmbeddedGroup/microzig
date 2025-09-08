@@ -67,12 +67,14 @@ pub const RAM = struct {
     size: usize,
 
     pub fn read(mem: RAM, addr: Address) u8 {
-        std.debug.assert(addr < mem.size);
+        // Logical RAM addresses include SRAM base (e.g., 0x0100..)
+        // Perform bounds checks inside the backend where we map to array indices.
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     pub fn write(mem: RAM, addr: Address, value: u8) void {
-        std.debug.assert(addr < mem.size);
+        // Logical RAM addresses include SRAM base (e.g., 0x0100..)
+        // Perform bounds checks inside the backend where we map to array indices.
         return mem.vtable.writeFn(mem.ctx, addr, value);
     }
 
@@ -120,12 +122,18 @@ pub const RAM = struct {
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return mem.data[addr];
+                // ATmega328P memory map: SRAM starts at 0x0100
+                // Map logical addresses 0x0100-0x08FF to array indices 0x0000-0x07FF
+                const sram_offset: Address = if (addr >= 0x100) addr - 0x100 else addr;
+                return mem.data[sram_offset];
             }
 
             fn mem_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                mem.data[addr] = value;
+                // ATmega328P memory map: SRAM starts at 0x0100
+                // Map logical addresses 0x0100-0x08FF to array indices 0x0000-0x07FF
+                const sram_offset: Address = if (addr >= 0x100) addr - 0x100 else addr;
+                mem.data[sram_offset] = value;
             }
         };
     }
@@ -154,14 +162,23 @@ pub const IO = struct {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
+    pub fn check_exit(mem: IO) ?u8 {
+        return mem.vtable.checkExitFn(mem.ctx);
+    }
+
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
+        checkExitFn: *const fn (ctx: ?*anyopaque) ?u8,
     };
 
     pub const empty = IO{
         .ctx = null,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
+        .vtable = &VTable{
+            .readFn = empty_read,
+            .writeFn = empty_write,
+            .checkExitFn = empty_check_exit,
+        },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
@@ -175,5 +192,10 @@ pub const IO = struct {
         _ = value;
         _ = addr;
         _ = ctx;
+    }
+
+    fn empty_check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null;
     }
 };

@@ -32,6 +32,8 @@ const ExitMode = union(testconfig.ExitType) {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
+    program_exit,
     system_exit: u8,
 };
 
@@ -40,7 +42,7 @@ fn validate_reg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void
 
     const actual = ts.cpu.regs[reg.num()];
     if (expected != actual) {
-        std.debug.print("Invalid register value for register {s}: Expected {}, but got {}.\n", .{
+        std.debug.print("Invalid register value for register {s}: Expected 0x{X:0>2}, but got 0x{X:0>2}.\n", .{
             @tagName(reg),
             expected,
             actual,
@@ -133,46 +135,52 @@ pub fn main() !u8 {
     var stderr = std.array_list.Managed(u8).init(allocator);
     defer stderr.deinit();
 
+    // Initialize test_system with partial initialization to break circular dependency
     test_system = SystemState{
         .options = cli.options,
         .config = config,
+        .io = undefined, // Initialized below
+        .cpu = undefined, // Initialized below
+    };
 
-        .io = IO{
-            .sreg = &test_system.cpu.sreg,
-            .sp = 2047,
-            .config = config,
+    test_system.io = IO{
+        .sreg = undefined, // Will be set after CPU initialization
+        // Initialize SP to RAMEND (0x0100 + SRAM size - 1)
+        .sp = @as(u16, 0x0100) + @as(u16, test_system.sram.data.len - 1),
+        .config = config,
 
-            .stdin = config.stdin,
-            .stdout = &stdout,
-            .stderr = &stderr,
-        },
+        .stdin = config.stdin,
+        .stdout = &stdout,
+        .stderr = &stderr,
+    };
 
-        .cpu = aviron.Cpu{
-            .trace = cli.options.trace,
+    test_system.cpu = aviron.Cpu{
+        .trace = cli.options.trace,
 
-            .instruction_set = .avr5,
+        .instruction_set = .avr5,
 
-            .flash = test_system.flash_storage.memory(),
-            .sram = test_system.sram.memory(),
-            .eeprom = test_system.eeprom.memory(),
-            .io = test_system.io.memory(),
+        .flash = test_system.flash_storage.memory(),
+        .sram = test_system.sram.memory(),
+        .eeprom = test_system.eeprom.memory(),
+        .io = test_system.io.memory(),
 
-            .code_model = .code16,
+        .code_model = .code16,
 
-            .sio = .{
-                .ramp_x = null,
-                .ramp_y = null,
-                .ramp_z = null,
-                .ramp_d = null,
-                .e_ind = null,
+        .sio = .{
+            .ramp_x = null,
+            .ramp_y = null,
+            .ramp_z = null,
+            .ramp_d = null,
+            .e_ind = null,
 
-                .sp_l = @intFromEnum(IO.Register.sp_l),
-                .sp_h = @intFromEnum(IO.Register.sp_h),
+            .sp_l = @intFromEnum(IO.Register.sp_l),
+            .sp_h = @intFromEnum(IO.Register.sp_h),
 
-                .sreg = @intFromEnum(IO.Register.sreg),
-            },
+            .sreg = @intFromEnum(IO.Register.sreg),
         },
     };
+
+    test_system.io.sreg = &test_system.cpu.sreg;
 
     // Initialize CPU state:
     inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
@@ -207,17 +215,26 @@ pub fn main() !u8 {
 
             const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
+            // For SRAM sections, adjust for aviron's SRAM base address (0x100)
+            const target_addr = if (phdr.p_vaddr >= 0x0080_0000)
+                addr_masked - 0x100 // SRAM data should be relative to SRAM start
+            else
+                addr_masked;
+
             if (phdr.p_filesz > 0) {
                 try file_reader.seekTo(phdr.p_offset);
-                try file_reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
+                try file_reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
             }
             if (phdr.p_memsz > phdr.p_filesz) {
-                @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
             }
         }
+
+        // Set PC to entry point
+        test_system.cpu.pc = @intCast(header.entry);
     }
 
-    const result = try test_system.cpu.run(null);
+    const result = try test_system.cpu.run(null, null);
     validate_syste_and_exit(switch (result) {
         inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
     });
@@ -246,6 +263,7 @@ const IO = struct {
     pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
+        .checkExitFn = check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -372,5 +390,10 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null; // Testrunner handles exits differently via validate_syste_and_exit
     }
 };
