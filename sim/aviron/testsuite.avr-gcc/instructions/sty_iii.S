@@ -12,9 +12,9 @@
 //!     "r16": 221,
 //!     "r17": 238,
 //!     "r18": 255,
-//!     "r19": 255,
+//!     "r19": 221,
 //!     "r20": 238,
-//!     "r21": 221,
+//!     "r21": 255,
 //!     "r22": 0,
 //!     "r23": 0,
 //!     "r24": 2
@@ -42,9 +42,9 @@
 
     ; Read back the values to verify they were stored correctly
     ; Y is now at 0x0200, so read forward
-    ld r21, Y+  ; r21 = Memory[0x0200] = 0xDD, Y becomes 0x0201
+    ld r19, Y+  ; r19 = Memory[0x0200] = 0xDD, Y becomes 0x0201
     ld r20, Y+  ; r20 = Memory[0x0201] = 0xEE, Y becomes 0x0202
-    ld r19, Y+  ; r19 = Memory[0x0202] = 0xFF, Y becomes 0x0203
+    ld r21, Y+  ; r21 = Memory[0x0202] = 0xFF, Y becomes 0x0203
     ld r22, Y+  ; r22 = Memory[0x0203] = 0x00, Y becomes 0x0204
 
     ; Reset Y to final position after ST operations (0x0200)

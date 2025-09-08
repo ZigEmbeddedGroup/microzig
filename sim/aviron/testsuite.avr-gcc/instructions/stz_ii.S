@@ -37,7 +37,7 @@
     st Z+, r18
 
     ; Copy final Z register value (after ST operations) to r23:r24 for verification
-    mov r23, r30  ; r23 = Z low byte (should be 19)
+    mov r23, r30  ; r23 = Z low byte (should be 0x13)
     mov r24, r31  ; r24 = Z high byte (should be 2)
 
     ; Read back the values to verify they were stored correctly
