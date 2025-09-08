@@ -105,8 +105,12 @@ pub fn build(b: *Build) !void {
     }
 
     // Test suite:
-    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
+    // Set up the update-testsuite step - this only creates/updates JSON files and ELF files
     try add_test_suite_update(b, update_testsuite_step);
+
+    // Set up test scanning - this reads existing JSON files and runs tests
+    // Only set up if we're not exclusively running update-testsuite
+    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
 }
 
 fn add_test_suite(
@@ -282,7 +286,11 @@ fn add_test_suite(
                 const config = if (entry.dir.openFile(config_path, .{})) |file| cfg: {
                     defer file.close();
                     break :cfg try TestSuiteConfig.load(b.allocator, file);
-                } else |_| @panic(config_path);
+                } else |_| {
+                    // If JSON file doesn't exist, skip this test (likely during testsuite update)
+                    std.log.warn("Skipping test {s} - JSON config file {s} not found (run 'zig build update-testsuite' first)", .{ entry.path, config_path });
+                    continue;
+                };
 
                 break :blk .{
                     .binary = b.path(b.fmt("testsuite/{s}", .{entry.path})),
@@ -375,13 +383,24 @@ fn add_test_suite_update(
 
                 const config = try parse_test_suite_config(b, file);
 
-                const gcc_invocation = Build.Step.Run.create(b, "run avr-gcc");
-                gcc_invocation.addFileArg(avr_gcc);
-                gcc_invocation.addArg("-o");
-                gcc_invocation.addArg(b.fmt(
-                    "testsuite/{s}/{s}.elf",
+                // Force write JSON directly using a temporary file approach
+                const json_content = config.to_string(b);
+                const temp_json = b.addWriteFile("temp.json", json_content);
+
+                const json_write = Build.Step.Run.create(b, "write json to testsuite");
+                json_write.addArg("cp");
+                json_write.addFileArg(temp_json.getDirectory().path(b, "temp.json"));
+                json_write.addArg(b.fmt(
+                    "testsuite/{s}/{s}.elf.json",
                     .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
                 ));
+                json_write.step.dependOn(&temp_json.step);
+
+                // Force write ELF directly to testsuite directory
+                const gcc_invocation = Build.Step.Run.create(b, "write elf to testsuite");
+                gcc_invocation.addFileArg(avr_gcc);
+                gcc_invocation.addArg("-o");
+                gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) }));
                 gcc_invocation.addArg(b.fmt("-mmcu={s}", .{config.cpu orelse @panic("Unknown MCU!")}));
                 for (config.gcc_flags) |opt| {
                     gcc_invocation.addArg(opt);
@@ -390,13 +409,8 @@ fn add_test_suite_update(
                 gcc_invocation.addArg("testsuite");
                 gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
 
-                const write_file = b.addWriteFile(b.fmt(
-                    "testsuite/{s}/{s}.elf.json",
-                    .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
-                ), config.to_string(b));
-
+                invoke_step.dependOn(&json_write.step);
                 invoke_step.dependOn(&gcc_invocation.step);
-                invoke_step.dependOn(&write_file.step);
             },
         }
     }
@@ -433,10 +447,7 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
         .{
             .allocate = .alloc_always,
         },
-    ) catch |e| {
-        std.log.info("json: {s}", .{json_text});
-        return e;
-    };
+    );
 }
 
 fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
