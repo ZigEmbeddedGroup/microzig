@@ -426,14 +426,17 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
     if (json_text.len == 0)
         return TestSuiteConfig{};
 
-    return try std.json.parseFromSliceLeaky(
+    return std.json.parseFromSliceLeaky(
         TestSuiteConfig,
         b.allocator,
         json_text,
         .{
             .allocate = .alloc_always,
         },
-    );
+    ) catch |e| {
+        std.log.info("json: {s}", .{json_text});
+        return e;
+    };
 }
 
 fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
