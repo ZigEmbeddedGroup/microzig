@@ -447,10 +447,7 @@ fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
         .{
             .allocate = .alloc_always,
         },
-    ) catch |e| {
-        std.log.info("json: {s}", .{json_text});
-        return e;
-    };
+    );
 }
 
 fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
