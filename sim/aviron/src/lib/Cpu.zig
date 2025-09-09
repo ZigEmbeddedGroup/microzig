@@ -92,14 +92,6 @@ pub fn dump_system_state(cpu: *Cpu) void {
     std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
     std.debug.print("SREG: {f}\n", .{cpu.sreg});
 
-    // Dump all registers
-    std.debug.print("\nREGISTERS:\n", .{});
-    for (cpu.regs, 0..) |reg, i| {
-        if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
-        std.debug.print("{X:0>2} ", .{reg});
-        if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
-    }
-
     // Dump X, Y, Z pointer registers
     const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
     const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
@@ -109,23 +101,61 @@ pub fn dump_system_state(cpu: *Cpu) void {
     std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
     std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
 
+    // Dump all registers
+    std.debug.print("\nREGISTERS:\n", .{});
+    for (cpu.regs, 0..) |reg, i| {
+        if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
+        std.debug.print("{X:0>2} ", .{reg});
+        if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
+    }
+
     // Dump SRAM using absolute addresses based on configured base
     const sram_base: u24 = cpu.sram.get_base();
     const sram_end: u24 = sram_base + @as(u24, @intCast(cpu.sram.size - 1));
     std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ sram_base, sram_end, cpu.sram.size });
-    for (0..cpu.sram.size) |i| {
-        if (i % 16 == 0) {
+
+    const row_width = 16;
+    var prev_row: [row_width]u8 = undefined;
+    var prev_len: usize = 0;
+    var have_prev = false;
+    var elided = false;
+
+    var i: usize = 0;
+    while (i < cpu.sram.size) : (i += @min(row_width, cpu.sram.size - i)) {
+        const row_len: usize = @min(row_width, cpu.sram.size - i);
+        var cur_row: [row_width]u8 = undefined;
+
+        var j: usize = 0;
+        while (j < row_len) : (j += 1) {
+            cur_row[j] = cpu.sram.read(sram_base + @as(u24, @intCast(i + j)));
+        }
+
+        // 'Don't show repeated lines to minimize the size of the dump
+        const same_as_prev = have_prev and prev_len == row_len and std.mem.eql(u8, prev_row[0..prev_len], cur_row[0..row_len]);
+        if (same_as_prev) {
+            elided = true;
+        } else {
+            if (elided) {
+                std.debug.print("*\n", .{});
+                elided = false;
+            }
+
             std.debug.print("0x{X:0>4}: ", .{sram_base + @as(u24, @intCast(i))});
-        }
-        // Read using absolute address = base + offset
-        std.debug.print("{X:0>2} ", .{cpu.sram.read(sram_base + @as(u24, @intCast(i)))});
-        if ((i + 1) % 16 == 0) {
+            j = 0;
+            while (j < row_len) : (j += 1) {
+                std.debug.print("{X:0>2} ", .{cur_row[j]});
+            }
             std.debug.print("\n", .{});
+
+            // store as previous row
+            @memcpy(prev_row[0..row_len], cur_row[0..row_len]);
+            prev_len = row_len;
+            have_prev = true;
         }
     }
-    if (cpu.sram.size % 16 != 0) {
-        std.debug.print("\n", .{});
-    }
+    if (elided)
+        std.debug.print("*\n", .{});
+
     std.debug.print("=== END DUMP ===\n", .{});
 }
 
