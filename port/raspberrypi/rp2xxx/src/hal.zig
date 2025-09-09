@@ -4,8 +4,19 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
+pub const bootmeta = @import("hal/bootmeta.zig");
 pub const clocks = @import("hal/clocks.zig");
+pub const compatibility = @import("hal/compatibility.zig");
+pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
+pub const dcp = switch (compatibility.chip) {
+    .RP2040 => @compileError("RP2040 doesn't support DCP"),
+    .RP2350 => switch (compatibility.arch) {
+        .arm => @import("hal/dcp.zig"),
+        .riscv => @compileError("RP2350 riscv doesn't support DCP"),
+    },
+};
 pub const dma = @import("hal/dma.zig");
+pub const drivers = @import("hal/drivers.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const multicore = @import("hal/multicore.zig");
@@ -21,22 +32,12 @@ pub const rtc = switch (compatibility.chip) {
     .RP2350 => @import("hal/always_on_timer.zig"),
 };
 pub const spi = @import("hal/spi.zig");
+pub const system_timer = @import("hal/system_timer.zig");
 pub const i2c = @import("hal/i2c.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
-pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
-pub const drivers = @import("hal/drivers.zig");
-pub const compatibility = @import("hal/compatibility.zig");
-pub const bootmeta = @import("hal/bootmeta.zig");
-pub const dcp = switch (compatibility.chip) {
-    .RP2040 => @compileError("RP2040 doesn't support DCP"),
-    .RP2350 => switch (compatibility.arch) {
-        .arm => @import("hal/dcp.zig"),
-        .riscv => @compileError("RP2350 riscv doesn't support DCP"),
-    },
-};
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
