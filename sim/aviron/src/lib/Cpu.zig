@@ -109,14 +109,16 @@ pub fn dump_system_state(cpu: *Cpu) void {
     std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
     std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
 
-    // Dump SRAM relative to configured base
-    std.debug.print("\nSRAM DUMP (base 0x{X:0>4}, {d} bytes):\n", .{ cpu.sram.getBase(), cpu.sram.size });
+    // Dump SRAM using absolute addresses based on configured base
+    const sram_base: u24 = cpu.sram.get_base();
+    const sram_end: u24 = sram_base + @as(u24, @intCast(cpu.sram.size - 1));
+    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ sram_base, sram_end, cpu.sram.size });
     for (0..cpu.sram.size) |i| {
         if (i % 16 == 0) {
-            std.debug.print("0x{X:0>4}: ", .{@as(u24, @intCast(i))});
+            std.debug.print("0x{X:0>4}: ", .{sram_base + @as(u24, @intCast(i))});
         }
         // Read using absolute address = base + offset
-        std.debug.print("{X:0>2} ", .{cpu.sram.read(@as(u24, @intCast(i)) + cpu.sram.getBase())});
+        std.debug.print("{X:0>2} ", .{cpu.sram.read(sram_base + @as(u24, @intCast(i)))});
         if ((i + 1) % 16 == 0) {
             std.debug.print("\n", .{});
         }

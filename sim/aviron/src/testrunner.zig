@@ -268,7 +268,7 @@ const IO = struct {
     };
 
     // This is our own "debug" device with it's own debug addresses:
-    const Register = enum(u8) {
+    const Register = enum(aviron.IO.Address) {
         exit = 0, // read: 0, write: os.exit()
         stdio = 1, // read: stdin, write: print to stdout
         stderr = 2, // read: 0, write: print to stderr
@@ -297,7 +297,7 @@ const IO = struct {
         _,
     };
 
-    fn read(ctx: ?*anyopaque, addr: u8) u8 {
+    fn read(ctx: ?*anyopaque, addr: aviron.IO.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         return switch (reg) {
@@ -340,7 +340,7 @@ const IO = struct {
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn write(ctx: ?*anyopaque, addr: u8, mask: u8, value: u8) void {
+    fn write(ctx: ?*anyopaque, addr: aviron.IO.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
@@ -375,7 +375,7 @@ const IO = struct {
             _ => {
                 // Unimplemented I/O: ignore the write but record an error via stderr to aid debugging.
                 // The test harness uses explicit exits, so we do not kill the simulator here.
-                std.debug.print("warning: write to undefined I/O register 0x{X:0>2} (value=0x{X:0>2}, mask=0x{X:0>2})\n", .{ addr, value, mask });
+                std.debug.print("warning: write to undefined I/O register 0x{X} (value=0x{X:0>2}, mask=0x{X:0>2})\n", .{ addr, value, mask });
             },
         }
     }
@@ -406,7 +406,7 @@ const IO = struct {
         return null; // Testrunner handles exits via validate_syste_and_exit
     }
 
-    fn translate_addr(ctx: ?*anyopaque, addr: u24) ?u8 {
+    fn translate_addr(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
         _ = ctx; // This test IO maps the canonical AVR low I/O window only by default
         // Map data-space 0x20..0x5F to I/O ports 0x00..0x3F
         if (addr >= 0x20 and addr <= 0x5F) return @intCast(addr - 0x20);

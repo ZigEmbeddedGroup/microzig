@@ -14,7 +14,7 @@ pub const Flash = struct {
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
-    pub fn getBase(mem: Flash) Address {
+    pub fn get_base(mem: Flash) Address {
         return mem.vtable.getBaseFn(mem.ctx);
     }
 
@@ -58,7 +58,7 @@ pub const Flash = struct {
                 };
             }
 
-            pub const vtable = VTable{ .readFn = mem_read, .getBaseFn = get_base };
+            pub const vtable = VTable{ .readFn = mem_read, .getBaseFn = Self.get_base };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
@@ -95,7 +95,7 @@ pub const RAM = struct {
         return mem.vtable.writeFn(mem.ctx, addr, value);
     }
 
-    pub fn getBase(mem: RAM) Address {
+    pub fn get_base(mem: RAM) Address {
         return mem.vtable.getBaseFn(mem.ctx);
     }
 
@@ -147,7 +147,7 @@ pub const RAM = struct {
             pub const vtable = VTable{
                 .readFn = mem_read,
                 .writeFn = mem_write,
-                .getBaseFn = get_base,
+                .getBaseFn = Self.get_base,
             };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
@@ -177,7 +177,8 @@ pub const RAM = struct {
 pub const EEPROM = RAM; // actually the same interface *shrug*
 
 pub const IO = struct {
-    pub const Address = u8;
+    // Some AVR families (e.g., XMEGA) expose extended I/O up to 0xFFF (12 bits).
+    pub const Address = u12;
 
     ctx: ?*anyopaque,
 

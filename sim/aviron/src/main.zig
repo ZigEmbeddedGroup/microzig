@@ -217,7 +217,7 @@ const IO = struct {
     };
 
     // This is our own "debug" device with it's own debug addresses:
-    const Register = enum(u8) {
+    const Register = enum(aviron.IO.Address) {
         exit = 0, // read: 0, write: os.exit()
         stdio = 1, // read: stdin, write: print to stdout
         stderr = 2, // read: 0, write: print to stderr
@@ -246,7 +246,7 @@ const IO = struct {
         _,
     };
 
-    fn read(ctx: ?*anyopaque, addr: u8) u8 {
+    fn read(ctx: ?*anyopaque, addr: aviron.IO.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         return switch (reg) {
@@ -286,7 +286,7 @@ const IO = struct {
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn write(ctx: ?*anyopaque, addr: u8, mask: u8, value: u8) void {
+    fn write(ctx: ?*anyopaque, addr: aviron.IO.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
@@ -325,9 +325,7 @@ const IO = struct {
             .sreg => write_masked(@ptrCast(io.sreg), mask, value),
 
             _ => {
-                // Unimplemented I/O: Just crash. TODO: Halt
-                io.exit_requested = true;
-                io.exit_code = 0xFF;
+                // Unimplemented I/O: ignore (no panic). Could log if desired.
             },
         }
     }
@@ -363,7 +361,7 @@ const IO = struct {
 
     // By default, map AVR low I/O window: data-space 0x20..0x5F → I/O ports 0x00..0x3F.
     // Extended I/O (0x60..0xFF) is left unmapped for now.
-    fn translate_address(ctx: ?*anyopaque, addr: u24) ?u8 {
+    fn translate_address(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
         _ = ctx;
         return if (addr >= 0x20 and addr <= 0x5F) @intCast(addr - 0x20) else null;
     }
