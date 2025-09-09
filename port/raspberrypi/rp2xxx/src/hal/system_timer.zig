@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const compatibility = @import("compatibility.zig");
 
-pub fn num(n: u2) Timer {
+pub fn num(n: u1) Timer {
     if (compatibility.chip == .RP2040) std.debug.assert(n == 0);
     return @enumFromInt(n);
 }
