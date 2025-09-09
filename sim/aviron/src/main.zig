@@ -26,15 +26,15 @@ pub fn main() !u8 {
     // TODO: Add support for more MCUs!
     std.debug.assert(cli.options.mcu == .atmega328p);
 
-    var flash_storage = aviron.Flash.Static(32768){};
-    var sram = aviron.RAM.Static(2048){};
-    var eeprom = aviron.EEPROM.Static(1024){};
-    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM starts at 0x0100.
+    var flash_storage = aviron.Flash.Static(32768){ .base = 0 };
+    var sram = aviron.RAM.Static(2048){ .base = 0x0100 };
+    var eeprom = aviron.EEPROM.Static(1024){ .base = 0 };
+    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific (0x0100 on ATmega328P).
     // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
     // For ATmega328P with 2KB SRAM, RAMEND = 0x08FF.
     var io = IO{
         .sreg = undefined,
-        .sp = @as(u16, 0x0100) + @as(u16, sram.data.len - 1),
+        .sp = @as(u16, @intCast(sram.base)) + @as(u16, sram.data.len - 1),
     };
 
     var cpu = aviron.Cpu{
@@ -99,10 +99,14 @@ pub fn main() !u8 {
                         &flash_storage.data;
 
                     const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
+                    const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
+                        addr_masked - sram.base
+                    else
+                        addr_masked - flash_storage.base;
 
                     try reader.seekTo(phdr.p_offset);
-                    try reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
-                    @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                    try reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
+                    @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
                 }
             },
             .binary, .bin => {

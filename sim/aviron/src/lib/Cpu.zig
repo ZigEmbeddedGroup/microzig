@@ -109,13 +109,14 @@ pub fn dump_system_state(cpu: *Cpu) void {
     std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
     std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
 
-    // Dump SRAM
-    std.debug.print("\nSRAM DUMP (0x0100-0x08FF, {} bytes):\n", .{cpu.sram.size});
+    // Dump SRAM relative to configured base
+    std.debug.print("\nSRAM DUMP (base 0x{X:0>4}, {d} bytes):\n", .{ cpu.sram.getBase(), cpu.sram.size });
     for (0..cpu.sram.size) |i| {
         if (i % 16 == 0) {
-            std.debug.print("0x{X:0>4}: ", .{0x0100 + i});
+            std.debug.print("0x{X:0>4}: ", .{@as(u24, @intCast(i))});
         }
-        std.debug.print("{X:0>2} ", .{cpu.sram.read(@as(u24, @intCast(0x0100 + i)))});
+        // Read using absolute address = base + offset
+        std.debug.print("{X:0>2} ", .{cpu.sram.read(@as(u24, @intCast(i)) + cpu.sram.getBase())});
         if ((i + 1) % 16 == 0) {
             std.debug.print("\n", .{});
         }

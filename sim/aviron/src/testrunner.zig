@@ -16,9 +16,9 @@ const SystemState = struct {
     cpu: aviron.Cpu,
 
     // Emulate Atmega382p device size:
-    flash_storage: aviron.Flash.Static(32768) = .{},
-    sram: aviron.RAM.Static(2048) = .{},
-    eeprom: aviron.EEPROM.Static(1024) = .{},
+    flash_storage: aviron.Flash.Static(32768) = .{ .base = 0 },
+    sram: aviron.RAM.Static(2048) = .{ .base = 0x0100 },
+    eeprom: aviron.EEPROM.Static(1024) = .{ .base = 0 },
     io: IO,
 
     config: testconfig.TestSuiteConfig,
@@ -145,8 +145,8 @@ pub fn main() !u8 {
 
     test_system.io = IO{
         .sreg = undefined, // Will be set after CPU initialization
-        // Initialize SP to RAMEND (0x0100 + SRAM size - 1)
-        .sp = @as(u16, 0x0100) + @as(u16, test_system.sram.data.len - 1),
+        // Initialize SP to RAMEND (SRAM base + SRAM size - 1)
+        .sp = @as(u16, @intCast(test_system.sram.base)) + @as(u16, test_system.sram.data.len - 1),
         .config = config,
 
         .stdin = config.stdin,
@@ -215,11 +215,11 @@ pub fn main() !u8 {
 
             const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
-            // For SRAM sections, adjust for aviron's SRAM base address (0x100)
-            const target_addr = if (phdr.p_vaddr >= 0x0080_0000)
-                addr_masked - 0x100 // SRAM data should be relative to SRAM start
+            // Adjust for configured base of the target memory region
+            const target_addr: u24 = if (phdr.p_vaddr >= 0x0080_0000)
+                addr_masked - test_system.sram.base
             else
-                addr_masked;
+                addr_masked - test_system.flash_storage.base;
 
             if (phdr.p_filesz > 0) {
                 try file_reader.seekTo(phdr.p_offset);

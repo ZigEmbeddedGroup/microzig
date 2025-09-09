@@ -11,22 +11,31 @@ pub const Flash = struct {
     size: usize,
 
     pub fn read(mem: Flash, addr: Address) u16 {
-        std.debug.assert(addr < mem.size);
         return mem.vtable.readFn(mem.ctx, addr);
+    }
+
+    pub fn getBase(mem: Flash) Address {
+        return mem.vtable.getBaseFn(mem.ctx);
     }
 
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
+        getBaseFn: *const fn (ctx: ?*anyopaque) Address,
     };
 
     pub const empty = Flash{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = empty_read },
+        .vtable = &VTable{ .readFn = empty_read, .getBaseFn = empty_get_base },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: Address) u16 {
         _ = addr;
+        _ = ctx;
+        return 0;
+    }
+
+    fn empty_get_base(ctx: ?*anyopaque) Address {
         _ = ctx;
         return 0;
     }
@@ -38,6 +47,8 @@ pub const Flash = struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
+            /// Base address (in words) where this flash is mapped.
+            base: Address = 0,
 
             pub fn memory(self: *Self) Flash {
                 return Flash{
@@ -47,11 +58,19 @@ pub const Flash = struct {
                 };
             }
 
-            pub const vtable = VTable{ .readFn = mem_read };
+            pub const vtable = VTable{ .readFn = mem_read, .getBaseFn = get_base };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return std.mem.bytesAsSlice(u16, &mem.data)[addr];
+                std.debug.assert(addr >= mem.base);
+                const off: Address = addr - mem.base;
+                std.debug.assert(off < @as(Address, @intCast(@divExact(size, 2))));
+                return std.mem.bytesAsSlice(u16, &mem.data)[off];
+            }
+
+            fn get_base(ctx: ?*anyopaque) Address {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                return mem.base;
             }
         };
     }
@@ -67,26 +86,29 @@ pub const RAM = struct {
     size: usize,
 
     pub fn read(mem: RAM, addr: Address) u8 {
-        // Logical RAM addresses include SRAM base (e.g., 0x0100..)
-        // Perform bounds checks inside the backend where we map to array indices.
+        // Logical RAM addresses include SRAM base; backend maps to array indices.
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     pub fn write(mem: RAM, addr: Address, value: u8) void {
-        // Logical RAM addresses include SRAM base (e.g., 0x0100..)
-        // Perform bounds checks inside the backend where we map to array indices.
+        // Logical RAM addresses include SRAM base; backend maps to array indices.
         return mem.vtable.writeFn(mem.ctx, addr, value);
+    }
+
+    pub fn getBase(mem: RAM) Address {
+        return mem.vtable.getBaseFn(mem.ctx);
     }
 
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
+        getBaseFn: *const fn (ctx: ?*anyopaque) Address,
     };
 
     pub const empty = RAM{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
+        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write, .getBaseFn = empty_get_base },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: u16) u8 {
@@ -101,11 +123,18 @@ pub const RAM = struct {
         _ = ctx;
     }
 
+    fn empty_get_base(ctx: ?*anyopaque) Address {
+        _ = ctx;
+        return 0;
+    }
+
     pub fn Static(comptime size: comptime_int) type {
         return struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
+            /// Base address where this RAM is mapped.
+            base: Address = 0,
 
             pub fn memory(self: *Self) RAM {
                 return RAM{
@@ -118,22 +147,28 @@ pub const RAM = struct {
             pub const vtable = VTable{
                 .readFn = mem_read,
                 .writeFn = mem_write,
+                .getBaseFn = get_base,
             };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                // ATmega328P memory map: SRAM starts at 0x0100
-                // Map logical addresses 0x0100-0x08FF to array indices 0x0000-0x07FF
-                const sram_offset: Address = if (addr >= 0x100) addr - 0x100 else addr;
-                return mem.data[sram_offset];
+                std.debug.assert(addr >= mem.base);
+                const off: Address = addr - mem.base;
+                std.debug.assert(off < size);
+                return mem.data[off];
             }
 
             fn mem_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                // ATmega328P memory map: SRAM starts at 0x0100
-                // Map logical addresses 0x0100-0x08FF to array indices 0x0000-0x07FF
-                const sram_offset: Address = if (addr >= 0x100) addr - 0x100 else addr;
-                mem.data[sram_offset] = value;
+                std.debug.assert(addr >= mem.base);
+                const off: Address = addr - mem.base;
+                std.debug.assert(off < size);
+                mem.data[off] = value;
+            }
+
+            fn get_base(ctx: ?*anyopaque) Address {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                return mem.base;
             }
         };
     }
