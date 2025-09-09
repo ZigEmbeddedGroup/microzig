@@ -221,6 +221,21 @@ fn fetch_code(cpu: *Cpu) u16 {
     return value;
 }
 
+inline fn data_read(cpu: *Cpu, addr: u24) u8 {
+    if (cpu.io.translate_address(addr)) |port| {
+        return cpu.io.read(port);
+    }
+    return cpu.sram.read(addr);
+}
+
+inline fn data_write(cpu: *Cpu, addr: u24, value: u8) void {
+    if (cpu.io.translate_address(addr)) |port| {
+        cpu.io.write(port, value);
+        return;
+    }
+    cpu.sram.write(addr, value);
+}
+
 fn push(cpu: *Cpu, val: u8) void {
     // AVR PUSH: Write to [SP] first, then decrement SP
     const sp = cpu.get_sp();
@@ -1165,7 +1180,7 @@ const instructions = struct {
     inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (k)
         const addr = cpu.extend_direct_address(cpu.fetch_code());
-        cpu.regs[info.d.num()] = cpu.sram.read(addr);
+        cpu.regs[info.d.num()] = cpu.data_read(addr);
     }
 
     const IndexOpMode = enum { none, post_incr, pre_decr, displace };
@@ -1198,7 +1213,7 @@ const instructions = struct {
             .rd = .ramp,
             .wb = .ramp,
         });
-        cpu.regs[d.num()] = cpu.sram.read(address);
+        cpu.regs[d.num()] = cpu.data_read(address);
     }
 
     /// LD – Load Indirect from Data Space to Register using Index X
@@ -1355,7 +1370,7 @@ const instructions = struct {
             .rd = .ramp,
             .wb = .ramp,
         });
-        cpu.sram.write(address, cpu.regs[r.num()]);
+        cpu.data_write(address, cpu.regs[r.num()]);
     }
 
     /// ST – Store Indirect From Register to Data Space using Index X
@@ -1470,7 +1485,7 @@ const instructions = struct {
     inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
         // (k) ← Rr
         const addr = cpu.extend_direct_address(cpu.fetch_code());
-        cpu.sram.write(addr, cpu.regs[info.d.num()]);
+        cpu.data_write(addr, cpu.regs[info.d.num()]);
     }
 
     /// PUSH – Push Register on Stack

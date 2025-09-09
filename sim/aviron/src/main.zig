@@ -213,10 +213,11 @@ const IO = struct {
         .readFn = read,
         .writeFn = write,
         .checkExitFn = check_exit,
+        .translateAddressFn = translate_address,
     };
 
     // This is our own "debug" device with it's own debug addresses:
-    const Register = enum(u6) {
+    const Register = enum(u8) {
         exit = 0, // read: 0, write: os.exit()
         stdio = 1, // read: stdin, write: print to stdout
         stderr = 2, // read: 0, write: print to stderr
@@ -245,7 +246,7 @@ const IO = struct {
         _,
     };
 
-    fn read(ctx: ?*anyopaque, addr: u6) u8 {
+    fn read(ctx: ?*anyopaque, addr: u8) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         return switch (reg) {
@@ -280,12 +281,12 @@ const IO = struct {
             .sp_l => @truncate(io.sp >> 0),
             .sp_h => @truncate(io.sp >> 8),
 
-            _ => std.debug.panic("illegal i/o read from undefined register 0x{X:0>2}", .{addr}),
+            _ => 0xFF, // Unimplemented I/O: return 0xFF and let CPU/reporting handle it
         };
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn write(ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void {
+    fn write(ctx: ?*anyopaque, addr: u8, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
@@ -323,7 +324,11 @@ const IO = struct {
             .sp_h => write_masked(high_byte(&io.sp), mask, value),
             .sreg => write_masked(@ptrCast(io.sreg), mask, value),
 
-            _ => std.debug.panic("illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}", .{ addr, value, mask }),
+            _ => {
+                // Unimplemented I/O: Just crash. TODO: Halt
+                io.exit_requested = true;
+                io.exit_code = 0xFF;
+            },
         }
     }
 
@@ -354,5 +359,12 @@ const IO = struct {
             return io.exit_code;
         }
         return null;
+    }
+
+    // By default, map AVR low I/O window: data-space 0x20..0x5F → I/O ports 0x00..0x3F.
+    // Extended I/O (0x60..0xFF) is left unmapped for now.
+    fn translate_address(ctx: ?*anyopaque, addr: u24) ?u8 {
+        _ = ctx;
+        return if (addr >= 0x20 and addr <= 0x5F) @intCast(addr - 0x20) else null;
     }
 };

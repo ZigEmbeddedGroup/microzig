@@ -177,7 +177,7 @@ pub const RAM = struct {
 pub const EEPROM = RAM; // actually the same interface *shrug*
 
 pub const IO = struct {
-    pub const Address = u6;
+    pub const Address = u8;
 
     ctx: ?*anyopaque,
 
@@ -201,10 +201,17 @@ pub const IO = struct {
         return mem.vtable.checkExitFn(mem.ctx);
     }
 
+    /// Translate an absolute data-space address to an I/O port address if mapped.
+    /// Returns null when the address is not mapped to I/O and should be served by SRAM.
+    pub fn translate_address(mem: IO, data_addr: u24) ?Address {
+        return mem.vtable.translateAddressFn(mem.ctx, data_addr);
+    }
+
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
         checkExitFn: *const fn (ctx: ?*anyopaque) ?u8,
+        translateAddressFn: *const fn (ctx: ?*anyopaque, data_addr: u24) ?Address,
     };
 
     pub const empty = IO{
@@ -213,6 +220,7 @@ pub const IO = struct {
             .readFn = empty_read,
             .writeFn = empty_write,
             .checkExitFn = empty_check_exit,
+            .translateAddressFn = empty_translate,
         },
     };
 
@@ -231,6 +239,12 @@ pub const IO = struct {
 
     fn empty_check_exit(ctx: ?*anyopaque) ?u8 {
         _ = ctx;
+        return null;
+    }
+
+    fn empty_translate(ctx: ?*anyopaque, data_addr: u24) ?Address {
+        _ = ctx;
+        _ = data_addr;
         return null;
     }
 };
