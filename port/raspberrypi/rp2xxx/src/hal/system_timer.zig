@@ -3,13 +3,8 @@ const microzig = @import("microzig");
 const compatibility = @import("compatibility.zig");
 
 pub fn num(n: u2) Timer {
-    return switch (compatibility.chip) {
-        .RP2040 => if (n == 0)
-            @enumFromInt(n)
-        else
-            @panic("only timer 0 is available on RP2040"),
-        .RP2350 => @enumFromInt(n),
-    };
+    if (compatibility.chip == .RP2040) std.debug.assert(n == 0);
+    return @enumFromInt(n);
 }
 
 pub const Timer = enum(u1) {
