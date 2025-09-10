@@ -141,11 +141,32 @@ pub fn dump_system_state(cpu: *Cpu) void {
             }
 
             std.debug.print("0x{X:0>4}: ", .{sram_base + @as(u24, @intCast(i))});
+            // hex bytes
             j = 0;
             while (j < row_len) : (j += 1) {
                 std.debug.print("{X:0>2} ", .{cur_row[j]});
             }
-            std.debug.print("\n", .{});
+
+            // pad hex area for short rows to align ASCII column
+            if (row_len < row_width) {
+                var pad: usize = row_width - row_len;
+                while (pad > 0) : (pad -= 1) {
+                    std.debug.print("   ", .{});
+                }
+            }
+
+            // ASCII representation
+            std.debug.print(" |", .{});
+            j = 0;
+            while (j < row_len) : (j += 1) {
+                const b = cur_row[j];
+                if (b >= 32 and b <= 126) {
+                    std.debug.print("{c}", .{b});
+                } else {
+                    std.debug.print(".", .{});
+                }
+            }
+            std.debug.print("|\n", .{});
 
             // store as previous row
             @memcpy(prev_row[0..row_len], cur_row[0..row_len]);
