@@ -19,9 +19,8 @@ const EpNum = types.Endpoint.Num;
 
 pub const DeviceInterface = struct {
     pub const Vtable = struct {
-        submit_tx_buffer: *const fn (ptr: *anyopaque, ep_in: EpNum, buffer_end: [*]const u8) void,
-        signal_rx_ready: *const fn (ptr: *anyopaque, ep_out: EpNum, max_len: usize) void,
-        endpoint_open: *const fn (ptr: *anyopaque, desc: *const descriptor.Endpoint) void,
+        writev: *const fn (*anyopaque, EpNum, []const []const u8) usize,
+        listen: *const fn (*anyopaque, EpNum, u16) void,
     };
     ptr: *anyopaque,
     vtable: *const Vtable,
@@ -29,20 +28,13 @@ pub const DeviceInterface = struct {
     /// Called by drivers when a tx buffer is filled.
     /// Submitting an empty buffer signals an ACK.
     /// A buffer can only be submitted once.
-    pub fn submit_tx_buffer(this: @This(), ep_in: EpNum, buffer_end: [*]const u8) void {
-        this.vtable.submit_tx_buffer(this.ptr, ep_in, buffer_end);
+    pub fn writev(this: @This(), ep_in: EpNum, buffers: []const []const u8) usize {
+        return this.vtable.writev(this.ptr, ep_in, buffers);
     }
     /// Called by drivers to report readiness to receive up to `len` bytes.
     /// Must be called exactly once before each packet.
-    pub fn signal_rx_ready(this: @This(), ep_out: EpNum, max_len: usize) void {
-        this.vtable.signal_rx_ready(this.ptr, ep_out, max_len);
-    }
-    /// Opens an endpoint according to the descriptor. Note that if the endpoint
-    /// direction is IN this may call the controller's `on_tx_ready` function,
-    /// so driver initialization must be done before this function is called
-    /// on IN endpoint descriptors.
-    pub fn endpoint_open(this: @This(), desc: *const descriptor.Endpoint) void {
-        return this.vtable.endpoint_open(this.ptr, desc);
+    pub fn listen(this: @This(), ep_out: EpNum, len: u16) void {
+        this.vtable.listen(this.ptr, ep_out, len);
     }
 };
 
@@ -300,7 +292,7 @@ pub fn Controller(comptime config: Config) type {
         }
 
         /// Called whenever a SET_CONFIGURATION request is received.
-        pub fn set_configuration(this: *@This(), device: DeviceInterface, setup: *const types.SetupPacket) bool {
+        pub fn set_configuration(this: *@This(), device: anytype, setup: *const types.SetupPacket) bool {
             if (setup.value == 0) {
                 this.deinit();
                 return true;
@@ -320,16 +312,16 @@ pub fn Controller(comptime config: Config) type {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .Out) continue;
-                    device.endpoint_open(&desc_ep);
+                    device.open(desc_ep.endpoint.num, .Out, desc_ep.attributes.transfer_type);
                 }
 
-                @field(this.drivers.?, drv.name) = .init(device, &descriptors);
+                @field(this.drivers.?, drv.name).init(device.interface(), &descriptors);
 
                 inline for (fields) |fld| {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .In) continue;
-                    device.endpoint_open(&desc_ep);
+                    device.open(desc_ep.endpoint.num, .In, desc_ep.attributes.transfer_type);
                 }
             }
             return true;

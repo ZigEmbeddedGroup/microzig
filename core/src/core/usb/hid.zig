@@ -138,7 +138,6 @@ pub const HidClassDriver = struct {
             .interface_handlers = &.{
                 .{ .itf = first_interface, .func = interface_setup },
             },
-            .endpoint_in_handlers = &.{},
             .endpoint_out_handlers = &.{},
             .descriptors = .create(
                 first_interface,
@@ -154,8 +153,8 @@ pub const HidClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn init(_: usb.DeviceInterface, desc: *const InOutDescriptor) @This() {
-        return .{
+    pub fn init(this: *@This(), _: usb.DeviceInterface, desc: *const InOutDescriptor) void {
+        this.* = .{
             .hid_descriptor = std.mem.asBytes(&desc.hid),
             .report_descriptor = undefined,
             .ep_in = desc.ep_in.endpoint.num,

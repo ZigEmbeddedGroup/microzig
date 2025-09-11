@@ -44,7 +44,7 @@ fn write_all(serial: *CdcDriver, data: []const u8) void {
     while (offset < data.len) {
         offset += serial.write(data[offset..]);
         serial.flush(usb.interface());
-        usb.task();
+        usb.poll();
     }
 }
 
@@ -66,7 +66,7 @@ pub fn main() !void {
     var i: u32 = 0;
     while (true) {
         // You can now poll for USB events
-        usb.task();
+        usb.poll();
 
         const usb_serial = if (usb.controller.drivers) |*drivers|
             &drivers.serial

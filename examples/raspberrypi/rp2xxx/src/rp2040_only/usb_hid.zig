@@ -58,7 +58,7 @@ pub fn main() !void {
 
     while (true) {
         // You can now poll for USB events
-        usb.task();
+        usb.poll();
 
         const hid = if (usb.controller.drivers) |*drivers|
             &drivers.hid

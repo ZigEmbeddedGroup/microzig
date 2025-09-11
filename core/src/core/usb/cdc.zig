@@ -44,15 +44,18 @@ pub const Descriptor = extern struct {
 };
 
 pub const CdcClassDriver = struct {
-    ep_in_notif: types.Endpoint.Num = .ep0,
-    ep_in: types.Endpoint.Num = .ep0,
-    ep_out: types.Endpoint.Num = .ep0,
-    awaiting_data: bool = false,
+    ep_in_notif: types.Endpoint.Num,
+    ep_in: types.Endpoint.Num,
+    ep_out: types.Endpoint.Num,
+    awaiting_data: bool,
 
-    line_coding: LineCoding = .init,
+    line_coding: LineCoding,
 
-    rx_buf: ?[]const u8 = null,
-    tx_buf: ?[]u8 = null,
+    rx_buf: [64]u8,
+    rx_seek: u16,
+    rx_end: u16,
+    tx_buf: ?[]u8,
+    tx_end: u16,
 
     pub fn info(first_interface: u8, string_ids: anytype, endpoints: anytype) usb.DriverInfo(@This(), Descriptor) {
         const endpoint_notifi_size = 8;
@@ -128,17 +131,20 @@ pub const CdcClassDriver = struct {
     }
 
     /// This function is called when the host chooses a configuration that contains this driver.
-    pub fn init(device: usb.DeviceInterface, desc: *const Descriptor) @This() {
-        device.signal_rx_ready(desc.ep_out.endpoint.num, std.math.maxInt(usize));
-        return .{
+    pub fn init(this: *@This(), device: usb.DeviceInterface, desc: *const Descriptor) void {
+        this.* = .{
             .line_coding = .init,
             .awaiting_data = false,
-            .rx_buf = null,
+            .rx_buf = @splat(0),
+            .rx_seek = 0,
+            .rx_end = 0,
             .tx_buf = null,
+            .tx_end = 0,
             .ep_in_notif = desc.ep_notifi.endpoint.num,
             .ep_out = desc.ep_out.endpoint.num,
             .ep_in = desc.ep_in.endpoint.num,
         };
+        device.listen(desc.ep_out.endpoint.num, this.rx_buf.len);
     }
 
     /// On bus reset, this function is called followed by init().
@@ -146,30 +152,26 @@ pub const CdcClassDriver = struct {
 
     /// How many bytes in rx buffer?
     pub fn available(this: *@This()) usize {
-        return if (this.rx_buf) |rx| rx.len else 0;
+        return this.rx_end - this.rx_seek;
     }
 
     /// Read data from rx buffer into dst.
     pub fn read(this: *@This(), device: usb.DeviceInterface, dst: []u8) usize {
-        if (this.rx_buf) |rx| {
-            const len = @min(rx.len, dst.len);
-            std.mem.copyForwards(u8, dst[0..len], rx[0..len]);
-            if (len < rx.len)
-                this.rx_buf = rx[len..]
-            else {
-                device.signal_rx_ready(this.ep_out, std.math.maxInt(usize));
-                this.rx_buf = null;
-            }
-            return len;
-        } else return 0;
+        const len = @min(dst.len, this.rx_end - this.rx_seek);
+        @memcpy(dst[0..len], this.rx_buf[this.rx_seek .. this.rx_seek + len]);
+        this.rx_seek += len;
+        if (len != 0 and this.rx_seek == this.rx_end)
+            device.listen(this.ep_out, this.rx_buf.len);
+        return len;
     }
 
     /// Write data from src into tx buffer.
     pub fn write(this: *@This(), src: []const u8) usize {
         if (this.tx_buf) |tx| {
-            const len = @min(tx.len, src.len);
-            std.mem.copyForwards(u8, tx[0..len], src[0..len]);
-            this.tx_buf = tx[len..];
+            const avail = tx[this.tx_end..];
+            const len = @min(avail.len, src.len);
+            std.mem.copyForwards(u8, avail[0..len], src[0..len]);
+            this.tx_end += @intCast(len);
             return len;
         } else return 0;
     }
@@ -177,8 +179,10 @@ pub const CdcClassDriver = struct {
     /// Submit tx buffer to the device.
     pub fn flush(this: *@This(), device: usb.DeviceInterface) void {
         if (this.tx_buf) |tx| {
-            defer this.tx_buf = null;
-            device.submit_tx_buffer(this.ep_in, tx.ptr);
+            if (this.tx_end != device.writev(this.ep_in, &.{tx[0..this.tx_end]}))
+                std.debug.panic("not flushed", .{});
+            this.tx_buf = null;
+            this.tx_end = 0;
         }
     }
 
@@ -200,9 +204,14 @@ pub const CdcClassDriver = struct {
 
     pub fn on_tx_ready(this: *@This(), data: []u8) void {
         this.tx_buf = data;
+        this.tx_end = 0;
     }
 
     pub fn on_data_rx(this: *@This(), data: []const u8) void {
-        this.rx_buf = data;
+        if (this.rx_seek != this.rx_end)
+            std.log.err("RX buffer overwrite", .{});
+        this.rx_seek = 0;
+        this.rx_end = @intCast(data.len);
+        std.mem.copyForwards(u8, this.rx_buf[0..data.len], data);
     }
 };
