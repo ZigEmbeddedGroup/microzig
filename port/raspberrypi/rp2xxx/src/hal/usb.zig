@@ -90,7 +90,7 @@ pub fn Usb(comptime config: Config) type {
     return struct {
         pub const interface_vtable: usb.DeviceInterface.Vtable = .{
             .writev = &writev,
-            .listen = &listen,
+            .stream = &stream,
         };
 
         const Controller = usb.Controller(blk: {
@@ -190,8 +190,7 @@ pub fn Usb(comptime config: Config) type {
                 std.mem.copyForwards(u8, tx_buf[0..len], data[0..len]);
                 this.state = .{ .sending = data[len..] };
             }
-            if (len != this.interface().writev(.ep0, &.{tx_buf.ptr[0..len]}))
-                std.debug.panic("ep0 not flushed", .{});
+            submit_buffer_in(.ep0, @intCast(len));
         }
 
         /// Called when a setup packet is received.
@@ -268,7 +267,7 @@ pub fn Usb(comptime config: Config) type {
                                 this.ep0_send(buf, data);
 
                                 if (data.len == 0) {
-                                    this.interface().listen(.ep0, 0);
+                                    listen(.ep0, 0);
                                     this.state = .waiting_ack;
                                 }
                             },
@@ -282,7 +281,7 @@ pub fn Usb(comptime config: Config) type {
                             .ready => |_| break :blk error.UsbPacketUnhandled,
                             .waiting_ack => this.state = .{ .ready = buf },
                         }
-                    } else this.controller.on_tx_ready(ep_num, buf);
+                    } else continue;
 
                     result catch
                         std.log.warn("unhandled usb packet: ep{}in", .{ep_num});
@@ -309,7 +308,7 @@ pub fn Usb(comptime config: Config) type {
                                 this.state = .{ .ready = buf };
                             },
                         }
-                    } else this.controller.on_data_rx(ep_num, buf[0..buf_ctrl.LENGTH_0]);
+                    } else continue;
 
                     result catch {
                         std.log.warn("unhandled usb packet: ep{}out", .{ep_num});
@@ -332,14 +331,7 @@ pub fn Usb(comptime config: Config) type {
             }
         }
 
-        /// See interface description.
-        pub fn writev(_: *anyopaque, ep_in: EpNum, buffers: []const []const u8) usize {
-
-            // It is technically possible to support longer buffers but this demo doesn't bother.
-            const buf = get_ep_buf(ep_in, .In);
-            const len = @min(buf.len, buffers[0].len);
-            // std.mem.copyForwards(u8, buf[0..len], buffers[0][0..len]);
-
+        fn submit_buffer_in(ep_in: EpNum, len: u16) void {
             // Write the buffer information to the buffer control register
             const buf_ctrl = get_buf_ctrl(ep_in, .In);
             var rmw = buf_ctrl.read();
@@ -360,11 +352,50 @@ pub fn Usb(comptime config: Config) type {
 
             rmw.AVAILABLE_0 = 1;
             buf_ctrl.write(rmw);
+        }
+
+        /// See interface description.
+        pub fn writev(_: *anyopaque, ep_in: EpNum, buffers: []const []const u8) usize {
+            const buf_ctrl = get_buf_ctrl(ep_in, .In);
+            const rmw = buf_ctrl.read();
+            if (rmw.FULL_0 != 0) return 0;
+
+            // It is technically possible to support longer buffers but this demo doesn't bother.
+            const buf = get_ep_buf(ep_in, .In);
+            const len = @min(buf.len, buffers[0].len);
+            std.mem.copyForwards(u8, buf[0..len], buffers[0][0..len]);
+
+            submit_buffer_in(ep_in, @intCast(len));
+
+            return len;
+        }
+
+        pub fn stream(_: *anyopaque, ep_out: EpNum, w: *std.Io.Writer, limit: std.Io.Limit) usize {
+            const dst = limit.slice(w.unusedCapacitySlice());
+            if (dst.len == 0) return 0;
+
+            const buf_ctrl = get_buf_ctrl(ep_out, .Out);
+            var rmw = buf_ctrl.read();
+            if (rmw.AVAILABLE_0 == 1) return 0;
+
+            const buffer = get_ep_buf(ep_out, .Out);
+            const src = buffer[rmw.LENGTH_1..rmw.LENGTH_0];
+
+            const len = @min(src.len, dst.len);
+            std.mem.copyForwards(u8, dst[0..len], src[0..len]);
+
+            if (src.len < dst.len)
+                listen(ep_out, @intCast(dst.len - src.len))
+            else {
+                rmw.FULL_0 = 0;
+                rmw.LENGTH_1 += @intCast(len);
+                buf_ctrl.write(rmw);
+            }
             return len;
         }
 
         /// See interface description.
-        pub fn listen(_: *anyopaque, ep_out: EpNum, len: u16) void {
+        pub fn listen(ep_out: EpNum, len: u16) void {
             // Configure the OUT:
             const buf_ctrl = get_buf_ctrl(ep_out, .Out);
             var rmw = buf_ctrl.read();
@@ -372,6 +403,7 @@ pub fn Usb(comptime config: Config) type {
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 0; // Buffer is empty
             rmw.AVAILABLE_0 = 1; // And ready to be filled
+            rmw.LENGTH_1 = 0;
             rmw.LENGTH_0 = @min(len, default.transfer_size);
             buf_ctrl.write(rmw);
         }
@@ -391,15 +423,6 @@ pub fn Usb(comptime config: Config) type {
                 // The datasheet claims bits 0 throigh 5 are ignored, but it is not the case in practice.
                 rmw.BUFFER_ADDRESS = @shlExact(@as(u16, buf_idx), 6);
                 ep_ctrl.write(rmw);
-
-                if (ep_dir == .In) {
-                    // The tx buffer is ready.
-                    this.controller.on_tx_ready(ep_num, &dpram_buffers[buf_idx]) catch
-                        std.log.warn(
-                            "USB controller ignored inital tx buffer for ep{}",
-                            .{@intFromEnum(ep_num)},
-                        );
-                }
             }
         }
     };

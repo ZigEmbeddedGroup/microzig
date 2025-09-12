@@ -20,7 +20,7 @@ const EpNum = types.Endpoint.Num;
 pub const DeviceInterface = struct {
     pub const Vtable = struct {
         writev: *const fn (*anyopaque, EpNum, []const []const u8) usize,
-        listen: *const fn (*anyopaque, EpNum, u16) void,
+        stream: *const fn (*anyopaque, EpNum, *std.Io.Writer, std.Io.Limit) usize,
     };
     ptr: *anyopaque,
     vtable: *const Vtable,
@@ -33,8 +33,8 @@ pub const DeviceInterface = struct {
     }
     /// Called by drivers to report readiness to receive up to `len` bytes.
     /// Must be called exactly once before each packet.
-    pub fn listen(this: @This(), ep_out: EpNum, len: u16) void {
-        this.vtable.listen(this.ptr, ep_out, len);
+    pub fn stream(this: @This(), ep_out: EpNum, w: *std.Io.Writer, limit: std.Io.Limit) usize {
+        return this.vtable.stream(this.ptr, ep_out, w, limit);
     }
 };
 
@@ -88,10 +88,6 @@ pub fn DriverInfo(T: type, Descriptors: type) type {
         descriptors: Descriptors,
         /// Handlers of setup packets for each used interface.
         interface_handlers: []const struct { itf: u8, func: fn (*T, *const types.SetupPacket) ?[]const u8 },
-        /// Functions called an endpoint is ready to send.
-        endpoint_in_handlers: []const struct { ep_num: EpNum, func: fn (*T, []u8) void },
-        /// Functions called when data is received on an endpoint.
-        endpoint_out_handlers: []const struct { ep_num: EpNum, func: fn (*T, []const u8) void },
     };
 }
 
@@ -351,34 +347,6 @@ pub fn Controller(comptime config: Config) type {
                 }
             }
             return NAK;
-        }
-
-        /// Called whenever a tx buffer is ready.
-        pub fn on_tx_ready(this: *@This(), ep_num: EpNum, buf: []u8) PacketUnhandled!void {
-            if (this.drivers) |*drivers| {
-                inline for (config.drivers) |drv| {
-                    const ptr = &@field(drivers, drv.name);
-                    inline for (@field(driver_info, drv.name).endpoint_in_handlers) |handler| {
-                        if (handler.ep_num == ep_num)
-                            return handler.func(ptr, buf);
-                    }
-                }
-            }
-            return error.UsbPacketUnhandled;
-        }
-
-        /// Called whenever a packet is received from the host.
-        pub fn on_data_rx(this: *@This(), ep_num: EpNum, buf: []const u8) PacketUnhandled!void {
-            if (this.drivers) |*drivers| {
-                inline for (config.drivers) |drv| {
-                    const ptr = &@field(drivers, drv.name);
-                    inline for (@field(driver_info, drv.name).endpoint_out_handlers) |handler| {
-                        if (handler.ep_num == ep_num)
-                            return handler.func(ptr, buf);
-                    }
-                }
-            }
-            return error.UsbPacketUnhandled;
         }
     };
 }

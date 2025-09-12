@@ -138,7 +138,6 @@ pub const HidClassDriver = struct {
             .interface_handlers = &.{
                 .{ .itf = first_interface, .func = interface_setup },
             },
-            .endpoint_out_handlers = &.{},
             .descriptors = .create(
                 first_interface,
                 string_ids.name,

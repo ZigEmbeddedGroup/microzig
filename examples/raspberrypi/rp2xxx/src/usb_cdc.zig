@@ -42,8 +42,7 @@ var usb: Usb = undefined;
 fn write_all(serial: *CdcDriver, data: []const u8) void {
     var offset: usize = 0;
     while (offset < data.len) {
-        offset += serial.write(data[offset..]);
-        serial.flush(usb.interface());
+        offset += serial.write(data[offset..], usb.interface());
         usb.poll();
     }
 }
