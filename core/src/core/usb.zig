@@ -308,7 +308,7 @@ pub fn Controller(comptime config: Config) type {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .Out) continue;
-                    device.open(desc_ep.endpoint.num, .Out, desc_ep.attributes.transfer_type);
+                    device.open_out(desc_ep.endpoint.num, desc_ep.attributes.transfer_type);
                 }
 
                 @field(this.drivers.?, drv.name).init(device.interface(), &descriptors);
@@ -317,7 +317,7 @@ pub fn Controller(comptime config: Config) type {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc_ep = @field(descriptors, fld.name);
                     if (desc_ep.endpoint.dir != .In) continue;
-                    device.open(desc_ep.endpoint.num, .In, desc_ep.attributes.transfer_type);
+                    device.open_in(desc_ep.endpoint.num, desc_ep.attributes.transfer_type);
                 }
             }
             return true;

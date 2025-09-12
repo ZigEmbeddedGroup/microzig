@@ -31,31 +31,6 @@ const EpNum = usb.types.Endpoint.Num;
 const EpCtrl = @TypeOf(USB_DPRAM.EP1_IN_CONTROL);
 const BufCtrl = @TypeOf(USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const dpram_buffer_len = 64;
-// `@volatileCast` is sound because the USB hardware only modifies the buffers
-// after we transfer ownership by accesing a volatile register.
-const dpram_buffers: *[4096 / dpram_buffer_len][dpram_buffer_len]u8 = @ptrCast(@volatileCast(USB_DPRAM));
-// First 0x100 bytes are registers
-const dpram_ep0buf_idx = 0x100 / dpram_buffer_len;
-
-/// Keeps track of how many buffers have been allocated.
-pub const DpramAllocatorBump = struct {
-    top: u10,
-
-    // First 2 buffers are for endpoint 0.
-    const init: @This() = .{ .top = dpram_ep0buf_idx + 2 };
-
-    /// Allocate a new buffer in dpram, `len` is in units of 64 bytes.
-    fn alloc(this: *@This(), len: u10) error{OutOfBufferMemory}!u10 {
-        const next, const ovf = @addWithOverflow(len, this.top);
-        if (ovf != 0 or next > dpram_buffers.len)
-            return error.OutOfBufferMemory;
-
-        defer this.top = next;
-        return this.top;
-    }
-};
-
 pub const Config = struct {
     /// How many nops to insert for synchronization with the USB hardware.
     synchronization_nops: comptime_int = 3,
@@ -63,28 +38,73 @@ pub const Config = struct {
     controller_config: usb.Config,
 };
 
-const max_endpoints_count = RP2XXX_MAX_ENDPOINTS_COUNT;
+const DualPortRam = extern struct {
+    const buffer_len_mult = 64;
+    const total_size = 4096;
 
-fn get_ep_ctrl(ep_num: EpNum, dir: types.Dir) ?*volatile EpCtrl {
-    if (ep_num == .ep0) return null;
-    const idx = (@as(usize, @intFromEnum(ep_num)) << 1) | (@as(usize, @intFromEnum(dir)) ^ 1);
-    const ptr: *volatile [2 * RP2XXX_MAX_ENDPOINTS_COUNT]EpCtrl = @ptrCast(USB_DPRAM);
-    return &ptr[idx];
+    setup: types.SetupPacket,
+    ep_ctrl_raw: [15][2]EpCtrl,
+    buf_ctrl_raw: [16][2]BufCtrl,
+    buffer0: [buffer_len_mult]u8,
+    buffer1: [buffer_len_mult]u8,
+
+    var alloc_top: u16 = @sizeOf(@This());
+
+    fn ep_open(this: *@This(), ep_num: EpNum, ep_dir: types.Dir, transfer_type: types.TransferType) u16 {
+        if (ep_num == .ep0)
+            std.debug.panic("Endpoint 0 should not be opened.", .{});
+        if (transfer_type == .Control)
+            std.debug.panic("Only endpoint 0 can be a control endpoint.", .{});
+        if (transfer_type == .Isochronous)
+            std.debug.panic("Isochronous endpoints are not implemented", .{});
+
+        const buf_idx = alloc_top;
+        alloc_top += buffer_len_mult;
+        if (alloc_top > total_size)
+            std.debug.panic("USB controller out of memory.", .{});
+
+        var reg = this.ep_ctrl(ep_num, ep_dir).?;
+        var rmw = reg.read();
+        rmw.ENABLE = 1;
+        rmw.INTERRUPT_PER_BUFF = 1;
+        rmw.ENDPOINT_TYPE = @enumFromInt(transfer_type.as_number());
+        // The datasheet claims bits 0 throigh 5 are ignored, but it is not the case in practice.
+        rmw.BUFFER_ADDRESS = buf_idx;
+        reg.write(rmw);
+        return buf_idx;
+    }
+
+    fn ep_ctrl(this: *@This(), num: EpNum, dir: types.Dir) ?*volatile EpCtrl {
+        if (std.math.sub(u4, @intFromEnum(num), 1)) |idx|
+            return &this.ep_ctrl_raw[idx][@intFromBool(dir == .Out)]
+        else |_|
+            return null;
+    }
+
+    fn buf_ctrl(this: *@This(), num: EpNum, dir: types.Dir) *volatile BufCtrl {
+        return &this.buf_ctrl_raw[@intFromEnum(num)][@intFromBool(dir == .Out)];
+    }
+
+    // TODO: Double buffered mode?
+    fn buffer(this: *@This(), num: EpNum, dir: types.Dir) []u8 {
+        if (this.ep_ctrl(num, dir)) |ep| {
+            const addr = ep.read().BUFFER_ADDRESS;
+            const mem: *[total_size]u8 = @ptrCast(this);
+            // TODO: Isochronous endpoints can have other sizes.
+            const size = 64;
+            return mem[addr .. addr + size];
+        } else return &this.buffer0;
+    }
+};
+
+comptime {
+    assert(@offsetOf(DualPortRam, "buf_ctrl_raw") == 0x80);
+    assert(@offsetOf(DualPortRam, "buffer0") == 0x100);
 }
 
-fn get_buf_ctrl(ep_num: EpNum, dir: types.Dir) *volatile BufCtrl {
-    const idx = (@as(usize, @intFromEnum(ep_num)) << 1) | (@as(usize, @intFromEnum(dir)) ^ 1);
-    const ptr: *volatile [2 * RP2XXX_MAX_ENDPOINTS_COUNT]BufCtrl = @ptrCast(&USB_DPRAM.EP0_IN_BUFFER_CONTROL);
-    return &ptr[idx];
-}
-
-fn get_ep_buf(ep_num: EpNum, ep_dir: types.Dir) []u8 {
-    const idx: usize = if (get_ep_ctrl(ep_num, ep_dir)) |reg|
-        @shrExact(reg.read().BUFFER_ADDRESS, 6)
-    else
-        dpram_ep0buf_idx;
-    return &dpram_buffers[idx];
-}
+// `@volatileCast` is sound because the USB hardware only modifies the buffers
+// after we transfer ownership by accesing a volatile register.
+const dpram: *DualPortRam = @ptrCast(@volatileCast(USB_DPRAM));
 
 pub fn Usb(comptime config: Config) type {
     return struct {
@@ -111,7 +131,6 @@ pub fn Usb(comptime config: Config) type {
         };
 
         state: State,
-        dpram_allocator: DpramAllocatorBump,
         controller: Controller,
 
         pub fn interface(this: *@This()) usb.DeviceInterface {
@@ -175,8 +194,7 @@ pub fn Usb(comptime config: Config) type {
             USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
             return .{
-                .state = .{ .ready = &dpram_buffers[dpram_ep0buf_idx] },
-                .dpram_allocator = .init,
+                .state = .{ .ready = &dpram.buffer0 },
                 .controller = .init,
             };
         }
@@ -258,8 +276,8 @@ pub fn Usb(comptime config: Config) type {
                     if (unhandled & (@as(u32, 1) << shamt) == 0) continue;
 
                     const ep_num: EpNum = @enumFromInt(ep_num_usize);
-                    // const buf_ctrl = get_buf_ctrl(ep_num, .In).read();
-                    const buf = get_ep_buf(ep_num, .In);
+                    // const buf_ctrl = dpram.buf_ctrl(ep_num, .In).read();
+                    const buf = dpram.buffer(ep_num, .In);
 
                     const result = if (ep_num == .ep0) blk: {
                         switch (this.state) {
@@ -292,8 +310,8 @@ pub fn Usb(comptime config: Config) type {
                     if (unhandled & (@as(u32, 2) << shamt) == 0) continue;
 
                     const ep_num: EpNum = @enumFromInt(ep_num_usize);
-                    const buf_ctrl = get_buf_ctrl(ep_num, .Out).read();
-                    const buf = get_ep_buf(ep_num, .Out);
+                    const buf_ctrl = dpram.buf_ctrl(ep_num, .Out).read();
+                    const buf = dpram.buffer(ep_num, .Out);
 
                     const result = if (ep_num == .ep0) blk: {
                         switch (this.state) {
@@ -312,7 +330,7 @@ pub fn Usb(comptime config: Config) type {
 
                     result catch {
                         std.log.warn("unhandled usb packet: ep{}out", .{ep_num});
-                        std.log.warn("{any}", .{buf[0..get_buf_ctrl(ep_num, .Out).read().LENGTH_0]});
+                        std.log.warn("{any}", .{buf[0..dpram.buf_ctrl(ep_num, .Out).read().LENGTH_0]});
                     };
                 }
 
@@ -322,7 +340,6 @@ pub fn Usb(comptime config: Config) type {
             if (ints.BUS_RESET != 0) {
                 this.controller.deinit();
                 this.controller = .init;
-                this.dpram_allocator = .init;
 
                 var sie_status: SieStatus = @bitCast(@as(u32, 0));
                 sie_status.BUS_RESET = 1;
@@ -333,7 +350,7 @@ pub fn Usb(comptime config: Config) type {
 
         fn submit_buffer_in(ep_in: EpNum, len: u16) void {
             // Write the buffer information to the buffer control register
-            const buf_ctrl = get_buf_ctrl(ep_in, .In);
+            const buf_ctrl = dpram.buf_ctrl(ep_in, .In);
             var rmw = buf_ctrl.read();
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 1; // We have put data in
@@ -356,12 +373,12 @@ pub fn Usb(comptime config: Config) type {
 
         /// See interface description.
         pub fn writev(_: *anyopaque, ep_in: EpNum, buffers: []const []const u8) usize {
-            const buf_ctrl = get_buf_ctrl(ep_in, .In);
+            const buf_ctrl = dpram.buf_ctrl(ep_in, .In);
             const rmw = buf_ctrl.read();
             if (rmw.FULL_0 != 0) return 0;
 
             // It is technically possible to support longer buffers but this demo doesn't bother.
-            const buf = get_ep_buf(ep_in, .In);
+            const buf = dpram.buffer(ep_in, .In);
             const len = @min(buf.len, buffers[0].len);
             std.mem.copyForwards(u8, buf[0..len], buffers[0][0..len]);
 
@@ -374,11 +391,11 @@ pub fn Usb(comptime config: Config) type {
             const dst = limit.slice(w.unusedCapacitySlice());
             if (dst.len == 0) return 0;
 
-            const buf_ctrl = get_buf_ctrl(ep_out, .Out);
+            const buf_ctrl = dpram.buf_ctrl(ep_out, .Out);
             var rmw = buf_ctrl.read();
             if (rmw.AVAILABLE_0 == 1) return 0;
 
-            const buffer = get_ep_buf(ep_out, .Out);
+            const buffer = dpram.buffer(ep_out, .Out);
             const src = buffer[rmw.LENGTH_1..rmw.LENGTH_0];
 
             const len = @min(src.len, dst.len);
@@ -397,7 +414,7 @@ pub fn Usb(comptime config: Config) type {
         /// See interface description.
         pub fn listen(ep_out: EpNum, len: u16) void {
             // Configure the OUT:
-            const buf_ctrl = get_buf_ctrl(ep_out, .Out);
+            const buf_ctrl = dpram.buf_ctrl(ep_out, .Out);
             var rmw = buf_ctrl.read();
 
             rmw.PID_0 ^= 1; // Flip DATA0/1
@@ -408,22 +425,12 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
-        pub fn open(this: *@This(), ep_num: EpNum, ep_dir: types.Dir, transfer_type: types.TransferType) void {
-            assert(@intFromEnum(ep_num) < max_endpoints_count);
+        pub fn open_in(_: *@This(), ep_num: EpNum, transfer_type: types.TransferType) void {
+            _ = dpram.ep_open(ep_num, .In, transfer_type);
+        }
 
-            if (ep_num != .ep0) {
-                const buf_idx = this.dpram_allocator.alloc(1) catch
-                    std.debug.panic("USB controller out of memory.", .{});
-
-                var ep_ctrl = get_ep_ctrl(ep_num, ep_dir).?;
-                var rmw = ep_ctrl.read();
-                rmw.ENABLE = 1;
-                rmw.INTERRUPT_PER_BUFF = 1;
-                rmw.ENDPOINT_TYPE = @enumFromInt(transfer_type.as_number());
-                // The datasheet claims bits 0 throigh 5 are ignored, but it is not the case in practice.
-                rmw.BUFFER_ADDRESS = @shlExact(@as(u16, buf_idx), 6);
-                ep_ctrl.write(rmw);
-            }
+        pub fn open_out(_: *@This(), ep_num: EpNum, transfer_type: types.TransferType) void {
+            _ = dpram.ep_open(ep_num, .Out, transfer_type);
         }
     };
 }
