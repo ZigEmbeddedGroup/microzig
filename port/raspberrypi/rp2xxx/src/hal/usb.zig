@@ -7,13 +7,9 @@ const assert = std.debug.assert;
 const enumFromInt = std.meta.intToEnum;
 
 const microzig = @import("microzig");
-const chip = microzig.hal.compatibility.chip;
-const USB_DPRAM = microzig.chip.peripherals.USB_DPRAM;
 const USB = microzig.chip.peripherals.USB;
 const usb = microzig.core.usb;
-const types = usb.types;
-
-pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
+const EpNum = usb.types.Endpoint.Num;
 
 pub const default = struct {
     pub const strings: usb.Config.DeviceStrings = .{
@@ -27,10 +23,6 @@ pub const default = struct {
     pub const transfer_size = 64;
 };
 
-const EpNum = usb.types.Endpoint.Num;
-const EpCtrl = @TypeOf(USB_DPRAM.EP1_IN_CONTROL);
-const BufCtrl = @TypeOf(USB_DPRAM.EP0_IN_BUFFER_CONTROL);
-
 pub const Config = struct {
     /// How many nops to insert for synchronization with the USB hardware.
     synchronization_nops: comptime_int = 3,
@@ -42,7 +34,11 @@ const DualPortRam = extern struct {
     const buffer_len_mult = 64;
     const total_size = 4096;
 
-    setup: types.SetupPacket,
+    const peri = microzig.chip.peripherals.USB_DPRAM;
+    const EpCtrl = @TypeOf(peri.EP1_IN_CONTROL);
+    const BufCtrl = @TypeOf(peri.EP0_IN_BUFFER_CONTROL);
+
+    setup: usb.types.SetupPacket,
     ep_ctrl_raw: [15][2]EpCtrl,
     buf_ctrl_raw: [16][2]BufCtrl,
     buffer0: [buffer_len_mult]u8,
@@ -50,13 +46,9 @@ const DualPortRam = extern struct {
 
     var alloc_top: u16 = @sizeOf(@This());
 
-    fn ep_open(this: *@This(), ep_num: EpNum, ep_dir: types.Dir, transfer_type: types.TransferType) u16 {
+    fn ep_open(this: *@This(), ep_num: EpNum, ep_dir: usb.types.Dir, transfer_type: usb.types.TransferType) u16 {
         if (ep_num == .ep0)
             std.debug.panic("Endpoint 0 should not be opened.", .{});
-        if (transfer_type == .Control)
-            std.debug.panic("Only endpoint 0 can be a control endpoint.", .{});
-        if (transfer_type == .Isochronous)
-            std.debug.panic("Isochronous endpoints are not implemented", .{});
 
         const buf_idx = alloc_top;
         alloc_top += buffer_len_mult;
@@ -67,26 +59,31 @@ const DualPortRam = extern struct {
         var rmw = reg.read();
         rmw.ENABLE = 1;
         rmw.INTERRUPT_PER_BUFF = 1;
-        rmw.ENDPOINT_TYPE = @enumFromInt(transfer_type.as_number());
+        rmw.ENDPOINT_TYPE = switch (transfer_type) {
+            .Control => std.debug.panic("Only endpoint 0 can be a control endpoint.", .{}),
+            .Isochronous => std.debug.panic("Isochronous endpoints are not implemented", .{}),
+            .Bulk => .bulk,
+            .Interrupt => .interrupt,
+        };
         // The datasheet claims bits 0 throigh 5 are ignored, but it is not the case in practice.
         rmw.BUFFER_ADDRESS = buf_idx;
         reg.write(rmw);
         return buf_idx;
     }
 
-    fn ep_ctrl(this: *@This(), num: EpNum, dir: types.Dir) ?*volatile EpCtrl {
+    fn ep_ctrl(this: *@This(), num: EpNum, dir: usb.types.Dir) ?*volatile EpCtrl {
         if (std.math.sub(u4, @intFromEnum(num), 1)) |idx|
             return &this.ep_ctrl_raw[idx][@intFromBool(dir == .Out)]
         else |_|
             return null;
     }
 
-    fn buf_ctrl(this: *@This(), num: EpNum, dir: types.Dir) *volatile BufCtrl {
+    fn buf_ctrl(this: *@This(), num: EpNum, dir: usb.types.Dir) *volatile BufCtrl {
         return &this.buf_ctrl_raw[@intFromEnum(num)][@intFromBool(dir == .Out)];
     }
 
     // TODO: Double buffered mode?
-    fn buffer(this: *@This(), num: EpNum, dir: types.Dir) []u8 {
+    fn buffer(this: *@This(), num: EpNum, dir: usb.types.Dir) []u8 {
         if (this.ep_ctrl(num, dir)) |ep| {
             const addr = ep.read().BUFFER_ADDRESS;
             const mem: *[total_size]u8 = @ptrCast(this);
@@ -98,13 +95,17 @@ const DualPortRam = extern struct {
 };
 
 comptime {
+    // Sanity check that offsets match the datasheet.
+    assert(@offsetOf(DualPortRam, "ep_ctrl_raw") == 0x8);
     assert(@offsetOf(DualPortRam, "buf_ctrl_raw") == 0x80);
     assert(@offsetOf(DualPortRam, "buffer0") == 0x100);
+    assert(@offsetOf(DualPortRam, "buffer1") == 0x140);
+    assert(@sizeOf(DualPortRam) == 0x180);
 }
 
 // `@volatileCast` is sound because the USB hardware only modifies the buffers
 // after we transfer ownership by accesing a volatile register.
-const dpram: *DualPortRam = @ptrCast(@volatileCast(USB_DPRAM));
+const dpram: *DualPortRam = @ptrCast(@volatileCast(DualPortRam.peri));
 
 pub fn Usb(comptime config: Config) type {
     return struct {
@@ -142,12 +143,14 @@ pub fn Usb(comptime config: Config) type {
 
         /// Initialize USB hardware and request enumertation from USB host.
         pub fn init() @This() {
+            const chip = microzig.hal.compatibility.chip;
+
             if (chip == .RP2350)
                 USB.MAIN_CTRL.modify(.{ .PHY_ISO = 0 });
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
-            const dpram_data: *volatile [0x100 / @sizeOf(u32)]u32 = @ptrCast(USB_DPRAM);
+            const dpram_data: *volatile [0x100 / @sizeOf(u32)]u32 = @ptrCast(dpram);
             @memset(dpram_data, 0);
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are
@@ -215,14 +218,11 @@ pub fn Usb(comptime config: Config) type {
         fn process_setup(this: *@This(), tx_buf: []u8) void {
             // Copy the setup packet out of its dedicated buffer at the base of
             // USB SRAM. The PAC models this buffer as two 32-bit registers.
-            const setup: usb.types.SetupPacket = @bitCast([2]u32{
-                USB_DPRAM.SETUP_PACKET_LOW.raw,
-                USB_DPRAM.SETUP_PACKET_HIGH.raw,
-            });
+            const setup = dpram.setup;
 
             // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
             // to an IN on EP0 needs to use PID DATA1.
-            USB_DPRAM.EP0_IN_BUFFER_CONTROL.modify(.{ .PID_0 = 0 });
+            dpram.buf_ctrl(.ep0, .In).modify(.{ .PID_0 = 0 });
 
             switch (setup.request_type.recipient) {
                 .Device => blk: {
@@ -425,11 +425,11 @@ pub fn Usb(comptime config: Config) type {
             buf_ctrl.write(rmw);
         }
 
-        pub fn open_in(_: *@This(), ep_num: EpNum, transfer_type: types.TransferType) void {
+        pub fn open_in(_: *@This(), ep_num: EpNum, transfer_type: usb.types.TransferType) void {
             _ = dpram.ep_open(ep_num, .In, transfer_type);
         }
 
-        pub fn open_out(_: *@This(), ep_num: EpNum, transfer_type: types.TransferType) void {
+        pub fn open_out(_: *@This(), ep_num: EpNum, transfer_type: usb.types.TransferType) void {
             _ = dpram.ep_open(ep_num, .Out, transfer_type);
         }
     };
