@@ -47,31 +47,29 @@ original RTT default config which is:
 
 ### Custom Thread Safety
 
-This package utilizes a similar scheme to the standard library's `GenericWriter`/`AnyWriter` API for its "lock" types.
-It exposes a `GenericLock` function that creates a type given lock/unlock functions and a type for "context" to pass
-to each function. This type has a method `any()`, that returns a type erased `AnyLock` that can be passed to a 
-`rtt.Config`. Users can utilize this API to specify their own custom lock/unlock behavior for RTT to use if the default
-behavior isn't desired. Assigning `null` to `.exclusive_access` disables thread safety entirely.
+This package exposes a `GenericLock` function that creates a type given lock/unlock functions and a type for "context" to pass
+to each function. This type has a method `any()`, that returns a type erased `AnyLock` that can be passed to a `rtt.Config`.
+Users can utilize this API to specify their own custom lock/unlock behavior for RTT to use if the default behavior isn't desired.
+Assigning `null` to `.exclusive_access` disables thread safety entirely.
 
 ## Usage
 
 Once an rtt instance is configured, the API is quite simple:
-- `init()` properly initializes the control block memory, and _must_ be called before any other RTT operations take
-place
-- `fn write(comptime channel_number: usize, bytes: []const u8) WriteError!usize` writes bytes to a specific up channel
+- `init()` properly initializes the control block memory, and _must_ be called before any other RTT operations take place
+- `fn write(comptime channel_number: usize, bytes: []const u8) usize` writes bytes to a specific up channel
 (device -> probe), where `channel_number` is validated at compile time to exist, and returns number of bytes written
 (writing less than requested bytes is not an error)
-- `fn writer(comptime channel_number: usize) Writer` returns a standard library `GenericWriter` for a specific up
-channel for integration with the standard library functions that use this type. A special note is that the
-`GenericWriter` uses a special internal write function that discards write data when the write buffer is full. While
-this can lead to data loss if the up buffer isn't big enough and getting written too fast/frequently, it prevents the
-undesirable behavior of the `GenericWriter` blocking indefinitely on a write (for instance, if you are logging via RTT)
-when a debug probe isn't connected!
-- `fn read(comptime channel_number: usize, bytes: []u8) ReadError!usize` reads bytes from a specific down channel
+- `fn writer(comptime channel_number: usize, buf: []u8) Writer` returns a struct that implements the `std.Io.Writer`
+interface for a specific up channel. Allows integration with the standard library functions that use this type.
+A special note is that the `Writer` discards write data when the RTT up channel write buffer is full. While this can
+lead to data loss if the up buffer isn't big enough and getting written too fast/frequently, it prevents the
+undesirable behavior of constantly returning a `WriteError` if a debug probe isn't connected. See the implementation
+code for more details.
+- `fn read(comptime channel_number: usize, bytes: []u8) usize` reads bytes from a specific down channel
 (probe -> device), where `channel_number` is validated at compile time to exist, and returns number of bytes read
 (reading less than requested bytes is not an error)
-- `fn reader(comptime channel_number: usize) Reader` returns a standard library `GenericReader` for a specific down
-channel for integration with the standard library functions that use this type
+- `fn reader(comptime channel_number: usize, buf: []u8) Reader` returns a struct that implements the `std.Io.Reader`
+interface for a specific down channel. See implementation and doc comments for more information on choosing a buffer. 
 
 See the [example](../../examples/raspberrypi/rp2xxx/src/rtt_log.zig) for more information on using this package.
 
@@ -80,3 +78,4 @@ See the [example](../../examples/raspberrypi/rp2xxx/src/rtt_log.zig) for more in
 `SEGGER_RTT_CPU_CACHE_LINE_SIZE` and `SEGGER_RTT_UNCACHED_OFF` macros in original Segger source
 - Support for virtual terminals supported by RTT viewer
 - Support for ANSI terminal color escape codes supported by RTT viewer
+- Compile time option for returning a `WriteError` from `Writer` when attempting to write a full RTT buffer
