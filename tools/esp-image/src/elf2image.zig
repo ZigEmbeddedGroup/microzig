@@ -186,14 +186,13 @@ pub fn main() !void {
         var app_desc: esp_image.AppDesc = try reader.takeStruct(esp_image.AppDesc, .little);
 
         if (app_desc.magic == esp_image.AppDesc.MAGIC) {
-            // should we modify the app_desc (apart from the elf sha256)?
             std.log.debug("detected app_desc... we shall modify it", .{});
 
             var writer: std.Io.Writer = .fixed(flash_segments.items[0].data);
             // TODO: override time and date
             app_desc.min_efuse_blk_rev_full = min_rev;
             app_desc.max_efuse_blk_rev_full = max_rev;
-            app_desc.mmu_page_size = @intFromEnum(flash_mmu_page_size);
+            app_desc.mmu_page_size = flash_mmu_page_size;
             app_desc.app_elf_sha256 = elf_file_hash;
             try writer.writeStruct(app_desc, .little);
         }

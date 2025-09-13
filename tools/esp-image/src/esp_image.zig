@@ -66,7 +66,7 @@ pub const AppDesc = extern struct {
     app_elf_sha256: [32]u8 = std.mem.zeroes([32]u8),
     min_efuse_blk_rev_full: u16 = 0,
     max_efuse_blk_rev_full: u16 = 0xffff,
-    mmu_page_size: u8 = DEFAULT_FLASH_MMU_PAGE_SIZE,
+    mmu_page_size: FlashMMU_PageSize = DEFAULT_FLASH_MMU_PAGE_SIZE,
     reserved1: [3]u8 = std.mem.zeroes([3]u8),
     reserved2: [18]u32 = std.mem.zeroes([18]u32),
 };
