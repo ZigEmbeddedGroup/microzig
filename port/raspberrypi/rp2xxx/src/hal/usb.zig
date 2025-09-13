@@ -47,7 +47,7 @@ const DualPortRam = extern struct {
     var alloc_top: u16 = @sizeOf(@This());
 
     fn ep_open(this: *@This(), ep_num: EpNum, ep_dir: usb.types.Dir, transfer_type: usb.types.TransferType) u16 {
-        if (ep_num == .ep0)
+        var reg = this.ep_ctrl(ep_num, ep_dir) orelse
             std.debug.panic("Endpoint 0 should not be opened.", .{});
 
         const buf_idx = alloc_top;
@@ -55,19 +55,22 @@ const DualPortRam = extern struct {
         if (alloc_top > total_size)
             std.debug.panic("USB controller out of memory.", .{});
 
-        var reg = this.ep_ctrl(ep_num, ep_dir).?;
-        var rmw = reg.read();
-        rmw.ENABLE = 1;
-        rmw.INTERRUPT_PER_BUFF = 1;
-        rmw.ENDPOINT_TYPE = switch (transfer_type) {
-            .Control => std.debug.panic("Only endpoint 0 can be a control endpoint.", .{}),
-            .Isochronous => std.debug.panic("Isochronous endpoints are not implemented", .{}),
-            .Bulk => .bulk,
-            .Interrupt => .interrupt,
-        };
-        // The datasheet claims bits 0 throigh 5 are ignored, but it is not the case in practice.
-        rmw.BUFFER_ADDRESS = buf_idx;
-        reg.write(rmw);
+        reg.write(.{
+            .ENABLE = 1,
+            .DOUBLE_BUFFERED = 0,
+            .INTERRUPT_PER_BUFF = 1,
+            .INTERRUPT_PER_DOUBLE_BUFF = 1,
+            .ENDPOINT_TYPE = switch (transfer_type) {
+                .Control => std.debug.panic("Only endpoint 0 can be a control endpoint.", .{}),
+                .Isochronous => std.debug.panic("Isochronous endpoints are not implemented", .{}),
+                .Bulk => .bulk,
+                .Interrupt => .interrupt,
+            },
+            .INTERRUPT_ON_STALL = 0,
+            .INTERRUPT_ON_NAK = 0,
+            .BUFFER_ADDRESS = buf_idx,
+        });
+
         return buf_idx;
     }
 
@@ -109,11 +112,6 @@ const dpram: *DualPortRam = @ptrCast(@volatileCast(DualPortRam.peri));
 
 pub fn Usb(comptime config: Config) type {
     return struct {
-        pub const interface_vtable: usb.DeviceInterface.Vtable = .{
-            .writev = &writev,
-            .stream = &stream,
-        };
-
         const Controller = usb.Controller(blk: {
             var cfg = config.controller_config;
             cfg.strings = cfg.strings orelse default.strings;
@@ -127,7 +125,7 @@ pub fn Usb(comptime config: Config) type {
         const State = union(enum) {
             sending: []const u8, // Slice of data left to be sent.
             no_buffer: ?u7, // Optionally a new address.
-            ready: []u8, // Buffer for next transaction. Always empty if available.
+            ready,
             waiting_ack, // Host is expected to send an ACK.
         };
 
@@ -137,7 +135,7 @@ pub fn Usb(comptime config: Config) type {
         pub fn interface(this: *@This()) usb.DeviceInterface {
             return .{
                 .ptr = this,
-                .vtable = &interface_vtable,
+                .transfer = &transfer,
             };
         }
 
@@ -150,8 +148,13 @@ pub fn Usb(comptime config: Config) type {
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
-            const dpram_data: *volatile [0x100 / @sizeOf(u32)]u32 = @ptrCast(dpram);
-            @memset(dpram_data, 0);
+            dpram.* = .{
+                .setup = @bitCast(@as(u64, 0)),
+                .ep_ctrl_raw = @splat(@bitCast(@as(u64, 0))),
+                .buf_ctrl_raw = @splat(@bitCast(@as(u64, 0))),
+                .buffer0 = undefined,
+                .buffer1 = undefined,
+            };
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are
             // alternatives to this, but, there are.
@@ -197,28 +200,17 @@ pub fn Usb(comptime config: Config) type {
             USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
             return .{
-                .state = .{ .ready = &dpram.buffer0 },
+                .state = .ready,
                 .controller = .init,
             };
         }
 
-        /// Helper function that breaks up long strings.
-        fn ep0_send(this: *@This(), tx_buf: []u8, data: []const u8) void {
-            const len = @min(tx_buf.len, data.len);
-            if (len == 0)
-                this.state = .{ .no_buffer = null }
-            else {
-                std.mem.copyForwards(u8, tx_buf[0..len], data[0..len]);
-                this.state = .{ .sending = data[len..] };
-            }
-            submit_buffer_in(.ep0, @intCast(len));
-        }
-
         /// Called when a setup packet is received.
-        fn process_setup(this: *@This(), tx_buf: []u8) void {
-            // Copy the setup packet out of its dedicated buffer at the base of
-            // USB SRAM. The PAC models this buffer as two 32-bit registers.
+        fn process_setup(this: *@This()) ?[]const u8 {
+            // Copy the setup packet out of its dedicated buffer at the base of USB SRAM.
             const setup = dpram.setup;
+
+            std.log.info("setup: {any}", .{setup});
 
             // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
             // to an IN on EP0 needs to use PID DATA1.
@@ -232,24 +224,25 @@ pub fn Usb(comptime config: Config) type {
                         setup.request,
                     ) catch break :blk) {
                         .SetAddress => {
-                            this.ep0_send(tx_buf, usb.ACK);
                             this.state = .{ .no_buffer = @intCast(setup.value) };
+                            return usb.ACK;
                         },
                         .SetConfiguration => if (this.controller.set_configuration(this, &setup))
-                            this.ep0_send(tx_buf, usb.ACK),
+                            return usb.ACK,
                         .GetDescriptor => if (Controller.get_descriptor(&setup)) |desc|
-                            this.ep0_send(tx_buf, desc),
+                            return desc,
                         .SetFeature => if (this.controller.set_feature(
                             @intCast(setup.value >> 8),
                             setup.index,
                             true,
-                        )) this.ep0_send(tx_buf, usb.ACK),
+                        )) return usb.ACK,
                     }
                 },
                 .Interface => if (this.controller.interface_setup(&setup)) |data|
-                    this.ep0_send(tx_buf, data),
+                    return data,
                 else => {},
             }
+            return usb.NAK;
         }
 
         /// Polls the device for events. Not thread safe, this must be called
@@ -259,82 +252,52 @@ pub fn Usb(comptime config: Config) type {
             const SieStatus = @TypeOf(USB.SIE_STATUS).underlying_type;
 
             switch (this.state) {
-                .ready => |tx_buf| if (ints.SETUP_REQ != 0) {
+                .ready => |_| if (ints.SETUP_REQ != 0) {
                     // Clear the status flag (write one to clear)
                     var sie_status: SieStatus = @bitCast(@as(u32, 0));
                     sie_status.SETUP_REC = 1;
                     USB.SIE_STATUS.write(sie_status);
-                    this.process_setup(tx_buf);
+                    if (this.process_setup()) |data| {
+                        std.log.info("setup response: '{}' {}", .{ data.len, dpram.buf_ctrl(.ep0, .In).read().AVAILABLE_0 });
+                        const len = this.interface().write_buffered(data, .ep0, true).?;
+
+                        if (len != 0) {
+                            this.state = .{ .sending = data[len..] };
+                        } else if (this.state != .no_buffer) {
+                            this.state = .{ .no_buffer = null };
+                        }
+                    }
                 },
                 else => {},
             }
-            if (ints.BUFF_STATUS != 0) {
-                const unhandled = USB.BUFF_STATUS.raw;
+            if (ints.BUFF_STATUS != 0)
+                USB.BUFF_STATUS.write(USB.BUFF_STATUS.read());
 
-                for (0..16) |ep_num_usize| {
-                    const shamt: u5 = @intCast(2 * ep_num_usize);
-                    if (unhandled & (@as(u32, 1) << shamt) == 0) continue;
-
-                    const ep_num: EpNum = @enumFromInt(ep_num_usize);
-                    // const buf_ctrl = dpram.buf_ctrl(ep_num, .In).read();
-                    const buf = dpram.buffer(ep_num, .In);
-
-                    const result = if (ep_num == .ep0) blk: {
-                        switch (this.state) {
-                            .sending => |data| {
-                                this.ep0_send(buf, data);
-
-                                if (data.len == 0) {
-                                    listen(.ep0, 0);
-                                    this.state = .waiting_ack;
-                                }
-                            },
-                            .no_buffer => |new_address| {
-                                // Finish the delayed SetAddress request, if there is one:
-                                if (new_address) |addr|
-                                    USB.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
-
-                                this.state = .{ .ready = buf };
-                            },
-                            .ready => |_| break :blk error.UsbPacketUnhandled,
-                            .waiting_ack => this.state = .{ .ready = buf },
-                        }
-                    } else continue;
-
-                    result catch
-                        std.log.warn("unhandled usb packet: ep{}in", .{ep_num});
-                }
-
-                for (0..16) |ep_num_usize| {
-                    const shamt: u5 = @intCast(2 * ep_num_usize);
-                    if (unhandled & (@as(u32, 2) << shamt) == 0) continue;
-
-                    const ep_num: EpNum = @enumFromInt(ep_num_usize);
-                    const buf_ctrl = dpram.buf_ctrl(ep_num, .Out).read();
-                    const buf = dpram.buffer(ep_num, .Out);
-
-                    const result = if (ep_num == .ep0) blk: {
-                        switch (this.state) {
-                            .sending => |_| break :blk error.UsbPacketUnhandled,
-                            .no_buffer => |_| break :blk error.UsbPacketUnhandled,
-                            .ready => |_| {
-                                std.log.err("Got buffer twice!", .{});
-                                break :blk error.UsbPacketUnhandled;
-                            },
-                            .waiting_ack => {
-                                assert(buf_ctrl.LENGTH_0 == 0);
-                                this.state = .{ .ready = buf };
-                            },
-                        }
-                    } else continue;
-
-                    result catch {
-                        std.log.warn("unhandled usb packet: ep{}out", .{ep_num});
-                        std.log.warn("{any}", .{buf[0..dpram.buf_ctrl(ep_num, .Out).read().LENGTH_0]});
-                    };
-                }
-
-                USB.BUFF_STATUS.write_raw(unhandled);
+            const buf_ctrl_in = dpram.buf_ctrl(.ep0, .In).read();
+            switch (this.state) {
+                .sending => |data| if (this.interface().write_buffered(data, .ep0, true)) |len| {
+                    if (len != 0)
+                        this.state = .{ .sending = data[len..] }
+                    else {
+                        // TODO: Check return value.
+                        // _ = this.interface().read_exact("", .ep0, 0);
+                        listen(.ep0, 0);
+                        this.state = .waiting_ack;
+                    }
+                },
+                .no_buffer => |new_address| if (buf_ctrl_in.AVAILABLE_0 == 0) {
+                    // Finish the delayed SetAddress request, if there is one:
+                    if (new_address) |addr|
+                        USB.ADDR_ENDP.write(.{ .ENDPOINT = 0, .ADDRESS = addr });
+                    this.state = .ready;
+                },
+                .ready => {},
+                .waiting_ack => if (buf_ctrl_in.AVAILABLE_0 == 0) {
+                    this.state = .ready;
+                } else if (this.interface().read_exact("", .ep0, null)) |len| {
+                    assert(len == 0);
+                    this.state = .ready;
+                },
             }
 
             if (ints.BUS_RESET != 0) {
@@ -348,13 +311,13 @@ pub fn Usb(comptime config: Config) type {
             }
         }
 
-        fn submit_buffer_in(ep_in: EpNum, len: u16) void {
+        fn submit_buffer_in(ep_in: EpNum, len: u10) void {
             // Write the buffer information to the buffer control register
             const buf_ctrl = dpram.buf_ctrl(ep_in, .In);
             var rmw = buf_ctrl.read();
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 1; // We have put data in
-            rmw.LENGTH_0 = @intCast(len); // There are this many bytes
+            rmw.LENGTH_0 = len; // There are this many bytes
 
             // If the CPU is running at a higher clock speed than USB,
             // the AVAILABLE bit in the buffer control register should be set
@@ -372,43 +335,55 @@ pub fn Usb(comptime config: Config) type {
         }
 
         /// See interface description.
-        pub fn writev(_: *anyopaque, ep_in: EpNum, buffers: []const []const u8) usize {
-            const buf_ctrl = dpram.buf_ctrl(ep_in, .In);
-            const rmw = buf_ctrl.read();
-            if (rmw.FULL_0 != 0) return 0;
+        pub fn transfer(ptr: *anyopaque, opts: usb.DeviceInterface.Options, ep_num: EpNum, df: bool) ?u16 {
+            const this: *@This() = @ptrCast(@alignCast(ptr));
+            _ = this;
 
-            // It is technically possible to support longer buffers but this demo doesn't bother.
-            const buf = dpram.buffer(ep_in, .In);
-            const len = @min(buf.len, buffers[0].len);
-            std.mem.copyForwards(u8, buf[0..len], buffers[0][0..len]);
-
-            submit_buffer_in(ep_in, @intCast(len));
-
-            return len;
-        }
-
-        pub fn stream(_: *anyopaque, ep_out: EpNum, w: *std.Io.Writer, limit: std.Io.Limit) usize {
-            const dst = limit.slice(w.unusedCapacitySlice());
-            if (dst.len == 0) return 0;
-
-            const buf_ctrl = dpram.buf_ctrl(ep_out, .Out);
+            const buf_ctrl = dpram.buf_ctrl(ep_num, opts);
             var rmw = buf_ctrl.read();
-            if (rmw.AVAILABLE_0 == 1) return 0;
+            if (rmw.AVAILABLE_0 == 1) return null;
 
-            const buffer = dpram.buffer(ep_out, .Out);
-            const src = buffer[rmw.LENGTH_1..rmw.LENGTH_0];
+            const buffer = dpram.buffer(ep_num, opts);
+            const avail = switch (opts) {
+                .Out => buffer[if (rmw.FULL_0 == 1) 0 else rmw.LENGTH_1..rmw.LENGTH_0],
+                .In => buffer[if (rmw.FULL_0 == 0) 0 else rmw.LENGTH_0..],
+            };
 
-            const len = @min(src.len, dst.len);
-            std.mem.copyForwards(u8, dst[0..len], src[0..len]);
+            if (df and buffer.ptr != avail.ptr)
+                std.debug.panic("residual {any} data on {any}: {}", .{ opts, ep_num, if (opts == .In) rmw.LENGTH_0 else rmw.LENGTH_1 });
 
-            if (src.len < dst.len)
-                listen(ep_out, @intCast(dst.len - src.len))
-            else {
-                rmw.FULL_0 = 0;
-                rmw.LENGTH_1 += @intCast(len);
-                buf_ctrl.write(rmw);
+            const len = @min(avail.len, opts.len());
+            rmw.FULL_0 = @intFromEnum(opts);
+
+            switch (opts) {
+                .Out => |out| {
+                    if (df and len != avail.len)
+                        std.debug.panic("could not read full packet on {any} {} {}", .{ ep_num, len, avail.len });
+
+                    std.mem.copyForwards(u8, out.data[0..len], avail[0..len]);
+
+                    if (len == avail.len and out.listen != null)
+                        listen(ep_num, out.listen.?)
+                    else {
+                        rmw.LENGTH_1 = @intCast(avail.ptr - buffer.ptr + len);
+                        buf_ctrl.write(rmw);
+                    }
+                },
+                .In => |in| {
+                    if (df and len != in.data.len)
+                        std.debug.panic("could not send full packet on {any}", .{ep_num});
+
+                    std.mem.copyForwards(u8, avail[0..len], in.data[0..len]);
+
+                    rmw.LENGTH_0 = @intCast(avail.ptr - buffer.ptr + len);
+                    if (df or len == avail.len or in.flush)
+                        submit_buffer_in(ep_num, rmw.LENGTH_0)
+                    else {
+                        buf_ctrl.write(rmw);
+                    }
+                },
             }
-            return len;
+            return @intCast(len);
         }
 
         /// See interface description.
@@ -416,6 +391,8 @@ pub fn Usb(comptime config: Config) type {
             // Configure the OUT:
             const buf_ctrl = dpram.buf_ctrl(ep_out, .Out);
             var rmw = buf_ctrl.read();
+
+            if (rmw.AVAILABLE_0 == 1) return;
 
             rmw.PID_0 ^= 1; // Flip DATA0/1
             rmw.FULL_0 = 0; // Buffer is empty

@@ -18,23 +18,72 @@ test "tests" {
 const EpNum = types.Endpoint.Num;
 
 pub const DeviceInterface = struct {
-    pub const Vtable = struct {
-        writev: *const fn (*anyopaque, EpNum, []const []const u8) usize,
-        stream: *const fn (*anyopaque, EpNum, *std.Io.Writer, std.Io.Limit) usize,
-    };
-    ptr: *anyopaque,
-    vtable: *const Vtable,
+    pub const Options = union(types.Dir) {
+        Out: struct {
+            data: []u8,
+            listen: ?u16,
+        },
+        In: struct {
+            data: []const u8,
+            flush: bool,
+        },
 
-    /// Called by drivers when a tx buffer is filled.
-    /// Submitting an empty buffer signals an ACK.
-    /// A buffer can only be submitted once.
-    pub fn writev(this: @This(), ep_in: EpNum, buffers: []const []const u8) usize {
-        return this.vtable.writev(this.ptr, ep_in, buffers);
+        pub fn len(this: @This()) usize {
+            return switch (this) {
+                .Out => |x| x.data.len,
+                .In => |x| x.data.len,
+            };
+        }
+    };
+
+    ptr: *anyopaque,
+    transfer: *const fn (ptr: *anyopaque, opts: Options, ep_num: EpNum, df: bool) ?u16,
+
+    /// Sends all bytes from `data` to the host in a single packet. Returns true if data was sent.
+    /// If `data` is empty, an ACK is sent.
+    /// If the transmit buffer was not empty, the old data is flushed and `false` is returned.
+    /// Panics if `data` is too long to be sent through this endpoint.
+    pub fn write_exact(this: @This(), data: []const u8, ep_in: EpNum) bool {
+        if (this.transfer(this.ptr, .{ .In = .{
+            .data = data,
+            .flush = true,
+        } }, ep_in, true)) |len| {
+            assert(len == data.len);
+            return true;
+        } else return false;
     }
-    /// Called by drivers to report readiness to receive up to `len` bytes.
-    /// Must be called exactly once before each packet.
-    pub fn stream(this: @This(), ep_out: EpNum, w: *std.Io.Writer, limit: std.Io.Limit) usize {
-        return this.vtable.stream(this.ptr, ep_out, w, limit);
+
+    /// Writes bytes from `data` into the transmit buffer.
+    /// `data` must contain at least one buffer, which may be empty.
+    /// If this fills the transmit buffer or `flush` is true, the transmit buffer is submitted.
+    /// Returns the number of bytes written, or `null` if no space was available.
+    pub fn write_buffered(this: @This(), data: []const u8, ep_in: EpNum, flush: bool) ?u16 {
+        return this.transfer(this.ptr, .{ .In = .{
+            .data = data,
+            .flush = flush,
+        } }, ep_in, false);
+    }
+
+    /// Reads a full received packet into `data`, emptying the receive buffer.
+    /// Returns the number of bytes read, or `null` if no data was available.
+    /// If `listen` is not null, up to `listen` more bytes are requested from the host.
+    /// Panics if there was residual data in the receive buffer or the packet does not fit in `data`.
+    pub fn read_exact(this: @This(), data: []u8, ep_out: EpNum, listen: ?u16) ?u16 {
+        return this.transfer(this.ptr, .{ .Out = .{
+            .data = data,
+            .listen = listen,
+        } }, ep_out, true);
+    }
+
+    /// Reads data from the receive buffer into `data`.
+    /// `data` must contain at least one buffer, which may be empty.
+    /// Returns the number of bytes read, or `null` if no data was available.
+    /// If this empties the receive buffer, more data is requested.
+    pub fn read_buffered(this: @This(), data: []u8, ep_out: EpNum) ?u16 {
+        return this.transfer(this.ptr, .{ .Out = .{
+            .data = data,
+            .listen = std.math.maxInt(u16),
+        } }, ep_out, false);
     }
 };
 

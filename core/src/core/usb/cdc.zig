@@ -134,13 +134,17 @@ pub const CdcClassDriver = struct {
 
     /// Read data from rx buffer into dst.
     pub fn read(this: *@This(), device: usb.DeviceInterface, dst: []u8) usize {
-        var w: std.Io.Writer = .fixed(dst);
-        return device.stream(this.ep_out, &w, .limited(dst.len));
+        return device.read_buffered(dst[0..1], this.ep_out) orelse 0;
     }
 
     /// Write data from src into tx buffer.
     pub fn write(this: *@This(), src: []const u8, device: usb.DeviceInterface) usize {
-        return device.writev(this.ep_in, &.{src});
+        return device.write_buffered(src[0..1], this.ep_in, false) orelse 0;
+    }
+
+    /// Send any buffered data.
+    pub fn flush(this: *@This(), device: usb.DeviceInterface) void {
+        _ = device.write_buffered("", this.ep_in, true);
     }
 
     /// Callback for setup packets.
