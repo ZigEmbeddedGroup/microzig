@@ -1,10 +1,10 @@
 const std = @import("std");
-const elf2image = @import("src/elf2image.zig");
-pub const ChipId = elf2image.ChipId;
-pub const FlashMode = elf2image.FlashMode;
-pub const FlashFreq = elf2image.FlashFreq;
-pub const FlashSize = elf2image.FlashSize;
-pub const FlashMMU_PageSize = elf2image.FlashMMU_PageSize;
+const esp_image = @import("src/esp_image.zig");
+pub const ChipId = esp_image.ChipId;
+pub const FlashMode = esp_image.FlashMode;
+pub const FlashFreq = esp_image.FlashFreq;
+pub const FlashSize = esp_image.FlashSize;
+pub const FlashMMU_PageSize = esp_image.FlashMMU_PageSize;
 
 pub const Options = struct {
     chip_id: ChipId,
@@ -85,7 +85,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    const esp_image = b.addModule("esp_image", .{
+    const esp_image_mod = b.addModule("esp_image", .{
         .root_source_file = b.path("src/esp_image.zig"),
     });
 
@@ -96,7 +96,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "esp_image", .module = esp_image },
+                .{ .name = "esp_image", .module = esp_image_mod },
             },
         }),
     });
@@ -110,6 +110,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/elf2image.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "esp_image", .module = esp_image_mod },
+            },
         }),
     });
 
