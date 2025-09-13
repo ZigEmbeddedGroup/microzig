@@ -5,6 +5,7 @@
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
+        .@"microzig/tools/esp-image" = .{ .path = "../../../tools/esp-image" },
     },
     .paths = .{
         "README.md",

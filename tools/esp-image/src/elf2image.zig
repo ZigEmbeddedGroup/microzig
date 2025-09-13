@@ -1,12 +1,15 @@
 const std = @import("std");
 const Sha256 = std.crypto.hash.sha2.Sha256;
 const clap = @import("clap");
+const esp_image = @import("esp_image");
+const AppDesc = esp_image.AppDesc;
 
 pub const std_options: std.Options = .{
     .log_level = .warn,
 };
 
 var elf_file_reader_buf: [1024]u8 = undefined;
+var elf_file_hashing_buf: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
 var output_writer_buf: [1024]u8 = undefined;
 
 pub fn main() !void {
@@ -15,16 +18,17 @@ pub fn main() !void {
     const allocator = debug_allocator.allocator();
 
     const args = comptime clap.parseParamsComptime(
-        \\--help                    Show this message
-        \\--output <str>            Path to save the generated file
-        \\--chip-id <ChipId>        Chip id
-        \\--min-rev-full <u16>      Minimal chip revision (in format: major * 100 + minor)
-        \\--max-rev-full <u16>      Maximal chip revision (in format: major * 100 + minor)
-        \\--dont-append-digest      Don't append a SHA256 digest of the entire image after the checksum
-        \\--flash-freq <FlashFreq>  SPI Flash frequency
-        \\--flash-mode <FlashMode>  SPI Flash mode
-        \\--flash-size <FlashSize>  SPI Flash size in megabytes
-        \\--use-segments            Use program headers instead of section headers
+        \\--help                                     Show this message
+        \\--output <str>                             Path to save the generated file
+        \\--chip-id <ChipId>                         Chip id
+        \\--min-rev-full <u16>                       Minimal chip revision (in format: major * 100 + minor)
+        \\--max-rev-full <u16>                       Maximal chip revision (in format: major * 100 + minor)
+        \\--dont-append-digest                       Don't append a SHA256 digest of the entire image after the checksum
+        \\--flash-freq <FlashFreq>                   SPI Flash frequency
+        \\--flash-mode <FlashMode>                   SPI Flash mode
+        \\--flash-size <FlashSize>                   SPI Flash size in megabytes
+        \\--flash-mmu-page-size <FlashMMU_PageSize>  Flash MMU page size
+        \\--use-segments                             Use program headers instead of section headers
         \\<str>
         \\
     );
@@ -40,6 +44,7 @@ pub fn main() !void {
         .FlashFreq = clap.parsers.enumeration(FlashFreq),
         .FlashMode = clap.parsers.enumeration(FlashMode),
         .FlashSize = clap.parsers.enumeration(FlashSize),
+        .FlashMMU_PageSize = clap.parsers.enumeration(FlashMMU_PageSize),
     }, .{
         .diagnostic = &diag,
         .allocator = allocator,
@@ -55,23 +60,49 @@ pub fn main() !void {
 
     const elf_path = res.positionals[0] orelse return error.MissingInputFile;
     const output_path = res.args.output orelse return error.MissingOutputFile;
+
     const chip_id = res.args.@"chip-id" orelse return error.MissingChipId;
+    const chip = chips.get(chip_id) orelse {
+        std.log.err("support for chip `{s}` is not implemented yet", .{@tagName(chip_id)});
+        return error.UnimplementedChip;
+    };
+
     const min_rev: u16 = res.args.@"min-rev-full" orelse 0x0000;
     const max_rev: u16 = res.args.@"max-rev-full" orelse 0xffff;
     const no_digest = res.args.@"dont-append-digest" != 0;
     const flash_freq: FlashFreq = res.args.@"flash-freq" orelse .@"40m";
     const flash_mode: FlashMode = res.args.@"flash-mode" orelse .dio;
     const flash_size: FlashSize = res.args.@"flash-size" orelse .@"4mb";
-    const use_segments = res.args.@"use-segments" != 0;
 
-    const chip = chips.get(chip_id) orelse {
-        std.log.err("support for chip `{s}` is not implemented yet", .{@tagName(chip_id)});
-        return error.UnimplementedChip;
-    };
+    var flash_mmu_page_size: FlashMMU_PageSize = DEFAULT_FLASH_MMU_PAGE_SIZE;
+    if (res.args.@"flash-mmu-page-size") |page_size_override| {
+        if (chip.supported_flash_mmu_page_sizes) |supported_flash_mmu_page_sizes| {
+            if (std.mem.indexOfScalar(FlashMMU_PageSize, supported_flash_mmu_page_sizes, page_size_override) != null) {
+                flash_mmu_page_size = page_size_override;
+            } else {
+                std.log.err("flash mmu page size `{t}` is not supported by chip `{t}`... using default `{t}`", .{
+                    flash_mmu_page_size,
+                    chip_id,
+                    DEFAULT_FLASH_MMU_PAGE_SIZE,
+                });
+            }
+        }
+    }
+
+    const use_segments = res.args.@"use-segments" != 0;
 
     const elf_file = try std.fs.cwd().openFile(elf_path, .{});
     defer elf_file.close();
     var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
+
+    var elf_file_hash: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
+    {
+        var hashing: std.Io.Writer.Hashing(std.crypto.hash.sha2.Sha256) = .init(&elf_file_hashing_buf);
+        _ = try elf_file_reader.interface.streamRemaining(&hashing.writer);
+        hashing.hasher.final(&elf_file_hash);
+        try elf_file_reader.seekTo(0);
+    }
+
     const elf_header = try std.elf.Header.read(&elf_file_reader.interface);
 
     const entry_point: u32 = @intCast(elf_header.entry);
@@ -126,9 +157,9 @@ pub fn main() !void {
             if ((chip.irom_map_start <= segment_info.addr and segment_info.addr < chip.irom_map_end) or
                 (chip.drom_map_start <= segment_info.addr and segment_info.addr < chip.drom_map_end))
             {
-                try flash_segments.append(allocator, try .init(allocator, segment_info, elf_file));
+                try flash_segments.append(allocator, try .init(allocator, segment_info, &elf_file_reader));
             } else {
-                try ram_segments.append(allocator, try .init(allocator, segment_info, elf_file));
+                try ram_segments.append(allocator, try .init(allocator, segment_info, &elf_file_reader));
             }
         }
     }
@@ -147,36 +178,52 @@ pub fn main() !void {
         std.log.debug("ram segment at addr 0x{x} of size 0x{x}", .{ segment.addr, segment.size });
     }
 
-    var segment_data: std.ArrayList(u8) = .empty;
-    defer segment_data.deinit(allocator);
+    if (flash_segments.items.len > 0) {
+        var reader: std.Io.Reader = .fixed(flash_segments.items[0].data);
+        var app_desc: AppDesc = try reader.takeStruct(AppDesc, .little);
+
+        if (app_desc.magic == AppDesc.MAGIC) {
+            // should we modify the app_desc (apart from the elf sha256)?
+            std.log.debug("detected app_desc... we shall modify it", .{});
+
+            var writer: std.Io.Writer = .fixed(flash_segments.items[0].data);
+            // TODO: override time and date
+            app_desc.min_efuse_blk_rev_full = min_rev;
+            app_desc.max_efuse_blk_rev_full = max_rev;
+            app_desc.mmu_page_size = @intFromEnum(flash_mmu_page_size);
+            app_desc.app_elf_sha256 = elf_file_hash;
+            try writer.writeStruct(app_desc, .little);
+        }
+    }
+
+    var segment_data: std.Io.Writer.Allocating = .init(allocator);
+    defer segment_data.deinit();
 
     var segment_count: u8 = 0;
-    var checksum: u8 = checksum_xor_byte;
+    var checksum: u8 = CHECKSUM_XOR_BYTE;
     {
-        const writer = segment_data.writer(allocator);
-
         for (flash_segments.items) |*segment| {
-            while (segment.get_flash_align_padding_len(segment_data.items.len + image_header_len)) |pad_len| {
-                if (ram_segments.items.len > 0 and pad_len > segment_header_len) {
+            while (segment.get_flash_align_padding_len(segment_data.writer.end + IMAGE_HEADER_LEN, flash_mmu_page_size)) |pad_len| {
+                if (ram_segments.items.len > 0 and pad_len > SEGMENT_HEADER_LEN) {
                     const ram_seg = &ram_segments.items[ram_segments.items.len - 1];
-                    try ram_seg.write_to(allocator, writer, pad_len, &checksum);
+                    try ram_seg.write_to(allocator, &segment_data.writer, pad_len, &checksum);
                     if (ram_seg.size == 0) {
                         ram_segments.items.len -= 1;
                     }
                 } else {
                     var padding_seg: Segment = try .init_padding(allocator, pad_len);
                     defer padding_seg.deinit(allocator);
-                    try padding_seg.write_to(allocator, writer, null, &checksum);
+                    try padding_seg.write_to(allocator, &segment_data.writer, null, &checksum);
                 }
                 segment_count += 1;
             }
 
-            try segment.write_to(allocator, writer, null, &checksum);
+            try segment.write_to(allocator, &segment_data.writer, null, &checksum);
             segment_count += 1;
         }
 
         for (ram_segments.items) |*segment| {
-            try segment.write_to(allocator, writer, null, &checksum);
+            try segment.write_to(allocator, &segment_data.writer, null, &checksum);
             segment_count += 1;
         }
     }
@@ -207,7 +254,7 @@ pub fn main() !void {
     try file_header.write_to(&sha256_hasher.writer);
     try extended_file_header.write_to(&sha256_hasher.writer);
 
-    try sha256_hasher.writer.writeAll(segment_data.items);
+    try sha256_hasher.writer.writeAll(segment_data.written());
 
     // TODO: Add secure boot option (v1 or v2) and append a signature if enabled.
 
@@ -238,10 +285,10 @@ fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.ArrayList(S
     }
 }
 
-const irom_align = 0x10000;
-const segment_header_len = 0x8;
-const image_header_len = 0x18;
-const checksum_xor_byte = 0xEF;
+pub const SEGMENT_HEADER_LEN = 0x8;
+pub const IMAGE_HEADER_LEN = 0x18;
+pub const CHECKSUM_XOR_BYTE = 0xEF;
+pub const DEFAULT_FLASH_MMU_PAGE_SIZE: FlashMMU_PageSize = .@"64k";
 
 pub const FlashMode = enum(u8) {
     qio = 0,
@@ -263,6 +310,17 @@ pub const FlashFreq = enum(u4) {
     @"26m" = 1,
     @"20m" = 2,
     @"80m" = 3,
+};
+
+pub const FlashMMU_PageSize = enum(u8) {
+    @"8k" = 13,
+    @"16k" = 14,
+    @"32k" = 15,
+    @"64k" = 16,
+
+    pub fn in_bytes(self: FlashMMU_PageSize) usize {
+        return @as(usize, 1) << @intCast(@intFromEnum(self));
+    }
 };
 
 pub const ChipId = enum(u16) {
@@ -290,6 +348,7 @@ const Chip = struct {
     irom_map_end: usize,
     drom_map_start: usize,
     drom_map_end: usize,
+    supported_flash_mmu_page_sizes: ?[]const FlashMMU_PageSize = null,
 };
 
 const FileHeader = struct {
@@ -349,17 +408,13 @@ const Segment = struct {
     size: usize,
     data: []u8,
 
-    pub fn init(allocator: std.mem.Allocator, segment_info: SegmentInfo, elf_file: std.fs.File) !Segment {
-        try elf_file.seekTo(segment_info.file_offset);
+    pub fn init(allocator: std.mem.Allocator, segment_info: SegmentInfo, elf_file_reader: *std.fs.File.Reader) !Segment {
+        try elf_file_reader.seekTo(segment_info.file_offset);
 
         const data = try allocator.alloc(u8, segment_info.size + segment_info.size % 4);
         errdefer allocator.free(data);
 
-        const n = try elf_file.readAll(data[0..segment_info.size]);
-        if (n != segment_info.size) {
-            return error.InvalidSegment;
-        }
-
+        try elf_file_reader.interface.readSliceAll(data[0..segment_info.size]);
         @memset(data[segment_info.size..], 0);
 
         return .{
@@ -385,16 +440,18 @@ const Segment = struct {
         allocator.free(self.data);
     }
 
-    pub fn get_flash_align_padding_len(self: Segment, file_pos: usize) ?usize {
-        const align_past: i32 = @as(i32, @intCast(self.addr % irom_align)) - segment_header_len;
-        var pad_len: i32 = (irom_align - @as(i32, @intCast(file_pos % irom_align))) + align_past;
-        if (pad_len == 0 or pad_len == irom_align) {
+    pub fn get_flash_align_padding_len(self: Segment, file_pos: usize, flash_mmu_page_size: FlashMMU_PageSize) ?usize {
+        const align_to = flash_mmu_page_size.in_bytes();
+
+        const align_past: i32 = @as(i32, @intCast(self.addr % align_to)) - SEGMENT_HEADER_LEN;
+        var pad_len: i32 = align_past + @as(i32, @intCast(align_to - file_pos % align_to));
+        if (pad_len == 0 or pad_len == align_to) {
             return null;
         }
 
-        pad_len -= segment_header_len;
+        pad_len -= SEGMENT_HEADER_LEN;
         if (pad_len < 0) {
-            pad_len += irom_align;
+            pad_len += @intCast(align_to);
         }
         return @intCast(pad_len);
     }
@@ -491,7 +548,7 @@ test "Segment.write_to" {
     defer segment_data.deinit(allocator);
     const writer = segment_data.writer(allocator);
 
-    var checksum: u8 = checksum_xor_byte;
+    var checksum: u8 = CHECKSUM_XOR_BYTE;
     try segment.write_to(allocator, writer, 0x10, &checksum);
     try segment.write_to(allocator, writer, null, &checksum);
 

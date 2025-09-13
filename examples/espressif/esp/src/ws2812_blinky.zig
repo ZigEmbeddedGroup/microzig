@@ -7,6 +7,11 @@ const gpio = hal.gpio;
 
 pub const microzig_options: microzig.Options = .{
     .logFn = hal.usb_serial_jtag.logger.log,
+    .hal = .{
+        .info = .{
+            .project_name = "ws2812_blinky",
+        },
+    },
 };
 
 pub fn main() !void {

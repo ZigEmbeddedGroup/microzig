@@ -1,3 +1,4 @@
+const std = @import("std");
 const microzig = @import("microzig");
 
 pub const cache = @import("hal/cache.zig");
@@ -18,7 +19,17 @@ pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 comptime {
     // export atomic intrinsics
     _ = @import("hal/atomic.zig");
+
+    _ = esp_app_desc;
 }
+
+pub const HAL_Options = struct {
+    info: struct {
+        project_name: []const u8 = "Unnamed Project",
+        secure_version: u32 = 0,
+        version: []const u8 = "0.0.0",
+    } = .{},
+};
 
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .default;
@@ -39,7 +50,7 @@ pub fn init_sequence(clock_cfg: clocks.Config) void {
 
     system.init();
 
-    time.initialize();
+    time.init();
 }
 
 // NOTE: might be esp32c3 specific only + temporary until timers hal.
@@ -65,4 +76,24 @@ fn disable_watchdogs() void {
     RTC_CNTL.SWD_WPROTECT.raw = super_dogfood;
     RTC_CNTL.SWD_CONF.modify(.{ .SWD_DISABLE = 1 });
     RTC_CNTL.SWD_WPROTECT.raw = 0;
+}
+
+const esp_image = @import("esp_image");
+
+// Only these fields are populated and the others will be set in elf2image.
+export const esp_app_desc: esp_image.AppDesc linksection(".app_desc") = .{
+    .secure_version = microzig.options.hal.info.secure_version,
+    .version = str(32, microzig.options.hal.info.version),
+    .project_name = str(32, microzig.options.hal.info.project_name),
+};
+
+// don't change the name of this variable, it is used by espflash tool
+fn str(comptime l: usize, s: []const u8) [l]u8 {
+    if (s.len > l) {
+        @compileError("string doesn't fit buffer len");
+    }
+
+    var buf = std.mem.zeroes([l]u8);
+    std.mem.copyForwards(u8, buf[0..s.len], s);
+    return buf;
 }

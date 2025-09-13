@@ -7,7 +7,6 @@ SECTIONS
     KEEP(*(microzig_ram_start))
     *(.text*)
     KEEP(*(.ram_text))
-
   } > IRAM
 
   . = ALIGN(8);

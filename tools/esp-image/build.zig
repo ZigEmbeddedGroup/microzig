@@ -4,6 +4,7 @@ pub const ChipId = elf2image.ChipId;
 pub const FlashMode = elf2image.FlashMode;
 pub const FlashFreq = elf2image.FlashFreq;
 pub const FlashSize = elf2image.FlashSize;
+pub const FlashMMU_PageSize = elf2image.FlashMMU_PageSize;
 
 pub const Options = struct {
     chip_id: ChipId,
@@ -13,6 +14,7 @@ pub const Options = struct {
     flash_freq: ?FlashFreq = null,
     flash_mode: ?FlashMode = null,
     flash_size: ?FlashSize = null,
+    flash_mmu_page_size: ?FlashMMU_PageSize = null,
     use_segments: ?bool = null,
 };
 
@@ -70,6 +72,11 @@ pub fn from_elf(dep: *std.Build.Dependency, elf_file: std.Build.LazyPath, option
         }
     }
 
+    if (options.flash_mmu_page_size) |flash_mmu_page_size| {
+        run.addArg("--flash-mmu-page-size");
+        run.addArg(@tagName(flash_mmu_page_size));
+    }
+
     run.addArg("--output");
     return run.addOutputFileArg("output.bin");
 }
@@ -78,12 +85,19 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
+    const esp_image = b.addModule("esp_image", .{
+        .root_source_file = b.path("src/esp_image.zig"),
+    });
+
     const elf2image_exe = b.addExecutable(.{
         .name = "elf2image",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/elf2image.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "esp_image", .module = esp_image },
+            },
         }),
     });
 

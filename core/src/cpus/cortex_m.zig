@@ -550,8 +550,9 @@ pub const atomic = struct {
         if (has_native_atomics) {
             return @atomicRmw(T, ptr, .Add, delta, .monotonic);
         } else {
-            interrupt.disable_interrupts();
-            defer interrupt.enable_interrupts();
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
             const old_value = ptr.*;
             ptr.* = old_value +% delta;
             return old_value;
@@ -563,8 +564,9 @@ pub const atomic = struct {
         if (has_native_atomics) {
             return @atomicLoad(T, ptr, ordering);
         } else {
-            interrupt.disable_interrupts();
-            defer interrupt.enable_interrupts();
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
             return ptr.*;
         }
     }
@@ -574,8 +576,9 @@ pub const atomic = struct {
         if (has_native_atomics) {
             @atomicStore(T, ptr, value, ordering);
         } else {
-            interrupt.disable_interrupts();
-            defer interrupt.enable_interrupts();
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
             ptr.* = value;
         }
     }
@@ -585,8 +588,9 @@ pub const atomic = struct {
         if (has_native_atomics) {
             return @cmpxchgWeak(T, ptr, expected_value, new_value, success_ordering, failure_ordering);
         } else {
-            interrupt.disable_interrupts();
-            defer interrupt.enable_interrupts();
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
             const current = ptr.*;
             if (current == expected_value) {
                 ptr.* = new_value;
@@ -601,8 +605,9 @@ pub const atomic = struct {
         if (has_native_atomics) {
             return @atomicRmw(T, ptr, op, operand, ordering);
         } else {
-            interrupt.disable_interrupts();
-            defer interrupt.enable_interrupts();
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
             const old_value = ptr.*;
             ptr.* = switch (op) {
                 .Xchg => operand,
