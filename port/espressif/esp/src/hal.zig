@@ -27,7 +27,7 @@ comptime {
 
 pub const HAL_Options = struct {
     info: struct {
-        project_name: []const u8 = "Unnamed Project",
+        project_name: []const u8 = "Untitled Project",
         secure_version: u32 = 0,
         version: []const u8 = "0.0.0",
     } = .{},
@@ -80,17 +80,18 @@ fn disable_watchdogs() void {
     RTC_CNTL.SWD_WPROTECT.raw = 0;
 }
 
-// Only these fields are populated here. The others will be set by elf2image.
+// Don't change the name of this export, it is checked by espflash tool. Only
+// these fields are populated here. The others will be set by elf2image.
 export const esp_app_desc: esp_image.AppDesc linksection(".app_desc") = .{
     .secure_version = microzig.options.hal.info.secure_version,
     .version = str(32, microzig.options.hal.info.version),
     .project_name = str(32, microzig.options.hal.info.project_name),
 };
 
-// don't change the name of this variable, it is used by espflash tool
-fn str(comptime l: usize, s: []const u8) [l]u8 {
-    if (s.len > l) {
-        @compileError("string doesn't fit buffer len");
+fn str(comptime l: usize, comptime s: []const u8) [l]u8 {
+    // l - 1 because we need to add a null byte at the end
+    if (s.len > l - 1) {
+        @compileError(std.fmt.comptimePrint("string `{s}` doesn't fit in buffer with len {d}", .{ s, l }));
     }
 
     var buf = std.mem.zeroes([l]u8);
