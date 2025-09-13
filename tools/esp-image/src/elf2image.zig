@@ -164,6 +164,10 @@ pub fn main() !void {
         }
     }
 
+    // TODO: move app desc to the start of the image. This is currently done
+    // accidentally on esp32c3 because of the memory map (DROM comes before
+    // IROM).
+
     // TODO: maybe also check if sections overlap
 
     // merge segments
