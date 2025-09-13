@@ -1,5 +1,8 @@
 const std = @import("std");
 
+// TODO: Refactor esp-image to allow reading esp images in freestanding. The
+// elf specific image generation functionality should be kept in elf2image.
+
 pub const AppDesc = extern struct {
     pub const MAGIC: u32 = 0xABCD5432;
 

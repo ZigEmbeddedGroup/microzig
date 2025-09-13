@@ -1,6 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+pub const esp_image = @import("esp_image");
+
 pub const cache = @import("hal/cache.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
@@ -78,9 +80,7 @@ fn disable_watchdogs() void {
     RTC_CNTL.SWD_WPROTECT.raw = 0;
 }
 
-const esp_image = @import("esp_image");
-
-// Only these fields are populated and the others will be set in elf2image.
+// Only these fields are populated here. The others will be set by elf2image.
 export const esp_app_desc: esp_image.AppDesc linksection(".app_desc") = .{
     .secure_version = microzig.options.hal.info.secure_version,
     .version = str(32, microzig.options.hal.info.version),
