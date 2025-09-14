@@ -17,11 +17,14 @@ pub const BitMode = enum {
     quad,
 };
 
-pub const SPI_Instance = enum {
-    spi2,
-};
+pub fn num(comptime n: u2) SPI {
+    if (n != 2) @compileError("only SPI2 is supported");
+    return @enumFromInt(n);
+}
 
-pub const SPI_Bus = struct {
+pub const SPI = enum(u2) {
+    _,
+
     pub const Config = struct {
         clock_config: clocks.Config,
         baud_rate: u32,
@@ -106,53 +109,51 @@ pub const SPI_Bus = struct {
         lsb_first = 1,
     };
 
-    regs: *volatile SPI_Regs,
-
-    pub fn init(instance: SPI_Instance) SPI_Bus {
-        return .{
-            .regs = switch (instance) {
-                .spi2 => microzig.chip.peripherals.SPI2,
-            },
+    pub fn get_regs(self: SPI) *volatile SPI_Regs {
+        return switch (@intFromEnum(self)) {
+            2 => microzig.chip.peripherals.SPI2,
         };
     }
 
-    pub fn apply(self: SPI_Bus, comptime config: Config) void {
+    pub fn apply(self: SPI, comptime config: Config) void {
         comptime config.validate() catch @compileError("invalid baud rate");
 
         system.enable_clocks_and_release_reset(.{
             .spi2 = true,
         });
 
-        self.regs.CLK_GATE.modify(.{
+        const regs = self.get_regs();
+
+        regs.CLK_GATE.modify(.{
             .CLK_EN = 1,
         });
 
         // this also enables using all 16 words
-        self.regs.USER.write_raw(0);
+        regs.USER.write_raw(0);
 
-        self.regs.CLK_GATE.modify(.{
+        regs.CLK_GATE.modify(.{
             .MST_CLK_ACTIVE = 1,
             .MST_CLK_SEL = 1,
         });
 
-        self.regs.CTRL.modify(.{
+        regs.CTRL.modify(.{
             .Q_POL = 0,
             .D_POL = 0,
             .WP_POL = 0,
         });
 
         // this also disables all cs lines
-        self.regs.MISC.write_raw(0);
+        regs.MISC.write_raw(0);
 
-        self.regs.SLAVE.write_raw(0);
+        regs.SLAVE.write_raw(0);
 
-        self.regs.CLOCK.write_raw(config.get_clock_config());
+        regs.CLOCK.write_raw(config.get_clock_config());
 
-        self.regs.DMA_INT_CLR.modify(.{
+        regs.DMA_INT_CLR.modify(.{
             .TRANS_DONE_INT_CLR = 1,
         });
 
-        self.regs.DMA_INT_ENA.modify(.{
+        regs.DMA_INT_ENA.modify(.{
             .TRANS_DONE_INT_ENA = 1,
         });
 
@@ -160,7 +161,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn writev_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer_vec: []const []const u8,
         bit_mode: BitMode,
     ) void {
@@ -186,7 +187,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn write_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer: []const u8,
         bit_mode: BitMode,
     ) void {
@@ -197,7 +198,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn readv_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer_vec: []const []u8,
         bit_mode: BitMode,
     ) usize {
@@ -228,7 +229,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn read_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer: []u8,
         bit_mode: BitMode,
     ) usize {
@@ -239,7 +240,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn transceivev_blocking(
-        self: SPI_Bus,
+        self: SPI,
         write_buffer_vec: []const []const u8,
         read_buffer_vec: []const []u8,
     ) void {
@@ -271,22 +272,24 @@ pub const SPI_Bus = struct {
     }
 
     pub fn transceive_blocking(
-        self: SPI_Bus,
+        self: SPI,
         write_buffer: []const u8,
         read_buffer: []u8,
     ) void {
         self.transceivev_blocking(&.{write_buffer}, &.{read_buffer});
     }
 
-    fn set_bit_order(self: SPI_Bus, bit_order: BitOrder) void {
-        self.regs.CTRL.modify(.{
+    fn set_bit_order(self: SPI, bit_order: BitOrder) void {
+        const regs = self.get_regs();
+        regs.CTRL.modify(.{
             .RD_BIT_ORDER = @intFromEnum(bit_order),
             .WR_BIT_ORDER = @intFromEnum(bit_order),
         });
     }
 
-    fn fill_fifo(self: SPI_Bus, iter: *SliceVector([]const u8).Iterator, len: usize) void {
-        const fifo: *volatile [16]u32 = @ptrCast(&self.regs.W0);
+    fn fill_fifo(self: SPI, iter: *SliceVector([]const u8).Iterator, len: usize) void {
+        const regs = self.get_regs();
+        const fifo: *volatile [16]u32 = @ptrCast(&regs.W0);
 
         var i: usize = 0;
         var word: u32 = 0;
@@ -303,8 +306,9 @@ pub const SPI_Bus = struct {
         }
     }
 
-    fn read_fifo(self: SPI_Bus, iter: *SliceVector([]u8).Iterator, len: usize) void {
-        const fifo: *volatile [16]u32 = @ptrCast(&self.regs.W0);
+    fn read_fifo(self: SPI, iter: *SliceVector([]u8).Iterator, len: usize) void {
+        const regs = self.get_regs();
+        const fifo: *volatile [16]u32 = @ptrCast(&regs.W0);
 
         var i: usize = 0;
         while (i < len) : (i += 1) {
@@ -316,13 +320,15 @@ pub const SPI_Bus = struct {
     }
 
     fn start_transfer_generic(
-        self: SPI_Bus,
+        self: SPI,
         write: bool,
         read: bool,
         data_bitlen: u18,
         bit_mode: BitMode,
     ) void {
-        self.regs.USER.modify(.{
+        const regs = self.get_regs();
+
+        regs.USER.modify(.{
             .DOUTDIN = @intFromBool(write and read),
             .SIO = @intFromBool(bit_mode == .single_one_wire),
 
@@ -336,7 +342,7 @@ pub const SPI_Bus = struct {
             .FWRITE_QUAD = @intFromBool(bit_mode == .quad),
         });
 
-        self.regs.CTRL.modify(.{
+        regs.CTRL.modify(.{
             .FCMD_DUAL = @intFromBool(bit_mode == .dual),
             .FCMD_QUAD = @intFromBool(bit_mode == .quad),
             .FADDR_DUAL = @intFromBool(bit_mode == .dual),
@@ -345,32 +351,33 @@ pub const SPI_Bus = struct {
             .FREAD_QUAD = @intFromBool(bit_mode == .quad),
         });
 
-        self.regs.MS_DLEN.write(.{
+        regs.MS_DLEN.write(.{
             .MS_DATA_BITLEN = @intCast(data_bitlen - 1),
         });
 
-        self.regs.DMA_INT_CLR.modify(.{
+        regs.DMA_INT_CLR.modify(.{
             .TRANS_DONE_INT_CLR = 1,
         });
 
-        self.regs.DMA_CONF.modify(.{
+        regs.DMA_CONF.modify(.{
             .RX_AFIFO_RST = 1,
             .BUF_AFIFO_RST = 1,
             .DMA_AFIFO_RST = 1,
         });
 
-        self.regs.CMD.modify(.{
+        regs.CMD.modify(.{
             .UPDATE = 1,
         });
 
-        while (self.regs.CMD.read().UPDATE == 1) {}
+        while (regs.CMD.read().UPDATE == 1) {}
 
-        self.regs.CMD.modify(.{
+        regs.CMD.modify(.{
             .USR = 1,
         });
     }
 
-    fn wait_for_transfer_blocking(self: SPI_Bus) void {
-        while (self.regs.DMA_INT_RAW.read().TRANS_DONE_INT_RAW != 1) {}
+    fn wait_for_transfer_blocking(self: SPI) void {
+        const regs = self.get_regs();
+        while (regs.DMA_INT_RAW.read().TRANS_DONE_INT_RAW != 1) {}
     }
 };

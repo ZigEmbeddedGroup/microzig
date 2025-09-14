@@ -12,16 +12,6 @@ const peripherals = microzig.chip.peripherals;
 const IO_MUX = peripherals.IO_MUX;
 const GPIO = peripherals.GPIO;
 
-pub fn num(n: u5) Pin {
-    std.debug.assert(n < 22);
-    return @as(Pin, @enumFromInt(n));
-}
-
-pub const Level = enum(u1) {
-    low = 0,
-    high = 1,
-};
-
 pub const DriveStrength = enum {
     @"5mA",
     @"10mA",
@@ -53,6 +43,7 @@ pub const AlternateFunction = enum(u2) {
     function0 = 0,
     function1 = 1,
     function2 = 2,
+    function3 = 3,
 };
 
 /// Interrupt events
@@ -126,34 +117,65 @@ pub const OutputSignal = enum(u8) {
             else => false,
         };
     }
-
-    fn direct_output_via_io_mux(signal: OutputSignal) bool {
-        return switch (signal) {
-            .fspiclk,
-            .fspiq,
-            .fspid,
-            .fspihd,
-            .fspiwp,
-            .fspics0,
-            .fspics1,
-            .fspics2,
-            .fspics3,
-            .fspics4,
-            .fspics5,
-            => true,
-            else => false,
-        };
-    }
 };
+
+pub const Pull = enum {
+    up,
+    down,
+    disabled,
+};
+
+pub const Mask = enum(u22) {
+    _,
+};
+
+pub fn num(n: u5) Pin {
+    std.debug.assert(n < 22);
+    return @as(Pin, @enumFromInt(n));
+}
 
 pub const Pin = enum(u5) {
     _,
 
+    pub fn init(self: Pin) void {
+        const n = @intFromEnum(self);
+
+        // NOTE: Assert that the USB_SERIAL_JTAG peripheral which uses pins GPIO18 and GPIO19
+        //       is disabled and USB pullup/down resistors are disabled.
+        if (n == 18 or n == 19) {
+            const usb_conf0 = peripherals.USB_DEVICE.CONF0.read();
+            std.debug.assert(usb_conf0.USB_PAD_ENABLE == 0 and
+                usb_conf0.DP_PULLUP == 0 and
+                usb_conf0.DP_PULLDOWN == 0 and
+                usb_conf0.DM_PULLUP == 0 and
+                usb_conf0.DM_PULLDOWN == 0);
+        }
+
+        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n });
+
+        IO_MUX.GPIO[n].write(.{
+            .SLP_SEL = 0,
+            .FUN_IE = 0,
+            .MCU_SEL = 1,
+        });
+
+        GPIO.FUNC_OUT_SEL_CFG[n].write(.{
+            .OUT_SEL = @intFromEnum(OutputSignal.gpio),
+        });
+
+        GPIO.PIN[n].modify(.{ .PIN_PAD_DRIVER = 0 });
+    }
+
     pub const Config = struct {
+        // TODO: sleep mode
+
+        output_enable: bool = false,
+        use_output_enable_signal: bool = false,
         output_signal: OutputSignal = .gpio,
         output_invert: bool = false,
 
         input_enable: bool = false,
+        input_signal: InputSignal = .gpio,
         input_invert: bool = false,
         input_filter_enable: bool = false,
 
@@ -161,6 +183,30 @@ pub const Pin = enum(u5) {
         pullup_enable: bool = false,
         pulldown_enable: bool = false,
         drive_strength: DriveStrength = .@"5mA",
+
+        alternate_function: AlternateFunction = .function1,
+        input_bypass_gpio_matrix: bool = false,
+
+        pub const simple_gpio_input_output: Config = .{
+            .output_enable = true,
+            .input_enable = true,
+        };
+
+        pub fn connect_peripheral(input_signal: ?InputSignal, output_signal: ?OutputSignal) Config {
+            return .{
+                .input_enable = input_signal != null,
+                .output_enable = output_signal != null,
+                .input_signal = input_signal orelse .gpio,
+                .output_signal = output_signal orelse .gpio,
+            };
+        }
+
+        pub fn direct_input_and_output_via_io_mux(alternate_function: AlternateFunction) Config {
+            return .{
+                .alternate_function = alternate_function,
+                .input_bypass_gpio_matrix = true,
+            };
+        }
     };
 
     pub fn apply(self: Pin, config: Config) void {
@@ -172,14 +218,20 @@ pub const Pin = enum(u5) {
             .FUN_DRV = @intFromEnum(config.drive_strength),
             .FILTER_EN = @intFromBool(config.input_filter_enable),
             .FUN_IE = @intFromBool(config.input_enable),
-            .MCU_SEL = 1,
+            .MCU_SEL = @intFromEnum(config.alternate_function),
         });
 
         GPIO.FUNC_OUT_SEL_CFG[n].write(.{
             .OUT_SEL = @intFromEnum(config.output_signal),
-            .OEN_SEL = @intFromBool(config.output_signal.has_output_enable_signal()),
+            .OEN_SEL = @intFromBool(!config.use_output_enable_signal),
             .INV_SEL = @intFromBool(config.output_invert),
             .OEN_INV_SEL = 0,
+        });
+
+        GPIO.FUNC_IN_SEL_CFG[n].write(.{
+            .IN_SEL = @intFromEnum(config.input_signal),
+            .IN_INV_SEL = @intFromBool(config.input_invert),
+            .SEL = @intFromBool(!config.input_bypass_gpio_matrix),
         });
 
         GPIO.PIN[n].modify(.{ .PIN_PAD_DRIVER = @intFromBool(config.open_drain) });
@@ -196,220 +248,84 @@ pub const Pin = enum(u5) {
         }
 
         // Enable output
-        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u26, 1) << n });
-    }
-
-    pub fn reset(self: Pin) void {
-        const n = @intFromEnum(self);
-        IO_MUX.GPIO[n].write_raw(0x00);
-        GPIO.FUNC_OUT_SEL_CFG[n].write_raw(0x00);
-        GPIO.PIN[n].write_raw(0x00);
-        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n });
-    }
-
-    // pub fn set_output_enable(self: Pin, enable: bool) void {
-    //     // TODO: Some other implementations (only) set GPIO.ENABLE_W1TS?
-    //     GPIO.FUNC_OUT_SEL_CFG[@intFromEnum(self)].modify(.{ .OEN_SEL = @intFromBool(enable) });
-    // }
-
-    pub fn set_input_enable(self: Pin, enable: bool) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{ .FUN_IE = @intFromBool(enable) });
-    }
-
-    /// Connect input to peripheral.
-    pub fn connect_input_to_peripheral(self: Pin, signal: InputSignal) void {
-        self.connect_input_to_peripheral_with_options(signal, false, false);
-    }
-
-    /// Connect input to peripheral. `invert` inverts the input signal and `force_via_gpio_mux`
-    /// forces the signal to be routed through the gpio mux, even if it could be routed directly
-    /// through the io mux.
-    fn connect_input_to_peripheral_with_options(
-        self: Pin,
-        signal: InputSignal,
-        invert: bool,
-        force_via_gpio_mux: bool,
-    ) void {
-        // TODO: In else case, match function to alt function?
-        const af: AlternateFunction = if (force_via_gpio_mux) .function1 else .function1;
-
-        if (af == .function1 and @intFromEnum(signal) >= 128) {
-            @panic("Cannot connect GPIO to this peripheral");
+        if (config.output_enable) {
+            GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u26, 1) << n });
+        } else {
+            GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n });
         }
+    }
 
-        self.set_alternate_function(af);
-
-        if (@intFromEnum(signal) < 128) {
-            GPIO.FUNC_IN_SEL_CFG[@intFromEnum(signal)].write(.{
-                .SEL = 1,
-                .IN_INV_SEL = @intFromBool(invert),
-                .IN_SEL = @intFromEnum(self),
+    pub fn set_output_enabled(self: Pin, enable: bool) void {
+        const n = @intFromEnum(self);
+        if (enable) {
+            GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u26, 1) << n });
+            GPIO.FUNC_OUT_SEL_CFG[n].write(.{
+                .OEN_SEL = @intFromBool(enable),
             });
+        } else {
+            GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n });
         }
     }
 
-    pub fn connect_peripheral_to_output(self: Pin, signal: OutputSignal) void {
-        self.connect_peripheral_to_output_with_options(signal, false, false, false, false);
-    }
-
-    /// Connect peripheral to output. `invert` inverts the output signal
-    pub fn connect_peripheral_to_output_with_options(
-        self: Pin,
-        signal: OutputSignal,
-        invert: bool,
-        invert_enable: bool,
-        enable_from_gpio: bool,
-        force_via_gpio_mux: bool,
-    ) void {
-        // TODO: In else case, match function to alt function?
-        const af: AlternateFunction = if (force_via_gpio_mux) .function1 else .function1;
-
-        if (af == .function1 and @intFromEnum(signal) > 128) {
-            @panic("Cannot connect this peripheral to GPIO");
-        }
-
-        self.set_alternate_function(af);
-
-        const clamped_signal: u8 = if (@intFromEnum(signal) <= 128)
-            @intFromEnum(signal)
-        else
-            128;
-
+    pub fn set_output_invert(self: Pin, invert: bool) void {
         GPIO.FUNC_OUT_SEL_CFG[@intFromEnum(self)].write(.{
-            .OUT_SEL = clamped_signal,
             .INV_SEL = @intFromBool(invert),
-            .OEN_SEL = @intFromBool(enable_from_gpio),
-            .OEN_INV_SEL = @intFromBool(invert_enable),
         });
     }
 
-    pub fn set_alternate_function(self: Pin, alternate: AlternateFunction) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{ .MCU_SEL = @intFromEnum(alternate) });
-    }
-
-    pub fn set_open_drain(self: Pin, enable: bool) void {
-        const n = @intFromEnum(self);
-        // Set open-drain
-        GPIO.PIN[n].modify(.{ .PIN_PAD_DRIVER = @intFromBool(enable) });
-
-        GPIO.FUNC_OUT_SEL_CFG[n].modify(.{
-            .OUT_SEL = @intFromEnum(OutputSignal.gpio),
-        });
-
-        // Disable inputs, pullup/down, and sleep mode
-        IO_MUX.GPIO[n].modify(.{
-            .FUN_IE = 0,
-            .FUN_WPD = 0,
-            .FUN_WPU = 0,
-            .FUN_DRV = DriveStrength.to_value(.@"20mA", self),
-            .SLP_SEL = 0,
-        });
-    }
-
-    pub fn set_pullup(self: Pin, enable: bool) void {
+    pub fn set_input_enabled(self: Pin, enable: bool) void {
         IO_MUX.GPIO[@intFromEnum(self)].modify(.{
-            .FUN_WPU = @intFromBool(enable),
+            .FUN_IE = @intFromBool(enable),
         });
     }
 
-    pub fn set_pullup_sleep(self: Pin, enable: bool) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
-            .MCU_WPU = @intFromBool(enable),
+    pub fn set_input_invert(self: Pin, invert: bool) void {
+        GPIO.FUNC_IN_SEL_CFG[@intFromEnum(self)].write(.{
+            .IN_INV_SEL = @intFromBool(invert),
         });
     }
 
-    pub fn set_pulldown(self: Pin, enable: bool) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
-            .FUN_WPD = @intFromBool(enable),
-        });
-    }
-
-    pub fn set_pulldown_sleep(self: Pin, enable: bool) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
-            .MCU_WPD = @intFromBool(enable),
-        });
-    }
-
-    pub fn set_output_invert(self: Pin, enable: bool) void {
-        GPIO.FUNC_OUT_SEL_CFG[@intFromEnum(self)].modify(.{
-            .OEN_INV_SEL = enable,
-        });
-    }
-
-    pub fn set_output_drive_strength(self: Pin, strength: DriveStrength) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
-            .FUN_DRV = strength.to_value(self),
-        });
-    }
-
-    pub fn set_input_filter(self: Pin, enable: bool) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
+    pub fn set_input_filter_enabled(self: Pin, enable: bool) void {
+        GPIO.FUNC_IN_SEL_CFG[@intFromEnum(self)].write(.{
             .FILTER_EN = @intFromBool(enable),
         });
     }
 
-    // Configure the pin as an output GPIO with open drain enabled
-    pub fn set_open_drain_output(self: Pin, enable: bool) void {
-        const n = @intFromEnum(self);
-        // Disable input & pull up/down resistors
-        IO_MUX.GPIO[n].modify(.{
-            .MCU_SEL = @intFromEnum(AlternateFunction.function1),
-            .FUN_IE = 0,
-            .FUN_WPU = 0,
-            .FUN_WPD = 0,
-            .FUN_DRV = @intFromEnum(DriveStrength.@"20mA"),
-            .SLP_SEL = 0,
-        });
-
-        // Enable open drain
-        self.enable_open_drain(enable);
-
-        // Configure as GPIO
-        GPIO.FUNC_OUT_SEL_CFG[n].modify(.{
-            .OUT_SEL = @intFromEnum(OutputSignal.gpio),
-        });
-
-        // Enable output
-        GPIO.ENABLE_W1TS.write_raw(@as(u32, 1) << n);
-    }
-
-    pub fn enable_open_drain(self: Pin, enable: bool) void {
-        GPIO.PIN[@intFromEnum(self)].modify(.{
-            .PIN_PAD_DRIVER = @intFromBool(enable),
+    pub fn set_pull(self: Pin, pull: Pull) void {
+        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
+            .FUN_WPD = @intFromBool(pull == .down),
+            .FUN_WPU = @intFromBool(pull == .up),
         });
     }
 
-    pub fn write(self: Pin, level: Level) void {
-        const n = @intFromEnum(self);
-        // Assert that the pin is set to output enabled
-        std.debug.assert(GPIO.FUNC_OUT_SEL_CFG[n].read().OEN_SEL == 1);
+    pub fn set_drive_strength(self: Pin, drive_strength: DriveStrength) void {
+        IO_MUX.GPIO[@intFromEnum(self)].modify(.{
+            .FUN_DRV = @intFromEnum(drive_strength),
+        });
+    }
 
+    pub fn set_open_drain(self: Pin, open_drain: bool) void {
+        GPIO.PIN[@intFromEnum(self)].modify(.{ .PIN_PAD_DRIVER = @intFromBool(open_drain) });
+    }
+
+    pub fn write(self: Pin, level: u1) void {
+        const n = @intFromEnum(self);
         switch (level) {
-            .low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u26, 1) << n }),
-            .high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u26, 1) << n }),
+            0 => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u26, 1) << n }),
+            1 => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u26, 1) << n }),
         }
     }
 
-    pub fn get_output_state(self: Pin) Level {
-        std.debug.assert(GPIO.FUNC_OUT_SEL_CFG[@intFromEnum(self)].read().OEN_SEL == 1);
-
-        return @enumFromInt(GPIO.OUT.raw >> @intFromEnum(self) & 1);
-    }
-
-    pub fn read(self: Pin) Level {
+    pub fn read(self: Pin) u1 {
         std.debug.assert(IO_MUX.GPIO[@intFromEnum(self)].read().FUN_IE == 1);
 
-        return @enumFromInt(GPIO.IN.raw >> @intFromEnum(self) & 1);
+        return @intCast((GPIO.IN.raw >> @intFromEnum(self)) & 1);
     }
 
     pub fn toggle(self: Pin) void {
         switch (self.get_output_state()) {
-            .low => self.write(.high),
-            .high => self.write(.low),
+            0 => self.write(1),
+            1 => self.write(0),
         }
-    }
-
-    pub fn set_drive_strength(self: Pin, strength: DriveStrength) void {
-        IO_MUX.GPIO[@intFromEnum(self)].modify(.{ .FUN_DRV = strength.to_value(self) });
     }
 };

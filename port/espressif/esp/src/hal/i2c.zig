@@ -145,6 +145,9 @@ pub const I2C = enum(u1) {
         microzig.hal.system.enable_clocks_and_release_reset(.{ .i2c_ext0 = true });
 
         // Setup SDA pin
+        pins.sda.apply(.connect_peripheral(.i2cext0_sda, .i2cext0_sda));
+        pins.sda.set_pull(.up);
+
         pins.sda.set_open_drain_output(true);
         pins.sda.set_input_enable(true);
         pins.sda.set_pullup(true);

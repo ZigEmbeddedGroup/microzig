@@ -12,7 +12,7 @@ pub const microzig_options: microzig.Options = .{
 pub fn main() !void {
     gpio.num(8).connect_peripheral_to_output(.fspid);
 
-    const spi_bus: hal.spi.SPI_Bus = .init(.spi2);
+    const spi_bus: hal.spi.SPI = .init(.spi2);
     spi_bus.apply(.{
         .clock_config = hal.clock_config,
         .baud_rate = 3_000_000,

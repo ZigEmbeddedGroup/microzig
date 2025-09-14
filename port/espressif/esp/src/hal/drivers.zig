@@ -254,11 +254,11 @@ pub const SPI_Device = struct {
         active_level: Digital_IO.State,
     };
 
-    bus: hal.spi.SPI_Bus,
+    bus: hal.spi.SPI,
     bit_mode: hal.spi.BitMode,
     maybe_chip_select: ?ChipSelect = null,
 
-    pub fn init(bus: hal.spi.SPI_Bus, bit_mode: hal.spi.BitMode, maybe_chip_select: ?ChipSelect) SPI_Device {
+    pub fn init(bus: hal.spi.SPI, bit_mode: hal.spi.BitMode, maybe_chip_select: ?ChipSelect) SPI_Device {
         if (maybe_chip_select) |chip_select| {
             chip_select.pin.apply(.{
                 .output_enable = true,
