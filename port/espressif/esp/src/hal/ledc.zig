@@ -138,8 +138,8 @@ pub const Channel = enum(u2) {
     channel3 = 3,
 
     pub const Config = struct {
-        initial_duty: u15,
         timer: Timer,
+        initial_duty: u15 = 0,
     };
 
     /// Applies the configuration to the channel.

@@ -18,8 +18,8 @@ pub fn main() !void {
     // pwm servo driver
 
     pwm_pin.apply(.{ .output_enable = true });
-
     ledc_channel.connect_pin(pwm_pin);
+
     esp.ledc.apply(.apb_clk);
     ledc_timer.apply(.{
         .clock_config = esp.clock_config,
