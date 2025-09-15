@@ -9,10 +9,15 @@ pub const microzig_options: microzig.Options = .{
     .logFn = hal.usb_serial_jtag.logger.log,
 };
 
-pub fn main() !void {
-    gpio.num(8).connect_peripheral_to_output(.fspid);
+const led_pin = gpio.num(8);
+const spi_bus = hal.spi.instance.SPI2;
 
-    const spi_bus: hal.spi.SPI = .init(.spi2);
+pub fn main() !void {
+    led_pin.apply(.{ .output_enable = true });
+
+    spi_bus.connect_pins(.{
+        .data = .{ .single_one_wire = led_pin },
+    });
     spi_bus.apply(.{
         .clock_config = hal.clock_config,
         .baud_rate = 3_000_000,

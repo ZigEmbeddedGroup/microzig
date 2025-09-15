@@ -3,6 +3,7 @@ const microzig = @import("microzig");
 const SliceVector = microzig.utilities.SliceVector;
 
 const clocks = @import("clocks.zig");
+const gpio = @import("gpio.zig");
 const system = @import("system.zig");
 
 const SPI_Regs = microzig.chip.types.peripherals.SPI2;
@@ -17,10 +18,15 @@ pub const BitMode = enum {
     quad,
 };
 
-pub fn num(comptime n: u2) SPI {
-    if (n != 2) @compileError("only SPI2 is supported");
-    return @enumFromInt(n);
-}
+pub const instance = struct {
+    pub const SPI2 = num(2);
+    pub fn num(n: u2) SPI {
+        std.debug.assert(n == 2);
+        return @enumFromInt(n);
+    }
+};
+
+// TODO: add support for peripheral controlled chip select pins
 
 pub const SPI = enum(u2) {
     _,
@@ -109,12 +115,6 @@ pub const SPI = enum(u2) {
         lsb_first = 1,
     };
 
-    pub fn get_regs(self: SPI) *volatile SPI_Regs {
-        return switch (@intFromEnum(self)) {
-            2 => microzig.chip.peripherals.SPI2,
-        };
-    }
-
     pub fn apply(self: SPI, comptime config: Config) void {
         comptime config.validate() catch @compileError("invalid baud rate");
 
@@ -158,6 +158,71 @@ pub const SPI = enum(u2) {
         });
 
         self.set_bit_order(config.bit_order);
+    }
+
+    // TODO: not sure if this is the best way to do this
+    pub inline fn connect_pins(_: SPI, pins: struct {
+        data: union(enum) {
+            single_one_wire: ?gpio.Pin,
+            single_two_wires: struct {
+                mosi: ?gpio.Pin = null,
+                miso: ?gpio.Pin = null,
+            },
+            dual: struct {
+                bit0: ?gpio.Pin = null,
+                bit1: ?gpio.Pin = null,
+            },
+            quad: struct {
+                bit0: ?gpio.Pin = null,
+                bit1: ?gpio.Pin = null,
+                bit2: ?gpio.Pin = null,
+                bit3: ?gpio.Pin = null,
+            },
+        } = .{ .single_one_wire = null },
+        clk: ?gpio.Pin = null,
+    }) void {
+        switch (pins.data) {
+            .single_one_wire => |maybe_pin| if (maybe_pin) |pin| {
+                pin.connect_input_to_peripheral(.{ .signal = .fspid });
+                pin.connect_peripheral_to_output(.{ .signal = .fspid });
+            },
+            .single_two_wires => |maybe_pins| {
+                if (maybe_pins.mosi) |mosi| {
+                    mosi.connect_input_to_peripheral(.{ .signal = .fspid });
+                }
+                if (maybe_pins.miso) |miso| {
+                    miso.connect_input_to_peripheral(.{ .signal = .fspiq });
+                }
+            },
+            .dual => |maybe_pins| {
+                if (maybe_pins.bit0) |bit0| {
+                    bit0.connect_input_to_peripheral(.{ .signal = .fspid });
+                    bit0.connect_peripheral_to_output(.{ .signal = .fspid });
+                }
+                if (maybe_pins.bit1) |bit1| {
+                    bit1.connect_input_to_peripheral(.{ .signal = .fspiq });
+                    bit1.connect_peripheral_to_output(.{ .signal = .fspiq });
+                }
+            },
+            .quad => |maybe_pins| {
+                if (maybe_pins.bit0) |bit0| {
+                    bit0.connect_input_to_peripheral(.{ .signal = .fspid });
+                    bit0.connect_peripheral_to_output(.{ .signal = .fspid });
+                }
+                if (maybe_pins.bit1) |bit1| {
+                    bit1.connect_input_to_peripheral(.{ .signal = .fspiq });
+                    bit1.connect_peripheral_to_output(.{ .signal = .fspiq });
+                }
+                if (maybe_pins.bit2) |bit2| {
+                    bit2.connect_input_to_peripheral(.{ .signal = .fspiwp });
+                    bit2.connect_peripheral_to_output(.{ .signal = .fspiwp });
+                }
+                if (maybe_pins.bit3) |bit3| {
+                    bit3.connect_input_to_peripheral(.{ .signal = .fspihd });
+                    bit3.connect_peripheral_to_output(.{ .signal = .fspihd });
+                }
+            },
+        }
     }
 
     pub fn writev_blocking(
@@ -277,6 +342,11 @@ pub const SPI = enum(u2) {
         read_buffer: []u8,
     ) void {
         self.transceivev_blocking(&.{write_buffer}, &.{read_buffer});
+    }
+
+    inline fn get_regs(self: SPI) *volatile SPI_Regs {
+        std.debug.assert(@intFromEnum(self) == 2);
+        return microzig.chip.peripherals.SPI2;
     }
 
     fn set_bit_order(self: SPI, bit_order: BitOrder) void {

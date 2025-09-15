@@ -110,12 +110,6 @@ const OperationType = enum(u1) {
     read = 1,
 };
 
-/// Pins used by the I2C interface
-pub const Pins = struct {
-    sda: gpio.Pin,
-    scl: gpio.Pin,
-};
-
 pub const instance = struct {
     pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub fn num(n: u1) I2C {
@@ -138,28 +132,11 @@ pub const I2C = enum(u1) {
         return I2C0;
     }
 
-    pub fn apply(self: I2C, pins: Pins, frequency: u32) ConfigError!void {
+    pub fn apply(self: I2C, frequency: u32) ConfigError!void {
         const regs = self.get_regs();
 
         // Enable I2C peripheral clock and take it out of reset
         microzig.hal.system.enable_clocks_and_release_reset(.{ .i2c_ext0 = true });
-
-        // Setup SDA pin
-        pins.sda.apply(.connect_peripheral(.i2cext0_sda, .i2cext0_sda));
-        pins.sda.set_pull(.up);
-
-        pins.sda.set_open_drain_output(true);
-        pins.sda.set_input_enable(true);
-        pins.sda.set_pullup(true);
-        pins.sda.connect_peripheral_to_output(.i2cext0_sda);
-        pins.sda.connect_input_to_peripheral(.i2cext0_sda);
-
-        // Setup SCL pin
-        pins.scl.set_open_drain_output(true);
-        pins.scl.set_input_enable(true);
-        pins.scl.set_pullup(true);
-        pins.scl.connect_peripheral_to_output(.i2cext0_scl);
-        pins.scl.connect_input_to_peripheral(.i2cext0_scl);
 
         // Reset entire peripheral (also resets fifo)
         self.reset();
@@ -190,6 +167,21 @@ pub const I2C = enum(u1) {
 
         // Propagate configuration changes
         self.update_config();
+    }
+
+    pub fn connect_pins(_: I2C, pins: struct {
+        sda: ?gpio.Pin = null,
+        scl: ?gpio.Pin = null,
+    }) void {
+        if (pins.sda) |sda_pin| {
+            sda_pin.connect_peripheral_to_output(.{ .signal = .i2cext0_sda });
+            sda_pin.connect_input_to_peripheral(.{ .signal = .i2cext0_sda });
+        }
+
+        if (pins.scl) |scl_pin| {
+            scl_pin.connect_peripheral_to_output(.{ .signal = .i2cext0_scl });
+            scl_pin.connect_input_to_peripheral(.{ .signal = .i2cext0_scl });
+        }
     }
 
     /// Reset the I2C controller
@@ -325,6 +317,7 @@ pub const I2C = enum(u1) {
             return Error.NoAcknowledge;
         }
     }
+
     /// Propagate configuration to the peripheral
     inline fn update_config(self: I2C) void {
         self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });

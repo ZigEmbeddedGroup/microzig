@@ -285,18 +285,18 @@ pub const SPI_Device = struct {
 
     pub fn connect(dev: SPI_Device) ConnectError!void {
         if (dev.maybe_chip_select) |chip_select| {
-            chip_select.pin.write(switch (chip_select.active_level) {
-                .low => .low,
-                .high => .high,
+            chip_select.pin.put(switch (chip_select.active_level) {
+                .low => 0,
+                .high => 1,
             });
         }
     }
 
     pub fn disconnect(dev: SPI_Device) void {
         if (dev.maybe_chip_select) |chip_select| {
-            chip_select.pin.write(switch (chip_select.active_level) {
-                .low => .high,
-                .high => .low,
+            chip_select.pin.put(switch (chip_select.active_level) {
+                .low => 1,
+                .high => 0,
             });
         }
     }
@@ -399,22 +399,23 @@ pub const GPIO_Device = struct {
     }
 
     pub fn set_direction(dio: GPIO_Device, dir: Direction) SetDirError!void {
-        dio.pin.set_output_enable(dir == .output);
+        dio.pin.set_output_enabled(dir == .output);
+        dio.pin.set_input_enabled(dir == .input);
     }
 
     pub fn set_bias(dio: GPIO_Device, maybe_bias: ?State) SetBiasError!void {
-        dio.pin.set_pullup(if (maybe_bias) |bias| switch (bias) {
-            .low => false,
-            .high => true,
-        } else false);
+        dio.pin.set_pull(if (maybe_bias) |bias| switch (bias) {
+            .low => .down,
+            .high => .up,
+        } else .disabled);
     }
 
     pub fn write(dio: GPIO_Device, state: State) WriteError!void {
-        dio.pin.write(@enumFromInt(state.value()));
+        dio.pin.put(state.value());
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @enumFromInt(@intFromEnum(dio.pin.read()));
+        return @enumFromInt(dio.pin.read());
     }
 
     const vtable = Digital_IO.VTable{

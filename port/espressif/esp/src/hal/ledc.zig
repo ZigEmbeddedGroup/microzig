@@ -140,7 +140,6 @@ pub const Channel = enum(u2) {
     pub const Config = struct {
         initial_duty: u15,
         timer: Timer,
-        pin: gpio.Pin,
     };
 
     /// Applies the configuration to the channel.
@@ -155,22 +154,17 @@ pub const Channel = enum(u2) {
 
         // also calls update()
         chan.set_duty(config.initial_duty);
-
-        // TODO: should we connect the pin here or require the user to do it?
-        chan.connect_pin(config.pin);
     }
 
     /// Connects the channel to the provided pin.
     pub fn connect_pin(chan: Channel, pin: gpio.Pin) void {
-        pin.apply(.{
-            .output_signal = switch (chan) {
+        pin.connect_peripheral_to_output(.{
+            .signal = switch (chan) {
                 .channel0 => .ledc_ls_sig_out0,
                 .channel1 => .ledc_ls_sig_out1,
                 .channel2 => .ledc_ls_sig_out2,
                 .channel3 => .ledc_ls_sig_out3,
             },
-            .pulldown_enable = true,
-            .pullup_enable = true,
         });
     }
 
