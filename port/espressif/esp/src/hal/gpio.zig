@@ -138,7 +138,7 @@ pub const Pin = enum(u5) {
     _,
 
     pub const Config = struct {
-        output_enable: bool = true,
+        output_enable: bool = false,
         input_enable: bool = false,
         open_drain: bool = false,
         pull: Pull = .disabled,
