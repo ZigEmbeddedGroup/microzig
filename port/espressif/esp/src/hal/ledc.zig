@@ -160,10 +160,10 @@ pub const Channel = enum(u2) {
     pub fn connect_pin(chan: Channel, pin: gpio.Pin) void {
         pin.connect_peripheral_to_output(.{
             .signal = switch (chan) {
-                .channel0 => .ledc_ls_sig_out0,
-                .channel1 => .ledc_ls_sig_out1,
-                .channel2 => .ledc_ls_sig_out2,
-                .channel3 => .ledc_ls_sig_out3,
+                .channel0 => .ledc_ls_sig0,
+                .channel1 => .ledc_ls_sig1,
+                .channel2 => .ledc_ls_sig2,
+                .channel3 => .ledc_ls_sig3,
             },
         });
     }

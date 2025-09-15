@@ -56,9 +56,44 @@ pub const Event = enum(u3) {
 };
 
 pub const InputSignal = enum(u8) {
-    // TODO: Other signals
-    rmt0 = 51,
-    rmt1 = 52,
+    spiq = 0,
+    spid = 1,
+    spihd = 2,
+    spiwp = 3,
+
+    u0rxd = 6,
+    u0cts = 7,
+    u0dsr = 8,
+    u1rxd = 9,
+    u1cts = 10,
+    u1dsr = 11,
+
+    i2s_mclk = 12,
+    i2so_bck = 13,
+    i2so_ws = 14,
+    i2si_sd = 15,
+    i2si_bck = 16,
+    i2si_ws = 17,
+
+    gpio_bt_priority = 18,
+    gpio_bt_active = 19,
+
+    cpu_gpio0 = 28,
+    cpu_gpio1 = 29,
+    cpu_gpio2 = 30,
+    cpu_gpio3 = 31,
+    cpu_gpio4 = 32,
+    cpu_gpio5 = 33,
+    cpu_gpio6 = 34,
+    cpu_gpio7 = 35,
+
+    ext_adc_start = 45,
+
+    rmt_sig0 = 51,
+    rmt_sig1 = 52,
+
+    i2cext0_scl = 53,
+    i2cext0_sda = 54,
 
     fspiclk = 63,
     fspiq = 64,
@@ -67,21 +102,65 @@ pub const InputSignal = enum(u8) {
     fspiwp = 67,
     fspics0 = 68,
 
-    i2cext0_scl = 53,
-    i2cext0_sda = 54,
+    twai_rx = 74,
+
+    sig_in_func_97 = 97,
+    sig_in_func_98 = 98,
+    sig_in_func_99 = 99,
+    sig_in_func_100 = 100,
+
+    pub const always_low: InputSignal = .cpu_gpio3;
+    pub const always_high: InputSignal = .cpu_gpio2;
 };
 
 pub const OutputSignal = enum(u8) {
-    // TODO: Other signals
-    ledc_ls_sig_out0 = 45,
-    ledc_ls_sig_out1 = 46,
-    ledc_ls_sig_out2 = 47,
-    ledc_ls_sig_out3 = 48,
-    ledc_ls_sig_out4 = 49,
-    ledc_ls_sig_out5 = 50,
+    spiq = 0,
+    spid = 1,
+    spihd = 2,
+    spiwp = 3,
+    spiclk = 4,
+    spics0 = 5,
 
-    rmt0 = 51,
-    rmt1 = 52,
+    u0txd = 6,
+    u0rts = 7,
+    u0dtr = 8,
+    u1txd = 9,
+    u1rts = 10,
+    u1dtr = 11,
+
+    i2s_mclk = 12,
+    i2so_bck = 13,
+    i2so_ws = 14,
+    i2si_sd = 15,
+    i2si_bck = 16,
+    i2si_ws = 17,
+
+    gpio_wlan_priority = 18,
+    gpio_wlan_active = 19,
+
+    cpu_gpio0 = 28,
+    cpu_gpio1 = 29,
+    cpu_gpio2 = 30,
+    cpu_gpio3 = 31,
+    cpu_gpio4 = 32,
+    cpu_gpio5 = 33,
+    cpu_gpio6 = 34,
+    cpu_gpio7 = 35,
+
+    usb_jtag_tck = 36,
+    usb_jtag_tms = 37,
+    usb_jtag_tdi = 38,
+    usb_jtag_tdo = 39,
+
+    ledc_ls_sig0 = 45,
+    ledc_ls_sig1 = 46,
+    ledc_ls_sig2 = 47,
+    ledc_ls_sig3 = 48,
+    ledc_ls_sig4 = 49,
+    ledc_ls_sig5 = 50,
+
+    rmt_sig0 = 51,
+    rmt_sig1 = 52,
 
     i2cext0_scl = 53,
     i2cext0_sda = 54,
@@ -98,25 +177,33 @@ pub const OutputSignal = enum(u8) {
     fspics4 = 72,
     fspics5 = 73,
 
-    gpio = 128,
+    twai_tx = 74,
+    twai_bus_off_on = 75,
+    twai_clk = 76,
 
-    fn has_output_enable_signal(signal: OutputSignal) bool {
-        return switch (signal) {
-            .fspiclk,
-            .fspiq,
-            .fspid,
-            .fspihd,
-            .fspiwp,
-            .fspics0,
-            .fspics1,
-            .fspics2,
-            .fspics3,
-            .fspics4,
-            .fspics5,
-            => true,
-            else => false,
-        };
-    }
+    ant_sel0 = 89,
+    ant_sel1 = 90,
+    ant_sel2 = 91,
+    ant_sel3 = 92,
+    ant_sel4 = 93,
+    ant_sel5 = 94,
+    ant_sel6 = 95,
+    ant_sel7 = 96,
+
+    sig_in_func_97 = 97,
+    sig_in_func_98 = 98,
+    sig_in_func_99 = 99,
+    sig_in_func_100 = 100,
+
+    clk_out1 = 123,
+    clk_out2 = 124,
+    clk_out3 = 125,
+
+    spics1 = 126,
+
+    usb_jtag_trst = 127,
+
+    gpio = 128,
 };
 
 pub const Pull = enum {
@@ -144,6 +231,12 @@ pub const Pin = enum(u5) {
         pull: Pull = .disabled,
         drive_strength: DriveStrength = .@"5mA",
         input_filter_enable: bool = false,
+
+        pub const analog: Config = .{
+            .output_enable = false,
+            .input_enable = false,
+            .pull = .disabled,
+        };
     };
 
     fn assert_usb_disabled(self: Pin) void {
