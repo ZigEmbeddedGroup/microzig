@@ -90,7 +90,7 @@ pub fn main() !void {
     // Nothing will work if you don't initialize the RTT control block first!
     rtt_instance.init();
 
-    // Manually write some bytes to RTT up channel 0 so that is shows up in RTT Viewer
+    // Manually write some bytes to RTT up channel 0 so that it shows up in RTT Viewer
     _ = rtt_instance.write(0, "Hello RTT!\n");
 
     // Use std.log instead by instantiating a Writer our log function can use, here we aren't buffering
