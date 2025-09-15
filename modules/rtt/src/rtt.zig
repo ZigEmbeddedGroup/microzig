@@ -553,7 +553,7 @@ pub fn RTT(comptime config: Config) type {
         /// Returns a Writer that implements the std.Io.Writer interface for a given up channel.
         /// A zero length buffer (&.{}) is valid across the entire std.Io.Writer API, and means that
         /// all calls to the API will immediatly write data to RTT up channel, making .flush() a noop.
-        /// A small buffer is reccomended if application code frequently makes consecutive, small writes.
+        /// A small buffer is recomended if application code frequently makes consecutive, small writes.
         /// Buffering allows the interface to consolidate these to a single write with .flush(), reducing the
         /// number of locks/interrupt enable/disables.
         pub fn writer(comptime channel_number: usize, buf: []u8) Writer {
