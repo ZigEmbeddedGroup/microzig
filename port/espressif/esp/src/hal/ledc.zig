@@ -123,10 +123,10 @@ pub const Timer = enum(u2) {
         value: @TypeOf(LEDC.LSTIMER0_VALUE),
     } {
         return switch (tim) {
-            .timer0 => @alignCast(@ptrCast(&LEDC.LSTIMER0_CONF)),
-            .timer1 => @alignCast(@ptrCast(&LEDC.LSTIMER1_CONF)),
-            .timer2 => @alignCast(@ptrCast(&LEDC.LSTIMER2_CONF)),
-            .timer3 => @alignCast(@ptrCast(&LEDC.LSTIMER3_CONF)),
+            .timer0 => @ptrCast(@alignCast(&LEDC.LSTIMER0_CONF)),
+            .timer1 => @ptrCast(@alignCast(&LEDC.LSTIMER1_CONF)),
+            .timer2 => @ptrCast(@alignCast(&LEDC.LSTIMER2_CONF)),
+            .timer3 => @ptrCast(@alignCast(&LEDC.LSTIMER3_CONF)),
         };
     }
 };
@@ -249,10 +249,10 @@ pub const Channel = enum(u2) {
         duty_r: @TypeOf(LEDC.LSCH0_DUTY_R),
     } {
         return switch (chan) {
-            .channel0 => @alignCast(@ptrCast(&LEDC.LSCH0_CONF0)),
-            .channel1 => @alignCast(@ptrCast(&LEDC.LSCH1_CONF0)),
-            .channel2 => @alignCast(@ptrCast(&LEDC.LSCH2_CONF0)),
-            .channel3 => @alignCast(@ptrCast(&LEDC.LSCH3_CONF0)),
+            .channel0 => @ptrCast(@alignCast(&LEDC.LSCH0_CONF0)),
+            .channel1 => @ptrCast(@alignCast(&LEDC.LSCH1_CONF0)),
+            .channel2 => @ptrCast(@alignCast(&LEDC.LSCH2_CONF0)),
+            .channel3 => @ptrCast(@alignCast(&LEDC.LSCH3_CONF0)),
         };
     }
 };
