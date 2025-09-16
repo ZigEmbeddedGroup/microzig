@@ -5,7 +5,7 @@ const EFUSE = peripherals.EFUSE;
 
 pub fn read_mac() [6]u8 {
     var mac: [6]u8 = undefined;
-    for (items.mac, 0..) |item, i| {
+    inline for (items.mac, 0..) |item, i| {
         mac[i] = read(item);
     }
     return mac;
