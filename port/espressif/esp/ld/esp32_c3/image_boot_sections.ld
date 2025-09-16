@@ -54,7 +54,7 @@ SECTIONS
 
   .ram_data_dummy (NOLOAD) :
   {
-    . = ALIGN(ALIGNOF(.ram.text)) + SIZEOF(.ram_text);
+    . = ALIGN(ALIGNOF(.ram.text)) + SIZEOF(.ram.text);
   } > DRAM
 
   .data :
