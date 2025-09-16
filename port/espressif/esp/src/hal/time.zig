@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const time = microzig.drivers.time;
 const systimer = microzig.hal.systimer;
 
-pub fn initialize() void {
+pub fn init() void {
     systimer.unit(0).apply(.enabled);
 }
 
