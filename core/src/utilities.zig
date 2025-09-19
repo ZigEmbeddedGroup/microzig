@@ -546,7 +546,7 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
             return if (buffer.start <= buffer.end)
                 buffer.end - buffer.start
             else
-                len - buffer.start - buffer.end;
+                len - buffer.start + buffer.end;
         }
 
         fn increment_end(buffer: *Self) void {
