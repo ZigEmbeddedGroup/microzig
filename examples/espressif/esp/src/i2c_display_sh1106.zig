@@ -22,10 +22,24 @@ pub fn main() !void {
     const sda_pin = gpio.num(5);
     const scl_pin = gpio.num(6);
 
-    try i2c0.apply(
-        .{ .sda = sda_pin, .scl = scl_pin },
-        400_000,
-    );
+    // Setup SDA pin
+    sda_pin.apply(.{
+        .output_enable = true,
+        .input_enable = true,
+        .open_drain = true,
+        .pull = .up,
+    });
+
+    // Setup SCL pin
+    scl_pin.apply(.{
+        .output_enable = true,
+        .input_enable = true,
+        .open_drain = true,
+        .pull = .up,
+    });
+
+    i2c0.connect_pins(.{ .sda = sda_pin, .scl = scl_pin });
+    try i2c0.apply(400_000);
 
     // Create i2c datagram device
     const i2c_device = I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);

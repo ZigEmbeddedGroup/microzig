@@ -206,7 +206,7 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
             dcur = 3;
             dbias = 2;
 
-            rom.functions.esp_rom_regi2c_write(0x66, 0, 4, 0x69);
+            rom.functions.esp_rom_regi2c_write(0x66, 0, 4, 0x69); // I2C_BBPLL_REG4
         },
         .@"480mhz" => {
             div_ref = 0;
@@ -217,7 +217,7 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
             dcur = 3;
             dbias = 2;
 
-            rom.functions.esp_rom_regi2c_write(0x66, 0, 4, 0x6b);
+            rom.functions.esp_rom_regi2c_write(0x66, 0, 4, 0x6b); // I2C_BBPLL_REG4
         },
     }
 
@@ -225,35 +225,18 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
     const i2c_bbpll_dcur: u8 =
         (2 << i2c_bbpll_oc_dlref_sel_lsb) | (1 << i2c_bbpll_oc_dhref_sel_lsb) | dcur;
 
-    rom.functions.esp_rom_regi2c_write(0x66, 0, 2, i2c_bbpll_lref);
-    rom.functions.esp_rom_regi2c_write(0x66, 0, 3, div7_0);
+    rom.functions.esp_rom_regi2c_write(0x66, 0, 2, i2c_bbpll_lref); // I2C_BBPLL_OC_REF
+    rom.functions.esp_rom_regi2c_write(0x66, 0, 3, div7_0); // I2C_BBPLL_OC_DIV_REG
 
-    {
-        var value = rom.functions.esp_rom_regi2c_read(0x66, 0, 5);
-        value &= ~@as(u8, 0b111);
-        value &= ~@as(u8, 0b111 << 4);
-        value |= dr1;
-        value |= dr3 << 4;
-        rom.functions.esp_rom_regi2c_write(0x66, 0, 5, value);
-    }
+    rom.functions.esp_rom_regi2c_write_mask(0x66, 0, 5, 2, 0, dr1); // I2C_BBPLL_OC_DR1
+    rom.functions.esp_rom_regi2c_write_mask(0x66, 0, 5, 6, 4, dr3); // I2C_BBPLL_OC_DR3
 
-    rom.functions.esp_rom_regi2c_write(0x66, 0, 6, i2c_bbpll_dcur);
+    rom.functions.esp_rom_regi2c_write(0x66, 0, 6, i2c_bbpll_dcur); // I2C_BBPLL_REG6
 
-    {
-        var value = rom.functions.esp_rom_regi2c_read(0x66, 0, 9);
-        value &= ~@as(u8, 0b11);
-        value |= dbias;
-        rom.functions.esp_rom_regi2c_write(0x66, 0, 9, value);
-    }
+    rom.functions.esp_rom_regi2c_write_mask(0x66, 0, 9, 1, 0, dbias); // I2C_BBPLL_OC_VCO_DBIAS
 
-    {
-        var value = rom.functions.esp_rom_regi2c_read(0x66, 0, 6);
-        value &= ~@as(u8, 0b11 << 4);
-        value &= ~@as(u8, 0b11 << 6);
-        value |= 2 << 4;
-        value |= 1 << 6;
-        rom.functions.esp_rom_regi2c_write(0x66, 0, 6, value);
-    }
+    rom.functions.esp_rom_regi2c_write_mask(0x66, 0, 6, 5, 4, 2); // I2C_BBPLL_OC_DHREF_SEL
+    rom.functions.esp_rom_regi2c_write_mask(0x66, 0, 6, 7, 6, 1); // I2C_BBPLL_OC_DLREF_SEL
 }
 
 const I2C_ANA_MST_TYPE = extern struct {

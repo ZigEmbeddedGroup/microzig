@@ -1,8 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const system = microzig.hal.system;
-
 const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
+
+const system = @import("system.zig");
 
 pub fn ticks_per_us() u64 {
     return 16;
