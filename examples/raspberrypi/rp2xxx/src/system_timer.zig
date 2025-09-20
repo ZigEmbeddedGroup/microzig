@@ -2,16 +2,14 @@ const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const peripherals = microzig.chip.peripherals;
-const interrupt = microzig.cpu.interrupt;
+const system_timer = rp2xxx.system_timer;
+const chip = rp2xxx.compatibility.chip;
 
 const led = rp2xxx.gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = rp2xxx.gpio.num(0);
+const timer = system_timer.num(0);
 
-const chip = rp2xxx.compatibility.chip;
-
-const timer = if (chip == .RP2040) peripherals.TIMER else peripherals.TIMER0;
 const timer_irq = if (chip == .RP2040) .TIMER_IRQ_0 else .TIMER0_IRQ_0;
 
 pub const rp2040_options: microzig.Options = .{
@@ -35,17 +33,9 @@ fn timer_interrupt() callconv(.c) void {
     std.log.info("toggle led!", .{});
     led.toggle();
 
-    timer.INTR.modify(.{ .ALARM_0 = 1 });
-
-    set_alarm(1_000_000);
-}
-
-pub fn set_alarm(us: u32) void {
-    const Duration = microzig.drivers.time.Duration;
-    const current = time.get_time_since_boot();
-    const target = current.add_duration(Duration.from_us(us));
-
-    timer.ALARM0.write_raw(@intCast(@intFromEnum(target) & 0xffffffff));
+    timer.clear_interrupt(.alarm0);
+    // set alarm for 1 second
+    timer.schedule_alarm(.alarm0, timer.read_low() +% 1_000_000);
 }
 
 pub fn main() !void {
@@ -59,11 +49,10 @@ pub fn main() !void {
     led.set_function(.sio);
     led.set_direction(.out);
 
-    set_alarm(1_000_000);
-
-    timer.INTE.toggle(.{ .ALARM_0 = 1 });
-
-    interrupt.enable(timer_irq);
+    microzig.cpu.interrupt.enable(timer_irq);
+    timer.set_interrupt_enabled(.alarm0, true);
+    // set alarm for 1 second
+    timer.schedule_alarm(.alarm0, timer.read_low() +% 1_000_000);
 
     // Enable machine external interrupts on RISC-V
     if (rp2xxx.compatibility.arch == .riscv) {
