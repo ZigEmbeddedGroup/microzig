@@ -1,8 +1,8 @@
 const microzig = @import("microzig");
 const EXTMEM = microzig.chip.peripherals.EXTMEM;
-const hal = microzig.hal;
-const compatibility = hal.compatibility;
-const rom = hal.rom;
+
+const compatibility = @import("compatibility.zig");
+const rom = @import("rom.zig");
 
 pub fn init() void {
     switch (compatibility.chip) {
