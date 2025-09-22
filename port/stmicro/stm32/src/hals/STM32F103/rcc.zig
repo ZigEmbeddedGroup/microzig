@@ -30,7 +30,7 @@ const ClockInitError = error{
     LSETimeout,
 };
 
-const RccPeriferals = enum {
+pub const RccPeriferals = enum {
     DMA1,
     DMA2,
     SRAM,

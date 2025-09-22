@@ -1,3 +1,4 @@
+const microzig = @import("microzig");
 pub const rcc = @import("rcc.zig");
 pub const pins = @import("pins.zig");
 pub const gpio = @import("gpio.zig");
@@ -15,6 +16,10 @@ pub const backup = @import("backup.zig");
 pub const rtc = @import("rtc.zig");
 pub const dma = @import("DMA.zig");
 pub const time = @import("time.zig");
+const util = @import("util.zig");
+
+//temporary solution
+pub const default_interrupts = util.load_timer_interrupt(time.TIM_handler);
 
 pub var RESET: rcc.ResetReason = .POR_or_PDR;
 pub fn init() void {
