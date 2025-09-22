@@ -7,17 +7,19 @@ const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
 const EpControl = usb_ll.EpControl;
 
 const interrupt = microzig.interrupt;
-var Counter: stm32.drivers.CounterDevice = undefined;
 
 pub const microzig_options: microzig.Options = .{
-    .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
+    .interrupts = .{
+        .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler },
+    },
 };
 
 // ============== HID Descriptor ================
@@ -267,16 +269,15 @@ pub fn main() !void {
     rcc.enable_clock(.GPIOC);
     rcc.enable_clock(.TIM2);
     rcc.enable_clock(.USB);
+    time.init_timer(.TIM2);
 
     const led = gpio.Pin.from_port(.B, 2);
-    Counter = timer.counter_device(72_000_000);
 
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
-    usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
-
+    usb_ll.usb_init(USB_conf, Duration.from_ms(25));
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     while (true) {
-        Counter.sleep_ms(1000);
+        time.sleep_ms(1000);
         led.toggle();
         report(&.{ 0xb, 0x8, 0xf });
         report(&.{ 0, 0, 0, 0, 0, 0 });
