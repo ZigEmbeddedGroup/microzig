@@ -115,9 +115,8 @@ pub fn dump_system_state(cpu: *Cpu) void {
     std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ sram_base, sram_end, cpu.sram.size });
 
     const row_width = 16;
-    var prev_row: [row_width]u8 = undefined;
+    var prev_row: ?[row_width]u8 = null;
     var prev_len: usize = 0;
-    var have_prev = false;
     var elided = false;
 
     var i: usize = 0;
@@ -130,9 +129,18 @@ pub fn dump_system_state(cpu: *Cpu) void {
             cur_row[j] = cpu.sram.read(sram_base + @as(u24, @intCast(i + j)));
         }
 
-        // 'Don't show repeated lines to minimize the size of the dump
-        const same_as_prev = have_prev and prev_len == row_len and std.mem.eql(u8, prev_row[0..prev_len], cur_row[0..row_len]);
-        if (same_as_prev) {
+        // Only elide repeated lines of all zeroes
+        const is_all_zeros = blk: {
+            for (cur_row[0..row_len]) |byte| {
+                if (byte != 0) break :blk false;
+            }
+            break :blk true;
+        };
+        const same_as_prev = if (prev_row) |prev|
+            prev_len == row_len and std.mem.eql(u8, prev[0..prev_len], cur_row[0..row_len])
+        else
+            false;
+        if (same_as_prev and is_all_zeros) {
             elided = true;
         } else {
             if (elided) {
@@ -169,9 +177,11 @@ pub fn dump_system_state(cpu: *Cpu) void {
             std.debug.print("|\n", .{});
 
             // store as previous row
-            @memcpy(prev_row[0..row_len], cur_row[0..row_len]);
+            if (prev_row == null) {
+                prev_row = [_]u8{0} ** row_width;
+            }
+            @memcpy(prev_row.?[0..row_len], cur_row[0..row_len]);
             prev_len = row_len;
-            have_prev = true;
         }
     }
     if (elided)
