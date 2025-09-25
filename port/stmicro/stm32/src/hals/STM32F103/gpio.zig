@@ -7,8 +7,6 @@ pub const peripherals = microzig.chip.peripherals;
 const GPIO = microzig.chip.types.peripherals.gpio_v1.GPIO;
 const AFIO = microzig.chip.peripherals.AFIO;
 
-const log = std.log.scoped(.gpio);
-
 pub const Function = enum {};
 
 pub const Port = enum {
