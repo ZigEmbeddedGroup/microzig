@@ -6,8 +6,6 @@ const pins = microzig.hal.pins;
 const compatibility = @import("compatibility.zig");
 const has_rp2350b = compatibility.has_rp2350b;
 
-const log = std.log.scoped(.pwm);
-
 pub const Config = struct {};
 
 fn get_regs(slice: u32) *volatile Regs {
@@ -115,7 +113,6 @@ const Regs = extern struct {
 ///   slice - the slice to set
 ///   phase_correct - true to enable phase correct mode, false to disable it
 pub fn set_slice_phase_correct(slice: u32, phase_correct: bool) void {
-    log.debug("PWM{} set phase correct: {}", .{ slice, phase_correct });
     get_regs(slice).csr.modify(.{
         .PH_CORRECT = @intFromBool(phase_correct),
     });
@@ -128,7 +125,6 @@ pub fn set_slice_phase_correct(slice: u32, phase_correct: bool) void {
 ///   integer - the integer part of the clock divider
 ///   fraction - the fractional part of the clock divider
 pub fn set_slice_clk_div(slice: u32, integer: u8, fraction: u4) void {
-    log.debug("PWM{} set clk div: {}.{}", .{ slice, integer, fraction });
     get_regs(slice).div.modify(.{
         .INT = integer,
         .FRAC = fraction,
@@ -141,7 +137,6 @@ pub fn set_slice_clk_div(slice: u32, integer: u8, fraction: u4) void {
 ///   slice - the slice to set
 ///   mode - the clock divider mode
 pub fn set_slice_clk_div_mode(slice: u32, mode: ClkDivMode) void {
-    log.debug("PWM{} set clk div mode: {}", .{ slice, mode });
     get_regs(slice).csr.modify(.{
         .DIVMODE = @intFromEnum(mode),
     });
@@ -175,7 +170,6 @@ pub fn set_channel_inversion(
 ///   slice - the slice to set
 ///   wrap - the wrap value
 pub fn set_slice_wrap(slice: u32, wrap: u16) void {
-    log.debug("PWM{} set wrap: {}", .{ slice, wrap });
     get_regs(slice).top.raw = wrap;
 }
 
@@ -194,7 +188,6 @@ pub fn set_channel_level(
     channel: Channel,
     level: u16,
 ) void {
-    log.debug("PWM{} {} set level: {}", .{ slice, channel, level });
     switch (channel) {
         .a => get_regs(slice).cc.modify(.{ .A = level }),
         .b => get_regs(slice).cc.modify(.{ .B = level }),
