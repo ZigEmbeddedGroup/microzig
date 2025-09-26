@@ -2,9 +2,14 @@
 //TODO: Synchronous mode (For USART only)
 
 const std = @import("std");
+const time = @import("time.zig");
 const microzig = @import("microzig");
-const Timeout = @import("drivers.zig").Timeout;
 const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
+
+const mdf = microzig.drivers;
+const drivers = mdf.base;
+const Duration = mdf.time.Duration;
+const Deadline = mdf.time.Deadline;
 
 const peripherals = microzig.chip.peripherals;
 const usart_t = microzig.chip.types.peripherals.usart_v1.USART;
@@ -220,32 +225,26 @@ pub const UART = struct {
         return (0 != uart.regs.SR.read().TXE);
     }
 
-    pub fn writev_blocking(uart: *const UART, payloads: []const []const u8, timeout: ?Timeout) TransmitError!void {
+    pub fn writev_blocking(uart: *const UART, payloads: []const []const u8, timeout: ?Duration) TransmitError!void {
+        const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
         const regs = uart.regs;
         for (payloads) |pkgs| {
             for (pkgs) |byte| {
                 while (!uart.is_writeable()) {
-                    if (timeout) |check| {
-                        if (check.check_timeout()) {
-                            return error.Timeout;
-                        }
-                    }
+                    if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
                 }
                 regs.DR.raw = @intCast(byte);
             }
         }
     }
 
-    pub fn readv_blocking(uart: *const UART, buffers: []const []u8, timeout: ?Timeout) ReceiveError!void {
+    pub fn readv_blocking(uart: *const UART, buffers: []const []u8, timeout: ?Duration) ReceiveError!void {
+        const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
         const regs = uart.regs;
         for (buffers) |buf| {
             for (buf) |*bytes| {
                 while (!uart.is_readable()) {
-                    if (timeout) |check| {
-                        if (check.check_timeout()) {
-                            return error.Timeout;
-                        }
-                    }
+                    if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
                 }
                 const SR = regs.SR.read();
 
@@ -282,11 +281,11 @@ pub const UART = struct {
         std.mem.doNotOptimizeAway(regs.DR.raw);
     }
 
-    pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Timeout) TransmitError!void {
+    pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Duration) TransmitError!void {
         try uart.writev_blocking(&.{data}, timeout);
     }
 
-    pub fn read_blocking(uart: *const UART, data: []u8, timeout: ?Timeout) ReceiveError!void {
+    pub fn read_blocking(uart: *const UART, data: []u8, timeout: ?Duration) ReceiveError!void {
         try uart.readv_blocking(&.{data}, timeout);
     }
 

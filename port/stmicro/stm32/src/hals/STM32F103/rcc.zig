@@ -30,7 +30,7 @@ const ClockInitError = error{
     LSETimeout,
 };
 
-const RccPeriferals = enum {
+pub const RccPeriferals = enum {
     DMA1,
     DMA2,
     SRAM,
@@ -75,6 +75,9 @@ const RccPeriferals = enum {
     BKP,
     PWR,
     DAC, //F103xE
+
+    //BKP
+    RTC,
 };
 
 pub const ResetReason = enum {
@@ -101,6 +104,7 @@ pub const ClockOutputs = struct {
     TimAPB2: u32 = 0,
     ADC: u32 = 0,
     USB: u32 = 0,
+    RTC: u32 = 0,
 };
 
 pub const Bus = enum {
@@ -164,6 +168,10 @@ fn validate_clocks(comptime config: ClockTree.Config) ClockOutputs {
 
     if (config.ADCprescaler) |_| {
         outputs.ADC = @intFromFloat(tree_values.ADCoutput.get_comptime());
+    }
+
+    if (config.RTCClkSource) |_| {
+        outputs.RTC = @intFromFloat(tree_values.RTCOutput.get_comptime());
     }
 
     return outputs;
@@ -346,6 +354,8 @@ fn config_RTC(comptime config: ClockTree.Config) ClockInitError!void {
         switch (src) {
             .RCC_RTCCLKSOURCE_HSE_DIV128 => {
                 rtcs = .HSE;
+                reset_backup_domain(); //HSE as RTC source requires full reset of the bkp domain
+                power.backup_domain_protection(false);
                 try config_HSE(config);
             },
             .RCC_RTCCLKSOURCE_LSE => {
@@ -520,6 +530,7 @@ pub fn set_clock(peri: RccPeriferals, state: u1) void {
         .BKP => rcc.APB1ENR.modify(.{ .BKPEN = state }),
         .PWR => rcc.APB1ENR.modify(.{ .PWREN = state }),
         .DAC => rcc.APB1ENR.modify(.{ .DACEN = state }), //F103xE
+        .RTC => enable_RTC(state != 0),
     }
 }
 
@@ -565,7 +576,7 @@ pub fn reset_bus(bus: Bus) void {
 //NOTE: should we panic on invalid clocks?
 //errors at comptime appear for peripherals manually configured like USB.
 ///if requests the clock of an unconfigured peripheral, 0 means error, != 0 means ok
-pub fn get_clock(source: RccPeriferals) u32 {
+pub fn get_clock(comptime source: RccPeriferals) u32 {
     return switch (source) {
         // AHB peripherals
         .DMA1,
@@ -615,6 +626,7 @@ pub fn get_clock(source: RccPeriferals) u32 {
         => corrent_clocks.APB1,
 
         .USB => corrent_clocks.USB,
+        .RTC => corrent_clocks.RTC,
     };
 }
 

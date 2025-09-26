@@ -1,12 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const drivers = @import("drivers.zig");
 const utils = @import("util.zig");
 const periferals = microzig.chip.peripherals;
 const adc_regs = microzig.chip.types.peripherals.adc_f1.ADC;
-const CounterDevice = drivers.CounterDevice;
-const timeout = drivers.Timeout;
 const DUALMOD = microzig.chip.types.peripherals.adc_f1.DUALMOD;
+const time = @import("time.zig");
 
 const ADC_inst = utils.create_peripheral_enum("ADC", "adc_f1");
 
@@ -43,13 +41,13 @@ pub var STAB_VREFE_TIME: u32 = 1000;
 pub const ADC = struct {
     regs: *volatile adc_regs,
 
-    pub fn enable(self: *const ADC, Counter: *const CounterDevice) void {
+    pub fn enable(self: *const ADC) void {
         const regs = self.regs;
         regs.CR2.raw = 0; //force reset
         regs.CR2.modify(.{ .ADON = 1 }); //enable ADC
 
         //wait for ADC stabilization time
-        Counter.sleep_us(STAB_TIME);
+        time.sleep_us(STAB_TIME);
 
         regs.CR2.modify(.{ .CAL = 1 }); //start calibration
 
@@ -65,7 +63,7 @@ pub const ADC = struct {
             .EXTTRIG = 1, //by default enable external trigger
         });
 
-        Counter.sleep_us(STAB_VREFE_TIME); //wait for Vrefint and temperature sensor to stabilize
+        time.sleep_us(STAB_VREFE_TIME); //wait for Vrefint and temperature sensor to stabilize
     }
 
     pub fn disable(self: *const ADC) void {
@@ -380,13 +378,13 @@ pub const AdvancedADC = struct {
     //==========ADC init functions===========
 
     ///enable the ADC and optionally calibrate it.
-    pub fn enable(self: *const AdvancedADC, calib: bool, Counter: *const CounterDevice) void {
+    pub fn enable(self: *const AdvancedADC, calib: bool) void {
         const regs = self.regs;
         if (regs.CR2.read().ADON == 0) {
             regs.CR2.modify(.{ .ADON = 1 }); //enable ADC
 
             //wait for ADC stabilization time
-            Counter.sleep_us(STAB_TIME);
+            time.sleep_us(STAB_TIME);
         }
 
         if (calib) {
@@ -447,11 +445,11 @@ pub const AdvancedADC = struct {
 
     ///enable the temperature sensor and Vrefint.
     ///NOTE: This function should be called after the ADC is enabled.
-    pub fn enable_reftemp(self: *const AdvancedADC, Counter: *const CounterDevice) void {
+    pub fn enable_reftemp(self: *const AdvancedADC) void {
         const regs = self.regs;
         regs.CR2.modify(.{ .TSVREFE = 1 }); //enable temperature sensor and Vrefint
         //wait for Vrefint and temperature sensor to stabilize
-        Counter.sleep_us(STAB_VREFE_TIME);
+        time.sleep_us(STAB_VREFE_TIME);
     }
 
     pub fn set_data_alignment(self: *const AdvancedADC, aling: Alignment) void {

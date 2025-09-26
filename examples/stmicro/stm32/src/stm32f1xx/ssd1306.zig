@@ -4,6 +4,8 @@ const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 const rcc = stm32.rcc;
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 
 const drivers = microzig.drivers;
 const lcd_driver = drivers.display.SSD1306_I2C;
@@ -27,7 +29,7 @@ pub const microzig_options = microzig.Options{
     .logFn = stm32.uart.log,
 };
 
-const i2c_device = I2C_Datagram_Device.init(i2c, I2C.Address.new(0x3c), config, null, null);
+const i2c_device = I2C_Datagram_Device.init(i2c, I2C.Address.new(0x3c), null);
 
 const zig_img = [_]u8{
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -103,6 +105,7 @@ pub fn main() !void {
     rcc.enable_clock(.USART1);
     rcc.enable_clock(.I2C2);
     rcc.enable_clock(.TIM2);
+    time.init_timer(.TIM2);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 

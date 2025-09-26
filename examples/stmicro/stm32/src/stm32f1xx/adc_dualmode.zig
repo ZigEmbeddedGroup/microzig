@@ -9,9 +9,9 @@ const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const dma = stm32.dma;
 const AdvancedADC = stm32.adc.AdvancedADC;
+const time = stm32.time;
 
 const dma_controller = dma.DMAController.init(.DMA1);
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const uart = stm32.uart.UART.init(.USART1);
 
 const TX = gpio.Pin.from_port(.A, 9);
@@ -43,8 +43,8 @@ pub fn main() !void {
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.ADC1);
     rcc.enable_clock(.ADC2);
+    time.init_timer(.TIM2);
 
-    const counter = timer.counter_device(rcc.get_clock(.TIM2));
     const adc1 = AdvancedADC.init(.ADC1);
     const adc2 = AdvancedADC.init(.ADC2);
     var adc_buf: [2]AdcData = undefined;
@@ -74,9 +74,9 @@ pub fn main() !void {
 
     stm32.uart.init_logger(&uart);
 
-    adc1.enable(true, &counter);
-    adc1.enable_reftemp(&counter);
-    adc2.enable(false, &counter);
+    adc1.enable(true);
+    adc1.enable_reftemp();
+    adc2.enable(true);
 
     try adc1.configure_dual_mode(.{ .Regular = .{
         .dma = true,
@@ -90,7 +90,7 @@ pub fn main() !void {
     std.log.info("start Dual ADC scan", .{});
     adc1.software_trigger(); //start conversion
     while (true) {
-        counter.sleep_ms(250);
+        time.sleep_ms(250);
         const temp = adc_buf[0].adc1;
         const vref = adc_buf[1].adc1;
         const ch1 = adc_buf[0].adc2;

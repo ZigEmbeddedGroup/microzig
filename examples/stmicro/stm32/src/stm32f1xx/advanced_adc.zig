@@ -17,9 +17,9 @@ const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const dma = stm32.dma;
 const AdvancedADC = stm32.adc.AdvancedADC;
+const time = stm32.time;
 
 const dma_controller = dma.DMAController.init(.DMA1);
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const uart = stm32.uart.UART.init(.USART1);
 const adc = AdvancedADC.init(.ADC1);
 
@@ -57,7 +57,8 @@ pub fn main() !void {
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.ADC1);
 
-    const counter = timer.counter_device(rcc.get_clock(.TIM2));
+    time.init_timer(.TIM2);
+
     const ref_ovf_flag: *volatile bool = &ovf_flag;
     var adc_buf: [10]u16 = .{0} ** 10;
 
@@ -91,8 +92,8 @@ pub fn main() !void {
     ADC_pin3.set_input_mode(.analog);
 
     //enable ADC and VREF/tempsensor
-    adc.enable(true, &counter);
-    adc.enable_reftemp(&counter);
+    adc.enable(true);
+    adc.enable_reftemp();
 
     //regular group configuration
     try adc.configure_regular(.{
@@ -133,7 +134,7 @@ pub fn main() !void {
     std.log.info("start Advanced ADC scan", .{});
     while (true) {
         adc.software_trigger(); //start conversion
-        counter.sleep_ms(100);
+        time.sleep_ms(100);
         std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(adc_buf[0])});
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});

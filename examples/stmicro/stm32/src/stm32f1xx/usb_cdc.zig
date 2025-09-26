@@ -7,8 +7,8 @@ const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-const Timeout = stm32.drivers.Timeout;
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
@@ -391,12 +391,13 @@ fn CDC_write(msg: []const u8) void {
     }
 }
 
-fn CDC_read(buf: []u8, timeout: Timeout) ![]const u8 {
+fn CDC_read(buf: []u8, timeout: ?Duration) ![]const u8 {
+    const deadline = microzig.drivers.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
     const fifo = &CDC_fifo;
     var index: usize = 0;
     reader: for (buf) |*byte| {
         while (fifo.get_readable_len() == 0) {
-            if (timeout.check_timeout()) break :reader;
+            if (deadline.is_reached_by(time.get_time_since_boot())) break :reader;
         }
 
         byte.* = fifo.pop().?;
@@ -423,20 +424,20 @@ pub fn main() !void {
     rcc.enable_clock(.GPIOC);
     rcc.enable_clock(.TIM2);
     rcc.enable_clock(.USB);
+    time.init_timer(.TIM2);
 
     const led = gpio.Pin.from_port(.B, 2);
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     CDC_fifo.reset();
 
-    Counter = timer.counter_device(rcc.get_clock(.TIM2));
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
-    usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
+    usb_ll.usb_init(USB_conf, Duration.from_ms(25));
     var recv_byte: [64]u8 = undefined;
     const conf: *volatile bool = &config;
     while (true) {
         led.toggle();
         if (!conf.*) continue;
-        const recv = CDC_read(&recv_byte, Counter.make_ms_timeout(10)) catch continue;
+        const recv = CDC_read(&recv_byte, Duration.from_ms(10)) catch continue;
         CDC_write(recv);
     }
 }
