@@ -5,7 +5,7 @@
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .atpack = .{
-            .url = "https://atpack.microzig.tech/Atmel.ATmega_DFP.2.2.509.atpack",
+            .url = "https://atpack.mattnite.net/Atmel.ATmega_DFP.2.2.509.atpack",
             .hash = "N-V-__8AALMZ6AaqwABfnUqEWoZX1Ocb7LqjGVZNKB1fJNon",
         },
     },
