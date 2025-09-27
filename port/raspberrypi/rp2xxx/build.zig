@@ -46,7 +46,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_rp2040: microzig.Target = .{
         .dep = dep,
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
+        .preferred_binary_format = .{ .uf2 = .{
+            .family_id = .RP2040,
+        } },
         .zig_target = .{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
@@ -70,7 +72,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_rp2350_arm: microzig.Target = .{
         .dep = dep,
-        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
+        .preferred_binary_format = .{ .uf2 = .{
+            .family_id = .RP2350_ARM_S,
+        } },
         .zig_target = .{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
@@ -98,7 +102,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_rp2350_riscv: microzig.Target = .{
         .dep = dep,
-        .preferred_binary_format = .{ .uf2 = .RP2350_RISCV },
+        .preferred_binary_format = .{ .uf2 = .{
+            .family_id = .RP2350_RISCV,
+        } },
         .zig_target = .{
             .cpu_arch = .riscv32,
             .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },

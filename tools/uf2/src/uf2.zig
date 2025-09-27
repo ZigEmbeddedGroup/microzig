@@ -39,7 +39,7 @@ pub const Archive = struct {
     pub const ReadFromOptions = struct {
         /// If true, checks if any new block has a family_id already present in
         /// the archive.
-        check_family_id_collission: bool = true,
+        check_family_id_collision: bool = true,
     };
 
     /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
@@ -56,7 +56,7 @@ pub const Archive = struct {
                 if (try new_family_ids.fetchPut(self.allocator, family_id, {}) == null and
                     try self.families.fetchPut(self.allocator, family_id, {}) != null)
                 {
-                    if (options.check_family_id_collission) {
+                    if (options.check_family_id_collision) {
                         return error.FamilyIdCollision;
                     }
                 }

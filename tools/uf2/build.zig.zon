@@ -6,6 +6,7 @@
         .microsoft_uf2 = .{
             .url = "git+https://github.com/microsoft/uf2#c7e55ceabd2680ef20a633936811359d9133728f",
             .hash = "N-V-__8AAGmZAQBumHB5R5vLkZX7yrBnVqCNHNHqlVBpfBZ8",
+            .lazy = true,
         },
     },
     .paths = .{

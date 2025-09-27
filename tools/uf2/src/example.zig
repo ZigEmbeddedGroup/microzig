@@ -1,5 +1,5 @@
 const std = @import("std");
-const uf2 = @import("uf2.zig");
+const uf2 = @import("uf2");
 
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{}) = .init;

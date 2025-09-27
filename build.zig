@@ -725,25 +725,20 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             break :blk objcopy.getOutput();
                         },
 
-                        .uf2 => |family_id| blk: {
-                            const uf2_exe = fw.mb.dep.builder.dependency("tools/uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
-
-                            const convert = fw.mb.builder.addRunArtifact(uf2_exe);
-
-                            convert.addArg("--family-id");
-                            convert.addArg(@tagName(family_id));
-
-                            convert.addArg("--elf-path");
-                            convert.addFileArg(elf_file);
-
-                            convert.addArg("--output-path");
-                            break :blk convert.addOutputFileArg(basename);
-                        },
+                        .uf2 => |options| @import("tools/uf2").from_elf(
+                            fw.mb.dep.builder.dependency("tools/uf2", .{
+                                .optimize = .ReleaseSafe,
+                            }),
+                            elf_file,
+                            options,
+                        ),
 
                         .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
 
                         .esp => |options| @import("tools/esp-image").from_elf(
-                            fw.mb.dep.builder.dependency("tools/esp-image", .{}),
+                            fw.mb.dep.builder.dependency("tools/esp-image", .{
+                                .optimize = .ReleaseSafe,
+                            }),
                             elf_file,
                             options,
                         ),
