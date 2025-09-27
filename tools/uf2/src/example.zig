@@ -33,15 +33,12 @@ pub fn main() !void {
 
         var buf: [4096]u8 = undefined;
         var reader = file.reader(&buf);
-        while (true) {
-            const block = uf2.Block.from_reader(&reader.interface) catch |err| switch (err) {
-                error.EndOfStream => break,
-                else => return err,
-            };
-            try blocks.append(block);
-        }
 
-        for (blocks.items) |block|
+        var archive: uf2.Archive = .init(std.heap.page_allocator);
+        defer archive.deinit();
+        try archive.read_from(&reader.interface);
+
+        for (archive.blocks.items) |block|
             std.log.info("payload: {}, target_addr: 0x{x}", .{
                 block.payload_size,
                 block.target_addr,

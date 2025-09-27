@@ -1,9 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const assert = std.debug.assert;
-const LibExeObjStep = std.build.LibExeObjStep;
 const Allocator = std.mem.Allocator;
-const GeneratedFile = std.build.GeneratedFile;
 
 const prog_page_size = 256;
 const uf2_alignment = 4;
@@ -33,6 +31,28 @@ pub const Archive = struct {
     pub fn deinit(self: *Self) void {
         self.blocks.deinit(self.allocator);
         self.families.deinit(self.allocator);
+    }
+
+    pub fn read_from(self: *Self, reader: *std.Io.Reader) !void {
+        while (reader.takeStruct(Block, .little)) |block| {
+            if (block.flags.family_id_present) {
+                const family_id = block.file_size_or_family_id.family_id;
+                try self.families.put(self.allocator, family_id, {});
+            }
+            try self.blocks.append(self.allocator, block);
+        } else |err| switch (err) {
+            error.EndOfStream => {},
+            else => return err,
+        }
+    }
+
+    pub fn write_to(self: *Self, writer: *std.Io.Writer) !void {
+        for (self.blocks.items, 0..) |*block, i| {
+            block.block_number = @as(u32, @intCast(i));
+            block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
+            try writer.writeStruct(block.*, .little);
+        }
+        try writer.flush();
     }
 
     pub fn add_elf(self: *Self, reader: *std.fs.File.Reader, opts: Options) !void {
@@ -113,15 +133,6 @@ pub const Archive = struct {
 
         if (opts.bundle_source)
             @panic("TODO: bundle source in UF2 file");
-    }
-
-    pub fn write_to(self: *Self, writer: *std.Io.Writer) !void {
-        for (self.blocks.items, 0..) |*block, i| {
-            block.block_number = @as(u32, @intCast(i));
-            block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
-            try block.write_to(writer);
-        }
-        try writer.flush();
     }
 
     pub fn add_file(self: *Self, path: []const u8) !void {
@@ -230,97 +241,7 @@ pub const Block = extern struct {
     comptime {
         assert(512 == @sizeOf(Block));
     }
-
-    pub fn from_reader(reader: *std.Io.Reader) !Block {
-        var block: Block = undefined;
-        inline for (std.meta.fields(Block)) |field| {
-            switch (field.type) {
-                u32 => @field(block, field.name) = try reader.takeInt(u32, .little),
-                [476]u8 => {
-                    try reader.readSliceAll(&@field(block, field.name));
-                },
-                else => {
-                    assert(4 == @sizeOf(field.type));
-                    @field(block, field.name) =
-                        @as(field.type, @bitCast(try reader.takeInt(u32, .little)));
-                },
-            }
-        }
-
-        return block;
-    }
-
-    pub fn write_to(self: Block, writer: *std.Io.Writer) !void {
-        inline for (std.meta.fields(Block)) |field| {
-            switch (field.type) {
-                u32 => try writer.writeInt(u32, @field(self, field.name), .little),
-                [476]u8 => try writer.writeAll(&@field(self, field.name)),
-                else => {
-                    assert(4 == @sizeOf(field.type));
-                    try writer.writeInt(
-                        u32,
-                        @as(u32, @bitCast(@field(self, field.name))),
-                        .little,
-                    );
-                },
-            }
-        }
-
-        try writer.flush();
-    }
 };
-
-fn expect_equal_block(expected: Block, actual: Block) !void {
-    try testing.expectEqual(@as(u32, first_magic), actual.magic_start1);
-    try testing.expectEqual(expected.magic_start1, actual.magic_start1);
-    try testing.expectEqual(@as(u32, second_magic), actual.magic_start2);
-    try testing.expectEqual(expected.magic_start2, actual.magic_start2);
-
-    try testing.expectEqual(expected.flags, actual.flags);
-    try testing.expectEqual(expected.target_addr, actual.target_addr);
-    try testing.expectEqual(expected.payload_size, actual.payload_size);
-    try testing.expectEqual(expected.block_number, actual.block_number);
-    try testing.expectEqual(expected.total_blocks, actual.total_blocks);
-    try testing.expectEqual(
-        expected.file_size_or_family_id.file_size,
-        actual.file_size_or_family_id.file_size,
-    );
-    try testing.expectEqual(expected.data, actual.data);
-
-    try testing.expectEqual(@as(u32, last_magic), actual.magic_end);
-    try testing.expectEqual(expected.magic_end, actual.magic_end);
-}
-
-test "Block loopback" {
-    var buf: [512]u8 = undefined;
-
-    var prng = std.Random.DefaultPrng.init(0xf163bfab);
-    var rand = prng.random();
-    var expected = Block{
-        .flags = @as(Flags, @bitCast(rand.int(u32))),
-        .target_addr = rand.int(u32),
-        .payload_size = rand.int(u32),
-        .block_number = rand.int(u32),
-        .total_blocks = rand.int(u32),
-        .file_size_or_family_id = .{
-            .file_size = rand.int(u32),
-        },
-        .data = undefined,
-    };
-    rand.bytes(&expected.data);
-
-    {
-        var writer: std.io.Writer = .fixed(&buf);
-        try expected.write_to(&writer);
-    }
-
-    {
-        var reader: std.io.Reader = .fixed(&buf);
-        const actual = try Block.from_reader(&reader);
-
-        try expect_equal_block(expected, actual);
-    }
-}
 
 pub const FamilyId = enum(u32) {
     ATMEGA32 = 0x16573617,
