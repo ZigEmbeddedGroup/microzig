@@ -98,7 +98,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_rp2350_riscv: microzig.Target = .{
         .dep = dep,
-        .preferred_binary_format = .{ .uf2 = .RP2350_RISC_V },
+        .preferred_binary_format = .{ .uf2 = .RP2350_RISCV },
         .zig_target = .{
             .cpu_arch = .riscv32,
             .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
