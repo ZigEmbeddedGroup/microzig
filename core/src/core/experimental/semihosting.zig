@@ -40,6 +40,7 @@ pub const Debug = struct {
     //WriteC and Write0 write direct to the Debug terminal, no context need
     pub const Writer = struct {
         interface: std.Io.Writer,
+        buffer: []u8,
     };
 
     pub fn writer(buffer: []u8) Writer {
@@ -50,6 +51,7 @@ pub const Debug = struct {
                 },
                 .buffer = buffer,
             },
+            .buffer = buffer,
         };
     }
 
@@ -58,10 +60,14 @@ pub const Debug = struct {
         len: usize,
     };
 
-    fn drain(_: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+    fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const buf = @as(*Writer, @alignCast(@fieldParentPtr("interface", io_w))).buffer;
         _ = splat;
         // TODO: implement splat
         var ret: usize = 0;
+        if (buf.len > 0) {
+            ret += try writerfn({}, buf);
+        }
         for (data) |d| {
             ret += try writerfn({}, d);
         }
@@ -72,6 +78,7 @@ pub const Debug = struct {
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
     fn writerfn(_: void, data: []const u8) std.Io.Writer.Error!usize {
         var len = data.len;
+        if (len == 0) return 0;
 
         if (len != 1) {
             const tmp_c = data[len - 1]; //check if last char is a sentinel
@@ -121,10 +128,10 @@ pub const Debug = struct {
         const MAGIC: [4]u8 = .{ 0x53, 0x48, 0x46, 0x42 };
         var magic_buffer: [4]u8 = undefined;
 
-        //try open extension file
+        // Try opening the extension file
         const ext_file = fs.open(":semihosting-features", .R) catch return false;
 
-        //check the size
+        // Check the size
         const byte_size = ext_file.size() catch return false;
         if (byte_size < (MAGIC.len + feature_byte + 1)) return false;
 
@@ -132,7 +139,7 @@ pub const Debug = struct {
         var file_reader = ext_file.reader(&read_buf);
         _ = file_reader.interface.readSliceShort(&magic_buffer) catch return false;
 
-        //check the magic number
+        // Check the magic number
         for (magic_buffer, MAGIC) |number, magic| {
             if (number != magic) return false;
         }
@@ -459,7 +466,7 @@ fn call(number: Syscalls, param: *const anyopaque) isize {
     return asm volatile (
         \\mov r0, %[num]
         \\mov r1, %[p]
-        \\BKPT #0xAB
+        \\bkpt #0xAB
         \\mov %[ret], r0
         : [ret] "=r" (-> isize),
         : [num] "r" (number),
