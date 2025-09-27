@@ -40,7 +40,6 @@ pub const Debug = struct {
     //WriteC and Write0 write direct to the Debug terminal, no context need
     pub const Writer = struct {
         interface: std.Io.Writer,
-        buffer: []u8,
     };
 
     pub fn writer(buffer: []u8) Writer {
@@ -51,7 +50,6 @@ pub const Debug = struct {
                 },
                 .buffer = buffer,
             },
-            .buffer = buffer,
         };
     }
 
@@ -61,15 +59,21 @@ pub const Debug = struct {
     };
 
     fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
-        const buf = @as(*Writer, @alignCast(@fieldParentPtr("interface", io_w))).buffer;
-        _ = splat;
-        // TODO: implement splat
+        const buf = @as(*Writer, @alignCast(@fieldParentPtr("interface", io_w))).interface.buffer;
+        // NOTE: If I do this, for some reason the newline is missing
+        // const buf = io_w.buffered();
+
         var ret: usize = 0;
         if (buf.len > 0) {
             ret += try writerfn({}, buf);
+            _ = io_w.consumeAll();
         }
-        for (data) |d| {
+        for (data[0 .. data.len - 1]) |d| {
             ret += try writerfn({}, d);
+        }
+        for (0..splat) |_| {
+            const to_splat = data[data.len - 1];
+            ret += try writerfn({}, to_splat);
         }
 
         return ret;
