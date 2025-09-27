@@ -690,7 +690,7 @@ const instructions = struct {
             .carry => if (cpu.sreg.c) 0x80 else 0x00,
             .sticky => (src & 0x80),
         };
-        const res: u8 = (src >> 7) | msb;
+        const res: u8 = (src >> 1) | msb;
 
         cpu.regs[info.d.num()] = res;
 
@@ -704,13 +704,13 @@ const instructions = struct {
 
         // Set if MSB of the result is set; cleared otherwise.
         // N = R7
-        cpu.sreg.n = (src & 0x80) != 0;
+        cpu.sreg.n = (res & 0x80) != 0;
 
         // V = N ⊕ C, for N and C after the shift.
         cpu.sreg.v = (cpu.sreg.n != cpu.sreg.c);
 
-        // N ⊕ V, for signed tests.
-        cpu.sreg.n = (cpu.sreg.n != cpu.sreg.v);
+        // S = N ⊕ V, for signed tests.
+        cpu.sreg.s = (cpu.sreg.n != cpu.sreg.v);
     }
 
     /// Shifts all bits in Rd one place to the right. Bit 7 is held constant. Bit 0 is loaded into the C Flag of the
@@ -1303,13 +1303,13 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Y) ← Rr, Y ← Y+1
-        generic_indexed_store(cpu, .y, info.r, 0, .none);
+        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Y ← Y - 1, (Y) ← Rr
-        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
+        generic_indexed_store(cpu, .y, info.r, 0, .pre_decr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
@@ -1323,13 +1323,13 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rr, Z ← Z+1
-        generic_indexed_store(cpu, .z, info.r, 0, .none);
+        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Z ← Z - 1, (Z) ← Rr
-        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
+        generic_indexed_store(cpu, .z, info.r, 0, .pre_decr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
