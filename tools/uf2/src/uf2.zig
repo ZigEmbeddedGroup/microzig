@@ -35,6 +35,8 @@ pub const Archive = struct {
         self.families.deinit(self.allocator);
     }
 
+    /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
+    /// bytes.
     pub fn read_from(self: *Self, reader: *std.Io.Reader) !void {
         while (reader.takeStruct(Block, .little)) |block| {
             if (block.flags.family_id_present) {

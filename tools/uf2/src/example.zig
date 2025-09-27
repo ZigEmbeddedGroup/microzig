@@ -31,6 +31,7 @@ pub fn main() !void {
         var blocks = std.array_list.Managed(uf2.Block).init(std.heap.page_allocator);
         defer blocks.deinit();
 
+        // Buffer must be at least 512 bytes (the size of `uf2.Block`)
         var buf: [4096]u8 = undefined;
         var reader = file.reader(&buf);
 
