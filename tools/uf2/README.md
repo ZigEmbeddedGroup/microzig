@@ -19,7 +19,7 @@ pub fn build(b: *Build) void {
     // ...
     const uf2_dep = b.dependency("uf2", .{});
 
-    const uf2_file = uf2.from_elf(uf2_dep, exe, .{ .family_id = .RP2040 });
+    const uf2_file = uf2.from_elf(uf2_dep, elf_file, .{ .family_id = .RP2040 });
     _ = b.addInstallFile(uf2_file, "bin/test.uf2");
 }
 
