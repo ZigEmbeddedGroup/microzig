@@ -17,7 +17,7 @@ pub const Options = struct {
 pub const Archive = struct {
     allocator: Allocator,
     blocks: std.ArrayList(Block),
-    families: std.AutoHashMapUnmanaged(FamilyId, void),
+    families: std.AutoArrayHashMapUnmanaged(FamilyId, void),
     // TODO: keep track of contained files
 
     const Self = @This();
