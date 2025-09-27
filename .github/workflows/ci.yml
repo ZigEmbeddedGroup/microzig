@@ -14,14 +14,14 @@ jobs:
     name: Formatting check
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Setup Zig
-      uses: mlugg/setup-zig@v2
-      with:
-        version: ${{ env.ZIG_VERSION }}
-    - name: Run zig fmt
-      run: zig fmt --check .
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Run zig fmt
+        run: zig fmt --check .
 
   unit-test-regz:
     name: Unit Test Regz
@@ -165,11 +165,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example_dir:
-          [
+        example_dir: [
             espressif/esp,
             gigadevice/gd32,
-          #microchip/avr,
+            #microchip/avr,
             microchip/atsam,
             nordic/nrf5x,
             nxp/lpc,
@@ -185,6 +184,8 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
+      - name: Dig
+        run: dig atpack.microzig.tech
       - name: Build Examples
         run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
