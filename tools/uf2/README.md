@@ -6,7 +6,11 @@ This package is for assembling uf2 files from ELF binaries. This format is used 
 
 See https://github.com/microsoft/uf2#file-containers for how we're going to embed file source into the format.
 
-For use in a build.zig:
+# Usage
+
+As a library: checkout [example.zig](src/example.zig).
+
+elf2uf2 in build.zig:
 
 ```zig
 const uf2 = @import("uf2");
@@ -15,13 +19,13 @@ pub fn build(b: *Build) void {
     // ...
     const uf2_dep = b.dependency("uf2", .{});
 
-    const uf2_file = uf2.from_elf(uf2_dep, exe, .{ .family_id = .RP2040 });
+    const uf2_file = uf2.from_elf(uf2_dep, elf_file, .{ .family_id = .RP2040 });
     _ = b.addInstallFile(uf2_file, "bin/test.uf2");
 }
 
 ```
 
-# Manually Executing elf2uf2
+Execute elf2uf2 manually:
 
 ```zig
 pub fn build(b: *Build) void {
