@@ -29,19 +29,13 @@ pub fn main() void {
     const path = "";
     const file_name = path ++ "foo.txt";
     const new_name = path ++ "bar.txt";
-    // var some_buf: [80]u8 = undefined;
+    var some_buf: [80]u8 = undefined;
 
-    while (true) {
-        TimeNow = semihosting.sys_clock();
-        board.led1.toggle();
-        semihosting.Debug.print("Hello World\n", .{});
-        time.sleep_ms(2000);
-    }
     //debug features
     semihosting.Debug.print("Hello World\n", .{});
 
-    // const args = semihosting.Debug.get_cmd_args(&some_buf) catch return;
-    // semihosting.Debug.print("receive args: {s}\n", .{args});
+    const args = semihosting.Debug.get_cmd_args(&some_buf) catch return;
+    semihosting.Debug.print("receive args: {s}\n", .{args});
 
     semihosting.Debug.print("feature support: STDOUT FILE: {any}, EXIT CODE {any}\n", .{
         semihosting.Debug.check_extensions(0, 1),
