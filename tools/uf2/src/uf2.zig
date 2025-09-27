@@ -20,8 +20,6 @@ pub const Archive = struct {
     families: std.AutoArrayHashMapUnmanaged(FamilyId, void),
     // TODO: keep track of contained files
 
-    const Self = @This();
-
     pub fn init(allocator: std.mem.Allocator) Archive {
         return .{
             .allocator = allocator,
@@ -30,14 +28,14 @@ pub const Archive = struct {
         };
     }
 
-    pub fn deinit(self: *Self) void {
+    pub fn deinit(self: *Archive) void {
         self.blocks.deinit(self.allocator);
         self.families.deinit(self.allocator);
     }
 
     /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
     /// bytes.
-    pub fn read_from(self: *Self, reader: *std.Io.Reader) !void {
+    pub fn read_from(self: *Archive, reader: *std.Io.Reader) !void {
         while (reader.takeStruct(Block, .little)) |block| {
             if (block.flags.family_id_present) {
                 const family_id = block.file_size_or_family_id.family_id;
@@ -50,7 +48,7 @@ pub const Archive = struct {
         }
     }
 
-    pub fn write_to(self: *Self, writer: *std.Io.Writer) !void {
+    pub fn write_to(self: *Archive, writer: *std.Io.Writer) !void {
         for (self.blocks.items, 0..) |*block, i| {
             block.block_number = @as(u32, @intCast(i));
             block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
@@ -59,7 +57,7 @@ pub const Archive = struct {
         try writer.flush();
     }
 
-    pub fn add_elf(self: *Self, reader: *std.fs.File.Reader, opts: Options) !void {
+    pub fn add_elf(self: *Archive, reader: *std.fs.File.Reader, opts: Options) !void {
         // TODO: ensures this reports an error if there is a collision
         if (opts.family_id) |family_id|
             try self.families.putNoClobber(self.allocator, family_id, {});
@@ -139,7 +137,7 @@ pub const Archive = struct {
             @panic("TODO: bundle source in UF2 file");
     }
 
-    pub fn add_file(self: *Self, path: []const u8) !void {
+    pub fn add_file(self: *Archive, path: []const u8) !void {
         const file = if (std.fs.path.isAbsolute(path))
             try std.fs.openFileAbsolute(path, .{})
         else
