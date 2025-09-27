@@ -12,6 +12,7 @@ const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const GPTimer = stm32.timer.GPTimer;
+const time = stm32.time;
 
 //gpios
 const ch1 = gpio.Pin.from_port(.A, 0);
@@ -25,7 +26,6 @@ pub const microzig_options = microzig.Options{
 };
 
 const comp = GPTimer.init(.TIM2);
-const counter = GPTimer.init(.TIM3).into_counter_mode();
 
 var global_uptime: i32 = 0;
 var global_downtime: i32 = 0;
@@ -75,6 +75,8 @@ pub fn main() !void {
     rcc.enable_clock(.AFIO);
     rcc.enable_clock(.USART1);
 
+    time.init_timer(.TIM3);
+
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     try uart.apply_runtime(.{
@@ -82,9 +84,6 @@ pub fn main() !void {
     });
 
     stm32.uart.init_logger(&uart);
-
-    //counter device to genereate delays
-    const cd = counter.counter_device(rcc.get_clock(.TIM2)); //8MHz clock
 
     //set PA0 (TI1) to input
     ch1.set_input_mode(.floating);
@@ -127,6 +126,6 @@ pub fn main() !void {
         std.log.info("freq: {d}HZ", .{freq});
         std.log.info("duty: {d:.2}%", .{duty_cycle});
 
-        cd.sleep_ms(1350);
+        time.sleep_ms(1350);
     }
 }

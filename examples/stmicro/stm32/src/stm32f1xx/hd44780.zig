@@ -4,14 +4,14 @@ const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 
 const drivers = microzig.drivers;
 const lcd_driver = drivers.display.hd44780;
 const lcd = drivers.display.HD44780;
 const PCF8574 = drivers.IO_expander.PCF8574;
 const State = drivers.base.Digital_IO.State;
-
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 
 const I2C = stm32.i2c;
 const I2C_Device = stm32.drivers.I2C_Device;
@@ -25,13 +25,12 @@ const config = I2C.Config{
     .mode = .standard,
 };
 
-var global_counter: stm32.drivers.CounterDevice = undefined;
+const i2c_device = I2C_Device.init(i2c, config, null);
 
-const i2c_device = I2C_Device.init(i2c, config, null, null);
-
-pub fn delay_us(time_delay: u32) void {
-    global_counter.sleep_us(time_delay);
+fn delay_us(delay: u32) void {
+    time.sleep_us(delay);
 }
+
 pub fn main() !void {
     rcc.enable_clock(.GPIOB);
     rcc.enable_clock(.GPIOC);
@@ -48,9 +47,6 @@ pub fn main() !void {
     //Set SCL and SDA to alternate function open drain
     SCL.set_output_mode(.alternate_function_open_drain, .max_50MHz);
     SDA.set_output_mode(.alternate_function_open_drain, .max_50MHz);
-
-    const counter = timer.counter_device(8_000_000);
-    global_counter = counter;
 
     i2c.apply(config);
 
@@ -79,6 +75,6 @@ pub fn main() !void {
 
     while (true) {
         try my_lcd.shift_display_left();
-        global_counter.sleep_ms(300);
+        time.sleep_ms(300);
     }
 }

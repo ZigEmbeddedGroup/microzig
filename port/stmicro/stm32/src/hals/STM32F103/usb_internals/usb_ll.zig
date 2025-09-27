@@ -1,9 +1,11 @@
 const std = @import("std");
 const PMA = @import("usb_pma.zig");
-const timeout = @import("../drivers.zig").Timeout;
 
 const microzig = @import("microzig");
+const time = microzig.hal.time;
 const interrupt = microzig.interrupt;
+const Duration = microzig.drivers.time.Duration;
+const Deadline = microzig.drivers.time.Deadline;
 
 const USB = microzig.chip.peripherals.USB;
 const USBTypes = microzig.chip.types.peripherals.usb_v1;
@@ -272,26 +274,27 @@ fn usb_check(config: Config) InitError!PMA.Config {
     return btable_conf;
 }
 
-pub fn usb_init(comptime config: Config, startup: timeout) void {
+pub fn usb_init(comptime config: Config, startup: Duration) void {
     const btable_conf = comptime usb_check(config) catch unreachable;
     PMA.comptime_check(btable_conf);
     inner_init(config, btable_conf, startup) catch unreachable;
 }
 
-pub fn usb_runtime_init(config: Config, startup: timeout) InitError!void {
+pub fn usb_runtime_init(config: Config, startup: Duration) InitError!void {
     const btable_conf = try usb_check(config);
     try inner_init(config, btable_conf, startup);
 }
 
-fn inner_init(config: Config, PMA_conf: PMA.Config, startup: timeout) InitError!void {
-    interrupt.disable(.USB_LP_CAN1_RX0);
+fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError!void {
+    //interrupt.disable(.USB_LP_CAN1_RX0); //NOTE: some error with this function is disabling all interrupts
+    const deadline = Deadline.init_relative(time.get_time_since_boot(), startup);
 
     //force USB reset before init
     USB.CNTR.modify(.{
         .PDWN = 0,
         .FRES = 1,
     });
-    while (!startup.check_timeout()) {
+    while (!deadline.is_reached_by(time.get_time_since_boot())) {
         asm volatile ("nop");
     }
     USB.CNTR.modify(.{ .FRES = 0 });

@@ -28,6 +28,7 @@ pub const Events = packed struct(u3) {
 };
 
 pub fn enter_config_mode() void {
+    busy_sync();
     while (rtc.CRL.read().RTOFF == .Ongoing) asm volatile ("" ::: .{ .memory = true });
     //enter in config mode
     rtc.CRL.modify_one("CNF", 1);
@@ -84,8 +85,7 @@ pub fn apply_interrupts(config: InterruptConfig) void {
 ///Wait for RTC registers to synchronize.
 ///After a reset, reading RTC registers may return unsynchronized or corrupted data.
 pub fn busy_sync() void {
-    const cr = rtc.CRL.read();
-    while (cr.RSF == 0) asm volatile ("" ::: .{ .memory = true });
+    while (rtc.CRL.read().RSF == 0) asm volatile ("" ::: .{ .memory = true });
     rtc.CRL.modify_one("RSF", 0);
 }
 
@@ -110,11 +110,15 @@ pub fn clear_events(events: Events) void {
 
 ///read the current frac of the RTC counter.
 pub fn read_frac() u20 {
-    return @truncate(rtc.DIVL.read().DIVL | (@as(u32, (rtc.DIVH.read().DIVH)) << 16));
+    busy_sync();
+    const high: u32 = rtc.DIVH.read().DIVH;
+    const low: u32 = rtc.DIVL.read().DIVL;
+    return @truncate((high << 16) | low);
 }
 
 pub fn read_counter() u32 {
-    const low = rtc.CNTL.read().CNTL;
+    busy_sync();
     const high = rtc.CNTH.read().CNTH;
+    const low = rtc.CNTL.read().CNTL;
     return low | (@as(u32, (high)) << 16);
 }
