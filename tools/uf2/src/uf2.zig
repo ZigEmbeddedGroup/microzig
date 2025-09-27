@@ -57,8 +57,8 @@ pub const Archive = struct {
                     try self.families.fetchPut(self.allocator, family_id, {}) != null)
                 {
                     if (options.check_family_id_collission) {
-                    return error.FamilyIdCollision;
-                }
+                        return error.FamilyIdCollision;
+                    }
                 }
             }
 
