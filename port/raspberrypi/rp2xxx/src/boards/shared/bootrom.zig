@@ -3,10 +3,12 @@ const microzig = @import("microzig");
 const chip = microzig.hal.compatibility.chip;
 
 comptime {
-    _ = BootromData.bootloader_data;
+    if (chip == .RP2040 and !microzig.config.ram_image) {
+        _ = BootromData.bootloader_data;
+    }
 }
 
-const BootromData = if (chip == .RP2040) struct {
+const BootromData = struct {
     fn prepare_boot_sector(comptime stage2_rom: []const u8) [256]u8 {
         @setEvalBranchQuota(10_000);
 
@@ -39,4 +41,4 @@ const BootromData = if (chip == .RP2040) struct {
     }
 
     export const bootloader_data: [256]u8 linksection(".boot2") = prepare_boot_sector(@embedFile("bootloader"));
-} else {};
+};
