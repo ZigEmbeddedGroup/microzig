@@ -11,24 +11,19 @@ pub fn main() !void {
     const allocator = arena.allocator();
     defer arena.deinit();
 
-    const json_file = try std.fs.cwd().openFile("deps/uf2/utils/uf2families.json", .{});
-    defer json_file.close();
+    const uf2families = @embedFile("uf2families");
+    const entries = try std.json.parseFromSliceLeaky([]FamilyEntry, allocator, uf2families, .{});
 
-    const text = try json_file.readToEndAlloc(allocator, std.math.maxInt(usize));
-    var stream = std.json.TokenStream.init(text);
-    const entries = try std.json.parse([]FamilyEntry, &stream, .{
-        .allocator = allocator,
-    });
+    const family_id_file = try std.fs.cwd().createFile("src/family_id.zig", .{});
+    defer family_id_file.close();
+    var writer = family_id_file.writer(&.{});
 
-    const writer = std.io.getStdOut().writer();
-
-    try writer.writeAll("pub const FamilyId = enum(u32) {\n");
-
-    for (entries) |entry|
-        try writer.print(
-            \\    {s} = {s},
+    try writer.interface.writeAll("pub const FamilyId = enum(u32) {\n");
+    for (entries) |entry| {
+        try writer.interface.print(
+            \\    {f} = {s},
             \\
-        , .{ entry.short_name, entry.id });
-
-    try writer.writeAll("    _,\n};\n");
+        , .{ std.zig.fmtId(entry.short_name), entry.id });
+    }
+    try writer.interface.writeAll("    _,\n};\n");
 }

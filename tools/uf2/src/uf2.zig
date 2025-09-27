@@ -3,6 +3,8 @@ const testing = std.testing;
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
+pub const FamilyId = @import("family_id.zig").FamilyId;
+
 const prog_page_size = 256;
 const uf2_alignment = 4;
 
@@ -241,54 +243,4 @@ pub const Block = extern struct {
     comptime {
         assert(512 == @sizeOf(Block));
     }
-};
-
-pub const FamilyId = enum(u32) {
-    ATMEGA32 = 0x16573617,
-    SAML21 = 0x1851780a,
-    NRF52 = 0x1b57745f,
-    ESP32 = 0x1c5f21b0,
-    STM32L1 = 0x1e1f432d,
-    STM32L0 = 0x202e3a91,
-    STM32WL = 0x21460ff0,
-    LPC55 = 0x2abc77ec,
-    STM32G0 = 0x300f5633,
-    GD32F350 = 0x31d228c6,
-    STM32L5 = 0x04240bdf,
-    STM32G4 = 0x4c71240a,
-    MIMXRT10XX = 0x4fb2d5bd,
-    STM32F7 = 0x53b80f00,
-    SAMD51 = 0x55114460,
-    STM32F4 = 0x57755a57,
-    FX2 = 0x5a18069b,
-    STM32F2 = 0x5d1a0a2e,
-    STM32F1 = 0x5ee21072,
-    NRF52833 = 0x621e937a,
-    STM32F0 = 0x647824b6,
-    SAMD21 = 0x68ed2b88,
-    STM32F3 = 0x6b846188,
-    STM32F407 = 0x6d0922fa,
-    STM32H7 = 0x6db66082,
-    STM32WB = 0x70d16653,
-    ESP8266 = 0x7eab61ed,
-    KL32L2 = 0x7f83e793,
-    STM32F407VG = 0x8fb060fe,
-    NRF52840 = 0xada52840,
-    ESP32S2 = 0xbfdd4eee,
-    ESP32S3 = 0xc47e5767,
-    ESP32C3 = 0xd42ba06c,
-    ESP32C2 = 0x2b88d29c,
-    ESP32H2 = 0x332726f6,
-    RP2040 = 0xe48bff56,
-    RP2XXX_ABSOLUTE = 0xe48b_ff57,
-    RP2XXX_DATA = 0xe48b_ff58,
-    RP2350_ARM_S = 0xe48b_ff59,
-    RP2350_RISC_V = 0xe48b_ff5a,
-    RP2350_ARM_NS = 0xe48b_ff5b,
-    STM32L4 = 0x00ff6919,
-    GD32VF103 = 0x9af03e33,
-    CSK4 = 0x4f6ace52,
-    CSK6 = 0x6e7348a8,
-    M0SENSE = 0x11de784a,
-    _,
 };

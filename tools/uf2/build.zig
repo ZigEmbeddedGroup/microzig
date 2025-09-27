@@ -59,17 +59,6 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
 
-    const gen = b.addExecutable(.{
-        .name = "gen",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/gen.zig"),
-            .target = b.graph.host,
-        }),
-    });
-    const gen_run_step = b.addRunArtifact(gen);
-    const gen_step = b.step("gen", "Generate family id enum");
-    gen_step.dependOn(&gen_run_step.step);
-
     const example = b.addExecutable(.{
         .name = "example",
         .root_module = b.createModule(.{
@@ -78,4 +67,23 @@ pub fn build(b: *std.Build) void {
         }),
     });
     b.installArtifact(example);
+
+    const gen = b.addExecutable(.{
+        .name = "gen",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/gen.zig"),
+            .imports = &.{
+                .{
+                    .name = "uf2families",
+                    .module = b.createModule(.{
+                        .root_source_file = b.dependency("microsoft_uf2", .{}).path("utils/uf2families.json"),
+                    }),
+                },
+            },
+            .target = b.graph.host,
+        }),
+    });
+    const gen_run_step = b.addRunArtifact(gen);
+    const gen_step = b.step("gen", "Generate family id enum");
+    gen_step.dependOn(&gen_run_step.step);
 }
