@@ -44,6 +44,9 @@ const InstructionEffect = enum {
     sleep,
 
     watchdog_reset,
+
+    /// Detected infinite loop (typically __stop_program after main returns)
+    infinite_loop,
 };
 
 // Options:
@@ -62,6 +65,7 @@ io: IO,
 pc: u24 = 0,
 regs: [32]u8 = [1]u8{0} ** 32,
 sreg: SREG = @bitCast(@as(u8, 0)),
+instr_count: u64 = 0,
 
 instr_effect: InstructionEffect = .none,
 
@@ -77,9 +81,116 @@ pub const RunResult = enum {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
+    program_exit,
 };
 
-pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
+pub fn dump_system_state(cpu: *Cpu) void {
+    // Dump complete system state
+    std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
+    std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
+    std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
+    std.debug.print("SREG: {f}\n", .{cpu.sreg});
+
+    // Dump X, Y, Z pointer registers
+    const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
+    const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
+    const z_reg = (@as(u16, cpu.regs[31]) << 8) | cpu.regs[30];
+    std.debug.print("\nPOINTER REGISTERS:\n", .{});
+    std.debug.print("X (r27:r26): 0x{X:0>4}\n", .{x_reg});
+    std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
+    std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
+
+    // Dump all registers
+    std.debug.print("\nREGISTERS:\n", .{});
+    for (cpu.regs, 0..) |reg, i| {
+        if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
+        std.debug.print("{X:0>2} ", .{reg});
+        if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
+    }
+
+    // Dump SRAM using absolute addresses based on configured base
+    const sram_base: u24 = cpu.sram.get_base();
+    const sram_end: u24 = sram_base + @as(u24, @intCast(cpu.sram.size - 1));
+    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ sram_base, sram_end, cpu.sram.size });
+
+    const row_width = 16;
+    var prev_row: ?[row_width]u8 = null;
+    var prev_len: usize = 0;
+    var elided = false;
+
+    var i: usize = 0;
+    while (i < cpu.sram.size) : (i += @min(row_width, cpu.sram.size - i)) {
+        const row_len: usize = @min(row_width, cpu.sram.size - i);
+        var cur_row: [row_width]u8 = undefined;
+
+        var j: usize = 0;
+        while (j < row_len) : (j += 1) {
+            cur_row[j] = cpu.sram.read(sram_base + @as(u24, @intCast(i + j)));
+        }
+
+        // Only elide repeated lines of all zeroes
+        const is_all_zeros = blk: {
+            for (cur_row[0..row_len]) |byte| {
+                if (byte != 0) break :blk false;
+            }
+            break :blk true;
+        };
+        const same_as_prev = if (prev_row) |prev|
+            prev_len == row_len and std.mem.eql(u8, prev[0..prev_len], cur_row[0..row_len])
+        else
+            false;
+        if (same_as_prev and is_all_zeros) {
+            elided = true;
+        } else {
+            if (elided) {
+                std.debug.print("*\n", .{});
+                elided = false;
+            }
+
+            std.debug.print("0x{X:0>4}: ", .{sram_base + @as(u24, @intCast(i))});
+            // hex bytes
+            j = 0;
+            while (j < row_len) : (j += 1) {
+                std.debug.print("{X:0>2} ", .{cur_row[j]});
+            }
+
+            // pad hex area for short rows to align ASCII column
+            if (row_len < row_width) {
+                var pad: usize = row_width - row_len;
+                while (pad > 0) : (pad -= 1) {
+                    std.debug.print("   ", .{});
+                }
+            }
+
+            // ASCII representation
+            std.debug.print(" |", .{});
+            j = 0;
+            while (j < row_len) : (j += 1) {
+                const b = cur_row[j];
+                if (b >= 32 and b <= 126) {
+                    std.debug.print("{c}", .{b});
+                } else {
+                    std.debug.print(".", .{});
+                }
+            }
+            std.debug.print("|\n", .{});
+
+            // store as previous row
+            if (prev_row == null) {
+                prev_row = [_]u8{0} ** row_width;
+            }
+            @memcpy(prev_row.?[0..row_len], cur_row[0..row_len]);
+            prev_len = row_len;
+        }
+    }
+    if (elided)
+        std.debug.print("*\n", .{});
+
+    std.debug.print("=== END DUMP ===\n", .{});
+}
+
+pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
     var rest_gas = mileage;
 
     while (true) {
@@ -97,11 +208,21 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                 .breakpoint => return .breakpoint,
                 .sleep => return .enter_sleep_mode,
                 .watchdog_reset => return .reset_watchdog,
+                .infinite_loop => return .infinite_loop,
             };
         };
 
         const pc = cpu.pc;
+
+        // Check breakpoint
+        if (break_pc) |bp_addr| {
+            if (pc == bp_addr) {
+                return .breakpoint;
+            }
+        }
+
         const inst = try isa.decode(cpu.fetch_code());
+        cpu.instr_count += 1;
 
         if (cpu.trace) {
             // std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
@@ -111,7 +232,8 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             //     fmtInstruction(inst),
             // });
 
-            std.debug.print("TRACE {s} {f} [", .{
+            std.debug.print("TRACE #{d: >6} {s} {f} [", .{
+                cpu.instr_count,
                 if (skip) "SKIP" else "    ",
                 cpu.sreg,
             });
@@ -141,6 +263,12 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                     }
                 },
             }
+
+            // Check if the program requested exit via I/O
+            if (cpu.io.check_exit()) |exit_code| {
+                _ = exit_code; // The exit code is stored in the IO context for main() to use
+                return .program_exit;
+            }
         }
     }
 }
@@ -156,13 +284,32 @@ fn fetch_code(cpu: *Cpu) u16 {
     return value;
 }
 
+inline fn data_read(cpu: *Cpu, addr: u24) u8 {
+    if (cpu.io.translate_address(addr)) |port| {
+        return cpu.io.read(port);
+    }
+    return cpu.sram.read(addr);
+}
+
+inline fn data_write(cpu: *Cpu, addr: u24, value: u8) void {
+    if (cpu.io.translate_address(addr)) |port| {
+        cpu.io.write(port, value);
+        return;
+    }
+    cpu.sram.write(addr, value);
+}
+
 fn push(cpu: *Cpu, val: u8) void {
+    // AVR PUSH: Write to [SP] first, then decrement SP
     const sp = cpu.get_sp();
+    // AVR convention: write to [SP] first, then decrement SP
+    // SP points to the first unused location
     cpu.sram.write(sp, val);
     cpu.set_sp(sp -% 1);
 }
 
 fn pop(cpu: *Cpu) u8 {
+    // AVR POP: Increment SP first, then read from [SP]
     const sp = cpu.get_sp() +% 1;
     cpu.set_sp(sp);
     return cpu.sram.read(sp);
@@ -172,6 +319,8 @@ fn push_code_loc(cpu: *Cpu, val: u24) void {
     const pc: u24 = val;
     const mask: u24 = @intFromEnum(cpu.code_model);
 
+    // AVR pushes return address bytes so that RET pops low byte first.
+    // With write-then-decrement PUSH, we push least significant byte first.
     if ((mask & 0x0000FF) != 0) {
         cpu.push(@truncate(pc >> 0));
     }
@@ -186,6 +335,7 @@ fn push_code_loc(cpu: *Cpu, val: u24) void {
 fn pop_code_loc(cpu: *Cpu) u24 {
     const mask = @intFromEnum(cpu.code_model);
 
+    // With increment-then-read POP, we pop most significant byte first.
     var pc: u24 = 0;
     if ((mask & 0xFF0000) != 0) {
         pc |= (@as(u24, cpu.pop()) << 16);
@@ -196,7 +346,6 @@ fn pop_code_loc(cpu: *Cpu) u24 {
     if ((mask & 0x0000FF) != 0) {
         pc |= (@as(u24, cpu.pop()) << 0);
     }
-
     return pc;
 }
 
@@ -868,7 +1017,14 @@ const instructions = struct {
     /// Program memory not exceeding 4K words (8KB) this instruction can address the entire memory from
     /// every address location. See also JMP.
     inline fn rjmp(cpu: *Cpu, bits: isa.opinfo.k12) void {
-        cpu.shift_program_counter(@as(i12, @bitCast(bits.k)));
+        const offset = @as(i12, @bitCast(bits.k));
+        // Detect infinite loop pattern (rjmp .-2, which is rjmp with k=-1)
+        // This is commonly used in __stop_program after main returns
+        if (offset == -1) {
+            cpu.instr_effect = .infinite_loop;
+            return;
+        }
+        cpu.shift_program_counter(offset);
     }
 
     /// RCALL – Relative Call to Subroutine
@@ -1087,7 +1243,7 @@ const instructions = struct {
     inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (k)
         const addr = cpu.extend_direct_address(cpu.fetch_code());
-        cpu.regs[info.d.num()] = cpu.sram.read(addr);
+        cpu.regs[info.d.num()] = cpu.data_read(addr);
     }
 
     const IndexOpMode = enum { none, post_incr, pre_decr, displace };
@@ -1120,7 +1276,7 @@ const instructions = struct {
             .rd = .ramp,
             .wb = .ramp,
         });
-        cpu.regs[d.num()] = cpu.sram.read(address);
+        cpu.regs[d.num()] = cpu.data_read(address);
     }
 
     /// LD – Load Indirect from Data Space to Register using Index X
@@ -1277,7 +1433,7 @@ const instructions = struct {
             .rd = .ramp,
             .wb = .ramp,
         });
-        cpu.sram.write(address, cpu.regs[r.num()]);
+        cpu.data_write(address, cpu.regs[r.num()]);
     }
 
     /// ST – Store Indirect From Register to Data Space using Index X
@@ -1392,7 +1548,7 @@ const instructions = struct {
     inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
         // (k) ← Rr
         const addr = cpu.extend_direct_address(cpu.fetch_code());
-        cpu.sram.write(addr, cpu.regs[info.d.num()]);
+        cpu.data_write(addr, cpu.regs[info.d.num()]);
     }
 
     /// PUSH – Push Register on Stack

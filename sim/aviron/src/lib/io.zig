@@ -11,22 +11,31 @@ pub const Flash = struct {
     size: usize,
 
     pub fn read(mem: Flash, addr: Address) u16 {
-        std.debug.assert(addr < mem.size);
         return mem.vtable.readFn(mem.ctx, addr);
+    }
+
+    pub fn get_base(mem: Flash) Address {
+        return mem.vtable.getBaseFn(mem.ctx);
     }
 
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
+        getBaseFn: *const fn (ctx: ?*anyopaque) Address,
     };
 
     pub const empty = Flash{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = empty_read },
+        .vtable = &VTable{ .readFn = empty_read, .getBaseFn = empty_get_base },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: Address) u16 {
         _ = addr;
+        _ = ctx;
+        return 0;
+    }
+
+    fn empty_get_base(ctx: ?*anyopaque) Address {
         _ = ctx;
         return 0;
     }
@@ -38,6 +47,8 @@ pub const Flash = struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
+            /// Base address (in words) where this flash is mapped.
+            base: Address = 0,
 
             pub fn memory(self: *Self) Flash {
                 return Flash{
@@ -47,11 +58,19 @@ pub const Flash = struct {
                 };
             }
 
-            pub const vtable = VTable{ .readFn = mem_read };
+            pub const vtable = VTable{ .readFn = mem_read, .getBaseFn = Self.get_base };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return std.mem.bytesAsSlice(u16, &mem.data)[addr];
+                std.debug.assert(addr >= mem.base);
+                const off: Address = addr - mem.base;
+                std.debug.assert(off < @as(Address, @intCast(@divExact(size, 2))));
+                return std.mem.bytesAsSlice(u16, &mem.data)[off];
+            }
+
+            fn get_base(ctx: ?*anyopaque) Address {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                return mem.base;
             }
         };
     }
@@ -67,24 +86,29 @@ pub const RAM = struct {
     size: usize,
 
     pub fn read(mem: RAM, addr: Address) u8 {
-        std.debug.assert(addr < mem.size);
+        // Logical RAM addresses include SRAM base; backend maps to array indices.
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     pub fn write(mem: RAM, addr: Address, value: u8) void {
-        std.debug.assert(addr < mem.size);
+        // Logical RAM addresses include SRAM base; backend maps to array indices.
         return mem.vtable.writeFn(mem.ctx, addr, value);
+    }
+
+    pub fn get_base(mem: RAM) Address {
+        return mem.vtable.getBaseFn(mem.ctx);
     }
 
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
+        getBaseFn: *const fn (ctx: ?*anyopaque) Address,
     };
 
     pub const empty = RAM{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
+        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write, .getBaseFn = empty_get_base },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: u16) u8 {
@@ -99,11 +123,18 @@ pub const RAM = struct {
         _ = ctx;
     }
 
+    fn empty_get_base(ctx: ?*anyopaque) Address {
+        _ = ctx;
+        return 0;
+    }
+
     pub fn Static(comptime size: comptime_int) type {
         return struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
+            /// Base address where this RAM is mapped.
+            base: Address = 0,
 
             pub fn memory(self: *Self) RAM {
                 return RAM{
@@ -116,16 +147,28 @@ pub const RAM = struct {
             pub const vtable = VTable{
                 .readFn = mem_read,
                 .writeFn = mem_write,
+                .getBaseFn = Self.get_base,
             };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return mem.data[addr];
+                std.debug.assert(addr >= mem.base);
+                const off: Address = addr - mem.base;
+                std.debug.assert(off < size);
+                return mem.data[off];
             }
 
             fn mem_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                mem.data[addr] = value;
+                std.debug.assert(addr >= mem.base);
+                const off: Address = addr - mem.base;
+                std.debug.assert(off < size);
+                mem.data[off] = value;
+            }
+
+            fn get_base(ctx: ?*anyopaque) Address {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                return mem.base;
             }
         };
     }
@@ -134,7 +177,8 @@ pub const RAM = struct {
 pub const EEPROM = RAM; // actually the same interface *shrug*
 
 pub const IO = struct {
-    pub const Address = u6;
+    // Some AVR families (e.g., XMEGA) expose extended I/O up to 0xFFF (12 bits).
+    pub const Address = u12;
 
     ctx: ?*anyopaque,
 
@@ -154,14 +198,31 @@ pub const IO = struct {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
+    pub fn check_exit(mem: IO) ?u8 {
+        return mem.vtable.checkExitFn(mem.ctx);
+    }
+
+    /// Translate an absolute data-space address to an I/O port address if mapped.
+    /// Returns null when the address is not mapped to I/O and should be served by SRAM.
+    pub fn translate_address(mem: IO, data_addr: u24) ?Address {
+        return mem.vtable.translateAddressFn(mem.ctx, data_addr);
+    }
+
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
+        checkExitFn: *const fn (ctx: ?*anyopaque) ?u8,
+        translateAddressFn: *const fn (ctx: ?*anyopaque, data_addr: u24) ?Address,
     };
 
     pub const empty = IO{
         .ctx = null,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
+        .vtable = &VTable{
+            .readFn = empty_read,
+            .writeFn = empty_write,
+            .checkExitFn = empty_check_exit,
+            .translateAddressFn = empty_translate,
+        },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
@@ -175,5 +236,16 @@ pub const IO = struct {
         _ = value;
         _ = addr;
         _ = ctx;
+    }
+
+    fn empty_check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null;
+    }
+
+    fn empty_translate(ctx: ?*anyopaque, data_addr: u24) ?Address {
+        _ = ctx;
+        _ = data_addr;
+        return null;
     }
 };
