@@ -10,8 +10,6 @@ const chip = @import("compatibility.zig").chip;
 
 const resets = @import("resets.zig");
 
-const log = std.log.scoped(.gpio);
-
 pub const Function =
     switch (chip) {
         .RP2040 => enum(u5) {
