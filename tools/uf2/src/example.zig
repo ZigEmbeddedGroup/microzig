@@ -38,7 +38,7 @@ pub fn main() !void {
 
         var archive: uf2.Archive = .init(allocator);
         defer archive.deinit();
-        try archive.read_from(&reader.interface);
+        try archive.read_from(&reader.interface, .{});
 
         for (archive.families.keys()) |family_id|
             std.log.info("family_id: {t}", .{family_id});

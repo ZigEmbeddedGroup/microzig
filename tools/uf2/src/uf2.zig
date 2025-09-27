@@ -8,12 +8,6 @@ pub const FamilyId = @import("family_id.zig").FamilyId;
 const prog_page_size = 256;
 const uf2_alignment = 4;
 
-pub const Options = struct {
-    // TODO: when implemented set to true by default
-    bundle_source: bool = false,
-    family_id: ?FamilyId = null,
-};
-
 pub const Archive = struct {
     allocator: Allocator,
     blocks: std.ArrayList(Block),
@@ -33,21 +27,6 @@ pub const Archive = struct {
         self.families.deinit(self.allocator);
     }
 
-    /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
-    /// bytes.
-    pub fn read_from(self: *Archive, reader: *std.Io.Reader) !void {
-        while (reader.takeStruct(Block, .little)) |block| {
-            if (block.flags.family_id_present) {
-                const family_id = block.file_size_or_family_id.family_id;
-                try self.families.put(self.allocator, family_id, {});
-            }
-            try self.blocks.append(self.allocator, block);
-        } else |err| switch (err) {
-            error.EndOfStream => {},
-            else => return err,
-        }
-    }
-
     pub fn write_to(self: *Archive, writer: *std.Io.Writer) !void {
         for (self.blocks.items, 0..) |*block, i| {
             block.block_number = @as(u32, @intCast(i));
@@ -57,10 +36,51 @@ pub const Archive = struct {
         try writer.flush();
     }
 
-    pub fn add_elf(self: *Archive, reader: *std.fs.File.Reader, opts: Options) !void {
-        // TODO: ensures this reports an error if there is a collision
+    pub const ReadFromOptions = struct {
+        /// If true, checks if any new block has a family_id already present in
+        /// the archive.
+        check_family_id_collission: bool = true,
+    };
+
+    /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
+    /// bytes.
+    pub fn read_from(self: *Archive, reader: *std.Io.Reader, options: ReadFromOptions) !void {
+        var new_family_ids: std.AutoArrayHashMapUnmanaged(FamilyId, void) = .empty;
+        defer new_family_ids.deinit(self.allocator);
+
+        while (reader.takeStruct(Block, .little)) |block| {
+            if (block.flags.family_id_present) {
+                const family_id = block.file_size_or_family_id.family_id;
+
+                // Check if family id is already present in the archive
+                if (try new_family_ids.fetchPut(self.allocator, family_id, {}) == null and
+                    try self.families.fetchPut(self.allocator, family_id, {}) != null)
+                {
+                    if (options.check_family_id_collission) {
+                    return error.FamilyIdCollision;
+                }
+                }
+            }
+
+            try self.blocks.append(self.allocator, block);
+        } else |err| switch (err) {
+            error.EndOfStream => {},
+            else => return err,
+        }
+    }
+
+    pub const ELF_Options = struct {
+        // TODO: when implemented set to true by default
+        bundle_source: bool = false,
+        family_id: ?FamilyId = null,
+    };
+
+    /// Adds an elf to the archive. Returns error if the family id (if
+    /// specified) is already present in the archive.
+    pub fn add_elf(self: *Archive, reader: *std.fs.File.Reader, opts: ELF_Options) !void {
         if (opts.family_id) |family_id|
-            try self.families.putNoClobber(self.allocator, family_id, {});
+            if (try self.families.fetchPut(self.allocator, family_id, {}) != null)
+                return error.FamilyIdCollision;
 
         const Segment = struct {
             addr: u32,
@@ -244,3 +264,91 @@ pub const Block = extern struct {
         assert(512 == @sizeOf(Block));
     }
 };
+
+test "Archive read and write" {
+    const data_1_block_1: Block = .{
+        .flags = .{
+            .not_main_flash = false,
+            .file_container = false,
+            .family_id_present = true,
+            .md5_checksum_present = false,
+            .extension_tags_present = false,
+        },
+        .target_addr = 0x10000000,
+        .payload_size = prog_page_size,
+        .block_number = undefined,
+        .total_blocks = undefined,
+        .file_size_or_family_id = .{
+            .family_id = .RP2040,
+        },
+        .data = @splat(0),
+    };
+    const data_1_block_2: Block = .{
+        .flags = .{
+            .not_main_flash = false,
+            .file_container = false,
+            .family_id_present = true,
+            .md5_checksum_present = false,
+            .extension_tags_present = false,
+        },
+        .target_addr = 0x10000000,
+        .payload_size = prog_page_size,
+        .block_number = undefined,
+        .total_blocks = undefined,
+        .file_size_or_family_id = .{
+            .family_id = .RP2350_ARM_S,
+        },
+        .data = @splat(0),
+    };
+    const data_2_block_1: Block = .{
+        .flags = .{
+            .not_main_flash = false,
+            .file_container = false,
+            .family_id_present = true,
+            .md5_checksum_present = false,
+            .extension_tags_present = false,
+        },
+        .target_addr = 0x10000100,
+        .payload_size = prog_page_size,
+        .block_number = 1,
+        .total_blocks = 2,
+        .file_size_or_family_id = .{
+            .family_id = .RP2350_ARM_S,
+        },
+        .data = @splat(0),
+    };
+
+    var data_1: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer data_1.deinit();
+    try data_1.writer.writeStruct(data_1_block_1, .little);
+    try data_1.writer.writeStruct(data_1_block_2, .little);
+
+    var data_2: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer data_2.deinit();
+    try data_2.writer.writeStruct(data_2_block_1, .little);
+
+    var data_1_reader: std.Io.Reader = .fixed(data_1.written());
+
+    var archive = Archive.init(std.testing.allocator);
+    defer archive.deinit();
+
+    try archive.read_from(&data_1_reader, .{});
+
+    var output: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer output.deinit();
+
+    try archive.write_to(&output.writer);
+
+    try std.testing.expectEqualSlices(FamilyId, archive.families.keys(), &.{ .RP2040, .RP2350_ARM_S });
+
+    // these are set by write_to
+    std.mem.writeInt(u32, data_1.written()[@offsetOf(Block, "block_number")..][0..4], 0, .little);
+    std.mem.writeInt(u32, data_1.written()[@offsetOf(Block, "total_blocks")..][0..4], 2, .little);
+    std.mem.writeInt(u32, data_1.written()[@sizeOf(Block)..][@offsetOf(Block, "block_number")..][0..4], 1, .little);
+    std.mem.writeInt(u32, data_1.written()[@sizeOf(Block)..][@offsetOf(Block, "total_blocks")..][0..4], 2, .little);
+    try std.testing.expectEqualSlices(u8, data_1.written(), output.written());
+
+    // test name collisions
+    var data_2_reader: std.Io.Reader = .fixed(data_2.written());
+    try std.testing.expectError(error.FamilyIdCollision, archive.read_from(&data_2_reader, .{}));
+}
