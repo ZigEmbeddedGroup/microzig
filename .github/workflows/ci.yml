@@ -14,14 +14,14 @@ jobs:
     name: Formatting check
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Setup Zig
-      uses: mlugg/setup-zig@v2
-      with:
-        version: ${{ env.ZIG_VERSION }}
-    - name: Run zig fmt
-      run: zig fmt --check .
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Run zig fmt
+        run: zig fmt --check .
 
   unit-test-regz:
     name: Unit Test Regz
@@ -165,11 +165,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example_dir:
-          [
+        example_dir: [
             espressif/esp,
             gigadevice/gd32,
-          #microchip/avr,
+            #microchip/avr,
             microchip/atsam,
             nordic/nrf5x,
             nxp/lpc,
@@ -242,7 +241,7 @@ jobs:
           MICROZIG_VERSION=$(zig build package -- get-version)
           echo microzig version: $MICROZIG_VERSION
           zig build package -- http://localhost:8000
-          python3 -m http.server 8000 --directory boxzer-out &
+          python3 -m http.server --directory boxzer-out &
           sleep 1
 
           cd tools/package-test
