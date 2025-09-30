@@ -1,313 +1,165 @@
 const std = @import("std");
+const enumFromInt = std.meta.intToEnum;
 
-const types = @import("types.zig");
-const utils = @import("utils.zig");
+const usb = @import("../usb.zig");
+const descriptor = usb.descriptor;
+const types = usb.types;
 
-const utilities = @import("../../utilities.zig");
-
-const DescType = types.DescType;
-const bos = utils.BosConfig;
-
-pub const DescSubType = enum(u8) {
-    Header = 0x00,
-    CallManagement = 0x01,
-    ACM = 0x02,
-    Union = 0x06,
-
-    pub fn from_u16(v: u16) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
-};
-
-pub const CdcManagementRequestType = enum(u8) {
+pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
     GetLineCoding = 0x21,
     SetControlLineState = 0x22,
     SendBreak = 0x23,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
-pub const CdcCommSubClassType = enum(u8) {
-    AbstractControlModel = 2,
-};
-
-pub const CdcHeaderDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `Header`.
-    descriptor_subtype: DescSubType = DescSubType.Header,
-    // USB Class Definitions for Communication Devices Specification release
-    // number in binary-coded decimal. Typically 0x01_10.
-    bcd_cdc: u16 align(1),
-
-    pub fn serialize(self: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = @intCast(self.bcd_cdc & 0xff);
-        out[4] = @intCast((self.bcd_cdc >> 8) & 0xff);
-        return out;
-    }
-};
-
-pub const CdcCallManagementDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `CallManagement`.
-    descriptor_subtype: DescSubType = DescSubType.CallManagement,
-    // Capabilities. Should be 0x00 for use as a serial device.
-    capabilities: u8,
-    // Data interface number.
-    data_interface: u8,
-
-    pub fn serialize(self: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = self.capabilities;
-        out[4] = self.data_interface;
-        return out;
-    }
-};
-
-pub const CdcAcmDescriptor = extern struct {
-    length: u8 = 4,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `ACM`.
-    descriptor_subtype: DescSubType = DescSubType.ACM,
-    // Capabilities. Should be 0x02 for use as a serial device.
-    capabilities: u8,
-
-    pub fn serialize(self: *const @This()) [4]u8 {
-        var out: [4]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = self.capabilities;
-        return out;
-    }
-};
-
-pub const CdcUnionDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `Union`.
-    descriptor_subtype: DescSubType = DescSubType.Union,
-    // The interface number of the communication or data class interface
-    // designated as the master or controlling interface for the union.
-    master_interface: u8,
-    // The interface number of the first slave or associated interface in the
-    // union.
-    slave_interface_0: u8,
-
-    pub fn serialize(self: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = self.master_interface;
-        out[4] = self.slave_interface_0;
-        return out;
-    }
-};
-
-pub const CdcLineCoding = extern struct {
+pub const LineCoding = extern struct {
     bit_rate: u32 align(1),
     stop_bits: u8,
     parity: u8,
     data_bits: u8,
+
+    pub const init: @This() = .{
+        .bit_rate = 115200,
+        .stop_bits = 0,
+        .parity = 0,
+        .data_bits = 8,
+    };
 };
 
-pub fn CdcClassDriver(comptime usb: anytype) type {
-    const FIFO = utilities.CircularBuffer(u8, usb.max_packet_size);
+pub const Descriptor = extern struct {
+    itf_assoc: descriptor.InterfaceAssociation,
+    itf_notifi: descriptor.Interface,
+    cdc_header: descriptor.cdc.Header,
+    cdc_call_mgmt: descriptor.cdc.CallManagement,
+    cdc_acm: descriptor.cdc.AbstractControlModel,
+    cdc_union: descriptor.cdc.Union,
+    ep_notifi: descriptor.Endpoint,
+    itf_data: descriptor.Interface,
+    ep_out: descriptor.Endpoint,
+    ep_in: descriptor.Endpoint,
 
-    return struct {
-        device: ?types.UsbDevice = null,
-        ep_notif: u8 = 0,
-        ep_in: u8 = 0,
-        ep_out: u8 = 0,
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
+};
 
-        line_coding: CdcLineCoding = undefined,
+pub const CdcClassDriver = struct {
+    ep_in_notif: types.Endpoint.Num,
+    ep_in: types.Endpoint.Num,
+    ep_out: types.Endpoint.Num,
+    awaiting_data: bool,
 
-        rx: FIFO = .empty,
-        tx: FIFO = .empty,
+    line_coding: LineCoding,
 
-        epin_buf: [usb.max_packet_size]u8 = undefined,
+    pub fn info(first_interface: u8, string_ids: anytype, endpoints: anytype) usb.DriverInfo(@This(), Descriptor) {
+        const endpoint_notifi_size = 8;
+        const endpoint_size = 64;
+        return .{
+            .interface_handlers = &.{
+                .{ .itf = first_interface, .func = interface_setup },
+                .{ .itf = first_interface + 1, .func = interface_setup },
+            },
+            .descriptors = .{
+                .itf_assoc = .{
+                    .first_interface = first_interface,
+                    .interface_count = 2,
+                    .function_class = 2,
+                    .function_subclass = 2,
+                    .function_protocol = 0,
+                    .function = 0,
+                },
+                .itf_notifi = .{
+                    .interface_number = first_interface,
+                    .alternate_setting = 0,
+                    .num_endpoints = 1,
+                    .interface_class = 2,
+                    .interface_subclass = 2,
+                    .interface_protocol = 0,
+                    .interface_s = string_ids.name,
+                },
+                .cdc_header = .{ .bcd_cdc = .from(0x0120) },
+                .cdc_call_mgmt = .{
+                    .capabilities = 0,
+                    .data_interface = first_interface + 1,
+                },
+                .cdc_acm = .{ .capabilities = 6 },
+                .cdc_union = .{
+                    .master_interface = first_interface,
+                    .slave_interface_0 = first_interface + 1,
+                },
+                .ep_notifi = .{
+                    .endpoint = .in(endpoints.notifi),
+                    .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                    .max_packet_size = .from(endpoint_notifi_size),
+                    .interval = 16,
+                },
+                .itf_data = .{
+                    .interface_number = first_interface + 1,
+                    .alternate_setting = 0,
+                    .num_endpoints = 2,
+                    .interface_class = 10,
+                    .interface_subclass = 0,
+                    .interface_protocol = 0,
+                    .interface_s = 0,
+                },
+                .ep_out = .{
+                    .endpoint = .out(endpoints.data),
+                    .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                    .max_packet_size = .from(endpoint_size),
+                    .interval = 0,
+                },
+                .ep_in = .{
+                    .endpoint = .in(endpoints.data),
+                    .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                    .max_packet_size = .from(endpoint_size),
+                    .interval = 0,
+                },
+            },
+        };
+    }
 
-        pub fn available(self: *@This()) usize {
-            return self.rx.get_readable_len();
-        }
+    /// This function is called when the host chooses a configuration that contains this driver.
+    pub fn init(this: *@This(), _: usb.DeviceInterface, desc: *const Descriptor) void {
+        this.* = .{
+            .line_coding = .init,
+            .awaiting_data = false,
+            .ep_in_notif = desc.ep_notifi.endpoint.num,
+            .ep_out = desc.ep_out.endpoint.num,
+            .ep_in = desc.ep_in.endpoint.num,
+        };
+    }
 
-        pub fn read(self: *@This(), dst: []u8) usize {
-            const read_count = self.rx.read(dst);
-            self.prep_out_transaction();
-            return read_count;
-        }
+    /// On bus reset, this function is called followed by init().
+    pub fn deinit(_: *@This()) void {}
 
-        pub fn write(self: *@This(), data: []const u8) []const u8 {
-            const write_count = @min(self.tx.get_writable_len(), data.len);
+    /// Read data from rx buffer into dst.
+    pub fn read(this: *@This(), device: usb.DeviceInterface, dst: []u8) usize {
+        return device.read_buffered(dst[0..1], this.ep_out) orelse 0;
+    }
 
-            if (write_count > 0) {
-                self.tx.write_assume_capacity(data[0..write_count]);
-            } else {
-                return data[0..];
-            }
+    /// Write data from src into tx buffer.
+    pub fn write(this: *@This(), src: []const u8, device: usb.DeviceInterface) usize {
+        return device.write_buffered(src[0..1], this.ep_in, false) orelse 0;
+    }
 
-            if (self.tx.get_writable_len() == 0) {
-                _ = self.write_flush();
-            }
+    /// Send any buffered data.
+    pub fn flush(this: *@This(), device: usb.DeviceInterface) void {
+        _ = device.write_buffered("", this.ep_in, true);
+    }
 
-            return data[write_count..];
-        }
-
-        pub fn write_flush(self: *@This()) usize {
-            if (self.device.?.ready() == false) {
-                return 0;
-            }
-            if (self.tx.get_readable_len() == 0) {
-                return 0;
-            }
-            const len = self.tx.read(&self.epin_buf);
-            self.device.?.endpoint_transfer(self.ep_in, self.epin_buf[0..len]);
-            return len;
-        }
-
-        fn prep_out_transaction(self: *@This()) void {
-            if (self.rx.get_writable_len() >= usb.max_packet_size) {
-                // Let endpoint know that we are ready for next packet
-                self.device.?.endpoint_transfer(self.ep_out, &.{});
-            }
-        }
-
-        fn init(ptr: *anyopaque, device: types.UsbDevice) void {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-            self.device = device;
-            self.line_coding = .{
-                .bit_rate = 115200,
-                .stop_bits = 0,
-                .parity = 0,
-                .data_bits = 8,
-            };
-        }
-
-        fn open(ptr: *anyopaque, cfg: []const u8) !usize {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-            var curr_cfg = cfg;
-
-            if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
-                if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Cdc)) return types.DriverErrors.UnsupportedInterfaceClassType;
-                if (desc_itf.interface_subclass != @intFromEnum(CdcCommSubClassType.AbstractControlModel)) return types.DriverErrors.UnsupportedInterfaceSubClassType;
-            } else {
-                return types.DriverErrors.ExpectedInterfaceDescriptor;
-            }
-
-            curr_cfg = bos.get_desc_next(curr_cfg);
-
-            while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == DescType.CsInterface) {
-                curr_cfg = bos.get_desc_next(curr_cfg);
-            }
-
-            if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                self.ep_notif = desc_ep.endpoint_address;
-                curr_cfg = bos.get_desc_next(curr_cfg);
-            }
-
-            if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
-                if (desc_itf.interface_class == @intFromEnum(types.ClassCode.CdcData)) {
-                    curr_cfg = bos.get_desc_next(curr_cfg);
-                    for (0..2) |_| {
-                        if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                            switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                                .In => self.ep_in = desc_ep.endpoint_address,
-                                .Out => self.ep_out = desc_ep.endpoint_address,
-                            }
-                            self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
-                            curr_cfg = bos.get_desc_next(curr_cfg);
-                        }
-                    }
-                }
-            }
-
-            return cfg.len - curr_cfg.len;
-        }
-
-        fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-
-            if (CdcManagementRequestType.from_u8(setup.request)) |request| {
-                switch (request) {
-                    .SetLineCoding => {
-                        switch (stage) {
-                            .Setup => {
-                                // HACK, we should handle data phase somehow to read sent line_coding
-                                self.device.?.control_ack(setup);
-                            },
-                            else => {},
-                        }
-                    },
-                    .GetLineCoding => {
-                        if (stage == .Setup) {
-                            self.device.?.control_transfer(setup, std.mem.asBytes(&self.line_coding));
-                        }
-                    },
-                    .SetControlLineState => {
-                        switch (stage) {
-                            .Setup => {
-                                self.device.?.control_ack(setup);
-                            },
-                            else => {},
-                        }
-                    },
-                    .SendBreak => {
-                        switch (stage) {
-                            .Setup => {
-                                self.device.?.control_ack(setup);
-                            },
-                            else => {},
-                        }
-                    },
-                }
-            }
-
-            return true;
-        }
-
-        fn transfer(ptr: *anyopaque, ep_addr: u8, data: []u8) void {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-
-            if (ep_addr == self.ep_out) {
-                self.rx.write(data) catch {};
-                self.prep_out_transaction();
-            }
-
-            if (ep_addr == self.ep_in) {
-                if (self.write_flush() == 0) {
-                    // If there is no data left, a empty packet should be sent if
-                    // data len is multiple of EP Packet size and not zero
-                    if (self.tx.get_readable_len() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
-                        self.device.?.endpoint_transfer(self.ep_in, &.{});
-                    }
-                }
-            }
-        }
-
-        pub fn driver(self: *@This()) types.UsbClassDriver {
-            return .{
-                .ptr = self,
-                .fn_init = init,
-                .fn_open = open,
-                .fn_class_control = class_control,
-                .fn_transfer = transfer,
-            };
-        }
-    };
-}
+    /// Callback for setup packets.
+    pub fn interface_setup(this: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
+        return if (enumFromInt(
+            ManagementRequestType,
+            setup.request,
+        )) |request| switch (request) {
+            .SetLineCoding => usb.ACK,
+            .GetLineCoding => {
+                const data = std.mem.asBytes(&this.line_coding);
+                return data[0..@min(@sizeOf(LineCoding), setup.length)];
+            },
+            .SetControlLineState => usb.ACK,
+            .SendBreak => usb.ACK,
+        } else |_| usb.ACK;
+    }
+};
