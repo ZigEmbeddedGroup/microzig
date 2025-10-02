@@ -85,47 +85,37 @@ pub const RAM = struct {
     /// Size of the RAM memory space in bytes.
     size: usize,
 
-    pub fn read(mem: RAM, addr: Address) u8 {
-        // Logical RAM addresses include SRAM base; backend maps to array indices.
-        return mem.vtable.readFn(mem.ctx, addr);
+    pub fn read(mem: RAM, index: Address) u8 {
+        // Index is a 0-based array index, not a data-space address.
+        return mem.vtable.readFn(mem.ctx, index);
     }
 
-    pub fn write(mem: RAM, addr: Address, value: u8) void {
-        // Logical RAM addresses include SRAM base; backend maps to array indices.
-        return mem.vtable.writeFn(mem.ctx, addr, value);
-    }
-
-    pub fn get_base(mem: RAM) Address {
-        return mem.vtable.getBaseFn(mem.ctx);
+    pub fn write(mem: RAM, index: Address, value: u8) void {
+        // Index is a 0-based array index, not a data-space address.
+        return mem.vtable.writeFn(mem.ctx, index, value);
     }
 
     pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
-        getBaseFn: *const fn (ctx: ?*anyopaque) Address,
+        readFn: *const fn (ctx: ?*anyopaque, index: Address) u8,
+        writeFn: *const fn (ctx: ?*anyopaque, index: Address, value: u8) void,
     };
 
     pub const empty = RAM{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write, .getBaseFn = empty_get_base },
+        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
     };
 
-    fn empty_read(ctx: ?*anyopaque, addr: u16) u8 {
-        _ = addr;
+    fn empty_read(ctx: ?*anyopaque, index: Address) u8 {
+        _ = index;
         _ = ctx;
         return 0;
     }
 
-    fn empty_write(ctx: ?*anyopaque, addr: u16, value: u8) void {
+    fn empty_write(ctx: ?*anyopaque, index: Address, value: u8) void {
         _ = value;
-        _ = addr;
+        _ = index;
         _ = ctx;
-    }
-
-    fn empty_get_base(ctx: ?*anyopaque) Address {
-        _ = ctx;
-        return 0;
     }
 
     pub fn Static(comptime size: comptime_int) type {
@@ -133,8 +123,6 @@ pub const RAM = struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
-            /// Base address where this RAM is mapped.
-            base: Address = 0,
 
             pub fn memory(self: *Self) RAM {
                 return RAM{
@@ -147,34 +135,153 @@ pub const RAM = struct {
             pub const vtable = VTable{
                 .readFn = mem_read,
                 .writeFn = mem_write,
-                .getBaseFn = Self.get_base,
             };
 
-            fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
+            fn mem_read(ctx: ?*anyopaque, index: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(addr >= mem.base);
-                const off: Address = addr - mem.base;
-                std.debug.assert(off < size);
-                return mem.data[off];
+                std.debug.assert(index < size);
+                return mem.data[index];
             }
 
-            fn mem_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
+            fn mem_write(ctx: ?*anyopaque, index: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(addr >= mem.base);
-                const off: Address = addr - mem.base;
-                std.debug.assert(off < size);
-                mem.data[off] = value;
-            }
-
-            fn get_base(ctx: ?*anyopaque) Address {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return mem.base;
+                std.debug.assert(index < size);
+                mem.data[index] = value;
             }
         };
     }
 };
 
 pub const EEPROM = RAM; // actually the same interface *shrug*
+
+/// Mapper handles translation of data-space addresses to the appropriate memory backend.
+/// This allows different AVR MCUs to have different memory layouts (e.g., IO registers
+/// mapped at different locations, extended IO space, etc.)
+pub const Mapper = struct {
+    pub const Address = u24;
+
+    ctx: ?*anyopaque,
+    vtable: *const VTable,
+
+    pub fn read(mapper: Mapper, addr: Address) u8 {
+        return mapper.vtable.readFn(mapper.ctx, addr);
+    }
+
+    pub fn write(mapper: Mapper, addr: Address, value: u8) void {
+        mapper.vtable.writeFn(mapper.ctx, addr, value);
+    }
+
+    /// `mask` determines which bits of `value` are written.
+    pub fn write_masked(mapper: Mapper, addr: Address, mask: u8, value: u8) void {
+        mapper.vtable.writeMaskedFn(mapper.ctx, addr, mask, value);
+    }
+
+    pub const VTable = struct {
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
+        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
+        writeMaskedFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
+    };
+
+    pub const empty = Mapper{
+        .ctx = null,
+        .vtable = &VTable{
+            .readFn = empty_read,
+            .writeFn = empty_write,
+            .writeMaskedFn = empty_write_masked,
+        },
+    };
+
+    fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
+        _ = ctx;
+        _ = addr;
+        return 0xFF;
+    }
+
+    fn empty_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
+        _ = ctx;
+        _ = addr;
+        _ = value;
+    }
+
+    fn empty_write_masked(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
+        _ = ctx;
+        _ = addr;
+        _ = mask;
+        _ = value;
+    }
+
+    /// SimpleMapper is a range-based mapper that routes data-space addresses to IO or SRAM.
+    /// The mapper translates data-space addresses to array indices for SRAM access.
+    //
+    /// NOTE: The mapper holds pointers to IO and SRAM, not copies. This allows the CPU to
+    /// share the same memory instances - the CPU uses the mapper for all data-space access
+    /// (loads, stores, stack operations, etc.), but keeps direct IO access for reading/writing
+    /// special registers like SP and SREG.
+    pub fn SimpleMapper(comptime Config: type) type {
+        return struct {
+            const Self = @This();
+
+            io: *IO,
+            sram: *RAM,
+
+            pub fn mapper(self: *Self) Mapper {
+                return Mapper{
+                    .ctx = self,
+                    .vtable = &vtable,
+                };
+            }
+
+            const vtable = Mapper.VTable{
+                .readFn = mapperRead,
+                .writeFn = mapperWrite,
+                .writeMaskedFn = mapperWriteMasked,
+            };
+
+            fn mapperRead(ctx: ?*anyopaque, addr: Mapper.Address) u8 {
+                const self: *Self = @ptrCast(@alignCast(ctx.?));
+
+                // Check if address is in IO range
+                if (Config.config.io_translate(addr)) |io_addr| {
+                    return self.io.read(io_addr);
+                }
+
+                // Otherwise, translate to SRAM array index
+                const sram_index = addr - Config.config.sram_base;
+                return self.sram.read(sram_index);
+            }
+
+            fn mapperWrite(ctx: ?*anyopaque, addr: Mapper.Address, value: u8) void {
+                const self: *Self = @ptrCast(@alignCast(ctx.?));
+
+                // Check if address is in IO range
+                if (Config.config.io_translate(addr)) |io_addr| {
+                    self.io.write(io_addr, value);
+                    return;
+                }
+
+                // Otherwise, translate to SRAM array index
+                const sram_index = addr - Config.config.sram_base;
+                self.sram.write(sram_index, value);
+            }
+
+            fn mapperWriteMasked(ctx: ?*anyopaque, addr: Mapper.Address, mask: u8, value: u8) void {
+                const self: *Self = @ptrCast(@alignCast(ctx.?));
+
+                // Check if address is in IO range
+                if (Config.config.io_translate(addr)) |io_addr| {
+                    self.io.write_masked(io_addr, mask, value);
+                    return;
+                }
+
+                // Otherwise, translate to SRAM array index - perform read-modify-write
+                const sram_index = addr - Config.config.sram_base;
+                const old_value = self.sram.read(sram_index);
+                const new_value = (old_value & ~mask) | (value & mask);
+                self.sram.write(sram_index, new_value);
+            }
+        };
+    }
+};
 
 pub const IO = struct {
     // Some AVR families (e.g., XMEGA) expose extended I/O up to 0xFFF (12 bits).

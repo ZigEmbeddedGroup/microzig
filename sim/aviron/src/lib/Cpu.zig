@@ -58,8 +58,10 @@ instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
 sram: RAM,
+sram_base: u24,
 eeprom: EEPROM,
 io: IO,
+mapper: io_mod.Mapper,
 
 // State
 pc: u24 = 0,
@@ -110,9 +112,8 @@ pub fn dump_system_state(cpu: *Cpu) void {
     }
 
     // Dump SRAM using absolute addresses based on configured base
-    const sram_base: u24 = cpu.sram.get_base();
-    const sram_end: u24 = sram_base + @as(u24, @intCast(cpu.sram.size - 1));
-    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ sram_base, sram_end, cpu.sram.size });
+    const sram_end: u24 = cpu.sram_base + @as(u24, @intCast(cpu.sram.size - 1));
+    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ cpu.sram_base, sram_end, cpu.sram.size });
 
     const row_width = 16;
     var prev_row: ?[row_width]u8 = null;
@@ -126,7 +127,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
 
         var j: usize = 0;
         while (j < row_len) : (j += 1) {
-            cur_row[j] = cpu.sram.read(sram_base + @as(u24, @intCast(i + j)));
+            cur_row[j] = cpu.mapper.read(cpu.sram_base + @as(u24, @intCast(i + j)));
         }
 
         // Only elide repeated lines of all zeroes
@@ -148,7 +149,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
                 elided = false;
             }
 
-            std.debug.print("0x{X:0>4}: ", .{sram_base + @as(u24, @intCast(i))});
+            std.debug.print("0x{X:0>4}: ", .{cpu.sram_base + @as(u24, @intCast(i))});
             // hex bytes
             j = 0;
             while (j < row_len) : (j += 1) {
@@ -285,18 +286,11 @@ fn fetch_code(cpu: *Cpu) u16 {
 }
 
 inline fn data_read(cpu: *Cpu, addr: u24) u8 {
-    if (cpu.io.translate_address(addr)) |port| {
-        return cpu.io.read(port);
-    }
-    return cpu.sram.read(addr);
+    return cpu.mapper.read(addr);
 }
 
 inline fn data_write(cpu: *Cpu, addr: u24, value: u8) void {
-    if (cpu.io.translate_address(addr)) |port| {
-        cpu.io.write(port, value);
-        return;
-    }
-    cpu.sram.write(addr, value);
+    cpu.mapper.write(addr, value);
 }
 
 fn push(cpu: *Cpu, val: u8) void {
@@ -304,7 +298,7 @@ fn push(cpu: *Cpu, val: u8) void {
     const sp = cpu.get_sp();
     // AVR convention: write to [SP] first, then decrement SP
     // SP points to the first unused location
-    cpu.sram.write(sp, val);
+    cpu.mapper.write(sp, val);
     cpu.set_sp(sp -% 1);
 }
 
@@ -312,7 +306,7 @@ fn pop(cpu: *Cpu) u8 {
     // AVR POP: Increment SP first, then read from [SP]
     const sp = cpu.get_sp() +% 1;
     cpu.set_sp(sp);
-    return cpu.sram.read(sp);
+    return cpu.mapper.read(sp);
 }
 
 fn push_code_loc(cpu: *Cpu, val: u24) void {
@@ -1167,8 +1161,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, Rd);
+        const mem = cpu.mapper.read(z);
+        cpu.mapper.write(z, Rd);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1186,8 +1180,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, (0xFF - Rd) & mem);
+        const mem = cpu.mapper.read(z);
+        cpu.mapper.write(z, (0xFF - Rd) & mem);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1205,8 +1199,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, Rd | mem);
+        const mem = cpu.mapper.read(z);
+        cpu.mapper.write(z, Rd | mem);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1223,8 +1217,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, Rd ^ mem);
+        const mem = cpu.mapper.read(z);
+        cpu.mapper.write(z, Rd ^ mem);
         cpu.regs[info.r.num()] = mem;
     }
 

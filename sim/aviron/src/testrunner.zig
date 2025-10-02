@@ -12,14 +12,19 @@ const Cli = struct {
     config: ?[]const u8 = null,
 };
 
+const sram_base: u24 = 0x0100; // ATmega328P SRAM starts at 0x0100
+const MapperConfig = aviron.mcu.ClassicMapperConfig(sram_base);
+const MapperImpl = aviron.Mapper.SimpleMapper(MapperConfig);
+
 const SystemState = struct {
     cpu: aviron.Cpu,
 
     // Emulate Atmega382p device size:
     flash_storage: aviron.Flash.Static(32768) = .{ .base = 0 },
-    sram: aviron.RAM.Static(2048) = .{ .base = 0x0100 },
-    eeprom: aviron.EEPROM.Static(1024) = .{ .base = 0 },
+    sram: aviron.RAM.Static(2048) = .{},
+    eeprom: aviron.EEPROM.Static(1024) = .{},
     io: IO,
+    mapper: MapperImpl,
 
     config: testconfig.TestSuiteConfig,
     options: Cli,
@@ -140,13 +145,14 @@ pub fn main() !u8 {
         .options = cli.options,
         .config = config,
         .io = undefined, // Initialized below
+        .mapper = undefined, // Initialized below
         .cpu = undefined, // Initialized below
     };
 
     test_system.io = IO{
         .sreg = undefined, // Will be set after CPU initialization
         // Initialize SP to RAMEND (SRAM base + SRAM size - 1)
-        .sp = @as(u16, @intCast(test_system.sram.base)) + @as(u16, test_system.sram.data.len - 1),
+        .sp = sram_base + @as(u16, test_system.sram.data.len - 1),
         .config = config,
 
         .stdin = config.stdin,
@@ -154,15 +160,28 @@ pub fn main() !u8 {
         .stderr = &stderr,
     };
 
+    // Create memory interfaces
+    const flash_mem = test_system.flash_storage.memory();
+    var sram_mem = test_system.sram.memory();
+    const eeprom_mem = test_system.eeprom.memory();
+    var io_mem = test_system.io.memory();
+
+    test_system.mapper = MapperImpl{
+        .io = &io_mem,
+        .sram = &sram_mem,
+    };
+
     test_system.cpu = aviron.Cpu{
         .trace = cli.options.trace,
 
         .instruction_set = .avr5,
 
-        .flash = test_system.flash_storage.memory(),
-        .sram = test_system.sram.memory(),
-        .eeprom = test_system.eeprom.memory(),
-        .io = test_system.io.memory(),
+        .flash = flash_mem,
+        .sram = sram_mem,
+        .sram_base = sram_base,
+        .eeprom = eeprom_mem,
+        .io = io_mem,
+        .mapper = test_system.mapper.mapper(),
 
         .code_model = .code16,
 
@@ -217,7 +236,7 @@ pub fn main() !u8 {
 
             // Adjust for configured base of the target memory region
             const target_addr: u24 = if (phdr.p_vaddr >= 0x0080_0000)
-                addr_masked - test_system.sram.base
+                addr_masked - sram_base
             else
                 addr_masked - test_system.flash_storage.base;
 
@@ -407,10 +426,10 @@ const IO = struct {
     }
 
     fn translate_addr(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
-        _ = ctx; // This test IO maps the canonical AVR low I/O window only by default
+        _ = ctx;
+        // This function is no longer used by Cpu (now uses Mapper), but kept for IO vtable compatibility
         // Map data-space 0x20..0x5F to I/O ports 0x00..0x3F
         if (addr >= 0x20 and addr <= 0x5F) return @intCast(addr - 0x20);
-        // Extended I/O (0x60..0xFF) could be mapped to 0x40..0xDF; leave unmapped by default.
         return null;
     }
 };

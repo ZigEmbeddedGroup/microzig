@@ -26,24 +26,42 @@ pub fn main() !u8 {
     // TODO: Add support for more MCUs!
     std.debug.assert(cli.options.mcu == .atmega328p);
 
+    const sram_base: u24 = 0x0100; // ATmega328P SRAM starts at 0x0100
+
     var flash_storage = aviron.Flash.Static(32768){ .base = 0 };
-    var sram = aviron.RAM.Static(2048){ .base = 0x0100 };
-    var eeprom = aviron.EEPROM.Static(1024){ .base = 0 };
+    var sram = aviron.RAM.Static(2048){};
+    var eeprom = aviron.EEPROM.Static(1024){};
     // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific (0x0100 on ATmega328P).
     // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
     // For ATmega328P with 2KB SRAM, RAMEND = 0x08FF.
     var io = IO{
         .sreg = undefined,
-        .sp = @as(u16, @intCast(sram.base)) + @as(u16, sram.data.len - 1),
+        .sp = sram_base + @as(u16, sram.data.len - 1),
+    };
+
+    // Create memory interfaces
+    const flash_mem = flash_storage.memory();
+    var sram_mem = sram.memory();
+    const eeprom_mem = eeprom.memory();
+    var io_mem = io.memory();
+
+    // Create mapper that routes addresses to IO or SRAM (using pointers to avoid duplication)
+    const MapperConfig = aviron.mcu.ClassicMapperConfig(sram_base);
+    const MapperImpl = aviron.Mapper.SimpleMapper(MapperConfig);
+    var memory_mapper = MapperImpl{
+        .io = &io_mem,
+        .sram = &sram_mem,
     };
 
     var cpu = aviron.Cpu{
         .trace = cli.options.trace,
 
-        .flash = flash_storage.memory(),
-        .sram = sram.memory(),
-        .eeprom = eeprom.memory(),
-        .io = io.memory(),
+        .flash = flash_mem,
+        .sram = sram_mem,
+        .sram_base = sram_base,
+        .eeprom = eeprom_mem,
+        .io = io_mem,
+        .mapper = memory_mapper.mapper(),
 
         .code_model = .code16,
         .instruction_set = .avr5,
@@ -91,7 +109,7 @@ pub fn main() !u8 {
                 var pheaders = header.iterateProgramHeaders(&reader);
                 while (try pheaders.next()) |phdr| {
                     if (phdr.p_type != std.elf.PT_LOAD)
-                        continue; // Header isn't lodead
+                        continue; // Header isn't loaded
 
                     const dest_mem = if (phdr.p_paddr >= 0x0080_0000)
                         &sram.data
@@ -100,7 +118,7 @@ pub fn main() !u8 {
 
                     const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
                     const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
-                        addr_masked - sram.base
+                        addr_masked - sram_base
                     else
                         addr_masked - flash_storage.base;
 
@@ -359,10 +377,9 @@ const IO = struct {
         return null;
     }
 
-    // By default, map AVR low I/O window: data-space 0x20..0x5F → I/O ports 0x00..0x3F.
-    // Extended I/O (0x60..0xFF) is left unmapped for now.
     fn translate_address(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
         _ = ctx;
+        // Classic AVR: data-space 0x20-0x5F maps to IO ports 0x00-0x3F
         return if (addr >= 0x20 and addr <= 0x5F) @intCast(addr - 0x20) else null;
     }
 };
