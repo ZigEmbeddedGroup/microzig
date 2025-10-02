@@ -21,22 +21,21 @@ pub fn main() !u8 {
         return if (cli.options.help) @as(u8, 0) else 1;
     }
 
-    // Emulate Atmega382p device size:
-
+    // Get MCU configuration
     // TODO: Add support for more MCUs!
     std.debug.assert(cli.options.mcu == .atmega328p);
+    const mcu_config = aviron.mcu.atmega328p;
 
-    const sram_base: u24 = 0x0100; // ATmega328P SRAM starts at 0x0100
+    // Allocate memory based on MCU configuration
+    var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
+    var sram = aviron.RAM.Static(mcu_config.sram_size){};
+    var eeprom = aviron.EEPROM.Static(mcu_config.eeprom_size){};
 
-    var flash_storage = aviron.Flash.Static(32768){};
-    var sram = aviron.RAM.Static(2048){};
-    var eeprom = aviron.EEPROM.Static(1024){};
-    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific (0x0100 on ATmega328P).
+    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific.
     // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
-    // For ATmega328P with 2KB SRAM, RAMEND = 0x08FF.
     var io = IO{
         .sreg = undefined,
-        .sp = sram_base + @as(u16, sram.data.len - 1),
+        .sp = mcu_config.sram_base + @as(u16, mcu_config.sram_size - 1),
     };
 
     // Create memory interfaces
@@ -46,7 +45,7 @@ pub fn main() !u8 {
     var io_mem = io.memory();
 
     // Create mapper that routes addresses to IO or SRAM (using pointers to avoid duplication)
-    const MapperConfig = aviron.mcu.ClassicMapperConfig(sram_base);
+    const MapperConfig = aviron.mcu.ClassicMapperConfig(mcu_config.sram_base);
     const MapperImpl = aviron.Mapper.SimpleMapper(MapperConfig);
     var memory_mapper = MapperImpl{
         .io = &io_mem,
@@ -58,25 +57,25 @@ pub fn main() !u8 {
 
         .flash = flash_mem,
         .sram = sram_mem,
-        .sram_base = sram_base,
+        .sram_base = mcu_config.sram_base,
         .eeprom = eeprom_mem,
         .io = io_mem,
         .mapper = memory_mapper.mapper(),
 
-        .code_model = .code16,
-        .instruction_set = .avr5,
+        .code_model = mcu_config.code_model,
+        .instruction_set = mcu_config.instruction_set,
 
         .sio = .{
-            .ramp_x = null,
-            .ramp_y = null,
-            .ramp_z = null,
-            .ramp_d = null,
-            .e_ind = null,
+            .ramp_x = mcu_config.special_io.ramp_x,
+            .ramp_y = mcu_config.special_io.ramp_y,
+            .ramp_z = mcu_config.special_io.ramp_z,
+            .ramp_d = mcu_config.special_io.ramp_d,
+            .e_ind = mcu_config.special_io.e_ind,
 
-            .sp_l = @intFromEnum(IO.Register.sp_l),
-            .sp_h = @intFromEnum(IO.Register.sp_h),
+            .sp_l = mcu_config.special_io.sp_l,
+            .sp_h = mcu_config.special_io.sp_h,
 
-            .sreg = @intFromEnum(IO.Register.sreg),
+            .sreg = mcu_config.special_io.sreg,
         },
     };
 
@@ -118,7 +117,7 @@ pub fn main() !u8 {
 
                     const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
                     const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
-                        addr_masked - sram_base
+                        addr_masked - mcu_config.sram_base
                     else
                         addr_masked; // Flash always starts at 0
 
