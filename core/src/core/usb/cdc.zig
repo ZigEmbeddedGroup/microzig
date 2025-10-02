@@ -136,6 +136,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         ep_in: u8 = 0,
         ep_out: u8 = 0,
 
+        line_state: u8 = 0,
         line_coding: CdcLineCoding = undefined,
 
         rx: FIFO = .empty,
@@ -263,6 +264,9 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                         switch (stage) {
                             .Setup => {
                                 self.device.?.control_ack(setup);
+                            },
+                            .Ack => {
+                                self.line_state = setup.request;
                             },
                             else => {},
                         }
