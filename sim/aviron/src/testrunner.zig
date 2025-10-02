@@ -20,7 +20,7 @@ const SystemState = struct {
     cpu: aviron.Cpu,
 
     // Emulate Atmega382p device size:
-    flash_storage: aviron.Flash.Static(32768) = .{ .base = 0 },
+    flash_storage: aviron.Flash.Static(32768) = .{},
     sram: aviron.RAM.Static(2048) = .{},
     eeprom: aviron.EEPROM.Static(1024) = .{},
     io: IO,
@@ -238,7 +238,7 @@ pub fn main() !u8 {
             const target_addr: u24 = if (phdr.p_vaddr >= 0x0080_0000)
                 addr_masked - sram_base
             else
-                addr_masked - test_system.flash_storage.base;
+                addr_masked; // Flash always starts at 0
 
             if (phdr.p_filesz > 0) {
                 try file_reader.seekTo(phdr.p_offset);

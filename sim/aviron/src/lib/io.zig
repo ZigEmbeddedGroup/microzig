@@ -47,8 +47,6 @@ pub const Flash = struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
-            /// Base address (in words) where this flash is mapped.
-            base: Address = 0,
 
             pub fn memory(self: *Self) Flash {
                 return Flash{
@@ -62,15 +60,13 @@ pub const Flash = struct {
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(addr >= mem.base);
-                const off: Address = addr - mem.base;
-                std.debug.assert(off < @as(Address, @intCast(@divExact(size, 2))));
-                return std.mem.bytesAsSlice(u16, &mem.data)[off];
+                std.debug.assert(addr < @as(Address, @intCast(@divExact(size, 2))));
+                return std.mem.bytesAsSlice(u16, &mem.data)[addr];
             }
 
             fn get_base(ctx: ?*anyopaque) Address {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return mem.base;
+                _ = ctx;
+                return 0; // Flash always starts at address 0 in AVR
             }
         };
     }

@@ -28,7 +28,7 @@ pub fn main() !u8 {
 
     const sram_base: u24 = 0x0100; // ATmega328P SRAM starts at 0x0100
 
-    var flash_storage = aviron.Flash.Static(32768){ .base = 0 };
+    var flash_storage = aviron.Flash.Static(32768){};
     var sram = aviron.RAM.Static(2048){};
     var eeprom = aviron.EEPROM.Static(1024){};
     // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific (0x0100 on ATmega328P).
@@ -120,7 +120,7 @@ pub fn main() !u8 {
                     const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
                         addr_masked - sram_base
                     else
-                        addr_masked - flash_storage.base;
+                        addr_masked; // Flash always starts at 0
 
                     try reader.seekTo(phdr.p_offset);
                     try reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
