@@ -141,7 +141,7 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(cli.options.gas, cli.options.break_pc);
+    const result = try cpu.run(cli.options.gas, cli.options.breakpoint);
 
     if (cli.options.trace) {
         cpu.dump_system_state();
@@ -176,7 +176,7 @@ const Cli = struct {
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
-    break_pc: ?u24 = null,
+    breakpoint: ?u24 = null,
     gas: ?u64 = null,
 
     pub const shorthands = .{
@@ -185,7 +185,7 @@ const Cli = struct {
         .m = "mcu",
         .I = "info",
         .f = "format",
-        .B = "break_pc",
+        .B = "breakpoint",
         .G = "gas",
     };
     pub const meta = .{
@@ -203,7 +203,7 @@ const Cli = struct {
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
-            .break_pc = "Break when PC reaches this address (hex or dec)",
+            .breakpoint = "Break when PC reaches this address (hex or dec)",
             .gas = "Stop after N instructions executed",
         },
     };
