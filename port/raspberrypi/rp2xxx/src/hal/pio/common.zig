@@ -157,14 +157,19 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                     break offset;
             } else error.NoSpace;
         }
+        inline fn is_jmp(insn: u16) bool {
+            return (insn & 0xe000) == 0;
+        }
 
         pub fn add_program_at_offset_unlocked(self: EnumType, program: Program, offset: u5) !void {
             if (!self.can_add_program_at_offset(program, offset))
                 return error.NoSpace;
 
             const instruction_memory = self.get_instruction_memory();
-            for (program.instructions, offset..) |insn, i|
-                instruction_memory[i] = insn;
+            for (program.instructions, offset..) |insn, i| {
+                // offset jump instructions since they are absolute
+                instruction_memory[i] = if (is_jmp(insn)) insn + offset else insn;
+            }
 
             const program_mask = program.get_mask();
             UsedInstructionSpace(chip).val[@intFromEnum(self)] |= program_mask << offset;
@@ -548,12 +553,12 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 .pin_mappings = options.pin_mappings,
                 .exec = .{
                     .wrap = if (program.wrap) |wrap|
-                        wrap
+                        wrap + offset // program.wrap is relitive but actual wrap is absolute
                     else
                         offset + @as(u5, @intCast(program.instructions.len)),
 
                     .wrap_target = if (program.wrap_target) |wrap_target|
-                        wrap_target
+                        wrap_target + offset // program.wrap_target is relitive but actual wrap is absolute
                     else
                         offset,
 
