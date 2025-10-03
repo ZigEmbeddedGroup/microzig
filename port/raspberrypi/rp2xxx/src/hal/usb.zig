@@ -254,7 +254,7 @@ pub fn F(comptime config: UsbConfig) type {
             // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::In);
 
             const ep = hardware_endpoint_get_by_address(ep_addr);
-            // wait for controller to give processor ownership of the buffer before writing it. 
+            // wait for controller to give processor ownership of the buffer before writing it.
             while (ep.buffer_control.?.read().AVAILABLE_0 == 1) {}
 
             // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
