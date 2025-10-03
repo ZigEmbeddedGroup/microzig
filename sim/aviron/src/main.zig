@@ -298,7 +298,7 @@ const IO = struct {
             .sp_l => @truncate(io.sp >> 0),
             .sp_h => @truncate(io.sp >> 8),
 
-            _ => 0xFF, // Unimplemented I/O: return 0xFF and let CPU/reporting handle it
+            _ => std.debug.panic("illegal i/o read from undefined register 0x{X:0>2}", .{addr}),
         };
     }
 
@@ -341,9 +341,10 @@ const IO = struct {
             .sp_h => write_masked(high_byte(&io.sp), mask, value),
             .sreg => write_masked(@ptrCast(io.sreg), mask, value),
 
-            _ => {
-                // Unimplemented I/O: ignore (no panic). Could log if desired.
-            },
+            _ => std.debug.panic(
+                "illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}",
+                .{ addr, value, mask },
+            ),
         }
     }
 
