@@ -14,28 +14,18 @@ pub const Flash = struct {
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
-    pub fn get_base(mem: Flash) Address {
-        return mem.vtable.getBaseFn(mem.ctx);
-    }
-
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
-        getBaseFn: *const fn (ctx: ?*anyopaque) Address,
     };
 
     pub const empty = Flash{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = empty_read, .getBaseFn = empty_get_base },
+        .vtable = &VTable{ .readFn = empty_read },
     };
 
     fn empty_read(ctx: ?*anyopaque, addr: Address) u16 {
         _ = addr;
-        _ = ctx;
-        return 0;
-    }
-
-    fn empty_get_base(ctx: ?*anyopaque) Address {
         _ = ctx;
         return 0;
     }
@@ -56,17 +46,12 @@ pub const Flash = struct {
                 };
             }
 
-            pub const vtable = VTable{ .readFn = mem_read, .getBaseFn = Self.get_base };
+            pub const vtable = VTable{ .readFn = mem_read };
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 std.debug.assert(addr < @as(Address, @intCast(@divExact(size, 2))));
                 return std.mem.bytesAsSlice(u16, &mem.data)[addr];
-            }
-
-            fn get_base(ctx: ?*anyopaque) Address {
-                _ = ctx;
-                return 0; // Flash always starts at address 0 in AVR
             }
         };
     }
