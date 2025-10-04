@@ -93,7 +93,8 @@
     "r31": null
   },
   "mileage": 0,
-  "cpu": "attiny816",
+  "cpu": "atmega2560",
+  "cpus": null,
   "optimize": "ReleaseSmall",
   "gcc_flags": [
     "-g",

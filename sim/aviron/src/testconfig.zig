@@ -69,6 +69,7 @@ pub const TestSuiteConfig = struct {
     mileage: ?u32 = 0,
 
     cpu: ?[]const u8 = null,
+    cpus: ?[][]const u8 = null, // Alternative to cpu: run test against multiple MCUs
     optimize: std.builtin.OptimizeMode = .ReleaseSmall,
 
     gcc_flags: []const []const u8 = &.{

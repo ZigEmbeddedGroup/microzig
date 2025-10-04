@@ -1,6 +1,6 @@
 //! {
 //!   "exit": "breakpoint",
-//!   "cpu": "atmega328p",
+//!   "cpus": ["atmega328p", "atmega2560"],
 //!   "precondition": {
 //!     "r28": 3,
 //!     "r29": 2,

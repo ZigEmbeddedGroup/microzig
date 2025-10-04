@@ -383,34 +383,46 @@ fn add_test_suite_update(
 
                 const config = try parse_test_suite_config(b, file);
 
-                // Force write JSON directly using a temporary file approach
-                const json_content = config.to_string(b);
-                const temp_json = b.addWriteFile("temp.json", json_content);
+                // Determine which CPUs to compile for
+                const cpu_list = if (config.cpus) |cpus| cpus else if (config.cpu) |cpu| &[_][]const u8{cpu} else @panic("No CPU specified in test config!");
 
-                const json_write = Build.Step.Run.create(b, "write json to testsuite");
-                json_write.addArg("cp");
-                json_write.addFileArg(temp_json.getDirectory().path(b, "temp.json"));
-                json_write.addArg(b.fmt(
-                    "testsuite/{s}/{s}.elf.json",
-                    .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) },
-                ));
-                json_write.step.dependOn(&temp_json.step);
+                // Compile for each CPU
+                for (cpu_list) |cpu| {
+                    // Create a config for this specific CPU
+                    var cpu_config = config;
+                    cpu_config.cpu = cpu;
+                    cpu_config.cpus = null; // Don't include cpus array in individual test configs
 
-                // Force write ELF directly to testsuite directory
-                const gcc_invocation = Build.Step.Run.create(b, "write elf to testsuite");
-                gcc_invocation.addFileArg(avr_gcc);
-                gcc_invocation.addArg("-o");
-                gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) }));
-                gcc_invocation.addArg(b.fmt("-mmcu={s}", .{config.cpu orelse @panic("Unknown MCU!")}));
-                for (config.gcc_flags) |opt| {
-                    gcc_invocation.addArg(opt);
+                    // Force write JSON directly using a temporary file approach
+                    const json_content = cpu_config.to_string(b);
+                    const temp_json = b.addWriteFile("temp.json", json_content);
+
+                    const json_suffix = if (cpu_list.len > 1) b.fmt("-{s}", .{cpu}) else "";
+                    const json_write = Build.Step.Run.create(b, b.fmt("write json to testsuite ({s})", .{cpu}));
+                    json_write.addArg("cp");
+                    json_write.addFileArg(temp_json.getDirectory().path(b, "temp.json"));
+                    json_write.addArg(b.fmt(
+                        "testsuite/{s}/{s}{s}.elf.json",
+                        .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename), json_suffix },
+                    ));
+                    json_write.step.dependOn(&temp_json.step);
+
+                    // Force write ELF directly to testsuite directory
+                    const gcc_invocation = Build.Step.Run.create(b, b.fmt("compile elf for {s}", .{cpu}));
+                    gcc_invocation.addFileArg(avr_gcc);
+                    gcc_invocation.addArg("-o");
+                    gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename), json_suffix }));
+                    gcc_invocation.addArg(b.fmt("-mmcu={s}", .{cpu}));
+                    for (config.gcc_flags) |opt| {
+                        gcc_invocation.addArg(opt);
+                    }
+                    gcc_invocation.addArg("-I");
+                    gcc_invocation.addArg("testsuite");
+                    gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
+
+                    invoke_step.dependOn(&json_write.step);
+                    invoke_step.dependOn(&gcc_invocation.step);
                 }
-                gcc_invocation.addArg("-I");
-                gcc_invocation.addArg("testsuite");
-                gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
-
-                invoke_step.dependOn(&json_write.step);
-                invoke_step.dependOn(&gcc_invocation.step);
             },
         }
     }
