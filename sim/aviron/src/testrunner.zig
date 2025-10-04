@@ -12,26 +12,6 @@ const Cli = struct {
     config: ?[]const u8 = null,
 };
 
-const sram_base: u24 = 0x0100; // ATmega328P SRAM starts at 0x0100
-const MapperConfig = aviron.mcu.ClassicMapperConfig(sram_base);
-const MapperImpl = aviron.Mapper.SimpleMapper(MapperConfig);
-
-const SystemState = struct {
-    cpu: aviron.Cpu,
-
-    // Emulate Atmega382p device size:
-    flash_storage: aviron.Flash.Static(32768) = .{},
-    sram: aviron.RAM.Static(2048) = .{},
-    eeprom: aviron.EEPROM.Static(1024) = .{},
-    io: IO,
-    mapper: MapperImpl,
-
-    config: testconfig.TestSuiteConfig,
-    options: Cli,
-};
-
-var test_system: SystemState = undefined;
-
 const ExitMode = union(testconfig.ExitType) {
     breakpoint,
     enter_sleep_mode,
@@ -42,59 +22,204 @@ const ExitMode = union(testconfig.ExitType) {
     system_exit: u8,
 };
 
-fn validate_reg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void {
-    const expected = @field(ts.config.postcondition, @tagName(reg)) orelse return;
-
-    const actual = ts.cpu.regs[reg.num()];
-    if (expected != actual) {
-        std.debug.print("Invalid register value for register {s}: Expected 0x{X:0>2}, but got 0x{X:0>2}.\n", .{
-            @tagName(reg),
-            expected,
-            actual,
-        });
-        ok.* = false;
+fn run_test_with_mcu(
+    allocator: std.mem.Allocator,
+    mcu_name: []const u8,
+    test_config: testconfig.TestSuiteConfig,
+    options: Cli,
+    elf_paths: []const []const u8,
+) !void {
+    // Use comptime dispatch based on memory sizes (case-insensitive comparison)
+    if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega328P") or std.ascii.eqlIgnoreCase(mcu_name, "atmega328p")) {
+        try run_test(allocator, aviron.mcu.atmega328p, test_config, options, elf_paths);
+    } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATtiny816") or std.ascii.eqlIgnoreCase(mcu_name, "attiny816")) {
+        try run_test(allocator, aviron.mcu.attiny816, test_config, options, elf_paths);
+    } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega2560") or std.ascii.eqlIgnoreCase(mcu_name, "atmega2560")) {
+        try run_test(allocator, aviron.mcu.atmega2560, test_config, options, elf_paths);
+    } else {
+        std.debug.print("MCU '{s}' not yet supported in test runner\n", .{mcu_name});
+        return error.UnsupportedMCU;
     }
 }
 
-fn validate_syste_and_exit(exit_mode: ExitMode) noreturn {
-    var ok = true;
-    const ts = &test_system;
+fn run_test(
+    allocator: std.mem.Allocator,
+    comptime mcu_config: anytype,
+    test_config: testconfig.TestSuiteConfig,
+    options: Cli,
+    elf_paths: []const []const u8,
+) !void {
+    // Create mapper using MCU's MapperType
+    const MapperImpl = @TypeOf(mcu_config).MapperType;
 
-    if (exit_mode != ts.config.exit) {
+    var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
+    var sram = aviron.RAM.Static(mcu_config.sram_size){};
+    var eeprom = aviron.EEPROM.Static(mcu_config.eeprom_size){};
+
+    var stdout = std.array_list.Managed(u8).init(allocator);
+    defer stdout.deinit();
+
+    var stderr = std.array_list.Managed(u8).init(allocator);
+    defer stderr.deinit();
+
+    var io = IO{
+        .sreg = undefined,
+        .sp = mcu_config.sram_base + @as(u16, @intCast(mcu_config.sram_size - 1)),
+        .config = test_config,
+        .stdin = test_config.stdin,
+        .stdout = &stdout,
+        .stderr = &stderr,
+    };
+
+    const flash_mem = flash_storage.memory();
+    var sram_mem = sram.memory();
+    const eeprom_mem = eeprom.memory();
+    var io_mem = io.memory();
+
+    var memory_mapper = MapperImpl{
+        .io = &io_mem,
+        .sram = &sram_mem,
+    };
+
+    var cpu = aviron.Cpu{
+        .trace = options.trace,
+        .instruction_set = mcu_config.instruction_set,
+        .flash = flash_mem,
+        .sram = sram_mem,
+        .sram_base = mcu_config.sram_base,
+        .eeprom = eeprom_mem,
+        .io = io_mem,
+        .mapper = memory_mapper.mapper(),
+        .code_model = mcu_config.code_model,
+        .sio = .{
+            .ramp_x = mcu_config.special_io.ramp_x,
+            .ramp_y = mcu_config.special_io.ramp_y,
+            .ramp_z = mcu_config.special_io.ramp_z,
+            .ramp_d = mcu_config.special_io.ramp_d,
+            .e_ind = mcu_config.special_io.e_ind,
+            .sp_l = mcu_config.special_io.sp_l,
+            .sp_h = mcu_config.special_io.sp_h,
+            .sreg = mcu_config.special_io.sreg,
+        },
+    };
+
+    io.sreg = &cpu.sreg;
+
+    // Initialize CPU state
+    inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
+        if (@field(test_config.precondition.sreg, fld.name)) |init_value| {
+            @field(cpu.sreg, fld.name) = init_value;
+        }
+    }
+    inline for (comptime std.enums.values(aviron.Register)) |reg| {
+        if (@field(test_config.precondition, @tagName(reg))) |init_value| {
+            cpu.regs[reg.num()] = init_value;
+        }
+    }
+
+    // Load ELF files
+    for (elf_paths) |file_path| {
+        var elf_file = try std.fs.cwd().openFile(file_path, .{});
+        defer elf_file.close();
+
+        var file_buf: [4096]u8 = undefined;
+        var reader = elf_file.reader(&file_buf);
+
+        var header = try std.elf.Header.read(&reader.interface);
+
+        var pheaders = header.iterateProgramHeaders(&reader);
+        while (try pheaders.next()) |phdr| {
+            if (phdr.p_type != std.elf.PT_LOAD)
+                continue;
+
+            const dest_mem = if (phdr.p_paddr >= 0x0080_0000)
+                &sram.data
+            else
+                &flash_storage.data;
+
+            const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
+            const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
+                addr_masked - mcu_config.sram_base
+            else
+                addr_masked;
+
+            try reader.seekTo(phdr.p_offset);
+            try reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
+            @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+        }
+
+        // Set PC to entry point
+        cpu.pc = @intCast(header.entry);
+    }
+
+    // Run the test
+    const result = cpu.run(null, null) catch |err| {
+        std.debug.print("CPU execution error: {}\n", .{err});
+        std.process.exit(1);
+    };
+
+    // Check if it was a system exit (via IO)
+    const exit_mode: ExitMode = if (io.exit_requested)
+        .{ .system_exit = io.exit_code }
+    else switch (result) {
+        .breakpoint => .breakpoint,
+        .enter_sleep_mode => .enter_sleep_mode,
+        .reset_watchdog => .reset_watchdog,
+        .out_of_gas => .out_of_gas,
+        .infinite_loop => .infinite_loop,
+        .program_exit => .program_exit,
+    };
+
+    // Validate results
+    var ok = true;
+
+    if (exit_mode != test_config.exit) {
         std.debug.print("Invalid exit type: Expected {s}, but got {s}.\n", .{
-            @tagName(ts.config.exit),
+            @tagName(test_config.exit),
             @tagName(exit_mode),
         });
         ok = false;
-    } else if (exit_mode == .system_exit and exit_mode.system_exit != ts.config.exit_code) {
+    } else if (exit_mode == .system_exit and exit_mode.system_exit != test_config.exit_code) {
         std.debug.print("Invalid exit code: Expected {}, but got {}.\n", .{
-            ts.config.exit_code,
+            test_config.exit_code,
             exit_mode.system_exit,
         });
         ok = false;
     }
 
-    if (!std.mem.eql(u8, ts.io.stdout.items, ts.config.stdout)) {
+    if (!std.mem.eql(u8, stdout.items, test_config.stdout)) {
         std.debug.print("stdout mismatch:\n", .{});
-        std.debug.print("expected: '{x}'\n", .{ts.config.stdout});
-        std.debug.print("actual:   '{x}'\n", .{ts.io.stdout.items});
+        std.debug.print("expected: '{x}'\n", .{test_config.stdout});
+        std.debug.print("actual:   '{x}'\n", .{stdout.items});
         ok = false;
     }
 
-    if (!std.mem.eql(u8, ts.io.stderr.items, ts.config.stderr)) {
+    if (!std.mem.eql(u8, stderr.items, test_config.stderr)) {
         std.debug.print("stderr mismatch:\n", .{});
-        std.debug.print("expected: '{x}'\n", .{ts.config.stderr});
-        std.debug.print("actual:   '{x}'\n", .{ts.io.stderr.items});
+        std.debug.print("expected: '{x}'\n", .{test_config.stderr});
+        std.debug.print("actual:   '{x}'\n", .{stderr.items});
         ok = false;
     }
 
+    // Check each register
     inline for (comptime std.enums.values(aviron.Register)) |reg| {
-        validate_reg(&ok, ts, reg);
+        const reg_name = comptime @tagName(reg);
+        if (@field(test_config.postcondition, reg_name)) |expected| {
+            const actual = cpu.regs[reg.num()];
+            if (expected != actual) {
+                std.debug.print("Invalid register value for register {s}: Expected 0x{X:0>2}, but got 0x{X:0>2}.\n", .{
+                    reg_name,
+                    expected,
+                    actual,
+                });
+                ok = false;
+            }
+        }
     }
 
     inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
-        if (@field(test_system.config.postcondition.sreg, fld.name)) |expected_value| {
-            const actual_value = @field(test_system.cpu.sreg, fld.name);
+        if (@field(test_config.postcondition.sreg, fld.name)) |expected_value| {
+            const actual_value = @field(cpu.sreg, fld.name);
             if (actual_value != expected_value) {
                 std.debug.print("Invalid register value for SREG.{s}: Expected {}, but got {}.\n", .{
                     fld.name,
@@ -106,8 +231,8 @@ fn validate_syste_and_exit(exit_mode: ExitMode) noreturn {
         }
     }
 
-    if (!ok and ts.options.name.len > 0) {
-        std.debug.print("test {s} failed.\n", .{ts.options.name});
+    if (!ok and options.name.len > 0) {
+        std.debug.print("test {s} failed.\n", .{options.name});
     }
 
     std.process.exit(if (ok) 0x00 else 0x01);
@@ -134,129 +259,20 @@ pub fn main() !u8 {
     if (cli.positionals.len == 0)
         @panic("usage: aviron [--trace] <elf>");
 
-    var stdout = std.array_list.Managed(u8).init(allocator);
-    defer stdout.deinit();
-
-    var stderr = std.array_list.Managed(u8).init(allocator);
-    defer stderr.deinit();
-
-    // Initialize test_system with partial initialization to break circular dependency
-    test_system = SystemState{
-        .options = cli.options,
-        .config = config,
-        .io = undefined, // Initialized below
-        .mapper = undefined, // Initialized below
-        .cpu = undefined, // Initialized below
-    };
-
-    test_system.io = IO{
-        .sreg = undefined, // Will be set after CPU initialization
-        // Initialize SP to RAMEND (SRAM base + SRAM size - 1)
-        .sp = sram_base + @as(u16, test_system.sram.data.len - 1),
-        .config = config,
-
-        .stdin = config.stdin,
-        .stdout = &stdout,
-        .stderr = &stderr,
-    };
-
-    // Create memory interfaces
-    const flash_mem = test_system.flash_storage.memory();
-    var sram_mem = test_system.sram.memory();
-    const eeprom_mem = test_system.eeprom.memory();
-    var io_mem = test_system.io.memory();
-
-    test_system.mapper = MapperImpl{
-        .io = &io_mem,
-        .sram = &sram_mem,
-    };
-
-    test_system.cpu = aviron.Cpu{
-        .trace = cli.options.trace,
-
-        .instruction_set = .avr5,
-
-        .flash = flash_mem,
-        .sram = sram_mem,
-        .sram_base = sram_base,
-        .eeprom = eeprom_mem,
-        .io = io_mem,
-        .mapper = test_system.mapper.mapper(),
-
-        .code_model = .code16,
-
-        .sio = .{
-            .ramp_x = null,
-            .ramp_y = null,
-            .ramp_z = null,
-            .ramp_d = null,
-            .e_ind = null,
-
-            .sp_l = @intFromEnum(IO.Register.sp_l),
-            .sp_h = @intFromEnum(IO.Register.sp_h),
-
-            .sreg = @intFromEnum(IO.Register.sreg),
-        },
-    };
-
-    test_system.io.sreg = &test_system.cpu.sreg;
-
-    // Initialize CPU state:
-    inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
-        if (@field(test_system.config.precondition.sreg, fld.name)) |init_value| {
-            @field(test_system.cpu.sreg, fld.name) = init_value;
+    // Determine which MCU(s) to test with
+    if (config.cpus) |cpus| {
+        // Run test against multiple MCUs
+        for (cpus) |mcu_name| {
+            std.debug.print("Running test with MCU: {s}\n", .{mcu_name});
+            try run_test_with_mcu(allocator, mcu_name, config, cli.options, cli.positionals);
         }
-    }
-    inline for (comptime std.enums.values(aviron.Register)) |reg| {
-        if (@field(test_system.config.precondition, @tagName(reg))) |init_value| {
-            test_system.cpu.regs[reg.num()] = init_value;
-        }
+    } else {
+        // Run test against a single MCU (default to ATmega328P if not specified)
+        const mcu_name = config.cpu orelse "ATmega328P";
+        try run_test_with_mcu(allocator, mcu_name, config, cli.options, cli.positionals);
     }
 
-    for (cli.positionals) |file_path| {
-        var elf_file = try std.fs.cwd().openFile(file_path, .{});
-        defer elf_file.close();
-
-        var buf: [4096]u8 = undefined;
-        var file_reader = elf_file.reader(&buf);
-
-        var header = try std.elf.Header.read(&file_reader.interface);
-
-        var pheaders = header.iterateProgramHeaders(&file_reader);
-        while (try pheaders.next()) |phdr| {
-            if (phdr.p_type != std.elf.PT_LOAD)
-                continue; // Header isn't lodead
-
-            const dest_mem = if (phdr.p_vaddr >= 0x0080_0000)
-                &test_system.sram.data
-            else
-                &test_system.flash_storage.data;
-
-            const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
-
-            // Adjust for configured base of the target memory region
-            const target_addr: u24 = if (phdr.p_vaddr >= 0x0080_0000)
-                addr_masked - sram_base
-            else
-                addr_masked; // Flash always starts at 0
-
-            if (phdr.p_filesz > 0) {
-                try file_reader.seekTo(phdr.p_offset);
-                try file_reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
-            }
-            if (phdr.p_memsz > phdr.p_filesz) {
-                @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
-            }
-        }
-
-        // Set PC to entry point
-        test_system.cpu.pc = @intCast(header.entry);
-    }
-
-    const result = try test_system.cpu.run(null, null);
-    validate_syste_and_exit(switch (result) {
-        inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
-    });
+    return 0;
 }
 
 const IO = struct {
@@ -267,10 +283,21 @@ const IO = struct {
     sp: u16,
     sreg: *aviron.Cpu.SREG,
 
+    // RAMP registers for extended addressing (atmega2560)
+    ramp_x: u8 = 0,
+    ramp_y: u8 = 0,
+    ramp_z: u8 = 0,
+    ramp_d: u8 = 0,
+    e_ind: u8 = 0,
+
     stdout: *std.array_list.Managed(u8),
     stderr: *std.array_list.Managed(u8),
 
     stdin: []const u8,
+
+    // Exit status tracking
+    exit_requested: bool = false,
+    exit_code: u8 = 0,
 
     pub fn memory(self: *IO) aviron.IO {
         return aviron.IO{
@@ -309,9 +336,14 @@ const IO = struct {
         scratch_e = 0x1e, // scratch register
         scratch_f = 0x1f, // scratch register
 
-        sp_l = 0x3D, // ATmega328p
-        sp_h = 0x3E, // ATmega328p
-        sreg = 0x3F, // ATmega328p
+        ramp_d = 0x38, // ATmega2560
+        ramp_x = 0x39, // ATmega2560
+        ramp_y = 0x3A, // ATmega2560
+        ramp_z = 0x3B, // ATmega2560
+        e_ind = 0x3C,  // ATmega2560
+        sp_l = 0x3D,   // Common
+        sp_h = 0x3E,   // Common
+        sreg = 0x3F,   // Common
 
         _,
     };
@@ -347,6 +379,12 @@ const IO = struct {
 
             .sreg => @bitCast(io.sreg.*),
 
+            .ramp_x => io.ramp_x,
+            .ramp_y => io.ramp_y,
+            .ramp_z => io.ramp_z,
+            .ramp_d => io.ramp_d,
+            .e_ind => io.e_ind,
+
             .sp_l => @truncate(io.sp >> 0),
             .sp_h => @truncate(io.sp >> 8),
 
@@ -363,9 +401,10 @@ const IO = struct {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
-            .exit => validate_syste_and_exit(.{
-                .system_exit = (value & mask),
-            }),
+            .exit => {
+                io.exit_requested = true;
+                io.exit_code = value & mask;
+            },
 
             .stdio => io.stdout.append(value & mask) catch @panic("out of memory"),
             .stderr => io.stderr.append(value & mask) catch @panic("out of memory"),
@@ -386,6 +425,12 @@ const IO = struct {
             .scratch_d => write_masked(&io.scratch_regs[0xd], mask, value),
             .scratch_e => write_masked(&io.scratch_regs[0xe], mask, value),
             .scratch_f => write_masked(&io.scratch_regs[0xf], mask, value),
+
+            .ramp_x => write_masked(&io.ramp_x, mask, value),
+            .ramp_y => write_masked(&io.ramp_y, mask, value),
+            .ramp_z => write_masked(&io.ramp_z, mask, value),
+            .ramp_d => write_masked(&io.ramp_d, mask, value),
+            .e_ind => write_masked(&io.e_ind, mask, value),
 
             .sp_l => write_masked(low_byte(&io.sp), mask, value),
             .sp_h => write_masked(high_byte(&io.sp), mask, value),
@@ -421,8 +466,8 @@ const IO = struct {
     }
 
     fn check_exit(ctx: ?*anyopaque) ?u8 {
-        _ = ctx;
-        return null; // Testrunner handles exits via validate_syste_and_exit
+        const io: *IO = @ptrCast(@alignCast(ctx.?));
+        return if (io.exit_requested) io.exit_code else null;
     }
 
     fn translate_addr(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
