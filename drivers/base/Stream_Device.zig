@@ -59,22 +59,12 @@ pub fn readv(sd: Stream_Device, bytes_vec: []const []u8) ReadError!usize {
     return readv_fn(sd.ptr, bytes_vec);
 }
 
-pub const Reader = std.io.Reader(Stream_Device, ReadError, reader_read);
-pub fn reader(sd: Stream_Device) Reader {
-    return .{ .context = sd };
+pub fn writer(self: Stream_Device, buf: []u8) Writer {
+    return .init(self, buf);
 }
 
-fn reader_read(sd: Stream_Device, buf: []u8) ReadError!usize {
-    return sd.read(buf);
-}
-
-pub const Writer = std.io.Reader(Stream_Device, WriteError, writer_write);
-pub fn writer(sd: Stream_Device) Writer {
-    return .{ .context = sd };
-}
-
-fn writer_write(sd: Stream_Device, buf: []const u8) WriteError!usize {
-    return sd.write(buf);
+pub fn reader(self: Stream_Device, buf: []u8) Reader {
+    return .init(self, buf);
 }
 
 pub const VTable = struct {
@@ -82,6 +72,104 @@ pub const VTable = struct {
     disconnect_fn: ?*const fn (*anyopaque) void,
     writev_fn: ?*const fn (*anyopaque, datagram: []const []const u8) WriteError!usize,
     readv_fn: ?*const fn (*anyopaque, datagram: []const []u8) ReadError!usize,
+};
+
+///microzig already has this function in SliceVector, but no other base driver include microzig as a dependency
+///so we duplicate it here for now
+fn byte_sum(data: []const []const u8) usize {
+    var sum: usize = 0;
+    for (data) |bytes| {
+        sum += bytes.len;
+    }
+    return sum;
+}
+
+pub const Writer = struct {
+    dev: Stream_Device,
+    interface: std.Io.Writer,
+    err: ?WriteError = null,
+
+    fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const wt: *Writer = @alignCast(@fieldParentPtr("interface", w));
+        const total_size = byte_sum(data);
+        var ret: usize = 0;
+
+        const n = wt.dev.write(w.buffered()) catch |err| {
+            wt.err = err;
+            return error.WriteFailed;
+        };
+        _ = w.consume(n);
+
+        ret = wt.dev.writev(data) catch |err| {
+            wt.err = err;
+            return error.WriteFailed;
+        };
+
+        //TODO: maybe check if ret is 0 across multiple calls to detect broken stream?
+        //check if we wrote everything we wanted before splatting
+        if (ret != total_size) {
+            return ret;
+        }
+
+        const pattern = data[data.len - 1];
+        for (0..splat) |_| {
+            ret += wt.dev.write(pattern) catch |err| {
+                wt.err = err;
+                return error.WriteFailed;
+            };
+        }
+
+        return ret;
+    }
+
+    pub fn init(dev: Stream_Device, buf: []u8) Writer {
+        return Writer{
+            .dev = dev,
+            .interface = .{
+                .buffer = buf,
+                .vtable = &.{
+                    .drain = drain,
+                },
+            },
+        };
+    }
+};
+
+pub const Reader = struct {
+    dev: Stream_Device,
+    interface: std.Io.Reader,
+    err: ?ReadError = null,
+
+    fn stream(r: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+        const rd: *Reader = @alignCast(@fieldParentPtr("interface", r));
+        const max: usize = @intFromEnum(limit);
+        var aux_buffer: [256]u8 = undefined; //mandatory minimum buffer
+
+        const n = rd.dev.read(aux_buffer[0..@min(aux_buffer.len, max)]) catch |err| {
+            rd.err = err;
+            return error.ReadFailed;
+        };
+
+        //NOTE: should we treat 0 as an EOF or check if 0 across multiple calls before returning EOF?
+        if (n == 0) return error.EndOfStream;
+
+        try w.writeAll(aux_buffer[0..n]);
+        return n;
+    }
+
+    pub fn init(dev: Stream_Device, buf: []u8) Reader {
+        return Reader{
+            .dev = dev,
+            .interface = .{
+                .buffer = buf,
+                .seek = 0,
+                .end = 0,
+                .vtable = &.{
+                    .stream = stream,
+                },
+            },
+        };
+    }
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
