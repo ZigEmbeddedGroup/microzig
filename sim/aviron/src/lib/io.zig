@@ -135,156 +135,6 @@ pub const RAM = struct {
 
 pub const EEPROM = RAM; // actually the same interface *shrug*
 
-/// Mapper handles translation of data-space addresses to the appropriate memory backend.
-/// This allows different AVR MCUs to have different memory layouts (e.g., IO registers
-/// mapped at different locations, extended IO space, etc.)
-pub const Mapper = struct {
-    pub const Address = u24;
-
-    ctx: ?*anyopaque,
-    vtable: *const VTable,
-
-    pub fn read(mapper: Mapper, addr: Address) u8 {
-        return mapper.vtable.readFn(mapper.ctx, addr);
-    }
-
-    pub fn write(mapper: Mapper, addr: Address, value: u8) void {
-        mapper.vtable.writeFn(mapper.ctx, addr, value);
-    }
-
-    /// `mask` determines which bits of `value` are written.
-    pub fn write_masked(mapper: Mapper, addr: Address, mask: u8, value: u8) void {
-        mapper.vtable.writeMaskedFn(mapper.ctx, addr, mask, value);
-    }
-
-    pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
-        writeMaskedFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
-    };
-
-    pub const empty = Mapper{
-        .ctx = null,
-        .vtable = &VTable{
-            .readFn = empty_read,
-            .writeFn = empty_write,
-            .writeMaskedFn = empty_write_masked,
-        },
-    };
-
-    fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
-        _ = ctx;
-        _ = addr;
-        return 0xFF;
-    }
-
-    fn empty_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
-        _ = ctx;
-        _ = addr;
-        _ = value;
-    }
-
-    fn empty_write_masked(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
-        _ = ctx;
-        _ = addr;
-        _ = mask;
-        _ = value;
-    }
-
-    /// SimpleMapper is a range-based mapper that routes data-space addresses to IO or SRAM.
-    /// The mapper translates data-space addresses to array indices for SRAM access.
-    //
-    /// NOTE: The mapper holds pointers to IO and SRAM, not copies. This allows the CPU to
-    /// share the same memory instances - the CPU uses the mapper for all data-space access
-    /// (loads, stores, stack operations, etc.), but keeps direct IO access for reading/writing
-    /// special registers like SP and SREG.
-    pub fn SimpleMapper(
-        comptime io_translate_fn: *const fn (data_addr: u24) ?IO.Address,
-        comptime sram_base: u24,
-    ) type {
-        return struct {
-            const Self = @This();
-
-            io: *IO,
-            sram: *RAM,
-
-            pub fn mapper(self: *Self) Mapper {
-                return Mapper{
-                    .ctx = self,
-                    .vtable = &vtable,
-                };
-            }
-
-            const vtable = Mapper.VTable{
-                .readFn = mapperRead,
-                .writeFn = mapperWrite,
-                .writeMaskedFn = mapperWriteMasked,
-            };
-
-            fn mapperRead(ctx: ?*anyopaque, addr: Mapper.Address) u8 {
-                const self: *Self = @ptrCast(@alignCast(ctx.?));
-
-                // Check if address is in IO range
-                if (io_translate_fn(addr)) |io_addr| {
-                    return self.io.read(io_addr);
-                }
-
-                // Check if address is in SRAM range
-                if (addr < sram_base) {
-                    std.debug.print("Mapper read from unmapped address: 0x{X:0>6} (below SRAM base 0x{X:0>6})\n", .{ addr, sram_base });
-                    @panic("Read from unmapped memory address");
-                }
-
-                // Translate to SRAM array index
-                const sram_index = addr - sram_base;
-                return self.sram.read(sram_index);
-            }
-
-            fn mapperWrite(ctx: ?*anyopaque, addr: Mapper.Address, value: u8) void {
-                const self: *Self = @ptrCast(@alignCast(ctx.?));
-
-                // Check if address is in IO range
-                if (io_translate_fn(addr)) |io_addr| {
-                    self.io.write(io_addr, value);
-                    return;
-                }
-
-                // Check if address is in SRAM range
-                if (addr < sram_base) {
-                    std.debug.print("Mapper write to unmapped address: 0x{X:0>6} (below SRAM base 0x{X:0>6})\n", .{ addr, sram_base });
-                    @panic("Write to unmapped memory address");
-                }
-
-                // Translate to SRAM array index
-                const sram_index = addr - sram_base;
-                self.sram.write(sram_index, value);
-            }
-
-            fn mapperWriteMasked(ctx: ?*anyopaque, addr: Mapper.Address, mask: u8, value: u8) void {
-                const self: *Self = @ptrCast(@alignCast(ctx.?));
-
-                // Check if address is in IO range
-                if (io_translate_fn(addr)) |io_addr| {
-                    self.io.write_masked(io_addr, mask, value);
-                    return;
-                }
-
-                // Check if address is in SRAM range
-                if (addr < sram_base) {
-                    std.debug.print("Mapper write_masked to unmapped address: 0x{X:0>6} (below SRAM base 0x{X:0>6})\n", .{ addr, sram_base });
-                    @panic("Write to unmapped memory address");
-                }
-
-                // Translate to SRAM array index - perform read-modify-write
-                const sram_index = addr - sram_base;
-                const old_value = self.sram.read(sram_index);
-                const new_value = (old_value & ~mask) | (value & mask);
-                self.sram.write(sram_index, new_value);
-            }
-        };
-    }
-};
-
 pub const IO = struct {
     // Some AVR families (e.g., XMEGA) expose extended I/O up to 0xFFF (12 bits).
     pub const Address = u12;
@@ -311,17 +161,10 @@ pub const IO = struct {
         return mem.vtable.checkExitFn(mem.ctx);
     }
 
-    /// Translate an absolute data-space address to an I/O port address if mapped.
-    /// Returns null when the address is not mapped to I/O and should be served by SRAM.
-    pub fn translate_address(mem: IO, data_addr: u24) ?Address {
-        return mem.vtable.translateAddressFn(mem.ctx, data_addr);
-    }
-
     pub const VTable = struct {
         readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
         writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
         checkExitFn: *const fn (ctx: ?*anyopaque) ?u8,
-        translateAddressFn: *const fn (ctx: ?*anyopaque, data_addr: u24) ?Address,
     };
 
     pub const empty = IO{
@@ -330,7 +173,6 @@ pub const IO = struct {
             .readFn = empty_read,
             .writeFn = empty_write,
             .checkExitFn = empty_check_exit,
-            .translateAddressFn = empty_translate,
         },
     };
 
@@ -352,9 +194,5 @@ pub const IO = struct {
         return null;
     }
 
-    fn empty_translate(ctx: ?*anyopaque, data_addr: u24) ?Address {
-        _ = ctx;
-        _ = data_addr;
-        return null;
-    }
+    // no translate in new design
 };

@@ -1,38 +1,83 @@
 const std = @import("std");
 const io_mod = @import("io.zig");
+const memory = @import("memory.zig");
 const Cpu = @import("Cpu.zig");
 
 /// MCU configuration defines the memory layout and special register addresses
 /// for a specific AVR microcontroller.
-pub fn Config(comptime Mapper: type) type {
-    return struct {
-        /// Human-readable name of the MCU
-        name: []const u8,
+pub const Config = struct {
+    /// Human-readable name of the MCU
+    name: []const u8,
 
-        /// Flash memory size in bytes (must be 2-aligned)
-        flash_size: usize,
+    /// Flash memory size in bytes (must be 2-aligned)
+    flash_size: usize,
 
-        /// SRAM size in bytes
-        sram_size: usize,
+    /// SRAM size in bytes
+    sram_size: usize,
 
-        /// SRAM base address in data space
-        sram_base: u24,
+    /// SRAM base address in data space
+    sram_base: u24,
 
-        /// EEPROM size in bytes
-        eeprom_size: usize,
+    /// EEPROM size in bytes
+    eeprom_size: usize,
 
-        /// Code model (determines PC width)
-        code_model: Cpu.CodeModel,
+    /// Code model (determines PC width)
+    code_model: Cpu.CodeModel,
 
-        /// Instruction set variant
-        instruction_set: Cpu.InstructionSet,
+    /// Instruction set variant
+    instruction_set: Cpu.InstructionSet,
 
-        /// Special I/O register addresses
-        special_io: SpecialIoConfig,
+    /// Special I/O register addresses
+    special_io: SpecialIoConfig,
 
-        /// Memory mapper type for this MCU
-        pub const MapperType = Mapper;
-    };
+    /// Start of IO window in data address space (inclusive).
+    io_window_base: u24,
+    /// End of IO window in data address space (inclusive).
+    io_window_end: u24,
+};
+
+/// Convenience container for constructed memory spaces.
+pub const Spaces = struct {
+    data: memory.MemorySpace,
+    io: memory.MemorySpace,
+    prog: memory.MemorySpace,
+
+    pub fn deinit(self: *const Spaces, alloc: std.mem.Allocator) void {
+        self.data.deinit(alloc);
+        self.io.deinit(alloc);
+        self.prog.deinit(alloc);
+    }
+};
+
+/// Build memory spaces (data, io, program) for the given MCU configuration.
+pub fn build_spaces(
+    alloc: std.mem.Allocator,
+    cfg: Config,
+    flash: *const io_mod.Flash,
+    ram: *io_mod.RAM,
+    io_mem: *io_mod.IO,
+) !Spaces {
+    // IO window size
+    const io_size: usize = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
+
+    // Data space: IO window mapped into data space (at base), then SRAM at sram_base
+    var data_seg_buf: [2]memory.Segment = undefined;
+    data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = memory.Backend.fromIO(io_mem) };
+    data_seg_buf[1] = .{ .at = cfg.sram_base, .size = ram.size, .backend = memory.Backend.fromRAM(ram) };
+    const data_space = try memory.MemorySpace.init(alloc, data_seg_buf[0..]);
+
+    // IO space: IO addresses starting at 0
+    var io_seg_buf: [1]memory.Segment = undefined;
+    io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = memory.Backend.fromIO(io_mem) };
+    const io_space = try memory.MemorySpace.init(alloc, io_seg_buf[0..]);
+
+    // Program space: byte-addressable view over Flash
+    var prog_seg_buf: [1]memory.Segment = undefined;
+    const prog_size: usize = flash.size * 2; // words → bytes
+    prog_seg_buf[0] = .{ .at = 0, .size = prog_size, .backend = memory.Backend.fromFlash(flash) };
+    const prog_space = try memory.MemorySpace.init(alloc, prog_seg_buf[0..]);
+
+    return .{ .data = data_space, .io = io_space, .prog = prog_space };
 }
 
 pub const SpecialIoConfig = struct {
@@ -53,32 +98,12 @@ pub const SpecialIoConfig = struct {
     sreg: io_mod.IO.Address,
 };
 
-
-/// Classic AVR IO translation: IO mapped at 0x0020-0x005F in data space
-pub fn classic_io_translate(data_addr: u24) ?io_mod.IO.Address {
-    // Classic AVR: IO registers at 0x0020-0x005F map to IO addresses 0x00-0x3F
-    return if (data_addr >= 0x20 and data_addr <= 0x5F)
-        @intCast(data_addr - 0x20)
-    else
-        null;
-}
-
-/// Extended IO translation: More IO registers mapped in data space
-pub fn extended_io_translate(data_addr: u24) ?io_mod.IO.Address {
-    // Extended IO: 0x0020-0x00FF map to IO addresses 0x00-0xDF
-    return if (data_addr >= 0x20 and data_addr <= 0xFF)
-        @intCast(data_addr - 0x20)
-    else
-        null;
-}
-
-
 // ============================================================================
 // Predefined MCU Configurations
 // ============================================================================
 
 /// ATmega328P configuration (Arduino Uno)
-pub const atmega328p = Config(io_mod.Mapper.SimpleMapper(classic_io_translate, 0x0100)){
+pub const atmega328p = Config{
     .name = "ATmega328P",
     .flash_size = 32768,
     .sram_size = 2048,
@@ -96,10 +121,12 @@ pub const atmega328p = Config(io_mod.Mapper.SimpleMapper(classic_io_translate, 0
         .sp_h = 0x3E,
         .sreg = 0x3F,
     },
+    .io_window_base = 0x20,
+    .io_window_end = 0x5F,
 };
 
 /// ATtiny816 configuration (modern tinyAVR)
-pub const attiny816 = Config(io_mod.Mapper.SimpleMapper(classic_io_translate, 0x3F00)){
+pub const attiny816 = Config{
     .name = "ATtiny816",
     .flash_size = 8192,
     .sram_size = 512,
@@ -117,10 +144,12 @@ pub const attiny816 = Config(io_mod.Mapper.SimpleMapper(classic_io_translate, 0x
         .sp_h = 0x3E,
         .sreg = 0x3F,
     },
+    .io_window_base = 0x20,
+    .io_window_end = 0x5F,
 };
 
 /// ATmega2560 configuration (Arduino Mega)
-pub const atmega2560 = Config(io_mod.Mapper.SimpleMapper(extended_io_translate, 0x0200)){
+pub const atmega2560 = Config{
     .name = "ATmega2560",
     .flash_size = 262144,
     .sram_size = 8192,
@@ -138,5 +167,6 @@ pub const atmega2560 = Config(io_mod.Mapper.SimpleMapper(extended_io_translate, 
         .sp_h = 0x3E,
         .sreg = 0x3F,
     },
+    .io_window_base = 0x20,
+    .io_window_end = 0x00FF,
 };
-

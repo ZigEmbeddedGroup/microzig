@@ -1,6 +1,8 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
 const io_mod = @import("io.zig");
+const builtin = @import("builtin");
+const memory = @import("memory.zig");
 
 const Flash = io_mod.Flash;
 const RAM = io_mod.RAM;
@@ -61,7 +63,9 @@ sram: RAM,
 sram_base: u24,
 eeprom: EEPROM,
 io: IO,
-mapper: io_mod.Mapper,
+data: memory.MemorySpace,
+io_space: memory.MemorySpace,
+prog: memory.MemorySpace,
 
 // State
 pc: u24 = 0,
@@ -127,7 +131,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
 
         var j: usize = 0;
         while (j < row_len) : (j += 1) {
-            cur_row[j] = cpu.mapper.read(cpu.sram_base + @as(u24, @intCast(i + j)));
+            cur_row[j] = cpu.data.read8(cpu.sram_base + @as(u24, @intCast(i + j))) catch 0x00;
         }
 
         // Only elide repeated lines of all zeroes
@@ -279,18 +283,33 @@ fn shift_program_counter(cpu: *Cpu, by: i12) void {
 }
 
 fn fetch_code(cpu: *Cpu) u16 {
-    const value = cpu.flash.read(cpu.pc);
+    // Program space is byte-addressed; PC is word-addressed.
+    const base: usize = @intCast(@as(u32, cpu.pc) << 1);
+    const lo = cpu.prog.read8(base) catch @panic("fetch_code: unmapped program byte (lo)");
+    const hi = cpu.prog.read8(base + 1) catch @panic("fetch_code: unmapped program byte (hi)");
+    const value: u16 = switch (comptime builtin.cpu.arch.endian()) {
+        .little => (@as(u16, hi) << 8) | lo,
+        .big => (@as(u16, lo) << 8) | hi,
+    };
     cpu.pc +%= 1; // increment with wraparound
     cpu.pc &= @intFromEnum(cpu.code_model); // then wrap to lower bit size
     return value;
 }
 
 inline fn data_read(cpu: *Cpu, addr: u24) u8 {
-    return cpu.mapper.read(addr);
+    return cpu.data.read8(addr) catch |e| switch (e) {
+        error.Unmapped => @panic("Read from unmapped memory address"),
+        error.OutOfRange => @panic("Read out of range"),
+        error.ReadOnly => @panic("ReadOnly error on read"),
+    };
 }
 
 inline fn data_write(cpu: *Cpu, addr: u24, value: u8) void {
-    cpu.mapper.write(addr, value);
+    cpu.data.write8(addr, value) catch |e| switch (e) {
+        error.Unmapped => @panic("Write to unmapped memory address"),
+        error.OutOfRange => @panic("Write out of range"),
+        error.ReadOnly => @panic("Write to read-only memory"),
+    };
 }
 
 fn push(cpu: *Cpu, val: u8) void {
@@ -298,7 +317,7 @@ fn push(cpu: *Cpu, val: u8) void {
     const sp = cpu.get_sp();
     // AVR convention: write to [SP] first, then decrement SP
     // SP points to the first unused location
-    cpu.mapper.write(sp, val);
+    cpu.data.write8(sp, val) catch @panic("stack write failed");
     cpu.set_sp(sp -% 1);
 }
 
@@ -306,7 +325,7 @@ fn pop(cpu: *Cpu) u8 {
     // AVR POP: Increment SP first, then read from [SP]
     const sp = cpu.get_sp() +% 1;
     cpu.set_sp(sp);
-    return cpu.mapper.read(sp);
+    return cpu.data.read8(sp) catch @panic("stack read failed");
 }
 
 fn push_code_loc(cpu: *Cpu, val: u24) void {
@@ -359,11 +378,11 @@ fn read_wide_reg(cpu: *Cpu, comptime reg: WideReg, comptime mode: IndexRegReadMo
         switch (mode) {
             .raw => 0,
             .ramp => switch (reg) {
-                .x => if (cpu.sio.ramp_x) |ramp| cpu.io.read(ramp) else 0,
-                .y => if (cpu.sio.ramp_y) |ramp| cpu.io.read(ramp) else 0,
-                .z => if (cpu.sio.ramp_z) |ramp| cpu.io.read(ramp) else 0,
+                .x => if (cpu.sio.ramp_x) |ramp| (cpu.io_space.read8(@intCast(ramp)) catch @panic("IO read failed")) else 0,
+                .y => if (cpu.sio.ramp_y) |ramp| (cpu.io_space.read8(@intCast(ramp)) catch @panic("IO read failed")) else 0,
+                .z => if (cpu.sio.ramp_z) |ramp| (cpu.io_space.read8(@intCast(ramp)) catch @panic("IO read failed")) else 0,
             },
-            .eind => if (cpu.sio.e_ind) |e_ind| cpu.io.read(e_ind) else 0,
+            .eind => if (cpu.sio.e_ind) |e_ind| (cpu.io_space.read8(@intCast(e_ind)) catch @panic("IO read failed")) else 0,
         },
         cpu.regs[reg.base() + 1],
         cpu.regs[reg.base() + 0],
@@ -378,9 +397,9 @@ fn write_wide_reg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: IndexRegWr
     cpu.regs[reg.base() + 1] = parts[1];
     if (mode == .ramp) {
         switch (reg) {
-            .x => if (cpu.sio.ramp_x) |ramp| cpu.io.write(ramp, parts[2]),
-            .y => if (cpu.sio.ramp_y) |ramp| cpu.io.write(ramp, parts[2]),
-            .z => if (cpu.sio.ramp_z) |ramp| cpu.io.write(ramp, parts[2]),
+            .x => if (cpu.sio.ramp_x) |ramp| cpu.io_space.write8(@intCast(ramp), parts[2]) catch @panic("IO write failed"),
+            .y => if (cpu.sio.ramp_y) |ramp| cpu.io_space.write8(@intCast(ramp), parts[2]) catch @panic("IO write failed"),
+            .z => if (cpu.sio.ramp_z) |ramp| cpu.io_space.write8(@intCast(ramp), parts[2]) catch @panic("IO write failed"),
         }
     }
 }
@@ -888,14 +907,14 @@ const instructions = struct {
     /// Stores data from register Rr in the Register File to I/O Space (Ports, Timers, Configuration Registers, etc.).
     inline fn out(cpu: *Cpu, info: isa.opinfo.a6r5) void {
         // I/O(A) ← Rr
-        cpu.io.write(info.a, cpu.regs[info.r.num()]);
+        cpu.io_space.write8(@intCast(info.a), cpu.regs[info.r.num()]) catch @panic("IO write failed");
     }
 
     /// IN - Load an I/O Location to Register
     /// Loads data from the I/O Space (Ports, Timers, Configuration Registers, etc.) into register Rd in the Register File.
     inline fn in(cpu: *Cpu, info: isa.opinfo.a6d5) void {
         // Rd ← I/O(A)
-        cpu.regs[info.d.num()] = cpu.io.read(info.a);
+        cpu.regs[info.d.num()] = cpu.io_space.read8(@intCast(info.a)) catch @panic("IO read failed");
     }
 
     /// CBI – Clear Bit in I/O Register
@@ -903,14 +922,14 @@ const instructions = struct {
     /// addresses 0-31.
     inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 0
-        cpu.io.write_masked(info.a, info.b.mask(), 0x00);
+        cpu.io_space.write_masked(@intCast(info.a), info.b.mask(), 0x00) catch @panic("IO masked write failed");
     }
 
     /// SBI – Set Bit in I/O Register
     /// Sets a specified bit in an I/O Register. This instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 1
-        cpu.io.write_masked(info.a, info.b.mask(), 0xFF);
+        cpu.io_space.write_masked(@intCast(info.a), info.b.mask(), 0xFF) catch @panic("IO masked write failed");
     }
 
     // Branching:
@@ -945,7 +964,7 @@ const instructions = struct {
     /// instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbic(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // If I/O(A,b) = 0 then PC ← PC + 2 (or 3) else PC ← PC + 1
-        const val = cpu.io.read(info.a);
+        const val = cpu.io_space.read8(@intCast(info.a)) catch @panic("IO read failed");
         if ((val & info.b.mask()) == 0) {
             cpu.instr_effect = .skip_next;
         }
@@ -956,7 +975,7 @@ const instructions = struct {
     /// instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbis(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // If I/O(A,b) = 1 then PC ← PC + 2 (or 3) else PC ← PC + 1
-        const val = cpu.io.read(info.a);
+        const val = cpu.io_space.read8(@intCast(info.a)) catch @panic("IO read failed");
         if ((val & info.b.mask()) != 0) {
             cpu.instr_effect = .skip_next;
         }
@@ -1161,8 +1180,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.mapper.read(z);
-        cpu.mapper.write(z, Rd);
+        const mem = cpu.data.read8(z) catch @panic("read failed");
+        cpu.data.write8(z, Rd) catch @panic("write failed");
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1180,8 +1199,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.mapper.read(z);
-        cpu.mapper.write(z, (0xFF - Rd) & mem);
+        const mem = cpu.data.read8(z) catch @panic("read failed");
+        cpu.data.write8(z, (0xFF - Rd) & mem) catch @panic("write failed");
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1199,8 +1218,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.mapper.read(z);
-        cpu.mapper.write(z, Rd | mem);
+        const mem = cpu.data.read8(z) catch @panic("read failed");
+        cpu.data.write8(z, Rd | mem) catch @panic("write failed");
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1217,8 +1236,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.mapper.read(z);
-        cpu.mapper.write(z, Rd ^ mem);
+        const mem = cpu.data.read8(z) catch @panic("read failed");
+        cpu.data.write8(z, Rd ^ mem) catch @panic("write failed");
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1764,14 +1783,14 @@ pub const SpecialIoRegisters = struct {
 
 fn extend_direct_address(cpu: *Cpu, value: u16) u24 {
     return value | if (cpu.sio.ramp_d) |ramp_d|
-        @as(u24, cpu.io.read(ramp_d)) << 16
+        @as(u24, cpu.io_space.read8(@intCast(ramp_d)) catch @panic("IO read failed")) << 16
     else
         0;
 }
 
 fn get_sp(cpu: *Cpu) u16 {
-    const lo = cpu.io.read(cpu.sio.sp_l);
-    const hi = cpu.io.read(cpu.sio.sp_h);
+    const lo = cpu.io_space.read8(@intCast(cpu.sio.sp_l)) catch @panic("IO read failed");
+    const hi = cpu.io_space.read8(@intCast(cpu.sio.sp_h)) catch @panic("IO read failed");
 
     return (@as(u16, hi) << 8) | lo;
 }
@@ -1779,9 +1798,8 @@ fn get_sp(cpu: *Cpu) u16 {
 fn set_sp(cpu: *Cpu, value: u16) void {
     const lo: u8 = @truncate(value >> 0);
     const hi: u8 = @truncate(value >> 8);
-
-    cpu.io.write(cpu.sio.sp_l, lo);
-    cpu.io.write(cpu.sio.sp_h, hi);
+    cpu.io_space.write8(@intCast(cpu.sio.sp_l), lo) catch @panic("IO write failed");
+    cpu.io_space.write8(@intCast(cpu.sio.sp_h), hi) catch @panic("IO write failed");
 }
 
 fn compose24(hi: u8, mid: u8, lo: u8) u24 {

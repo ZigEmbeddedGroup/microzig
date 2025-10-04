@@ -44,12 +44,9 @@ pub fn main() !u8 {
     const eeprom_mem = eeprom.memory();
     var io_mem = io.memory();
 
-    // Create mapper that routes addresses to IO or SRAM (using pointers to avoid duplication)
-    const MapperImpl = @TypeOf(mcu_config).MapperType;
-    var memory_mapper = MapperImpl{
-        .io = &io_mem,
-        .sram = &sram_mem,
-    };
+    // Build memory spaces via MCU helper
+    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, &flash_mem, &sram_mem, &io_mem);
+    defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
         .trace = cli.options.trace,
@@ -59,7 +56,9 @@ pub fn main() !u8 {
         .sram_base = mcu_config.sram_base,
         .eeprom = eeprom_mem,
         .io = io_mem,
-        .mapper = memory_mapper.mapper(),
+        .data = spaces.data,
+        .io_space = spaces.io,
+        .prog = spaces.prog,
 
         .code_model = mcu_config.code_model,
         .instruction_set = mcu_config.instruction_set,
@@ -229,7 +228,6 @@ const IO = struct {
         .readFn = read,
         .writeFn = write,
         .checkExitFn = check_exit,
-        .translateAddressFn = translate_address,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -374,11 +372,5 @@ const IO = struct {
             return io.exit_code;
         }
         return null;
-    }
-
-    fn translate_address(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
-        _ = ctx;
-        // Classic AVR: data-space 0x20-0x5F maps to IO ports 0x00-0x3F
-        return if (addr >= 0x20 and addr <= 0x5F) @intCast(addr - 0x20) else null;
     }
 };

@@ -49,9 +49,6 @@ fn run_test(
     options: Cli,
     elf_paths: []const []const u8,
 ) !void {
-    // Create mapper using MCU's MapperType
-    const MapperImpl = @TypeOf(mcu_config).MapperType;
-
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
     var sram = aviron.RAM.Static(mcu_config.sram_size){};
     var eeprom = aviron.EEPROM.Static(mcu_config.eeprom_size){};
@@ -76,10 +73,9 @@ fn run_test(
     const eeprom_mem = eeprom.memory();
     var io_mem = io.memory();
 
-    var memory_mapper = MapperImpl{
-        .io = &io_mem,
-        .sram = &sram_mem,
-    };
+    // Build memory spaces via MCU helper
+    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, &flash_mem, &sram_mem, &io_mem);
+    defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
         .trace = options.trace,
@@ -89,7 +85,9 @@ fn run_test(
         .sram_base = mcu_config.sram_base,
         .eeprom = eeprom_mem,
         .io = io_mem,
-        .mapper = memory_mapper.mapper(),
+        .data = spaces.data,
+        .io_space = spaces.io,
+        .prog = spaces.prog,
         .code_model = mcu_config.code_model,
         .sio = .{
             .ramp_x = mcu_config.special_io.ramp_x,
@@ -310,7 +308,6 @@ const IO = struct {
         .readFn = read,
         .writeFn = write,
         .checkExitFn = check_exit,
-        .translateAddressFn = translate_addr,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -340,10 +337,10 @@ const IO = struct {
         ramp_x = 0x39, // ATmega2560
         ramp_y = 0x3A, // ATmega2560
         ramp_z = 0x3B, // ATmega2560
-        e_ind = 0x3C,  // ATmega2560
-        sp_l = 0x3D,   // Common
-        sp_h = 0x3E,   // Common
-        sreg = 0x3F,   // Common
+        e_ind = 0x3C, // ATmega2560
+        sp_l = 0x3D, // Common
+        sp_h = 0x3E, // Common
+        sreg = 0x3F, // Common
 
         _,
     };
@@ -468,13 +465,5 @@ const IO = struct {
     fn check_exit(ctx: ?*anyopaque) ?u8 {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         return if (io.exit_requested) io.exit_code else null;
-    }
-
-    fn translate_addr(ctx: ?*anyopaque, addr: u24) ?aviron.IO.Address {
-        _ = ctx;
-        // This function is no longer used by Cpu (now uses Mapper), but kept for IO vtable compatibility
-        // Map data-space 0x20..0x5F to I/O ports 0x00..0x3F
-        if (addr >= 0x20 and addr <= 0x5F) return @intCast(addr - 0x20);
-        return null;
     }
 };
