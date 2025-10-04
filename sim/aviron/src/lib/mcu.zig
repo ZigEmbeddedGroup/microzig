@@ -13,10 +13,10 @@ pub const Config = struct {
     flash_size: usize,
 
     /// SRAM size in bytes
-    sram_size: usize,
+    sram_size: u16,
 
     /// SRAM base address in data space
-    sram_base: u24,
+    sram_base: u16,
 
     /// EEPROM size in bytes
     eeprom_size: usize,
@@ -63,7 +63,7 @@ pub fn build_spaces(
     // Data space: IO window mapped into data space (at base), then SRAM at sram_base
     var data_seg_buf: [2]memory.Segment = undefined;
     data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = memory.Backend.fromIO(io_mem) };
-    data_seg_buf[1] = .{ .at = cfg.sram_base, .size = ram.size, .backend = memory.Backend.fromRAM(ram) };
+    data_seg_buf[1] = .{ .at = @as(usize, cfg.sram_base), .size = ram.size, .backend = memory.Backend.fromRAM(ram) };
     const data_space = try memory.MemorySpace.init(alloc, data_seg_buf[0..]);
 
     // IO space: IO addresses starting at 0

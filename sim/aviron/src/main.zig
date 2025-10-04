@@ -35,7 +35,7 @@ pub fn main() !u8 {
     // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
     var io = IO{
         .sreg = undefined,
-        .sp = mcu_config.sram_base + @as(u16, mcu_config.sram_size - 1),
+        .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
     };
 
     // Create memory interfaces
@@ -108,14 +108,14 @@ pub fn main() !u8 {
                     if (phdr.p_type != std.elf.PT_LOAD)
                         continue; // Header isn't loaded
 
-                    const dest_mem = if (phdr.p_paddr >= 0x0080_0000)
-                        &sram.data
+                    var dest_mem: []u8 = if (phdr.p_paddr >= 0x0080_0000)
+                        sram.data
                     else
-                        &flash_storage.data;
+                        flash_storage.data;
 
                     const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
                     const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
-                        addr_masked - mcu_config.sram_base
+                        addr_masked - @as(u24, mcu_config.sram_base)
                     else
                         addr_masked; // Flash always starts at 0
 
@@ -125,7 +125,7 @@ pub fn main() !u8 {
                 }
             },
             .binary, .bin => {
-                const size = try file.readAll(&flash_storage.data);
+                const size = try file.readAll(flash_storage.data);
                 @memset(flash_storage.data[size..], 0);
             },
             .ihex, .hex => {

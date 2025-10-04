@@ -61,7 +61,7 @@ fn run_test(
 
     var io = IO{
         .sreg = undefined,
-        .sp = mcu_config.sram_base + @as(u16, @intCast(mcu_config.sram_size - 1)),
+        .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
         .config = test_config,
         .stdin = test_config.stdin,
         .stdout = &stdout,
@@ -130,14 +130,14 @@ fn run_test(
             if (phdr.p_type != std.elf.PT_LOAD)
                 continue;
 
-            const dest_mem = if (phdr.p_paddr >= 0x0080_0000)
+            const dest_mem: []u8 = if (phdr.p_paddr >= 0x0080_0000)
                 &sram.data
             else
                 &flash_storage.data;
 
             const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
             const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
-                addr_masked - mcu_config.sram_base
+                addr_masked - @as(u24, mcu_config.sram_base)
             else
                 addr_masked;
 

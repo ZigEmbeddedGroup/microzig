@@ -60,7 +60,7 @@ instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
 sram: RAM,
-sram_base: u24,
+sram_base: u16,
 eeprom: EEPROM,
 io: IO,
 data: memory.MemorySpace,
@@ -116,7 +116,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
     }
 
     // Dump SRAM using absolute addresses based on configured base
-    const sram_end: u24 = cpu.sram_base + @as(u24, @intCast(cpu.sram.size - 1));
+    const sram_end: u16 = cpu.sram_base + @as(u16, @truncate(cpu.sram.size - 1));
     std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ cpu.sram_base, sram_end, cpu.sram.size });
 
     const row_width = 16;
@@ -131,7 +131,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
 
         var j: usize = 0;
         while (j < row_len) : (j += 1) {
-            cur_row[j] = cpu.data.read8(cpu.sram_base + @as(u24, @intCast(i + j))) catch 0x00;
+            cur_row[j] = cpu.data.read8(cpu.sram_base + (i + j)) catch 0x00;
         }
 
         // Only elide repeated lines of all zeroes
@@ -153,7 +153,7 @@ pub fn dump_system_state(cpu: *Cpu) void {
                 elided = false;
             }
 
-            std.debug.print("0x{X:0>4}: ", .{cpu.sram_base + @as(u24, @intCast(i))});
+            std.debug.print("0x{X:0>4}: ", .{cpu.sram_base + i});
             // hex bytes
             j = 0;
             while (j < row_len) : (j += 1) {
