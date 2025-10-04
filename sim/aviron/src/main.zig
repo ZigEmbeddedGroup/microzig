@@ -45,8 +45,7 @@ pub fn main() !u8 {
     var io_mem = io.memory();
 
     // Create mapper that routes addresses to IO or SRAM (using pointers to avoid duplication)
-    const MapperConfig = aviron.mcu.ClassicMapperConfig(mcu_config.sram_base);
-    const MapperImpl = aviron.Mapper.SimpleMapper(MapperConfig);
+    const MapperImpl = @TypeOf(mcu_config).MapperType;
     var memory_mapper = MapperImpl{
         .io = &io_mem,
         .sram = &sram_mem,
