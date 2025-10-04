@@ -28,17 +28,17 @@ pub fn main() !void {
     var byte: [100]u8 = undefined;
 
     //simple USART echo
-    try uart.write_blocking("START UART ECHO\n", null);
+    _ = try uart.write_blocking("START UART ECHO\n", null);
     while (true) {
         @memset(&byte, 0);
-        uart.read_blocking(&byte, Duration.from_ms(100)) catch |err| {
+        const len = uart.read_blocking(&byte, Duration.from_ms(100)) catch |err| {
             if (err != error.Timeout) {
                 uart.writer().print("Got error {any}\n", .{err}) catch unreachable;
                 uart.clear_errors();
-                continue;
             }
+            continue;
         };
 
-        uart.write_blocking(&byte, null) catch unreachable;
+        _ = uart.write_blocking(byte[0..len], null) catch unreachable;
     }
 }
