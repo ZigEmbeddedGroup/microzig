@@ -244,7 +244,13 @@ pub const Mapper = struct {
                     return self.io.read(io_addr);
                 }
 
-                // Otherwise, translate to SRAM array index
+                // Check if address is in SRAM range
+                if (addr < sram_base) {
+                    std.debug.print("Mapper read from unmapped address: 0x{X:0>6} (below SRAM base 0x{X:0>6})\n", .{ addr, sram_base });
+                    @panic("Read from unmapped memory address");
+                }
+
+                // Translate to SRAM array index
                 const sram_index = addr - sram_base;
                 return self.sram.read(sram_index);
             }
@@ -258,7 +264,13 @@ pub const Mapper = struct {
                     return;
                 }
 
-                // Otherwise, translate to SRAM array index
+                // Check if address is in SRAM range
+                if (addr < sram_base) {
+                    std.debug.print("Mapper write to unmapped address: 0x{X:0>6} (below SRAM base 0x{X:0>6})\n", .{ addr, sram_base });
+                    @panic("Write to unmapped memory address");
+                }
+
+                // Translate to SRAM array index
                 const sram_index = addr - sram_base;
                 self.sram.write(sram_index, value);
             }
@@ -272,7 +284,13 @@ pub const Mapper = struct {
                     return;
                 }
 
-                // Otherwise, translate to SRAM array index - perform read-modify-write
+                // Check if address is in SRAM range
+                if (addr < sram_base) {
+                    std.debug.print("Mapper write_masked to unmapped address: 0x{X:0>6} (below SRAM base 0x{X:0>6})\n", .{ addr, sram_base });
+                    @panic("Write to unmapped memory address");
+                }
+
+                // Translate to SRAM array index - perform read-modify-write
                 const sram_index = addr - sram_base;
                 const old_value = self.sram.read(sram_index);
                 const new_value = (old_value & ~mask) | (value & mask);
