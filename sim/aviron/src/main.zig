@@ -21,15 +21,20 @@ pub fn main() !u8 {
         return if (cli.options.help) @as(u8, 0) else 1;
     }
 
-    // Get MCU configuration
-    // TODO: Add support for more MCUs!
-    std.debug.assert(cli.options.mcu == .atmega328p);
-    const mcu_config = aviron.mcu.atmega328p;
+    // Get MCU configuration from CLI
+    const mcu_config = switch (cli.options.mcu) {
+        .atmega328p => aviron.mcu.atmega328p,
+        .attiny816 => aviron.mcu.attiny816,
+        .atmega2560 => aviron.mcu.atmega2560,
+    };
 
     // Allocate memory based on MCU configuration
-    var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
-    var sram = aviron.RAM.Static(mcu_config.sram_size){};
-    var eeprom = aviron.EEPROM.Static(mcu_config.eeprom_size){};
+    var flash_storage = try aviron.Flash.Dynamic().init(allocator, mcu_config.flash_size);
+    defer flash_storage.deinit();
+    var sram = try aviron.RAM.Dynamic().init(allocator, @intCast(mcu_config.sram_size));
+    defer sram.deinit();
+    var eeprom = try aviron.EEPROM.Dynamic().init(allocator, mcu_config.eeprom_size);
+    defer eeprom.deinit();
 
     // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific.
     // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
@@ -158,6 +163,8 @@ pub fn main() !u8 {
 // not actually marvel cinematic universe, but microcontroller unit ;
 pub const MCU = enum {
     atmega328p,
+    attiny816,
+    atmega2560,
 };
 
 pub const FileFormat = enum {

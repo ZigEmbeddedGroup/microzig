@@ -55,6 +55,45 @@ pub const Flash = struct {
             }
         };
     }
+
+    /// Dynamically sized flash storage backed by a heap slice.
+    pub fn Dynamic() type {
+        return struct {
+            const Self = @This();
+
+            allocator: std.mem.Allocator,
+            data_words: []u16,
+            data: []align(2) u8,
+
+            pub fn init(allocator: std.mem.Allocator, size_bytes: usize) !Self {
+                if ((size_bytes & 1) != 0) return error.InvalidFlashSize;
+                const words = try allocator.alloc(u16, @divExact(size_bytes, 2));
+                @memset(words, 0);
+                const bytes: []align(2) u8 = std.mem.sliceAsBytes(words);
+                return .{ .allocator = allocator, .data_words = words, .data = bytes };
+            }
+
+            pub fn deinit(self: *Self) void {
+                self.allocator.free(self.data_words);
+            }
+
+            pub fn memory(self: *Self) Flash {
+                return Flash{
+                    .ctx = self,
+                    .vtable = &vtable,
+                    .size = self.data_words.len,
+                };
+            }
+
+            pub const vtable = VTable{ .readFn = mem_read };
+
+            fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                std.debug.assert(addr < @as(Address, @intCast(mem.data_words.len)));
+                return mem.data_words[addr];
+            }
+        };
+    }
 };
 
 pub const RAM = struct {
@@ -127,6 +166,51 @@ pub const RAM = struct {
             fn mem_write(ctx: ?*anyopaque, index: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 std.debug.assert(index < size);
+                mem.data[index] = value;
+            }
+        };
+    }
+
+    /// Dynamically sized RAM storage backed by a heap slice.
+    pub fn Dynamic() type {
+        return struct {
+            const Self = @This();
+
+            allocator: std.mem.Allocator,
+            data: []u8,
+
+            pub fn init(allocator: std.mem.Allocator, size_bytes: usize) !Self {
+                const buf = try allocator.alloc(u8, size_bytes);
+                @memset(buf, 0);
+                return .{ .allocator = allocator, .data = buf };
+            }
+
+            pub fn deinit(self: *Self) void {
+                self.allocator.free(self.data);
+            }
+
+            pub fn memory(self: *Self) RAM {
+                return RAM{
+                    .ctx = self,
+                    .vtable = &vtable,
+                    .size = self.data.len,
+                };
+            }
+
+            pub const vtable = VTable{
+                .readFn = mem_read,
+                .writeFn = mem_write,
+            };
+
+            fn mem_read(ctx: ?*anyopaque, index: Address) u8 {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                std.debug.assert(index < mem.data.len);
+                return mem.data[index];
+            }
+
+            fn mem_write(ctx: ?*anyopaque, index: Address, value: u8) void {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                std.debug.assert(index < mem.data.len);
                 mem.data[index] = value;
             }
         };
