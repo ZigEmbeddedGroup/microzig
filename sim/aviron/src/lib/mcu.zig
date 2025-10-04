@@ -61,37 +61,39 @@ pub const MapperConfig = struct {
     sram_base: u24,
 };
 
-/// Classic AVR memory layout: IO mapped at 0x0020-0x005F in data space, SRAM at 0x0100+
+/// Classic AVR IO translation: IO mapped at 0x0020-0x005F in data space
+pub fn classic_io_translate(data_addr: u24) ?io_mod.IO.Address {
+    // Classic AVR: IO registers at 0x0020-0x005F map to IO addresses 0x00-0x3F
+    return if (data_addr >= 0x20 and data_addr <= 0x5F)
+        @intCast(data_addr - 0x20)
+    else
+        null;
+}
+
+/// Extended IO translation: More IO registers mapped in data space
+pub fn extended_io_translate(data_addr: u24) ?io_mod.IO.Address {
+    // Extended IO: 0x0020-0x00FF map to IO addresses 0x00-0xDF
+    return if (data_addr >= 0x20 and data_addr <= 0xFF)
+        @intCast(data_addr - 0x20)
+    else
+        null;
+}
+
+/// Legacy helper for backward compatibility
 pub fn ClassicMapperConfig(comptime sram_base: u24) type {
     return struct {
-        pub fn io_translate(data_addr: u24) ?io_mod.IO.Address {
-            // Classic AVR: IO registers at 0x0020-0x005F map to IO addresses 0x00-0x3F
-            return if (data_addr >= 0x20 and data_addr <= 0x5F)
-                @intCast(data_addr - 0x20)
-            else
-                null;
-        }
-
         pub const config = MapperConfig{
-            .io_translate = io_translate,
+            .io_translate = classic_io_translate,
             .sram_base = sram_base,
         };
     };
 }
 
-/// Extended IO mapping for devices with more IO registers
+/// Legacy helper for backward compatibility
 pub fn ExtendedMapperConfig(comptime sram_base: u24) type {
     return struct {
-        pub fn io_translate(data_addr: u24) ?io_mod.IO.Address {
-            // Extended IO: 0x0020-0x00FF map to IO addresses 0x00-0xDF
-            return if (data_addr >= 0x20 and data_addr <= 0xFF)
-                @intCast(data_addr - 0x20)
-            else
-                null;
-        }
-
         pub const config = MapperConfig{
-            .io_translate = io_translate,
+            .io_translate = extended_io_translate,
             .sram_base = sram_base,
         };
     };
@@ -121,7 +123,7 @@ pub const atmega328p = Config{
         .sreg = 0x3F,
     },
     .mapper_config = .{
-        .io_translate = ClassicMapperConfig(0x0100).config.io_translate,
+        .io_translate = classic_io_translate,
         .sram_base = 0x0100,
     },
 };
@@ -146,7 +148,7 @@ pub const attiny816 = Config{
         .sreg = 0x3F,
     },
     .mapper_config = .{
-        .io_translate = ClassicMapperConfig(0x3F00).config.io_translate,
+        .io_translate = classic_io_translate,
         .sram_base = 0x3F00,
     },
 };
@@ -171,7 +173,7 @@ pub const atmega2560 = Config{
         .sreg = 0x3F,
     },
     .mapper_config = .{
-        .io_translate = ExtendedMapperConfig(0x0200).config.io_translate,
+        .io_translate = extended_io_translate,
         .sram_base = 0x0200,
     },
 };

@@ -213,7 +213,10 @@ pub const Mapper = struct {
     /// share the same memory instances - the CPU uses the mapper for all data-space access
     /// (loads, stores, stack operations, etc.), but keeps direct IO access for reading/writing
     /// special registers like SP and SREG.
-    pub fn SimpleMapper(comptime Config: type) type {
+    pub fn SimpleMapper(
+        comptime io_translate_fn: *const fn (data_addr: u24) ?IO.Address,
+        comptime sram_base: u24,
+    ) type {
         return struct {
             const Self = @This();
 
@@ -237,12 +240,12 @@ pub const Mapper = struct {
                 const self: *Self = @ptrCast(@alignCast(ctx.?));
 
                 // Check if address is in IO range
-                if (Config.config.io_translate(addr)) |io_addr| {
+                if (io_translate_fn(addr)) |io_addr| {
                     return self.io.read(io_addr);
                 }
 
                 // Otherwise, translate to SRAM array index
-                const sram_index = addr - Config.config.sram_base;
+                const sram_index = addr - sram_base;
                 return self.sram.read(sram_index);
             }
 
@@ -250,13 +253,13 @@ pub const Mapper = struct {
                 const self: *Self = @ptrCast(@alignCast(ctx.?));
 
                 // Check if address is in IO range
-                if (Config.config.io_translate(addr)) |io_addr| {
+                if (io_translate_fn(addr)) |io_addr| {
                     self.io.write(io_addr, value);
                     return;
                 }
 
                 // Otherwise, translate to SRAM array index
-                const sram_index = addr - Config.config.sram_base;
+                const sram_index = addr - sram_base;
                 self.sram.write(sram_index, value);
             }
 
@@ -264,13 +267,13 @@ pub const Mapper = struct {
                 const self: *Self = @ptrCast(@alignCast(ctx.?));
 
                 // Check if address is in IO range
-                if (Config.config.io_translate(addr)) |io_addr| {
+                if (io_translate_fn(addr)) |io_addr| {
                     self.io.write_masked(io_addr, mask, value);
                     return;
                 }
 
                 // Otherwise, translate to SRAM array index - perform read-modify-write
-                const sram_index = addr - Config.config.sram_base;
+                const sram_index = addr - sram_base;
                 const old_value = self.sram.read(sram_index);
                 const new_value = (old_value & ~mask) | (value & mask);
                 self.sram.write(sram_index, new_value);
