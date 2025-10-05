@@ -21,41 +21,65 @@ pub fn main() !u8 {
         return if (cli.options.help) @as(u8, 0) else 1;
     }
 
-    // Emulate Atmega382p device size:
+    // Get MCU configuration from CLI
+    const mcu_config = switch (cli.options.mcu) {
+        .atmega328p => aviron.mcu.atmega328p,
+        .attiny816 => aviron.mcu.attiny816,
+        .atmega2560 => aviron.mcu.atmega2560,
+        .xmega128a4u => aviron.mcu.xmega128a4u,
+    };
 
-    // TODO: Add support for more MCUs!
-    std.debug.assert(cli.options.mcu == .atmega328p);
+    // Allocate memory based on MCU configuration
+    var flash_storage = try aviron.Flash.Dynamic().init(allocator, mcu_config.flash_size);
+    defer flash_storage.deinit();
+    var sram = try aviron.RAM.Dynamic().init(allocator, @intCast(mcu_config.sram_size));
+    defer sram.deinit();
+    var eeprom = try aviron.EEPROM.Dynamic().init(allocator, mcu_config.eeprom_size);
+    defer eeprom.deinit();
 
-    var flash_storage = aviron.Flash.Static(32768){};
-    var sram = aviron.RAM.Static(2048){};
-    var eeprom = aviron.EEPROM.Static(1024){};
+    // AVR data space: registers + I/O (0x0000..0x00FF), SRAM base is device-specific.
+    // Stack pointer must be initialized to RAMEND (top of SRAM) at reset.
     var io = IO{
         .sreg = undefined,
-        .sp = sram.data.len - 1,
+        .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
     };
+
+    // Create memory interfaces
+    const flash_mem = flash_storage.memory();
+
+    // Build memory spaces via MCU helper
+    // Build Device views
+    const io_dev = io.device();
+    const sram_dev = sram.device();
+
+    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_dev, io_dev);
+    defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
         .trace = cli.options.trace,
 
-        .flash = flash_storage.memory(),
-        .sram = sram.memory(),
-        .eeprom = eeprom.memory(),
-        .io = io.memory(),
+        .flash = flash_mem,
+        .sram_base = mcu_config.sram_base,
+        .sram_size = mcu_config.sram_size,
+        .eeprom_size = mcu_config.eeprom_size,
+        .io_dev = io_dev,
+        .data = spaces.data,
+        .io_space = spaces.io,
 
-        .code_model = .code16,
-        .instruction_set = .avr5,
+        .code_model = mcu_config.code_model,
+        .instruction_set = mcu_config.instruction_set,
 
         .sio = .{
-            .ramp_x = null,
-            .ramp_y = null,
-            .ramp_z = null,
-            .ramp_d = null,
-            .e_ind = null,
+            .ramp_x = mcu_config.special_io.ramp_x,
+            .ramp_y = mcu_config.special_io.ramp_y,
+            .ramp_z = mcu_config.special_io.ramp_z,
+            .ramp_d = mcu_config.special_io.ramp_d,
+            .e_ind = mcu_config.special_io.e_ind,
 
-            .sp_l = @intFromEnum(IO.Register.sp_l),
-            .sp_h = @intFromEnum(IO.Register.sp_h),
+            .sp_l = mcu_config.special_io.sp_l,
+            .sp_h = mcu_config.special_io.sp_h,
 
-            .sreg = @intFromEnum(IO.Register.sreg),
+            .sreg = mcu_config.special_io.sreg,
         },
     };
 
@@ -67,8 +91,8 @@ pub fn main() !u8 {
         try stdout.interface.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
         try stdout.interface.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
         try stdout.interface.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
-        try stdout.interface.print("  RAM:        {d: >5} bytes\n", .{cpu.sram.size});
-        try stdout.interface.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom.size});
+        try stdout.interface.print("  RAM:        {d: >5} bytes\n", .{cpu.sram_size});
+        try stdout.interface.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom_size});
         try stdout.interface.flush();
         return 0;
     }
@@ -85,25 +109,32 @@ pub fn main() !u8 {
             .elf => {
                 var header = try std.elf.Header.read(&reader.interface);
 
+                // Set PC to entry point (convert byte address to word address for AVR)
+                cpu.pc = @intCast(header.entry / 2);
+
                 var pheaders = header.iterateProgramHeaders(&reader);
                 while (try pheaders.next()) |phdr| {
                     if (phdr.p_type != std.elf.PT_LOAD)
-                        continue; // Header isn't lodead
+                        continue; // Header isn't loaded
 
-                    const dest_mem = if (phdr.p_paddr >= 0x0080_0000)
-                        &sram.data
+                    var dest_mem: []u8 = if (phdr.p_paddr >= 0x0080_0000)
+                        sram.data
                     else
-                        &flash_storage.data;
+                        flash_storage.data;
 
                     const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
+                    const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
+                        addr_masked - @as(u24, mcu_config.sram_base)
+                    else
+                        addr_masked; // Flash always starts at 0
 
                     try reader.seekTo(phdr.p_offset);
-                    try reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
-                    @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                    try reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
+                    @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
                 }
             },
             .binary, .bin => {
-                const size = try file.readAll(&flash_storage.data);
+                const size = try file.readAll(flash_storage.data);
                 @memset(flash_storage.data[size..], 0);
             },
             .ihex, .hex => {
@@ -117,9 +148,18 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(null);
+    const result = try cpu.run(cli.options.gas, cli.options.breakpoint);
 
-    std.debug.print("STOP: {s}\n", .{@tagName(result)});
+    if (cli.options.trace) {
+        cpu.dump_system_state();
+    }
+
+    std.debug.print("\nSTOP: {s}\n", .{@tagName(result)});
+
+    // Handle program exit
+    if (result == .program_exit) {
+        return io.exit_code;
+    }
 
     return 0;
 }
@@ -127,6 +167,9 @@ pub fn main() !u8 {
 // not actually marvel cinematic universe, but microcontroller unit ;
 pub const MCU = enum {
     atmega328p,
+    attiny816,
+    atmega2560,
+    xmega128a4u,
 };
 
 pub const FileFormat = enum {
@@ -143,6 +186,8 @@ const Cli = struct {
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
+    breakpoint: ?u24 = null,
+    gas: ?u64 = null,
 
     pub const shorthands = .{
         .h = "help",
@@ -150,6 +195,8 @@ const Cli = struct {
         .m = "mcu",
         .I = "info",
         .f = "format",
+        .B = "breakpoint",
+        .G = "gas",
     };
     pub const meta = .{
         .summary = "[-h] [-t] [-m <mcu>] <file> ...",
@@ -166,6 +213,8 @@ const Cli = struct {
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
+            .breakpoint = "Break when PC reaches this address (hex or dec)",
+            .gas = "Stop after N instructions executed",
         },
     };
 };
@@ -176,20 +225,30 @@ const IO = struct {
     sp: u16,
     sreg: *aviron.Cpu.SREG,
 
-    pub fn memory(self: *IO) aviron.IO {
-        return aviron.IO{
-            .ctx = self,
-            .vtable = &vtable,
-        };
+    // RAMP registers for extended addressing (used by larger MCUs like ATmega2560)
+    ramp_x: u8 = 0,
+    ramp_y: u8 = 0,
+    ramp_z: u8 = 0,
+    ramp_d: u8 = 0,
+    e_ind: u8 = 0,
+
+    // Exit status tracking
+    exit_requested: bool = false,
+    exit_code: u8 = 0,
+
+    pub fn device(self: *IO) aviron.Device {
+        return .{ .ctx = self, .vtable = &dev_vtable };
     }
 
-    pub const vtable = aviron.IO.VTable{
-        .readFn = read,
-        .writeFn = write,
+    const dev_vtable = aviron.Device.VTable{
+        .read8 = dev_read,
+        .write8 = dev_write,
+        .write_masked = dev_write_masked,
+        .check_exit = dev_check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
-    const Register = enum(u6) {
+    const Register = enum(aviron.IO.Address) {
         exit = 0, // read: 0, write: os.exit()
         stdio = 1, // read: stdin, write: print to stdout
         stderr = 2, // read: 0, write: print to stderr
@@ -211,16 +270,24 @@ const IO = struct {
         scratch_e = 0x1e, // scratch register
         scratch_f = 0x1f, // scratch register
 
-        sp_l = 0x3D, // ATmega328p
-        sp_h = 0x3E, // ATmega328p
-        sreg = 0x3F, // ATmega328p
+        // Extended addressing registers (ATmega2560 and similar)
+        ramp_d = 0x38, // ATmega2560
+        ramp_x = 0x39, // ATmega2560
+        ramp_y = 0x3A, // ATmega2560
+        ramp_z = 0x3B, // ATmega2560
+        e_ind = 0x3C, // ATmega2560
+
+        // Common registers
+        sp_l = 0x3D, // Common
+        sp_h = 0x3E, // Common
+        sreg = 0x3F, // Common
 
         _,
     };
 
-    fn read(ctx: ?*anyopaque, addr: u6) u8 {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
-        const reg: Register = @enumFromInt(addr);
+    fn dev_read(ctx: *anyopaque, addr: usize) u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
             .exit => 0,
             .stdio => blk: {
@@ -250,6 +317,12 @@ const IO = struct {
 
             .sreg => @bitCast(io.sreg.*),
 
+            .ramp_x => io.ramp_x,
+            .ramp_y => io.ramp_y,
+            .ramp_z => io.ramp_z,
+            .ramp_d => io.ramp_d,
+            .e_ind => io.e_ind,
+
             .sp_l => @truncate(io.sp >> 0),
             .sp_h => @truncate(io.sp >> 8),
 
@@ -258,11 +331,18 @@ const IO = struct {
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn write(ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
-        const reg: Register = @enumFromInt(addr);
+    fn dev_write(ctx: *anyopaque, addr: usize, value: u8) void {
+        dev_write_masked(ctx, addr, 0xFF, value);
+    }
+
+    fn dev_write_masked(ctx: *anyopaque, addr: usize, mask: u8, value: u8) void {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
-            .exit => std.process.exit(value & mask),
+            .exit => {
+                io.exit_requested = true;
+                io.exit_code = value & mask;
+            },
             .stdio => {
                 var stdout = std.fs.File.stdout().writer(&.{});
                 stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
@@ -293,7 +373,16 @@ const IO = struct {
             .sp_h => write_masked(high_byte(&io.sp), mask, value),
             .sreg => write_masked(@ptrCast(io.sreg), mask, value),
 
-            _ => std.debug.panic("illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}", .{ addr, value, mask }),
+            .ramp_x => write_masked(&io.ramp_x, mask, value),
+            .ramp_y => write_masked(&io.ramp_y, mask, value),
+            .ramp_z => write_masked(&io.ramp_z, mask, value),
+            .ramp_d => write_masked(&io.ramp_d, mask, value),
+            .e_ind => write_masked(&io.e_ind, mask, value),
+
+            _ => std.debug.panic(
+                "illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}",
+                .{ addr, value, mask },
+            ),
         }
     }
 
@@ -316,5 +405,13 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn dev_check_exit(ctx: *anyopaque) ?u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        if (io.exit_requested) {
+            return io.exit_code;
+        }
+        return null;
     }
 };

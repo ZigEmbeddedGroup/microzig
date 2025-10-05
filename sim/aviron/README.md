@@ -8,7 +8,7 @@ AVR simulator in Zig.
 
 ```sh
 .
-├── doc                 # Documents for Aviron or AVR 
+├── doc                 # Documents for Aviron or AVR
 ├── samples             # Source of examples that can be run on the simulator
 ├── src                 # Source code
 │   ├── lib             # - Aviron emulator
@@ -16,8 +16,8 @@ AVR simulator in Zig.
 │   └── shared          # - Shared code between the tools, generated code and simulator
 ├── testsuite           # Contains the test suite of Aviron
 │   ├── instructions    # - Tests for single instructions
-│   ├── lib             # - Tests for the libtestsuie  
-│   ├── simulator       # - Tests for the simulator per se 
+│   ├── lib             # - Tests for the libtestsuite
+│   ├── simulator       # - Tests for the simulator per se
 │   └── testrunner      # - Tests for the test runner (conditions, checks, ...)
 ├── testsuite.avr-gcc   # Contains code for the test suite that cannot be built with LLVM right now
 │   └── instructions
@@ -29,8 +29,7 @@ AVR simulator in Zig.
 Run the test suite by invoking
 
 ```sh-session
-[~/projects/aviron]$ zig build test
-[~/projects/aviron]$ 
+$ zig build test
 ```
 
 The `test` step will recursively scan the folder `testsuite` for files of the following types:
@@ -42,7 +41,9 @@ The `test` step will recursively scan the folder `testsuite` for files of the fo
 - *load* `.bin`
 - *load* `.elf`
 
-File extensions marked *compile* will be compiled or assembled with the Zig compiler, then executed with the test runner. Those files allow embedding a JSON configuration via Zig file documentation comments:
+File extensions marked *compile* will be compiled or assembled with the Zig compiler, then executed
+with the test runner. Those files allow embedding a JSON configuration via Zig file documentation
+comments:
 
 ```zig
 //! {
@@ -58,15 +59,19 @@ export fn _start() callconv(.c) noreturn {
 }
 ```
 
-For files marked as *load*, another companion file `.bin.json` or similar contains the configuration for this test.
+For files marked as *load*, another companion file `.bin.json` or similar contains the configuration
+for this test.
 
-The [JSON schema](src/testconfig.zig) allows description of how the file is built and the test runner is executed. It also contains a set of pre- and postconditions that can be used to set up the CPU and validate it after the program exits.
+The [JSON schema](src/testconfig.zig) allows description of how the file is built and the test
+runner is executed. It also contains a set of pre- and postconditions that can be used to set up the
+CPU and validate it after the program exits.
 
-If you're not sure if your code compiled correctly, you can use the `debug-testsuite` build step to inspect the generated files:
+If you're not sure if your code compiled correctly, you can use the `debug-testsuite` build step to
+inspect the generated files:
 
 ```sh-session
-[~/projects/aviron]$ zig build debug-testsuite
-[~/projects/aviron]$ tree zig-out/
+$ zig build debug-testsuite
+$ tree zig-out/
 zig-out/
 ├── bin
 │   └── aviron-test-runner
@@ -90,7 +95,7 @@ zig-out/
 You can then disassemble those files with either `llvm-objdump` or `avr-objdump`:
 
 ```sh-session
-[~/projects/aviron]$ llvm-objdump -d zig-out/testsuite/instructions/out-exit-0.elf 
+$ llvm-objdump -d zig-out/testsuite/instructions/out-exit-0.elf
 
 zig-out/testsuite/instructions/out-exit-0.elf:  file format elf32-avr
 
@@ -99,8 +104,8 @@ Disassembly of section .text:
 00000000 <_start>:
        0: 00 27         clr     r16
        2: 00 b9         out     0x0, r16
-       
-[~/projects/aviron]$ avr-objdump -d zig-out/testsuite/instructions/out-exit-0.elf 
+
+$ avr-objdump -d zig-out/testsuite/instructions/out-exit-0.elf
 
 zig-out/testsuite/instructions/out-exit-0.elf:     file format elf32-avr
 
@@ -110,23 +115,30 @@ Disassembly of section .text:
    0:   00 27           eor     r16, r16
    2:   00 b9           out     0x00, r16       ; 0
 
-[~/projects/aviron]$ 
+$
 ```
 
-The test runner is located at [src/testrunner.zig](src/testrunner.zig) and behaves similar to the main `aviron` executable, but introduces a good amount of checks we can use to inspect and validate the simulation.
+The test runner is located at [src/testrunner.zig](src/testrunner.zig) and behaves similar to the
+main `aviron` executable, but introduces a good amount of checks we can use to inspect and validate
+the simulation.
 
 ### Updating AVR-GCC tests
 
-To prevent a hard dependency on the `avr-gcc` toolchain, we vendor the binaries for all tests defined in the folder `testsuite.avr-gcc`. To update the files, you need to invoke the `update-testsuite` build step:
+To prevent a hard dependency on the `avr-gcc` toolchain, we vendor the binaries for all tests
+defined in the folder `testsuite.avr-gcc`. To update the files, you need to invoke the
+`update-testsuite` build step:
 
 ```sh-session
-[~/projects/aviron]$ zig build update-testsuite
-[~/projects/aviron]$ 
+$ zig build update-testsuite
+$
 ```
 
 After that, `zig build test` will run the regenerated tests.
 
-**NOTE:** The build will not detect changed files, so you have no guarantee that running `zig build update-testsuite test` will actually do the right thing. If you're working on the test suite, just use `zig build update-testsuite && zig build test` for this.
+> [!NOTE]
+> The build will not detect changed files, so you have no guarantee that running `zig build
+> update-testsuite test` will actually do the right thing. If you're working on the test suite, just
+> use `zig build update-testsuite && zig build test` for this.
 
 ## Links
 
