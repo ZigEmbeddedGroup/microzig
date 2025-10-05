@@ -127,6 +127,9 @@ fn run_test(
 
         var header = try std.elf.Header.read(&reader.interface);
 
+        // Set PC to entry point (convert byte address to word address for AVR)
+        cpu.pc = @intCast(header.entry / 2);
+
         var pheaders = header.iterateProgramHeaders(&reader);
         while (try pheaders.next()) |phdr| {
             if (phdr.p_type != std.elf.PT_LOAD)
@@ -147,9 +150,6 @@ fn run_test(
             try reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
             @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
         }
-
-        // Set PC to entry point
-        cpu.pc = @intCast(header.entry);
     }
 
     // Run the test

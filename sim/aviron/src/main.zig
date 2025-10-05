@@ -109,6 +109,9 @@ pub fn main() !u8 {
             .elf => {
                 var header = try std.elf.Header.read(&reader.interface);
 
+                // Set PC to entry point (convert byte address to word address for AVR)
+                cpu.pc = @intCast(header.entry / 2);
+
                 var pheaders = header.iterateProgramHeaders(&reader);
                 while (try pheaders.next()) |phdr| {
                     if (phdr.p_type != std.elf.PT_LOAD)
