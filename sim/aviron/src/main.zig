@@ -117,9 +117,14 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(null);
+    const result = try cpu.run(null, cli.options.breakpoint);
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
+
+    // Handle program exit - the defer block will still run
+    if (result == .program_exit) {
+        return io.exit_code.?;
+    }
 
     return 0;
 }
@@ -143,6 +148,8 @@ const Cli = struct {
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
+    breakpoint: ?u24 = null,
+    gas: ?u64 = null,
 
     pub const shorthands = .{
         .h = "help",
@@ -150,6 +157,8 @@ const Cli = struct {
         .m = "mcu",
         .I = "info",
         .f = "format",
+        .b = "breakpoint",
+        .g = "gas",
     };
     pub const meta = .{
         .summary = "[-h] [-t] [-m <mcu>] <file> ...",
@@ -166,6 +175,8 @@ const Cli = struct {
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
+            .breakpoint = "Break when PC reaches this address (hex or dec)",
+            .gas = "Stop after N instructions executed",
         },
     };
 };
@@ -175,6 +186,9 @@ const IO = struct {
 
     sp: u16,
     sreg: *aviron.Cpu.SREG,
+
+    // Exit status tracking
+    exit_code: ?u8 = null,
 
     pub fn memory(self: *IO) aviron.IO {
         return aviron.IO{
@@ -186,6 +200,7 @@ const IO = struct {
     pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
+        .checkExitFn = check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -262,7 +277,9 @@ const IO = struct {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
-            .exit => std.process.exit(value & mask),
+            .exit => {
+                io.exit_code = value & mask;
+            },
             .stdio => {
                 var stdout = std.fs.File.stdout().writer(&.{});
                 stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
@@ -316,5 +333,13 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn check_exit(ctx: ?*anyopaque) ?u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx.?));
+        if (io.exit_code) |code| {
+            return code;
+        }
+        return null;
     }
 };

@@ -44,6 +44,9 @@ const InstructionEffect = enum {
     sleep,
 
     watchdog_reset,
+
+    /// Detected infinite loop (typically __stop_program after main returns)
+    infinite_loop,
 };
 
 // Options:
@@ -62,6 +65,7 @@ io: IO,
 pc: u24 = 0,
 regs: [32]u8 = [1]u8{0} ** 32,
 sreg: SREG = @bitCast(@as(u8, 0)),
+instr_count: u64 = 0,
 
 instr_effect: InstructionEffect = .none,
 
@@ -77,9 +81,11 @@ pub const RunResult = enum {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
+    program_exit,
 };
 
-pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
+pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
     var rest_gas = mileage;
 
     while (true) {
@@ -97,11 +103,21 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                 .breakpoint => return .breakpoint,
                 .sleep => return .enter_sleep_mode,
                 .watchdog_reset => return .reset_watchdog,
+                .infinite_loop => return .infinite_loop,
             };
         };
 
         const pc = cpu.pc;
+
+        // Check breakpoint
+        if (breakpoint) |bp_addr| {
+            if (pc == bp_addr) {
+                return .breakpoint;
+            }
+        }
+
         const inst = try isa.decode(cpu.fetch_code());
+        cpu.instr_count += 1;
 
         if (cpu.trace) {
             // std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
@@ -111,7 +127,8 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             //     fmtInstruction(inst),
             // });
 
-            std.debug.print("TRACE {s} {f} [", .{
+            std.debug.print("TRACE #{d: >6} {s} {f} [", .{
+                cpu.instr_count,
                 if (skip) "SKIP" else "    ",
                 cpu.sreg,
             });
@@ -140,6 +157,12 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
                         @field(instructions, @tagName(tag))(cpu, info);
                     }
                 },
+            }
+
+            // Check if the program requested exit via I/O
+            if (cpu.io.check_exit()) |exit_code| {
+                _ = exit_code; // The exit code is stored in the IO context for main() to use
+                return .program_exit;
             }
         }
     }
@@ -868,7 +891,14 @@ const instructions = struct {
     /// Program memory not exceeding 4K words (8KB) this instruction can address the entire memory from
     /// every address location. See also JMP.
     inline fn rjmp(cpu: *Cpu, bits: isa.opinfo.k12) void {
-        cpu.shift_program_counter(@as(i12, @bitCast(bits.k)));
+        const offset = @as(i12, @bitCast(bits.k));
+        // Detect infinite loop pattern (rjmp .-2, which is rjmp with k=-1)
+        // This is commonly used in __stop_program after main returns
+        if (offset == -1) {
+            cpu.instr_effect = .infinite_loop;
+            return;
+        }
+        cpu.shift_program_counter(offset);
     }
 
     /// RCALL – Relative Call to Subroutine
