@@ -154,11 +154,11 @@ pub fn main() !u8 {
 
     // Build memory spaces for the test runner
     const mcu_config = aviron.mcu.atmega328p;
-    const io_dev = test_system.io.device();
-    const sram_dev = test_system.sram.device();
-    const eeprom_dev = test_system.eeprom.device();
+    const io_bus = test_system.io.bus();
+    const sram_bus = test_system.sram.bus();
+    const eeprom_bus = test_system.eeprom.bus();
 
-    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_dev, io_dev, eeprom_dev);
+    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_bus, io_bus, eeprom_bus);
     defer spaces.deinit(allocator);
 
     test_system.cpu = aviron.Cpu{
@@ -167,9 +167,9 @@ pub fn main() !u8 {
         .instruction_set = .avr5,
 
         .flash = test_system.flash_storage.memory(),
-        .data = spaces.data.device(),
-        .io = spaces.io.device(),
-        .eeprom = spaces.eeprom.device(),
+        .data = spaces.data.bus(),
+        .io = spaces.io.bus(),
+        .eeprom = spaces.eeprom.bus(),
 
         .code_model = .code16,
 
@@ -264,14 +264,14 @@ const IO = struct {
     // Exit status tracking
     exit_code: ?u8 = null,
 
-    pub fn device(self: *IO) aviron.Device {
-        return aviron.Device{
+    pub fn bus(self: *IO) aviron.Bus {
+        return aviron.Bus{
             .ctx = self,
-            .vtable = &dev_vtable,
+            .vtable = &bus_vtable,
         };
     }
 
-    const dev_vtable = aviron.Device.VTable{
+    const bus_vtable = aviron.Bus.VTable{
         .read = dev_read,
         .write = dev_write,
         .write_masked = dev_write_masked,
@@ -308,7 +308,7 @@ const IO = struct {
         _,
     };
 
-    fn dev_read(ctx: *anyopaque, addr: aviron.Device.Address) u8 {
+    fn dev_read(ctx: *anyopaque, addr: aviron.Bus.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
@@ -346,12 +346,12 @@ const IO = struct {
         };
     }
 
-    fn dev_write(ctx: *anyopaque, addr: aviron.Device.Address, value: u8) void {
+    fn dev_write(ctx: *anyopaque, addr: aviron.Bus.Address, value: u8) void {
         dev_write_masked(ctx, addr, 0xFF, value);
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn dev_write_masked(ctx: *anyopaque, addr: aviron.Device.Address, mask: u8, value: u8) void {
+    fn dev_write_masked(ctx: *anyopaque, addr: aviron.Bus.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {

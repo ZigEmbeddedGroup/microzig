@@ -1,9 +1,9 @@
 const std = @import("std");
 const io = @import("io.zig");
 
-/// Use the unified device interface
-pub const Backend = io.Device;
-const Device = io.Device;
+/// Use the unified bus interface
+pub const Backend = io.Bus;
+const Bus = io.Bus;
 
 /// Fixed-size memory device with byte-addressable read/write operations
 pub fn FixedSizedMemory(comptime size: comptime_int) type {
@@ -12,30 +12,30 @@ pub fn FixedSizedMemory(comptime size: comptime_int) type {
 
         data: [size]u8 align(2) = .{0} ** size,
 
-        pub fn device(self: *Self) Device {
-            return Device{ .ctx = self, .vtable = &dev_vtable };
+        pub fn bus(self: *Self) Bus {
+            return Bus{ .ctx = self, .vtable = &bus_vtable };
         }
 
-        pub const dev_vtable = Device.VTable{
+        pub const bus_vtable = Bus.VTable{
             .read = dev_read,
             .write = dev_write,
             .write_masked = dev_write_masked,
             .check_exit = null,
         };
 
-        fn dev_read(ctx: *anyopaque, addr: Device.Address) u8 {
+        fn dev_read(ctx: *anyopaque, addr: Bus.Address) u8 {
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             return mem.data[addr];
         }
 
-        fn dev_write(ctx: *anyopaque, addr: Device.Address, value: u8) void {
+        fn dev_write(ctx: *anyopaque, addr: Bus.Address, value: u8) void {
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             mem.data[addr] = value;
         }
 
-        fn dev_write_masked(ctx: *anyopaque, addr: Device.Address, mask: u8, value: u8) void {
+        fn dev_write_masked(ctx: *anyopaque, addr: Bus.Address, mask: u8, value: u8) void {
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             const old = mem.data[addr];
@@ -47,9 +47,9 @@ pub fn FixedSizedMemory(comptime size: comptime_int) type {
 /// A mapping entry within a MemorySpace.
 pub const Segment = struct {
     /// Base address within the enclosing memory space.
-    at: Device.Address,
+    at: Bus.Address,
     /// Size in bytes of the mapped range.
-    size: Device.Address,
+    size: Bus.Address,
     /// Backend handling the mapped range starting at index 0.
     backend: Backend,
 };
@@ -94,14 +94,14 @@ pub const MemorySpace = struct {
         alloc.free(self.segments);
     }
 
-    pub fn read(self: *const Self, addr: Device.Address) AccessError!u8 {
+    pub fn read(self: *const Self, addr: Bus.Address) AccessError!u8 {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
         return seg.backend.read(idx);
     }
 
-    pub fn write(self: *const Self, addr: Device.Address, v: u8) AccessError!void {
+    pub fn write(self: *const Self, addr: Bus.Address, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
@@ -109,7 +109,7 @@ pub const MemorySpace = struct {
         return;
     }
 
-    pub fn write_masked(self: *const Self, addr: Device.Address, mask: u8, v: u8) AccessError!void {
+    pub fn write_masked(self: *const Self, addr: Bus.Address, mask: u8, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
@@ -117,7 +117,7 @@ pub const MemorySpace = struct {
         return;
     }
 
-    fn find(self: *const Self, addr: Device.Address) ?*const Segment {
+    fn find(self: *const Self, addr: Bus.Address) ?*const Segment {
         // Linear scan is fine initially; segments are sorted.
         for (self.segments) |*s| {
             if (addr >= s.at and addr < s.at + s.size) return s;
@@ -125,23 +125,23 @@ pub const MemorySpace = struct {
         return null;
     }
 
-    /// Returns a Device interface for this MemorySpace.
-    /// The returned Device uses absolute addressing within this space (not segment-relative).
-    pub fn device(self: *Self) Device {
-        return Device{
+    /// Returns a Bus interface for this MemorySpace.
+    /// The returned Bus uses absolute addressing within this space (not segment-relative).
+    pub fn bus(self: *Self) Bus {
+        return Bus{
             .ctx = @as(*anyopaque, @ptrCast(self)),
-            .vtable = &device_vtable,
+            .vtable = &bus_vtable,
         };
     }
 
-    const device_vtable = Device.VTable{
-        .read = device_read,
-        .write = device_write,
-        .write_masked = device_write_masked,
-        .check_exit = device_check_exit,
+    const bus_vtable = Bus.VTable{
+        .read = bus_read,
+        .write = bus_write,
+        .write_masked = bus_write_masked,
+        .check_exit = bus_check_exit,
     };
 
-    fn device_read(ctx: *anyopaque, addr: Device.Address) u8 {
+    fn bus_read(ctx: *anyopaque, addr: Bus.Address) u8 {
         const self: *const Self = @ptrCast(@alignCast(ctx));
         return self.read(addr) catch |e| switch (e) {
             error.Unmapped => @panic("Read from unmapped memory address"),
@@ -150,7 +150,7 @@ pub const MemorySpace = struct {
         };
     }
 
-    fn device_write(ctx: *anyopaque, addr: Device.Address, v: u8) void {
+    fn bus_write(ctx: *anyopaque, addr: Bus.Address, v: u8) void {
         const self: *const Self = @ptrCast(@alignCast(ctx));
         self.write(addr, v) catch |e| switch (e) {
             error.Unmapped => @panic("Write to unmapped memory address"),
@@ -159,7 +159,7 @@ pub const MemorySpace = struct {
         };
     }
 
-    fn device_write_masked(ctx: *anyopaque, addr: Device.Address, mask: u8, v: u8) void {
+    fn bus_write_masked(ctx: *anyopaque, addr: Bus.Address, mask: u8, v: u8) void {
         const self: *const Self = @ptrCast(@alignCast(ctx));
         self.write_masked(addr, mask, v) catch |e| switch (e) {
             error.Unmapped => @panic("Masked write to unmapped memory address"),
@@ -168,7 +168,7 @@ pub const MemorySpace = struct {
         };
     }
 
-    fn device_check_exit(ctx: *anyopaque) ?u8 {
+    fn bus_check_exit(ctx: *anyopaque) ?u8 {
         const self: *const Self = @ptrCast(@alignCast(ctx));
         // Check all segments for exit condition
         for (self.segments) |*seg| {
@@ -185,8 +185,8 @@ test "MemorySpace: detects overlapping segments" {
 
     var ram1_storage = FixedSizedMemory(16){};
     var ram2_storage = FixedSizedMemory(16){};
-    const ram1 = ram1_storage.device();
-    const ram2 = ram2_storage.device();
+    const ram1 = ram1_storage.bus();
+    const ram2 = ram2_storage.bus();
 
     const segs = [_]Segment{
         .{ .at = 0x10, .size = 12, .backend = ram1 },
@@ -205,8 +205,8 @@ test "MemorySpace: basic read/write across segments" {
 
     var io_storage = FixedSizedMemory(32){}; // stand-in for IO range (no side effects)
     var sram_storage = FixedSizedMemory(64){};
-    const io_dev = io_storage.device();
-    const sram_dev = sram_storage.device();
+    const io_dev = io_storage.bus();
+    const sram_dev = sram_storage.bus();
 
     const segs = [_]Segment{
         .{ .at = 0x0000, .size = 0x20, .backend = io_dev },

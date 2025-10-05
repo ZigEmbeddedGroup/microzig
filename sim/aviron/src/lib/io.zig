@@ -118,8 +118,8 @@ pub const IO = struct {
     }
 };
 
-// Unified byte-addressable device interface used by MemorySpace for RAM and IO
-pub const Device = struct {
+// Unified byte-addressable bus interface used by MemorySpace for RAM and IO
+pub const Bus = struct {
     pub const Address = u24;
 
     ctx: *anyopaque,
@@ -132,19 +132,19 @@ pub const Device = struct {
         check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
     };
 
-    pub fn read(self: *const Device, addr: Address) u8 {
+    pub fn read(self: *const Bus, addr: Address) u8 {
         return self.vtable.read(self.ctx, addr);
     }
 
-    pub fn write(self: *const Device, addr: Address, v: u8) void {
+    pub fn write(self: *const Bus, addr: Address, v: u8) void {
         self.vtable.write(self.ctx, addr, v);
     }
 
-    pub fn write_masked(self: *const Device, addr: Address, mask: u8, v: u8) void {
+    pub fn write_masked(self: *const Bus, addr: Address, mask: u8, v: u8) void {
         self.vtable.write_masked(self.ctx, addr, mask, v);
     }
 
-    pub fn check_exit(self: *const Device) ?u8 {
+    pub fn check_exit(self: *const Bus) ?u8 {
         if (self.vtable.check_exit) |f| return f(self.ctx) else return null;
     }
 };

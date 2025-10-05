@@ -7,7 +7,7 @@ pub const Cpu = @import("Cpu.zig");
 
 pub const Flash = io.Flash;
 pub const IO = io.IO;
-pub const Device = io.Device;
+pub const Bus = io.Bus;
 
 const memory = @import("memory.zig");
 pub const FixedSizedMemory = memory.FixedSizedMemory;

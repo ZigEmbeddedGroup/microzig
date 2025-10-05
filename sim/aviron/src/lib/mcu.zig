@@ -16,7 +16,7 @@ pub const Config = struct {
     sram_size: u16,
 
     /// SRAM base address in data space
-    sram_base: io_mod.Device.Address,
+    sram_base: io_mod.Bus.Address,
 
     /// EEPROM size in bytes
     eeprom_size: u16,
@@ -31,9 +31,9 @@ pub const Config = struct {
     special_io: SpecialIoConfig,
 
     /// Start of IO window in data address space (inclusive).
-    io_window_base: io_mod.Device.Address,
+    io_window_base: io_mod.Bus.Address,
     /// End of IO window in data address space (inclusive).
-    io_window_end: io_mod.Device.Address,
+    io_window_end: io_mod.Bus.Address,
 };
 
 /// Convenience container for constructed memory spaces.
@@ -53,12 +53,12 @@ pub const Spaces = struct {
 pub fn build_spaces(
     alloc: std.mem.Allocator,
     cfg: Config,
-    sram_dev: io_mod.Device,
-    io_dev: io_mod.Device,
-    eeprom_dev: io_mod.Device,
+    sram_dev: io_mod.Bus,
+    io_dev: io_mod.Bus,
+    eeprom_dev: io_mod.Bus,
 ) !Spaces {
     // IO window size
-    const io_size: io_mod.Device.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
+    const io_size: io_mod.Bus.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
 
     // Data space: IO window mapped into data space (at base), then SRAM at sram_base
     var data_seg_buf: [2]memory.Segment = undefined;
