@@ -1,8 +1,6 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
 const io_mod = @import("io.zig");
-const builtin = @import("builtin");
-const memory = @import("memory.zig");
 
 const Flash = io_mod.Flash;
 const RAM = io_mod.RAM;
