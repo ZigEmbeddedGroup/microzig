@@ -1,9 +1,153 @@
 const std = @import("std");
-const io = @import("io.zig");
+const isa = @import("decoder.zig");
 
-/// Use the unified bus interface
-pub const Backend = io.Bus;
-const Bus = io.Bus;
+pub const Flash = struct {
+    pub const Address = u24;
+
+    ctx: ?*anyopaque,
+    vtable: *const VTable,
+
+    /// Size of the flash memory in bytes (word count). Is always 2-aligned.
+    size: Address,
+
+    pub fn read(mem: Flash, addr: Address) u16 {
+        std.debug.assert(addr < mem.size);
+        return mem.vtable.readFn(mem.ctx, addr);
+    }
+
+    pub const VTable = struct {
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
+    };
+
+    pub const empty = Flash{
+        .ctx = null,
+        .size = 0,
+        .vtable = &VTable{ .readFn = empty_read },
+    };
+
+    fn empty_read(ctx: ?*anyopaque, addr: Address) u16 {
+        _ = addr;
+        _ = ctx;
+        return 0;
+    }
+
+    pub fn Static(comptime size: comptime_int) type {
+        if ((size & 1) != 0)
+            @compileError("size must be a multiple of two!");
+        return struct {
+            const Self = @This();
+
+            data: [size]u8 align(2) = .{0} ** size,
+
+            pub fn memory(self: *Self) Flash {
+                return Flash{
+                    .ctx = self,
+                    .vtable = &vtable,
+                    .size = @divExact(size, 2),
+                };
+            }
+
+            pub const vtable = VTable{ .readFn = mem_read };
+
+            fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
+                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+                std.debug.assert(addr < @as(Address, @intCast(@divExact(size, 2))));
+                return std.mem.bytesAsSlice(u16, &mem.data)[addr];
+            }
+        };
+    }
+};
+
+pub const IO = struct {
+    // Some AVR families (e.g., XMEGA) expose extended I/O up to 0xFFF (12 bits).
+    pub const Address = u12;
+
+    ctx: ?*anyopaque,
+
+    /// Size of the EEPROM in bytes.
+    vtable: *const VTable,
+
+    pub fn read(mem: IO, addr: Address) u8 {
+        return mem.vtable.readFn(mem.ctx, addr);
+    }
+
+    pub fn write(mem: IO, addr: Address, value: u8) void {
+        return mem.write_masked(addr, 0xFF, value);
+    }
+
+    /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
+    pub fn write_masked(mem: IO, addr: Address, mask: u8, value: u8) void {
+        return mem.vtable.writeFn(mem.ctx, addr, mask, value);
+    }
+
+    pub fn check_exit(mem: IO) ?u8 {
+        return mem.vtable.checkExitFn(mem.ctx);
+    }
+
+    pub const VTable = struct {
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
+        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
+        checkExitFn: *const fn (ctx: ?*anyopaque) ?u8,
+    };
+
+    pub const empty = IO{
+        .ctx = null,
+        .vtable = &VTable{
+            .readFn = empty_read,
+            .writeFn = empty_write,
+            .checkExitFn = empty_check_exit,
+        },
+    };
+
+    fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
+        _ = addr;
+        _ = ctx;
+        return 0;
+    }
+
+    fn empty_write(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
+        _ = mask;
+        _ = value;
+        _ = addr;
+        _ = ctx;
+    }
+
+    fn empty_check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null;
+    }
+};
+
+// Unified byte-addressable bus interface used by MemorySpace for RAM and IO
+pub const Bus = struct {
+    pub const Address = u24;
+
+    ctx: *anyopaque,
+    vtable: *const VTable,
+
+    pub const VTable = struct {
+        read: *const fn (ctx: *anyopaque, addr: Address) u8,
+        write: *const fn (ctx: *anyopaque, addr: Address, v: u8) void,
+        write_masked: *const fn (ctx: *anyopaque, addr: Address, mask: u8, v: u8) void,
+        check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
+    };
+
+    pub fn read(self: *const Bus, addr: Address) u8 {
+        return self.vtable.read(self.ctx, addr);
+    }
+
+    pub fn write(self: *const Bus, addr: Address, v: u8) void {
+        self.vtable.write(self.ctx, addr, v);
+    }
+
+    pub fn write_masked(self: *const Bus, addr: Address, mask: u8, v: u8) void {
+        self.vtable.write_masked(self.ctx, addr, mask, v);
+    }
+
+    pub fn check_exit(self: *const Bus) ?u8 {
+        if (self.vtable.check_exit) |f| return f(self.ctx) else return null;
+    }
+};
 
 /// Fixed-size memory device with byte-addressable read/write operations
 pub fn FixedSizedMemory(comptime size: comptime_int) type {
@@ -13,7 +157,7 @@ pub fn FixedSizedMemory(comptime size: comptime_int) type {
         data: [size]u8 align(2) = .{0} ** size,
 
         pub fn bus(self: *Self) Bus {
-            return Bus{ .ctx = self, .vtable = &bus_vtable };
+            return .{ .ctx = self, .vtable = &bus_vtable };
         }
 
         pub const bus_vtable = Bus.VTable{
@@ -51,7 +195,7 @@ pub const Segment = struct {
     /// Size in bytes of the mapped range.
     size: Bus.Address,
     /// Backend handling the mapped range starting at index 0.
-    backend: Backend,
+    backend: Bus,
 };
 
 /// A logical memory space composed of non-overlapping segments.
@@ -128,7 +272,7 @@ pub const MemorySpace = struct {
     /// Returns a Bus interface for this MemorySpace.
     /// The returned Bus uses absolute addressing within this space (not segment-relative).
     pub fn bus(self: *Self) Bus {
-        return Bus{
+        return .{
             .ctx = @as(*anyopaque, @ptrCast(self)),
             .vtable = &bus_vtable,
         };

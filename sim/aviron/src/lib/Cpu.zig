@@ -1,10 +1,10 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
-const io_mod = @import("io.zig");
+const bus = @import("bus.zig");
 
-const Flash = io_mod.Flash;
-const IO = io_mod.IO;
-const Bus = io_mod.Bus;
+const Flash = bus.Flash;
+const IO = bus.IO;
+const Bus = bus.Bus;
 
 const Cpu = @This();
 

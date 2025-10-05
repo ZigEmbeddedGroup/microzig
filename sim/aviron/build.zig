@@ -135,10 +135,10 @@ fn add_test_suite(
     });
     test_step.dependOn(&b.addRunArtifact(unit_tests).step);
 
-    // Run unit tests for low-level library components (e.g., memory.zig)
+    // Run unit tests for low-level library components (e.g., bus.zig)
     const memory_tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/lib/memory.zig"),
+            .root_source_file = b.path("src/lib/bus.zig"),
             .target = host_target,
             .optimize = optimize,
         }),
