@@ -8,6 +8,7 @@ const Flash = io_mod.Flash;
 const RAM = io_mod.RAM;
 const EEPROM = io_mod.EEPROM;
 const IO = io_mod.IO;
+const Device = io_mod.Device;
 
 const Cpu = @This();
 
@@ -59,10 +60,10 @@ code_model: CodeModel,
 instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
-sram: RAM,
 sram_base: u16,
-eeprom: EEPROM,
-io: IO,
+sram_size: usize,
+eeprom_size: usize,
+io_dev: Device,
 data: memory.MemorySpace,
 io_space: memory.MemorySpace,
 
@@ -115,8 +116,8 @@ pub fn dump_system_state(cpu: *Cpu) void {
     }
 
     // Dump SRAM using absolute addresses based on configured base
-    const sram_end: u16 = cpu.sram_base + @as(u16, @truncate(cpu.sram.size - 1));
-    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ cpu.sram_base, sram_end, cpu.sram.size });
+    const sram_end: u16 = cpu.sram_base + @as(u16, @truncate(cpu.sram_size - 1));
+    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ cpu.sram_base, sram_end, cpu.sram_size });
 
     const row_width = 16;
     var prev_row: ?[row_width]u8 = null;
@@ -124,8 +125,8 @@ pub fn dump_system_state(cpu: *Cpu) void {
     var elided = false;
 
     var i: usize = 0;
-    while (i < cpu.sram.size) : (i += @min(row_width, cpu.sram.size - i)) {
-        const row_len: usize = @min(row_width, cpu.sram.size - i);
+    while (i < cpu.sram_size) : (i += @min(row_width, cpu.sram_size - i)) {
+        const row_len: usize = @min(row_width, cpu.sram_size - i);
         var cur_row: [row_width]u8 = undefined;
 
         var j: usize = 0;
@@ -269,7 +270,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64, break_pc: ?u24) RunError!RunResult {
             }
 
             // Check if the program requested exit via I/O
-            if (cpu.io.check_exit()) |exit_code| {
+            if (cpu.io_dev.check_exit()) |exit_code| {
                 _ = exit_code; // The exit code is stored in the IO context for main() to use
                 return .program_exit;
             }

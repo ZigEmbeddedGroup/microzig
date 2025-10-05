@@ -46,22 +46,23 @@ pub fn main() !u8 {
 
     // Create memory interfaces
     const flash_mem = flash_storage.memory();
-    var sram_mem = sram.memory();
-    const eeprom_mem = eeprom.memory();
-    var io_mem = io.memory();
 
     // Build memory spaces via MCU helper
-    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, &sram_mem, &io_mem);
+    // Build Device views
+    const io_dev = io.device();
+    const sram_dev = sram.device();
+
+    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_dev, io_dev);
     defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
         .trace = cli.options.trace,
 
         .flash = flash_mem,
-        .sram = sram_mem,
         .sram_base = mcu_config.sram_base,
-        .eeprom = eeprom_mem,
-        .io = io_mem,
+        .sram_size = mcu_config.sram_size,
+        .eeprom_size = mcu_config.eeprom_size,
+        .io_dev = io_dev,
         .data = spaces.data,
         .io_space = spaces.io,
 
@@ -90,8 +91,8 @@ pub fn main() !u8 {
         try stdout.interface.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
         try stdout.interface.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
         try stdout.interface.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
-        try stdout.interface.print("  RAM:        {d: >5} bytes\n", .{cpu.sram.size});
-        try stdout.interface.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom.size});
+        try stdout.interface.print("  RAM:        {d: >5} bytes\n", .{cpu.sram_size});
+        try stdout.interface.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom_size});
         try stdout.interface.flush();
         return 0;
     }
@@ -218,34 +219,32 @@ const Cli = struct {
     };
 };
 
-    const IO = struct {
-        scratch_regs: [16]u8 = @splat(0),
+const IO = struct {
+    scratch_regs: [16]u8 = @splat(0),
 
-        sp: u16,
-        sreg: *aviron.Cpu.SREG,
+    sp: u16,
+    sreg: *aviron.Cpu.SREG,
 
-        // RAMP registers for extended addressing (used by larger MCUs like ATmega2560)
-        ramp_x: u8 = 0,
-        ramp_y: u8 = 0,
-        ramp_z: u8 = 0,
-        ramp_d: u8 = 0,
-        e_ind: u8 = 0,
+    // RAMP registers for extended addressing (used by larger MCUs like ATmega2560)
+    ramp_x: u8 = 0,
+    ramp_y: u8 = 0,
+    ramp_z: u8 = 0,
+    ramp_d: u8 = 0,
+    e_ind: u8 = 0,
 
     // Exit status tracking
     exit_requested: bool = false,
     exit_code: u8 = 0,
 
-    pub fn memory(self: *IO) aviron.IO {
-        return aviron.IO{
-            .ctx = self,
-            .vtable = &vtable,
-        };
+    pub fn device(self: *IO) aviron.Device {
+        return .{ .ctx = self, .vtable = &dev_vtable };
     }
 
-    pub const vtable = aviron.IO.VTable{
-        .readFn = read,
-        .writeFn = write,
-        .checkExitFn = check_exit,
+    const dev_vtable = aviron.Device.VTable{
+        .read8 = dev_read,
+        .write8 = dev_write,
+        .write_masked = dev_write_masked,
+        .check_exit = dev_check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -286,9 +285,9 @@ const Cli = struct {
         _,
     };
 
-    fn read(ctx: ?*anyopaque, addr: aviron.IO.Address) u8 {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
-        const reg: Register = @enumFromInt(addr);
+    fn dev_read(ctx: *anyopaque, addr: usize) u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
             .exit => 0,
             .stdio => blk: {
@@ -332,9 +331,13 @@ const Cli = struct {
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn write(ctx: ?*anyopaque, addr: aviron.IO.Address, mask: u8, value: u8) void {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
-        const reg: Register = @enumFromInt(addr);
+    fn dev_write(ctx: *anyopaque, addr: usize, value: u8) void {
+        dev_write_masked(ctx, addr, 0xFF, value);
+    }
+
+    fn dev_write_masked(ctx: *anyopaque, addr: usize, mask: u8, value: u8) void {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
             .exit => {
                 io.exit_requested = true;
@@ -404,8 +407,8 @@ const Cli = struct {
         dst.* |= (val & mask);
     }
 
-    fn check_exit(ctx: ?*anyopaque) ?u8 {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
+    fn dev_check_exit(ctx: *anyopaque) ?u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx));
         if (io.exit_requested) {
             return io.exit_code;
         }

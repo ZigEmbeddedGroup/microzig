@@ -97,74 +97,40 @@ pub const Flash = struct {
 pub const RAM = struct {
     pub const Address = u24;
 
-    ctx: ?*anyopaque,
-    vtable: *const VTable,
-
-    /// Size of the RAM memory space in bytes.
-    size: usize,
-
-    pub fn read(mem: RAM, index: Address) u8 {
-        // Index is a 0-based array index, not a data-space address.
-        return mem.vtable.readFn(mem.ctx, index);
-    }
-
-    pub fn write(mem: RAM, index: Address, value: u8) void {
-        // Index is a 0-based array index, not a data-space address.
-        return mem.vtable.writeFn(mem.ctx, index, value);
-    }
-
-    pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, index: Address) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, index: Address, value: u8) void,
-    };
-
-    pub const empty = RAM{
-        .ctx = null,
-        .size = 0,
-        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
-    };
-
-    fn empty_read(ctx: ?*anyopaque, index: Address) u8 {
-        _ = index;
-        _ = ctx;
-        return 0;
-    }
-
-    fn empty_write(ctx: ?*anyopaque, index: Address, value: u8) void {
-        _ = value;
-        _ = index;
-        _ = ctx;
-    }
-
     pub fn Static(comptime size: comptime_int) type {
         return struct {
             const Self = @This();
 
             data: [size]u8 align(2) = .{0} ** size,
 
-            pub fn memory(self: *Self) RAM {
-                return RAM{
-                    .ctx = self,
-                    .vtable = &vtable,
-                    .size = size,
-                };
+            pub fn device(self: *Self) Device {
+                return Device{ .ctx = self, .vtable = &dev_vtable };
             }
 
-            pub const vtable = VTable{
-                .readFn = mem_read,
-                .writeFn = mem_write,
+            pub const dev_vtable = Device.VTable{
+                .read8 = dev_read8,
+                .write8 = dev_write8,
+                .write_masked = dev_write_masked,
+                .check_exit = null,
             };
 
-            fn mem_read(ctx: ?*anyopaque, index: Address) u8 {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+            fn dev_read8(ctx: *anyopaque, index: usize) u8 {
+                const mem: *Self = @ptrCast(@alignCast(ctx));
                 std.debug.assert(index < size);
                 return mem.data[index];
             }
 
-            fn mem_write(ctx: ?*anyopaque, index: Address, value: u8) void {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
+            fn dev_write8(ctx: *anyopaque, index: usize, value: u8) void {
+                const mem: *Self = @ptrCast(@alignCast(ctx));
                 std.debug.assert(index < size);
                 mem.data[index] = value;
+            }
+
+            fn dev_write_masked(ctx: *anyopaque, index: usize, mask: u8, value: u8) void {
+                const mem: *Self = @ptrCast(@alignCast(ctx));
+                std.debug.assert(index < size);
+                const old = mem.data[index];
+                mem.data[index] = (old & ~mask) | (value & mask);
             }
         };
     }
@@ -187,29 +153,34 @@ pub const RAM = struct {
                 self.allocator.free(self.data);
             }
 
-            pub fn memory(self: *Self) RAM {
-                return RAM{
-                    .ctx = self,
-                    .vtable = &vtable,
-                    .size = self.data.len,
-                };
+            pub fn device(self: *Self) Device {
+                return Device{ .ctx = self, .vtable = &dev_vtable };
             }
 
-            pub const vtable = VTable{
-                .readFn = mem_read,
-                .writeFn = mem_write,
+            pub const dev_vtable = Device.VTable{
+                .read8 = dev_read8,
+                .write8 = dev_write8,
+                .write_masked = dev_write_masked,
+                .check_exit = null,
             };
 
-            fn mem_read(ctx: ?*anyopaque, index: Address) u8 {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(index < mem.data.len);
-                return mem.data[index];
+            fn dev_read8(ctx: *anyopaque, idx: usize) u8 {
+                const mem: *Self = @ptrCast(@alignCast(ctx));
+                std.debug.assert(idx < mem.data.len);
+                return mem.data[idx];
             }
 
-            fn mem_write(ctx: ?*anyopaque, index: Address, value: u8) void {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(index < mem.data.len);
-                mem.data[index] = value;
+            fn dev_write8(ctx: *anyopaque, idx: usize, v: u8) void {
+                const mem: *Self = @ptrCast(@alignCast(ctx));
+                std.debug.assert(idx < mem.data.len);
+                mem.data[idx] = v;
+            }
+
+            fn dev_write_masked(ctx: *anyopaque, idx: usize, mask: u8, v: u8) void {
+                const mem: *Self = @ptrCast(@alignCast(ctx));
+                std.debug.assert(idx < mem.data.len);
+                const old = mem.data[idx];
+                mem.data[idx] = (old & ~mask) | (v & mask);
             }
         };
     }
@@ -275,6 +246,33 @@ pub const IO = struct {
         _ = ctx;
         return null;
     }
+};
 
-    // no translate in new design
+// Unified byte-addressable device interface used by MemorySpace for RAM and IO
+pub const Device = struct {
+    ctx: *anyopaque,
+    vtable: *const VTable,
+
+    pub const VTable = struct {
+        read8: *const fn (ctx: *anyopaque, idx: usize) u8,
+        write8: *const fn (ctx: *anyopaque, idx: usize, v: u8) void,
+        write_masked: *const fn (ctx: *anyopaque, idx: usize, mask: u8, v: u8) void,
+        check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
+    };
+
+    pub fn read8(self: *const Device, idx: usize) u8 {
+        return self.vtable.read8(self.ctx, idx);
+    }
+
+    pub fn write8(self: *const Device, idx: usize, v: u8) void {
+        self.vtable.write8(self.ctx, idx, v);
+    }
+
+    pub fn write_masked(self: *const Device, idx: usize, mask: u8, v: u8) void {
+        self.vtable.write_masked(self.ctx, idx, mask, v);
+    }
+
+    pub fn check_exit(self: *const Device) ?u8 {
+        if (self.vtable.check_exit) |f| return f(self.ctx) else return null;
+    }
 };

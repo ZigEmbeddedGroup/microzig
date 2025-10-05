@@ -51,21 +51,21 @@ pub const Spaces = struct {
 pub fn build_spaces(
     alloc: std.mem.Allocator,
     cfg: Config,
-    ram: *io_mod.RAM,
-    io_mem: *io_mod.IO,
+    sram_dev: io_mod.Device,
+    io_dev: io_mod.Device,
 ) !Spaces {
     // IO window size
     const io_size: usize = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
 
     // Data space: IO window mapped into data space (at base), then SRAM at sram_base
     var data_seg_buf: [2]memory.Segment = undefined;
-    data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = memory.Backend.fromIO(io_mem) };
-    data_seg_buf[1] = .{ .at = @as(usize, cfg.sram_base), .size = ram.size, .backend = memory.Backend.fromRAM(ram) };
+    data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = io_dev };
+    data_seg_buf[1] = .{ .at = @as(usize, cfg.sram_base), .size = cfg.sram_size, .backend = sram_dev };
     const data_space = try memory.MemorySpace.init(alloc, data_seg_buf[0..]);
 
     // IO space: IO addresses starting at 0
     var io_seg_buf: [1]memory.Segment = undefined;
-    io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = memory.Backend.fromIO(io_mem) };
+    io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = io_dev };
     const io_space = try memory.MemorySpace.init(alloc, io_seg_buf[0..]);
 
     return .{ .data = data_space, .io = io_space };
@@ -166,9 +166,9 @@ pub const atmega2560 = Config{
 pub const xmega128a4u = Config{
     .name = "ATxmega128A4U",
     .flash_size = 131072, // 128 KiB
-    .sram_size = 8192,    // 8 KiB
-    .sram_base = 0x2000,  // XMEGA SRAM typically starts at 0x2000
-    .eeprom_size = 2048,  // 2 KiB
+    .sram_size = 8192, // 8 KiB
+    .sram_base = 0x2000, // XMEGA SRAM typically starts at 0x2000
+    .eeprom_size = 2048, // 2 KiB
     .code_model = .code22,
     .instruction_set = .avrxmega,
     .special_io = .{

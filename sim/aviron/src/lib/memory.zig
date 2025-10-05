@@ -1,121 +1,8 @@
 const std = @import("std");
 const io = @import("io.zig");
 
-/// Unified byte-addressable backend interface for RAM and IO.
-/// - RAM: read/write bytes by index
-/// - IO: read/write bytes with side effects; never exposes slices
-pub const Backend = struct {
-    ctx: *anyopaque,
-    vtable: *const VTable,
-
-    pub const VTable = struct {
-        read8: *const fn (ctx: *anyopaque, idx: usize) ReadError!u8,
-        write8: *const fn (ctx: *anyopaque, idx: usize, v: u8) WriteError!void,
-        write_masked: ?*const fn (ctx: *anyopaque, idx: usize, mask: u8, v: u8) WriteError!void = null,
-
-        // Optional contiguous views (not used initially). All adapters return null for safety.
-        slice_ro: *const fn (ctx: *anyopaque) ?[]const u8,
-        slice_rw: *const fn (ctx: *anyopaque) ?[]u8,
-    };
-
-    pub const ReadError = error{OutOfRange};
-    pub const WriteError = error{ OutOfRange, ReadOnly };
-
-    pub fn read8(self: *const Backend, idx: usize) ReadError!u8 {
-        return self.vtable.read8(self.ctx, idx);
-    }
-
-    pub fn write8(self: *const Backend, idx: usize, v: u8) WriteError!void {
-        return self.vtable.write8(self.ctx, idx, v);
-    }
-
-    pub fn writeMasked(self: *const Backend, idx: usize, mask: u8, v: u8) WriteError!void {
-        if (self.vtable.write_masked) |f| {
-            return f(self.ctx, idx, mask, v);
-        }
-        // Default: emulate via read-modify-write
-        const old = self.read8(idx) catch |e| switch (e) {
-            error.OutOfRange => return error.OutOfRange,
-        };
-        const new_value: u8 = (old & ~mask) | (v & mask);
-        return self.write8(idx, new_value);
-    }
-
-    pub fn sliceRO(self: *const Backend) ?[]const u8 {
-        return self.vtable.slice_ro(self.ctx);
-    }
-
-    pub fn sliceRW(self: *const Backend) ?[]u8 {
-        return self.vtable.slice_rw(self.ctx);
-    }
-
-    /// Adapter for RAM backends (read-write, byte-indexed)
-    pub fn fromRAM(ram: *io.RAM) Backend {
-        return .{ .ctx = ram, .vtable = &ram_vtable };
-    }
-
-    /// Adapter for IO backends (read-write with side effects). Index is treated as IO address.
-    pub fn fromIO(io_mem: *io.IO) Backend {
-        return .{ .ctx = io_mem, .vtable = &io_vtable };
-    }
-};
-
-// ---- VTable singletons and adapter fns ----
-
-fn ram_read8(ctx: *anyopaque, idx: usize) Backend.ReadError!u8 {
-    const r: *io.RAM = @ptrCast(@alignCast(ctx));
-    return r.read(@intCast(idx));
-}
-
-fn ram_write8(ctx: *anyopaque, idx: usize, v: u8) Backend.WriteError!void {
-    const r: *io.RAM = @ptrCast(@alignCast(ctx));
-    r.write(@intCast(idx), v);
-}
-
-fn ram_slice_ro(_: *anyopaque) ?[]const u8 {
-    return null;
-}
-fn ram_slice_rw(_: *anyopaque) ?[]u8 {
-    return null;
-}
-
-const ram_vtable = Backend.VTable{
-    .read8 = &ram_read8,
-    .write8 = &ram_write8,
-    .write_masked = null,
-    .slice_ro = &ram_slice_ro,
-    .slice_rw = &ram_slice_rw,
-};
-
-fn io_read8(ctx: *anyopaque, idx: usize) Backend.ReadError!u8 {
-    const m: *io.IO = @ptrCast(@alignCast(ctx));
-    return m.read(@intCast(idx));
-}
-
-fn io_write8(ctx: *anyopaque, idx: usize, v: u8) Backend.WriteError!void {
-    const m: *io.IO = @ptrCast(@alignCast(ctx));
-    m.write(@intCast(idx), v);
-}
-
-fn io_write_masked(ctx: *anyopaque, idx: usize, mask: u8, v: u8) Backend.WriteError!void {
-    const m: *io.IO = @ptrCast(@alignCast(ctx));
-    m.write_masked(@intCast(idx), mask, v);
-}
-
-fn io_slice_ro(_: *anyopaque) ?[]const u8 {
-    return null;
-}
-fn io_slice_rw(_: *anyopaque) ?[]u8 {
-    return null;
-}
-
-const io_vtable = Backend.VTable{
-    .read8 = &io_read8,
-    .write8 = &io_write8,
-    .write_masked = &io_write_masked,
-    .slice_ro = &io_slice_ro,
-    .slice_rw = &io_slice_rw,
-};
+/// Use the unified device interface
+pub const Backend = io.Device;
 
 /// A mapping entry within a MemorySpace.
 pub const Segment = struct {
@@ -171,29 +58,23 @@ pub const MemorySpace = struct {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
-        return seg.backend.read8(idx) catch |e| switch (e) {
-            error.OutOfRange => return e,
-        };
+        return seg.backend.read8(idx);
     }
 
     pub fn write8(self: *const Self, addr: usize, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
-        return seg.backend.write8(idx, v) catch |e| switch (e) {
-            error.ReadOnly => return error.ReadOnly,
-            error.OutOfRange => return error.OutOfRange,
-        };
+        seg.backend.write8(idx, v);
+        return;
     }
 
     pub fn write_masked(self: *const Self, addr: usize, mask: u8, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
-        return seg.backend.writeMasked(idx, mask, v) catch |e| switch (e) {
-            error.ReadOnly => return error.ReadOnly,
-            error.OutOfRange => return error.OutOfRange,
-        };
+        seg.backend.write_masked(idx, mask, v);
+        return;
     }
 
     fn find(self: *const Self, addr: usize) ?*const Segment {
@@ -210,12 +91,12 @@ test "MemorySpace: detects overlapping segments" {
 
     var ram1_storage = io.RAM.Static(16){};
     var ram2_storage = io.RAM.Static(16){};
-    var ram1 = ram1_storage.memory();
-    var ram2 = ram2_storage.memory();
+    const ram1 = ram1_storage.device();
+    const ram2 = ram2_storage.device();
 
     const segs = [_]Segment{
-        .{ .at = 0x10, .size = 12, .backend = Backend.fromRAM(&ram1) },
-        .{ .at = 0x18, .size = 12, .backend = Backend.fromRAM(&ram2) }, // overlaps 0x1A..0x1B
+        .{ .at = 0x10, .size = 12, .backend = ram1 },
+        .{ .at = 0x18, .size = 12, .backend = ram2 }, // overlaps 0x1A..0x1B
     };
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -230,12 +111,12 @@ test "MemorySpace: basic read/write across segments" {
 
     var io_storage = io.RAM.Static(32){}; // stand-in for IO range (no side effects)
     var sram_storage = io.RAM.Static(64){};
-    var io_ram = io_storage.memory();
-    var sram = sram_storage.memory();
+    const io_dev = io_storage.device();
+    const sram_dev = sram_storage.device();
 
     const segs = [_]Segment{
-        .{ .at = 0x0000, .size = 0x20, .backend = Backend.fromRAM(&io_ram) },
-        .{ .at = 0x0020, .size = 0x40, .backend = Backend.fromRAM(&sram) },
+        .{ .at = 0x0000, .size = 0x20, .backend = io_dev },
+        .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
     };
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -249,8 +130,8 @@ test "MemorySpace: basic read/write across segments" {
     try ms.write8(0x0005, 0xAA);
     try ms.write8(0x0025, 0xCC);
 
-    try testing.expectEqual(@as(u8, 0xAA), io_ram.read(0x0005));
-    try testing.expectEqual(@as(u8, 0xCC), sram.read(0x0005)); // 0x25 - 0x20 = 0x5
+    try testing.expectEqual(@as(u8, 0xAA), io_dev.read8(0x0005));
+    try testing.expectEqual(@as(u8, 0xCC), sram_dev.read8(0x0005)); // 0x25 - 0x20 = 0x5
 
     // Read back via MemorySpace
     try testing.expectEqual(@as(u8, 0xAA), try ms.read8(0x0005));
