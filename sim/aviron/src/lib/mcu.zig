@@ -27,7 +27,7 @@ pub const Config = struct {
     instruction_set: Cpu.InstructionSet,
 
     /// Special I/O register addresses
-    special_io: SpecialIoConfig,
+    special_io: Cpu.SpecialIoRegisters,
 
     /// Start of IO window in data address space (inclusive).
     io_window_base: bus.Bus.Address,
@@ -81,24 +81,6 @@ pub fn build_spaces(
         .eeprom = eeprom_space,
     };
 }
-
-pub const SpecialIoConfig = struct {
-    /// RAMP registers for extended addressing (if present)
-    ramp_x: ?bus.IO.Address = null,
-    ramp_y: ?bus.IO.Address = null,
-    ramp_z: ?bus.IO.Address = null,
-    ramp_d: ?bus.IO.Address = null,
-
-    /// Extended indirect register (if present)
-    e_ind: ?bus.IO.Address = null,
-
-    /// Stack pointer registers
-    sp_l: bus.IO.Address,
-    sp_h: bus.IO.Address,
-
-    /// Status register
-    sreg: bus.IO.Address,
-};
 
 // ============================================================================
 // Predefined MCU Configurations

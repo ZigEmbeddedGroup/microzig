@@ -55,18 +55,7 @@ pub fn main() !u8 {
         .code_model = mcu_config.code_model,
         .instruction_set = mcu_config.instruction_set,
 
-        .sio = .{
-            .ramp_x = mcu_config.special_io.ramp_x,
-            .ramp_y = mcu_config.special_io.ramp_y,
-            .ramp_z = mcu_config.special_io.ramp_z,
-            .ramp_d = mcu_config.special_io.ramp_d,
-            .e_ind = mcu_config.special_io.e_ind,
-
-            .sp_l = mcu_config.special_io.sp_l,
-            .sp_h = mcu_config.special_io.sp_h,
-
-            .sreg = mcu_config.special_io.sreg,
-        },
+        .sio = mcu_config.special_io,
     };
 
     io.sreg = &cpu.sreg;
