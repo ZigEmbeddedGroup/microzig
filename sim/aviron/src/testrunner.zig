@@ -17,8 +17,8 @@ const SystemState = struct {
 
     // Emulate Atmega382p device size:
     flash_storage: aviron.Flash.Static(32768) = .{},
-    sram: aviron.RAM.Static(2048) = .{},
-    eeprom: aviron.EEPROM.Static(1024) = .{},
+    sram: aviron.FixedSizedMemory(2048) = .{},
+    eeprom: aviron.FixedSizedMemory(1024) = .{},
     io: IO,
 
     config: testconfig.TestSuiteConfig,

@@ -5,6 +5,45 @@ const io = @import("io.zig");
 pub const Backend = io.Device;
 const Device = io.Device;
 
+/// Fixed-size memory device with byte-addressable read/write operations
+pub fn FixedSizedMemory(comptime size: comptime_int) type {
+    return struct {
+        const Self = @This();
+
+        data: [size]u8 align(2) = .{0} ** size,
+
+        pub fn device(self: *Self) Device {
+            return Device{ .ctx = self, .vtable = &dev_vtable };
+        }
+
+        pub const dev_vtable = Device.VTable{
+            .read = dev_read,
+            .write = dev_write,
+            .write_masked = dev_write_masked,
+            .check_exit = null,
+        };
+
+        fn dev_read(ctx: *anyopaque, addr: Device.Address) u8 {
+            const mem: *Self = @ptrCast(@alignCast(ctx));
+            std.debug.assert(addr < size);
+            return mem.data[addr];
+        }
+
+        fn dev_write(ctx: *anyopaque, addr: Device.Address, value: u8) void {
+            const mem: *Self = @ptrCast(@alignCast(ctx));
+            std.debug.assert(addr < size);
+            mem.data[addr] = value;
+        }
+
+        fn dev_write_masked(ctx: *anyopaque, addr: Device.Address, mask: u8, value: u8) void {
+            const mem: *Self = @ptrCast(@alignCast(ctx));
+            std.debug.assert(addr < size);
+            const old = mem.data[addr];
+            mem.data[addr] = (old & ~mask) | (value & mask);
+        }
+    };
+}
+
 /// A mapping entry within a MemorySpace.
 pub const Segment = struct {
     /// Base address within the enclosing memory space.
@@ -144,8 +183,8 @@ pub const MemorySpace = struct {
 test "MemorySpace: detects overlapping segments" {
     const testing = std.testing;
 
-    var ram1_storage = io.RAM.Static(16){};
-    var ram2_storage = io.RAM.Static(16){};
+    var ram1_storage = FixedSizedMemory(16){};
+    var ram2_storage = FixedSizedMemory(16){};
     const ram1 = ram1_storage.device();
     const ram2 = ram2_storage.device();
 
@@ -164,8 +203,8 @@ test "MemorySpace: detects overlapping segments" {
 test "MemorySpace: basic read/write across segments" {
     const testing = std.testing;
 
-    var io_storage = io.RAM.Static(32){}; // stand-in for IO range (no side effects)
-    var sram_storage = io.RAM.Static(64){};
+    var io_storage = FixedSizedMemory(32){}; // stand-in for IO range (no side effects)
+    var sram_storage = FixedSizedMemory(64){};
     const io_dev = io_storage.device();
     const sram_dev = sram_storage.device();
 

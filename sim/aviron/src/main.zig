@@ -26,8 +26,8 @@ pub fn main() !u8 {
     const mcu_config = aviron.mcu.atmega328p;
 
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
-    var sram = aviron.RAM.Static(mcu_config.sram_size){};
-    var eeprom = aviron.EEPROM.Static(mcu_config.eeprom_size){};
+    var sram = aviron.FixedSizedMemory(mcu_config.sram_size){};
+    var eeprom = aviron.FixedSizedMemory(mcu_config.eeprom_size){};
     var io = IO{
         .sreg = undefined,
         .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
