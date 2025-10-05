@@ -3,8 +3,6 @@ const isa = @import("decoder.zig");
 const io_mod = @import("io.zig");
 
 const Flash = io_mod.Flash;
-const RAM = io_mod.RAM;
-const EEPROM = io_mod.EEPROM;
 const IO = io_mod.IO;
 const Device = io_mod.Device;
 

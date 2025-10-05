@@ -58,50 +58,6 @@ pub const Flash = struct {
     }
 };
 
-pub const RAM = struct {
-    pub const Address = u24;
-
-    pub fn Static(comptime size: comptime_int) type {
-        return struct {
-            const Self = @This();
-
-            data: [size]u8 align(2) = .{0} ** size,
-
-            pub fn device(self: *Self) Device {
-                return Device{ .ctx = self, .vtable = &dev_vtable };
-            }
-
-            pub const dev_vtable = Device.VTable{
-                .read = dev_read,
-                .write = dev_write,
-                .write_masked = dev_write_masked,
-                .check_exit = null,
-            };
-
-            fn dev_read(ctx: *anyopaque, addr: Device.Address) u8 {
-                const mem: *Self = @ptrCast(@alignCast(ctx));
-                std.debug.assert(addr < size);
-                return mem.data[addr];
-            }
-
-            fn dev_write(ctx: *anyopaque, addr: Device.Address, value: u8) void {
-                const mem: *Self = @ptrCast(@alignCast(ctx));
-                std.debug.assert(addr < size);
-                mem.data[addr] = value;
-            }
-
-            fn dev_write_masked(ctx: *anyopaque, addr: Device.Address, mask: u8, value: u8) void {
-                const mem: *Self = @ptrCast(@alignCast(ctx));
-                std.debug.assert(addr < size);
-                const old = mem.data[addr];
-                mem.data[addr] = (old & ~mask) | (value & mask);
-            }
-        };
-    }
-};
-
-pub const EEPROM = RAM; // actually the same interface *shrug*
-
 pub const IO = struct {
     // Some AVR families (e.g., XMEGA) expose extended I/O up to 0xFFF (12 bits).
     pub const Address = u12;
