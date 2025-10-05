@@ -1,6 +1,5 @@
 const std = @import("std");
-const io_mod = @import("io.zig");
-const memory = @import("memory.zig");
+const bus = @import("bus.zig");
 const Cpu = @import("Cpu.zig");
 
 /// MCU configuration defines the memory layout and special register addresses
@@ -10,13 +9,13 @@ pub const Config = struct {
     name: []const u8,
 
     /// Flash memory size in bytes (must be 2-aligned)
-    flash_size: io_mod.Flash.Address,
+    flash_size: bus.Flash.Address,
 
     /// SRAM size in bytes
     sram_size: u16,
 
     /// SRAM base address in data space
-    sram_base: io_mod.Bus.Address,
+    sram_base: bus.Bus.Address,
 
     /// EEPROM size in bytes
     eeprom_size: u16,
@@ -31,16 +30,16 @@ pub const Config = struct {
     special_io: SpecialIoConfig,
 
     /// Start of IO window in data address space (inclusive).
-    io_window_base: io_mod.Bus.Address,
+    io_window_base: bus.Bus.Address,
     /// End of IO window in data address space (inclusive).
-    io_window_end: io_mod.Bus.Address,
+    io_window_end: bus.Bus.Address,
 };
 
 /// Convenience container for constructed memory spaces.
 pub const Spaces = struct {
-    data: memory.MemorySpace,
-    io: memory.MemorySpace,
-    eeprom: memory.MemorySpace,
+    data: bus.MemorySpace,
+    io: bus.MemorySpace,
+    eeprom: bus.MemorySpace,
 
     pub fn deinit(self: *const Spaces, alloc: std.mem.Allocator) void {
         self.data.deinit(alloc);
@@ -53,28 +52,28 @@ pub const Spaces = struct {
 pub fn build_spaces(
     alloc: std.mem.Allocator,
     cfg: Config,
-    sram_dev: io_mod.Bus,
-    io_dev: io_mod.Bus,
-    eeprom_dev: io_mod.Bus,
+    sram_dev: bus.Bus,
+    io_dev: bus.Bus,
+    eeprom_dev: bus.Bus,
 ) !Spaces {
     // IO window size
-    const io_size: io_mod.Bus.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
+    const io_size: bus.Bus.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
 
     // Data space: IO window mapped into data space (at base), then SRAM at sram_base
-    var data_seg_buf: [2]memory.Segment = undefined;
+    var data_seg_buf: [2]bus.Segment = undefined;
     data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = io_dev };
     data_seg_buf[1] = .{ .at = cfg.sram_base, .size = cfg.sram_size, .backend = sram_dev };
-    const data_space = try memory.MemorySpace.init(alloc, data_seg_buf[0..]);
+    const data_space = try bus.MemorySpace.init(alloc, data_seg_buf[0..]);
 
     // IO space: IO addresses starting at 0
-    var io_seg_buf: [1]memory.Segment = undefined;
+    var io_seg_buf: [1]bus.Segment = undefined;
     io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = io_dev };
-    const io_space = try memory.MemorySpace.init(alloc, io_seg_buf[0..]);
+    const io_space = try bus.MemorySpace.init(alloc, io_seg_buf[0..]);
 
     // EEPROM space: EEPROM addresses starting at 0
-    var eeprom_seg_buf: [1]memory.Segment = undefined;
+    var eeprom_seg_buf: [1]bus.Segment = undefined;
     eeprom_seg_buf[0] = .{ .at = 0, .size = cfg.eeprom_size, .backend = eeprom_dev };
-    const eeprom_space = try memory.MemorySpace.init(alloc, eeprom_seg_buf[0..]);
+    const eeprom_space = try bus.MemorySpace.init(alloc, eeprom_seg_buf[0..]);
 
     return .{
         .data = data_space,
@@ -85,20 +84,20 @@ pub fn build_spaces(
 
 pub const SpecialIoConfig = struct {
     /// RAMP registers for extended addressing (if present)
-    ramp_x: ?io_mod.IO.Address = null,
-    ramp_y: ?io_mod.IO.Address = null,
-    ramp_z: ?io_mod.IO.Address = null,
-    ramp_d: ?io_mod.IO.Address = null,
+    ramp_x: ?bus.IO.Address = null,
+    ramp_y: ?bus.IO.Address = null,
+    ramp_z: ?bus.IO.Address = null,
+    ramp_d: ?bus.IO.Address = null,
 
     /// Extended indirect register (if present)
-    e_ind: ?io_mod.IO.Address = null,
+    e_ind: ?bus.IO.Address = null,
 
     /// Stack pointer registers
-    sp_l: io_mod.IO.Address,
-    sp_h: io_mod.IO.Address,
+    sp_l: bus.IO.Address,
+    sp_h: bus.IO.Address,
 
     /// Status register
-    sreg: io_mod.IO.Address,
+    sreg: bus.IO.Address,
 };
 
 // ============================================================================
