@@ -49,7 +49,7 @@ pub fn main() !u8 {
 
         .flash = flash_mem,
         .data = spaces.data.device(),
-        .io_space = spaces.io.device(),
+        .io = spaces.io.device(),
         .eeprom = spaces.eeprom.device(),
 
         .code_model = mcu_config.code_model,
