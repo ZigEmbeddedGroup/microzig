@@ -36,6 +36,8 @@ fn run_test_with_mcu(
         try run_test(allocator, aviron.mcu.attiny816, test_config, options, elf_paths);
     } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega2560")) {
         try run_test(allocator, aviron.mcu.atmega2560, test_config, options, elf_paths);
+    } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATxmega128A4U")) {
+        try run_test(allocator, aviron.mcu.xmega128a4u, test_config, options, elf_paths);
     } else {
         std.debug.print("MCU '{s}' not yet supported in test runner\n", .{mcu_name});
         return error.UnsupportedMCU;

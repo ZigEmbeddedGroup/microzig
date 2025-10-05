@@ -26,6 +26,7 @@ pub fn main() !u8 {
         .atmega328p => aviron.mcu.atmega328p,
         .attiny816 => aviron.mcu.attiny816,
         .atmega2560 => aviron.mcu.atmega2560,
+        .xmega128a4u => aviron.mcu.xmega128a4u,
     };
 
     // Allocate memory based on MCU configuration
@@ -165,6 +166,7 @@ pub const MCU = enum {
     atmega328p,
     attiny816,
     atmega2560,
+    xmega128a4u,
 };
 
 pub const FileFormat = enum {

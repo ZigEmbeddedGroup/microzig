@@ -170,3 +170,28 @@ pub const atmega2560 = Config{
     .io_window_base = 0x20,
     .io_window_end = 0x00FF,
 };
+
+/// ATxmega128A4U configuration (XMEGA A-series)
+pub const xmega128a4u = Config{
+    .name = "ATxmega128A4U",
+    .flash_size = 131072, // 128 KiB
+    .sram_size = 8192,    // 8 KiB
+    .sram_base = 0x2000,  // XMEGA SRAM typically starts at 0x2000
+    .eeprom_size = 2048,  // 2 KiB
+    .code_model = .code22,
+    .instruction_set = .avrxmega,
+    .special_io = .{
+        // XMEGA provides RAMP registers; EIND is present on parts with >128 KiB, but define for completeness.
+        .ramp_x = 0x39,
+        .ramp_y = 0x3A,
+        .ramp_z = 0x3B,
+        .ramp_d = 0x38,
+        .e_ind = 0x3C,
+        .sp_l = 0x3D,
+        .sp_h = 0x3E,
+        .sreg = 0x3F,
+    },
+    // XMEGA extended I/O space up to 0x0FFF (12-bit I/O addresses)
+    .io_window_base = 0x20,
+    .io_window_end = 0x0FFF,
+};
