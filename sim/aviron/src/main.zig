@@ -217,8 +217,8 @@ const IO = struct {
     }
 
     const dev_vtable = aviron.Device.VTable{
-        .read8 = dev_read,
-        .write8 = dev_write,
+        .read = dev_read,
+        .write = dev_write,
         .write_masked = dev_write_masked,
         .check_exit = dev_check_exit,
     };
