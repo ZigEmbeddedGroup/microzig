@@ -8,9 +8,9 @@ const Device = io.Device;
 /// A mapping entry within a MemorySpace.
 pub const Segment = struct {
     /// Base address within the enclosing memory space.
-    at: usize,
+    at: Device.Address,
     /// Size in bytes of the mapped range.
-    size: usize,
+    size: Device.Address,
     /// Backend handling the mapped range starting at index 0.
     backend: Backend,
 };
@@ -55,14 +55,14 @@ pub const MemorySpace = struct {
         alloc.free(self.segments);
     }
 
-    pub fn read8(self: *const Self, addr: usize) AccessError!u8 {
+    pub fn read8(self: *const Self, addr: Device.Address) AccessError!u8 {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
         return seg.backend.read8(idx);
     }
 
-    pub fn write8(self: *const Self, addr: usize, v: u8) AccessError!void {
+    pub fn write8(self: *const Self, addr: Device.Address, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
@@ -70,7 +70,7 @@ pub const MemorySpace = struct {
         return;
     }
 
-    pub fn write_masked(self: *const Self, addr: usize, mask: u8, v: u8) AccessError!void {
+    pub fn write_masked(self: *const Self, addr: Device.Address, mask: u8, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
@@ -78,7 +78,7 @@ pub const MemorySpace = struct {
         return;
     }
 
-    fn find(self: *const Self, addr: usize) ?*const Segment {
+    fn find(self: *const Self, addr: Device.Address) ?*const Segment {
         // Linear scan is fine initially; segments are sorted.
         for (self.segments) |*s| {
             if (addr >= s.at and addr < s.at + s.size) return s;
@@ -102,27 +102,27 @@ pub const MemorySpace = struct {
         .check_exit = device_check_exit,
     };
 
-    fn device_read8(ctx: *anyopaque, idx: usize) u8 {
+    fn device_read8(ctx: *anyopaque, addr: Device.Address) u8 {
         const self: *const Self = @ptrCast(@alignCast(ctx));
-        return self.read8(idx) catch |e| switch (e) {
+        return self.read8(addr) catch |e| switch (e) {
             error.Unmapped => @panic("Read from unmapped memory address"),
             error.OutOfRange => @panic("Read out of range"),
             error.ReadOnly => @panic("ReadOnly error on read"),
         };
     }
 
-    fn device_write8(ctx: *anyopaque, idx: usize, v: u8) void {
+    fn device_write8(ctx: *anyopaque, addr: Device.Address, v: u8) void {
         const self: *const Self = @ptrCast(@alignCast(ctx));
-        self.write8(idx, v) catch |e| switch (e) {
+        self.write8(addr, v) catch |e| switch (e) {
             error.Unmapped => @panic("Write to unmapped memory address"),
             error.OutOfRange => @panic("Write out of range"),
             error.ReadOnly => @panic("Write to read-only memory"),
         };
     }
 
-    fn device_write_masked(ctx: *anyopaque, idx: usize, mask: u8, v: u8) void {
+    fn device_write_masked(ctx: *anyopaque, addr: Device.Address, mask: u8, v: u8) void {
         const self: *const Self = @ptrCast(@alignCast(ctx));
-        self.write_masked(idx, mask, v) catch |e| switch (e) {
+        self.write_masked(addr, mask, v) catch |e| switch (e) {
             error.Unmapped => @panic("Masked write to unmapped memory address"),
             error.OutOfRange => @panic("Masked write out of range"),
             error.ReadOnly => @panic("Masked write to read-only memory"),

@@ -10,16 +10,16 @@ pub const Config = struct {
     name: []const u8,
 
     /// Flash memory size in bytes (must be 2-aligned)
-    flash_size: usize,
+    flash_size: io_mod.Flash.Address,
 
     /// SRAM size in bytes
     sram_size: u16,
 
     /// SRAM base address in data space
-    sram_base: u16,
+    sram_base: io_mod.Device.Address,
 
     /// EEPROM size in bytes
-    eeprom_size: usize,
+    eeprom_size: u16,
 
     /// Code model (determines PC width)
     code_model: Cpu.CodeModel,
@@ -31,9 +31,9 @@ pub const Config = struct {
     special_io: SpecialIoConfig,
 
     /// Start of IO window in data address space (inclusive).
-    io_window_base: u24,
+    io_window_base: io_mod.Device.Address,
     /// End of IO window in data address space (inclusive).
-    io_window_end: u24,
+    io_window_end: io_mod.Device.Address,
 };
 
 /// Convenience container for constructed memory spaces.
@@ -58,12 +58,12 @@ pub fn build_spaces(
     eeprom_dev: io_mod.Device,
 ) !Spaces {
     // IO window size
-    const io_size: usize = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
+    const io_size: io_mod.Device.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
 
     // Data space: IO window mapped into data space (at base), then SRAM at sram_base
     var data_seg_buf: [2]memory.Segment = undefined;
     data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = io_dev };
-    data_seg_buf[1] = .{ .at = @as(usize, cfg.sram_base), .size = cfg.sram_size, .backend = sram_dev };
+    data_seg_buf[1] = .{ .at = cfg.sram_base, .size = cfg.sram_size, .backend = sram_dev };
     const data_space = try memory.MemorySpace.init(alloc, data_seg_buf[0..]);
 
     // IO space: IO addresses starting at 0
