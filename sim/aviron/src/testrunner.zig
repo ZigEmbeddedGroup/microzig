@@ -243,7 +243,7 @@ pub fn main() !u8 {
 
     const result = try test_system.cpu.run(null, null);
     validate_syste_and_exit(switch (result) {
-        .program_exit => .{ .system_exit = test_system.io.exit_code },
+        .program_exit => .{ .system_exit = test_system.io.exit_code.? },
         inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
     });
 }
@@ -261,8 +261,8 @@ const IO = struct {
 
     stdin: []const u8,
 
-    exit_requested: bool = false,
-    exit_code: u8 = 0,
+    // Exit status tracking
+    exit_code: ?u8 = null,
 
     pub fn device(self: *IO) aviron.Device {
         return aviron.Device{
@@ -356,7 +356,6 @@ const IO = struct {
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
             .exit => {
-                io.exit_requested = true;
                 io.exit_code = value & mask;
             },
 
@@ -411,6 +410,6 @@ const IO = struct {
 
     fn dev_check_exit(ctx: *anyopaque) ?u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
-        return if (io.exit_requested) io.exit_code else null;
+        return io.exit_code;
     }
 };
