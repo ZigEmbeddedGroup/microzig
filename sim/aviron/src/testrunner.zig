@@ -149,32 +149,46 @@ pub fn main() !u8 {
             .stderr = &stderr,
         },
 
-        .cpu = aviron.Cpu{
-            .trace = cli.options.trace,
+        .cpu = undefined, // Will be set below after spaces are built
+    };
 
-            .instruction_set = .avr5,
+    // Build memory spaces for the test runner
+    const mcu_config = aviron.mcu.atmega328p;
+    const io_dev = test_system.io.device();
+    const sram_dev = test_system.sram.device();
+    const eeprom_dev = test_system.eeprom.device();
 
-            .flash = test_system.flash_storage.memory(),
-            .sram = test_system.sram.memory(),
-            .eeprom = test_system.eeprom.memory(),
-            .io = test_system.io.memory(),
+    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_dev, io_dev, eeprom_dev);
+    defer spaces.deinit(allocator);
 
-            .code_model = .code16,
+    test_system.cpu = aviron.Cpu{
+        .trace = cli.options.trace,
 
-            .sio = .{
-                .ramp_x = null,
-                .ramp_y = null,
-                .ramp_z = null,
-                .ramp_d = null,
-                .e_ind = null,
+        .instruction_set = .avr5,
 
-                .sp_l = @intFromEnum(IO.Register.sp_l),
-                .sp_h = @intFromEnum(IO.Register.sp_h),
+        .flash = test_system.flash_storage.memory(),
+        .data = spaces.data.device(),
+        .io_space = spaces.io.device(),
+        .eeprom = spaces.eeprom.device(),
 
-                .sreg = @intFromEnum(IO.Register.sreg),
-            },
+        .code_model = .code16,
+
+        .sio = .{
+            .ramp_x = null,
+            .ramp_y = null,
+            .ramp_z = null,
+            .ramp_d = null,
+            .e_ind = null,
+
+            .sp_l = @intFromEnum(IO.Register.sp_l),
+            .sp_h = @intFromEnum(IO.Register.sp_h),
+
+            .sreg = @intFromEnum(IO.Register.sreg),
         },
     };
+
+    // Now we can initialize the IO's sreg pointer
+    test_system.io.sreg = &test_system.cpu.sreg;
 
     // Initialize CPU state:
     inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
@@ -197,30 +211,39 @@ pub fn main() !u8 {
 
         var header = try std.elf.Header.read(&file_reader.interface);
 
+        // Set PC to entry point (convert from byte address to word address)
+        test_system.cpu.pc = @intCast(header.entry / 2);
+
         var pheaders = header.iterateProgramHeaders(&file_reader);
         while (try pheaders.next()) |phdr| {
             if (phdr.p_type != std.elf.PT_LOAD)
-                continue; // Header isn't lodead
+                continue; // Header isn't loaded
 
-            const dest_mem = if (phdr.p_vaddr >= 0x0080_0000)
+            if (phdr.p_memsz == 0)
+                continue; // Empty segment, nothing to load
+
+            // Use vaddr to determine if this is data or code
+            // AVR uses 0x800000 flag in vaddr to indicate data memory
+            var dest_mem: []u8 = if (phdr.p_vaddr >= 0x0080_0000)
                 &test_system.sram.data
             else
                 &test_system.flash_storage.data;
 
             const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
+            const target_addr: u24 = if (phdr.p_vaddr >= 0x0080_0000)
+                addr_masked - @as(u24, mcu_config.sram_base)
+            else
+                addr_masked; // Flash always starts at 0
 
-            if (phdr.p_filesz > 0) {
-                try file_reader.seekTo(phdr.p_offset);
-                try file_reader.interface.readSliceAll(dest_mem[addr_masked..][0..phdr.p_filesz]);
-            }
-            if (phdr.p_memsz > phdr.p_filesz) {
-                @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
-            }
+            try file_reader.seekTo(phdr.p_offset);
+            try file_reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
+            @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
         }
     }
 
     const result = try test_system.cpu.run(null, null);
     validate_syste_and_exit(switch (result) {
+        .program_exit => .{ .system_exit = test_system.io.exit_code },
         inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
     });
 }
@@ -238,21 +261,25 @@ const IO = struct {
 
     stdin: []const u8,
 
-    pub fn memory(self: *IO) aviron.IO {
-        return aviron.IO{
+    exit_requested: bool = false,
+    exit_code: u8 = 0,
+
+    pub fn device(self: *IO) aviron.Device {
+        return aviron.Device{
             .ctx = self,
-            .vtable = &vtable,
+            .vtable = &dev_vtable,
         };
     }
 
-    pub const vtable = aviron.IO.VTable{
-        .readFn = read,
-        .writeFn = write,
-        .checkExitFn = check_exit,
+    const dev_vtable = aviron.Device.VTable{
+        .read8 = dev_read,
+        .write8 = dev_write,
+        .write_masked = dev_write_masked,
+        .check_exit = dev_check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
-    const Register = enum(u6) {
+    const Register = enum(aviron.IO.Address) {
         exit = 0, // read: 0, write: os.exit()
         stdio = 1, // read: stdin, write: print to stdout
         stderr = 2, // read: 0, write: print to stderr
@@ -281,9 +308,9 @@ const IO = struct {
         _,
     };
 
-    fn read(ctx: ?*anyopaque, addr: u6) u8 {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
-        const reg: Register = @enumFromInt(addr);
+    fn dev_read(ctx: *anyopaque, addr: usize) u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
             .exit => 0,
             .stdio => if (io.stdin.len > 0) blk: {
@@ -319,14 +346,19 @@ const IO = struct {
         };
     }
 
+    fn dev_write(ctx: *anyopaque, addr: usize, value: u8) void {
+        dev_write_masked(ctx, addr, 0xFF, value);
+    }
+
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn write(ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void {
-        const io: *IO = @ptrCast(@alignCast(ctx.?));
-        const reg: Register = @enumFromInt(addr);
+    fn dev_write_masked(ctx: *anyopaque, addr: usize, mask: u8, value: u8) void {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
-            .exit => validate_syste_and_exit(.{
-                .system_exit = (value & mask),
-            }),
+            .exit => {
+                io.exit_requested = true;
+                io.exit_code = value & mask;
+            },
 
             .stdio => io.stdout.append(value & mask) catch @panic("out of memory"),
             .stderr => io.stderr.append(value & mask) catch @panic("out of memory"),
@@ -377,8 +409,8 @@ const IO = struct {
         dst.* |= (val & mask);
     }
 
-    fn check_exit(ctx: ?*anyopaque) ?u8 {
-        _ = ctx;
-        return null; // Testrunner handles exits differently via validate_syste_and_exit
+    fn dev_check_exit(ctx: *anyopaque) ?u8 {
+        const io: *IO = @ptrCast(@alignCast(ctx));
+        return if (io.exit_requested) io.exit_code else null;
     }
 };

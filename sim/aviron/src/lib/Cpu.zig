@@ -1,11 +1,14 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
 const io_mod = @import("io.zig");
+const builtin = @import("builtin");
+const memory = @import("memory.zig");
 
 const Flash = io_mod.Flash;
 const RAM = io_mod.RAM;
 const EEPROM = io_mod.EEPROM;
 const IO = io_mod.IO;
+const Device = io_mod.Device;
 
 const Cpu = @This();
 
@@ -57,9 +60,9 @@ code_model: CodeModel,
 instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
-sram: RAM,
-eeprom: EEPROM,
-io: IO,
+data: Device,
+io_space: Device,
+eeprom: Device,
 
 // State
 pc: u24 = 0,
@@ -160,7 +163,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
             }
 
             // Check if the program requested exit via I/O
-            if (cpu.io.check_exit()) |exit_code| {
+            if (cpu.io_space.check_exit()) |exit_code| {
                 _ = exit_code; // The exit code is stored in the IO context for main() to use
                 return .program_exit;
             }
@@ -179,22 +182,36 @@ fn fetch_code(cpu: *Cpu) u16 {
     return value;
 }
 
+inline fn data_read(cpu: *Cpu, addr: u24) u8 {
+    return cpu.data.read8(addr);
+}
+
+inline fn data_write(cpu: *Cpu, addr: u24, value: u8) void {
+    cpu.data.write8(addr, value);
+}
+
 fn push(cpu: *Cpu, val: u8) void {
+    // AVR PUSH: Write to [SP] first, then decrement SP
     const sp = cpu.get_sp();
-    cpu.sram.write(sp, val);
+    // AVR convention: write to [SP] first, then decrement SP
+    // SP points to the first unused location
+    cpu.data.write8(sp, val);
     cpu.set_sp(sp -% 1);
 }
 
 fn pop(cpu: *Cpu) u8 {
+    // AVR POP: Increment SP first, then read from [SP]
     const sp = cpu.get_sp() +% 1;
     cpu.set_sp(sp);
-    return cpu.sram.read(sp);
+    return cpu.data.read8(sp);
 }
 
 fn push_code_loc(cpu: *Cpu, val: u24) void {
     const pc: u24 = val;
     const mask: u24 = @intFromEnum(cpu.code_model);
 
+    // AVR pushes return address bytes so that RET pops low byte first.
+    // With write-then-decrement PUSH, we push least significant byte first.
     if ((mask & 0x0000FF) != 0) {
         cpu.push(@truncate(pc >> 0));
     }
@@ -219,7 +236,6 @@ fn pop_code_loc(cpu: *Cpu) u24 {
     if ((mask & 0x0000FF) != 0) {
         pc |= (@as(u24, cpu.pop()) << 0);
     }
-
     return pc;
 }
 
@@ -239,11 +255,11 @@ fn read_wide_reg(cpu: *Cpu, comptime reg: WideReg, comptime mode: IndexRegReadMo
         switch (mode) {
             .raw => 0,
             .ramp => switch (reg) {
-                .x => if (cpu.sio.ramp_x) |ramp| cpu.io.read(ramp) else 0,
-                .y => if (cpu.sio.ramp_y) |ramp| cpu.io.read(ramp) else 0,
-                .z => if (cpu.sio.ramp_z) |ramp| cpu.io.read(ramp) else 0,
+                .x => if (cpu.sio.ramp_x) |ramp| cpu.io_space.read8(@intCast(ramp)) else 0,
+                .y => if (cpu.sio.ramp_y) |ramp| cpu.io_space.read8(@intCast(ramp)) else 0,
+                .z => if (cpu.sio.ramp_z) |ramp| cpu.io_space.read8(@intCast(ramp)) else 0,
             },
-            .eind => if (cpu.sio.e_ind) |e_ind| cpu.io.read(e_ind) else 0,
+            .eind => if (cpu.sio.e_ind) |e_ind| cpu.io_space.read8(@intCast(e_ind)) else 0,
         },
         cpu.regs[reg.base() + 1],
         cpu.regs[reg.base() + 0],
@@ -258,9 +274,9 @@ fn write_wide_reg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: IndexRegWr
     cpu.regs[reg.base() + 1] = parts[1];
     if (mode == .ramp) {
         switch (reg) {
-            .x => if (cpu.sio.ramp_x) |ramp| cpu.io.write(ramp, parts[2]),
-            .y => if (cpu.sio.ramp_y) |ramp| cpu.io.write(ramp, parts[2]),
-            .z => if (cpu.sio.ramp_z) |ramp| cpu.io.write(ramp, parts[2]),
+            .x => if (cpu.sio.ramp_x) |ramp| cpu.io_space.write8(@intCast(ramp), parts[2]),
+            .y => if (cpu.sio.ramp_y) |ramp| cpu.io_space.write8(@intCast(ramp), parts[2]),
+            .z => if (cpu.sio.ramp_z) |ramp| cpu.io_space.write8(@intCast(ramp), parts[2]),
         }
     }
 }
@@ -768,14 +784,14 @@ const instructions = struct {
     /// Stores data from register Rr in the Register File to I/O Space (Ports, Timers, Configuration Registers, etc.).
     inline fn out(cpu: *Cpu, info: isa.opinfo.a6r5) void {
         // I/O(A) ← Rr
-        cpu.io.write(info.a, cpu.regs[info.r.num()]);
+        cpu.io_space.write8(@intCast(info.a), cpu.regs[info.r.num()]);
     }
 
     /// IN - Load an I/O Location to Register
     /// Loads data from the I/O Space (Ports, Timers, Configuration Registers, etc.) into register Rd in the Register File.
     inline fn in(cpu: *Cpu, info: isa.opinfo.a6d5) void {
         // Rd ← I/O(A)
-        cpu.regs[info.d.num()] = cpu.io.read(info.a);
+        cpu.regs[info.d.num()] = cpu.io_space.read8(@intCast(info.a));
     }
 
     /// CBI – Clear Bit in I/O Register
@@ -783,14 +799,14 @@ const instructions = struct {
     /// addresses 0-31.
     inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 0
-        cpu.io.write_masked(info.a, info.b.mask(), 0x00);
+        cpu.io_space.write_masked(@intCast(info.a), info.b.mask(), 0x00);
     }
 
     /// SBI – Set Bit in I/O Register
     /// Sets a specified bit in an I/O Register. This instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 1
-        cpu.io.write_masked(info.a, info.b.mask(), 0xFF);
+        cpu.io_space.write_masked(@intCast(info.a), info.b.mask(), 0xFF);
     }
 
     // Branching:
@@ -825,7 +841,7 @@ const instructions = struct {
     /// instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbic(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // If I/O(A,b) = 0 then PC ← PC + 2 (or 3) else PC ← PC + 1
-        const val = cpu.io.read(info.a);
+        const val = cpu.io_space.read8(@intCast(info.a));
         if ((val & info.b.mask()) == 0) {
             cpu.instr_effect = .skip_next;
         }
@@ -836,7 +852,7 @@ const instructions = struct {
     /// instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbis(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // If I/O(A,b) = 1 then PC ← PC + 2 (or 3) else PC ← PC + 1
-        const val = cpu.io.read(info.a);
+        const val = cpu.io_space.read8(@intCast(info.a));
         if ((val & info.b.mask()) != 0) {
             cpu.instr_effect = .skip_next;
         }
@@ -1041,8 +1057,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, Rd);
+        const mem = cpu.data.read8(z);
+        cpu.data.write8(z, Rd);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1060,8 +1076,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, (0xFF - Rd) & mem);
+        const mem = cpu.data.read8(z);
+        cpu.data.write8(z, (0xFF - Rd) & mem);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1079,8 +1095,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, Rd | mem);
+        const mem = cpu.data.read8(z);
+        cpu.data.write8(z, Rd | mem);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1097,8 +1113,8 @@ const instructions = struct {
         const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
-        const mem = cpu.sram.read(z);
-        cpu.sram.write(z, Rd ^ mem);
+        const mem = cpu.data.read8(z);
+        cpu.data.write8(z, Rd ^ mem);
         cpu.regs[info.r.num()] = mem;
     }
 
@@ -1117,7 +1133,7 @@ const instructions = struct {
     inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (k)
         const addr = cpu.extend_direct_address(cpu.fetch_code());
-        cpu.regs[info.d.num()] = cpu.sram.read(addr);
+        cpu.regs[info.d.num()] = cpu.data_read(addr);
     }
 
     const IndexOpMode = enum { none, post_incr, pre_decr, displace };
@@ -1150,7 +1166,7 @@ const instructions = struct {
             .rd = .ramp,
             .wb = .ramp,
         });
-        cpu.regs[d.num()] = cpu.sram.read(address);
+        cpu.regs[d.num()] = cpu.data_read(address);
     }
 
     /// LD – Load Indirect from Data Space to Register using Index X
@@ -1307,7 +1323,7 @@ const instructions = struct {
             .rd = .ramp,
             .wb = .ramp,
         });
-        cpu.sram.write(address, cpu.regs[r.num()]);
+        cpu.data_write(address, cpu.regs[r.num()]);
     }
 
     /// ST – Store Indirect From Register to Data Space using Index X
@@ -1422,7 +1438,7 @@ const instructions = struct {
     inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
         // (k) ← Rr
         const addr = cpu.extend_direct_address(cpu.fetch_code());
-        cpu.sram.write(addr, cpu.regs[info.d.num()]);
+        cpu.data_write(addr, cpu.regs[info.d.num()]);
     }
 
     /// PUSH – Push Register on Stack
@@ -1644,14 +1660,14 @@ pub const SpecialIoRegisters = struct {
 
 fn extend_direct_address(cpu: *Cpu, value: u16) u24 {
     return value | if (cpu.sio.ramp_d) |ramp_d|
-        @as(u24, cpu.io.read(ramp_d)) << 16
+        @as(u24, cpu.io_space.read8(@intCast(ramp_d))) << 16
     else
         0;
 }
 
 fn get_sp(cpu: *Cpu) u16 {
-    const lo = cpu.io.read(cpu.sio.sp_l);
-    const hi = cpu.io.read(cpu.sio.sp_h);
+    const lo = cpu.io_space.read8(@intCast(cpu.sio.sp_l));
+    const hi = cpu.io_space.read8(@intCast(cpu.sio.sp_h));
 
     return (@as(u16, hi) << 8) | lo;
 }
@@ -1659,9 +1675,8 @@ fn get_sp(cpu: *Cpu) u16 {
 fn set_sp(cpu: *Cpu, value: u16) void {
     const lo: u8 = @truncate(value >> 0);
     const hi: u8 = @truncate(value >> 8);
-
-    cpu.io.write(cpu.sio.sp_l, lo);
-    cpu.io.write(cpu.sio.sp_h, hi);
+    cpu.io_space.write8(@intCast(cpu.sio.sp_l), lo);
+    cpu.io_space.write8(@intCast(cpu.sio.sp_h), hi);
 }
 
 fn compose24(hi: u8, mid: u8, lo: u8) u24 {
