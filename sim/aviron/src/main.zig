@@ -117,7 +117,7 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(null);
+    const result = try cpu.run(null, cli.options.breakpoint);
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
 
@@ -143,6 +143,8 @@ const Cli = struct {
     mcu: MCU = .atmega328p,
     info: bool = false,
     format: FileFormat = .elf,
+    breakpoint: ?u24 = null,
+    gas: ?u64 = null,
 
     pub const shorthands = .{
         .h = "help",
@@ -150,6 +152,8 @@ const Cli = struct {
         .m = "mcu",
         .I = "info",
         .f = "format",
+        .b = "breakpoint",
+        .g = "gas",
     };
     pub const meta = .{
         .summary = "[-h] [-t] [-m <mcu>] <file> ...",
@@ -166,6 +170,8 @@ const Cli = struct {
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
+            .breakpoint = "Break when PC reaches this address (hex or dec)",
+            .gas = "Stop after N instructions executed",
         },
     };
 };
