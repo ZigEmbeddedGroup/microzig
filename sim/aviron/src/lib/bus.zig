@@ -118,7 +118,7 @@ pub const IO = struct {
     }
 };
 
-// Unified byte-addressable bus interface used by MemorySpace for RAM and IO
+// Unified byte-addressable bus interface used by MemoryMapping for RAM and IO
 pub const Bus = struct {
     pub const Address = u24;
 
@@ -188,7 +188,7 @@ pub fn FixedSizedMemory(comptime size: comptime_int) type {
     };
 }
 
-/// A mapping entry within a MemorySpace.
+/// A mapping entry within a MemoryMapping.
 pub const Segment = struct {
     /// Base address within the enclosing memory space.
     at: Bus.Address,
@@ -199,7 +199,7 @@ pub const Segment = struct {
 };
 
 /// A logical memory space composed of non-overlapping segments.
-pub const MemorySpace = struct {
+pub const MemoryMapping = struct {
     const Self = @This();
 
     segments: []const Segment, // sorted by .at, owned by this struct
@@ -269,7 +269,7 @@ pub const MemorySpace = struct {
         return null;
     }
 
-    /// Returns a Bus interface for this MemorySpace.
+    /// Returns a Bus interface for this MemoryMapping.
     /// The returned Bus uses absolute addressing within this space (not segment-relative).
     pub fn bus(self: *Self) Bus {
         return .{
@@ -324,7 +324,7 @@ pub const MemorySpace = struct {
     }
 };
 
-test "MemorySpace: detects overlapping segments" {
+test "MemoryMapping: detects overlapping segments" {
     const testing = std.testing;
 
     var ram1_storage = FixedSizedMemory(16){};
@@ -341,10 +341,10 @@ test "MemorySpace: detects overlapping segments" {
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
 
-    try testing.expectError(error.OverlappingSegments, MemorySpace.init(alloc, &segs));
+    try testing.expectError(error.OverlappingSegments, MemoryMapping.init(alloc, &segs));
 }
 
-test "MemorySpace: basic read/write across segments" {
+test "MemoryMapping: basic read/write across segments" {
     const testing = std.testing;
 
     var io_storage = FixedSizedMemory(32){}; // stand-in for IO range (no side effects)
@@ -361,17 +361,17 @@ test "MemorySpace: basic read/write across segments" {
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
 
-    const ms = try MemorySpace.init(alloc, &segs);
+    const ms = try MemoryMapping.init(alloc, &segs);
     defer ms.deinit(alloc);
 
-    // Write to IO region and SRAM region via MemorySpace
+    // Write to IO region and SRAM region via MemoryMapping
     try ms.write(0x0005, 0xAA);
     try ms.write(0x0025, 0xCC);
 
     try testing.expectEqual(@as(u8, 0xAA), io_dev.read(0x0005));
     try testing.expectEqual(@as(u8, 0xCC), sram_dev.read(0x0005)); // 0x25 - 0x20 = 0x5
 
-    // Read back via MemorySpace
+    // Read back via MemoryMapping
     try testing.expectEqual(@as(u8, 0xAA), try ms.read(0x0005));
     try testing.expectEqual(@as(u8, 0xCC), try ms.read(0x0025));
 }

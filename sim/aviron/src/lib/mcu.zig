@@ -37,9 +37,9 @@ pub const Config = struct {
 
 /// Convenience container for constructed memory spaces.
 pub const Spaces = struct {
-    data: bus.MemorySpace,
-    io: bus.MemorySpace,
-    eeprom: bus.MemorySpace,
+    data: bus.MemoryMapping,
+    io: bus.MemoryMapping,
+    eeprom: bus.MemoryMapping,
 
     pub fn deinit(self: *const Spaces, alloc: std.mem.Allocator) void {
         self.data.deinit(alloc);
@@ -63,17 +63,17 @@ pub fn build_spaces(
     var data_seg_buf: [2]bus.Segment = undefined;
     data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = io_dev };
     data_seg_buf[1] = .{ .at = cfg.sram_base, .size = cfg.sram_size, .backend = sram_dev };
-    const data_space = try bus.MemorySpace.init(alloc, data_seg_buf[0..]);
+    const data_space = try bus.MemoryMapping.init(alloc, data_seg_buf[0..]);
 
     // IO space: IO addresses starting at 0
     var io_seg_buf: [1]bus.Segment = undefined;
     io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = io_dev };
-    const io_space = try bus.MemorySpace.init(alloc, io_seg_buf[0..]);
+    const io_space = try bus.MemoryMapping.init(alloc, io_seg_buf[0..]);
 
     // EEPROM space: EEPROM addresses starting at 0
     var eeprom_seg_buf: [1]bus.Segment = undefined;
     eeprom_seg_buf[0] = .{ .at = 0, .size = cfg.eeprom_size, .backend = eeprom_dev };
-    const eeprom_space = try bus.MemorySpace.init(alloc, eeprom_seg_buf[0..]);
+    const eeprom_space = try bus.MemoryMapping.init(alloc, eeprom_seg_buf[0..]);
 
     return .{
         .data = data_space,
