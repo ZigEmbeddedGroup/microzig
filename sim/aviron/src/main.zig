@@ -123,7 +123,7 @@ pub fn main() !u8 {
 
     // Handle program exit - the defer block will still run
     if (result == .program_exit) {
-        return io.exit_code;
+        return io.exit_code.?;
     }
 
     return 0;
@@ -188,8 +188,7 @@ const IO = struct {
     sreg: *aviron.Cpu.SREG,
 
     // Exit status tracking
-    exit_requested: bool = false,
-    exit_code: u8 = 0,
+    exit_code: ?u8 = null,
 
     pub fn memory(self: *IO) aviron.IO {
         return aviron.IO{
@@ -279,7 +278,6 @@ const IO = struct {
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
             .exit => {
-                io.exit_requested = true;
                 io.exit_code = value & mask;
             },
             .stdio => {
@@ -339,8 +337,8 @@ const IO = struct {
 
     fn check_exit(ctx: ?*anyopaque) ?u8 {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
-        if (io.exit_requested) {
-            return io.exit_code;
+        if (io.exit_code) |code| {
+            return code;
         }
         return null;
     }
