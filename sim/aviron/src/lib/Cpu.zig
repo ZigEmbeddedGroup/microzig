@@ -4,7 +4,7 @@ const io_mod = @import("io.zig");
 
 const Flash = io_mod.Flash;
 const IO = io_mod.IO;
-const Device = io_mod.Device;
+const Bus = io_mod.Bus;
 
 const Cpu = @This();
 
@@ -56,9 +56,9 @@ code_model: CodeModel,
 instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
-data: Device,
-io: Device,
-eeprom: Device,
+data: Bus,
+io: Bus,
+eeprom: Bus,
 
 // State
 pc: u24 = 0,
