@@ -214,6 +214,9 @@ pub fn main() !u8 {
         // Set PC to entry point (convert from byte address to word address)
         test_system.cpu.pc = @intCast(header.entry / 2);
 
+        // Get the data bus for loading segments
+        const data_bus = spaces.data.bus();
+
         var pheaders = header.iterateProgramHeaders(&file_reader);
         while (try pheaders.next()) |phdr| {
             if (phdr.p_type != std.elf.PT_LOAD)
@@ -224,20 +227,33 @@ pub fn main() !u8 {
 
             // Use vaddr to determine if this is data or code
             // AVR uses 0x800000 flag in vaddr to indicate data memory
-            var dest_mem: []u8 = if (phdr.p_vaddr >= 0x0080_0000)
-                &test_system.sram.data
-            else
-                &test_system.flash_storage.data;
-
-            const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
-            const target_addr: u24 = if (phdr.p_vaddr >= 0x0080_0000)
-                addr_masked - @as(u24, mcu_config.sram_base)
-            else
-                addr_masked; // Flash always starts at 0
+            const is_data = phdr.p_vaddr >= 0x0080_0000;
+            const target_addr: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
             try file_reader.seekTo(phdr.p_offset);
-            try file_reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
-            @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+
+            if (is_data) {
+                // Load data segment via Bus interface
+                // Read the segment data into a temporary buffer
+                const segment_buf = try allocator.alloc(u8, phdr.p_filesz);
+                defer allocator.free(segment_buf);
+                try file_reader.interface.readSliceAll(segment_buf);
+
+                // Write each byte through the bus
+                for (segment_buf, 0..) |byte, i| {
+                    data_bus.write(@intCast(target_addr + i), byte);
+                }
+
+                // Zero-fill the remaining memory
+                var i: usize = phdr.p_filesz;
+                while (i < phdr.p_memsz) : (i += 1) {
+                    data_bus.write(@intCast(target_addr + i), 0);
+                }
+            } else {
+                // Flash can be loaded directly
+                try file_reader.interface.readSliceAll(test_system.flash_storage.data[target_addr..][0..phdr.p_filesz]);
+                @memset(test_system.flash_storage.data[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+            }
         }
     }
 
