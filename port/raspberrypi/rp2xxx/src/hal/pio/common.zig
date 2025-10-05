@@ -553,12 +553,12 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 .pin_mappings = options.pin_mappings,
                 .exec = .{
                     .wrap = if (program.wrap) |wrap|
-                        wrap + offset // program.wrap is relitive but actual wrap is absolute
+                        wrap + offset // program.wrap is relative but actual wrap is absolute
                     else
                         offset + @as(u5, @intCast(program.instructions.len)),
 
                     .wrap_target = if (program.wrap_target) |wrap_target|
-                        wrap_target + offset // program.wrap_target is relitive but actual wrap is absolute
+                        wrap_target + offset // program.wrap_target is relative but actual wrap is absolute
                     else
                         offset,
 
