@@ -161,25 +161,25 @@ pub fn FixedSizedMemory(comptime size: comptime_int) type {
         }
 
         pub const bus_vtable = Bus.VTable{
-            .read = dev_read,
-            .write = dev_write,
-            .write_masked = dev_write_masked,
+            .read = read,
+            .write = write,
+            .write_masked = write_masked,
             .check_exit = null,
         };
 
-        fn dev_read(ctx: *anyopaque, addr: Bus.Address) u8 {
+        fn read(ctx: *anyopaque, addr: Bus.Address) u8 {
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             return mem.data[addr];
         }
 
-        fn dev_write(ctx: *anyopaque, addr: Bus.Address, value: u8) void {
+        fn write(ctx: *anyopaque, addr: Bus.Address, value: u8) void {
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             mem.data[addr] = value;
         }
 
-        fn dev_write_masked(ctx: *anyopaque, addr: Bus.Address, mask: u8, value: u8) void {
+        fn write_masked(ctx: *anyopaque, addr: Bus.Address, mask: u8, value: u8) void {
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             const old = mem.data[addr];
