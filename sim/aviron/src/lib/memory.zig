@@ -55,18 +55,18 @@ pub const MemorySpace = struct {
         alloc.free(self.segments);
     }
 
-    pub fn read8(self: *const Self, addr: Device.Address) AccessError!u8 {
+    pub fn read(self: *const Self, addr: Device.Address) AccessError!u8 {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
-        return seg.backend.read8(idx);
+        return seg.backend.read(idx);
     }
 
-    pub fn write8(self: *const Self, addr: Device.Address, v: u8) AccessError!void {
+    pub fn write(self: *const Self, addr: Device.Address, v: u8) AccessError!void {
         const seg = self.find(addr) orelse return error.Unmapped;
         const idx = addr - seg.at;
         if (idx >= seg.size) return error.OutOfRange;
-        seg.backend.write8(idx, v);
+        seg.backend.write(idx, v);
         return;
     }
 
@@ -96,24 +96,24 @@ pub const MemorySpace = struct {
     }
 
     const device_vtable = Device.VTable{
-        .read8 = device_read8,
-        .write8 = device_write8,
+        .read = device_read,
+        .write = device_write,
         .write_masked = device_write_masked,
         .check_exit = device_check_exit,
     };
 
-    fn device_read8(ctx: *anyopaque, addr: Device.Address) u8 {
+    fn device_read(ctx: *anyopaque, addr: Device.Address) u8 {
         const self: *const Self = @ptrCast(@alignCast(ctx));
-        return self.read8(addr) catch |e| switch (e) {
+        return self.read(addr) catch |e| switch (e) {
             error.Unmapped => @panic("Read from unmapped memory address"),
             error.OutOfRange => @panic("Read out of range"),
             error.ReadOnly => @panic("ReadOnly error on read"),
         };
     }
 
-    fn device_write8(ctx: *anyopaque, addr: Device.Address, v: u8) void {
+    fn device_write(ctx: *anyopaque, addr: Device.Address, v: u8) void {
         const self: *const Self = @ptrCast(@alignCast(ctx));
-        self.write8(addr, v) catch |e| switch (e) {
+        self.write(addr, v) catch |e| switch (e) {
             error.Unmapped => @panic("Write to unmapped memory address"),
             error.OutOfRange => @panic("Write out of range"),
             error.ReadOnly => @panic("Write to read-only memory"),
@@ -182,13 +182,13 @@ test "MemorySpace: basic read/write across segments" {
     defer ms.deinit(alloc);
 
     // Write to IO region and SRAM region via MemorySpace
-    try ms.write8(0x0005, 0xAA);
-    try ms.write8(0x0025, 0xCC);
+    try ms.write(0x0005, 0xAA);
+    try ms.write(0x0025, 0xCC);
 
-    try testing.expectEqual(@as(u8, 0xAA), io_dev.read8(0x0005));
-    try testing.expectEqual(@as(u8, 0xCC), sram_dev.read8(0x0005)); // 0x25 - 0x20 = 0x5
+    try testing.expectEqual(@as(u8, 0xAA), io_dev.read(0x0005));
+    try testing.expectEqual(@as(u8, 0xCC), sram_dev.read(0x0005)); // 0x25 - 0x20 = 0x5
 
     // Read back via MemorySpace
-    try testing.expectEqual(@as(u8, 0xAA), try ms.read8(0x0005));
-    try testing.expectEqual(@as(u8, 0xCC), try ms.read8(0x0025));
+    try testing.expectEqual(@as(u8, 0xAA), try ms.read(0x0005));
+    try testing.expectEqual(@as(u8, 0xCC), try ms.read(0x0025));
 }

@@ -72,19 +72,19 @@ pub const RAM = struct {
             }
 
             pub const dev_vtable = Device.VTable{
-                .read8 = dev_read8,
-                .write8 = dev_write8,
+                .read = dev_read,
+                .write = dev_write,
                 .write_masked = dev_write_masked,
                 .check_exit = null,
             };
 
-            fn dev_read8(ctx: *anyopaque, addr: Device.Address) u8 {
+            fn dev_read(ctx: *anyopaque, addr: Device.Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx));
                 std.debug.assert(addr < size);
                 return mem.data[addr];
             }
 
-            fn dev_write8(ctx: *anyopaque, addr: Device.Address, value: u8) void {
+            fn dev_write(ctx: *anyopaque, addr: Device.Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx));
                 std.debug.assert(addr < size);
                 mem.data[addr] = value;
@@ -170,18 +170,18 @@ pub const Device = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        read8: *const fn (ctx: *anyopaque, addr: Address) u8,
-        write8: *const fn (ctx: *anyopaque, addr: Address, v: u8) void,
+        read: *const fn (ctx: *anyopaque, addr: Address) u8,
+        write: *const fn (ctx: *anyopaque, addr: Address, v: u8) void,
         write_masked: *const fn (ctx: *anyopaque, addr: Address, mask: u8, v: u8) void,
         check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
     };
 
-    pub fn read8(self: *const Device, addr: Address) u8 {
-        return self.vtable.read8(self.ctx, addr);
+    pub fn read(self: *const Device, addr: Address) u8 {
+        return self.vtable.read(self.ctx, addr);
     }
 
-    pub fn write8(self: *const Device, addr: Address, v: u8) void {
-        self.vtable.write8(self.ctx, addr, v);
+    pub fn write(self: *const Device, addr: Address, v: u8) void {
+        self.vtable.write(self.ctx, addr, v);
     }
 
     pub fn write_masked(self: *const Device, addr: Address, mask: u8, v: u8) void {
