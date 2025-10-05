@@ -214,11 +214,18 @@ const Cli = struct {
     };
 };
 
-const IO = struct {
-    scratch_regs: [16]u8 = @splat(0),
+    const IO = struct {
+        scratch_regs: [16]u8 = @splat(0),
 
-    sp: u16,
-    sreg: *aviron.Cpu.SREG,
+        sp: u16,
+        sreg: *aviron.Cpu.SREG,
+
+        // RAMP registers for extended addressing (used by larger MCUs like ATmega2560)
+        ramp_x: u8 = 0,
+        ramp_y: u8 = 0,
+        ramp_z: u8 = 0,
+        ramp_d: u8 = 0,
+        e_ind: u8 = 0,
 
     // Exit status tracking
     exit_requested: bool = false,
@@ -260,9 +267,17 @@ const IO = struct {
         scratch_e = 0x1e, // scratch register
         scratch_f = 0x1f, // scratch register
 
-        sp_l = 0x3D, // ATmega328p
-        sp_h = 0x3E, // ATmega328p
-        sreg = 0x3F, // ATmega328p
+        // Extended addressing registers (ATmega2560 and similar)
+        ramp_d = 0x38, // ATmega2560
+        ramp_x = 0x39, // ATmega2560
+        ramp_y = 0x3A, // ATmega2560
+        ramp_z = 0x3B, // ATmega2560
+        e_ind = 0x3C, // ATmega2560
+
+        // Common registers
+        sp_l = 0x3D, // Common
+        sp_h = 0x3E, // Common
+        sreg = 0x3F, // Common
 
         _,
     };
@@ -298,6 +313,12 @@ const IO = struct {
             .scratch_f => io.scratch_regs[0xf],
 
             .sreg => @bitCast(io.sreg.*),
+
+            .ramp_x => io.ramp_x,
+            .ramp_y => io.ramp_y,
+            .ramp_z => io.ramp_z,
+            .ramp_d => io.ramp_d,
+            .e_ind => io.e_ind,
 
             .sp_l => @truncate(io.sp >> 0),
             .sp_h => @truncate(io.sp >> 8),
@@ -344,6 +365,12 @@ const IO = struct {
             .sp_l => write_masked(low_byte(&io.sp), mask, value),
             .sp_h => write_masked(high_byte(&io.sp), mask, value),
             .sreg => write_masked(@ptrCast(io.sreg), mask, value),
+
+            .ramp_x => write_masked(&io.ramp_x, mask, value),
+            .ramp_y => write_masked(&io.ramp_y, mask, value),
+            .ramp_z => write_masked(&io.ramp_z, mask, value),
+            .ramp_d => write_masked(&io.ramp_d, mask, value),
+            .e_ind => write_masked(&io.e_ind, mask, value),
 
             _ => std.debug.panic(
                 "illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}",
