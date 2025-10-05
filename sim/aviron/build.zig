@@ -135,6 +135,17 @@ fn add_test_suite(
     });
     test_step.dependOn(&b.addRunArtifact(unit_tests).step);
 
+    // Run unit tests for low-level library components (e.g., memory.zig)
+    const memory_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/lib/memory.zig"),
+            .target = host_target,
+            .optimize = optimize,
+        }),
+        .use_llvm = true,
+    });
+    test_step.dependOn(&b.addRunArtifact(memory_tests).step);
+
     const testrunner_exe = b.addExecutable(.{
         .name = "aviron-test-runner",
         .root_module = b.createModule(.{
