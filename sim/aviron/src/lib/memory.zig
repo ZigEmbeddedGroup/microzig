@@ -1,9 +1,8 @@
 const std = @import("std");
 const io = @import("io.zig");
 
-/// Unified byte-addressable backend interface for RAM, Flash, and IO.
+/// Unified byte-addressable backend interface for RAM and IO.
 /// - RAM: read/write bytes by index
-/// - Flash: read-only; byte reads derived from word-addressed storage
 /// - IO: read/write bytes with side effects; never exposes slices
 pub const Backend = struct {
     ctx: *anyopaque,
@@ -55,11 +54,6 @@ pub const Backend = struct {
         return .{ .ctx = ram, .vtable = &ram_vtable };
     }
 
-    /// Adapter for Flash backends (read-only, word-addressed internally)
-    pub fn fromFlash(flash: *const io.Flash) Backend {
-        return .{ .ctx = @constCast(flash), .vtable = &flash_vtable };
-    }
-
     /// Adapter for IO backends (read-write with side effects). Index is treated as IO address.
     pub fn fromIO(io_mem: *io.IO) Backend {
         return .{ .ctx = io_mem, .vtable = &io_vtable };
@@ -91,39 +85,6 @@ const ram_vtable = Backend.VTable{
     .write_masked = null,
     .slice_ro = &ram_slice_ro,
     .slice_rw = &ram_slice_rw,
-};
-
-fn flash_read8(ctx: *anyopaque, idx: usize) Backend.ReadError!u8 {
-    const f: *const io.Flash = @ptrCast(@alignCast(ctx));
-    const word_index: io.Flash.Address = @intCast(idx >> 1);
-    const word: u16 = f.read(word_index);
-    return if ((idx & 1) == 0)
-        @as(u8, @intCast(word & 0x00FF))
-    else
-        @as(u8, @intCast((word >> 8) & 0x00FF));
-}
-
-fn flash_write8(_: *anyopaque, _: usize, _: u8) Backend.WriteError!void {
-    return error.ReadOnly;
-}
-
-fn flash_write_masked(_: *anyopaque, _: usize, _: u8, _: u8) Backend.WriteError!void {
-    return error.ReadOnly;
-}
-
-fn flash_slice_ro(_: *anyopaque) ?[]const u8 {
-    return null;
-}
-fn flash_slice_rw(_: *anyopaque) ?[]u8 {
-    return null;
-}
-
-const flash_vtable = Backend.VTable{
-    .read8 = &flash_read8,
-    .write8 = &flash_write8,
-    .write_masked = &flash_write_masked,
-    .slice_ro = &flash_slice_ro,
-    .slice_rw = &flash_slice_rw,
 };
 
 fn io_read8(ctx: *anyopaque, idx: usize) Backend.ReadError!u8 {

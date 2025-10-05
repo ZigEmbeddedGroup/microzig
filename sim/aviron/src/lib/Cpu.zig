@@ -65,7 +65,6 @@ eeprom: EEPROM,
 io: IO,
 data: memory.MemorySpace,
 io_space: memory.MemorySpace,
-prog: memory.MemorySpace,
 
 // State
 pc: u24 = 0,
@@ -283,14 +282,8 @@ fn shift_program_counter(cpu: *Cpu, by: i12) void {
 }
 
 fn fetch_code(cpu: *Cpu) u16 {
-    // Program space is byte-addressed; PC is word-addressed.
-    const base: usize = @intCast(@as(u32, cpu.pc) << 1);
-    const lo = cpu.prog.read8(base) catch @panic("fetch_code: unmapped program byte (lo)");
-    const hi = cpu.prog.read8(base + 1) catch @panic("fetch_code: unmapped program byte (hi)");
-    const value: u16 = switch (comptime builtin.cpu.arch.endian()) {
-        .little => (@as(u16, hi) << 8) | lo,
-        .big => (@as(u16, lo) << 8) | hi,
-    };
+    // Program memory is word-addressed; PC is in words.
+    const value: u16 = cpu.flash.read(@intCast(cpu.pc));
     cpu.pc +%= 1; // increment with wraparound
     cpu.pc &= @intFromEnum(cpu.code_model); // then wrap to lower bit size
     return value;

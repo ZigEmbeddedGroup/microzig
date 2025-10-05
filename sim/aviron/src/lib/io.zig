@@ -62,26 +62,24 @@ pub const Flash = struct {
             const Self = @This();
 
             allocator: std.mem.Allocator,
-            data_words: []u16,
             data: []align(2) u8,
 
             pub fn init(allocator: std.mem.Allocator, size_bytes: usize) !Self {
                 if ((size_bytes & 1) != 0) return error.InvalidFlashSize;
-                const words = try allocator.alloc(u16, @divExact(size_bytes, 2));
-                @memset(words, 0);
-                const bytes: []align(2) u8 = std.mem.sliceAsBytes(words);
-                return .{ .allocator = allocator, .data_words = words, .data = bytes };
+                const bytes = try allocator.alignedAlloc(u8, std.mem.Alignment.fromByteUnits(2), size_bytes);
+                @memset(bytes, 0);
+                return .{ .allocator = allocator, .data = bytes };
             }
 
             pub fn deinit(self: *Self) void {
-                self.allocator.free(self.data_words);
+                self.allocator.free(self.data);
             }
 
             pub fn memory(self: *Self) Flash {
                 return Flash{
                     .ctx = self,
                     .vtable = &vtable,
-                    .size = self.data_words.len,
+                    .size = @intCast(@divExact(self.data.len, 2)),
                 };
             }
 
@@ -89,8 +87,8 @@ pub const Flash = struct {
 
             fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(addr < @as(Address, @intCast(mem.data_words.len)));
-                return mem.data_words[addr];
+                std.debug.assert(addr < @as(Address, @intCast(@divExact(mem.data.len, 2))));
+                return std.mem.bytesAsSlice(u16, &mem.data)[addr];
             }
         };
     }

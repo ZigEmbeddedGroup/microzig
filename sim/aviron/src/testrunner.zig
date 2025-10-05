@@ -76,7 +76,7 @@ fn run_test(
     var io_mem = io.memory();
 
     // Build memory spaces via MCU helper
-    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, &flash_mem, &sram_mem, &io_mem);
+    const spaces = try aviron.mcu.build_spaces(allocator, mcu_config, &sram_mem, &io_mem);
     defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
@@ -89,7 +89,6 @@ fn run_test(
         .io = io_mem,
         .data = spaces.data,
         .io_space = spaces.io,
-        .prog = spaces.prog,
         .code_model = mcu_config.code_model,
         .sio = .{
             .ramp_x = mcu_config.special_io.ramp_x,

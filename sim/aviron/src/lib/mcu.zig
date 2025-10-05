@@ -40,12 +40,10 @@ pub const Config = struct {
 pub const Spaces = struct {
     data: memory.MemorySpace,
     io: memory.MemorySpace,
-    prog: memory.MemorySpace,
 
     pub fn deinit(self: *const Spaces, alloc: std.mem.Allocator) void {
         self.data.deinit(alloc);
         self.io.deinit(alloc);
-        self.prog.deinit(alloc);
     }
 };
 
@@ -53,7 +51,6 @@ pub const Spaces = struct {
 pub fn build_spaces(
     alloc: std.mem.Allocator,
     cfg: Config,
-    flash: *const io_mod.Flash,
     ram: *io_mod.RAM,
     io_mem: *io_mod.IO,
 ) !Spaces {
@@ -71,13 +68,7 @@ pub fn build_spaces(
     io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = memory.Backend.fromIO(io_mem) };
     const io_space = try memory.MemorySpace.init(alloc, io_seg_buf[0..]);
 
-    // Program space: byte-addressable view over Flash
-    var prog_seg_buf: [1]memory.Segment = undefined;
-    const prog_size: usize = flash.size * 2; // words → bytes
-    prog_seg_buf[0] = .{ .at = 0, .size = prog_size, .backend = memory.Backend.fromFlash(flash) };
-    const prog_space = try memory.MemorySpace.init(alloc, prog_seg_buf[0..]);
-
-    return .{ .data = data_space, .io = io_space, .prog = prog_space };
+    return .{ .data = data_space, .io = io_space };
 }
 
 pub const SpecialIoConfig = struct {
