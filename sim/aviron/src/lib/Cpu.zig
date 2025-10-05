@@ -184,9 +184,8 @@ fn fetch_code(cpu: *Cpu) u16 {
 
 fn push(cpu: *Cpu, val: u8) void {
     // AVR PUSH: Write to [SP] first, then decrement SP
-    const sp = cpu.get_sp();
-    // AVR convention: write to [SP] first, then decrement SP
     // SP points to the first unused location
+    const sp = cpu.get_sp();
     cpu.data.write8(sp, val);
     cpu.set_sp(sp -% 1);
 }

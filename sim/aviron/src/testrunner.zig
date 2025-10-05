@@ -308,7 +308,7 @@ const IO = struct {
         _,
     };
 
-    fn dev_read(ctx: *anyopaque, addr: usize) u8 {
+    fn dev_read(ctx: *anyopaque, addr: aviron.Device.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
@@ -346,12 +346,12 @@ const IO = struct {
         };
     }
 
-    fn dev_write(ctx: *anyopaque, addr: usize, value: u8) void {
+    fn dev_write(ctx: *anyopaque, addr: aviron.Device.Address, value: u8) void {
         dev_write_masked(ctx, addr, 0xFF, value);
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn dev_write_masked(ctx: *anyopaque, addr: usize, mask: u8, value: u8) void {
+    fn dev_write_masked(ctx: *anyopaque, addr: aviron.Device.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
