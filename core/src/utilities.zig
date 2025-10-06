@@ -542,7 +542,8 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
 
         pub fn get_readable_len(buffer: *const Self) usize {
             buffer.assert_valid();
-
+            if (buffer.full)
+                return len;
             return if (buffer.start <= buffer.end)
                 buffer.end - buffer.start
             else

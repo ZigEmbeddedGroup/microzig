@@ -32,6 +32,8 @@ const ExitMode = union(testconfig.ExitType) {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
+    program_exit,
     system_exit: u8,
 };
 
@@ -40,7 +42,7 @@ fn validate_reg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void
 
     const actual = ts.cpu.regs[reg.num()];
     if (expected != actual) {
-        std.debug.print("Invalid register value for register {s}: Expected {}, but got {}.\n", .{
+        std.debug.print("Invalid register value for register {s}: Expected 0x{X:0>2}, but got 0x{X:0>2}.\n", .{
             @tagName(reg),
             expected,
             actual,
@@ -217,7 +219,7 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try test_system.cpu.run(null);
+    const result = try test_system.cpu.run(null, null);
     validate_syste_and_exit(switch (result) {
         inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
     });
@@ -246,6 +248,7 @@ const IO = struct {
     pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
+        .checkExitFn = check_exit,
     };
 
     // This is our own "debug" device with it's own debug addresses:
@@ -372,5 +375,10 @@ const IO = struct {
     fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
+    }
+
+    fn check_exit(ctx: ?*anyopaque) ?u8 {
+        _ = ctx;
+        return null; // Testrunner handles exits differently via validate_syste_and_exit
     }
 };
