@@ -27,7 +27,7 @@ pub fn main() !u8 {
 
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
     var sram = aviron.FixedSizedMemory(mcu_config.sram_size){};
-    var eeprom = aviron.FixedSizedMemory(mcu_config.eeprom_size){};
+    // TODO: Add support for reading/writing EEPROM through IO
     var io = IO{
         .sreg = undefined,
         .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
@@ -39,9 +39,8 @@ pub fn main() !u8 {
     // Build Bus interfaces
     const io_bus = io.bus();
     const sram_bus = sram.bus();
-    const eeprom_bus = eeprom.bus();
 
-    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_bus, io_bus, eeprom_bus);
+    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_bus, io_bus);
     defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
@@ -50,7 +49,6 @@ pub fn main() !u8 {
         .flash = flash_mem,
         .data = spaces.data.bus(),
         .io = spaces.io.bus(),
-        .eeprom = spaces.eeprom.bus(),
 
         .code_model = mcu_config.code_model,
         .instruction_set = mcu_config.instruction_set,
