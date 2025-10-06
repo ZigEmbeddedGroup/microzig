@@ -20,7 +20,7 @@ pub const BLOCK_SIZE = 65536;
 pub const XIP_BASE = 0x10000000;
 
 /// Flash code related to the second stage boot loader
-pub const boot2 = struct {
+pub const boot2 = if (!microzig.config.ram_image) struct {
     /// Size of the second stage bootloader in words
     const BOOT2_SIZE_WORDS = 64;
 
@@ -62,6 +62,21 @@ pub const boot2 = struct {
             \\blx r0
             :
             : [copyout] "{r0}" (@intFromPtr(&copyout)),
+            : .{ .r0 = true, .r14 = true });
+    }
+} else struct {
+    // no op
+    pub inline fn flash_init() linksection(".ram_text") void {}
+
+    /// Configure the SSI and the external flash for XIP by calling the second stage
+    /// bootloader that was copied out to `copyout`.
+    pub inline fn flash_enable_xip() linksection(".ram_text") void {
+        // The bootloader is in thumb mode
+        asm volatile (
+            \\adds r0, #1
+            \\blx r0
+            :
+            : [copyout] "{r0}" (@intFromPtr(microzig.board.bootrom.stage2_rom.ptr)),
             : .{ .r0 = true, .r14 = true });
     }
 };
