@@ -69,7 +69,7 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
     pub inline fn flash_init() linksection(".ram_text") void {}
 
     /// Configure the SSI and the external flash for XIP by calling the second stage
-    /// bootloader that was copied out to `copyout`.
+    /// bootloader embedded into RAM.
     pub inline fn flash_enable_xip() linksection(".ram_text") void {
         // The bootloader is in thumb mode
         asm volatile (
