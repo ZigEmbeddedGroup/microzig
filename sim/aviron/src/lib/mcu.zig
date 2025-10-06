@@ -39,22 +39,19 @@ pub const Config = struct {
 pub const Spaces = struct {
     data: bus.MemoryMapping,
     io: bus.MemoryMapping,
-    eeprom: bus.MemoryMapping,
 
     pub fn deinit(self: *const Spaces, alloc: std.mem.Allocator) void {
         self.data.deinit(alloc);
         self.io.deinit(alloc);
-        self.eeprom.deinit(alloc);
     }
 };
 
-/// Build memory spaces (data, io, eeprom) for the given MCU configuration.
+/// Build memory spaces (data, io) for the given MCU configuration.
 pub fn build_spaces(
     alloc: std.mem.Allocator,
     cfg: Config,
     sram_dev: bus.Bus,
     io_dev: bus.Bus,
-    eeprom_dev: bus.Bus,
 ) !Spaces {
     // IO window size
     const io_size: bus.Bus.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
@@ -70,15 +67,9 @@ pub fn build_spaces(
     io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = io_dev };
     const io_space = try bus.MemoryMapping.init(alloc, io_seg_buf[0..]);
 
-    // EEPROM space: EEPROM addresses starting at 0
-    var eeprom_seg_buf: [1]bus.Segment = undefined;
-    eeprom_seg_buf[0] = .{ .at = 0, .size = cfg.eeprom_size, .backend = eeprom_dev };
-    const eeprom_space = try bus.MemoryMapping.init(alloc, eeprom_seg_buf[0..]);
-
     return .{
         .data = data_space,
         .io = io_space,
-        .eeprom = eeprom_space,
     };
 }
 

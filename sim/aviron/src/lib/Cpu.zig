@@ -58,7 +58,6 @@ sio: SpecialIoRegisters,
 flash: Flash,
 data: Bus,
 io: Bus,
-eeprom: Bus,
 
 // State
 pc: u24 = 0,
