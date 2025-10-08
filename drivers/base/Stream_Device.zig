@@ -113,10 +113,12 @@ pub const Writer = struct {
 
         const pattern = data[data.len - 1];
         for (0..splat) |_| {
-            ret += wt.dev.write(pattern) catch |err| {
+            const s_len = wt.dev.write(pattern) catch |err| {
                 wt.err = err;
                 return error.WriteFailed;
             };
+            ret += s_len;
+            if (s_len < pattern.len) break; // if the previous pattern was not fully written, break the loop
         }
 
         return ret;
@@ -142,10 +144,9 @@ pub const Reader = struct {
 
     fn stream(r: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
         const rd: *Reader = @alignCast(@fieldParentPtr("interface", r));
-        const max: usize = @intFromEnum(limit);
-        var aux_buffer: [256]u8 = undefined; //mandatory minimum buffer
+        const w_buf = limit.slice(try w.writableSliceGreedy(1));
 
-        const n = rd.dev.read(aux_buffer[0..@min(aux_buffer.len, max)]) catch |err| {
+        const n = rd.dev.read(w_buf) catch |err| {
             rd.err = err;
             return error.ReadFailed;
         };
@@ -153,7 +154,7 @@ pub const Reader = struct {
         //NOTE: should we treat 0 as an EOF or check if 0 across multiple calls before returning EOF?
         if (n == 0) return error.EndOfStream;
 
-        try w.writeAll(aux_buffer[0..n]);
+        w.advance(n);
         return n;
     }
 
