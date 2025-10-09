@@ -231,24 +231,26 @@ pub fn main() !void {
             \\    microzig_bss_end = .;
             \\  }} > {s}
             \\
+            \\  .heap (NOLOAD) :
+            \\  {{
+            \\      microzig_heap_start = .;
+            \\      . = ORIGIN({s}) + LENGTH({s});
+            \\      microzig_heap_end   = .;
+            \\  }} > {s}
+            \\
         , .{
             if (!parsed_args.ram_image)
                 try std.fmt.allocPrint(allocator, "{s} AT> {s}", .{ ram_region_name, flash_region_name })
             else
                 ram_region_name,
             ram_region_name,
+            ram_region_name,
+            ram_region_name,
+            ram_region_name
         });
 
         if (!parsed_args.ram_image) {
             try writer.interface.print(
-                \\
-                \\  .heap (NOLOAD) :
-                \\  {
-                \\      microzig_heap_start = .;
-                \\      . = ORIGIN(ram0) + LENGTH(ram0);
-                \\      microzig_heap_end   = .;
-                \\  } > ram0
-                \\
                 \\
                 \\  .flash_end :
                 \\  {{

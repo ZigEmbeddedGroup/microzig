@@ -124,7 +124,7 @@ pub fn main() !void {
 
         allocator.free(allocs[idx]);
 
-        allocs[idx] = try allocator.alignedAlloc(u8, 32, rand.intRangeAtMost(usize, 1, 256));
+        allocs[idx] = try allocator.alignedAlloc(u8, .@"32", rand.intRangeAtMost(usize, 1, 256));
 
         // For Zig 0.15.0
         // allocs[idx] = try allocator.alignedAlloc(u8, .@"32", rand.intRangeAtMost(usize, 1, 256));
