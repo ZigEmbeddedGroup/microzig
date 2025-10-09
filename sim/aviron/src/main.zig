@@ -105,14 +105,18 @@ pub fn main() !u8 {
 
                     if (is_data) {
                         // Load data segment via Bus interface
-                        // Read the segment data into a temporary buffer
-                        const segment_buf = try allocator.alloc(u8, phdr.p_filesz);
-                        defer allocator.free(segment_buf);
-                        try reader.interface.readSliceAll(segment_buf);
-
-                        // Write each byte through the bus
-                        for (segment_buf, 0..) |byte, i| {
-                            data_bus.write(@intCast(target_addr + i), byte);
+                        // Use a stack buffer to read and write through the bus
+                        var read_buf: [256]u8 = undefined;
+                        var remaining = phdr.p_filesz;
+                        var offset: usize = 0;
+                        while (remaining > 0) {
+                            const to_read = @min(remaining, read_buf.len);
+                            try reader.interface.readSliceAll(read_buf[0..to_read]);
+                            for (read_buf[0..to_read], 0..) |byte, i| {
+                                data_bus.write(@intCast(target_addr + offset + i), byte);
+                            }
+                            offset += to_read;
+                            remaining -= to_read;
                         }
 
                         // Zero-fill the remaining memory
