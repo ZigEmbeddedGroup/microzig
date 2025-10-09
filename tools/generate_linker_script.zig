@@ -246,7 +246,7 @@ pub fn main() !void {
             ram_region_name,
             ram_region_name,
             ram_region_name,
-            ram_region_name
+            ram_region_name,
         });
 
         if (!parsed_args.ram_image) {
