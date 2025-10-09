@@ -26,7 +26,7 @@ pub fn main() !u8 {
     const mcu_config = aviron.mcu.atmega328p;
 
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
-    var sram = aviron.FixedSizedMemory(mcu_config.sram_size){};
+    var sram = aviron.FixedSizedMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
     // TODO: Add support for reading/writing EEPROM through IO
     var io = IO{
         .sreg = undefined,
@@ -37,10 +37,11 @@ pub fn main() !u8 {
     const flash_mem = flash_storage.memory();
 
     // Build Bus interfaces
-    const io_bus = io.bus();
+    const io_data_bus = io.bus(); // For memory-mapped data space
+    const io_io_bus = io.io_bus(); // For direct IO operations
     const sram_bus = sram.bus();
 
-    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_bus, io_bus);
+    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_bus, io_data_bus);
     defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
@@ -48,7 +49,7 @@ pub fn main() !u8 {
 
         .flash = flash_mem,
         .data = spaces.data.bus(),
-        .io = spaces.io.bus(),
+        .io = io_io_bus,
 
         .code_model = mcu_config.code_model,
         .instruction_set = mcu_config.instruction_set,
@@ -219,11 +220,25 @@ const IO = struct {
     // Exit status tracking
     exit_code: ?u8 = null,
 
-    pub fn bus(self: *IO) aviron.Bus {
-        return .{ .ctx = self, .vtable = &bus_vtable };
+    const IOBusType = @import("aviron").Bus(.{ .address_type = @import("aviron").IO.Address });
+    const DataBusType = @import("aviron").Bus(.{ .address_type = u24 });
+
+    pub fn bus(self: *IO) DataBusType {
+        return .{ .ctx = self, .vtable = &data_bus_vtable };
     }
 
-    const bus_vtable = aviron.Bus.VTable{
+    pub fn io_bus(self: *IO) IOBusType {
+        return .{ .ctx = self, .vtable = &io_bus_vtable };
+    }
+
+    const data_bus_vtable = DataBusType.VTable{
+        .read = dev_read_data,
+        .write = dev_write_data,
+        .write_masked = dev_write_masked_data,
+        .check_exit = dev_check_exit,
+    };
+
+    const io_bus_vtable = IOBusType.VTable{
         .read = dev_read,
         .write = dev_write,
         .write_masked = dev_write_masked,
@@ -260,7 +275,11 @@ const IO = struct {
         _,
     };
 
-    fn dev_read(ctx: *anyopaque, addr: aviron.Bus.Address) u8 {
+    fn dev_read_data(ctx: *anyopaque, addr: DataBusType.Address) u8 {
+        return dev_read(ctx, @intCast(addr));
+    }
+
+    fn dev_read(ctx: *anyopaque, addr: IOBusType.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
@@ -300,11 +319,19 @@ const IO = struct {
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    fn dev_write(ctx: *anyopaque, addr: aviron.Bus.Address, value: u8) void {
+    fn dev_write_data(ctx: *anyopaque, addr: DataBusType.Address, value: u8) void {
+        dev_write_masked_data(ctx, addr, 0xFF, value);
+    }
+
+    fn dev_write_masked_data(ctx: *anyopaque, addr: DataBusType.Address, mask: u8, value: u8) void {
+        dev_write_masked(ctx, @intCast(addr), mask, value);
+    }
+
+    fn dev_write(ctx: *anyopaque, addr: IOBusType.Address, value: u8) void {
         dev_write_masked(ctx, addr, 0xFF, value);
     }
 
-    fn dev_write_masked(ctx: *anyopaque, addr: aviron.Bus.Address, mask: u8, value: u8) void {
+    fn dev_write_masked(ctx: *anyopaque, addr: IOBusType.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {

@@ -4,7 +4,8 @@ const bus = @import("bus.zig");
 
 const Flash = bus.Flash;
 const IO = bus.IO;
-const Bus = bus.Bus;
+const DataBus = bus.DataBus;
+const IOBus = bus.IOBus;
 
 const Cpu = @This();
 
@@ -56,8 +57,8 @@ code_model: CodeModel,
 instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
-data: Bus,
-io: Bus,
+data: DataBus,
+io: IOBus,
 
 // State
 pc: u24 = 0,

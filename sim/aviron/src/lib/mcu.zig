@@ -15,7 +15,7 @@ pub const Config = struct {
     sram_size: u16,
 
     /// SRAM base address in data space
-    sram_base: bus.Bus.Address,
+    sram_base: bus.DataBus.Address,
 
     /// EEPROM size in bytes
     eeprom_size: u16,
@@ -30,15 +30,15 @@ pub const Config = struct {
     special_io: Cpu.SpecialIoRegisters,
 
     /// Start of IO window in data address space (inclusive).
-    io_window_base: bus.Bus.Address,
+    io_window_base: bus.DataBus.Address,
     /// End of IO window in data address space (inclusive).
-    io_window_end: bus.Bus.Address,
+    io_window_end: bus.DataBus.Address,
 };
 
 /// Convenience container for constructed memory spaces.
 pub const Spaces = struct {
-    data: bus.MemoryMapping,
-    io: bus.MemoryMapping,
+    data: bus.MemoryMapping(bus.DataBus),
+    io: bus.MemoryMapping(bus.DataBus),
 
     pub fn deinit(self: *const Spaces, alloc: std.mem.Allocator) void {
         self.data.deinit(alloc);
@@ -50,22 +50,24 @@ pub const Spaces = struct {
 pub fn build_spaces(
     alloc: std.mem.Allocator,
     cfg: Config,
-    sram_dev: bus.Bus,
-    io_dev: bus.Bus,
+    sram_dev: bus.DataBus,
+    io_dev: bus.DataBus,
 ) !Spaces {
+    const DataMapping = bus.MemoryMapping(bus.DataBus);
+
     // IO window size
-    const io_size: bus.Bus.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
+    const io_size: bus.DataBus.Address = @intCast(cfg.io_window_end - cfg.io_window_base + 1);
 
     // Data space: IO window mapped into data space (at base), then SRAM at sram_base
-    var data_seg_buf: [2]bus.Segment = undefined;
+    var data_seg_buf: [2]DataMapping.Segment = undefined;
     data_seg_buf[0] = .{ .at = cfg.io_window_base, .size = io_size, .backend = io_dev };
     data_seg_buf[1] = .{ .at = cfg.sram_base, .size = cfg.sram_size, .backend = sram_dev };
-    const data_space = try bus.MemoryMapping.init(alloc, data_seg_buf[0..]);
+    const data_space = try DataMapping.init(alloc, data_seg_buf[0..]);
 
     // IO space: IO addresses starting at 0
-    var io_seg_buf: [1]bus.Segment = undefined;
+    var io_seg_buf: [1]DataMapping.Segment = undefined;
     io_seg_buf[0] = .{ .at = 0, .size = io_size, .backend = io_dev };
-    const io_space = try bus.MemoryMapping.init(alloc, io_seg_buf[0..]);
+    const io_space = try DataMapping.init(alloc, io_seg_buf[0..]);
 
     return .{
         .data = data_space,
