@@ -8,6 +8,7 @@ pub const Cpu = @import("Cpu.zig");
 pub const Flash = bus.Flash;
 pub const IO = bus.IO;
 pub const Bus = bus.Bus;
+pub const IOBus = bus.IOBus;
 
 pub const FixedSizedMemory = bus.FixedSizedMemory;
 
