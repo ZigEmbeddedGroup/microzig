@@ -261,9 +261,9 @@ fn write_wide_reg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: IndexRegWr
     cpu.regs[reg.base() + 1] = parts[1];
     if (mode == .ramp) {
         switch (reg) {
-            .x => if (cpu.sio.ramp_x) |ramp| cpu.io.write(ramp, parts[2]),
-            .y => if (cpu.sio.ramp_y) |ramp| cpu.io.write(ramp, parts[2]),
-            .z => if (cpu.sio.ramp_z) |ramp| cpu.io.write(ramp, parts[2]),
+            .x => if (cpu.sio.ramp_x) |ramp| cpu.io.write(ramp, 0xFF, parts[2]),
+            .y => if (cpu.sio.ramp_y) |ramp| cpu.io.write(ramp, 0xFF, parts[2]),
+            .z => if (cpu.sio.ramp_z) |ramp| cpu.io.write(ramp, 0xFF, parts[2]),
         }
     }
 }
@@ -771,7 +771,7 @@ const instructions = struct {
     /// Stores data from register Rr in the Register File to I/O Space (Ports, Timers, Configuration Registers, etc.).
     inline fn out(cpu: *Cpu, info: isa.opinfo.a6r5) void {
         // I/O(A) ← Rr
-        cpu.io.write(info.a, cpu.regs[info.r.num()]);
+        cpu.io.write(info.a, 0xFF, cpu.regs[info.r.num()]);
     }
 
     /// IN - Load an I/O Location to Register
@@ -786,14 +786,14 @@ const instructions = struct {
     /// addresses 0-31.
     inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 0
-        cpu.io.write_masked(info.a, info.b.mask(), 0x00);
+        cpu.io.write(info.a, info.b.mask(), 0x00);
     }
 
     /// SBI – Set Bit in I/O Register
     /// Sets a specified bit in an I/O Register. This instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 1
-        cpu.io.write_masked(info.a, info.b.mask(), 0xFF);
+        cpu.io.write(info.a, info.b.mask(), 0xFF);
     }
 
     // Branching:
@@ -1662,8 +1662,8 @@ fn get_sp(cpu: *Cpu) u16 {
 fn set_sp(cpu: *Cpu, value: u16) void {
     const lo: u8 = @truncate(value >> 0);
     const hi: u8 = @truncate(value >> 8);
-    cpu.io.write(cpu.sio.sp_l, lo);
-    cpu.io.write(cpu.sio.sp_h, hi);
+    cpu.io.write(cpu.sio.sp_l, 0xFF, lo);
+    cpu.io.write(cpu.sio.sp_h, 0xFF, hi);
 }
 
 fn compose24(hi: u8, mid: u8, lo: u8) u24 {

@@ -122,11 +122,42 @@ pub const BusConfig = struct {
     address_type: type,
 };
 
+/// IO Bus interface with masked writes as the primary write method
+pub fn IOBusInterface(comptime address_type: type) type {
+    return struct {
+        const Self = @This();
+        pub const Address = address_type;
+
+        ctx: *anyopaque,
+        vtable: *const VTable,
+
+        pub const VTable = struct {
+            read: *const fn (ctx: *anyopaque, addr: Address) u8,
+            write: *const fn (ctx: *anyopaque, addr: Address, mask: u8, v: u8) void,
+            check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
+        };
+
+        pub fn read(self: *const Self, addr: Address) u8 {
+            return self.vtable.read(self.ctx, addr);
+        }
+
+        /// Write with mask - this is the primary write interface for IO
+        /// `mask` determines which bits of `value` are written.
+        pub fn write(self: *const Self, addr: Address, mask: u8, v: u8) void {
+            self.vtable.write(self.ctx, addr, mask, v);
+        }
+
+        pub fn check_exit(self: *const Self) ?u8 {
+            if (self.vtable.check_exit) |f| return f(self.ctx) else return null;
+        }
+    };
+}
+
 /// Standard data bus using 24-bit addressing (for AVR data space)
 pub const DataBus = Bus(.{ .address_type = u24 });
 
 /// Standard IO bus using 12-bit addressing (for AVR IO space)
-pub const IOBus = Bus(.{ .address_type = IO.Address });
+pub const IOBus = IOBusInterface(IO.Address);
 
 /// Unified byte-addressable bus interface used by MemoryMapping for RAM and IO
 pub fn Bus(comptime config: BusConfig) type {
@@ -140,7 +171,6 @@ pub fn Bus(comptime config: BusConfig) type {
         pub const VTable = struct {
             read: *const fn (ctx: *anyopaque, addr: Address) u8,
             write: *const fn (ctx: *anyopaque, addr: Address, v: u8) void,
-            write_masked: *const fn (ctx: *anyopaque, addr: Address, mask: u8, v: u8) void,
             check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
         };
 
@@ -150,10 +180,6 @@ pub fn Bus(comptime config: BusConfig) type {
 
         pub fn write(self: *const Self, addr: Address, v: u8) void {
             self.vtable.write(self.ctx, addr, v);
-        }
-
-        pub fn write_masked(self: *const Self, addr: Address, mask: u8, v: u8) void {
-            self.vtable.write_masked(self.ctx, addr, mask, v);
         }
 
         pub fn check_exit(self: *const Self) ?u8 {
@@ -182,7 +208,6 @@ pub fn FixedSizedMemory(comptime size: comptime_int, comptime bus_config: ?BusCo
         pub const bus_vtable = BusType.VTable{
             .read = read,
             .write = write,
-            .write_masked = write_masked,
             .check_exit = null,
         };
 
@@ -196,13 +221,6 @@ pub fn FixedSizedMemory(comptime size: comptime_int, comptime bus_config: ?BusCo
             const mem: *Self = @ptrCast(@alignCast(ctx));
             std.debug.assert(addr < size);
             mem.data[addr] = value;
-        }
-
-        fn write_masked(ctx: *anyopaque, addr: AddressType, mask: u8, value: u8) void {
-            const mem: *Self = @ptrCast(@alignCast(ctx));
-            std.debug.assert(addr < size);
-            const old = mem.data[addr];
-            mem.data[addr] = (old & ~mask) | (value & mask);
         }
     };
 }
@@ -273,14 +291,6 @@ pub fn MemoryMapping(comptime BusType: type) type {
             return;
         }
 
-        pub fn write_masked(self: *const Self, addr: BusType.Address, mask: u8, v: u8) AccessError!void {
-            const seg = self.find(addr) orelse return error.Unmapped;
-            const idx = addr - seg.at;
-            if (idx >= seg.size) return error.OutOfRange;
-            seg.backend.write_masked(idx, mask, v);
-            return;
-        }
-
         fn find(self: *const Self, addr: BusType.Address) ?*const Segment {
             // Linear scan is fine initially; segments are sorted.
             for (self.segments) |*s| {
@@ -301,7 +311,6 @@ pub fn MemoryMapping(comptime BusType: type) type {
         const bus_vtable = BusType.VTable{
             .read = bus_read,
             .write = bus_write,
-            .write_masked = bus_write_masked,
             .check_exit = bus_check_exit,
         };
 
@@ -320,15 +329,6 @@ pub fn MemoryMapping(comptime BusType: type) type {
                 error.Unmapped => @panic("Write to unmapped memory address"),
                 error.OutOfRange => @panic("Write out of range"),
                 error.ReadOnly => @panic("Write to read-only memory"),
-            };
-        }
-
-        fn bus_write_masked(ctx: *anyopaque, addr: BusType.Address, mask: u8, v: u8) void {
-            const self: *const Self = @ptrCast(@alignCast(ctx));
-            self.write_masked(addr, mask, v) catch |e| switch (e) {
-                error.Unmapped => @panic("Masked write to unmapped memory address"),
-                error.OutOfRange => @panic("Masked write out of range"),
-                error.ReadOnly => @panic("Masked write to read-only memory"),
             };
         }
 

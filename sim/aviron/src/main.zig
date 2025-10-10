@@ -220,8 +220,9 @@ const IO = struct {
     // Exit status tracking
     exit_code: ?u8 = null,
 
-    const IOBusType = @import("aviron").Bus(.{ .address_type = @import("aviron").IO.Address });
-    const DataBusType = @import("aviron").Bus(.{ .address_type = u24 });
+    const aviron_module = @import("aviron");
+    const IOBusType = aviron_module.IOBus;
+    const DataBusType = aviron_module.Bus(.{ .address_type = u24 });
 
     pub fn bus(self: *IO) DataBusType {
         return .{ .ctx = self, .vtable = &data_bus_vtable };
@@ -234,14 +235,12 @@ const IO = struct {
     const data_bus_vtable = DataBusType.VTable{
         .read = dev_read_data,
         .write = dev_write_data,
-        .write_masked = dev_write_masked_data,
         .check_exit = dev_check_exit,
     };
 
     const io_bus_vtable = IOBusType.VTable{
         .read = dev_read,
-        .write = dev_write,
-        .write_masked = dev_write_masked,
+        .write = dev_write_masked,
         .check_exit = dev_check_exit,
     };
 
@@ -318,17 +317,9 @@ const IO = struct {
         };
     }
 
-    /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
     fn dev_write_data(ctx: *anyopaque, addr: DataBusType.Address, value: u8) void {
-        dev_write_masked_data(ctx, addr, 0xFF, value);
-    }
-
-    fn dev_write_masked_data(ctx: *anyopaque, addr: DataBusType.Address, mask: u8, value: u8) void {
-        dev_write_masked(ctx, @intCast(addr), mask, value);
-    }
-
-    fn dev_write(ctx: *anyopaque, addr: IOBusType.Address, value: u8) void {
-        dev_write_masked(ctx, addr, 0xFF, value);
+        // Data bus writes full bytes (mask = 0xFF)
+        dev_write_masked(ctx, @intCast(addr), 0xFF, value);
     }
 
     fn dev_write_masked(ctx: *anyopaque, addr: IOBusType.Address, mask: u8, value: u8) void {
