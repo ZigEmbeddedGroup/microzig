@@ -74,8 +74,8 @@ pub const VTable = struct {
     readv_fn: ?*const fn (*anyopaque, datagram: []const []u8) ReadError!usize,
 };
 
-///microzig already has this function in SliceVector, but no other base driver include microzig as a dependency
-///so we duplicate it here for now
+/// microzig already has this function in SliceVector, but no other base driver include microzig as a dependency
+/// so we duplicate it here for now
 fn byte_sum(data: []const []const u8) usize {
     var sum: usize = 0;
     for (data) |bytes| {
@@ -105,8 +105,8 @@ pub const Writer = struct {
             return error.WriteFailed;
         };
 
-        //TODO: maybe check if ret is 0 across multiple calls to detect broken stream?
-        //check if we wrote everything we wanted before splatting
+        // NOTE: maybe check if ret is 0 across multiple calls to detect broken stream?
+        // check if we wrote everything we wanted before splatting
         if (ret != total_size) {
             return ret;
         }
@@ -151,7 +151,7 @@ pub const Reader = struct {
             return error.ReadFailed;
         };
 
-        //NOTE: should we treat 0 as an EOF or check if 0 across multiple calls before returning EOF?
+        // NOTE: should we treat 0 as an EOF or check if 0 across multiple calls before returning EOF?
         if (n == 0) return error.EndOfStream;
 
         w.advance(n);
