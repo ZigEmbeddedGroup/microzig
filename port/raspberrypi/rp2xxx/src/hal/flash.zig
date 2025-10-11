@@ -20,29 +20,30 @@ pub const BLOCK_SIZE = 65536;
 pub const XIP_BASE = 0x10000000;
 
 /// Flash code related to the second stage boot loader
-pub const boot2 = struct {
+pub const boot2 = if (!microzig.config.ram_image) struct {
     /// Size of the second stage bootloader in words
     const BOOT2_SIZE_WORDS = 64;
 
     /// Buffer for the second stage bootloader
     ///
     /// The only job of the second stage bootloader is to configure the SSI and
-    /// the external flash for the best possible execute-in-place (XIP) performance.
-    /// Until the SSI is correctly configured for the attached flash device, it's not
-    /// possible to access flash via the XIP address window, i.e., we have to copy
-    /// the bootloader into sram before calling `rom.flash_exit_xip`. This is required
-    /// if we want to erase and/or write to flash.
+    /// the external flash for the best possible execute-in-place (XIP)
+    /// performance. Until the SSI is correctly configured for the attached
+    /// flash device, it's not possible to access flash via the XIP address
+    /// window, i.e., we have to copy the bootloader into sram before calling
+    /// `rom.flash_exit_xip`. This is required if we want to erase and/or write
+    /// to flash.
     ///
-    /// At the end we can then just make a subroutine call to copyout, to configure
-    /// the SSI and flash. The second stage bootloader will return to the calling function
-    /// if a return address is provided in `lr`.
+    /// At the end we can then just make a subroutine call to copyout, to
+    /// configure the SSI and flash. The second stage bootloader will return to
+    /// the calling function if a return address is provided in `lr`.
     var copyout: [BOOT2_SIZE_WORDS]u32 = undefined;
     var copyout_valid: bool = false;
 
     /// Copy the 2nd stage bootloader into memory
     ///
-    /// This is required by `_range_erase` and `_range_program` so we can later setup
-    /// XIP via the second stage bootloader.
+    /// This is required by `_range_erase` and `_range_program` so we can later
+    /// setup XIP via the second stage bootloader.
     pub export fn flash_init() linksection(".ram_text") void {
         if (copyout_valid) return;
         const bootloader = @as([*]u32, @ptrFromInt(XIP_BASE));
@@ -53,8 +54,8 @@ pub const boot2 = struct {
         copyout_valid = true;
     }
 
-    /// Configure the SSI and the external flash for XIP by calling the second stage
-    /// bootloader that was copied out to `copyout`.
+    /// Configure the SSI and the external flash for XIP by calling the second
+    /// stage bootloader that was copied out to `copyout`.
     pub export fn flash_enable_xip() linksection(".ram_text") void {
         // The bootloader is in thumb mode
         asm volatile (
@@ -64,12 +65,27 @@ pub const boot2 = struct {
             : [copyout] "{r0}" (@intFromPtr(&copyout)),
             : .{ .r0 = true, .r14 = true });
     }
+} else struct {
+    // no op
+    pub inline fn flash_init() linksection(".ram_text") void {}
+
+    /// Configure the SSI and the external flash for XIP by calling the second
+    /// stage bootloader embedded into RAM.
+    pub inline fn flash_enable_xip() linksection(".ram_text") void {
+        // The bootloader is in thumb mode
+        asm volatile (
+            \\adds r0, #1
+            \\blx r0
+            :
+            : [copyout] "{r0}" (@intFromPtr(microzig.board.bootrom.stage2_rom.ptr)),
+            : .{ .r0 = true, .r14 = true });
+    }
 };
 
 /// Erase count bytes starting at offset (offset from start of flash)
 ///
-/// The offset must be aligned to a 4096-byte sector, and count must
-/// be a multiple of 4096 bytes!
+/// The offset must be aligned to a 4096-byte sector, and count must be a
+/// multiple of 4096 bytes!
 pub inline fn range_erase(offset: u32, count: u32) void {
     // Do not inline `_range_erase`!
     @call(.never_inline, _range_erase, .{ offset, count });
@@ -114,8 +130,8 @@ export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection
     boot2.flash_enable_xip();
 }
 
-/// Force the chip select using IO overrides, in case RAM-resident IRQs
-/// are still running, and the FIFO bottoms out
+/// Force the chip select using IO overrides, in case RAM-resident IRQs are
+/// still running, and the FIFO bottoms out
 pub inline fn force_cs(high: bool) void {
     @call(.never_inline, _force_cs, .{high});
 }
@@ -135,8 +151,8 @@ fn _force_cs(high: bool) linksection(".ram_text") void {
 
 /// Execute a command on the flash chip
 ///
-/// Configures flash for serial mode operation, sends a command, receives response
-/// and then configures flash back to XIP mode
+/// Configures flash for serial mode operation, sends a command, receives
+/// response and then configures flash back to XIP mode
 pub inline fn cmd(tx_buf: []const u8, rx_buf: []u8) void {
     @call(.never_inline, _cmd, .{ tx_buf, rx_buf });
 }

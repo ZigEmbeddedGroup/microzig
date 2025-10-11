@@ -97,7 +97,7 @@ pub inline fn init() void {
 const is_fpu_used: bool = builtin.abi.float() == .hard;
 
 /// Allows user to easily swap in their own clock config while still
-/// using the reccomended initialization sequence
+/// using the recommended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     if (compatibility.chip == .RP2350 and
         compatibility.arch == .arm)

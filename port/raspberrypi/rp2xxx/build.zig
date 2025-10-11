@@ -197,6 +197,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .name = "RaspberryPi Pico (ram image)",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
                         .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
+                        // needed by the flash hal
+                        .imports = rp2040_bootrom_imports,
                     },
                 }),
                 .pico2_arm = chip_rp2350_arm.derive(.{
