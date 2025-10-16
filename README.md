@@ -4,7 +4,7 @@
 
 ## What version of Zig to use
 
-Zig 0.15.1
+Zig 0.15.2
 
 ## Getting Started With MicroZig
 

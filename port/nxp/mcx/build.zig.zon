@@ -2,7 +2,7 @@
     .name = .mz_port_mcx,
     .version = "0.0.0",
     .fingerprint = 0xe43e30911cb3fe37,
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"mcux-soc-svd" = .{
