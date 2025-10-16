@@ -225,26 +225,30 @@ pub const UART = struct {
         return (0 != uart.regs.SR.read().TXE);
     }
 
-    pub fn writev_blocking(uart: *const UART, payloads: []const []const u8, timeout: ?Duration) TransmitError!void {
+    pub fn writev_blocking(uart: *const UART, payloads: []const []const u8, timeout: ?Duration) TransmitError!usize {
         const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
         const regs = uart.regs;
+        var n: usize = 0;
         for (payloads) |pkgs| {
             for (pkgs) |byte| {
                 while (!uart.is_writeable()) {
                     if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
                 }
                 regs.DR.raw = @intCast(byte);
+                n += 1;
             }
         }
+        return n;
     }
 
-    pub fn readv_blocking(uart: *const UART, buffers: []const []u8, timeout: ?Duration) ReceiveError!void {
+    pub fn readv_blocking(uart: *const UART, buffers: []const []u8, timeout: ?Duration) ReceiveError!usize {
         const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
         const regs = uart.regs;
+        var n: usize = 0;
         for (buffers) |buf| {
             for (buf) |*bytes| {
                 while (!uart.is_readable()) {
-                    if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
+                    if (deadline.is_reached_by(time.get_time_since_boot())) return n;
                 }
                 const SR = regs.SR.read();
 
@@ -260,8 +264,10 @@ pub const UART = struct {
                 const rx = regs.DR.raw;
 
                 bytes.* = @intCast(0xFF & rx);
+                n += 1;
             }
         }
+        return n;
     }
 
     pub fn get_errors(uart: *const UART) ErrorStates {
@@ -281,12 +287,12 @@ pub const UART = struct {
         std.mem.doNotOptimizeAway(regs.DR.raw);
     }
 
-    pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Duration) TransmitError!void {
-        try uart.writev_blocking(&.{data}, timeout);
+    pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Duration) TransmitError!usize {
+        return uart.writev_blocking(&.{data}, timeout);
     }
 
-    pub fn read_blocking(uart: *const UART, data: []u8, timeout: ?Duration) ReceiveError!void {
-        try uart.readv_blocking(&.{data}, timeout);
+    pub fn read_blocking(uart: *const UART, data: []u8, timeout: ?Duration) ReceiveError!usize {
+        return uart.readv_blocking(&.{data}, timeout);
     }
 
     pub fn writer(uart: *const UART) Writer {
@@ -297,13 +303,11 @@ pub const UART = struct {
         return .{ .context = uart };
     }
     fn generic_writer_fn(uart: *const UART, buffer: []const u8) TransmitError!usize {
-        try uart.write_blocking(buffer, null);
-        return buffer.len;
+        return uart.write_blocking(buffer, null);
     }
 
     fn generic_reader_fn(uart: *const UART, buffer: []u8) ReceiveError!usize {
-        try uart.read_blocking(buffer, null);
-        return buffer.len;
+        return uart.read_blocking(buffer, null);
     }
 
     pub fn init(comptime uart: Instances) UART {
