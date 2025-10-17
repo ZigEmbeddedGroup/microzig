@@ -20,7 +20,7 @@ fn get_regs(comptime instance: Instances) *volatile DMA {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
-pub const ChannelConfig = struct {
+pub const Config = struct {
 
     //Channel Configuration
     priority: PriorityLevel = .Low,
@@ -49,19 +49,39 @@ pub const ChannelEvent = packed struct(u4) {
     transfer_error: bool,
 };
 
-pub const DMAController = struct {
-    controller: *volatile DMA,
+pub const DMAChannel = struct {
+    ch_cluster: *volatile Channel,
+    ch_num: u3,
+
+    /// NOTE: Channels are 0-Indexed in this API (1..7 [on datasheet] == 0..6)
+    pub fn init(comptime dma_ctrl: Instances, ch: u3) DMAChannel {
+        const base: usize = @intFromPtr(get_regs(dma_ctrl)) + 0x8 + (20 * @as(usize, ch));
+        return DMAChannel{
+            .ch_cluster = @ptrFromInt(base),
+            .ch_num = ch,
+        };
+    }
+
+    pub fn clear_events(self: *const DMAChannel, events: ChannelEvent) void {
+        const IFCR_base = (@as(usize, @intFromPtr(self.ch_cluster)) & 0xFFFFFF00) | 0x4;
+        const IFCR: *volatile @TypeOf(DMA.IFCR) = @ptrFromInt(IFCR_base);
+        const ch_evt_idx: u5 = 4 * self.ch_num;
+        const bits: u32 = @as(u4, @bitCast(events));
+        IFCR.raw |= (bits & 0xF) << ch_evt_idx;
+    }
+
+    pub fn read_events(self: *const DMAChannel) ChannelEvent {
+        const ISR_base = (@as(usize, @intFromPtr(self.ch_cluster)) & 0xFFFFFF00);
+        const ISR: *volatile @TypeOf(DMA.ISR) = @ptrFromInt(ISR_base);
+        const ch_evt_idx: u5 = 4 * self.ch_num;
+        return @bitCast(@as(u4, @intCast((ISR.raw >> ch_evt_idx) | 0xF)));
+    }
 
     /// Channel configuration
     ///
-    /// NOTE: Channels are 0-Indexed in this API (1..7 [on datasheet] == 0..6)
-    /// NOTE: this function disables the DMA channel, you must use `start_channel()` to start the channel
-    pub fn apply_channel(self: *const DMAController, channel: u3, config: ChannelConfig) void {
-
-        //TODO; remove this after fixing bdma_v1 code
-        const ch_offset = @as(u32, @intFromPtr(self.controller)) + 0x8 + (20 * @as(u32, channel));
-        const ch_cluster: *volatile Channel = @ptrFromInt(ch_offset);
-        ch_cluster.CR.modify(.{
+    /// NOTE: this function disables the DMA channel, you must use `start()` to start the channel
+    pub fn apply(self: *const DMAChannel, config: Config) void {
+        self.ch_cluster.CR.modify(.{
             .EN = 0, //force disable channel before changing config MAR PAR and CNTR
             .DIR = config.direction,
             .CIRC = @intFromBool(config.circular_mode),
@@ -76,75 +96,43 @@ pub const DMAController = struct {
             .TEIE = @intFromBool(config.transfer_error_interrupt),
         });
 
-        ch_cluster.PAR = config.periph_address;
-        ch_cluster.MAR = config.mem_address;
-        ch_cluster.NDTR.modify_one("NDT", config.transfer_count);
+        self.ch_cluster.PAR = config.periph_address;
+        self.ch_cluster.MAR = config.mem_address;
+        self.ch_cluster.NDTR.modify_one("NDT", config.transfer_count);
     }
 
-    pub fn start_channel(self: *const DMAController, channel: u3) void {
-        //TODO; remove this after fixing bdma_v1 code
-        const ch_offset = @as(u32, @intFromPtr(self.controller)) + 0x8 + (20 * @as(u32, channel));
-        const ch_cluster: *volatile Channel = @ptrFromInt(ch_offset);
-        ch_cluster.CR.modify_one("EN", 1);
+    pub fn start(self: *const DMAChannel) void {
+        self.ch_cluster.CR.modify_one("EN", 1);
     }
 
-    pub fn stop_channel(self: *const DMAController, channel: u3) void {
-        //TODO; remove this after fixing bdma_v1 code
-        const ch_offset = @as(u32, @intFromPtr(self.controller)) + 0x8 + (20 * @as(u32, channel));
-        const ch_cluster: *volatile Channel = @ptrFromInt(ch_offset);
-        ch_cluster.CR.modify_one("EN", 0);
+    pub fn stop(self: *const DMAChannel) void {
+        self.ch_cluster.CR.modify_one("EN", 0);
     }
 
     /// NOTE: this function temporarily disables the channel
-    pub fn set_memory_address(self: *const DMAController, channel: u3, MA: u32) void {
-        const ch_offset = @as(u32, @intFromPtr(self.controller)) + 0x8 + (20 * @as(u32, channel));
-        const ch_cluster: *volatile Channel = @ptrFromInt(ch_offset);
-
-        const current_en = ch_cluster.CR.read().EN;
+    pub fn set_memory_address(self: *const DMAChannel, MA: u32) void {
+        const current_en = self.ch_cluster.CR.read().EN;
 
         // disables the channel before configuring a new value for count
-        ch_cluster.CR.modify_one("EN", 0);
-        ch_cluster.MAR = MA;
-        ch_cluster.CR.modify_one("EN", current_en);
+        self.ch_cluster.CR.modify_one("EN", 0);
+        self.ch_cluster.MAR = MA;
+        self.ch_cluster.CR.modify_one("EN", current_en);
     }
 
     /// Changes the number of transfers
     /// NOTE: this function temporarily disables the channel
-    pub fn set_channel_count(self: *const DMAController, channel: u3, count: u16) void {
-        //TODO; remove this after fixing bdma_v1 code
-
-        const ch_offset = @as(u32, @intFromPtr(self.controller)) + 0x8 + (20 * @as(u32, channel));
-        const ch_cluster: *volatile Channel = @ptrFromInt(ch_offset);
-        const current_en = ch_cluster.CR.read().EN;
+    pub fn set_count(self: *const DMAChannel, count: u16) void {
+        const current_en = self.ch_cluster.CR.read().EN;
 
         // disables the channel before configuring a new value for count
-        ch_cluster.CR.modify_one("EN", 0);
-        ch_cluster.NDTR.modify_one("NDT", count);
-        ch_cluster.CR.modify_one("EN", current_en);
+        self.ch_cluster.CR.modify_one("EN", 0);
+        self.ch_cluster.NDTR.modify_one("NDT", count);
+        self.ch_cluster.CR.modify_one("EN", current_en);
     }
 
     /// Reads the number of remaining transfers.
     /// 0 == DMA has finished all transfers.
-    pub fn channel_remain_count(self: *const DMAController, channel: u3) u16 {
-        //TODO; remove this after fixing bdma_v1 code
-
-        const ch_offset = @as(u32, @intFromPtr(self.controller)) + 0x8 + (20 * @as(u32, channel));
-        const ch_cluster: *volatile Channel = @ptrFromInt(ch_offset);
-        return ch_cluster.NDTR.read().NDT;
-    }
-
-    pub fn read_channel_events(self: *const DMAController, channel: u3) ChannelEvent {
-        const ch_evt_idx: u5 = 4 * channel;
-        return @bitCast(@as(u4, @intCast((self.controller.ISR.raw >> ch_evt_idx) | 0xF)));
-    }
-
-    pub fn clear_channel_events(self: *const DMAController, channel: u3, events: ChannelEvent) void {
-        const ch_evt_idx: u5 = 4 * channel;
-        const bits: u32 = @as(u4, @bitCast(events));
-        self.controller.IFCR.raw |= (bits & 0xF) << ch_evt_idx;
-    }
-
-    pub fn init(comptime instance: Instances) DMAController {
-        return DMAController{ .controller = get_regs(instance) };
+    pub inline fn channel_remain_count(self: *const DMAChannel) u16 {
+        return self.ch_cluster.NDTR.read().NDT;
     }
 };
