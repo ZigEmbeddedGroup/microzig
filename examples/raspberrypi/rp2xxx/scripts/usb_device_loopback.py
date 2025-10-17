@@ -19,7 +19,7 @@ try:
 
     # was it found?
     if dev is None:
-        raise ValueError('Device not found. Verify that device is attached, then check vendor and product settings.')
+        raise ValueError("Device not found. Verify that device is attached, then check vendor and product settings.")
 
     print("Device found!")
 
@@ -53,8 +53,10 @@ try:
         intf,
         custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN)
 
-    assert inep is not None, "IN endpoint not found"
-    assert outep is not None, "OUT endpoint not found"
+    if inep is None:
+        raise ValueError("IN endpoint not found")
+    if outep is None:
+        raise ValueError("OUT endpoint not found")
 
     print(f"OUT endpoint: 0x{outep.bEndpointAddress:02x}")
     print(f"IN endpoint: 0x{inep.bEndpointAddress:02x}")
@@ -77,7 +79,6 @@ try:
     from_device = inep.read(64, timeout=2000)
     print(f"Received {len(from_device)} bytes")
     print("Device Says: {}".format(''.join([chr(x) for x in from_device])))
-
 except usb.core.USBTimeoutError:
     print("\nTimeout! The device isn't responding.")
 except usb.core.USBError as e:
@@ -96,11 +97,11 @@ finally:
                 dev.attach_kernel_driver(interface)
                 print(f"Kernel driver reattached to interface {interface}")
             except:
-                pass
+                print(f"Could not reattach kernel driver to interface {interface}")
         
         # Dispose of the device object
         usb.util.dispose_resources(dev)
     except:
-        pass
+        print("Attempts to cleanup by releasing interfaces failed.")
     
     print("Done!")
