@@ -59,9 +59,7 @@ pub const Debug = struct {
     };
 
     fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
-        const buf = @as(*Writer, @alignCast(@fieldParentPtr("interface", io_w))).interface.buffer;
-        // NOTE: If I do this, for some reason the newline is missing
-        // const buf = io_w.buffered();
+        const buf = io_w.buffered();
 
         var ret: usize = 0;
         if (buf.len > 0) {
@@ -81,17 +79,19 @@ pub const Debug = struct {
 
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
     fn writerfn(_: void, data: []const u8) std.Io.Writer.Error!usize {
-        var len = data.len;
+        const len = data.len;
         if (len == 0) return 0;
 
         if (len != 1) {
             const tmp_c = data[len - 1]; //check if last char is a sentinel
             if (tmp_c != 0) {
-                len -= 1; //last char is gonna be change to '\0'
+                // Temporarily change last char to null byte
                 var tmp_data: []u8 = @constCast(data);
-                tmp_data[len] = 0;
+                tmp_data[len - 1] = 0;
                 write0(@ptrCast(tmp_data.ptr));
-                tmp_data[len] = tmp_c;
+                tmp_data[len - 1] = tmp_c;
+                // Write the last character separately
+                write_byte(tmp_c);
                 return len;
             }
             write0(@ptrCast(data.ptr));
