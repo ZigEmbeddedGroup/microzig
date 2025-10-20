@@ -58,12 +58,20 @@ pub const Debug = struct {
         len: usize,
     };
 
-    fn drain(_: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
-        _ = splat;
-        // TODO: implement splat
+    fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const buf = io_w.buffered();
+
         var ret: usize = 0;
-        for (data) |d| {
+        if (buf.len > 0) {
+            ret += try writerfn({}, buf);
+            _ = io_w.consumeAll();
+        }
+        for (data[0 .. data.len - 1]) |d| {
             ret += try writerfn({}, d);
+        }
+        for (0..splat) |_| {
+            const to_splat = data[data.len - 1];
+            ret += try writerfn({}, to_splat);
         }
 
         return ret;
@@ -71,16 +79,19 @@ pub const Debug = struct {
 
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
     fn writerfn(_: void, data: []const u8) std.Io.Writer.Error!usize {
-        var len = data.len;
+        const len = data.len;
+        if (len == 0) return 0;
 
         if (len != 1) {
             const tmp_c = data[len - 1]; //check if last char is a sentinel
             if (tmp_c != 0) {
-                len -= 1; //last char is gonna be change to '\0'
+                // Temporarily change last char to null byte
                 var tmp_data: []u8 = @constCast(data);
-                tmp_data[len] = 0;
+                tmp_data[len - 1] = 0;
                 write0(@ptrCast(tmp_data.ptr));
-                tmp_data[len] = tmp_c;
+                tmp_data[len - 1] = tmp_c;
+                // Write the last character separately
+                write_byte(tmp_c);
                 return len;
             }
             write0(@ptrCast(data.ptr));
@@ -121,10 +132,10 @@ pub const Debug = struct {
         const MAGIC: [4]u8 = .{ 0x53, 0x48, 0x46, 0x42 };
         var magic_buffer: [4]u8 = undefined;
 
-        //try open extension file
+        // Try opening the extension file
         const ext_file = fs.open(":semihosting-features", .R) catch return false;
 
-        //check the size
+        // Check the size
         const byte_size = ext_file.size() catch return false;
         if (byte_size < (MAGIC.len + feature_byte + 1)) return false;
 
@@ -132,7 +143,7 @@ pub const Debug = struct {
         var file_reader = ext_file.reader(&read_buf);
         _ = file_reader.interface.readSliceShort(&magic_buffer) catch return false;
 
-        //check the magic number
+        // Check the magic number
         for (magic_buffer, MAGIC) |number, magic| {
             if (number != magic) return false;
         }
@@ -459,7 +470,7 @@ fn call(number: Syscalls, param: *const anyopaque) isize {
     return asm volatile (
         \\mov r0, %[num]
         \\mov r1, %[p]
-        \\BKPT #0xAB
+        \\bkpt #0xAB
         \\mov %[ret], r0
         : [ret] "=r" (-> isize),
         : [num] "r" (number),

@@ -1,8 +1,12 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const board = microzig.board;
+const nrf = microzig.hal;
+
 const semihosting = microzig.core.experimental.ARM_semihosting;
 
 pub fn main() void {
+    board.init();
     const path = "";
     const file_name = path ++ "foo.txt";
     const new_name = path ++ "bar.txt";
