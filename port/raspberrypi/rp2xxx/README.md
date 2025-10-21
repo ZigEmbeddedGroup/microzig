@@ -17,7 +17,7 @@ The RP2350 is very similar to the RP2040, but has enough differences to require 
 - [ ] pins
 - [ ] pio
 - [x] pll
-- [ ] pwm
+- [x] pwm
 - [ ] random
 - [x] resets
 - [ ] rom
