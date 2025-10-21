@@ -292,7 +292,7 @@ pub const I2C = enum(u1) {
     pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
         addr.check_reserved() catch |err| switch (err) {
             AddressError.GeneralCall => {},
-            else => return Error.TargetAddressReserved,
+            else => return Error.IllegalAddress,
         };
 
         if (chunks.len == 0)
@@ -355,7 +355,7 @@ pub const I2C = enum(u1) {
     /// NOTE: readv_blocking is unsupported because of a bug in the chip, where subsequent reads
     /// cannot be performed without sending an extra START event.
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
-        addr.check_reserved() catch return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.IllegalAddress;
 
         // TODO: We can handle this if for some reason we want to send a start and immediate stop?
         if (dst.len == 0)
@@ -396,7 +396,7 @@ pub const I2C = enum(u1) {
     /// This is useful for the common scenario of writing an address to a target device, and then
     /// immediately reading bytes from that address
     pub fn write_then_read_blocking(i2c: I2C, addr: Address, data: []const u8, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
-        addr.check_reserved() catch return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.IllegalAddress;
 
         // TODO: We can handle this actually
         if (data.len == 0)
