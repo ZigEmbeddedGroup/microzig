@@ -104,13 +104,48 @@ pub const AS5600 = struct {
         );
     }
 
+    // TODO: Write method
+    pub fn read_zero_position(self: *const Self) !u16 {
+        const zpos = self.read2_raw(register.ZPOS);
+        return zpos & 0xFFF;
+    }
+
+    // TODO: Write method
+    pub fn read_max_position(self: *const Self) !u16 {
+        const mpos = self.read2_raw(register.MPOS);
+        return mpos & 0xFFF;
+    }
+
+    // TODO: Write method
+    pub fn read_max_angle(self: *const Self) !u16 {
+        const mang = self.read2_raw(register.MANG);
+        return mang & 0xFFF;
+    }
+
+    pub fn read_configuration(self: *const Self) !u16 {
+        const configuration = self.read2_raw(register.CONF);
+        return @bitCast(configuration);
+    }
+
     pub fn write_configuration(self: *const Self, config: Configuration) !void {
         return self.write_raw(Self.register.CONF, @bitCast(config));
     }
 
+    pub fn read_raw_angle(self: *const Self) !u16 {
+        return self.read2_raw(register.RAW_ANGLE);
+    }
+
+    pub fn read_angle(self: *const Self) !u16 {
+        return self.read2_raw(register.ANGLE);
+    }
+
     pub fn read_status(self: *const Self) !Status {
         const s = try self.read1_raw(register.STATUS);
-        return @enumFromInt(s & (0b111 << 3));
+        return @bitCast(s & (0b111 << 3));
+    }
+
+    pub fn read_magnitude(self: *const Self) !u16 {
+        return self.read2_raw(register.MAGNITUDE);
     }
 
     pub fn configure_range(self: *const Self) !void {
