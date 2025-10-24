@@ -71,10 +71,29 @@ pub const AS5600 = struct {
         WD: enum(u1) { off = 0, on = 1 } = .off,
     };
 
-    pub const Status = enum(u8) {
-        MD = 1 << 5,
-        ML = 1 << 4,
-        MH = 1 << 3,
+    // TODO: Enum is not correct. Can be multiple
+    // Could enumerate all the combos?
+    // pub const Status = enum {
+    // // Magnet too close.
+    // MagnetHigh = 0x8,
+    // // Magnet too far.
+    // MagnetLow = 0x10,
+    // // Magnet detected.
+    // MagnetDetected = 0x20,
+    // // Magnet detected, but close.
+    // MagnetDetectedHigh = 0x28,
+    // // Magnet detected, but low.
+    // MagnetDetectedLow = 0x30,
+    // };
+    pub const Status = packed struct(u8) {
+        reserved0: u3 = 0,
+        // Magnet too strong
+        MH: u1 = 0,
+        // Magnet too weak
+        ML: u1 = 0,
+        // Magnet detected
+        MD: u1 = 0,
+        reserved6: u2 = 0,
     };
 
     pub fn init(dev: mdf.base.I2C_Device, address: mdf.base.I2C_Device.Address) Self {
@@ -104,7 +123,7 @@ pub const AS5600 = struct {
         );
     }
 
-    // TODO: Write method
+    // TODO: Write method. read-modify-write? Suggested by datasheet because extra bits might be config
     pub fn read_zero_position(self: *const Self) !u16 {
         const zpos = self.read2_raw(register.ZPOS);
         return zpos & 0xFFF;
@@ -154,4 +173,6 @@ pub const AS5600 = struct {
         // max position (MPOS) or the maximiium angle (MANG)
         return;
     }
+
+    // TODO: Write burn functions. Scary.
 };
