@@ -49,9 +49,16 @@ pub fn main() !void {
     );
 
     while (true) {
-        std.log.info("Reading status", .{});
         const status = try dev.read_status();
-        std.log.info("Status: {any}", .{status});
+        std.log.info("Status: {any} ({b:0>8})", .{ status, @as(u8, @bitCast(status)) });
+        if (status.MD != 0 and status.MH == 0 and status.ML == 0) {
+            const raw_angle = try dev.read_raw_angle();
+            std.log.info("Raw Angle: {any}", .{raw_angle});
+            const angle = try dev.read_angle();
+            std.log.info("Angle: {any}", .{angle});
+            const magnitude = try dev.read_magnitude();
+            std.log.info("Magnitude: {any}", .{magnitude});
+        }
 
         sleep_ms(250);
     }
