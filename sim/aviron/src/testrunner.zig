@@ -52,7 +52,7 @@ fn run_test(
     elf_paths: []const []const u8,
 ) !void {
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
-    var sram = aviron.FixedSizedMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
+    var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
 
     var stdout = std.array_list.Managed(u8).init(allocator);
     defer stdout.deinit();

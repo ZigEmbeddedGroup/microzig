@@ -12,7 +12,7 @@ fn run_with_mcu(
 ) !u8 {
     // Allocate memory based on MCU configuration
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
-    var sram = aviron.FixedSizedMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
+    var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
 
     var io = IO{
         .sreg = undefined,
