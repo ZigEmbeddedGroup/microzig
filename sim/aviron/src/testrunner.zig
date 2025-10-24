@@ -128,25 +128,50 @@ fn run_test(
         // Set PC to entry point (convert byte address to word address for AVR)
         cpu.pc = @intCast(header.entry / 2);
 
+        // Get the data bus for loading segments
+        const data_bus = spaces.data.bus();
+
         var pheaders = header.iterateProgramHeaders(&reader);
         while (try pheaders.next()) |phdr| {
             if (phdr.p_type != std.elf.PT_LOAD)
-                continue;
+                continue; // Header isn't loaded
 
-            const dest_mem: []u8 = if (phdr.p_paddr >= 0x0080_0000)
-                &sram.data
-            else
-                &flash_storage.data;
+            if (phdr.p_memsz == 0)
+                continue; // Empty segment, nothing to load
 
-            const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
-            const target_addr: u24 = if (phdr.p_paddr >= 0x0080_0000)
-                addr_masked - @as(u24, mcu_config.sram_base)
-            else
-                addr_masked;
+            // Use vaddr to determine if this is data or code
+            // AVR uses 0x800000 flag in vaddr to indicate data memory
+            const is_data = phdr.p_vaddr >= 0x0080_0000;
+            const target_addr: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
             try reader.seekTo(phdr.p_offset);
-            try reader.interface.readSliceAll(dest_mem[target_addr..][0..phdr.p_filesz]);
-            @memset(dest_mem[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+
+            if (is_data) {
+                // Load data segment via Bus interface
+                // Use a stack buffer to read and write through the bus
+                var read_buf: [256]u8 = undefined;
+                var remaining = phdr.p_filesz;
+                var offset: usize = 0;
+                while (remaining > 0) {
+                    const to_read = @min(remaining, read_buf.len);
+                    try reader.interface.readSliceAll(read_buf[0..to_read]);
+                    for (read_buf[0..to_read], 0..) |byte, i| {
+                        data_bus.write(@intCast(target_addr + offset + i), byte);
+                    }
+                    offset += to_read;
+                    remaining -= to_read;
+                }
+
+                // Zero-fill the remaining memory
+                var i: usize = phdr.p_filesz;
+                while (i < phdr.p_memsz) : (i += 1) {
+                    data_bus.write(@intCast(target_addr + i), 0);
+                }
+            } else {
+                // Flash can be loaded directly
+                try reader.interface.readSliceAll(flash_storage.data[target_addr..][0..phdr.p_filesz]);
+                @memset(flash_storage.data[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+            }
         }
     }
 
