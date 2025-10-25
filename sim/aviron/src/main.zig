@@ -53,6 +53,8 @@ pub fn main() !u8 {
 
         .code_model = mcu_config.code_model,
         .instruction_set = mcu_config.instruction_set,
+        .sram_base = mcu_config.sram_base,
+        .sram_size = mcu_config.sram_size,
 
         .sio = mcu_config.special_io,
     };
@@ -148,6 +150,10 @@ pub fn main() !u8 {
     }
 
     const result = try cpu.run(cli.options.gas, cli.options.breakpoint);
+
+    if (cpu.trace) {
+        cpu.dump_system_state();
+    }
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
 
