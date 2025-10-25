@@ -19,7 +19,7 @@ const dma = stm32.dma;
 const AdvancedADC = stm32.adc.AdvancedADC;
 const time = stm32.time;
 
-const adc_dma = dma.DMAChannel.init(.DMA1, 0);
+const adc_dma = dma.Channel.init(.DMA1, 0);
 const uart = stm32.uart.UART.init(.USART1);
 const adc = AdvancedADC.init(.ADC1);
 

@@ -14,7 +14,7 @@ const DMA = Bdma_v1.DMA;
 const PriorityLevel = Bdma_v1.PL;
 const DIrection = Bdma_v1.DIR;
 const Size = Bdma_v1.SIZE;
-const Channel = Bdma_v1.CH;
+const Channel_t = Bdma_v1.CH;
 pub const Instances = util.create_peripheral_enum("DMA", "bdma_v1");
 fn get_regs(comptime instance: Instances) *volatile DMA {
     return @field(microzig.chip.peripherals, @tagName(instance));
@@ -49,20 +49,20 @@ pub const ChannelEvent = packed struct(u4) {
     transfer_error: bool,
 };
 
-pub const DMAChannel = struct {
-    ch_cluster: *volatile Channel,
+pub const Channel = struct {
+    ch_cluster: *volatile Channel_t,
     ch_num: u3,
 
     /// NOTE: Channels are 0-Indexed in this API (1..7 [on datasheet] == 0..6)
-    pub fn init(comptime dma_ctrl: Instances, ch: u3) DMAChannel {
+    pub fn init(comptime dma_ctrl: Instances, ch: u3) Channel {
         const base: usize = @intFromPtr(get_regs(dma_ctrl)) + 0x8 + (20 * @as(usize, ch));
-        return DMAChannel{
+        return Channel{
             .ch_cluster = @ptrFromInt(base),
             .ch_num = ch,
         };
     }
 
-    pub fn clear_events(self: *const DMAChannel, events: ChannelEvent) void {
+    pub fn clear_events(self: *const Channel, events: ChannelEvent) void {
         const IFCR_base = (@as(usize, @intFromPtr(self.ch_cluster)) & 0xFFFFFF00) | 0x4;
         const IFCR: *volatile @TypeOf(DMA.IFCR) = @ptrFromInt(IFCR_base);
         const ch_evt_idx: u5 = 4 * self.ch_num;
@@ -70,7 +70,7 @@ pub const DMAChannel = struct {
         IFCR.raw |= (bits & 0xF) << ch_evt_idx;
     }
 
-    pub fn read_events(self: *const DMAChannel) ChannelEvent {
+    pub fn read_events(self: *const Channel) ChannelEvent {
         const ISR_base = (@as(usize, @intFromPtr(self.ch_cluster)) & 0xFFFFFF00);
         const ISR: *volatile @TypeOf(DMA.ISR) = @ptrFromInt(ISR_base);
         const ch_evt_idx: u5 = 4 * self.ch_num;
@@ -80,7 +80,7 @@ pub const DMAChannel = struct {
     /// Channel configuration
     ///
     /// NOTE: this function disables the DMA channel, you must use `start()` to start the channel
-    pub fn apply(self: *const DMAChannel, config: Config) void {
+    pub fn apply(self: *const Channel, config: Config) void {
         self.ch_cluster.CR.modify(.{
             .EN = 0, //force disable channel before changing config MAR PAR and CNTR
             .DIR = config.direction,
@@ -101,16 +101,16 @@ pub const DMAChannel = struct {
         self.ch_cluster.NDTR.modify_one("NDT", config.transfer_count);
     }
 
-    pub fn start(self: *const DMAChannel) void {
+    pub fn start(self: *const Channel) void {
         self.ch_cluster.CR.modify_one("EN", 1);
     }
 
-    pub fn stop(self: *const DMAChannel) void {
+    pub fn stop(self: *const Channel) void {
         self.ch_cluster.CR.modify_one("EN", 0);
     }
 
     /// NOTE: this function temporarily disables the channel
-    pub fn set_memory_address(self: *const DMAChannel, MA: u32) void {
+    pub fn set_memory_address(self: *const Channel, MA: u32) void {
         const current_en = self.ch_cluster.CR.read().EN;
 
         // disables the channel before configuring a new value for count
@@ -121,7 +121,7 @@ pub const DMAChannel = struct {
 
     /// Changes the number of transfers
     /// NOTE: this function temporarily disables the channel
-    pub fn set_count(self: *const DMAChannel, count: u16) void {
+    pub fn set_count(self: *const Channel, count: u16) void {
         const current_en = self.ch_cluster.CR.read().EN;
 
         // disables the channel before configuring a new value for count
@@ -132,7 +132,7 @@ pub const DMAChannel = struct {
 
     /// Reads the number of remaining transfers.
     /// 0 == DMA has finished all transfers.
-    pub inline fn channel_remain_count(self: *const DMAChannel) u16 {
+    pub inline fn channel_remain_count(self: *const Channel) u16 {
         return self.ch_cluster.NDTR.read().NDT;
     }
 };
