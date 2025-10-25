@@ -108,7 +108,8 @@ pub const Channel = struct {
     pub fn stop(self: *const Channel) void {
         self.ch_cluster.CR.modify_one("EN", 0);
     }
-
+    ///changes the memory address.
+    ///
     /// NOTE: this function temporarily disables the channel
     pub fn set_memory_address(self: *const Channel, MA: u32) void {
         const current_en = self.ch_cluster.CR.read().EN;
@@ -119,7 +120,8 @@ pub const Channel = struct {
         self.ch_cluster.CR.modify_one("EN", current_en);
     }
 
-    /// Changes the number of transfers
+    /// Changes the number of transfers.
+    ///
     /// NOTE: this function temporarily disables the channel
     pub fn set_count(self: *const Channel, count: u16) void {
         const current_en = self.ch_cluster.CR.read().EN;
