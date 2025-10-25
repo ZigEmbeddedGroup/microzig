@@ -59,6 +59,9 @@ sio: SpecialIoRegisters,
 flash: Flash,
 data: DataBus,
 io: IOBus,
+sram_base: u16 = 0,
+sram_size: u16 = 0,
+eeprom_size: u16 = 0,
 
 // State
 pc: u24 = 0,
@@ -83,6 +86,110 @@ pub const RunResult = enum {
     infinite_loop,
     program_exit,
 };
+
+pub fn dump_system_state(cpu: *Cpu) void {
+    // Dump complete system state
+    std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
+    std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
+    std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
+    std.debug.print("SREG: {f}\n", .{cpu.sreg});
+
+    // Dump X, Y, Z pointer registers
+    const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
+    const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
+    const z_reg = (@as(u16, cpu.regs[31]) << 8) | cpu.regs[30];
+    std.debug.print("\nPOINTER REGISTERS:\n", .{});
+    std.debug.print("X (r27:r26): 0x{X:0>4}\n", .{x_reg});
+    std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
+    std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
+
+    // Dump all registers
+    std.debug.print("\nREGISTERS:\n", .{});
+    for (cpu.regs, 0..) |reg, i| {
+        if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
+        std.debug.print("{X:0>2} ", .{reg});
+        if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
+    }
+
+    // Dump SRAM using absolute addresses based on configured base
+    const sram_end: u16 = cpu.sram_base + @as(u16, @truncate(cpu.sram_size - 1));
+    std.debug.print("\nSRAM DUMP (0x{X:0>4}-0x{X:0>4}, {d} bytes):\n", .{ cpu.sram_base, sram_end, cpu.sram_size });
+
+    const row_width = 16;
+    var prev_row: ?[row_width]u8 = null;
+    var prev_len: usize = 0;
+    var elided = false;
+
+    var i: usize = 0;
+    while (i < cpu.sram_size) : (i += @min(row_width, cpu.sram_size - i)) {
+        const row_len: usize = @min(row_width, cpu.sram_size - i);
+        var cur_row: [row_width]u8 = undefined;
+
+        var j: usize = 0;
+        while (j < row_len) : (j += 1) {
+            cur_row[j] = cpu.data.read(cpu.sram_base + @as(u16, @intCast(i + j)));
+        }
+
+        // Only elide repeated lines of all zeroes
+        const is_all_zeros = blk: {
+            for (cur_row[0..row_len]) |byte| {
+                if (byte != 0) break :blk false;
+            }
+            break :blk true;
+        };
+        const same_as_prev = if (prev_row) |prev|
+            prev_len == row_len and std.mem.eql(u8, prev[0..prev_len], cur_row[0..row_len])
+        else
+            false;
+        if (same_as_prev and is_all_zeros) {
+            elided = true;
+        } else {
+            if (elided) {
+                std.debug.print("*\n", .{});
+                elided = false;
+            }
+
+            std.debug.print("0x{X:0>4}: ", .{cpu.sram_base + i});
+            // hex bytes
+            j = 0;
+            while (j < row_len) : (j += 1) {
+                std.debug.print("{X:0>2} ", .{cur_row[j]});
+            }
+
+            // pad hex area for short rows to align ASCII column
+            if (row_len < row_width) {
+                var pad: usize = row_width - row_len;
+                while (pad > 0) : (pad -= 1) {
+                    std.debug.print("   ", .{});
+                }
+            }
+
+            // ASCII representation
+            std.debug.print(" |", .{});
+            j = 0;
+            while (j < row_len) : (j += 1) {
+                const b = cur_row[j];
+                if (b >= 32 and b <= 126) {
+                    std.debug.print("{c}", .{b});
+                } else {
+                    std.debug.print(".", .{});
+                }
+            }
+            std.debug.print("|\n", .{});
+
+            // store as previous row
+            if (prev_row == null) {
+                prev_row = [_]u8{0} ** row_width;
+            }
+            @memcpy(prev_row.?[0..row_len], cur_row[0..row_len]);
+            prev_len = row_len;
+        }
+    }
+    if (elided)
+        std.debug.print("*\n", .{});
+
+    std.debug.print("=== END DUMP ===\n", .{});
+}
 
 pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
     var rest_gas = mileage;
