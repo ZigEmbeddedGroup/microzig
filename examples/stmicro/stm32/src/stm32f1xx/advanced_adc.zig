@@ -19,7 +19,7 @@ const dma = stm32.dma;
 const AdvancedADC = stm32.adc.AdvancedADC;
 const time = stm32.time;
 
-const dma_controller = dma.DMAController.init(.DMA1);
+const adc_dma = dma.Channel.init(.DMA1, 0);
 const uart = stm32.uart.UART.init(.USART1);
 const adc = AdvancedADC.init(.ADC1);
 
@@ -62,7 +62,7 @@ pub fn main() !void {
     const ref_ovf_flag: *volatile bool = &ovf_flag;
     var adc_buf: [10]u16 = .{0} ** 10;
 
-    dma_controller.apply_channel(0, .{
+    adc_dma.apply(.{
         .circular_mode = true,
         .memory_increment = true,
 
@@ -75,7 +75,7 @@ pub fn main() !void {
         .periph_address = @intFromPtr(&adc.regs.DR),
         .mem_address = @intFromPtr(&adc_buf),
     });
-    dma_controller.start_channel(0);
+    adc_dma.start();
 
     //configure UART log
 

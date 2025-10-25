@@ -11,7 +11,7 @@ const dma = stm32.dma;
 const AdvancedADC = stm32.adc.AdvancedADC;
 const time = stm32.time;
 
-const dma_controller = dma.DMAController.init(.DMA1);
+const adc_dma = dma.Channel.init(.DMA1, 0);
 const uart = stm32.uart.UART.init(.USART1);
 
 const TX = gpio.Pin.from_port(.A, 9);
@@ -49,7 +49,7 @@ pub fn main() !void {
     const adc2 = AdvancedADC.init(.ADC2);
     var adc_buf: [2]AdcData = undefined;
 
-    dma_controller.apply_channel(0, .{
+    adc_dma.apply(.{
         .circular_mode = true,
         .memory_increment = true,
 
@@ -62,7 +62,7 @@ pub fn main() !void {
         .periph_address = @intFromPtr(&adc1.regs.DR),
         .mem_address = @intFromPtr(&adc_buf),
     });
-    dma_controller.start_channel(0);
+    adc_dma.start();
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     ADC_pin1.set_input_mode(.analog);
