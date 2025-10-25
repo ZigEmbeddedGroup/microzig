@@ -1,0 +1,25 @@
+.{
+    .name = .sorcerer,
+    .version = "0.0.1",
+    .dependencies = .{
+        .microzig = .{
+            .path = "../..",
+        },
+        .dvui = .{
+            .url = "git+https://github.com/david-vanderson/dvui#7cdcf937f41490b70e96f4abe80d8e61a858ec96",
+            .hash = "dvui-0.4.0-dev-AQFJmUCT1QAYkkYKaevIYepio5OH9VNUa4_8Cpp1qPkV",
+        },
+        .serial = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/serial#fbd7389ff8bbc9fa362aa74081588755b5d028a0",
+            .hash = "serial-0.0.1-PoeRzF60AAAN8Iu0yXTIX-t3DVzsnmN7vWHKM2HA2Zbq",
+        },
+    },
+    .minimum_zig_version = "0.15.2",
+    .fingerprint = 0x5f77e0bc82473a35,
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

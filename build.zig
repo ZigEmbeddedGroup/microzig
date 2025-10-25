@@ -1,6 +1,7 @@
 const std = @import("std");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
+const assert = std.debug.assert;
 
 const internals = @import("build-internals");
 pub const Target = internals.Target;
@@ -138,25 +139,35 @@ fn generate_release_steps(b: *Build) void {
     }
 }
 
-pub const PortSelect = blk: {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    for (port_list) |port| {
-        fields = fields ++ [_]std.builtin.Type.StructField{.{
-            .name = port.name,
-            .type = bool,
-            .default_value_ptr = @as(*const anyopaque, @ptrCast(&false)),
-            .is_comptime = false,
-            .alignment = @alignOf(bool),
-        }};
+pub const PortSelect = struct {
+    esp: bool = false,
+    gd32: bool = false,
+    atsam: bool = false,
+    avr: bool = false,
+    nrf5x: bool = false,
+    lpc: bool = false,
+    mcx: bool = false,
+    rp2xxx: bool = false,
+    stm32: bool = false,
+    ch32v: bool = false,
+
+    pub const all: PortSelect = blk: {
+        var ret: PortSelect = undefined;
+        for (@typeInfo(PortSelect).@"struct".fields) |field| {
+            @field(ret, field.name) = true;
+        }
+
+        break :blk ret;
+    };
+
+    comptime {
+        // assumes fields are in the same order as the port list
+        for (port_list, @typeInfo(PortSelect).@"struct".fields) |port_entry, field| {
+            assert(std.mem.eql(u8, port_entry.name, field.name));
+            const default_value_ptr: *const bool = @ptrCast(field.default_value_ptr);
+            assert(false == default_value_ptr.*);
+        }
     }
-    break :blk @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
 };
 
 // Don't know if this is required but it doesn't hurt either.

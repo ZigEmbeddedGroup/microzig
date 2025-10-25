@@ -1,4 +1,4 @@
-name: tools/regz-wizard
+name: tools/sorcerer
 on:
   push:
     branches: [main]
@@ -7,16 +7,11 @@ on:
 
 jobs:
   build:
-    if: false
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
-        os: [
-          ubuntu-latest,
-          #windows-latest, # Windows is having a hard time fetching raygui package reliably
-          macos-latest
-        ]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,9 +22,9 @@ jobs:
           version: 0.15.1
 
       - name: Build
-        working-directory: tools/regz-wizard
+        working-directory: tools/sorcerer
         run: zig build
 
       - name: Run Test Suite
-        working-directory: tools/regz-wizard
+        working-directory: tools/sorcerer
         run: zig build test
