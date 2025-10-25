@@ -1,6 +1,6 @@
 //! {
 //!   "exit": "breakpoint",
-//!   "cpu":    "attiny816",
+//!   "cpus": ["attiny816", "atmega2560"],
 //!   "precondition": {
 //!     "r16": 85,
 //!     "r17": 170,

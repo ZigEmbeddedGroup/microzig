@@ -10,7 +10,7 @@ pub const IO = bus.IO;
 pub const Bus = bus.Bus;
 pub const IOBus = bus.IOBus;
 
-pub const FixedSizedMemory = bus.FixedSizedMemory;
+pub const FixedSizeMemory = bus.FixedSizedMemory;
 
 pub const mcu = @import("mcu.zig");
 
