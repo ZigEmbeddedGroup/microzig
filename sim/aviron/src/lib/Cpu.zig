@@ -1,6 +1,7 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
 const bus = @import("bus.zig");
+const hexdump_util = @import("util/hexdump.zig");
 
 const Flash = bus.Flash;
 const IO = bus.IO;
@@ -59,6 +60,8 @@ sio: SpecialIoRegisters,
 flash: Flash,
 data: DataBus,
 io: IOBus,
+sram_base: u16 = 0,
+sram_size: u16 = 0,
 
 // State
 pc: u24 = 0,
@@ -83,6 +86,39 @@ pub const RunResult = enum {
     infinite_loop,
     program_exit,
 };
+
+pub fn dump_system_state(cpu: *Cpu) void {
+    // Dump complete system state
+    std.debug.print("\n=== SYSTEM STATE DUMP ===\n", .{});
+    std.debug.print("PC: 0x{X:0>4}\n", .{cpu.pc});
+    std.debug.print("SP: 0x{X:0>4}\n", .{cpu.get_sp()});
+    std.debug.print("SREG: {f}\n", .{cpu.sreg});
+
+    // Dump X, Y, Z pointer registers
+    const x_reg = (@as(u16, cpu.regs[27]) << 8) | cpu.regs[26];
+    const y_reg = (@as(u16, cpu.regs[29]) << 8) | cpu.regs[28];
+    const z_reg = (@as(u16, cpu.regs[31]) << 8) | cpu.regs[30];
+    std.debug.print("\nPOINTER REGISTERS:\n", .{});
+    std.debug.print("X (r27:r26): 0x{X:0>4}\n", .{x_reg});
+    std.debug.print("Y (r29:r28): 0x{X:0>4}\n", .{y_reg});
+    std.debug.print("Z (r31:r30): 0x{X:0>4}\n", .{z_reg});
+
+    // Dump all registers
+    std.debug.print("\nREGISTERS:\n", .{});
+    for (cpu.regs, 0..) |reg, i| {
+        if (i % 8 == 0) std.debug.print("r{d:0>2}-r{d:0>2}: ", .{ i, @min(i + 7, 31) });
+        std.debug.print("{X:0>2} ", .{reg});
+        if ((i + 1) % 8 == 0) std.debug.print("\n", .{});
+    }
+
+    // Dump SRAM
+    hexdump_util.hexdump(cpu.data, cpu.sram_base, cpu.sram_size, .{
+        .elide = .zeros,
+        .label = "SRAM DUMP",
+    });
+
+    std.debug.print("=== END DUMP ===\n", .{});
+}
 
 pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
     var rest_gas = mileage;
