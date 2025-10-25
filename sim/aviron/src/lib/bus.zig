@@ -190,7 +190,7 @@ pub fn Bus(comptime config: BusConfig) type {
 
 /// Fixed-size memory device with byte-addressable read/write operations
 /// Takes an optional bus_config parameter. If not provided, uses the smallest address width needed.
-pub fn FixedSizedMemory(comptime size: comptime_int, comptime bus_config: ?BusConfig) type {
+pub fn FixedSizeMemory(comptime size: comptime_int, comptime bus_config: ?BusConfig) type {
     const default_addr_type = if (size <= 256) u8 else if (size <= 65536) u16 else u24;
     const config = bus_config orelse BusConfig{ .address_type = default_addr_type };
 
@@ -348,8 +348,8 @@ pub fn MemoryMapping(comptime BusType: type) type {
 test "MemoryMapping: detects overlapping segments" {
     const testing = std.testing;
 
-    var ram1_storage = FixedSizedMemory(16, null){};
-    var ram2_storage = FixedSizedMemory(16, null){};
+    var ram1_storage = FixedSizeMemory(16, null){};
+    var ram2_storage = FixedSizeMemory(16, null){};
     const ram1 = ram1_storage.bus();
     const ram2 = ram2_storage.bus();
 
@@ -371,8 +371,8 @@ test "MemoryMapping: detects overlapping segments" {
 test "MemoryMapping: basic read/write across segments" {
     const testing = std.testing;
 
-    var io_storage = FixedSizedMemory(32, null){}; // stand-in for IO range (no side effects)
-    var sram_storage = FixedSizedMemory(64, null){};
+    var io_storage = FixedSizeMemory(32, null){}; // stand-in for IO range (no side effects)
+    var sram_storage = FixedSizeMemory(64, null){};
     const io_dev = io_storage.bus();
     const sram_dev = sram_storage.bus();
 

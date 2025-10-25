@@ -26,7 +26,7 @@ pub fn main() !u8 {
     const mcu_config = aviron.mcu.atmega328p;
 
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
-    var sram = aviron.FixedSizedMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
+    var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
     // TODO: Add support for reading/writing EEPROM through IO
     var io = IO{
         .sreg = undefined,
