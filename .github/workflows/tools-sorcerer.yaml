@@ -21,6 +21,11 @@ jobs:
         with:
           version: 0.15.1
 
+      - name: Setup SDL3
+        uses: libsdl-org/setup-sdl@main
+        with:
+          version: sdl3-latest
+
       - name: Build
         working-directory: tools/sorcerer
         run: zig build
