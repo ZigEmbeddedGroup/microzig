@@ -28,7 +28,7 @@ Zig is an excellent programming language for embedded systems.
   explicit and even verbose at times. Nullable pointers, pointer casting,
   integer conversions, etc.
 
-To learn more: [The Zig Language Reference](https://ziglang.org/documentation/0.15.1/)
+To learn more: [The Zig Language Reference](https://ziglang.org/documentation/0.15.2/)
 
 ## Why MicroZig?
 
