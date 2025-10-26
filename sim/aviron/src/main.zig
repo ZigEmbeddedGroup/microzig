@@ -4,30 +4,17 @@ const aviron = @import("aviron");
 const args_parser = @import("args");
 const ihex = @import("ihex");
 
-pub fn main() !u8 {
-    const allocator = std.heap.page_allocator;
-
-    var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
-    defer cli.deinit();
-
-    if (cli.options.help or (cli.positionals.len == 0 and !cli.options.info)) {
-        var stderr_writer = std.fs.File.stderr().writer(&.{});
-        try args_parser.printHelp(
-            Cli,
-            cli.executable_name orelse "aviron",
-            &stderr_writer.interface,
-        );
-
-        return if (cli.options.help) @as(u8, 0) else 1;
-    }
-
-    // TODO: Add support for more MCUs!
-    std.debug.assert(cli.options.mcu == .atmega328p);
-    const mcu_config = aviron.mcu.atmega328p;
-
+fn run_with_mcu(
+    allocator: std.mem.Allocator,
+    comptime mcu_config: anytype,
+    options: Cli,
+    positionals: []const []const u8,
+) !u8 {
+    // Allocate memory based on MCU configuration
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
     var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
     // TODO: Add support for reading/writing EEPROM through IO
+
     var io = IO{
         .sreg = undefined,
         .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
@@ -45,7 +32,7 @@ pub fn main() !u8 {
     defer spaces.deinit(allocator);
 
     var cpu = aviron.Cpu{
-        .trace = cli.options.trace,
+        .trace = options.trace,
 
         .flash = flash_mem,
         .data = spaces.data.bus(),
@@ -61,9 +48,9 @@ pub fn main() !u8 {
 
     io.sreg = &cpu.sreg;
 
-    if (cli.options.info) {
+    if (options.info) {
         var stdout = std.fs.File.stdout().writer(&.{});
-        try stdout.interface.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
+        try stdout.interface.print("Information for {s}:\n", .{@tagName(options.mcu)});
         try stdout.interface.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
         try stdout.interface.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
         try stdout.interface.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
@@ -74,14 +61,14 @@ pub fn main() !u8 {
     }
 
     // Load all provided executables:
-    for (cli.positionals) |file_path| {
+    for (positionals) |file_path| {
         var file = try std.fs.cwd().openFile(file_path, .{});
         defer file.close();
 
         var file_buf: [4096]u8 = undefined;
         var reader = file.reader(&file_buf);
 
-        switch (cli.options.format) {
+        switch (options.format) {
             .elf => {
                 var header = try std.elf.Header.read(&reader.interface);
 
@@ -149,13 +136,13 @@ pub fn main() !u8 {
         }
     }
 
-    const result = try cpu.run(cli.options.gas, cli.options.breakpoint);
+    const result = try cpu.run(options.gas, options.breakpoint);
 
-    if (cpu.trace) {
+    if (options.trace) {
         cpu.dump_system_state();
     }
 
-    std.debug.print("STOP: {s}\n", .{@tagName(result)});
+    std.debug.print("\nSTOP: {s}\n", .{@tagName(result)});
 
     // Handle program exit
     if (result == .program_exit) {
@@ -165,9 +152,38 @@ pub fn main() !u8 {
     return 0;
 }
 
+pub fn main() !u8 {
+    const allocator = std.heap.page_allocator;
+
+    var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
+    defer cli.deinit();
+
+    if (cli.options.help or (cli.positionals.len == 0 and !cli.options.info)) {
+        var stderr_writer = std.fs.File.stderr().writer(&.{});
+        try args_parser.printHelp(
+            Cli,
+            cli.executable_name orelse "aviron",
+            &stderr_writer.interface,
+        );
+
+        return if (cli.options.help) @as(u8, 0) else 1;
+    }
+
+    // Dispatch to MCU-specific function
+    return switch (cli.options.mcu) {
+        .atmega328p => try run_with_mcu(allocator, aviron.mcu.atmega328p, cli.options, cli.positionals),
+        .attiny816 => try run_with_mcu(allocator, aviron.mcu.attiny816, cli.options, cli.positionals),
+        .atmega2560 => try run_with_mcu(allocator, aviron.mcu.atmega2560, cli.options, cli.positionals),
+        .xmega128a4u => try run_with_mcu(allocator, aviron.mcu.xmega128a4u, cli.options, cli.positionals),
+    };
+}
+
 // not actually marvel cinematic universe, but microcontroller unit ;
 pub const MCU = enum {
     atmega328p,
+    attiny816,
+    atmega2560,
+    xmega128a4u,
 };
 
 pub const FileFormat = enum {
@@ -212,6 +228,7 @@ const Cli = struct {
             .info = "Prints information about the given MCUs memory.",
             .format = "Specify file format.",
             .breakpoint = "Break when PC reaches this address (hex or dec)",
+            .dump_len = "Number of bytes to dump (default 32)",
             .gas = "Stop after N instructions executed",
         },
     };
@@ -222,6 +239,13 @@ const IO = struct {
 
     sp: u16,
     sreg: *aviron.Cpu.SREG,
+
+    // RAMP registers for extended addressing (used by larger MCUs like ATmega2560)
+    ramp_x: u8 = 0,
+    ramp_y: u8 = 0,
+    ramp_z: u8 = 0,
+    ramp_d: u8 = 0,
+    e_ind: u8 = 0,
 
     // Exit status tracking
     exit_code: ?u8 = null,
@@ -273,9 +297,17 @@ const IO = struct {
         scratch_e = 0x1e, // scratch register
         scratch_f = 0x1f, // scratch register
 
-        sp_l = 0x3D, // ATmega328p
-        sp_h = 0x3E, // ATmega328p
-        sreg = 0x3F, // ATmega328p
+        // Extended addressing registers (ATmega2560 and similar)
+        ramp_d = 0x38, // ATmega2560
+        ramp_x = 0x39, // ATmega2560
+        ramp_y = 0x3A, // ATmega2560
+        ramp_z = 0x3B, // ATmega2560
+        e_ind = 0x3C, // ATmega2560
+
+        // Common registers
+        sp_l = 0x3D, // Common
+        sp_h = 0x3E, // Common
+        sreg = 0x3F, // Common
 
         _,
     };
@@ -315,6 +347,12 @@ const IO = struct {
             .scratch_f => io.scratch_regs[0xf],
 
             .sreg => @bitCast(io.sreg.*),
+
+            .ramp_x => io.ramp_x,
+            .ramp_y => io.ramp_y,
+            .ramp_z => io.ramp_z,
+            .ramp_d => io.ramp_d,
+            .e_ind => io.e_ind,
 
             .sp_l => @truncate(io.sp >> 0),
             .sp_h => @truncate(io.sp >> 8),
@@ -365,7 +403,16 @@ const IO = struct {
             .sp_h => write_masked(high_byte(&io.sp), mask, value),
             .sreg => write_masked(@ptrCast(io.sreg), mask, value),
 
-            _ => std.debug.panic("illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}", .{ addr, value, mask }),
+            .ramp_x => write_masked(&io.ramp_x, mask, value),
+            .ramp_y => write_masked(&io.ramp_y, mask, value),
+            .ramp_z => write_masked(&io.ramp_z, mask, value),
+            .ramp_d => write_masked(&io.ramp_d, mask, value),
+            .e_ind => write_masked(&io.e_ind, mask, value),
+
+            _ => std.debug.panic(
+                "illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}",
+                .{ addr, value, mask },
+            ),
         }
     }
 
