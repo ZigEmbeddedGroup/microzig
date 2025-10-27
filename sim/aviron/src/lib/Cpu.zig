@@ -1780,3 +1780,49 @@ fn format_instruction(inst: isa.Instruction, writer: *std.Io.Writer) !void {
         },
     }
 }
+
+test "Cpu: invalid instruction decode returns InvalidInstruction" {
+    const testing = std.testing;
+
+    // Create flash with invalid instruction data
+    var flash_storage = Flash.Static(128){};
+    const flash = flash_storage.memory();
+
+    // Fill flash with invalid instruction pattern (0xFFFF is not a valid AVR instruction)
+    flash_storage.data[0] = 0xFF;
+    flash_storage.data[1] = 0xFF;
+
+    // Create minimal IO and data bus (empty implementations)
+    const io = IO.empty;
+
+    var sram_storage = bus.FixedSizeMemory(64, .{ .address_type = u24 }){};
+    const data_bus = sram_storage.bus();
+
+    // Create CPU with minimal configuration
+    var cpu = Cpu{
+        .code_model = .code16,
+        .instruction_set = .avr2,
+        .sio = .{
+            .sreg = 0x3F,
+            .spl = 0x3D,
+            .sph = 0x3E,
+            .rampd = null,
+            .rampx = null,
+            .rampy = null,
+            .rampz = null,
+            .eind = null,
+        },
+        .flash = flash,
+        .data = data_bus,
+        .io = bus.IOBus{
+            .ctx = @constCast(&io),
+            .vtable = @constCast(&io.vtable),
+        },
+        .sram_base = 0,
+        .sram_size = 64,
+    };
+
+    // Try to run one instruction - should fail with InvalidInstruction
+    const result = cpu.run(1);
+    try testing.expectError(error.InvalidInstruction, result);
+}

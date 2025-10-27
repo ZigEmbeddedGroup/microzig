@@ -393,3 +393,71 @@ test "MemoryMapping: basic read/write across segments" {
     try testing.expectEqual(@as(u8, 0xAA), try ms.read(0x0005));
     try testing.expectEqual(@as(u8, 0xCC), try ms.read(0x0025));
 }
+
+test "MemoryMapping: unmapped read returns InvalidAddress" {
+    const testing = std.testing;
+
+    var sram_storage = FixedSizeMemory(64, null){};
+    const sram_dev = sram_storage.bus();
+
+    const BusType = @TypeOf(sram_dev);
+    const Mapping = MemoryMapping(BusType);
+
+    // Only map 0x0020-0x005F (64 bytes at 0x20)
+    const segs = [_]Mapping.Segment{
+        .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const alloc = gpa.allocator();
+
+    const ms = try Mapping.init(alloc, &segs);
+    defer ms.deinit(alloc);
+
+    // Try to read from unmapped address (before mapped region)
+    try testing.expectError(error.InvalidAddress, ms.read(0x0010));
+
+    // Try to read from unmapped address (after mapped region)
+    try testing.expectError(error.InvalidAddress, ms.read(0x0070));
+}
+
+test "MemoryMapping: unmapped write returns InvalidAddress" {
+    const testing = std.testing;
+
+    var sram_storage = FixedSizeMemory(64, null){};
+    const sram_dev = sram_storage.bus();
+
+    const BusType = @TypeOf(sram_dev);
+    const Mapping = MemoryMapping(BusType);
+
+    // Only map 0x0020-0x005F (64 bytes at 0x20)
+    const segs = [_]Mapping.Segment{
+        .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const alloc = gpa.allocator();
+
+    const ms = try Mapping.init(alloc, &segs);
+    defer ms.deinit(alloc);
+
+    // Try to write to unmapped address (before mapped region)
+    try testing.expectError(error.InvalidAddress, ms.write(0x0010, 0xFF));
+
+    // Try to write to unmapped address (after mapped region)
+    try testing.expectError(error.InvalidAddress, ms.write(0x0070, 0xFF));
+}
+
+test "Flash: out of bounds read returns InvalidAddress" {
+    const testing = std.testing;
+
+    var flash_storage = Flash.Static(128){};
+    const flash = flash_storage.memory();
+
+    // Flash has 128 bytes (64 words), so valid addresses are 0-63
+    // Try to read beyond the flash size
+    try testing.expectError(error.InvalidAddress, flash.read(64));
+    try testing.expectError(error.InvalidAddress, flash.read(100));
+}
