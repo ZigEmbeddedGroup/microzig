@@ -48,7 +48,7 @@ pub fn hexdump(
         var j: usize = 0;
         while (j < row_len) : (j += 1) {
             const addr = base_addr + @as(@TypeOf(base_addr), @intCast(i + j));
-            cur_row[j] = reader.read(addr);
+            cur_row[j] = reader.read(addr) catch 0xFF; // Use 0xFF for inaccessible memory
         }
 
         // Determine if we should elide this row

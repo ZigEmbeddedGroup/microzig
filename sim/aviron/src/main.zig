@@ -103,7 +103,7 @@ fn run_with_mcu(
                             const to_read = @min(remaining, read_buf.len);
                             try reader.interface.readSliceAll(read_buf[0..to_read]);
                             for (read_buf[0..to_read], 0..) |byte, i| {
-                                data_bus.write(@intCast(target_addr + offset + i), byte);
+                                try data_bus.write(@intCast(target_addr + offset + i), byte);
                             }
                             offset += to_read;
                             remaining -= to_read;
@@ -112,7 +112,7 @@ fn run_with_mcu(
                         // Zero-fill the remaining memory
                         var i: usize = phdr.p_filesz;
                         while (i < phdr.p_memsz) : (i += 1) {
-                            data_bus.write(@intCast(target_addr + i), 0);
+                            try data_bus.write(@intCast(target_addr + i), 0);
                         }
                     } else {
                         // Flash can be loaded directly
@@ -312,7 +312,7 @@ const IO = struct {
         _,
     };
 
-    fn dev_read_data(ctx: *anyopaque, addr: DataBusType.Address) u8 {
+    fn dev_read_data(ctx: *anyopaque, addr: DataBusType.Address) DataBusType.Error!u8 {
         return dev_read(ctx, @intCast(addr));
     }
 
@@ -361,7 +361,7 @@ const IO = struct {
         };
     }
 
-    fn dev_write_data(ctx: *anyopaque, addr: DataBusType.Address, value: u8) void {
+    fn dev_write_data(ctx: *anyopaque, addr: DataBusType.Address, value: u8) DataBusType.Error!void {
         // Data bus writes full bytes (mask = 0xFF)
         dev_write_masked(ctx, @intCast(addr), 0xFF, value);
     }
