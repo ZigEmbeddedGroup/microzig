@@ -418,7 +418,7 @@ fn add_test_suite_update(
                     ));
                     json_write.step.dependOn(&temp_json.step);
 
-                    // Force write ELF directly to testsuite directory
+                    // Compile ELF directly to testsuite directory
                     const gcc_invocation = Build.Step.Run.create(b, b.fmt("compile elf for {s}", .{cpu}));
                     gcc_invocation.addFileArg(avr_gcc);
                     gcc_invocation.addArg("-o");
@@ -431,8 +431,16 @@ fn add_test_suite_update(
                     gcc_invocation.addArg("testsuite");
                     gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
 
+                    // Strip local symbols to make builds deterministic
+                    // (avr-gcc@8 includes random temporary filenames in .strtab)
+                    const objcopy = Build.Step.Run.create(b, b.fmt("strip locals for {s}", .{cpu}));
+                    objcopy.addArg("avr-objcopy");
+                    objcopy.addArg("--strip-unneeded");
+                    objcopy.addArg(b.fmt("testsuite/{s}/{s}{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename), json_suffix }));
+                    objcopy.step.dependOn(&gcc_invocation.step);
+
                     invoke_step.dependOn(&json_write.step);
-                    invoke_step.dependOn(&gcc_invocation.step);
+                    invoke_step.dependOn(&objcopy.step);
                 }
             },
         }
