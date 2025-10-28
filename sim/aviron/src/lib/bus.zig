@@ -338,6 +338,7 @@ pub fn MemoryMapping(comptime BusType: type) type {
 
 test "MemoryMapping: detects overlapping segments" {
     const testing = std.testing;
+    const alloc = std.testing.allocator;
 
     var ram1_storage = FixedSizeMemory(16, null){};
     var ram2_storage = FixedSizeMemory(16, null){};
@@ -352,15 +353,12 @@ test "MemoryMapping: detects overlapping segments" {
         .{ .at = 0x18, .size = 12, .backend = ram2 }, // overlaps 0x1A..0x1B
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
-
     try testing.expectError(error.OverlappingSegments, Mapping.init(alloc, &segs));
 }
 
 test "MemoryMapping: basic read/write across segments" {
     const testing = std.testing;
+    const alloc = std.testing.allocator;
 
     var io_storage = FixedSizeMemory(32, null){}; // stand-in for IO range (no side effects)
     var sram_storage = FixedSizeMemory(64, null){};
@@ -374,10 +372,6 @@ test "MemoryMapping: basic read/write across segments" {
         .{ .at = 0x0000, .size = 0x20, .backend = io_dev },
         .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
     };
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
 
     const ms = try Mapping.init(alloc, &segs);
     defer ms.deinit(alloc);
@@ -396,6 +390,7 @@ test "MemoryMapping: basic read/write across segments" {
 
 test "MemoryMapping: unmapped read returns InvalidAddress" {
     const testing = std.testing;
+    const alloc = std.testing.allocator;
 
     var sram_storage = FixedSizeMemory(64, null){};
     const sram_dev = sram_storage.bus();
@@ -407,10 +402,6 @@ test "MemoryMapping: unmapped read returns InvalidAddress" {
     const segs = [_]Mapping.Segment{
         .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
     };
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
 
     const ms = try Mapping.init(alloc, &segs);
     defer ms.deinit(alloc);
@@ -424,6 +415,7 @@ test "MemoryMapping: unmapped read returns InvalidAddress" {
 
 test "MemoryMapping: unmapped write returns InvalidAddress" {
     const testing = std.testing;
+    const alloc = std.testing.allocator;
 
     var sram_storage = FixedSizeMemory(64, null){};
     const sram_dev = sram_storage.bus();
@@ -435,10 +427,6 @@ test "MemoryMapping: unmapped write returns InvalidAddress" {
     const segs = [_]Mapping.Segment{
         .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
     };
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
 
     const ms = try Mapping.init(alloc, &segs);
     defer ms.deinit(alloc);
