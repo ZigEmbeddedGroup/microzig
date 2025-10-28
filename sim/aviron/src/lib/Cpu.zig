@@ -151,13 +151,14 @@ pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
             }
         }
 
-        const inst = isa.decode(cpu.fetch_code() catch |err| {
+        const code = cpu.fetch_code() catch |err| {
             std.debug.print("\n=== MEMORY ACCESS ERROR ===\n", .{});
             std.debug.print("Failed to fetch instruction at PC 0x{X:0>6}\n", .{pc});
             std.debug.print("Error: {}\n", .{err});
             if (cpu.trace) cpu.dump_system_state();
             return error.MemoryAccessError;
-        }) catch |err| {
+        };
+        const inst = isa.decode(code) catch |err| {
             std.debug.print("\n=== INSTRUCTION DECODE ERROR ===\n", .{});
             std.debug.print("Failed to decode instruction at PC 0x{X:0>6}\n", .{pc});
             std.debug.print("Error: {}\n", .{err});
@@ -198,23 +199,18 @@ pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
                 inline else => |tag| {
                     const info = @field(inst, @tagName(tag));
 
-                    if (@TypeOf(info) == void) {
-                        @field(instructions, @tagName(tag))(cpu) catch |err| {
-                            std.debug.print("\n=== MEMORY ACCESS ERROR ===\n", .{});
-                            std.debug.print("Failed executing instruction at PC 0x{X:0>6}: {f}\n", .{ pc, fmt_instruction(inst) });
-                            std.debug.print("Error: {}\n", .{err});
-                            if (cpu.trace) cpu.dump_system_state();
-                            return error.MemoryAccessError;
-                        };
-                    } else {
-                        @field(instructions, @tagName(tag))(cpu, info) catch |err| {
-                            std.debug.print("\n=== MEMORY ACCESS ERROR ===\n", .{});
-                            std.debug.print("Failed executing instruction at PC 0x{X:0>6}: {f}\n", .{ pc, fmt_instruction(inst) });
-                            std.debug.print("Error: {}\n", .{err});
-                            if (cpu.trace) cpu.dump_system_state();
-                            return error.MemoryAccessError;
-                        };
-                    }
+                    const exec_result = if (@TypeOf(info) == void)
+                        @field(instructions, @tagName(tag))(cpu)
+                    else
+                        @field(instructions, @tagName(tag))(cpu, info);
+
+                    exec_result catch |err| {
+                        std.debug.print("\n=== MEMORY ACCESS ERROR ===\n", .{});
+                        std.debug.print("Failed executing instruction at PC 0x{X:0>6}: {f}\n", .{ pc, fmt_instruction(inst) });
+                        std.debug.print("Error: {}\n", .{err});
+                        if (cpu.trace) cpu.dump_system_state();
+                        return error.MemoryAccessError;
+                    };
                 },
             }
 
