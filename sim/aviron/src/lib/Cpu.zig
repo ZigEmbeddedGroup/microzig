@@ -77,7 +77,7 @@ pub fn reset(cpu: *Cpu) void {
     cpu.sreg = @bitCast(@as(u8, 0));
 }
 
-pub const RunError = error{ InvalidInstruction, MemoryAccessError };
+pub const RunError = error{ InvalidInstruction, BusError };
 pub const RunResult = enum {
     breakpoint,
     enter_sleep_mode,
@@ -156,7 +156,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
             std.debug.print("Failed to fetch instruction at PC 0x{X:0>6}\n", .{pc});
             std.debug.print("Error: {}\n", .{err});
             if (cpu.trace) cpu.dump_system_state();
-            return error.MemoryAccessError;
+            return error.BusError;
         };
         const inst = isa.decode(code) catch |err| {
             std.debug.print("\n=== INSTRUCTION DECODE ERROR ===\n", .{});
@@ -209,7 +209,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64, breakpoint: ?u24) RunError!RunResult {
                         std.debug.print("Failed executing instruction at PC 0x{X:0>6}: {f}\n", .{ pc, fmt_instruction(inst) });
                         std.debug.print("Error: {}\n", .{err});
                         if (cpu.trace) cpu.dump_system_state();
-                        return error.MemoryAccessError;
+                        return error.BusError;
                     };
                 },
             }
