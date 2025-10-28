@@ -3,6 +3,7 @@ const isa = @import("decoder.zig");
 
 pub const Flash = struct {
     pub const Address = u24;
+    pub const Error = error{InvalidAddress};
 
     ctx: ?*anyopaque,
     vtable: *const VTable,
@@ -10,13 +11,13 @@ pub const Flash = struct {
     /// Size of the flash memory in bytes (word count). Is always 2-aligned.
     size: Address,
 
-    pub fn read(mem: Flash, addr: Address) u16 {
-        std.debug.assert(addr < mem.size);
+    pub fn read(mem: Flash, addr: Address) Error!u16 {
+        if (addr >= mem.size) return error.InvalidAddress;
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) Error!u16,
     };
 
     pub const empty = Flash{
@@ -25,7 +26,7 @@ pub const Flash = struct {
         .vtable = &VTable{ .readFn = empty_read },
     };
 
-    fn empty_read(ctx: ?*anyopaque, addr: Address) u16 {
+    fn empty_read(ctx: ?*anyopaque, addr: Address) Error!u16 {
         _ = addr;
         _ = ctx;
         return 0;
@@ -49,9 +50,9 @@ pub const Flash = struct {
 
             pub const vtable = VTable{ .readFn = mem_read };
 
-            fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
+            fn mem_read(ctx: ?*anyopaque, addr: Address) Error!u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                std.debug.assert(addr < @as(Address, @intCast(@divExact(size, 2))));
+                if (addr >= @as(Address, @intCast(@divExact(size, 2)))) return error.InvalidAddress;
                 return std.mem.bytesAsSlice(u16, &mem.data)[addr];
             }
         };
@@ -72,12 +73,12 @@ pub const IO = struct {
     }
 
     pub fn write(mem: IO, addr: Address, value: u8) void {
-        return mem.write_masked(addr, 0xFF, value);
+        mem.write_masked(addr, 0xFF, value);
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
     pub fn write_masked(mem: IO, addr: Address, mask: u8, value: u8) void {
-        return mem.vtable.writeFn(mem.ctx, addr, mask, value);
+        mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
     pub fn check_exit(mem: IO) ?u8 {
@@ -164,22 +165,23 @@ pub fn Bus(comptime config: BusConfig) type {
     return struct {
         const Self = @This();
         pub const Address = config.address_type;
+        pub const Error = error{InvalidAddress};
 
         ctx: *anyopaque,
         vtable: *const VTable,
 
         pub const VTable = struct {
-            read: *const fn (ctx: *anyopaque, addr: Address) u8,
-            write: *const fn (ctx: *anyopaque, addr: Address, v: u8) void,
+            read: *const fn (ctx: *anyopaque, addr: Address) Error!u8,
+            write: *const fn (ctx: *anyopaque, addr: Address, v: u8) Error!void,
             check_exit: ?*const fn (ctx: *anyopaque) ?u8 = null,
         };
 
-        pub fn read(self: *const Self, addr: Address) u8 {
+        pub fn read(self: *const Self, addr: Address) !u8 {
             return self.vtable.read(self.ctx, addr);
         }
 
-        pub fn write(self: *const Self, addr: Address, v: u8) void {
-            self.vtable.write(self.ctx, addr, v);
+        pub fn write(self: *const Self, addr: Address, v: u8) !void {
+            try self.vtable.write(self.ctx, addr, v);
         }
 
         pub fn check_exit(self: *const Self) ?u8 {
@@ -211,15 +213,15 @@ pub fn FixedSizeMemory(comptime size: comptime_int, comptime bus_config: ?BusCon
             .check_exit = null,
         };
 
-        fn read(ctx: *anyopaque, addr: AddressType) u8 {
+        fn read(ctx: *anyopaque, addr: AddressType) BusType.Error!u8 {
             const mem: *Self = @ptrCast(@alignCast(ctx));
-            std.debug.assert(addr < size);
+            if (addr >= size) return error.InvalidAddress;
             return mem.data[addr];
         }
 
-        fn write(ctx: *anyopaque, addr: AddressType, value: u8) void {
+        fn write(ctx: *anyopaque, addr: AddressType, value: u8) BusType.Error!void {
             const mem: *Self = @ptrCast(@alignCast(ctx));
-            std.debug.assert(addr < size);
+            if (addr >= size) return error.InvalidAddress;
             mem.data[addr] = value;
         }
     };
@@ -243,7 +245,7 @@ pub fn MemoryMapping(comptime BusType: type) type {
         segments: []const Segment, // sorted by .at, owned by this struct
 
         pub const InitError = error{OverlappingSegments} || std.mem.Allocator.Error;
-        pub const AccessError = error{ Unmapped, ReadOnly, OutOfRange };
+        pub const AccessError = error{InvalidAddress};
 
         pub fn init(alloc: std.mem.Allocator, segs: []const Segment) InitError!Self {
             // Copy segments to owned memory
@@ -277,18 +279,15 @@ pub fn MemoryMapping(comptime BusType: type) type {
         }
 
         pub fn read(self: *const Self, addr: BusType.Address) AccessError!u8 {
-            const seg = self.find(addr) orelse return error.Unmapped;
+            const seg = self.find(addr) orelse return error.InvalidAddress;
             const idx = addr - seg.at;
-            if (idx >= seg.size) return error.OutOfRange;
-            return seg.backend.read(idx);
+            return seg.backend.read(idx) catch error.InvalidAddress;
         }
 
         pub fn write(self: *const Self, addr: BusType.Address, v: u8) AccessError!void {
-            const seg = self.find(addr) orelse return error.Unmapped;
+            const seg = self.find(addr) orelse return error.InvalidAddress;
             const idx = addr - seg.at;
-            if (idx >= seg.size) return error.OutOfRange;
-            seg.backend.write(idx, v);
-            return;
+            return seg.backend.write(idx, v) catch error.InvalidAddress;
         }
 
         fn find(self: *const Self, addr: BusType.Address) ?*const Segment {
@@ -314,22 +313,14 @@ pub fn MemoryMapping(comptime BusType: type) type {
             .check_exit = bus_check_exit,
         };
 
-        fn bus_read(ctx: *anyopaque, addr: BusType.Address) u8 {
+        fn bus_read(ctx: *anyopaque, addr: BusType.Address) BusType.Error!u8 {
             const self: *const Self = @ptrCast(@alignCast(ctx));
-            return self.read(addr) catch |e| switch (e) {
-                error.Unmapped => @panic("Read from unmapped memory address"),
-                error.OutOfRange => @panic("Read out of range"),
-                error.ReadOnly => @panic("ReadOnly error on read"),
-            };
+            return self.read(addr);
         }
 
-        fn bus_write(ctx: *anyopaque, addr: BusType.Address, v: u8) void {
+        fn bus_write(ctx: *anyopaque, addr: BusType.Address, v: u8) BusType.Error!void {
             const self: *const Self = @ptrCast(@alignCast(ctx));
-            self.write(addr, v) catch |e| switch (e) {
-                error.Unmapped => @panic("Write to unmapped memory address"),
-                error.OutOfRange => @panic("Write out of range"),
-                error.ReadOnly => @panic("Write to read-only memory"),
-            };
+            try self.write(addr, v);
         }
 
         fn bus_check_exit(ctx: *anyopaque) ?u8 {
@@ -347,6 +338,7 @@ pub fn MemoryMapping(comptime BusType: type) type {
 
 test "MemoryMapping: detects overlapping segments" {
     const testing = std.testing;
+    const alloc = std.testing.allocator;
 
     var ram1_storage = FixedSizeMemory(16, null){};
     var ram2_storage = FixedSizeMemory(16, null){};
@@ -361,15 +353,12 @@ test "MemoryMapping: detects overlapping segments" {
         .{ .at = 0x18, .size = 12, .backend = ram2 }, // overlaps 0x1A..0x1B
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
-
     try testing.expectError(error.OverlappingSegments, Mapping.init(alloc, &segs));
 }
 
 test "MemoryMapping: basic read/write across segments" {
     const testing = std.testing;
+    const alloc = std.testing.allocator;
 
     var io_storage = FixedSizeMemory(32, null){}; // stand-in for IO range (no side effects)
     var sram_storage = FixedSizeMemory(64, null){};
@@ -384,10 +373,6 @@ test "MemoryMapping: basic read/write across segments" {
         .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
-
     const ms = try Mapping.init(alloc, &segs);
     defer ms.deinit(alloc);
 
@@ -395,10 +380,72 @@ test "MemoryMapping: basic read/write across segments" {
     try ms.write(0x0005, 0xAA);
     try ms.write(0x0025, 0xCC);
 
-    try testing.expectEqual(@as(u8, 0xAA), io_dev.read(0x0005));
-    try testing.expectEqual(@as(u8, 0xCC), sram_dev.read(0x0005)); // 0x25 - 0x20 = 0x5
+    try testing.expectEqual(@as(u8, 0xAA), try io_dev.read(0x0005));
+    try testing.expectEqual(@as(u8, 0xCC), try sram_dev.read(0x0005)); // 0x25 - 0x20 = 0x5
 
     // Read back via MemoryMapping
     try testing.expectEqual(@as(u8, 0xAA), try ms.read(0x0005));
     try testing.expectEqual(@as(u8, 0xCC), try ms.read(0x0025));
+}
+
+test "MemoryMapping: unmapped read returns InvalidAddress" {
+    const testing = std.testing;
+    const alloc = std.testing.allocator;
+
+    var sram_storage = FixedSizeMemory(64, null){};
+    const sram_dev = sram_storage.bus();
+
+    const BusType = @TypeOf(sram_dev);
+    const Mapping = MemoryMapping(BusType);
+
+    // Only map 0x0020-0x005F (64 bytes at 0x20)
+    const segs = [_]Mapping.Segment{
+        .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
+    };
+
+    const ms = try Mapping.init(alloc, &segs);
+    defer ms.deinit(alloc);
+
+    // Try to read from unmapped address (before mapped region)
+    try testing.expectError(error.InvalidAddress, ms.read(0x0010));
+
+    // Try to read from unmapped address (after mapped region)
+    try testing.expectError(error.InvalidAddress, ms.read(0x0070));
+}
+
+test "MemoryMapping: unmapped write returns InvalidAddress" {
+    const testing = std.testing;
+    const alloc = std.testing.allocator;
+
+    var sram_storage = FixedSizeMemory(64, null){};
+    const sram_dev = sram_storage.bus();
+
+    const BusType = @TypeOf(sram_dev);
+    const Mapping = MemoryMapping(BusType);
+
+    // Only map 0x0020-0x005F (64 bytes at 0x20)
+    const segs = [_]Mapping.Segment{
+        .{ .at = 0x0020, .size = 0x40, .backend = sram_dev },
+    };
+
+    const ms = try Mapping.init(alloc, &segs);
+    defer ms.deinit(alloc);
+
+    // Try to write to unmapped address (before mapped region)
+    try testing.expectError(error.InvalidAddress, ms.write(0x0010, 0xFF));
+
+    // Try to write to unmapped address (after mapped region)
+    try testing.expectError(error.InvalidAddress, ms.write(0x0070, 0xFF));
+}
+
+test "Flash: out of bounds read returns InvalidAddress" {
+    const testing = std.testing;
+
+    var flash_storage = Flash.Static(128){};
+    const flash = flash_storage.memory();
+
+    // Flash has 128 bytes (64 words), so valid addresses are 0-63
+    // Try to read beyond the flash size
+    try testing.expectError(error.InvalidAddress, flash.read(64));
+    try testing.expectError(error.InvalidAddress, flash.read(100));
 }
