@@ -143,7 +143,7 @@ pub const interrupt = struct {
     pub const exception = struct {
         const ppb = switch (cortex_m) {
             .cortex_m7 => microzig.chip.peripherals.SCB,
-            else => microzig.cpu.peripherals.scb,
+            else => microzig.cpu.peripherals.ppb,
         };
 
         pub fn is_enabled(comptime excpt: Exception) bool {
@@ -497,10 +497,7 @@ pub const interrupt = struct {
     }
 
     pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
-        switch (cortex_m) {
-            .cortex_m7 => nvic.IP[@intFromEnum(int)] = @intFromEnum(priority),
-            else => nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority),
-        }
+        nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority);
     }
 
     pub fn get_priority(comptime int: ExternalInterrupt) Priority {

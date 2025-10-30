@@ -158,7 +158,7 @@ pub const NestedVectorInterruptController = extern struct {
     IABR: [7]u32,
     reserved4: [57]u32,
     /// Interrupt Priority Registers
-    IP: [239]u8,
+    IPR: [239]u8,
     reserved5: [2577]u8,
     /// Software Trigger Interrupt Register
     STIR: u32,
