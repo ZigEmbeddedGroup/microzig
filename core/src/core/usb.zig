@@ -359,9 +359,6 @@ pub fn Usb(comptime f: anytype) type {
 
                         bind_endpoints_to_driver(curr_bos_cfg[0..drv_cfg_len], curr_drv_idx);
                         curr_bos_cfg = curr_bos_cfg[drv_cfg_len..];
-
-                        // TODO: TMP solution - just 1 driver so quit while loop
-                        return;
                     }
                 }
 

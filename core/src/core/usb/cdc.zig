@@ -142,6 +142,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         rx: FIFO = .empty,
         tx: FIFO = .empty,
 
+        is_ready: bool = false,
         epin_buf: [usb.max_packet_size]u8 = undefined,
 
         pub fn available(self: *@This()) usize {
@@ -171,7 +172,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         }
 
         pub fn write_flush(self: *@This()) usize {
-            if (self.device.?.ready() == false) {
+            if (self.device.?.ready() == false or self.is_ready == false) {
                 return 0;
             }
             if (self.tx.get_readable_len() == 0) {
@@ -264,9 +265,9 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                         switch (stage) {
                             .Setup => {
                                 self.device.?.control_ack(setup);
-                            },
-                            .Ack => {
-                                self.line_state = setup.request;
+                                const DTR_BIT = 1;
+                                self.is_ready = (setup.value & DTR_BIT) != 0;
+                                self.line_state = @intCast(setup.value & 0xFF);
                             },
                             else => {},
                         }
