@@ -4,6 +4,25 @@ const Cpu = @import("Cpu.zig");
 
 /// MCU configuration defines the memory layout and special register addresses
 /// for a specific AVR microcontroller.
+///
+/// ## Architecture Notes
+///
+/// ### Classic AVR (ATmega, older ATtiny)
+/// Data space layout: [Registers 0x00-0x1F][I/O 0x20-...][SRAM]
+/// - Register file (R0-R31) IS part of data address space
+/// - LD/ST can access registers, I/O, and SRAM
+/// - IN/OUT can only access I/O ports 0x00-0x3F (maps to data addr 0x20-0x5F)
+///
+/// ### Modern AVR (XMEGA, tinyAVR 0/1/2)
+/// Data space layout: [I/O 0x0000-0x0FFF][SRAM]
+/// - Register file is in SEPARATE address space (not in data space)
+/// - LD/ST can access I/O and SRAM only
+/// - Registers accessed via dedicated register instructions only
+///
+/// ### Current Limitation
+/// FIXME: The current io_window design doesn't properly model register file mapping for classic
+/// AVR. On ATmega328P/2560, LD/ST to 0x00-0x1F should access CPU registers, but currently those
+/// addresses are unmapped. Proper fix requires io_dev backend to forward 0x00-0x1F to cpu.regs[].
 pub const Config = struct {
     /// Human-readable name of the MCU
     name: []const u8,
@@ -80,6 +99,15 @@ pub fn build_spaces(
 // ============================================================================
 
 /// ATmega328P configuration (Arduino Uno)
+///
+/// Data space: [Regs 0x00-0x1F][I/O 0x20-0x5F][Ext I/O 0x60-0xFF][SRAM 0x100-0x1FF]
+///
+/// When addressing I/O Registers as data space using LD and ST instructions, 0x20 must be added to
+/// these addresses (io_window_base=0x20 provides this offset automatically).
+///
+/// FIXME: Register file (0x00-0x1F) is not mapped in data space - LD/ST to these addresses will
+/// return error.InvalidAddress. Needs separate memory segment with cpu.regs[] backend. Extended I/O
+/// (0x60-0xFF) is only accessible via LD/ST, not IN/OUT.
 pub const atmega328p = Config{
     .name = "ATmega328P",
     .flash_size = 32768,
@@ -99,10 +127,13 @@ pub const atmega328p = Config{
         .sreg = 0x3F,
     },
     .io_window_base = 0x20,
-    .io_window_end = 0x5F,
+    .io_window_end = 0xFF,
 };
 
-/// ATtiny816 configuration (modern tinyAVR)
+/// ATtiny816 configuration (modern tinyAVR 0/1/2 series)
+///
+/// Data space: [I/O 0x0000-0x003F][Ext I/O 0x0040-0x0FFF][SRAM 0x3F00-...]
+/// Note: Register file is in SEPARATE address space (not part of data space).
 pub const attiny816 = Config{
     .name = "ATtiny816",
     .flash_size = 8192,
@@ -121,11 +152,18 @@ pub const attiny816 = Config{
         .sp_h = 0x3E,
         .sreg = 0x3F,
     },
-    .io_window_base = 0x20,
-    .io_window_end = 0x5F,
+    .io_window_base = 0x0000,
+    .io_window_end = 0x0FFF,
 };
 
 /// ATmega2560 configuration (Arduino Mega)
+///
+/// Data space: [Regs 0x00-0x1F][I/O 0x20-0x5F][Ext I/O 0x60-0x1FF][SRAM 0x200-...]
+///
+/// FIXME: Register file (0x00-0x1F) is not mapped in data space - LD/ST to these addresses will
+/// return error.InvalidAddress. Needs separate memory segment with cpu.regs[] backend.
+/// NOTE: io_window_base=0x20 provides the -0x20 offset so data addr 0x20 maps to I/O port 0x00.
+/// Extended I/O (0x60-0x1FF in data space → I/O ports 0x40-0x1DF) only accessible via LD/ST.
 pub const atmega2560 = Config{
     .name = "ATmega2560",
     .flash_size = 262144,
@@ -145,10 +183,13 @@ pub const atmega2560 = Config{
         .sreg = 0x3F,
     },
     .io_window_base = 0x20,
-    .io_window_end = 0x00FF,
+    .io_window_end = 0x01FF,
 };
 
 /// ATxmega128A4U configuration (XMEGA A-series)
+///
+/// Data space: [I/O 0x0000-0x0FFF][SRAM 0x2000-...]
+/// Note: Register file is in SEPARATE address space (not part of data space).
 pub const xmega128a4u = Config{
     .name = "ATxmega128A4U",
     .flash_size = 131072, // 128 KiB
@@ -169,6 +210,6 @@ pub const xmega128a4u = Config{
         .sreg = 0x3F,
     },
     // XMEGA extended I/O space up to 0x0FFF (12-bit I/O addresses)
-    .io_window_base = 0x20,
+    .io_window_base = 0x0000,
     .io_window_end = 0x0FFF,
 };
