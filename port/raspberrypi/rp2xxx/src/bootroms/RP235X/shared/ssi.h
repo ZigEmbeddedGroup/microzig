@@ -1,3 +1,4 @@
+#if 0 // RP2350 has no mention of SSI
 /**
  * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
  *
@@ -807,3 +808,4 @@
 #define SSI_TXD_DRIVE_EDGE_TDE_ACCESS "RW"
 // =============================================================================
 #endif // HARDWARE_REGS_SSI_DEFINED
+#endif

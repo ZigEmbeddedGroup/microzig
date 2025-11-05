@@ -17,9 +17,8 @@
 // ----------------------------------------------------------------------------
 
 #include "shared/asm_helper.S"
-#include "shared/regs.h"
-
-pico_default_asm_setup
+#include "shared/addressmap.h"
+#include "shared/qmi.h"  // RP2040 doesn't have this in Microzig... but does in Pico SDK
 
 // ----------------------------------------------------------------------------
 // Config section
@@ -27,72 +26,96 @@ pico_default_asm_setup
 // It should be possible to support most flash devices by modifying this section
 
 // The serial flash interface will run at clk_sys/PICO_FLASH_SPI_CLKDIV.
-// This must be a positive, even integer.
+// This must be a positive integer.
 // The bootrom is very conservative with SPI frequency, but here we should be
 // as aggressive as possible.
+
 #ifndef PICO_FLASH_SPI_CLKDIV
 #define PICO_FLASH_SPI_CLKDIV 4
+#endif
+#if (PICO_FLASH_SPI_CLKDIV << QMI_M0_TIMING_CLKDIV_LSB) & ~QMI_M0_TIMING_CLKDIV_BITS
+#error "CLKDIV greater than maximum"
+#endif
+
+// RX sampling delay is measured in units of one half clock cycle.
+
+#ifndef PICO_FLASH_SPI_RXDELAY
+#define PICO_FLASH_SPI_RXDELAY 1
+#endif
+#if (PICO_FLASH_SPI_RXDELAY << QMI_M0_TIMING_RXDELAY_LSB) & ~QMI_M0_TIMING_RXDELAY_BITS
+#error "RX delay greater than maximum"
 #endif
 
 #define CMD_READ 0x03
 
-// Value is number of address bits divided by 4
-#define ADDR_L 6
+// ----------------------------------------------------------------------------
+// Register initialisation values -- same in Arm/RISC-V code.
+// ----------------------------------------------------------------------------
 
-#define CTRLR0_XIP \
-    (SSI_CTRLR0_SPI_FRF_VALUE_STD << SSI_CTRLR0_SPI_FRF_LSB) |  /* Standard 1-bit SPI serial frames */ \
-    (31 << SSI_CTRLR0_DFS_32_LSB)  |                            /* 32 clocks per data frame */ \
-    (SSI_CTRLR0_TMOD_VALUE_EEPROM_READ  << SSI_CTRLR0_TMOD_LSB) /* Send instr + addr, receive data */
+// The QMI is automatically configured for 03h XIP straight out of reset,
+// but this code can't assume it's still in that state. Set up memory
+// window 0 for 03h serial reads.
 
-#define SPI_CTRLR0_XIP \
-    (CMD_READ << SSI_SPI_CTRLR0_XIP_CMD_LSB) |        /* Value of instruction prefix */ \
-    (ADDR_L << SSI_SPI_CTRLR0_ADDR_L_LSB) |           /* Total number of address + mode bits */ \
-    (2 << SSI_SPI_CTRLR0_INST_L_LSB) |                /* 8 bit command prefix (field value is bits divided by 4) */ \
-    (SSI_SPI_CTRLR0_TRANS_TYPE_VALUE_1C1A << SSI_SPI_CTRLR0_TRANS_TYPE_LSB) /* command and address both in serial format */
+// Setup timing parameters: short sequential-access cooldown, configured
+// CLKDIV and RXDELAY, and no constraints on CS max assertion, CS min
+// deassertion, or page boundary burst breaks.
+
+#define INIT_M0_TIMING (\
+    1                      << QMI_M0_TIMING_COOLDOWN_LSB |\
+    PICO_FLASH_SPI_RXDELAY << QMI_M0_TIMING_RXDELAY_LSB |\
+    PICO_FLASH_SPI_CLKDIV  << QMI_M0_TIMING_CLKDIV_LSB |\
+0)
+
+// Set command constants
+#define INIT_M0_RCMD (\
+    CMD_READ             << QMI_M0_RCMD_PREFIX_LSB |\
+0)
+
+// Set read format to all-serial with a command prefix
+#define INIT_M0_RFMT (\
+    QMI_M0_RFMT_PREFIX_WIDTH_VALUE_S << QMI_M0_RFMT_PREFIX_WIDTH_LSB |\
+    QMI_M0_RFMT_ADDR_WIDTH_VALUE_S   << QMI_M0_RFMT_ADDR_WIDTH_LSB |\
+    QMI_M0_RFMT_SUFFIX_WIDTH_VALUE_S << QMI_M0_RFMT_SUFFIX_WIDTH_LSB |\
+    QMI_M0_RFMT_DUMMY_WIDTH_VALUE_S  << QMI_M0_RFMT_DUMMY_WIDTH_LSB |\
+    QMI_M0_RFMT_DATA_WIDTH_VALUE_S   << QMI_M0_RFMT_DATA_WIDTH_LSB |\
+    QMI_M0_RFMT_PREFIX_LEN_VALUE_8   << QMI_M0_RFMT_PREFIX_LEN_LSB |\
+0)
 
 // ----------------------------------------------------------------------------
 // Start of 2nd Stage Boot Code
 // ----------------------------------------------------------------------------
 
+pico_default_asm_setup
+
 .section .text
 
+// On RP2350 boot stage2 is always called as a regular function, and should return normally
 regular_func _stage2_boot
+#ifdef __riscv
+    mv t0, ra
+    li a3, XIP_QMI_BASE
+    li a0, INIT_M0_TIMING
+    sw a0, QMI_M0_TIMING_OFFSET(a3)
+    li a0, INIT_M0_RCMD
+    sw a0, QMI_M0_RCMD_OFFSET(a3)
+    li a0, INIT_M0_RFMT
+    sw a0, QMI_M0_RFMT_OFFSET(a3)
+#else
     push {lr}
-
-    ldr r3, =XIP_SSI_BASE                // Use as base address where possible
-
-    // Disable SSI to allow further config
-    movs r1, #0
-    str r1, [r3, #SSI_SSIENR_OFFSET]
-
-    // Set baud rate
-    movs r1, #PICO_FLASH_SPI_CLKDIV
-    str r1, [r3, #SSI_BAUDR_OFFSET]
-
-    ldr r1, =(CTRLR0_XIP)
-    str r1, [r3, #SSI_CTRLR0_OFFSET]
-
-    ldr r1, =(SPI_CTRLR0_XIP)
-    ldr r0, =(XIP_SSI_BASE + SSI_SPI_CTRLR0_OFFSET)
-    str r1, [r0]
-
-    // NDF=0 (single 32b read)
-    movs r1, #0x0
-    str r1, [r3, #SSI_CTRLR1_OFFSET]
-
-    // Re-enable SSI
-    movs r1, #1
-    str r1, [r3, #SSI_SSIENR_OFFSET]
-
-// We are now in XIP mode. Any bus accesses to the XIP address window will be
-// translated by the SSI into 03h read commands to the external flash (if cache is missed),
-// and the data will be returned to the bus.
+    ldr r3, =XIP_QMI_BASE
+    ldr r0, =INIT_M0_TIMING
+    str r0, [r3, #QMI_M0_TIMING_OFFSET]
+    ldr r0, =INIT_M0_RCMD
+    str r0, [r3, #QMI_M0_RCMD_OFFSET]
+    ldr r0, =INIT_M0_RFMT
+    str r0, [r3, #QMI_M0_RFMT_OFFSET]
+#endif
 
 // Pull in standard exit routine
 #include "shared/exit_from_boot2.S"
 
+#ifndef __riscv
 .global literals
 literals:
 .ltorg
-
-.end
+#endif

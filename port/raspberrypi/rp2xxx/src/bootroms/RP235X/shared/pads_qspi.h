@@ -1,5 +1,7 @@
+// THIS HEADER FILE IS AUTOMATICALLY GENERATED -- DO NOT EDIT
+
 /**
- * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
+ * Copyright (c) 2024 Raspberry Pi Ltd.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -7,29 +9,36 @@
 // Register block : PADS_QSPI
 // Version        : 1
 // Bus type       : apb
-// Description    : None
 // =============================================================================
-#ifndef HARDWARE_REGS_PADS_QSPI_DEFINED
-#define HARDWARE_REGS_PADS_QSPI_DEFINED
+#ifndef _HARDWARE_REGS_PADS_QSPI_H
+#define _HARDWARE_REGS_PADS_QSPI_H
 // =============================================================================
 // Register    : PADS_QSPI_VOLTAGE_SELECT
 // Description : Voltage select. Per bank control
 //               0x0 -> Set voltage to 3.3V (DVDD >= 2V5)
 //               0x1 -> Set voltage to 1.8V (DVDD <= 1V8)
-#define PADS_QSPI_VOLTAGE_SELECT_OFFSET    _u(0x00000000)
-#define PADS_QSPI_VOLTAGE_SELECT_BITS      _u(0x00000001)
-#define PADS_QSPI_VOLTAGE_SELECT_RESET     _u(0x00000000)
-#define PADS_QSPI_VOLTAGE_SELECT_MSB       _u(0)
-#define PADS_QSPI_VOLTAGE_SELECT_LSB       _u(0)
-#define PADS_QSPI_VOLTAGE_SELECT_ACCESS    "RW"
+#define PADS_QSPI_VOLTAGE_SELECT_OFFSET _u(0x00000000)
+#define PADS_QSPI_VOLTAGE_SELECT_BITS   _u(0x00000001)
+#define PADS_QSPI_VOLTAGE_SELECT_RESET  _u(0x00000000)
+#define PADS_QSPI_VOLTAGE_SELECT_MSB    _u(0)
+#define PADS_QSPI_VOLTAGE_SELECT_LSB    _u(0)
+#define PADS_QSPI_VOLTAGE_SELECT_ACCESS "RW"
 #define PADS_QSPI_VOLTAGE_SELECT_VALUE_3V3 _u(0x0)
 #define PADS_QSPI_VOLTAGE_SELECT_VALUE_1V8 _u(0x1)
 // =============================================================================
 // Register    : PADS_QSPI_GPIO_QSPI_SCLK
-// Description : Pad control register
 #define PADS_QSPI_GPIO_QSPI_SCLK_OFFSET _u(0x00000004)
-#define PADS_QSPI_GPIO_QSPI_SCLK_BITS   _u(0x000000ff)
-#define PADS_QSPI_GPIO_QSPI_SCLK_RESET  _u(0x00000056)
+#define PADS_QSPI_GPIO_QSPI_SCLK_BITS   _u(0x000001ff)
+#define PADS_QSPI_GPIO_QSPI_SCLK_RESET  _u(0x00000156)
+// -----------------------------------------------------------------------------
+// Field       : PADS_QSPI_GPIO_QSPI_SCLK_ISO
+// Description : Pad isolation control. Remove this once the pad is configured
+//               by software.
+#define PADS_QSPI_GPIO_QSPI_SCLK_ISO_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SCLK_ISO_BITS   _u(0x00000100)
+#define PADS_QSPI_GPIO_QSPI_SCLK_ISO_MSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SCLK_ISO_LSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SCLK_ISO_ACCESS "RW"
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SCLK_OD
 // Description : Output disable. Has priority over output enable from
@@ -54,14 +63,14 @@
 //               0x1 -> 4mA
 //               0x2 -> 8mA
 //               0x3 -> 12mA
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_RESET      _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_BITS       _u(0x00000030)
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_MSB        _u(5)
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_LSB        _u(4)
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_ACCESS     "RW"
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_2MA  _u(0x0)
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_4MA  _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_8MA  _u(0x2)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_BITS   _u(0x00000030)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_MSB    _u(5)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_LSB    _u(4)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_ACCESS "RW"
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_2MA _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_4MA _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_8MA _u(0x2)
 #define PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_VALUE_12MA _u(0x3)
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SCLK_PUE
@@ -97,10 +106,18 @@
 #define PADS_QSPI_GPIO_QSPI_SCLK_SLEWFAST_ACCESS "RW"
 // =============================================================================
 // Register    : PADS_QSPI_GPIO_QSPI_SD0
-// Description : Pad control register
 #define PADS_QSPI_GPIO_QSPI_SD0_OFFSET _u(0x00000008)
-#define PADS_QSPI_GPIO_QSPI_SD0_BITS   _u(0x000000ff)
-#define PADS_QSPI_GPIO_QSPI_SD0_RESET  _u(0x00000052)
+#define PADS_QSPI_GPIO_QSPI_SD0_BITS   _u(0x000001ff)
+#define PADS_QSPI_GPIO_QSPI_SD0_RESET  _u(0x00000156)
+// -----------------------------------------------------------------------------
+// Field       : PADS_QSPI_GPIO_QSPI_SD0_ISO
+// Description : Pad isolation control. Remove this once the pad is configured
+//               by software.
+#define PADS_QSPI_GPIO_QSPI_SD0_ISO_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD0_ISO_BITS   _u(0x00000100)
+#define PADS_QSPI_GPIO_QSPI_SD0_ISO_MSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD0_ISO_LSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD0_ISO_ACCESS "RW"
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD0_OD
 // Description : Output disable. Has priority over output enable from
@@ -125,14 +142,14 @@
 //               0x1 -> 4mA
 //               0x2 -> 8mA
 //               0x3 -> 12mA
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_RESET      _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_BITS       _u(0x00000030)
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_MSB        _u(5)
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_LSB        _u(4)
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_ACCESS     "RW"
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_2MA  _u(0x0)
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_4MA  _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_8MA  _u(0x2)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_BITS   _u(0x00000030)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_MSB    _u(5)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_LSB    _u(4)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_ACCESS "RW"
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_2MA _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_4MA _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_8MA _u(0x2)
 #define PADS_QSPI_GPIO_QSPI_SD0_DRIVE_VALUE_12MA _u(0x3)
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD0_PUE
@@ -145,7 +162,7 @@
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD0_PDE
 // Description : Pull down enable
-#define PADS_QSPI_GPIO_QSPI_SD0_PDE_RESET  _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD0_PDE_RESET  _u(0x1)
 #define PADS_QSPI_GPIO_QSPI_SD0_PDE_BITS   _u(0x00000004)
 #define PADS_QSPI_GPIO_QSPI_SD0_PDE_MSB    _u(2)
 #define PADS_QSPI_GPIO_QSPI_SD0_PDE_LSB    _u(2)
@@ -168,10 +185,18 @@
 #define PADS_QSPI_GPIO_QSPI_SD0_SLEWFAST_ACCESS "RW"
 // =============================================================================
 // Register    : PADS_QSPI_GPIO_QSPI_SD1
-// Description : Pad control register
 #define PADS_QSPI_GPIO_QSPI_SD1_OFFSET _u(0x0000000c)
-#define PADS_QSPI_GPIO_QSPI_SD1_BITS   _u(0x000000ff)
-#define PADS_QSPI_GPIO_QSPI_SD1_RESET  _u(0x00000052)
+#define PADS_QSPI_GPIO_QSPI_SD1_BITS   _u(0x000001ff)
+#define PADS_QSPI_GPIO_QSPI_SD1_RESET  _u(0x00000156)
+// -----------------------------------------------------------------------------
+// Field       : PADS_QSPI_GPIO_QSPI_SD1_ISO
+// Description : Pad isolation control. Remove this once the pad is configured
+//               by software.
+#define PADS_QSPI_GPIO_QSPI_SD1_ISO_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD1_ISO_BITS   _u(0x00000100)
+#define PADS_QSPI_GPIO_QSPI_SD1_ISO_MSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD1_ISO_LSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD1_ISO_ACCESS "RW"
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD1_OD
 // Description : Output disable. Has priority over output enable from
@@ -196,14 +221,14 @@
 //               0x1 -> 4mA
 //               0x2 -> 8mA
 //               0x3 -> 12mA
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_RESET      _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_BITS       _u(0x00000030)
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_MSB        _u(5)
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_LSB        _u(4)
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_ACCESS     "RW"
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_2MA  _u(0x0)
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_4MA  _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_8MA  _u(0x2)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_BITS   _u(0x00000030)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_MSB    _u(5)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_LSB    _u(4)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_ACCESS "RW"
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_2MA _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_4MA _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_8MA _u(0x2)
 #define PADS_QSPI_GPIO_QSPI_SD1_DRIVE_VALUE_12MA _u(0x3)
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD1_PUE
@@ -216,7 +241,7 @@
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD1_PDE
 // Description : Pull down enable
-#define PADS_QSPI_GPIO_QSPI_SD1_PDE_RESET  _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD1_PDE_RESET  _u(0x1)
 #define PADS_QSPI_GPIO_QSPI_SD1_PDE_BITS   _u(0x00000004)
 #define PADS_QSPI_GPIO_QSPI_SD1_PDE_MSB    _u(2)
 #define PADS_QSPI_GPIO_QSPI_SD1_PDE_LSB    _u(2)
@@ -239,10 +264,18 @@
 #define PADS_QSPI_GPIO_QSPI_SD1_SLEWFAST_ACCESS "RW"
 // =============================================================================
 // Register    : PADS_QSPI_GPIO_QSPI_SD2
-// Description : Pad control register
 #define PADS_QSPI_GPIO_QSPI_SD2_OFFSET _u(0x00000010)
-#define PADS_QSPI_GPIO_QSPI_SD2_BITS   _u(0x000000ff)
-#define PADS_QSPI_GPIO_QSPI_SD2_RESET  _u(0x00000052)
+#define PADS_QSPI_GPIO_QSPI_SD2_BITS   _u(0x000001ff)
+#define PADS_QSPI_GPIO_QSPI_SD2_RESET  _u(0x0000015a)
+// -----------------------------------------------------------------------------
+// Field       : PADS_QSPI_GPIO_QSPI_SD2_ISO
+// Description : Pad isolation control. Remove this once the pad is configured
+//               by software.
+#define PADS_QSPI_GPIO_QSPI_SD2_ISO_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD2_ISO_BITS   _u(0x00000100)
+#define PADS_QSPI_GPIO_QSPI_SD2_ISO_MSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD2_ISO_LSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD2_ISO_ACCESS "RW"
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD2_OD
 // Description : Output disable. Has priority over output enable from
@@ -267,19 +300,19 @@
 //               0x1 -> 4mA
 //               0x2 -> 8mA
 //               0x3 -> 12mA
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_RESET      _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_BITS       _u(0x00000030)
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_MSB        _u(5)
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_LSB        _u(4)
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_ACCESS     "RW"
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_2MA  _u(0x0)
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_4MA  _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_8MA  _u(0x2)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_BITS   _u(0x00000030)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_MSB    _u(5)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_LSB    _u(4)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_ACCESS "RW"
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_2MA _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_4MA _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_8MA _u(0x2)
 #define PADS_QSPI_GPIO_QSPI_SD2_DRIVE_VALUE_12MA _u(0x3)
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD2_PUE
 // Description : Pull up enable
-#define PADS_QSPI_GPIO_QSPI_SD2_PUE_RESET  _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD2_PUE_RESET  _u(0x1)
 #define PADS_QSPI_GPIO_QSPI_SD2_PUE_BITS   _u(0x00000008)
 #define PADS_QSPI_GPIO_QSPI_SD2_PUE_MSB    _u(3)
 #define PADS_QSPI_GPIO_QSPI_SD2_PUE_LSB    _u(3)
@@ -310,10 +343,18 @@
 #define PADS_QSPI_GPIO_QSPI_SD2_SLEWFAST_ACCESS "RW"
 // =============================================================================
 // Register    : PADS_QSPI_GPIO_QSPI_SD3
-// Description : Pad control register
 #define PADS_QSPI_GPIO_QSPI_SD3_OFFSET _u(0x00000014)
-#define PADS_QSPI_GPIO_QSPI_SD3_BITS   _u(0x000000ff)
-#define PADS_QSPI_GPIO_QSPI_SD3_RESET  _u(0x00000052)
+#define PADS_QSPI_GPIO_QSPI_SD3_BITS   _u(0x000001ff)
+#define PADS_QSPI_GPIO_QSPI_SD3_RESET  _u(0x0000015a)
+// -----------------------------------------------------------------------------
+// Field       : PADS_QSPI_GPIO_QSPI_SD3_ISO
+// Description : Pad isolation control. Remove this once the pad is configured
+//               by software.
+#define PADS_QSPI_GPIO_QSPI_SD3_ISO_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD3_ISO_BITS   _u(0x00000100)
+#define PADS_QSPI_GPIO_QSPI_SD3_ISO_MSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD3_ISO_LSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SD3_ISO_ACCESS "RW"
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD3_OD
 // Description : Output disable. Has priority over output enable from
@@ -338,19 +379,19 @@
 //               0x1 -> 4mA
 //               0x2 -> 8mA
 //               0x3 -> 12mA
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_RESET      _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_BITS       _u(0x00000030)
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_MSB        _u(5)
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_LSB        _u(4)
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_ACCESS     "RW"
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_2MA  _u(0x0)
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_4MA  _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_8MA  _u(0x2)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_BITS   _u(0x00000030)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_MSB    _u(5)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_LSB    _u(4)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_ACCESS "RW"
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_2MA _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_4MA _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_8MA _u(0x2)
 #define PADS_QSPI_GPIO_QSPI_SD3_DRIVE_VALUE_12MA _u(0x3)
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SD3_PUE
 // Description : Pull up enable
-#define PADS_QSPI_GPIO_QSPI_SD3_PUE_RESET  _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SD3_PUE_RESET  _u(0x1)
 #define PADS_QSPI_GPIO_QSPI_SD3_PUE_BITS   _u(0x00000008)
 #define PADS_QSPI_GPIO_QSPI_SD3_PUE_MSB    _u(3)
 #define PADS_QSPI_GPIO_QSPI_SD3_PUE_LSB    _u(3)
@@ -381,10 +422,18 @@
 #define PADS_QSPI_GPIO_QSPI_SD3_SLEWFAST_ACCESS "RW"
 // =============================================================================
 // Register    : PADS_QSPI_GPIO_QSPI_SS
-// Description : Pad control register
 #define PADS_QSPI_GPIO_QSPI_SS_OFFSET _u(0x00000018)
-#define PADS_QSPI_GPIO_QSPI_SS_BITS   _u(0x000000ff)
-#define PADS_QSPI_GPIO_QSPI_SS_RESET  _u(0x0000005a)
+#define PADS_QSPI_GPIO_QSPI_SS_BITS   _u(0x000001ff)
+#define PADS_QSPI_GPIO_QSPI_SS_RESET  _u(0x0000015a)
+// -----------------------------------------------------------------------------
+// Field       : PADS_QSPI_GPIO_QSPI_SS_ISO
+// Description : Pad isolation control. Remove this once the pad is configured
+//               by software.
+#define PADS_QSPI_GPIO_QSPI_SS_ISO_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SS_ISO_BITS   _u(0x00000100)
+#define PADS_QSPI_GPIO_QSPI_SS_ISO_MSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SS_ISO_LSB    _u(8)
+#define PADS_QSPI_GPIO_QSPI_SS_ISO_ACCESS "RW"
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SS_OD
 // Description : Output disable. Has priority over output enable from
@@ -409,14 +458,14 @@
 //               0x1 -> 4mA
 //               0x2 -> 8mA
 //               0x3 -> 12mA
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_RESET      _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_BITS       _u(0x00000030)
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_MSB        _u(5)
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_LSB        _u(4)
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_ACCESS     "RW"
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_2MA  _u(0x0)
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_4MA  _u(0x1)
-#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_8MA  _u(0x2)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_RESET  _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_BITS   _u(0x00000030)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_MSB    _u(5)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_LSB    _u(4)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_ACCESS "RW"
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_2MA _u(0x0)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_4MA _u(0x1)
+#define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_8MA _u(0x2)
 #define PADS_QSPI_GPIO_QSPI_SS_DRIVE_VALUE_12MA _u(0x3)
 // -----------------------------------------------------------------------------
 // Field       : PADS_QSPI_GPIO_QSPI_SS_PUE
@@ -451,4 +500,5 @@
 #define PADS_QSPI_GPIO_QSPI_SS_SLEWFAST_LSB    _u(0)
 #define PADS_QSPI_GPIO_QSPI_SS_SLEWFAST_ACCESS "RW"
 // =============================================================================
-#endif // HARDWARE_REGS_PADS_QSPI_DEFINED
+#endif // _HARDWARE_REGS_PADS_QSPI_H
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
+ * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,22 +9,41 @@
 
 #include "wait_qmi_ready.S"
 
-// Pass status read cmd into r0.
-// Returns status value in r0.
+// Pass status read cmd into r0/a0.
+// Returns status value in r0/a0.
+
 .global read_flash_sreg
 .type read_flash_sreg,%function
+#ifdef __riscv
+read_flash_sreg:
+    // wait_qmi_ready does not clobber t1, so use this rather than stack.
+    mv t1, ra
+    sw a0, QMI_DIRECT_TX_OFFSET(a3)
+    // Dummy byte:
+    sw a0, QMI_DIRECT_TX_OFFSET(a3)
+
+    jal wait_qmi_ready
+    // Discard first byte, return second
+    lw a0, QMI_DIRECT_RX_OFFSET(a3)
+    lw a0, QMI_DIRECT_RX_OFFSET(a3)
+    jr t1
+
+#else
+
 .thumb_func
 read_flash_sreg:
-    push {r1, lr}
+    push {lr}
     str r0, [r3, #QMI_DIRECT_TX_OFFSET]
     // Dummy byte:
     str r0, [r3, #QMI_DIRECT_TX_OFFSET]
     
     bl wait_qmi_ready
-    // Discard first byte and combine the next two
+    // Discard first byte, return second
     ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
     ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
 
-    pop {r1, pc}
+    pop {pc}
+
+#endif
 
 #endif

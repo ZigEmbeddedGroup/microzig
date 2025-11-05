@@ -31,7 +31,8 @@
 // ----------------------------------------------------------------------------
 
 #include "shared/asm_helper.S"
-#include "shared/regs.h"
+#include "shared/addressmap.h"
+#include "shared/ssi.h"          // RP2040 doesn't have this in Microzig... but does in Pico SDK
 
 // The serial flash interface will run at clk_sys/PICO_FLASH_SPI_CLKDIV.
 // This must be an even number.
@@ -40,6 +41,8 @@
 #endif
 
 pico_default_asm_setup
+
+// todo port to QMI
 
 // ----------------------------------------------------------------------------
 // The "System Control Block" is a set of internal Cortex-M0+ control registers
@@ -74,8 +77,7 @@ pico_default_asm_setup
 
 .section .text
 
-// This code will get copied to 0x20000000 and then executed
-
+// On RP2350 boot stage2 is always called as a regular function, and should return normally
 regular_func _stage2_boot
     push {lr}
     ldr r3, =XIP_SSI_BASE                // Use as base address where possible

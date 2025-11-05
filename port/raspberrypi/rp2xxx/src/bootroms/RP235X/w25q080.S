@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 // Second stage boot code
-// Copyright (c) 2019-2021 Raspberry Pi (Trading) Ltd.
+// Copyright (c) 2019-2022 Raspberry Pi (Trading) Ltd.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 // Device:      Winbond W25Q080
@@ -27,23 +27,34 @@
 // ----------------------------------------------------------------------------
 
 #include "shared/asm_helper.S"
-#include "shared/regs.h"
-
+#include "shared/addressmap.h"
+#include "shared/pads_qspi.h"   // RP2040 doesn't have this in Microzig... but does in Pico SDK
+#include "shared/qmi.h"         // RP2040 doesn't have this in Microzig... but does in Pico SDK
+ 
 // ----------------------------------------------------------------------------
 // Config section
 // ----------------------------------------------------------------------------
 // It should be possible to support most flash devices by modifying this section
 
 // The serial flash interface will run at clk_sys/PICO_FLASH_SPI_CLKDIV.
-// This must be a positive, even integer.
+// This must be a positive integer.
 // The bootrom is very conservative with SPI frequency, but here we should be
 // as aggressive as possible.
 
 #ifndef PICO_FLASH_SPI_CLKDIV
-#define PICO_FLASH_SPI_CLKDIV 4
+#define PICO_FLASH_SPI_CLKDIV 2
 #endif
-#if PICO_FLASH_SPI_CLKDIV & 1
-#error PICO_FLASH_SPI_CLKDIV must be even
+#if (PICO_FLASH_SPI_CLKDIV << QMI_M0_TIMING_CLKDIV_LSB) & ~QMI_M0_TIMING_CLKDIV_BITS
+#error "CLKDIV greater than maximum"
+#endif
+
+// RX sampling delay is measured in units of one half clock cycle.
+
+#ifndef PICO_FLASH_SPI_RXDELAY
+#define PICO_FLASH_SPI_RXDELAY 2
+#endif
+#if (PICO_FLASH_SPI_RXDELAY << QMI_M0_TIMING_RXDELAY_LSB) & ~QMI_M0_TIMING_RXDELAY_BITS
+#error "RX delay greater than maximum"
 #endif
 
 // Define interface width: single/dual/quad IO
@@ -57,10 +68,6 @@
 // On W25Q080, the four LSBs are don't care, and if MSBs == 0xa, the
 // next read does not require the 0xeb instruction prefix.
 #define MODE_CONTINUOUS_READ 0xa0
-
-// The number of address + mode bits, divided by 4 (always 4, not function of
-// interface width).
-#define ADDR_L 8
 
 // How many clocks of Hi-Z following the mode bits. For W25Q080, 4 dummy cycles
 // are required.
@@ -81,188 +88,244 @@
 #define SREG_DATA 0x02  // Enable quad-SPI mode
 
 // ----------------------------------------------------------------------------
+// Register initialisation values -- same in Arm/RISC-V code.
+// ----------------------------------------------------------------------------
+
+// SCLK: 8mA drive, no slew limiting, input buffer disabled
+#define INIT_PAD_SCLK  (\
+    2 << PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_LSB | \
+    PADS_QSPI_GPIO_QSPI_SCLK_SLEWFAST_BITS | \
+0)
+
+// Need to use direct serial mode to send SR commands. Choose a
+// conservative direct-mode divisor (5 MHz at 150 MHz clk_sys)
+// since the XIP-mode divisor may be unsafe without an RX delay.
+#define INIT_DIRECT_CSR (\
+    30 << QMI_DIRECT_CSR_CLKDIV_LSB | \
+    QMI_DIRECT_CSR_EN_BITS | \
+    QMI_DIRECT_CSR_AUTO_CS0N_BITS | \
+0)
+
+// Setup timing parameters: short sequential-access cooldown, configured
+// CLKDIV and RXDELAY, and no constraints on CS max assertion, CS min
+// deassertion, or page boundary burst breaks.
+#define INIT_M0_TIMING (\
+    1                      << QMI_M0_TIMING_COOLDOWN_LSB |\
+    PICO_FLASH_SPI_RXDELAY << QMI_M0_TIMING_RXDELAY_LSB |\
+    PICO_FLASH_SPI_CLKDIV  << QMI_M0_TIMING_CLKDIV_LSB |\
+0)
+
+// Set command constants (e.g. EBh + A0h)
+#define INIT_M0_RCMD (\
+    CMD_READ             << QMI_M0_RCMD_PREFIX_LSB |\
+    MODE_CONTINUOUS_READ << QMI_M0_RCMD_SUFFIX_LSB |\
+0)
+
+// Set read format (serial command prefix, everything else quad)
+// Initial dummy transfer has a serial EBh prefix, and has XIP mode bits
+// set after the address. Subsequent transfers don't need the prefix, as long
+// as the mode bits are set correctly.
+#define INIT_M0_RFMT (\
+    QMI_M0_RFMT_PREFIX_WIDTH_VALUE_S << QMI_M0_RFMT_PREFIX_WIDTH_LSB |\
+    QMI_M0_RFMT_ADDR_WIDTH_VALUE_Q   << QMI_M0_RFMT_ADDR_WIDTH_LSB |\
+    QMI_M0_RFMT_SUFFIX_WIDTH_VALUE_Q << QMI_M0_RFMT_SUFFIX_WIDTH_LSB |\
+    QMI_M0_RFMT_DUMMY_WIDTH_VALUE_Q  << QMI_M0_RFMT_DUMMY_WIDTH_LSB |\
+    QMI_M0_RFMT_DATA_WIDTH_VALUE_Q   << QMI_M0_RFMT_DATA_WIDTH_LSB |\
+    QMI_M0_RFMT_PREFIX_LEN_VALUE_8   << QMI_M0_RFMT_PREFIX_LEN_LSB |\
+    QMI_M0_RFMT_SUFFIX_LEN_VALUE_8   << QMI_M0_RFMT_SUFFIX_LEN_LSB |\
+    WAIT_CYCLES                      << QMI_M0_RFMT_DUMMY_LEN_LSB |\
+0)
+
+// ----------------------------------------------------------------------------
 // Start of 2nd Stage Boot Code
 // ----------------------------------------------------------------------------
 
 pico_default_asm_setup
-
 .section .text
 
-// The exit point is passed in lr. If entered from bootrom, this will be the
-// flash address immediately following this second stage (0x10000100).
-// Otherwise it will be a return address -- second stage being called as a
-// function by user code, after copying out of XIP region. r3 holds SSI base,
-// r0...2 used as temporaries. Other GPRs not used.
+// ----------------------------------------------------------------------------
+// RISC-V implementation
+
+#ifdef __riscv
+
+// On RP2350 boot stage2 is always called as a regular function, and should return normally
 regular_func _stage2_boot
-    push {lr}
+    mv t0, ra
+_pad_config:
+    li a3, PADS_QSPI_BASE
+    li a0, INIT_PAD_SCLK
+    sw a0, PADS_QSPI_GPIO_QSPI_SCLK_OFFSET(a3)
+    // SDx: disable input Schmitt to reduce delay
+    li a3, PADS_QSPI_BASE + REG_ALIAS_CLR_BITS
+    li a0, PADS_QSPI_GPIO_QSPI_SD0_SCHMITT_BITS
+    sw a0, PADS_QSPI_GPIO_QSPI_SD0_OFFSET(a3)
+    sw a0, PADS_QSPI_GPIO_QSPI_SD1_OFFSET(a3)
+    sw a0, PADS_QSPI_GPIO_QSPI_SD2_OFFSET(a3)
+    sw a0, PADS_QSPI_GPIO_QSPI_SD3_OFFSET(a3)
 
-    // Set pad configuration:
-    // - SCLK 8mA drive, no slew limiting
-    // - SDx disable input Schmitt to reduce delay
-
-    ldr r3, =PADS_QSPI_BASE
-    movs r0, #(2 << PADS_QSPI_GPIO_QSPI_SCLK_DRIVE_LSB | PADS_QSPI_GPIO_QSPI_SCLK_SLEWFAST_BITS)
-    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SCLK_OFFSET]
-    ldr r0, [r3, #PADS_QSPI_GPIO_QSPI_SD0_OFFSET]
-    movs r1, #PADS_QSPI_GPIO_QSPI_SD0_SCHMITT_BITS
-    bics r0, r1
-    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD0_OFFSET]
-    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD1_OFFSET]
-    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD2_OFFSET]
-    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD3_OFFSET]
-
-    ldr r3, =XIP_SSI_BASE
-
-    // Disable SSI to allow further config
-    movs r1, #0
-    str r1, [r3, #SSI_SSIENR_OFFSET]
-
-    // Set baud rate
-    movs r1, #PICO_FLASH_SPI_CLKDIV
-    str r1, [r3, #SSI_BAUDR_OFFSET]
-
-    // Set 1-cycle sample delay. If PICO_FLASH_SPI_CLKDIV == 2 then this means,
-    // if the flash launches data on SCLK posedge, we capture it at the time that
-    // the next SCLK posedge is launched. This is shortly before that posedge
-    // arrives at the flash, so data hold time should be ok. For
-    // PICO_FLASH_SPI_CLKDIV > 2 this pretty much has no effect.
-
-    movs r1, #1
-    movs r2, #SSI_RX_SAMPLE_DLY_OFFSET  // == 0xf0 so need 8 bits of offset significance
-    str r1, [r3, r2]
-
+    li a3, XIP_QMI_BASE
 
 // On QSPI parts we usually need a 01h SR-write command to enable QSPI mode
 // (i.e. turn WPn and HOLDn into IO2/IO3)
 #ifdef PROGRAM_STATUS_REG
 program_sregs:
-#define CTRL0_SPI_TXRX \
-    (7 << SSI_CTRLR0_DFS_32_LSB) | /* 8 bits per data frame */ \
-    (SSI_CTRLR0_TMOD_VALUE_TX_AND_RX << SSI_CTRLR0_TMOD_LSB)
+    li a1, INIT_DIRECT_CSR
+    sw a1, QMI_DIRECT_CSR_OFFSET(a3)
+    // Wait for cooldown on last XIP transfer to expire, by polling BUSY
+1:
+    lw a1, QMI_DIRECT_CSR_OFFSET(a3)
+    andi a1, a1, QMI_DIRECT_CSR_BUSY_BITS
+    bnez a1, 1b
 
-    ldr r1, =(CTRL0_SPI_TXRX)
-    str r1, [r3, #SSI_CTRLR0_OFFSET]
+    // Check whether SR needs updating
+    li a0, CMD_READ_STATUS2
+    jal read_flash_sreg
+    addi a0, a0, -SREG_DATA
+    beqz a0, _skip_sreg_programming
 
-     // Enable SSI and select slave 0
-    movs r1, #1
-    str r1, [r3, #SSI_SSIENR_OFFSET]
+    // Send write enable command, discard RX
+    li a0, CMD_WRITE_ENABLE
+    sw a0, QMI_DIRECT_TX_OFFSET(a3)
+    jal wait_qmi_ready
+    lw a0, QMI_DIRECT_RX_OFFSET(a3)
+
+    // Send status write command followed by data bytes
+    li a0, CMD_WRITE_STATUS
+    sw a0, QMI_DIRECT_TX_OFFSET(a3)
+    sw zero, QMI_DIRECT_TX_OFFSET(a3)
+    li a0, SREG_DATA
+    sw a0, QMI_DIRECT_TX_OFFSET(a3)
+    jal wait_qmi_ready
+    lw a0, QMI_DIRECT_RX_OFFSET(a3)
+    lw a0, QMI_DIRECT_RX_OFFSET(a3)
+    lw a0, QMI_DIRECT_RX_OFFSET(a3)
+
+    // Poll status register for write completion
+1:
+    li a0, CMD_READ_STATUS
+    jal read_flash_sreg
+    andi a0, a0, 0x1
+    bnez a0, 1b
+
+_skip_sreg_programming:
+    // Disable direct mode
+    andi a1, a1, ~QMI_DIRECT_CSR_EN_BITS
+    sw a1, QMI_DIRECT_CSR_OFFSET(a3)
+#endif
+
+_qmi_config:
+    li a0, INIT_M0_TIMING
+    sw a0, QMI_M0_TIMING_OFFSET(a3)
+    li a0, INIT_M0_RCMD
+    sw a0, QMI_M0_RCMD_OFFSET(a3)
+    li a0, INIT_M0_RFMT
+    sw a0, QMI_M0_RFMT_OFFSET(a3)
+
+    // Dummy transfer
+    li a1, XIP_NOCACHE_NOALLOC_BASE
+    lw a1, (a1)
+
+    // Set prefix length to 0, as flash no longer expects to see commands
+    bclri a0, a0, QMI_M0_RFMT_PREFIX_LEN_LSB
+    sw a0, QMI_M0_RFMT_OFFSET(a3)
+
+// ----------------------------------------------------------------------------
+// Arm implementation
+
+#else
+
+// On RP2350 boot stage2 is always called as a regular function, and should return normally
+regular_func _stage2_boot
+    push {lr}
+_pad_config:
+    ldr r3, =PADS_QSPI_BASE
+    movs r0, INIT_PAD_SCLK
+    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SCLK_OFFSET]
+    // SDx: disable input Schmitt to reduce delay
+    adds r3, #REG_ALIAS_CLR_BITS
+    movs r0, #PADS_QSPI_GPIO_QSPI_SD0_SCHMITT_BITS
+    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD0_OFFSET]
+    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD1_OFFSET]
+    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD2_OFFSET]
+    str r0, [r3, #PADS_QSPI_GPIO_QSPI_SD3_OFFSET]
+
+    adds r3, (XIP_QMI_BASE - (PADS_QSPI_BASE + REG_ALIAS_CLR_BITS))
+
+// On QSPI parts we usually need a 01h SR-write command to enable QSPI mode
+// (i.e. turn WPn and HOLDn into IO2/IO3)
+#ifdef PROGRAM_STATUS_REG
+program_sregs:
+
+    // Need to use direct serial mode to send SR commands. Choose a
+    // conservative direct-mode divisor (5 MHz at 150 MHz clk_sys)
+    // since the XIP-mode divisor may be unsafe without an RX delay.
+    ldr r1, =INIT_DIRECT_CSR
+    str r1, [r3, #QMI_DIRECT_CSR_OFFSET]
+    // Need to poll for the cooldown on the last XIP transfer to expire
+    // (via direct-mode BUSY flag) before it is safe to perform the first
+    // direct-mode operation
+1:
+    ldr r0, [r3, #QMI_DIRECT_CSR_OFFSET]
+    tst r0, #QMI_DIRECT_CSR_BUSY_BITS
+    bne 1b
 
     // Check whether SR needs updating
     movs r0, #CMD_READ_STATUS2
     bl read_flash_sreg
-    movs r2, #SREG_DATA
-    cmp r0, r2
-    beq skip_sreg_programming
+    cmp r0, #SREG_DATA
+    beq _skip_sreg_programming
 
-    // Send write enable command
-    movs r1, #CMD_WRITE_ENABLE
-    str r1, [r3, #SSI_DR0_OFFSET]
-
-    // Poll for completion and discard RX
-    bl wait_ssi_ready
-    ldr r1, [r3, #SSI_DR0_OFFSET]
+    // Send write enable command, discard RX
+    movs r0, #CMD_WRITE_ENABLE
+    str r0, [r3, #QMI_DIRECT_TX_OFFSET]
+    bl wait_qmi_ready
+    ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
 
     // Send status write command followed by data bytes
-    movs r1, #CMD_WRITE_STATUS
-    str r1, [r3, #SSI_DR0_OFFSET]
+    movs r0, #CMD_WRITE_STATUS
+    str r0, [r3, #QMI_DIRECT_TX_OFFSET]
     movs r0, #0
-    str r0, [r3, #SSI_DR0_OFFSET]
-    str r2, [r3, #SSI_DR0_OFFSET]
-
-    bl wait_ssi_ready
-    ldr r1, [r3, #SSI_DR0_OFFSET]
-    ldr r1, [r3, #SSI_DR0_OFFSET]
-    ldr r1, [r3, #SSI_DR0_OFFSET]
+    str r0, [r3, #QMI_DIRECT_TX_OFFSET]
+    movs r0, #SREG_DATA
+    str r0, [r3, #QMI_DIRECT_TX_OFFSET]
+    bl wait_qmi_ready
+    ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
+    ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
+    ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
 
     // Poll status register for write completion
 1:
     movs r0, #CMD_READ_STATUS
     bl read_flash_sreg
-    movs r1, #1
-    tst r0, r1
-    bne 1b
+    lsrs r0, #1
+    bcs 1b
 
-skip_sreg_programming:
+_skip_sreg_programming:
+    // Disable direct mode
+    bics r1, #QMI_DIRECT_CSR_EN_BITS
+    str r1, [r3, #QMI_DIRECT_CSR_OFFSET]
 
-    // Disable SSI again so that it can be reconfigured
-    movs r1, #0
-    str r1, [r3, #SSI_SSIENR_OFFSET]
 #endif
 
-// Currently the flash expects an 8 bit serial command prefix on every
-// transfer, which is a waste of cycles. Perform a dummy Fast Read Quad I/O
-// command, with mode bits set such that the flash will not expect a serial
-// command prefix on *subsequent* transfers. We don't care about the results
-// of the read, the important part is the mode bits.
+_qmi_config:
+    ldr r0, =INIT_M0_TIMING
+    str r0, [r3, #QMI_M0_TIMING_OFFSET]
+    ldr r0, =INIT_M0_RCMD
+    str r0, [r3, #QMI_M0_RCMD_OFFSET]
+    ldr r0, =INIT_M0_RFMT
+    str r0, [r3, #QMI_M0_RFMT_OFFSET]
 
-dummy_read:
-#define CTRLR0_ENTER_XIP \
-    (FRAME_FORMAT                          /* Quad I/O mode */                \
-        << SSI_CTRLR0_SPI_FRF_LSB) |                                          \
-    (31 << SSI_CTRLR0_DFS_32_LSB)  |       /* 32 data bits */                 \
-    (SSI_CTRLR0_TMOD_VALUE_EEPROM_READ     /* Send INST/ADDR, Receive Data */ \
-        << SSI_CTRLR0_TMOD_LSB)
+    // Dummy transfer
+    mov r1, #XIP_NOCACHE_NOALLOC_BASE
+    ldrb r1, [r1]
 
-    ldr r1, =(CTRLR0_ENTER_XIP)
-    str r1, [r3, #SSI_CTRLR0_OFFSET]
+    // Set prefix length to 0, as flash no longer expects to see commands
+    bic r0, #QMI_M0_RFMT_PREFIX_LEN_BITS
+    str r0, [r3, #QMI_M0_RFMT_OFFSET]
 
-    movs r1, #0x0                    // NDF=0 (single 32b read)
-    str r1, [r3, #SSI_CTRLR1_OFFSET]
+#endif
 
-#define SPI_CTRLR0_ENTER_XIP \
-    (ADDR_L << SSI_SPI_CTRLR0_ADDR_L_LSB) |     /* Address + mode bits */ \
-    (WAIT_CYCLES << SSI_SPI_CTRLR0_WAIT_CYCLES_LSB) | /* Hi-Z dummy clocks following address + mode */ \
-    (SSI_SPI_CTRLR0_INST_L_VALUE_8B \
-        << SSI_SPI_CTRLR0_INST_L_LSB) |        /* 8-bit instruction */ \
-    (SSI_SPI_CTRLR0_TRANS_TYPE_VALUE_1C2A      /* Send Command in serial mode then address in Quad I/O mode */ \
-        << SSI_SPI_CTRLR0_TRANS_TYPE_LSB)
-
-    ldr r1, =(SPI_CTRLR0_ENTER_XIP)
-    ldr r0, =(XIP_SSI_BASE + SSI_SPI_CTRLR0_OFFSET)  // SPI_CTRL0 Register
-    str r1, [r0]
-
-    movs r1, #1                      // Re-enable SSI
-    str r1, [r3, #SSI_SSIENR_OFFSET]
-
-    movs r1, #CMD_READ
-    str r1, [r3, #SSI_DR0_OFFSET]   // Push SPI command into TX FIFO
-    movs r1, #MODE_CONTINUOUS_READ   // 32-bit: 24 address bits (we don't care, so 0) and M[7:4]=1010
-    str r1, [r3, #SSI_DR0_OFFSET]   // Push Address into TX FIFO - this will trigger the transaction
-
-    // Poll for completion
-    bl wait_ssi_ready
-
-// The flash is in a state where we can blast addresses in parallel, and get
-// parallel data back. Now configure the SSI to translate XIP bus accesses
-// into QSPI transfers of this form.
-
-    movs r1, #0
-    str r1, [r3, #SSI_SSIENR_OFFSET]   // Disable SSI (and clear FIFO) to allow further config
-
-// Note that the INST_L field is used to select what XIP data gets pushed into
-// the TX FIFO:
-//      INST_L_0_BITS   {ADDR[23:0],XIP_CMD[7:0]}       Load "mode bits" into XIP_CMD
-//      Anything else   {XIP_CMD[7:0],ADDR[23:0]}       Load SPI command into XIP_CMD
-configure_ssi:
-#define SPI_CTRLR0_XIP \
-    (MODE_CONTINUOUS_READ                      /* Mode bits to keep flash in continuous read mode */ \
-        << SSI_SPI_CTRLR0_XIP_CMD_LSB) | \
-    (ADDR_L << SSI_SPI_CTRLR0_ADDR_L_LSB) |    /* Total number of address + mode bits */ \
-    (WAIT_CYCLES << SSI_SPI_CTRLR0_WAIT_CYCLES_LSB) |    /* Hi-Z dummy clocks following address + mode */ \
-    (SSI_SPI_CTRLR0_INST_L_VALUE_NONE          /* Do not send a command, instead send XIP_CMD as mode bits after address */ \
-        << SSI_SPI_CTRLR0_INST_L_LSB) | \
-    (SSI_SPI_CTRLR0_TRANS_TYPE_VALUE_2C2A      /* Send Address in Quad I/O mode (and Command but that is zero bits long) */ \
-        << SSI_SPI_CTRLR0_TRANS_TYPE_LSB)
-
-    ldr r1, =(SPI_CTRLR0_XIP)
-    ldr r0, =(XIP_SSI_BASE + SSI_SPI_CTRLR0_OFFSET)
-    str r1, [r0]
-
-    movs r1, #1
-    str r1, [r3, #SSI_SSIENR_OFFSET]   // Re-enable SSI
-
-// Bus accesses to the XIP window will now be transparently serviced by the
-// external flash on cache miss. We are ready to run code from flash.
+// ----------------------------------------------------------------------------
 
 // Pull in standard exit routine
 #include "shared/exit_from_boot2.S"
@@ -273,8 +336,8 @@ configure_ssi:
 #include "shared/read_flash_sreg.S"
 #endif
 
+#ifndef __riscv
 .global literals
 literals:
 .ltorg
-
-.end
+#endif

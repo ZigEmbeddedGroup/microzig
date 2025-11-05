@@ -28,7 +28,10 @@
 // ----------------------------------------------------------------------------
 
 #include "shared/asm_helper.S"
-#include "shared/regs.h"
+#include "shared/addressmap.h"
+#include "shared/ssi.h"
+
+// todo port to QMI
 
 // ----------------------------------------------------------------------------
 // Config section
@@ -82,6 +85,7 @@
 pico_default_asm_setup
 
 .section text
+// On RP2350 boot stage2 is always called as a regular function, and should return normally
 regular_func _stage2_boot
     push {lr}
 

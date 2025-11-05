@@ -26,7 +26,11 @@
 // ----------------------------------------------------------------------------
 
 #include "shared/asm_helper.S"
-#include "shared/regs.h"
+#include "shared/regs/addressmap.h"
+#include "shared/regs/ssi.h"        // RP2040 doesn't have this in Microzig... but does in Pico SDK
+#include "shared/regs/pads_qspi.h"  // RP2040 doesn't have this in Microzig... but does in Pico SDK
+
+// todo port to QMI
 
 // ----------------------------------------------------------------------------
 // Config section
@@ -88,11 +92,7 @@ pico_default_asm_setup
 
 .section .text
 
-// The exit point is passed in lr. If entered from bootrom, this will be the
-// flash address immediately following this second stage (0x10000100).
-// Otherwise it will be a return address -- second stage being called as a
-// function by user code, after copying out of XIP region. r3 holds SSI base,
-// r0...2 used as temporaries. Other GPRs not used.
+// On RP2350 boot stage2 is always called as a regular function, and should return normally
 regular_func _stage2_boot
     push {lr}
 
