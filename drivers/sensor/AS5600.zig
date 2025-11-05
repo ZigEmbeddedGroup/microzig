@@ -107,22 +107,40 @@ pub const AS5600 = struct {
         );
     }
 
-    // TODO: Write method. read-modify-write? Suggested by datasheet because extra bits might be config
     pub fn read_zero_position(self: *const Self) !u16 {
         const zpos = self.read2_raw(register.ZPOS);
         return zpos & 0xFFF;
     }
 
-    // TODO: Write method
+    pub fn write_zero_position(self: *const Self, position: u12) !void {
+        // Read-modify-write because the high 4 bits might store config
+        var zpos = try self.read2_raw(register.ZPOS);
+        zpos = (zpos & 0xF000) | position;
+        try self.write_raw(register.ZPOS, zpos);
+    }
+
     pub fn read_max_position(self: *const Self) !u16 {
         const mpos = self.read2_raw(register.MPOS);
         return mpos & 0xFFF;
     }
 
-    // TODO: Write method
+    pub fn write_max_position(self: *const Self, max: u12) !void {
+        // Read-modify-write because the high 4 bits might store config
+        var mpos = try self.read2_raw(register.MPOS);
+        mpos = (mpos & 0xF000) | max;
+        try self.write_raw(register.MPOS, mpos);
+    }
+
     pub fn read_max_angle(self: *const Self) !u16 {
         const mang = self.read2_raw(register.MANG);
         return mang & 0xFFF;
+    }
+
+    pub fn write_max_angle(self: *const Self, max: u12) !void {
+        // Read-modify-write because the high 4 bits might store config
+        var mang = try self.read2_raw(register.MANG);
+        mang = (mang & 0xF000) | max;
+        try self.write_raw(register.MANG, mang);
     }
 
     pub fn read_configuration(self: *const Self) !u16 {
