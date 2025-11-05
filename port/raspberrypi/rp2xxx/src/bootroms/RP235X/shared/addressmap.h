@@ -33,6 +33,8 @@
 //#define SRAM1_BASE _u(0x21010000)
 //#define SRAM2_BASE _u(0x21020000)
 //#define SRAM3_BASE _u(0x21030000)
+#define SRAM8_BASE _u(0x20080000)
+#define SRAM9_BASE _u(0x20081000)
 #define SYSINFO_BASE _u(0x40000000)
 #define SYSCFG_BASE _u(0x40008000)
 #define CLOCKS_BASE _u(0x40010000)
