@@ -268,7 +268,7 @@ configure_ssi:
 #include "shared/exit_from_boot2.S"
 
 // Common functions
-#include "shared/wait_ssi_ready.S"
+#include "shared/wait_qmi_ready.S"
 #ifdef PROGRAM_STATUS_REG
 #include "shared/read_flash_sreg.S"
 #endif

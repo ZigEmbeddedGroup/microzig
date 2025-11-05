@@ -7,7 +7,7 @@
 #ifndef _BOOT2_HELPER_READ_FLASH_SREG
 #define _BOOT2_HELPER_READ_FLASH_SREG
 
-#include "wait_ssi_ready.S"
+#include "wait_qmi_ready.S"
 
 // Pass status read cmd into r0.
 // Returns status value in r0.
@@ -16,14 +16,14 @@
 .thumb_func
 read_flash_sreg:
     push {r1, lr}
-    str r0, [r3, #SSI_DR0_OFFSET]
+    str r0, [r3, #QMI_DIRECT_TX_OFFSET]
     // Dummy byte:
-    str r0, [r3, #SSI_DR0_OFFSET]
+    str r0, [r3, #QMI_DIRECT_TX_OFFSET]
     
-    bl wait_ssi_ready
+    bl wait_qmi_ready
     // Discard first byte and combine the next two
-    ldr r0, [r3, #SSI_DR0_OFFSET]
-    ldr r0, [r3, #SSI_DR0_OFFSET]
+    ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
+    ldr r0, [r3, #QMI_DIRECT_RX_OFFSET]
 
     pop {r1, pc}
 
