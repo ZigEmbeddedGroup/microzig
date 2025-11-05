@@ -9,12 +9,10 @@ const mdf = @import("../framework.zig");
 
 pub const AS5600 = struct {
     const Self = @This();
+    const address: mdf.base.I2C_Device.Address = @enumFromInt(0x36);
     dev: mdf.base.I2C_Device,
-    // TODO: Always 0x36, could make it a const
-    address: mdf.base.I2C_Device.Address,
 
     const register = enum(u8) {
-        // TODO: Maybe add how long each register is?
         ZMCO = 0x00,
         ZPOS = 0x01,
         MPOS = 0x03,
@@ -71,20 +69,6 @@ pub const AS5600 = struct {
         WD: enum(u1) { off = 0, on = 1 } = .off,
     };
 
-    // TODO: Enum is not correct. Can be multiple
-    // Could enumerate all the combos?
-    // pub const Status = enum {
-    // // Magnet too close.
-    // MagnetHigh = 0x8,
-    // // Magnet too far.
-    // MagnetLow = 0x10,
-    // // Magnet detected.
-    // MagnetDetected = 0x20,
-    // // Magnet detected, but close.
-    // MagnetDetectedHigh = 0x28,
-    // // Magnet detected, but low.
-    // MagnetDetectedLow = 0x30,
-    // };
     pub const Status = packed struct(u8) {
         reserved0: u3 = 0,
         // Magnet too strong
@@ -96,29 +80,29 @@ pub const AS5600 = struct {
         reserved6: u2 = 0,
     };
 
-    pub fn init(dev: mdf.base.I2C_Device, address: mdf.base.I2C_Device.Address) Self {
-        return Self{ .dev = dev, .address = address };
+    pub fn init(dev: mdf.base.I2C_Device) Self {
+        return Self{ .dev = dev };
     }
 
     pub inline fn read1_raw(self: *const Self, reg: Self.register) !u8 {
-        try self.dev.write(self.address, &[_]u8{@intFromEnum(reg)});
+        try self.dev.write(Self.address, &[_]u8{@intFromEnum(reg)});
         var buf: [1]u8 = undefined;
-        const size = try self.dev.read(self.address, &buf);
+        const size = try self.dev.read(Self.address, &buf);
         if (size != 1) return error.ReadError;
         return buf[0];
     }
 
     pub inline fn read2_raw(self: *const Self, reg: Self.register) !u16 {
-        try self.dev.write(self.address, &[_]u8{@intFromEnum(reg)});
+        try self.dev.write(Self.address, &[_]u8{@intFromEnum(reg)});
         var buf: [2]u8 = undefined;
-        const size = try self.dev.read(self.address, &buf);
+        const size = try self.dev.read(Self.address, &buf);
         if (size != 2) return error.ReadError;
         return std.mem.readInt(u16, &buf, .big);
     }
 
     pub inline fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
         return self.dev.write(
-            self.address,
+            Self.address,
             &([1]u8{@intFromEnum(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
         );
     }

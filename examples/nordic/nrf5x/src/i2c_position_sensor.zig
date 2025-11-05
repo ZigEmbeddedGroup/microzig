@@ -43,10 +43,7 @@ pub fn main() !void {
     var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c and clock device to driver to create sensor instance
     std.log.info("Creating driver instance", .{});
-    var dev = AS5600.init(
-        i2c_device.i2c_device(),
-        @enumFromInt(0x36),
-    );
+    var dev = AS5600.init(i2c_device.i2c_device());
 
     while (true) {
         const status = try dev.read_status();
