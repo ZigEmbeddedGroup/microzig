@@ -150,12 +150,14 @@ pub const AS5600 = struct {
         return self.write_raw(Self.register.CONF, @bitCast(config));
     }
 
-    pub fn read_raw_angle(self: *const Self) !u16 {
-        return self.read2_raw(register.RAW_ANGLE);
+    pub fn read_raw_angle(self: *const Self) !f32 {
+        const angle = (try self.read2_raw(register.ANGLE)) & 0xFFF;
+        return @as(f32, @floatFromInt(angle)) * 360 / 4096;
     }
 
-    pub fn read_angle(self: *const Self) !u16 {
-        return self.read2_raw(register.ANGLE);
+    pub fn read_angle(self: *const Self) !f32 {
+        const angle = (try self.read2_raw(register.ANGLE)) & 0xFFF;
+        return @as(f32, @floatFromInt(angle)) * 360 / 4096;
     }
 
     pub fn read_status(self: *const Self) !Status {
