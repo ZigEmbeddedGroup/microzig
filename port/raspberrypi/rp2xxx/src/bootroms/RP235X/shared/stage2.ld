@@ -1,6 +1,6 @@
 /*
- * Target CPU:  ARM Cortex-M0+
- * Target Chip: RP2040
+ * Target CPU:  ARM Cortex-M33 / RISC-V Hazard3
+ * Target Chip: RP2350 / RP2354
  */
 
 ENTRY(_stage2_boot);
@@ -8,7 +8,7 @@ ENTRY(_stage2_boot);
 MEMORY
 {
   flash0 (rx!w) : ORIGIN = 0x10000000, LENGTH = 0x00200000
-  ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
+  ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00080000
 }
 
 SECTIONS

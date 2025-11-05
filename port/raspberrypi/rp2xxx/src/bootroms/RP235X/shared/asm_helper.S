@@ -6,12 +6,12 @@
 
 #include "regs.h"
 
-# note we don't do this by default in this file for backwards comaptibility with user code
+# note we don't do this by default in this file for backwards compatibility with user code
 # that may include this file, but not use unified syntax. Note that this macro does equivalent
 # setup to the pico_default_asm macro for inline assembly in C code.
 .macro pico_default_asm_setup
 .syntax unified
-.cpu cortex-m0plus
+.cpu cortex-m33
 .thumb
 .endm
 
