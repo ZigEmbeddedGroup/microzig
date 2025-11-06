@@ -172,8 +172,8 @@ fn run_test(
     };
 
     // Check if it was a system exit (via IO)
-    const exit_mode: ExitMode = if (io.exit_requested)
-        .{ .system_exit = io.exit_code.? }
+    const exit_mode: ExitMode = if (io.exit_code) |code|
+        .{ .system_exit = code }
     else switch (result) {
         .breakpoint => .breakpoint,
         .enter_sleep_mode => .enter_sleep_mode,
@@ -310,7 +310,6 @@ const IO = struct {
 
     // Exit status tracking
     exit_code: ?u8 = null,
-    exit_requested: bool = false,
 
     const DataBusType = aviron.Bus(.{ .address_type = u24 });
     const IOBusType = aviron.IOBus;
@@ -433,7 +432,6 @@ const IO = struct {
         switch (reg) {
             .exit => {
                 io.exit_code = value & mask;
-                io.exit_requested = true;
             },
 
             .stdio => io.stdout.append(value & mask) catch @panic("out of memory"),
@@ -497,7 +495,9 @@ const IO = struct {
 
     fn dev_check_exit(ctx: *anyopaque) ?u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
-        if (io.exit_requested) return io.exit_code;
+        if (io.exit_code) |code| {
+            return code;
+        }
         return null;
     }
 };
