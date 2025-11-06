@@ -171,12 +171,5 @@ pub const AS5600 = struct {
         return self.read2_raw(register.MAGNITUDE);
     }
 
-    pub fn configure_range(self: *const Self) !void {
-        _ = self;
-        // NOTE: We set ZPOS for the start position, but we have the choice between configuring the
-        // max position (MPOS) or the maximiium angle (MANG)
-        return;
-    }
-
     // TODO: Write burn functions. Scary.
 };
