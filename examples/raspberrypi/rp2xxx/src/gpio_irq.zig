@@ -7,26 +7,27 @@ const gpio = rp2xxx.gpio;
 const led = gpio.num(25);
 const button = gpio.num(9);
 
-const MAGICREBOOTCODE: u8 = 0xAB;
-
-// Note non-standard uart config
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const MAGICREBOOTCODE: u8 = 0xAB;
+
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-    // This function has to handle both cpus if the BANK0 interrupts are enabled on both.
+    // This function has to handle both cpus if BANK0 interrupts are enabled on both.
     .interrupts = .{ .IO_IRQ_BANK0 = .{ .c = callback_alt } },
 };
 
+// used as event flag to keep IRQ handler fast
 var event: ?gpio.IrqTrigger = null;
 
-/// GPIO IRQ callback defined here. It will iterate through and print all pins/ events that are triggered
-/// No debounce featured here
+/// GPIO IRQ callback defined here.
+/// It will iterate through all pins/ events that are triggered
+/// No debounce featured
 /// Added to .ram_text section so it always executes quickly from RAM (vs Flash)
-/// iter.next is set to inline but might be a risk of being called from flash as is.
+/// only sets the last one to event flag (others would be dropped if there are multiple)
 fn callback_alt() linksection(".ram_text") callconv(.c) void {
     var iter = gpio.IrqEventIter{};
     while (iter.next()) |e| {
@@ -40,8 +41,7 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
-    // Enable GPIO IRQ
-    // HW is setup as
+    // Enable GPIO button & interrupt
     button.set_function(.sio);
     button.set_direction(.in);
     button.set_pull(.up);
@@ -58,17 +58,17 @@ pub fn main() !void {
 
     // Initialize the loop
     var i: u32 = 0;
-    var next_time = time.get_time_since_boot().to_us() + 500_000;
+    var next_time = time.get_time_since_boot().add_duration(.from_ms(500));
     while (true) {
         if (event) |e| {
             std.log.info("Callback happened! gpio{d} events: {}", .{ e.pin, e.events });
             event = null;
         }
         uart_read() catch {}; // Check for the reboot code.  Ignore errors.
-        if (time.get_time_since_boot().to_us() > next_time) {
-            std.log.info("what {}", .{i});
+        if (next_time.is_reached_by(time.get_time_since_boot())) {
+            next_time = time.get_time_since_boot().add_duration(.from_ms(500));
+            std.log.info("tick {}", .{i});
             led.toggle();
-            next_time = time.get_time_since_boot().to_us() + 500_000;
             i += 1;
         }
     }
