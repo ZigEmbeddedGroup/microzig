@@ -130,7 +130,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 }
 
 /// Enables fpu and/or dcp on RP2350 arm if requested in HAL options. On RP2350
-/// riscv or RP2040 this is a noop. Called in init sequence and on core1
+/// riscv and RP2040 this is a noop. Called in init_sequence and on core1
 /// startup.
 pub fn maybe_enable_fpu_and_dcp() void {
     if (compatibility.chip == .RP2350 and
