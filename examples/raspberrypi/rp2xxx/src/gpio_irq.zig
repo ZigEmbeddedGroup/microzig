@@ -10,14 +10,14 @@ const button = gpio.num(9);
 const MAGICREBOOTCODE: u8 = 0xAB;
 
 // Note non-standard uart config
-const uart = rp2xxx.uart.instance.num(1);
-const uart_tx_pin = gpio.num(4);
-const uart_rx_pin = gpio.num(5);
+const uart = rp2xxx.uart.instance.num(0);
+const uart_tx_pin = gpio.num(0);
+const uart_rx_pin = gpio.num(1);
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-    // I think this function has to handle both cpus.
+    // This function has to handle both cpus if the BANK0 interrupts are enabled on both.
     .interrupts = .{ .IO_IRQ_BANK0 = .{ .c = callback_alt } },
 };
 
@@ -25,9 +25,9 @@ var event: ?gpio.IrqTrigger = null;
 
 /// GPIO IRQ callback defined here. It will iterate through and print all pins/ events that are triggered
 /// No debounce featured here
-/// Added to .data section so it always executes quickly from RAM (vs Flash)
+/// Added to .ram_text section so it always executes quickly from RAM (vs Flash)
 /// iter.next is set to inline but might be a risk of being called from flash as is.
-fn callback_alt() linksection(".data") callconv(.c) void {
+fn callback_alt() linksection(".ram_text") callconv(.c) void {
     var iter = gpio.IrqEventIter{};
     while (iter.next()) |e| {
         event = e;
@@ -75,7 +75,8 @@ pub fn main() !void {
 }
 
 fn uart_read() !void {
-    const v = try uart.read_word() orelse {
+    const v = uart.read_word() catch {
+        uart.clear_errors();
         return;
     };
     if (v == MAGICREBOOTCODE) {
