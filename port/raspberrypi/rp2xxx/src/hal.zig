@@ -99,33 +99,7 @@ const is_fpu_used: bool = builtin.abi.float() == .hard;
 /// Allows user to easily swap in their own clock config while still
 /// using the recommended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
-    if (compatibility.chip == .RP2350 and
-        compatibility.arch == .arm)
-    {
-        var cpacr: u32 = microzig.cpu.peripherals.scb.CPACR;
-
-        if (microzig.options.hal.enable_fpu) {
-            if (is_fpu_used) {
-                // enable lazy state preservation
-                microzig.cpu.peripherals.fpu.FPCCR.modify(.{
-                    .ASPEN = 1,
-                    .LSPEN = 1,
-                });
-
-                // enable the FPU
-                cpacr |= 0xF << 20;
-            } else {
-                @compileError("target doesn't have FPU features enabled");
-            }
-        }
-
-        if (microzig.options.hal.use_dcp) {
-            // enable the DCP
-            cpacr |= 0b11 << 8;
-        }
-
-        microzig.cpu.peripherals.scb.CPACR = cpacr;
-    }
+    maybe_enable_fpu_and_dcp();
 
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
@@ -153,6 +127,39 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 
     // Peripheral clocks should now all be running
     resets.unreset_block_wait(resets.masks.all);
+}
+
+/// Enables fpu and/or dcp on RP2350 arm if requested in HAL options. On RP2350
+/// riscv or RP2040 this is a noop. Called in init sequence and on core1
+/// startup.
+pub fn maybe_enable_fpu_and_dcp() void {
+    if (compatibility.chip == .RP2350 and
+        compatibility.arch == .arm)
+    {
+        var cpacr: u32 = microzig.cpu.peripherals.scb.CPACR;
+
+        if (microzig.options.hal.enable_fpu) {
+            if (is_fpu_used) {
+                // enable lazy state preservation
+                microzig.cpu.peripherals.fpu.FPCCR.modify(.{
+                    .ASPEN = 1,
+                    .LSPEN = 1,
+                });
+
+                // enable the FPU
+                cpacr |= 0xF << 20;
+            } else {
+                @compileError("target doesn't have FPU features enabled");
+            }
+        }
+
+        if (microzig.options.hal.use_dcp) {
+            // enable the DCP
+            cpacr |= 0b11 << 8;
+        }
+
+        microzig.cpu.peripherals.scb.CPACR = cpacr;
+    }
 }
 
 pub fn get_cpu_id() u32 {
