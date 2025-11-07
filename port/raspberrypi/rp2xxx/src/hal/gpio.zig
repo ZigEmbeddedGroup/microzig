@@ -485,20 +485,26 @@ pub const Pin = enum(u6) {
         pads_reg.modify(.{ .DRIVE = drive_strength });
     }
 
-    /// Set or clear irq event enable for the input events
+    /// Set or clear IRQ event enable for the input events
     /// if enable=true irqs will be enabled for the events indicated
-    /// if enable=false irqs will be cleared for the events indicated - events not set in the IrqEvents object will not be effected
+    /// if enable=false irqs will be cleared for the events indicated
+    /// events not set in IrqEvents will not be changed
     pub fn set_irq(gpio: Pin, events: IrqEvents, enable: bool) void {
         // most of this is adapted from the pico-sdk implementation.
         // Get correct register set (based on calling core)
         const core_num = microzig.hal.get_cpu_id();
-        const irq_inte_base: [*]volatile u32 = if (core_num == 0) @ptrCast(&IO_BANK0.PROC0_INTE0) else @ptrCast(&IO_BANK0.PROC1_INTE0);
+        const irq_inte_base: [*]volatile u32 = switch (core_num) {
+            0 => @ptrCast(&IO_BANK0.PROC0_INTE0),
+            else => @ptrCast(&IO_BANK0.PROC1_INTE0),
+        };
+
         // Clear stale events which might cause immediate spurious handler entry
         acknowledge_irq(gpio, events);
 
         // Enable or disable interrupts for events on this pin
         const pin_num = @intFromEnum(gpio);
-        const en_reg: *volatile u32 = &irq_inte_base[pin_num / 8];
+        // Divide pin_num by 8 - 8 GPIOs per register.
+        const en_reg: *volatile u32 = &irq_inte_base[pin_num >> 3];
         if (enable) {
             const inte0_set = hw.set_alias_raw(en_reg);
             inte0_set.* = events.get_mask(gpio);
@@ -507,13 +513,11 @@ pub const Pin = enum(u6) {
             inte0_clear.* = events.get_mask(gpio);
         }
     }
-    /// Acknowledges rise/fall IRQ events - should be called during irq callback to avoid re-entry
+    /// Acknowledge rise/fall IRQ events - should be called during IRQ callback to avoid re-entry
     pub fn acknowledge_irq(gpio: Pin, events: IrqEvents) void {
-        // io_bank0_hw->intr[gpio / 8] = event_mask << (4 * (gpio % 8));
         const base_intr: [*]volatile u32 = @ptrCast(&IO_BANK0.INTR0);
         const pin_num = @intFromEnum(gpio);
-        // trust compiler to simplify division?
-        base_intr[pin_num / 8] = events.get_mask(gpio);
+        base_intr[pin_num >> 3] = events.get_mask(gpio);
     }
 };
 
@@ -528,14 +532,17 @@ pub const IrqEventIter = struct {
     _gpio_num: u9 = 0,
     _events_b: u4 = 0,
     /// return the next IRQ event that triggered.
-    /// Attempts to inline to minimize execution overhead during irq (only likely to be called in one place)
-    /// Acknowledges rise/fall events which have been triggered - calling acknowledge_irq.
+    /// Attempts to inline to minimize execution overhead during IRQ
+    /// Acknowledge rise/fall events which have been triggered - calling acknowledge_irq.
     pub inline fn next(self: *IrqEventIter) ?IrqTrigger {
         const core_num = microzig.hal.get_cpu_id();
-        const ints_base: [*]volatile u32 = if (core_num == 0) @ptrCast(&IO_BANK0.PROC0_INTS0) else @ptrCast(&IO_BANK0.PROC1_INTS0);
+        const ints_base: [*]volatile u32 = switch (core_num) {
+            0 => @ptrCast(&IO_BANK0.PROC0_INTS0),
+            else => @ptrCast(&IO_BANK0.PROC1_INTS0),
+        };
         // iterate through all INTS (interrupt status) registers
         while (self._base_gpio_num < NUM_BANK0_GPIOS) : (self._base_gpio_num += 8) {
-            self._allevents = ints_base[self._base_gpio_num / 8];
+            self._allevents = ints_base[self._base_gpio_num >> 3];
             self._gpio_num = self._base_gpio_num;
             // Loop through each of the 8 GPIO represented in an INTS register (4 bits at a time)
             while (self._allevents != 0) : (self._gpio_num += 1) {
@@ -543,7 +550,10 @@ pub const IrqEventIter = struct {
                 self._allevents = self._allevents >> 4;
                 if (self._events_b != 0) {
                     num(self._gpio_num).acknowledge_irq(@bitCast(self._events_b));
-                    return .{ .pin = num(self._gpio_num), .events = @bitCast(self._events_b) };
+                    return .{
+                        .pin = num(self._gpio_num),
+                        .events = @bitCast(self._events_b),
+                    };
                 }
             }
         }
