@@ -84,7 +84,7 @@ pub const AS5600 = struct {
         return Self{ .dev = dev };
     }
 
-    pub inline fn read1_raw(self: *const Self, reg: Self.register) !u8 {
+    pub fn read1_raw(self: *const Self, reg: Self.register) !u8 {
         try self.dev.write(Self.address, &[_]u8{@intFromEnum(reg)});
         var buf: [1]u8 = undefined;
         const size = try self.dev.read(Self.address, &buf);
@@ -92,7 +92,7 @@ pub const AS5600 = struct {
         return buf[0];
     }
 
-    pub inline fn read2_raw(self: *const Self, reg: Self.register) !u16 {
+    pub fn read2_raw(self: *const Self, reg: Self.register) !u16 {
         try self.dev.write(Self.address, &[_]u8{@intFromEnum(reg)});
         var buf: [2]u8 = undefined;
         const size = try self.dev.read(Self.address, &buf);
@@ -100,7 +100,7 @@ pub const AS5600 = struct {
         return std.mem.readInt(u16, &buf, .big);
     }
 
-    pub inline fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
+    pub fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
         return self.dev.write(
             Self.address,
             &([1]u8{@intFromEnum(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
