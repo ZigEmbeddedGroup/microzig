@@ -136,8 +136,6 @@ pub fn maybe_enable_fpu_and_dcp() void {
     if (compatibility.chip == .RP2350 and
         compatibility.arch == .arm)
     {
-        var cpacr: u32 = microzig.cpu.peripherals.scb.CPACR;
-
         if (microzig.options.hal.enable_fpu) {
             if (is_fpu_used) {
                 // enable lazy state preservation
@@ -146,19 +144,22 @@ pub fn maybe_enable_fpu_and_dcp() void {
                     .LSPEN = 1,
                 });
 
-                // enable the FPU
-                cpacr |= 0xF << 20;
+                // enable the FPU for the current core
+                microzig.cpu.peripherals.scb.CPACR.modify(.{
+                    .CP10 = .full_access,
+                    .CP11 = .full_access,
+                });
             } else {
                 @compileError("target doesn't have FPU features enabled");
             }
         }
 
         if (microzig.options.hal.use_dcp) {
-            // enable the DCP
-            cpacr |= 0b11 << 8;
+            // enable the DCP for the current core
+            microzig.cpu.peripherals.scb.CPACR.modify(.{
+                .CP4 = .full_access,
+            });
         }
-
-        microzig.cpu.peripherals.scb.CPACR = cpacr;
     }
 }
 
