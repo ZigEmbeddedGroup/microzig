@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_accel", .file = "src/i2c_accel.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_hall_effect", .file = "src/i2c_hall_effect.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_position_sensor", .file = "src/i2c_position_sensor.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_temp", .file = "src/i2c_temp.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_rtt_log", .file = "src/rtt_log.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_semihosting", .file = "src/semihosting.zig" },
