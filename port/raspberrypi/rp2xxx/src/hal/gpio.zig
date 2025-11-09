@@ -489,7 +489,7 @@ pub const Pin = enum(u6) {
     /// if enable=true irqs will be enabled for the events indicated
     /// if enable=false irqs will be cleared for the events indicated
     /// events not set in IrqEvents will not be changed
-    pub fn set_irq(gpio: Pin, events: IrqEvents, enable: bool) void {
+    pub fn set_irq_enabled(gpio: Pin, events: IrqEvents, enable: bool) void {
         // most of this is adapted from the pico-sdk implementation.
         // Get correct register set (based on calling core)
         const core_num = microzig.hal.get_cpu_id();
