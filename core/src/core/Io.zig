@@ -26,11 +26,13 @@ fn to_stack_units(size: usize) usize {
 /// Downside: Performance (may be mitigated once https://github.com/ziglang/zig/issues/23367 is implemeted).
 pub const PauseReason = union(enum) {
     const OnStack = [to_stack_units(@sizeOf(@This()))]StackUint;
+    const PtrMask = struct { ptr: *const usize, mask: usize };
 
     /// Task volutarily gave up execution, but is ready to continue.
     yield,
     sleep_until: time.Absolute align(@alignOf(StackUint)),
-    bits_mask_any_high: struct { ptr: *const usize, mask: usize },
+    bits_mask_all_low: PtrMask,
+    bits_mask_any_high: PtrMask,
     /// This value means there is no context stored on this stack
     /// so it can be used to launch a new task.
     no_task,
@@ -47,6 +49,9 @@ pub const PauseReason = union(enum) {
             .yield => true,
             .bits_mask_any_high => |info| {
                 return @atomicLoad(usize, info.ptr, .acquire) & info.mask != 0;
+            },
+            .bits_mask_all_low => |info| {
+                return @atomicLoad(usize, info.ptr, .acquire) & info.mask == 0;
             },
             .sleep_until => |t| t.is_reached_by(io.monotonic_clock()),
         };
@@ -303,6 +308,18 @@ pub const RoundRobin = struct {
     pub fn monotonic_clock(this: *@This()) time.Absolute {
         return this.vtable.monotonic_clock();
     }
+
+    /// Perform memcpy with DMA. `dst` and `src` must have the same length.
+    pub fn dma_memcpy(this: *@This(), T: type, dst: []T, src: []const T) !DmaResult {
+        assert(dst.len == src.len);
+        return this.vtable.dma_memcpy(dst.ptr, src.ptr, dst.len * @sizeOf(T));
+    }
+};
+
+/// TODO: I hate this
+pub const DmaResult = struct {
+    await: *const fn (*@This(), *RoundRobin) void,
+    channel: u32,
 };
 
 /// Common functionality between all implementations.
@@ -310,4 +327,5 @@ pub const RoundRobin = struct {
 pub const VTable = struct {
     /// A clock source that only ever goes up, not synchronized with epoch.
     monotonic_clock: *const fn () time.Absolute,
+    dma_memcpy: *const fn (*anyopaque, *const anyopaque, usize) anyerror!DmaResult,
 };

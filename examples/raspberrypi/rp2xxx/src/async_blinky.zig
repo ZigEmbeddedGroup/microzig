@@ -49,10 +49,18 @@ pub fn main() !void {
     io.async(task_blink, .{ &io, 24_000 });
     io.async(task_blink, .{ &io, 25_000 });
 
+    // DMA demo: using large arrays to prove waiting for transfer completion works.
+    const src: [1 << 15]u32 = @splat(1);
+    var dst: [1 << 15]u32 = @splat(0);
+    std.log.info("Before DMA: {any}", .{dst[dst.len - 16 ..]});
+    var future_dma = try io.dma_memcpy(u32, &dst, &src);
+    future_dma.await(&future_dma, &io);
+    std.log.info("After DMA: {any}", .{dst[dst.len - 16 ..]});
+
     var deadline: time.Absolute = io.monotonic_clock();
     var cnt: u32 = 0;
     while (true) {
-        try uart.writer().print("Hello! {}\r\n", .{cnt});
+        std.log.info("Hello! {}\r\n", .{cnt});
         cnt += 1;
         deadline = deadline.add_duration(.from_ms(1000));
         io.pause(&.{ .sleep_until = deadline });

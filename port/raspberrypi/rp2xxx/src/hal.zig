@@ -19,11 +19,7 @@ pub const dma = @import("hal/dma.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
-pub const Io = struct {
-    pub const vtable: microzig.core.Io.VTable = .{
-        .monotonic_clock = time.get_time_since_boot,
-    };
-};
+pub const Io = @import("hal/Io.zig");
 pub const multicore = @import("hal/multicore.zig");
 pub const mutex = @import("hal/mutex.zig");
 pub const pins = @import("hal/pins.zig");
