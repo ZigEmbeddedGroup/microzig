@@ -45,7 +45,7 @@ pub fn main() !void {
     button.set_function(.sio);
     button.set_direction(.in);
     button.set_pull(.up);
-    button.set_irq(gpio.IrqEvents{ .fall = 1, .rise = 1 }, true);
+    button.set_irq_enabled(gpio.IrqEvents{ .fall = 1, .rise = 1 }, true);
     microzig.interrupt.enable(.IO_IRQ_BANK0);
 
     // Setup uart for logging and fast reset to bootloader
