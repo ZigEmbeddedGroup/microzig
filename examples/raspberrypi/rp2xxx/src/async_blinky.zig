@@ -1,9 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+const Io = microzig.core.Io;
 
 const rp2xxx = microzig.hal;
-const Io = rp2xxx.Io;
 
 pub const microzig_options = microzig.Options{
     .log_level = .info,
@@ -43,7 +43,7 @@ pub fn main() !void {
     for (&task_stacks, &task_stacks_data) |*dst, *src|
         dst.* = Io.prepare_empty_stack(src);
 
-    var io: Io.RoundRobin = .{ .next_swap = 0, .tasks = &task_stacks };
+    var io: Io.RoundRobin = .{ .next_swap = 0, .tasks = &task_stacks, .vtable = rp2xxx.Io.vtable };
 
     // Mixing (xoring) two squarewaves of almost the same frequency produces a beat frequency.
     io.async(task_blink, .{ &io, 24_000 });

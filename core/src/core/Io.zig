@@ -1,13 +1,8 @@
-//! I'm not sure how much of this functionality could be moved into core.
-//! Context switches could probably made available project-wide,
-//! but that might be enough scope for a separate project.
-
 const builtin = @import("builtin");
 const std = @import("std");
-const microzig = @import("microzig");
+const drivers = @import("drivers");
 const assert = std.debug.assert;
-const rp2xxx = microzig.hal;
-const time = microzig.drivers.time;
+const time = drivers.time;
 
 /// Unsigned integer with the same alignment as the stack.
 const StackUint = usize;
@@ -271,6 +266,7 @@ pub fn prepare_task_stack(comptime F: type, f: *const F, stack: *PauseReason) st
 pub const RoundRobin = struct {
     next_swap: usize,
     tasks: []*PauseReason,
+    vtable: VTable,
 
     /// Pause the current task allow others to run.
     pub fn pause(this: *@This(), reason: *const PauseReason) void {
@@ -305,7 +301,13 @@ pub const RoundRobin = struct {
     }
 
     pub fn monotonic_clock(this: *@This()) time.Absolute {
-        _ = this;
-        return rp2xxx.time.get_time_since_boot();
+        return this.vtable.monotonic_clock();
     }
+};
+
+/// Common functionality between all implementations.
+/// Needs to be specified by every port.
+pub const VTable = struct {
+    /// A clock source that only ever goes up, not synchronized with epoch.
+    monotonic_clock: *const fn () time.Absolute,
 };
