@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 const time = microzig.drivers.time;
 
 const rp2xxx = microzig.hal;
-const get_time_since_boot = rp2xxx.time.get_time_since_boot;
 const Io = rp2xxx.Io;
 
 pub const microzig_options = microzig.Options{
@@ -24,7 +23,7 @@ const uart = rp2xxx.uart.instance.num(0);
 
 // Blink the led with given half-period.
 fn task_blink(io: *Io.RoundRobin, delay: u32) callconv(.c) noreturn {
-    var deadline: time.Absolute = get_time_since_boot();
+    var deadline: time.Absolute = io.monotonic_clock();
     while (true) {
         pins.led.toggle();
         deadline = deadline.add_duration(.from_us(delay));
@@ -50,7 +49,7 @@ pub fn main() !void {
     io.async(task_blink, .{ &io, 24_000 });
     io.async(task_blink, .{ &io, 25_000 });
 
-    var deadline: time.Absolute = get_time_since_boot();
+    var deadline: time.Absolute = io.monotonic_clock();
     var cnt: u32 = 0;
     while (true) {
         try uart.writer().print("Hello! {}\r\n", .{cnt});

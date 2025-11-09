@@ -35,6 +35,7 @@ pub const PauseReason = union(enum) {
     /// Task volutarily gave up execution, but is ready to continue.
     yield,
     sleep_until: time.Absolute align(@alignOf(StackUint)),
+    bits_mask_any_high: struct { ptr: *const usize, mask: usize },
     /// This value means there is no context stored on this stack
     /// so it can be used to launch a new task.
     no_task,
@@ -46,11 +47,13 @@ pub const PauseReason = union(enum) {
     /// Check if the task should be resumed.
     /// The io interface may not be necessary.
     pub fn can_resume(this: *const @This(), io: anytype) bool {
-        _ = io;
         return switch (this.*) {
             .no_task => false,
             .yield => true,
-            .sleep_until => |t| t.is_reached_by(rp2xxx.time.get_time_since_boot()),
+            .bits_mask_any_high => |info| {
+                return @atomicLoad(usize, info.ptr, .acquire) & info.mask != 0;
+            },
+            .sleep_until => |t| t.is_reached_by(io.monotonic_clock()),
         };
     }
 
@@ -299,5 +302,10 @@ pub const RoundRobin = struct {
             };
         // Maybe we could wait for them to complete instead?
         std.debug.panic("Cannot launch more tasks.", .{});
+    }
+
+    pub fn monotonic_clock(this: *@This()) time.Absolute {
+        _ = this;
+        return rp2xxx.time.get_time_since_boot();
     }
 };
