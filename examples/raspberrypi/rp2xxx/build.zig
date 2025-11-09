@@ -49,6 +49,7 @@ pub fn build(b: *std.Build) void {
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
+        .{ .name = "async-blinky", .file = "src/async_blinky.zig" },
         .{ .name = "i2c-accel", .file = "src/i2c_accel.zig" },
         .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
         .{ .name = "i2c-hall-effect", .file = "src/i2c_hall_effect.zig" },
@@ -79,20 +80,20 @@ pub fn build(b: *std.Build) void {
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         available_examples.append(.{
-            .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+            .target = raspberrypi.pico,
             .name = b.fmt("pico_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
 
         available_examples.append(.{
-            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+            .target = raspberrypi.pico2_arm,
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
 
         if (example.works_with_riscv) {
             available_examples.append(.{
-                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
+                .target = raspberrypi.pico2_riscv,
                 .name = b.fmt("pico2_riscv_{s}", .{example.name}),
                 .file = example.file,
             }) catch @panic("out of memory");
