@@ -38,7 +38,7 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     // Set up stacks. A helper function that automates this would be nice.
-    const max_tasks = 2;
+    const max_tasks = 8;
     var task_stacks_data: [max_tasks][1024]usize = undefined;
     var task_stacks: [max_tasks]*Io.PauseReason = undefined;
     for (&task_stacks, &task_stacks_data) |*dst, *src|
@@ -50,7 +50,6 @@ pub fn main() !void {
     io.async(task_blink, .{ &io, 24_000 });
     io.async(task_blink, .{ &io, 25_000 });
 
-    // We might want both a monotonic clock and an epoch-synchronized one.
     var deadline: time.Absolute = get_time_since_boot();
     var cnt: u32 = 0;
     while (true) {
