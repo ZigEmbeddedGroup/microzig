@@ -172,4 +172,5 @@ test "hal tests" {
     _ = usb;
     _ = i2c;
     _ = uart;
+    _ = mutex;
 }
