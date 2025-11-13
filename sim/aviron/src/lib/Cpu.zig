@@ -755,7 +755,7 @@ const instructions = struct {
         cpu.sreg.z = (res == 0);
         cpu.sreg.n = ((res & 0x8000) != 0);
         cpu.sreg.c = ((src & 0x8000) == 0) and ((res & 0x8000) != 0);
-        cpu.sreg.v = cpu.sreg.c;
+        cpu.sreg.v = ((src & 0x8000) != 0) and ((res & 0x8000) == 0);
         cpu.sreg.s = (cpu.sreg.n != cpu.sreg.v);
     }
 
