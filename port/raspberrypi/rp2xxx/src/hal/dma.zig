@@ -183,15 +183,16 @@ pub const Channel = enum(u4) {
             inline fn get_addr(value: anytype) u32 {
                 const Type = @TypeOf(value);
                 const Info = @typeInfo(Type);
-                switch (Info) {
+                return switch (Info) {
                     .@"struct" => {
-                        return value.addr;
+                        value.addr;
                     },
-                    .pointer => {
-                        return @intFromPtr(value);
+                    .pointer => |ptr| switch (ptr.size) {
+                        .one, .c, .many => @intFromPtr(value),
+                        .slice => @intFromPtr(value.ptr),
                     },
                     else => comptime unreachable,
-                }
+                };
             }
 
             inline fn get_dreq(value: anytype) Dreq {
