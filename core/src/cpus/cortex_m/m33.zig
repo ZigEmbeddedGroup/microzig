@@ -238,7 +238,30 @@ pub const SystemControlBlock = extern struct {
     _AFSR: u32,
     reserved1: [18]u32,
     /// Coprocessor Access Control Register.
-    CPACR: u32,
+    CPACR: mmio.Mmio(packed struct(u32) {
+        CP0: Privilege,
+        CP1: Privilege,
+        CP2: Privilege,
+        CP3: Privilege,
+        CP4: Privilege,
+        CP5: Privilege,
+        CP6: Privilege,
+        CP7: Privilege,
+        reserved16: u4,
+        CP10: Privilege,
+        CP11: Privilege,
+        reserved24: u8,
+
+        pub const Privilege = enum(u2) {
+            /// Access denied. Any attempted access generates a NOCP UsageFault.
+            access_denied = 0b00,
+            /// Privileged access only. An unprivileged access generates a NOCP UsageFault.
+            priviledged_access_only = 0b01,
+            reserved = 0b10,
+            /// Full access.
+            full_access = 0b11,
+        };
+    }),
     /// Non-secure Access Control Register.
     NSACR: u32,
 };
