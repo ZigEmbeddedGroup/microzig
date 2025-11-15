@@ -1,0 +1,26 @@
+.{
+    .name = .tinyusb,
+    .version = "0.1.0",
+    .fingerprint = 0x6f11d314f5263da7, // Changing this has security and trust implications?
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{
+        .pico_sdk = .{
+            .url = "https://github.com/raspberrypi/pico-sdk/releases/download/2.2.0/pico-sdk-2.2.0.tar.gz",
+            .sha256 = "sha256:2678fe2b176cf64a7f71cd91749fdf9134c8cf7ff84b7199dfe5ea0d6dba6fa4",
+            .hash = "N-V-__8AAJZDcwFLNdIEF1wutjiH14f8fSET5jNORZIZKCaM",
+        },
+        .tusb = .{
+            // matches pico-sdk submodule hash
+            .url = "git+https://github.com/hathach/tinyusb.git#86ad6e56c1700e85f1c5678607a762cfe3aa2f47",
+            .hash = "N-V-__8AAGUZ_gDYqxEdexw7Rfp9YENlWbwlDPQu0bCfKxws",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        "README.md",
+    },
+}

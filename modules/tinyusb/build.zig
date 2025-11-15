@@ -1,0 +1,147 @@
+const std = @import("std");
+const Build = std.Build;
+
+// TODO: Switch to lazy dependencies?
+
+pub fn build(b: *Build) !void {
+    addTinyUSBLib(b);
+}
+
+/// TODO: zig doesn't have these??
+const eabi_headers = "/usr/arm-none-eabi/include/";
+
+pub fn addTinyUSBLib(b: *Build) void {
+    const tusb_dep = b.dependency("tusb", .{});
+    const tusb_src = tusb_dep.path("src");
+    const module = b.addModule("tinyusb", .{
+        .link_libc = true,
+        // seems important to release fast to avoid some extra dependencies
+        .optimize = .ReleaseFast,
+    });
+
+    module.addIncludePath(b.path("cfiles"));
+    module.addCSourceFile(.{ .file = b.path("cfiles/printf.c") });
+
+    // /usr/arm-none-eabi/include/
+    // TODO: zig does not provide these headers for eabi I guess???
+    module.addSystemIncludePath(.{ .cwd_relative = eabi_headers });
+    // TinyUSB src folder
+    module.addIncludePath(tusb_src);
+
+    // Iterate and print each string
+    for (c_files) |file| {
+        module.addCSourceFile(.{ .file = tusb_src.path(b, file) });
+    }
+}
+
+const SupportedChips = enum {
+    RP2040,
+};
+
+pub fn addChip(b: *Build, module: *Build.Module, chip_name: []const u8) void {
+    const option = std.meta.stringToEnum(
+        SupportedChips,
+        chip_name,
+    ) orelse {
+        std.debug.print("BUILD ERROR: Chip not supported: {s}\n\r", .{chip_name});
+        @panic("Chip not supported for TinyUSB yet");
+    };
+    switch (option) {
+        .RP2040 => {
+            module.addCMacro("CFG_TUSB_MCU", "OPT_MCU_RP2040");
+            module.addCMacro("CFG_TUSB_OS", "OPT_OS_NONE");
+            module.addCMacro("PICO_RP2040", "1");
+            module.addCMacro("BOARD_TUD_RHPORT", "0");
+            // pico-sdk headers
+            addPicoSdkInclude(b, module);
+        },
+    }
+}
+
+pub fn getTinyUsbCTranslate(
+    b: *Build,
+    target: Build.ResolvedTarget,
+) *Build.Step.TranslateC {
+    // const target = b.standardTargetOptions(.{});
+    const tusb_dep = b.dependency("tusb", .{});
+    const tusb_src = tusb_dep.path("src");
+    const tinyusb_c = b.addTranslateC(.{
+        .root_source_file = tusb_src.path(b, "tusb.h"),
+        .target = target,
+        .optimize = .ReleaseFast,
+        .link_libc = false,
+    });
+
+    tinyusb_c.defineCMacro("CFG_TUSB_MCU", "OPT_MCU_NONE");
+    tinyusb_c.defineCMacro("CFG_TUSB_OS", "OPT_OS_NONE");
+
+    // TODO: zig does not provide these headers for eabi I guess???
+    tinyusb_c.addSystemIncludePath(.{ .cwd_relative = eabi_headers });
+    // TinyUSB src folder
+    tinyusb_c.addIncludePath(tusb_src);
+    tinyusb_c.addIncludePath(tusb_src.path(b, "device"));
+
+    return tinyusb_c;
+}
+
+/// List of all .c files in the tinyUSB src directory less the portable directory files
+const c_files = [_][]const u8{
+    "tusb.c",
+    "device/usbd.c",
+    "device/usbd_control.c",
+    "class/msc/msc_host.c",
+    "class/msc/msc_device.c",
+    "class/cdc/cdc_host.c",
+    "class/cdc/cdc_rndis_host.c",
+    "class/cdc/cdc_device.c",
+    "class/dfu/dfu_rt_device.c",
+    "class/dfu/dfu_device.c",
+    "class/video/video_device.c",
+    "class/usbtmc/usbtmc_device.c",
+    "class/vendor/vendor_host.c",
+    "class/vendor/vendor_device.c",
+    "class/net/ecm_rndis_device.c",
+    "class/net/ncm_device.c",
+    // "class/mtp/mtp_device.c",
+    "class/audio/audio_device.c",
+    "class/bth/bth_device.c",
+    "class/midi/midi_device.c",
+    // "class/midi/midi_host.c",
+    "class/hid/hid_device.c",
+    "class/hid/hid_host.c",
+    "host/usbh.c",
+    "host/hub.c",
+    "common/tusb_fifo.c",
+    "typec/usbc.c",
+    "portable/raspberrypi/rp2040/rp2040_usb.c",
+    "portable/raspberrypi/rp2040/dcd_rp2040.c",
+};
+
+fn addPicoSdkInclude(b: *std.Build, m: *std.Build.Module) void {
+    const pico_sdk_dep = b.dependency("pico_sdk", .{});
+    for (rp_2040_includes) |dir| {
+        m.addIncludePath(pico_sdk_dep.path(dir));
+    }
+}
+
+const rp_2040_includes = [_][]const u8{
+    "src",
+    "src/common/pico_base_headers/include",
+    "src/common/pico_time/include",
+    "src/rp2_common/pico_platform_compiler/include",
+    "src/rp2_common/pico_platform_sections/include",
+    "src/rp2_common/pico_platform_panic/include",
+    "src/rp2_common/pico_platform_common/include",
+    "src/rp2_common/hardware_timer/include",
+    "src/rp2_common/hardware_base/include",
+    "src/rp2350/hardware_regs/include",
+    "src/rp2350/hardware_structs/include",
+    "src/common/pico_sync/include",
+    "src/rp2_common/hardware_sync/include",
+    "src/rp2_common/hardware_sync_spin_lock/include",
+    "src/rp2_common/hardware_irq/include",
+    "src/rp2_common/hardware_resets/include",
+    "src/rp2040/pico_platform/include",
+    "src/rp2040/hardware_structs/include",
+    "src/rp2040/hardware_regs/include",
+};

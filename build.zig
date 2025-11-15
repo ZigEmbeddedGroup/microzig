@@ -16,6 +16,8 @@ pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
 
+pub const tusb = @import("modules/tinyusb");
+
 // If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
 // In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
@@ -859,6 +861,50 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 "No default cpu configuration for `{s}`. Please specify a cpu either in the target or in the options for creating the firmware.",
                 .{target.cpu.model.name},
             );
+        }
+        /// Adds build step for tinyUSB and adds a c translate module to app "tinyusb_api" which can be imported
+        /// input includes and c sources need to include tusb_descriptors.c (or equivalent)
+        /// and tusb_config.h at a minimum (see) tinyusb documentation for details
+        /// The api can be imported into a project: `const tinyusb = @import("tinyusb_api");`
+        /// it's contents is dependant on the configuration in tusb_config.h
+        pub fn addTinyUsbLib(
+            root_build: *Build,
+            fw: *Firmware,
+            c_sources: []const LazyPath,
+            includes: []const LazyPath,
+        ) void {
+            const tusb_dep = fw.mb.dep.builder.dependency("modules/tinyusb", .{});
+            const tusb_mod = tusb_dep.module("tinyusb");
+            const target = root_build.resolveTargetQuery(fw.target.zig_target);
+
+            tusb_mod.resolved_target = target;
+            for (c_sources) |source| {
+                tusb_mod.addCSourceFile(.{ .file = source });
+            }
+            for (includes) |path| {
+                tusb_mod.addIncludePath(path);
+            }
+            tusb.addChip(tusb_mod.owner, tusb_mod, fw.target.chip.name);
+
+            const tinyusb = root_build.addLibrary(.{
+                .linkage = .static,
+                .name = "tinyusb",
+                .root_module = tusb_mod,
+                .use_llvm = true,
+            });
+            const lib_step = root_build.addInstallArtifact(tinyusb, .{});
+            root_build.getInstallStep().dependOn(&lib_step.step);
+            fw.add_object_file(lib_step.emitted_bin.?);
+
+            const tusb_api_c = tusb.getTinyUsbCTranslate(
+                tusb_mod.owner,
+                target,
+            );
+
+            for (includes) |path| {
+                tusb_api_c.addIncludePath(path);
+            }
+            fw.app_mod.addImport("tinyusb", tusb_api_c.addModule("tinyusb_api"));
         }
     };
 }
