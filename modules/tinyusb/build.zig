@@ -14,7 +14,7 @@ pub fn addTinyUSBLib(b: *Build) void {
     const tusb_dep = b.dependency("tusb", .{});
     const tusb_src = tusb_dep.path("src");
     const module = b.addModule("tinyusb", .{
-        .link_libc = true,
+        .link_libc = false,
         // seems important to release fast to avoid some extra dependencies
         .optimize = .ReleaseFast,
     });
