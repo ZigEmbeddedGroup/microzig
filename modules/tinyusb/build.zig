@@ -7,9 +7,6 @@ pub fn build(b: *Build) !void {
     addTinyUSBLib(b);
 }
 
-/// TODO: zig doesn't have these??
-const eabi_headers = "/usr/arm-none-eabi/include/";
-
 pub fn addTinyUSBLib(b: *Build) void {
     const tusb_dep = b.dependency("tusb", .{});
     const tusb_src = tusb_dep.path("src");
@@ -22,9 +19,6 @@ pub fn addTinyUSBLib(b: *Build) void {
     module.addIncludePath(b.path("cfiles"));
     module.addCSourceFile(.{ .file = b.path("cfiles/printf.c") });
 
-    // /usr/arm-none-eabi/include/
-    // TODO: zig does not provide these headers for eabi I guess???
-    module.addSystemIncludePath(.{ .cwd_relative = eabi_headers });
     // TinyUSB src folder
     module.addIncludePath(tusb_src);
 
@@ -75,11 +69,8 @@ pub fn getTinyUsbCTranslate(
     tinyusb_c.defineCMacro("CFG_TUSB_MCU", "OPT_MCU_NONE");
     tinyusb_c.defineCMacro("CFG_TUSB_OS", "OPT_OS_NONE");
 
-    // TODO: zig does not provide these headers for eabi I guess???
-    tinyusb_c.addSystemIncludePath(.{ .cwd_relative = eabi_headers });
     // TinyUSB src folder
     tinyusb_c.addIncludePath(tusb_src);
-    tinyusb_c.addIncludePath(tusb_src.path(b, "device"));
 
     return tinyusb_c;
 }

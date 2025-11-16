@@ -1,4 +1,4 @@
-# issues
+# Issues
 - Only supports RP2040
 - Sometimes reset stalls when built.  If effected comment out:
     `unreset_block_wait(RESETS_RESET_USBCTRL_BITS);`
@@ -7,3 +7,5 @@
 - How can we move the IRQ functions into ram
 - USB Reset hang issue 
 - More chips supported
+- Probably refactor to better align with project.
+- Remove system includes dependency for arm-none-eabi
