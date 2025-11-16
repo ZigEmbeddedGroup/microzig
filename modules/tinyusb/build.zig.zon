@@ -14,6 +14,12 @@
             .url = "git+https://github.com/hathach/tinyusb.git#86ad6e56c1700e85f1c5678607a762cfe3aa2f47",
             .hash = "N-V-__8AAGUZ_gDYqxEdexw7Rfp9YENlWbwlDPQu0bCfKxws",
         },
+        // newlib folder of this seems to have the same licensing as the pico (not a lawyer)
+        .newlib = .{
+            .url = "https://sourceware.org/pub/newlib/newlib-4.5.0.20241231.tar.gz",
+            .sha256 = "sha256:8f6903f8ceb0f991490a1e34074443c2a72b14dbd",
+            .hash = "N-V-__8AAJH7PAM8M1Wj7e7momRRAp7hssKtI2VvX0vEz-_B",
+        },
     },
     .paths = .{
         "build.zig",

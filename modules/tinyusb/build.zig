@@ -21,11 +21,13 @@ pub fn addTinyUSBLib(b: *Build) void {
 
     // TinyUSB src folder
     module.addIncludePath(tusb_src);
-
-    // Iterate and print each string
-    for (c_files) |file| {
+    for (tinyusb_source_files) |file| {
         module.addCSourceFile(.{ .file = tusb_src.path(b, file) });
     }
+
+    // Add libc for embedded
+    const newlib_dep = b.dependency("newlib", .{});
+    module.addIncludePath(newlib_dep.path("newlib/libc/include"));
 }
 
 const SupportedChips = enum {
@@ -72,11 +74,16 @@ pub fn getTinyUsbCTranslate(
     // TinyUSB src folder
     tinyusb_c.addIncludePath(tusb_src);
 
+    // Add libc for embedded
+    const newlib_dep = b.dependency("newlib", .{});
+    tinyusb_c.addIncludePath(newlib_dep.path("newlib/libc/include"));
+
     return tinyusb_c;
 }
 
 /// List of all .c files in the tinyUSB src directory less the portable directory files
-const c_files = [_][]const u8{
+/// tinyusb does a good job only compiling based on options selected.
+const tinyusb_source_files = [_][]const u8{
     "tusb.c",
     "device/usbd.c",
     "device/usbd_control.c",
@@ -93,11 +100,11 @@ const c_files = [_][]const u8{
     "class/vendor/vendor_device.c",
     "class/net/ecm_rndis_device.c",
     "class/net/ncm_device.c",
-    // "class/mtp/mtp_device.c",
+    // "class/mtp/mtp_device.c", not available in older tinyusb compatible with sdk?
     "class/audio/audio_device.c",
     "class/bth/bth_device.c",
     "class/midi/midi_device.c",
-    // "class/midi/midi_host.c",
+    // "class/midi/midi_host.c", not available in older tinyusb compatible with sdk?
     "class/hid/hid_device.c",
     "class/hid/hid_host.c",
     "host/usbh.c",
@@ -132,6 +139,7 @@ const rp_2040_includes = [_][]const u8{
     "src/rp2_common/hardware_sync_spin_lock/include",
     "src/rp2_common/hardware_irq/include",
     "src/rp2_common/hardware_resets/include",
+    // I think these are the only things that would need to change for RP2350
     "src/rp2040/pico_platform/include",
     "src/rp2040/hardware_structs/include",
     "src/rp2040/hardware_regs/include",

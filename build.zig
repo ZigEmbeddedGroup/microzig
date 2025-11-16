@@ -872,7 +872,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw: *Firmware,
             c_sources: []const LazyPath,
             includes: []const LazyPath,
-            arm_none_eabi_include: []const u8,
         ) void {
             const tusb_dep = fw.mb.dep.builder.dependency("modules/tinyusb", .{});
             const tusb_mod = tusb_dep.module("tinyusb");
@@ -885,7 +884,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
             for (includes) |path| {
                 tusb_mod.addIncludePath(path);
             }
-            tusb_mod.addSystemIncludePath(.{ .cwd_relative = arm_none_eabi_include });
             tusb.addChip(tusb_mod.owner, tusb_mod, fw.target.chip.name);
 
             const tinyusb = root_build.addLibrary(.{
@@ -906,7 +904,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
             for (includes) |path| {
                 tusb_api_c.addIncludePath(path);
             }
-            tusb_api_c.addSystemIncludePath(.{ .cwd_relative = arm_none_eabi_include });
             fw.app_mod.addImport("tinyusb", tusb_api_c.addModule("tinyusb_api"));
         }
     };
