@@ -47,12 +47,14 @@ const std = @import("std");
 const runtime_safety = std.debug.runtime_safety;
 
 const microzig = @import("microzig");
+pub const gpio = @import("STM32F303/gpio.zig");
+
 const SPI1 = microzig.peripherals.SPI1;
-const RCC = microzig.peripherals.RCC;
-const USART1 = microzig.peripherals.USART1;
+const RCC = microzig.chip.peripherals.RCC;
+const USART1 = microzig.chip.peripherals.USART1;
 const GPIOA = microzig.peripherals.GPIOA;
 const GPIOB = microzig.peripherals.GPIOB;
-const GPIOC = microzig.peripherals.GPIOC;
+const GPIOC = microzig.chip.peripherals.GPIOC;
 const I2C1 = microzig.peripherals.I2C1;
 
 pub const cpu = @import("cpu");
@@ -98,31 +100,6 @@ fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) voi
     reg.write(temp);
 }
 
-pub const gpio = struct {
-    pub fn set_output(comptime pin: type) void {
-        set_reg_field(RCC.AHBENR, "IOP" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
-    }
-
-    pub fn set_input(comptime pin: type) void {
-        set_reg_field(RCC.AHBENR, "IOP" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
-    }
-
-    pub fn read(comptime pin: type) microzig.gpio.State {
-        const idr_reg = pin.gpio_port.IDR;
-        const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(microzig.gpio.State, @enumFromInt(reg_value));
-    }
-
-    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
-        switch (state) {
-            .low => set_reg_field(pin.gpio_port.BRR, "BR" ++ pin.suffix, 1),
-            .high => set_reg_field(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
-        }
-    }
-};
-
 pub const uart = struct {
     pub const DataBits = enum(u4) {
         seven = 7,
@@ -144,17 +121,13 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize, comptime source_pins: microzig.uart.Pins) type {
-    if (!(index == 1)) @compileError("TODO: only USART1 is currently supported");
-    if (source_pins.tx != null or source_pins.rx != null)
-        @compileError("TODO: custom pins are not currently supported");
-
+pub fn Uart() type {
     return struct {
         parity_read_mask: u8,
 
         const Self = @This();
 
-        pub fn init(config: microzig.uart.Config) !Self {
+        pub fn init() !Self {
             // The following must all be written when the USART is disabled (UE=0).
             if (USART1.CR1.read().UE == 1)
                 @panic("Trying to initialize USART1 while it is already enabled");
@@ -164,10 +137,10 @@ pub fn Uart(comptime index: usize, comptime source_pins: microzig.uart.Pins) typ
             // enable the USART1 clock
             RCC.APB2ENR.modify(.{ .USART1EN = 1 });
             // enable GPIOC clock
-            RCC.AHBENR.modify(.{ .IOPCEN = 1 });
+            RCC.AHBENR.modify(.{ .GPIOCEN = 1 });
             // set PC4+PC5 to alternate function 7, USART1_TX + USART1_RX
-            GPIOC.MODER.modify(.{ .MODER4 = 0b10, .MODER5 = 0b10 });
-            GPIOC.AFRL.modify(.{ .AFRL4 = 7, .AFRL5 = 7 });
+            GPIOC.MODER.modify(.{ .@"MODER[4]" = .Alternate, .@"MODER[5]" = .Alternate });
+            GPIOC.AFR[0].modify(.{ .@"AFR[4]" = 7, .@"AFR[5]" = 7 });
 
             // clear USART1 configuration to its default
             USART1.CR1.raw = 0;
@@ -182,18 +155,13 @@ pub fn Uart(comptime index: usize, comptime source_pins: microzig.uart.Pins) typ
             // So M1==1 means "7-bit mode" (in which
             // "the Smartcard mode, LIN master mode and Auto baud rate [...] are not supported");
             // and M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
-            const m1: u1 = if (config.data_bits == .seven and config.parity == null) 1 else 0;
-            const m0: u1 = if (config.data_bits == .eight and config.parity != null) 1 else 0;
-            // Note that .padding0 = bit 28 = .M1 (.svd file bug?), and .M == .M0.
-            USART1.CR1.modify(.{ .padding0 = m1, .M = m0 });
+            USART1.CR1.modify(.{ .M0 = .Bit8, .M1 = .M0 });
 
             // set parity
-            if (config.parity) |parity| {
-                USART1.CR1.modify(.{ .PCE = 1, .PS = @intFromEnum(parity) });
-            } else USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
+            USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
 
             // set number of stop bits
-            USART1.CR2.modify(.{ .STOP = @intFromEnum(config.stop_bits) });
+            USART1.CR2.modify(.{ .STOP = .Stop1 });
 
             // set the baud rate
             // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
@@ -202,7 +170,7 @@ pub fn Uart(comptime index: usize, comptime source_pins: microzig.uart.Pins) typ
             // if the board doesn't configure e.g. an HSE external crystal.
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @as(u16, @intCast(@divTrunc(microzig.clock.get().apb1, config.baud_rate)));
+            const usartdiv = @as(u16, @intCast(@divTrunc(clock_frequencies.apb2, 115200)));
             USART1.BRR.raw = usartdiv;
             // Above, ignore the BRR struct fields DIV_Mantissa and DIV_Fraction,
             // those seem to be for another chipset; .svd file bug?
@@ -232,7 +200,7 @@ pub fn Uart(comptime index: usize, comptime source_pins: microzig.uart.Pins) typ
             // As documented in `init()`, M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
             // So we always mask away the 9th bit, and if parity is enabled and it is in the 8th bit,
             // then we also mask away the 8th bit.
-            return Self{ .parity_read_mask = if (cr1.PCE == 1 and cr1.M == 0) 0x7F else 0xFF };
+            return Self{ .parity_read_mask = if (cr1.PCE == 1 and cr1.M0 == .Bit8) 0x7F else 0xFF };
         }
 
         pub fn can_write(self: Self) bool {
@@ -245,7 +213,7 @@ pub fn Uart(comptime index: usize, comptime source_pins: microzig.uart.Pins) typ
 
         pub fn tx(self: Self, ch: u8) void {
             while (!self.can_write()) {} // Wait for Previous transmission
-            USART1.TDR.modify(ch);
+            USART1.TDR.modify(.{ .DR = ch });
         }
 
         pub fn txflush(_: Self) void {
