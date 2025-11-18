@@ -132,8 +132,6 @@ const rp_2040_includes = [_][]const u8{
     "src/rp2_common/pico_platform_common/include",
     "src/rp2_common/hardware_timer/include",
     "src/rp2_common/hardware_base/include",
-    "src/rp2350/hardware_regs/include",
-    "src/rp2350/hardware_structs/include",
     "src/common/pico_sync/include",
     "src/rp2_common/hardware_sync/include",
     "src/rp2_common/hardware_sync_spin_lock/include",
@@ -143,4 +141,6 @@ const rp_2040_includes = [_][]const u8{
     "src/rp2040/pico_platform/include",
     "src/rp2040/hardware_structs/include",
     "src/rp2040/hardware_regs/include",
+    "src/rp2040/hardware_regs/include",
+    "src/rp2040/hardware_structs/include",
 };
