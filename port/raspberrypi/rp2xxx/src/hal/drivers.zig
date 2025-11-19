@@ -469,8 +469,7 @@ pub const WiFi = struct {
     const Self = @This();
 
     spi: hal.Cyw43PioSpi = undefined,
-    bus: mdf.wireless.Cyw43_Bus = undefined,
-    runner: mdf.wireless.Cyw43_Runner = undefined,
+    runner: mdf.wireless.cyw43.Runner = undefined,
 
     pub const Config = struct {
         spi: hal.Cyw43PioSpi.Config = .{},
@@ -486,20 +485,18 @@ pub const WiFi = struct {
         config.pwr_pin.set_direction(.out);
         var pwr_gpio = GPIO_Device.init(config.pwr_pin);
 
-        self.bus = .{
-            .pwr_pin = pwr_gpio.digital_io(),
-            .spi = .{
-                .ptr = &self.spi,
-                .vtable = &.{
-                    .spi_read_blocking = hal.Cyw43PioSpi.read,
-                    .spi_write_blocking = hal.Cyw43PioSpi.write,
-                },
-            },
-            .internal_delay_ms = hal.time.sleep_ms,
-        };
         self.runner = .{
-            .bus = &self.bus,
-            .internal_delay_ms = hal.time.sleep_ms,
+            .bus = .{
+                .pwr_pin = pwr_gpio.digital_io(),
+                .spi = .{
+                    .ptr = &self.spi,
+                    .vtable = &.{
+                        .read = hal.Cyw43PioSpi.read,
+                        .write = hal.Cyw43PioSpi.write,
+                    },
+                },
+                .sleep_ms = hal.time.sleep_ms,
+            },
         };
 
         try self.runner.init();

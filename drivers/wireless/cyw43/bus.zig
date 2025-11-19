@@ -3,48 +3,44 @@ const mdf = @import("../../framework.zig");
 const consts = @import("consts.zig");
 const DigitalIO = mdf.base.Digital_IO;
 
-/// Callback for microsecond delays
-pub const delayus_callback = fn (delay: u32) void;
+const log = std.log.scoped(.cyw43_bus);
 
-/// SPI interface for CYW43
 pub const SpiInterface = struct {
     const Self = @This();
     ptr: *anyopaque,
     vtable: *const VTable,
 
     /// Reads data from SPI into `buffer` using `cmd`
-    pub fn spi_read_blocking(self: *Self, cmd: u32, buffer: []u32) u32 {
-        return self.vtable.spi_read_blocking(self.ptr, cmd, buffer);
+    pub fn read(self: *Self, cmd: u32, buffer: []u32) u32 {
+        return self.vtable.read(self.ptr, cmd, buffer);
     }
 
     /// Writes `buffer` to SPI.
-    pub fn spi_write_blocking2(self: *Self, cmd: u32, buffer: []const u32) u32 {
-        return self.vtable.spi_write_blocking(self.ptr, cmd, buffer);
+    pub fn write(self: *Self, cmd: u32, buffer: []const u32) u32 {
+        return self.vtable.write(self.ptr, cmd, buffer);
     }
 
     pub const VTable = struct {
-        spi_read_blocking: *const fn (*anyopaque, cmd: u32, buffer: []u32) u32,
-        spi_write_blocking: *const fn (*anyopaque, cmd: u32, buffer: []const u32) u32,
+        read: *const fn (*anyopaque, cmd: u32, buffer: []u32) u32,
+        write: *const fn (*anyopaque, cmd: u32, buffer: []const u32) u32,
     };
 };
 
 /// CYW43 bus controller (SPI + power management)
-pub const Cyw43_Bus = struct {
+pub const Bus = struct {
     const Self = @This();
-    const log = std.log.scoped(.cyw43_bus);
 
-    const TestPattern = 0x12345678;
     pwr_pin: DigitalIO,
     spi: SpiInterface,
-    internal_delay_ms: *const delayus_callback,
+    sleep_ms: *const fn (delay: u32) void,
     backplane_window: u32 = 0xAAAA_AAAA,
 
-    pub fn init_bus(self: *Self) !void {
+    pub fn init(self: *Self) !void {
         // Init sequence
         try self.pwr_pin.write(.low);
-        self.internal_delay_ms(50);
+        self.sleep_ms(50);
         try self.pwr_pin.write(.high);
-        self.internal_delay_ms(250);
+        self.sleep_ms(250);
 
         log.debug("read REG_BUS_TEST_RO", .{});
         while (true) {
@@ -65,7 +61,7 @@ pub const Cyw43_Bus = struct {
         log.debug("0b{b}", .{@as(u8, @truncate(ctrl_reg_val))});
 
         // Set 32-bit word length and keep default endianness: little endian
-        const setup_regs = Cyw43FirstFourRegs{
+        const setup_regs = FirstFourRegs{
             .ctrl = .{
                 .word_length = .word_32,
                 .endianness = .little_endian,
@@ -134,25 +130,25 @@ pub const Cyw43_Bus = struct {
     }
 
     fn readn(self: *Self, func: FuncType, addr: u17, len: u11) u32 {
-        const cmd = Cyw43Cmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = len };
+        const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = len };
         var buff = [_]u32{0} ** 2;
         // if we are reading from the backplane, we need an extra word for the response delay
         const buff_len: usize = if (func == .backplane) 2 else 1;
 
-        _ = self.spi.spi_read_blocking(@bitCast(cmd), buff[0..buff_len]);
+        _ = self.spi.read(@bitCast(cmd), buff[0..buff_len]);
 
         return if (func == .backplane) buff[1] else buff[0];
     }
 
     pub fn read_words(self: *Self, func: FuncType, addr: u17, len: u11, buffer: []u32) u32 {
-        const cmd = Cyw43Cmd{
+        const cmd = SpiCmd{
             .cmd = .read,
             .incr = .incremental,
             .func = func,
             .addr = addr,
             .len = len,
         };
-        return self.spi.spi_read_blocking(@bitCast(cmd), buffer);
+        return self.spi.read(@bitCast(cmd), buffer);
     }
 
     pub inline fn write8(self: *Self, func: FuncType, addr: u17, value: u8) void {
@@ -168,12 +164,12 @@ pub const Cyw43_Bus = struct {
     }
 
     fn writen(self: *Self, func: FuncType, addr: u17, value: u32, len: u11) void {
-        const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
-        _ = self.spi.spi_write_blocking2(@bitCast(cmd), &.{value});
+        const cmd = SpiCmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
+        _ = self.spi.write(@bitCast(cmd), &.{value});
     }
 
     pub fn write_words(self: *Self, func: FuncType, addr: u17, buffer: []u32) void {
-        const cmd = Cyw43Cmd{
+        const cmd = SpiCmd{
             .cmd = .write,
             .incr = .incremental,
             .func = func,
@@ -181,7 +177,7 @@ pub const Cyw43_Bus = struct {
             .len = @intCast((buffer.len - 1) * 4),
         };
         buffer[0] = @bitCast(cmd);
-        _ = self.spi.spi_write_blocking2(@bitCast(cmd), buffer[1..]);
+        _ = self.spi.write(@bitCast(cmd), buffer[1..]);
     }
 
     pub fn bp_read(self: *Self, addr: u32, data: []u8) void {
@@ -207,11 +203,11 @@ pub const Cyw43_Bus = struct {
 
             self.backplane_set_window(current_addr);
 
-            const cmd = Cyw43Cmd{ .cmd = .read, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
+            const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
 
             // round `buf` to word boundary, add one extra word for the response delay
             const words_to_send = (len + 3) / 4 + 1;
-            _ = self.spi.spi_read_blocking(@bitCast(cmd), buf[0..words_to_send]);
+            _ = self.spi.read(@bitCast(cmd), buf[0..words_to_send]);
 
             const u32_data_slice = buf[1..];
             var u8_buf_view = std.mem.sliceAsBytes(u32_data_slice);
@@ -276,14 +272,14 @@ pub const Cyw43_Bus = struct {
             @memcpy(std.mem.sliceAsBytes(&words)[0..len], remaining[0..len]);
             // write
             self.backplane_set_window(current_addr);
-            const cmd = Cyw43Cmd{
+            const cmd = SpiCmd{
                 .cmd = .write,
                 .incr = .incremental,
                 .func = .backplane,
                 .addr = @truncate(window_offset),
                 .len = @truncate(len),
             };
-            _ = self.spi.spi_write_blocking2(@bitCast(cmd), words[0..wlen]);
+            _ = self.spi.write(@bitCast(cmd), words[0..wlen]);
 
             current_addr += @as(u32, @intCast(len));
             remaining = remaining[len..];
@@ -332,18 +328,18 @@ pub const Cyw43_Bus = struct {
     }
 
     fn read32_swapped(self: *Self, func: FuncType, addr: u17) u32 {
-        const cmd = Cyw43Cmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
+        const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
         const cmd_swapped = swap16(@bitCast(cmd));
 
         var buff = [1]u32{0};
-        _ = self.spi.spi_read_blocking(cmd_swapped, &buff);
+        _ = self.spi.read(cmd_swapped, &buff);
 
         return swap16(buff[0]);
     }
 
     fn write32_swapped(self: *Self, func: FuncType, addr: u17, value: u32) void {
-        const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
-        _ = self.spi.spi_write_blocking2(swap16(@bitCast(cmd)), &.{swap16(value)});
+        const cmd = SpiCmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
+        _ = self.spi.write(swap16(@bitCast(cmd)), &.{swap16(value)});
     }
 
     inline fn swap16(x: u32) u32 {
@@ -361,9 +357,14 @@ const IncrMode = enum(u1) {
     incremental = 1, // Incremental burst
 };
 
-const FuncType = enum(u2) { bus = 0, backplane = 1, wlan = 2, bt = 3 };
+const FuncType = enum(u2) {
+    bus = 0,
+    backplane = 1,
+    wlan = 2,
+    bt = 3,
+};
 
-const Cyw43Cmd = packed struct(u32) {
+const SpiCmd = packed struct(u32) {
     len: u11,
     addr: u17,
     func: FuncType = .bus,
@@ -371,13 +372,25 @@ const Cyw43Cmd = packed struct(u32) {
     cmd: CmdType,
 };
 
-const CtrlWordLength = enum(u1) { word_16 = 0, word_32 = 1 };
+const CtrlWordLength = enum(u1) {
+    word_16 = 0,
+    word_32 = 1,
+};
 
-const CtrlEndianness = enum(u1) { little_endian = 0, big_endian = 1 };
+const CtrlEndianness = enum(u1) {
+    little_endian = 0,
+    big_endian = 1,
+};
 
-const CtrlSpeedMode = enum(u1) { normal = 0, high_speed = 1 };
+const CtrlSpeedMode = enum(u1) {
+    normal = 0,
+    high_speed = 1,
+};
 
-const CtrlInterruptPolarity = enum(u1) { low_polarity = 0, high_polarity = 1 };
+const CtrlInterruptPolarity = enum(u1) {
+    low_polarity = 0,
+    high_polarity = 1,
+};
 
 const CtrlReg = packed struct(u8) {
     word_length: CtrlWordLength,
@@ -399,7 +412,7 @@ const StatusEnableReg = packed struct(u8) {
     reserved1: u6 = 0,
 };
 
-const Cyw43FirstFourRegs = packed struct(u32) {
+const FirstFourRegs = packed struct(u32) {
     ctrl: CtrlReg,
     response_delay: ResponseDelay,
     status_enable: StatusEnableReg,

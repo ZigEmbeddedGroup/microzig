@@ -1,22 +1,19 @@
 const std = @import("std");
-const bus = @import("bus.zig");
 const consts = @import("consts.zig");
-const nvram = @import("nvram.zig");
+const NVRAM = @import("nvram.zig").NVRAM;
+const Bus = @import("bus.zig").Bus;
 
-/// Callback for microsecond delays
-pub const delayus_callback = fn (delay: u32) void;
+const log = std.log.scoped(.cyw43_runner);
 
-pub const Cyw43_Runner = struct {
+pub const Runner = struct {
     const Self = @This();
-    const log = std.log.scoped(.cyw43_runner);
     const chip_log = std.log.scoped(.cyw43_chip);
     chip_log_state: LogState = .{},
 
-    bus: *bus.Cyw43_Bus,
-    internal_delay_ms: *const delayus_callback,
+    bus: Bus,
 
     pub fn init(self: *Self) !void {
-        try self.bus.init_bus();
+        try self.bus.init();
 
         // Init ALP (Active Low Power) clock
         log.debug("init alp", .{});
@@ -56,8 +53,8 @@ pub const Cyw43_Runner = struct {
 
         log.debug("loading nvram", .{});
         // Round up to 4 bytes.
-        const nvram_len = (nvram.NVRAM.len + 3) / 4 * 4;
-        self.bus.bp_write(ram_addr + CYW43439_Chip.chip_ram_size - 4 - nvram_len, nvram.NVRAM);
+        const nvram_len = (NVRAM.len + 3) / 4 * 4;
+        self.bus.bp_write(ram_addr + CYW43439_Chip.chip_ram_size - 4 - nvram_len, NVRAM);
 
         const nvram_len_words = nvram_len / 4;
         const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
@@ -119,7 +116,7 @@ pub const Cyw43_Runner = struct {
         self.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, 0);
         _ = self.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
 
-        self.internal_delay_ms(1);
+        self.sleep_ms(1);
 
         self.bus.bp_write8(base + consts.AI_RESETCTRL_OFFSET, consts.AI_RESETCTRL_BIT_RESET);
         _ = self.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
@@ -135,12 +132,12 @@ pub const Cyw43_Runner = struct {
 
         self.bus.bp_write8(base + consts.AI_RESETCTRL_OFFSET, 0);
 
-        self.internal_delay_ms(1);
+        self.sleep_ms(1);
 
         self.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_CLOCK_EN);
         _ = self.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
 
-        self.internal_delay_ms(1);
+        self.sleep_ms(1);
     }
 
     fn core_is_up(self: *Self, core: Core) bool {
@@ -273,7 +270,7 @@ pub const Cyw43_Runner = struct {
         var rsp: ioctl.Response = .empty;
 
         while (true) {
-            self.internal_delay_ms(10);
+            self.sleep_ms(10);
             rsp = .empty;
             const len = self.event_get_rsp(rsp.asU32());
             if (len == 0) {
@@ -288,6 +285,10 @@ pub const Cyw43_Runner = struct {
             log.debug("read_response ioctl: {}", .{rsp.ioctl()});
             log.debug("read_response data:  {x}", .{rsp.data(data_len)});
         }
+    }
+
+    fn sleep_ms(self: *Self, delay: u32) void {
+        self.bus.sleep_ms(delay);
     }
 
     pub fn run(self: *Self) void {
