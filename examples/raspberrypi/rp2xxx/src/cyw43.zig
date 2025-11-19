@@ -34,19 +34,20 @@ pub fn main() !void {
     //cyw43.test_loop();
 
     // enable led by wifi regs
-    wifi.runner.bus.bp_write32(0x18000000 + 0x68, 1);
+    // wifi.runner.bus.bp_write32(0x18000000 + 0x68, 1);
 
     var on: u32 = 1;
     wifi.runner.read_clmver();
     wifi.runner.read_mac();
     while (true) {
         time.sleep_ms(500);
-        log.info("led_on: {}", .{on});
         // toggle led by sending command
-        //wifi.runner.led_on(on == 1);
+        wifi.runner.led_on(on == 1);
         on = if (on == 1) 0 else 1;
 
         // toggle led by using wifi regs
-        wifi.runner.bus.bp_write32(0x18000000 + 0x64, on);
+        //wifi.runner.bus.bp_write32(0x18000000 + 0x64, on);
     }
 }
+
+// wifi.led.put()

@@ -174,7 +174,7 @@ pub const Bus = struct {
             .incr = .incremental,
             .func = func,
             .addr = addr,
-            .len = @intCast((buffer.len - 1) * 4),
+            .len = @intCast((buffer.len) * 4),
         };
         _ = self.spi.write(@bitCast(cmd), buffer);
     }

@@ -222,10 +222,10 @@ pub const Runner = struct {
                 //     log.debug("response word {} {x}", .{ i, w });
                 // }
             } else {
-                // // ..or clear interrupt, and discard data
-                // self.bus.write8(.backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
-                // const v = self.bus.read16(.bus, consts.REG_BUS_INTERRUPT);
-                // self.bus.write16(.bus, consts.REG_BUS_INTERRUPT, v);
+                // ..or clear interrupt, and discard data
+                self.bus.write8(.backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
+                const v = self.bus.read16(.bus, consts.REG_BUS_INTERRUPT);
+                self.bus.write16(.bus, consts.REG_BUS_INTERRUPT, v);
             }
             return rxlen;
         }

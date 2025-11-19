@@ -96,27 +96,27 @@ pub const Request = extern struct {
 
         tx_seq +|= 1;
         ioctl_reqid +|= 1;
-        var rsp = std.mem.zeroes(Self);
-        rsp.bus = .{
+        var req = std.mem.zeroes(Self);
+        req.bus = .{
             .len = txlen,
             .notlen = ~txlen,
             .seq = tx_seq,
             .chan = .control,
             .hdrlen = @sizeOf(BusHeader),
         };
-        rsp.hdr = .{
+        req.hdr = .{
             .cmd = cmd,
             .outlen = txdlen,
             .id = ioctl_reqid,
             .flags = if (set) 0x02 else 0,
         };
         if (name.len > 0) {
-            @memcpy(rsp.data[0..name.len], name);
+            @memcpy(req.data[0..name.len], name);
         }
         if (data.len > 0 and set) {
-            @memcpy(rsp.data[name.len + 1 ..][0..data.len], data);
+            @memcpy(req.data[name.len + 1 ..][0..data.len], data);
         }
-        return rsp;
+        return req;
     }
 
     pub fn as_slice(self: *Self) []u32 {
