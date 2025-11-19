@@ -39,6 +39,10 @@ pub const Pio = enum(u1) {
     pub const get_sm_regs = PioImpl.get_sm_regs;
     pub const get_irq_regs = PioImpl.get_irq_regs;
     pub const sm_set_clkdiv = PioImpl.sm_set_clkdiv;
+    pub fn get_gpio_base(self: Pio) u32 {
+        _ = self;
+        return 0;
+    }
     pub const sm_set_exec_options = PioImpl.sm_set_exec_options;
 
     pub fn sm_set_shift_options(self: Pio, sm: common.StateMachine, options: common.ShiftOptions(.RP2040)) void {

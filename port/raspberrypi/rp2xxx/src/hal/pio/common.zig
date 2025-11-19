@@ -209,8 +209,9 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             } else error.NoSpace;
         }
 
-        pub fn set_input_sync_bypass(self: EnumType, pin: u5) void {
-            const mask = @as(u32, 1) << pin;
+        pub fn set_input_sync_bypass(self: EnumType, pin: gpio.Pin) void {
+            // TODO: Pin is a u16 to support rp2350. What happens on that chip if they use a high pin?
+            const mask = @as(u32, 1) << @intFromEnum(pin);
             var val = self.get_regs().INPUT_SYNC_BYPASS.raw;
             val |= mask;
             self.get_regs().INPUT_SYNC_BYPASS.write_raw(val);
@@ -242,7 +243,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
         fn pin_to_index(self: EnumType, pin: gpio.Pin) error{InvalidPin}!u5 {
             const index = @intFromEnum(pin);
-            const base = (0x10 & self.get_regs().GPIOBASE.raw);
+            const base = self.get_gpio_base();
             if (index < base or index >= base + 32) {
                 return error.InvalidPin;
             }
