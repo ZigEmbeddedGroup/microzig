@@ -11,6 +11,8 @@ const drivers = microzig.hal.drivers;
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
+const log = std.log.scoped(.main);
+
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
@@ -38,13 +40,13 @@ pub fn main() !void {
     wifi.runner.read_clmver();
     wifi.runner.read_mac();
     while (true) {
-        time.sleep_ms(1000);
+        time.sleep_ms(500);
+        log.info("led_on: {}", .{on});
+        // toggle led by sending command
+        //wifi.runner.led_on(on == 1);
         on = if (on == 1) 0 else 1;
 
-        // toggle led by sending command
-        wifi.runner.led_on(on == 1);
-
         // toggle led by using wifi regs
-        // cyw43.cyw43_runner.bus.bp_write32(0x18000000 + 0x64, on);
+        wifi.runner.bus.bp_write32(0x18000000 + 0x64, on);
     }
 }

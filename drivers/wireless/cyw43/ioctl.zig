@@ -51,8 +51,9 @@ pub const BcdHeader = extern struct {
 pub const Response = extern struct {
     const Self = @This();
     pub const min_len = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
+    pub const empty = std.mem.zeroes(Response);
 
-    bus: BusHeader,
+    bus: BusHeader align(4),
     buffer: [IOCTL_MAX_BLKLEN - @sizeOf(BusHeader)]u8,
 
     pub fn ioctl_pos(self: *Self) usize {
@@ -73,24 +74,23 @@ pub const Response = extern struct {
         return &.{};
     }
 
-    pub fn asU32(self: *Self) []u32 {
-        var buf: []u32 = undefined;
-        buf.ptr = @ptrCast(@alignCast(self));
-        buf.len = @intCast(@sizeOf(Self) / 4);
-        return buf;
+    pub fn as_slice(self: *Self) []u32 {
+        return mem.bytesAsSlice(u32, mem.asBytes(self));
+        // var buf: []u32 = undefined;
+        // buf.ptr = @ptrCast(@alignCast(self));
+        // buf.len = @intCast(@sizeOf(Self) / 4);
+        // return buf;
     }
-    pub const empty = std.mem.zeroes(Response);
 };
 
-pub const WriteMsg = extern struct {
+pub const Request = extern struct {
     const Self = @This();
-    cmd_hdr: u32, // TODO vidi moze li bez ovoga, tako da posaljem prvo cmd, a onda ovaj cmd
-    bus: BusHeader,
+    bus: BusHeader align(4),
     hdr: IoctlHeader,
-    data: [IOCTL_MAX_BLKLEN - @sizeOf(BusHeader) - @sizeOf(IoctlHeader) - @sizeOf(u32)]u8,
+    data: [IOCTL_MAX_BLKLEN - @sizeOf(BusHeader) - @sizeOf(IoctlHeader)]u8,
 
     pub fn init(cmd: IoctlHeader.Cmd, name: []const u8, set: bool, data: []const u8) Self {
-        const txdlen: u16 = @intCast(((name.len + 1 + data.len + 3) / 4) * 4);
+        const txdlen: u16 = @intCast(((name.len + 1 + data.len + 3) / 4) * 4); // name has 0 sentinel that's why (+1)
         const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
         const txlen: u16 = hdrlen + txdlen;
 
@@ -119,65 +119,66 @@ pub const WriteMsg = extern struct {
         return rsp;
     }
 
-    pub fn asU32(self: *Self) []u32 {
-        var buf: []u32 = undefined;
-        buf.ptr = @ptrCast(@alignCast(self));
-        buf.len = @intCast(self.bus.len / 4 + 1);
-        return buf;
+    pub fn as_slice(self: *Self) []u32 {
+        return mem.bytesAsSlice(u32, mem.asBytes(self)[0..self.bus.len]);
+        // var buf: []u32 = undefined;
+        // buf.ptr = @ptrCast(@alignCast(self));
+        // buf.len = @intCast(self.bus.len / 4);
+        // return buf;
     }
 };
 
-pub const Msg = extern struct {
-    const min_len = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
+// pub const Msg = extern struct {
+//     const min_len = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
 
-    bus: BusHeader,
-    hdr: IoctlHeader,
-    data: [IOCTL_MAX_BLKLEN]u8,
+//     bus: BusHeader,
+//     hdr: IoctlHeader,
+//     data: [IOCTL_MAX_BLKLEN]u8,
 
-    pub const empty = std.mem.zeroes(Msg);
+//     pub const empty = std.mem.zeroes(Msg);
 
-    pub fn initRead(cmd: IoctlHeader.Cmd, name: []const u8, data: []const u8) Msg {
-        return init(cmd, name, data);
-    }
+//     pub fn initRead(cmd: IoctlHeader.Cmd, name: []const u8, data: []const u8) Msg {
+//         return init(cmd, name, data);
+//     }
 
-    pub fn initWrite(cmd: IoctlHeader.Cmd, name: []const u8, data: []const u8) Msg {
-        var ioctl = init(cmd, name, data);
-        ioctl.flags |= 2;
-        if (data.len > 0) {
-            @memcpy(ioctl.data[name.len + 1 ..][0..data.len], data);
-        }
-        return ioctl;
-    }
+//     pub fn initWrite(cmd: IoctlHeader.Cmd, name: []const u8, data: []const u8) Msg {
+//         var ioctl = init(cmd, name, data);
+//         ioctl.flags |= 2;
+//         if (data.len > 0) {
+//             @memcpy(ioctl.data[name.len + 1 ..][0..data.len], data);
+//         }
+//         return ioctl;
+//     }
 
-    fn init(cmd: IoctlHeader.Cmd, name: []const u8, data: []const u8) Msg {
-        const txdlen: u16 = @intCast(((name.len + data.len + 3) / 4) * 4);
-        const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
-        const txlen: u16 = hdrlen + txdlen;
+//     fn init(cmd: IoctlHeader.Cmd, name: []const u8, data: []const u8) Msg {
+//         const txdlen: u16 = @intCast(((name.len + data.len + 3) / 4) * 4);
+//         const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
+//         const txlen: u16 = hdrlen + txdlen;
 
-        tx_seq +|= 1;
-        ioctl_reqid +|= 1;
-        var ioctl = std.mem.zeroes(Msg);
-        ioctl.bus = .{
-            .len = txlen,
-            .notlen = ~txlen,
-            .seq = tx_seq,
-            .chan = .control,
-            .hdrlen = @sizeOf(BusHeader),
-        };
-        ioctl.hdr = .{
-            .cmd = cmd,
-            .outlen = txdlen,
-            .id = ioctl_reqid,
-        };
-        if (name.len > 0) {
-            @memcpy(ioctl.data[0..name.len], name);
-        }
-        // if (write and data.len > 0) {
-        //     @memcpy(ioctl.data[name.len..][0..data.len], data);
-        // }
-        return ioctl;
-    }
-};
+//         tx_seq +|= 1;
+//         ioctl_reqid +|= 1;
+//         var ioctl = std.mem.zeroes(Msg);
+//         ioctl.bus = .{
+//             .len = txlen,
+//             .notlen = ~txlen,
+//             .seq = tx_seq,
+//             .chan = .control,
+//             .hdrlen = @sizeOf(BusHeader),
+//         };
+//         ioctl.hdr = .{
+//             .cmd = cmd,
+//             .outlen = txdlen,
+//             .id = ioctl_reqid,
+//         };
+//         if (name.len > 0) {
+//             @memcpy(ioctl.data[0..name.len], name);
+//         }
+//         // if (write and data.len > 0) {
+//         //     @memcpy(ioctl.data[name.len..][0..data.len], data);
+//         // }
+//         return ioctl;
+//     }
+// };
 
 test "write command" {
     {
@@ -185,14 +186,14 @@ test "write command" {
 
         tx_seq = 2;
         ioctl_reqid = 2;
-        var msg = WriteMsg.init(.get_var, "cur_etheraddr", false, &mac);
+        var req = Request.init(.get_var, "cur_etheraddr", false, &mac);
 
         const expected = &hexToBytes("3000CFFF0300000C00000000060100001400000000000300000000006375725F65746865726164647200000000000000");
-        const buf = mem.asBytes(&msg)[4..][0..msg.bus.len];
+        const buf = mem.asBytes(&req)[0..req.bus.len];
         try std.testing.expectEqualSlices(u8, expected, buf);
 
         try testing.expectEqual(48, expected.len);
-        try testing.expectEqual(48 / 4 + 1, msg.asU32().len);
+        try testing.expectEqual(48 / 4, req.as_slice().len);
     }
     {
         tx_seq = 6;
@@ -201,20 +202,10 @@ test "write command" {
         var data: [8]u8 = @splat(0);
         data[0] = 1;
         data[4] = 1;
-        var req = WriteMsg.init(.set_var, "gpioout", true, &data);
-        const buf = mem.asBytes(&req)[4..][0..req.bus.len];
+        var req = Request.init(.set_var, "gpioout", true, &data);
+        const buf = mem.asBytes(&req)[0..req.bus.len];
         try std.testing.expectEqualSlices(u8, expected, buf);
-        //std.debug.print("buf: {x}", .{buf});
     }
-
-    // std.debug.print("{x}\n", .{buf});
-    // for (msg.asU32()) |w| {
-    //     std.debug.print("{x}\n", .{w});
-    // }
-    // std.debug.print("len: {x} {} {x}\n", .{ msg.bus.len, msg.bus.len / 4, msg.bus.notlen });
-
-    // std.debug.print("BusHeader: {}\n", .{@sizeOf(BusHeader)});
-    // std.debug.print("IoctlHeader: {}\n", .{@sizeOf(IoctlHeader)});
 }
 
 test "parse response" {

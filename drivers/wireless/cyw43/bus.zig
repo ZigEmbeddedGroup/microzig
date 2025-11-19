@@ -176,8 +176,7 @@ pub const Bus = struct {
             .addr = addr,
             .len = @intCast((buffer.len - 1) * 4),
         };
-        buffer[0] = @bitCast(cmd);
-        _ = self.spi.write(@bitCast(cmd), buffer[1..]);
+        _ = self.spi.write(@bitCast(cmd), buffer);
     }
 
     pub fn bp_read(self: *Self, addr: u32, data: []u8) void {
