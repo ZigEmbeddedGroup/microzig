@@ -14,22 +14,17 @@ pub const Cyw43_Spi = struct {
 
     /// Reads data from SPI into `buffer` using `cmd`
     pub fn spi_read_blocking(self: *Self, cmd: u32, buffer: []u32) u32 {
-        return self.vtable.spi_read_blocking_fn(self.ptr, cmd, buffer);
+        return self.vtable.spi_read_blocking(self.ptr, cmd, buffer);
     }
 
     /// Writes `buffer` to SPI.
-    pub fn spi_write_blocking(self: *Self, buffer: []const u32) u32 {
-        return self.vtable.spi_write_blocking_fn(self.ptr, buffer);
-    }
-
     pub fn spi_write_blocking2(self: *Self, cmd: u32, buffer: []const u32) u32 {
-        return self.vtable.spi_write_blocking_fn2(self.ptr, cmd, buffer);
+        return self.vtable.spi_write_blocking(self.ptr, cmd, buffer);
     }
 
     pub const VTable = struct {
-        spi_read_blocking_fn: *const fn (*anyopaque, cmd: u32, buffer: []u32) u32,
-        spi_write_blocking_fn: *const fn (*anyopaque, buffer: []const u32) u32,
-        spi_write_blocking_fn2: *const fn (*anyopaque, cmd: u32, buffer: []const u32) u32,
+        spi_read_blocking: *const fn (*anyopaque, cmd: u32, buffer: []u32) u32,
+        spi_write_blocking: *const fn (*anyopaque, cmd: u32, buffer: []const u32) u32,
     };
 };
 
@@ -174,8 +169,7 @@ pub const Cyw43_Bus = struct {
 
     fn writen(self: *Self, func: FuncType, addr: u17, value: u32, len: u11) void {
         const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
-
-        _ = self.spi.spi_write_blocking(&[_]u32{ @bitCast(cmd), value });
+        _ = self.spi.spi_write_blocking2(@bitCast(cmd), &.{value});
     }
 
     pub fn write_words(self: *Self, func: FuncType, addr: u17, buffer: []u32) void {
@@ -267,32 +261,32 @@ pub const Cyw43_Bus = struct {
         // To simplify, enforce 4-align for now.
         std.debug.assert(addr % 4 == 0);
 
-        var buf: [consts.BACKPLANE_MAX_TRANSFER_SIZE / 4 + 1]u32 = undefined;
+        // write buffer in words
+        var words: [consts.BACKPLANE_MAX_TRANSFER_SIZE / 4]u32 = undefined;
 
         var current_addr = addr;
-        var remaining_data = data;
+        var remaining = data;
+        while (remaining.len > 0) {
+            const window_offset = current_addr & consts.BACKPLANE_ADDRESS_MASK;
+            const window_remaining = consts.BACKPLANE_WINDOW_SIZE - @as(usize, @intCast(window_offset));
+            const len: usize = @min(remaining.len, consts.BACKPLANE_MAX_TRANSFER_SIZE, window_remaining);
+            const wlen = (len + 3) / 4; // len in words
 
-        while (remaining_data.len > 0) {
-            const window_offs = current_addr & consts.BACKPLANE_ADDRESS_MASK;
-            const window_remaining = consts.BACKPLANE_WINDOW_SIZE - @as(usize, @intCast(window_offs));
-
-            const len: usize = @min(remaining_data.len, consts.BACKPLANE_MAX_TRANSFER_SIZE, window_remaining);
-
-            const u32_data_slice = buf[1..];
-            var u8_buf_view = std.mem.sliceAsBytes(u32_data_slice);
-
-            @memcpy(u8_buf_view[0..len], remaining_data[0..len]);
-
+            // copy to words buffer
+            @memcpy(std.mem.sliceAsBytes(&words)[0..len], remaining[0..len]);
+            // write
             self.backplane_set_window(current_addr);
-
-            const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
-            buf[0] = @bitCast(cmd);
-
-            const words_to_send = (len + 3) / 4 + 1;
-            _ = self.spi.spi_write_blocking(buf[0..words_to_send]);
+            const cmd = Cyw43Cmd{
+                .cmd = .write,
+                .incr = .incremental,
+                .func = .backplane,
+                .addr = @truncate(window_offset),
+                .len = @truncate(len),
+            };
+            _ = self.spi.spi_write_blocking2(@bitCast(cmd), words[0..wlen]);
 
             current_addr += @as(u32, @intCast(len));
-            remaining_data = remaining_data[len..];
+            remaining = remaining[len..];
         }
     }
 
@@ -349,9 +343,7 @@ pub const Cyw43_Bus = struct {
 
     fn write32_swapped(self: *Self, func: FuncType, addr: u17, value: u32) void {
         const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
-
-        var buff: [2]u32 = .{ swap16(@bitCast(cmd)), swap16(value) };
-        _ = self.spi.spi_write_blocking(&buff);
+        _ = self.spi.spi_write_blocking2(swap16(@bitCast(cmd)), &.{swap16(value)});
     }
 
     inline fn swap16(x: u32) u32 {
