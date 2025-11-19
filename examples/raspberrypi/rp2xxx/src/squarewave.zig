@@ -35,10 +35,7 @@ pub fn main() !void {
     pio.sm_load_and_start_program(sm, squarewave_program, .{
         .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(125),
         .pin_mappings = .{
-            .set = .{
-                .base = 2,
-                .count = 1,
-            },
+            .set = .single(pin),
         },
     }) catch unreachable;
 

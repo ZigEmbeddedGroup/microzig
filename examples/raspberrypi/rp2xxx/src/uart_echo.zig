@@ -26,14 +26,15 @@ pub fn main() !void {
     var data: [1]u8 = .{0};
     while (true) {
         // Read one byte, timeout disabled
-        uart.read_blocking(&data, null) catch {
+        uart.read_blocking(&data, .no_deadline) catch {
             // You need to clear UART errors before making a new transaction
             uart.clear_errors();
             continue;
         };
 
         //tries to write one byte with 100ms timeout
-        uart.write_blocking(&data, time.Duration.from_ms(100)) catch {
+        const now = rp2xxx.time.get_time_since_boot();
+        uart.write_blocking(&data, .init_relative(now, .from_ms(100))) catch {
             uart.clear_errors();
         };
         // Toggle the led every time we think we've received a character so we
