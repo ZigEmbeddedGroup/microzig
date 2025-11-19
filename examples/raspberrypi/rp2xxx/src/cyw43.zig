@@ -43,12 +43,20 @@ pub fn main() !void {
     // Eventually, this will be replaced by a dedicated driver task/thread.
     //cyw43.test_loop();
 
+    // enable led by wifi regs
     cyw43.cyw43_runner.bus.bp_write32(0x18000000 + 0x68, 1);
+
     var on: u32 = 1;
+    cyw43.cyw43_runner.read_clmver();
+    cyw43.cyw43_runner.read_mac();
     while (true) {
-        cyw43.cyw43_runner.bus.bp_write32(0x18000000 + 0x64, on);
-        //cyw43.cyw43_runner.bus.write32(.backplane, 0x68, on);
-        on = if (on == 1) 0 else 1;
         time.sleep_ms(1000);
+        on = if (on == 1) 0 else 1;
+
+        // toggle led by sending command
+        cyw43.cyw43_runner.led_on(on == 1);
+
+        // toggle led by using wifi regs
+        // cyw43.cyw43_runner.bus.bp_write32(0x18000000 + 0x64, on);
     }
 }

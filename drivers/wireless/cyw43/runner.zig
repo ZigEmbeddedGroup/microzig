@@ -208,6 +208,88 @@ pub const Cyw43_Runner = struct {
         }
     }
 
+    pub fn event_get_rsp(self: *Self, data: []u32) u32 {
+        const val: u32 = self.bus.read32(.bus, consts.REG_BUS_STATUS);
+        log.debug("event_get_rsp {x} {}", .{ val, val & consts.STATUS_F2_PKT_AVAILABLE > 0 });
+        if (val != 0xffff and val & consts.STATUS_F2_PKT_AVAILABLE > 0) {
+            const rxlen = (val & consts.STATUS_F2_PKT_LEN_MASK) >> consts.STATUS_F2_PKT_LEN_SHIFT;
+            if (rxlen > 0) {
+                // Read event data if present
+                const bytes_len: usize = @min(rxlen, data.len * 4);
+                const words_len: usize = (@as(usize, @intCast(bytes_len)) + 3) / 4;
+                const rsp = self.bus.read_words(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
+
+                log.debug("event_get_rsp read_words status: {x} rxlen: {} bytes_len: {} data.len: {} words_len: {}", .{ rsp, rxlen, bytes_len, data.len, words_len });
+                // for (data[0..words_len], 0..) |w, i| {
+                //     log.debug("response word {} {x}", .{ i, w });
+                // }
+            } else {
+                // // ..or clear interrupt, and discard data
+                // self.bus.write8(.backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
+                // const v = self.bus.read16(.bus, consts.REG_BUS_INTERRUPT);
+                // self.bus.write16(.bus, consts.REG_BUS_INTERRUPT, v);
+            }
+            return rxlen;
+        }
+        return 0;
+    }
+    pub fn read_clmver(self: *Self) void {
+        const data: [300]u8 = undefined;
+
+        const ioctl = @import("ioctl.zig");
+        var msg = ioctl.WriteMsg.init(.get_var, "clmver", false, &data);
+
+        var buf: []u32 = undefined;
+        buf.ptr = @ptrCast(&msg);
+        buf.len = @intCast(1 + msg.bus.len / 4);
+        self.bus.write_words(.wlan, 0, buf);
+
+        self.read_response(300);
+    }
+
+    pub fn read_mac(self: *Self) void {
+        const mac: [6]u8 = undefined;
+
+        const ioctl = @import("ioctl.zig");
+        var req = ioctl.WriteMsg.init(.get_var, "cur_etheraddr", false, &mac);
+        self.bus.write_words(.wlan, 0, req.asU32());
+        self.read_response(6);
+    }
+
+    pub fn led_on(self: *Self, on: bool) void {
+        var data: [8]u8 = @splat(0);
+        data[0] = 1;
+        if (on) {
+            data[4] = 1;
+        }
+        const ioctl = @import("ioctl.zig");
+        var req = ioctl.WriteMsg.init(.set_var, "gpioout", true, &data);
+        self.bus.write_words(.wlan, 0, req.asU32());
+        self.read_response(0);
+    }
+
+    pub fn read_response(self: *Self, data_len: usize) void {
+        const ioctl = @import("ioctl.zig");
+        var rsp: ioctl.Response = .empty;
+
+        while (true) {
+            self.internal_delay_ms(10);
+            rsp = .empty;
+            const len = self.event_get_rsp(rsp.asU32());
+            if (len == 0) {
+                break;
+            }
+            log.debug("read_response len:    {}", .{len});
+            log.debug("read_response buffer: {x}", .{std.mem.asBytes(&rsp)[0..len]});
+            log.debug("read_response bus:    {}", .{rsp.bus});
+            if (rsp.bus.len ^ rsp.bus.notlen != 0xffff) {
+                continue;
+            }
+            log.debug("read_response ioctl: {}", .{rsp.ioctl()});
+            log.debug("read_response data:  {x}", .{rsp.data(data_len)});
+        }
+    }
+
     pub fn run(self: *Self) void {
         while (true) {
             self.log_read();

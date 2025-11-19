@@ -71,8 +71,10 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     config.clk_pin.set_slew_rate(.fast);
 
     try config.pio.sm_load_and_start_program(sm, cyw43spi_program, .{
-        // Default max value from pico-sdk 62.5Mhz
-        .clkdiv = .{ .int = 2, .frac = 0 },
+        // TODO: int = 2 gives 62.5Mhz on pico, but it is too much on pico2
+        // This should depend on pico/pico2: 2/3
+        // 50MHz i recomended by datasheet
+        .clkdiv = .{ .int = 3, .frac = 0 },
         .pin_mappings = .{
             .out = .single(config.io_pin),
             .set = .single(config.io_pin),
@@ -102,6 +104,12 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     };
 }
 
+fn to_pio_pin_num(pin: hal.gpio.Pin) u5 {
+    return @truncate(@intFromEnum(pin));
+}
+
+// By default it sends status after each read/write.
+// ref: datasheet 'Table 6. gSPI Registers' status enable has default 1
 pub const Cyw43PioSpi = struct {
     const Self = @This();
 
@@ -123,6 +131,13 @@ pub const Cyw43PioSpi = struct {
         defer self.cs_pin.put(1);
 
         return self.write_blocking(buffer);
+    }
+
+    pub fn spi_write_blocking2(self: *Self, cmd: u32, buffer: []const u32) u32 {
+        self.cs_pin.put(0);
+        defer self.cs_pin.put(1);
+
+        return self.write_blocking2(cmd, buffer);
     }
 
     fn read_blocking(self: *Self, cmd: u32, buffer: []u32) u32 {
@@ -217,6 +232,54 @@ pub const Cyw43PioSpi = struct {
         return status;
     }
 
+    fn write_blocking2(self: *Self, cmd: u32, buffer: []const u32) u32 {
+        self.pio.sm_set_enabled(self.sm, false);
+
+        const write_bits = buffer.len * 32 + 32 - 1;
+        const read_bits = 32 - 1;
+
+        self.pio.sm_exec_set_x(self.sm, write_bits);
+        self.pio.sm_exec_set_y(self.sm, read_bits);
+        self.pio.sm_exec_set_pindir(self.sm, 0b1);
+        self.pio.sm_exec_jmp(self.sm, cyw43spi_program.wrap_target.?);
+
+        self.pio.sm_set_enabled(self.sm, true);
+
+        const dma_ch = hal.dma.claim_unused_channel().?;
+        defer dma_ch.unclaim();
+
+        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{
+            .trigger = true,
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = true,
+            .write_increment = false,
+            .dreq = self.get_pio_tx_dreq(),
+        });
+        dma_ch.wait_for_finish_blocking();
+
+        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(buffer.ptr), buffer.len, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = true,
+            .write_increment = false,
+            .dreq = self.get_pio_tx_dreq(),
+        });
+        dma_ch.wait_for_finish_blocking();
+
+        var status: u32 = 0;
+        dma_ch.setup_transfer_raw(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = false,
+            .write_increment = true,
+            .dreq = self.get_pio_rx_dreq(),
+        });
+        dma_ch.wait_for_finish_blocking();
+
+        return status;
+    }
+
     inline fn get_pio_tx_fifo_addr(self: *Self) u32 {
         return @intFromPtr(self.pio.sm_get_tx_fifo(self.sm));
     }
@@ -244,6 +307,7 @@ pub const Cyw43PioSpi = struct {
     const vtable = Cyw43_Spi.VTable{
         .spi_read_blocking_fn = spi_read_blocking_fn,
         .spi_write_blocking_fn = spi_write_blocking_fn,
+        .spi_write_blocking_fn2 = spi_write_blocking_fn2,
     };
 
     fn spi_read_blocking_fn(spi: *anyopaque, cmd: u32, buffer: []u32) u32 {
@@ -254,5 +318,10 @@ pub const Cyw43PioSpi = struct {
     fn spi_write_blocking_fn(spi: *anyopaque, buffer: []const u32) u32 {
         const cyw43spi: *Self = @ptrCast(@alignCast(spi));
         return cyw43spi.spi_write_blocking(buffer);
+    }
+
+    fn spi_write_blocking_fn2(spi: *anyopaque, cmd: u32, buffer: []const u32) u32 {
+        const cyw43spi: *Self = @ptrCast(@alignCast(spi));
+        return cyw43spi.spi_write_blocking2(cmd, buffer);
     }
 };

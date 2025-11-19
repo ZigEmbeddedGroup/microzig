@@ -22,9 +22,14 @@ pub const Cyw43_Spi = struct {
         return self.vtable.spi_write_blocking_fn(self.ptr, buffer);
     }
 
+    pub fn spi_write_blocking2(self: *Self, cmd: u32, buffer: []const u32) u32 {
+        return self.vtable.spi_write_blocking_fn2(self.ptr, cmd, buffer);
+    }
+
     pub const VTable = struct {
         spi_read_blocking_fn: *const fn (*anyopaque, cmd: u32, buffer: []u32) u32,
         spi_write_blocking_fn: *const fn (*anyopaque, buffer: []const u32) u32,
+        spi_write_blocking_fn2: *const fn (*anyopaque, cmd: u32, buffer: []const u32) u32,
     };
 };
 
@@ -144,6 +149,17 @@ pub const Cyw43_Bus = struct {
         return if (func == .backplane) buff[1] else buff[0];
     }
 
+    pub fn read_words(self: *Self, func: FuncType, addr: u17, len: u11, buffer: []u32) u32 {
+        const cmd = Cyw43Cmd{
+            .cmd = .read,
+            .incr = .incremental,
+            .func = func,
+            .addr = addr,
+            .len = len,
+        };
+        return self.spi.spi_read_blocking(@bitCast(cmd), buffer);
+    }
+
     pub inline fn write8(self: *Self, func: FuncType, addr: u17, value: u8) void {
         return self.writen(func, addr, value, 1);
     }
@@ -160,6 +176,18 @@ pub const Cyw43_Bus = struct {
         const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
 
         _ = self.spi.spi_write_blocking(&[_]u32{ @bitCast(cmd), value });
+    }
+
+    pub fn write_words(self: *Self, func: FuncType, addr: u17, buffer: []u32) void {
+        const cmd = Cyw43Cmd{
+            .cmd = .write,
+            .incr = .incremental,
+            .func = func,
+            .addr = addr,
+            .len = @intCast((buffer.len - 1) * 4),
+        };
+        buffer[0] = @bitCast(cmd);
+        _ = self.spi.spi_write_blocking2(@bitCast(cmd), buffer[1..]);
     }
 
     pub fn bp_read(self: *Self, addr: u32, data: []u8) void {
