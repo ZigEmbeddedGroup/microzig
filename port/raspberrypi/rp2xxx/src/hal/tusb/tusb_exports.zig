@@ -29,11 +29,6 @@ export fn strlen(str: [*c]const u8) c_uint {
 export fn tusb_time_millis_api() c_uint {
     return @truncate(time.get_time_since_boot().to_us() * 1000);
 }
-// TODO: not sure what this is use for but build complains without it.
-// Only when enabling tusb logging
-// #define CFG_TUSB_DEBUG_PRINTF printf_
-// #define CFG_TUSB_DEBUG 3
-export const _ctype_: u8 = undefined;
 
 export fn rp2040_chip_version() c_uint {
     const chip_id = peripherals.SYSINFO.CHIP_ID.read();
@@ -41,12 +36,9 @@ export fn rp2040_chip_version() c_uint {
     return @intCast(chip_id.REVISION);
 }
 
-pub fn irq_handler() callconv(.c) void {
-    if (handler_p) |h| {
+pub fn irq_handler() linksection(".ram_text") callconv(.c) void {
+    if (handler_p) |h|
         h();
-    } else {
-        std.log.warn("Interrupt called without handler", .{});
-    }
 }
 
 //void irq_add_shared_handler(uint num, irq_handler_t handler, uint8_t order_priority);
@@ -80,5 +72,5 @@ export fn irq_set_enabled(num: c_uint, enabled: bool) void {
 // void __weak hard_assertion_failure(void) {
 export fn hard_assertion_failure() void {
     std.log.err("Probably hw_endpoint_alloc failed", .{});
-    @panic("Hard assertion Failed!");
+    @panic("TUSB: Hard assertion Failed!");
 }
