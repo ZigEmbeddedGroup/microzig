@@ -41,9 +41,21 @@ pub const AnalogMode = enum(u2) {
     _,
 };
 
-pub const AlternateFunction = enum(u2) {
-    //todo
-    _,
+pub const AF = enum(u4) {
+    AF0,
+    AF1,
+    AF2,
+    AF3,
+    AF4,
+    AF5,
+    AF6,
+    AF7,
+};
+
+pub const AlternateFunction = struct {
+    afr: AF,
+    resistor: PUPDR = .Floating,
+    o_type: OT = .PushPull,
 };
 
 // TODO Check the manual
@@ -63,6 +75,7 @@ pub const Pin = enum(usize) {
         const port = gpio.get_port();
         const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
         const modMask: u32 = @as(u32, 0b11) << (pin << 1);
+        const afrMask: u32 = @as(u32, 0b1111) << ((pin % 8) << 2);
 
         switch (mode) {
             .input => |imode| {
@@ -75,11 +88,17 @@ pub const Pin = enum(usize) {
                 port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(omode.resistor)) << (pin << 1));
             },
             .analog => {},
-            .alternate_function => {},
+            .alternate_function => |afmode| {
+                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Alternate)) << (pin << 1));
+                port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(afmode.o_type)) << pin);
+                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(afmode.resistor)) << (pin << 1));
+                var register = if (pin > 7) port.AFR[1] else port.AFR[0];
+                register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afmode.afr)) << (pin << 2));
+            },
         }
     }
 
-    fn mask(gpio: Pin) u32 {
+    pub fn mask(gpio: Pin) u32 {
         const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
         return @as(u32, 1) << pin;
     }

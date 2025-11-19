@@ -10,9 +10,6 @@ const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
 const OSPEEDR = gpio_v2.OSPEEDR;
 
 const gpio = @import("gpio.zig");
-// const pwm = @import("pwm.zig");
-// const adc = @import("adc.zig");
-// const resets = @import("resets.zig");
 
 pub const Pin = enum {
     PIN0,
@@ -66,8 +63,8 @@ pub const OutputGPIO = struct {
     }
 };
 
-const AlternateFunction = struct {
-    pin: gpio.Pin,
+pub const AlternateFunction = struct {
+    // Empty on perpose it should not be used as a GPIO.
 };
 
 const Analog = struct {
@@ -205,7 +202,12 @@ pub const GlobalConfiguration = struct {
                         const port = @intFromEnum(@field(Port, port_field.name));
                         var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
                         pin.set_mode(pin_config.mode.?);
-                        @field(ret, pin_config.name orelse field.name) = .{ .pin = pin };
+                        switch (pin_config.mode orelse .input) {
+                            .input => @field(ret, pin_config.name orelse field.name) = InputGPIO{ .pin = pin },
+                            .output => @field(ret, pin_config.name orelse field.name) = OutputGPIO{ .pin = pin },
+                            .analog => @field(ret, pin_config.name orelse field.name) = Analog{},
+                            .alternate_function => @field(ret, pin_config.name orelse field.name) = AlternateFunction{},
+                        }
                     }
                 }
             }
