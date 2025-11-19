@@ -1,12 +1,9 @@
 //! CYW43 3-wire SPI driver build on PIO
 //! Code based on embassy cyw43-pio driver https://github.com/embassy-rs/embassy/tree/main/cyw43-pio (last commit: d41eeea)
 const std = @import("std");
+const mem = std.mem;
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
-
-const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;
-
-const chip = microzig.hal.compatibility.chip;
 
 const cyw43spi_program = blk: {
     @setEvalBranchQuota(5000);
@@ -38,14 +35,27 @@ const cyw43spi_program = blk: {
     , .{}).get_program_by_name("cyw43spi");
 };
 
-pub const Cyw43PioSpi_Config = struct {
-    pio: hal.pio.Pio,
-    cs_pin: hal.gpio.Pin,
-    io_pin: hal.gpio.Pin,
-    clk_pin: hal.gpio.Pin,
+fn pin_num(pin: hal.gpio.Pin) u5 {
+    return @truncate(@intFromEnum(pin));
+}
+
+const Cyw43PioSpi = @This();
+
+pio: hal.pio.Pio,
+sm: hal.pio.StateMachine,
+cs_pin: hal.gpio.Pin,
+io_pin: hal.gpio.Pin,
+clk_pin: hal.gpio.Pin,
+channel: ?hal.dma.Channel = null, // current dma channel
+
+pub const Config = struct {
+    pio: hal.pio.Pio = hal.pio.num(0),
+    cs_pin: hal.gpio.Pin = hal.gpio.num(25),
+    io_pin: hal.gpio.Pin = hal.gpio.num(24),
+    clk_pin: hal.gpio.Pin = hal.gpio.num(29),
 };
 
-pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
+pub fn init(config: Config) !Cyw43PioSpi {
     const sm = try config.pio.claim_unused_state_machine();
 
     // Chip select pin setup
@@ -104,159 +114,75 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     };
 }
 
-fn to_pio_pin_num(pin: hal.gpio.Pin) u5 {
-    return @truncate(@intFromEnum(pin));
+pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
+    const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
+    self.cs_pin.put(0);
+    defer self.cs_pin.put(1);
+
+    self.channel = hal.dma.claim_unused_channel();
+    defer self.channel.?.unclaim();
+
+    self.prep(buffer.len * 32 + 32 - 1, 31);
+    self.dma_write(&.{cmd});
+    self.dma_read(buffer);
+    return self.status();
+}
+
+pub fn write(ptr: *anyopaque, cmd: u32, buffer: []const u32) u32 {
+    const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
+    self.cs_pin.put(0);
+    defer self.cs_pin.put(1);
+
+    self.channel = hal.dma.claim_unused_channel();
+    defer self.channel.?.unclaim();
+
+    self.prep(31, buffer.len * 32 + 32 - 1);
+    self.dma_write(&.{cmd});
+    self.dma_write(buffer);
+    return self.status();
+}
+
+fn prep(self: *Cyw43PioSpi, read_bits: u32, write_bits: u32) void {
+    self.pio.sm_set_enabled(self.sm, false);
+    self.pio.sm_exec_set_y(self.sm, read_bits);
+    self.pio.sm_exec_set_x(self.sm, write_bits);
+    self.pio.sm_exec_set_pindir(self.sm, 0b1);
+    self.pio.sm_exec_jmp(self.sm, cyw43spi_program.wrap_target.?);
+    self.pio.sm_set_enabled(self.sm, true);
+}
+
+fn dma_read(self: *Cyw43PioSpi, data: []u32) void {
+    const ch = self.channel.?;
+    const rx_fifo_addr = @intFromPtr(self.pio.sm_get_rx_fifo(self.sm));
+    ch.setup_transfer_raw(@intFromPtr(data.ptr), rx_fifo_addr, data.len, .{
+        .trigger = true,
+        .data_size = .size_32,
+        .enable = true,
+        .read_increment = false,
+        .write_increment = true,
+        .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4),
+    });
+    ch.wait_for_finish_blocking();
+}
+
+fn dma_write(self: *Cyw43PioSpi, data: []const u32) void {
+    const ch = self.channel.?;
+    const tx_fifo_addr = @intFromPtr(self.pio.sm_get_tx_fifo(self.sm));
+    ch.setup_transfer_raw(tx_fifo_addr, @intFromPtr(data.ptr), data.len, .{
+        .trigger = true,
+        .data_size = .size_32,
+        .enable = true,
+        .read_increment = true,
+        .write_increment = false,
+        .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm)),
+    });
+    ch.wait_for_finish_blocking();
 }
 
 // By default it sends status after each read/write.
 // ref: datasheet 'Table 6. gSPI Registers' status enable has default 1
-pub const Cyw43PioSpi = struct {
-    const Self = @This();
-
-    pio: hal.pio.Pio,
-    sm: hal.pio.StateMachine,
-    cs_pin: hal.gpio.Pin,
-    io_pin: hal.gpio.Pin,
-    clk_pin: hal.gpio.Pin,
-
-    pub fn spi_read_blocking(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
-        const self: *Self = @ptrCast(@alignCast(ptr));
-        self.cs_pin.put(0);
-        defer self.cs_pin.put(1);
-        return self.read_blocking(cmd, buffer);
-    }
-
-    pub fn spi_write_blocking(ptr: *anyopaque, cmd: u32, buffer: []const u32) u32 {
-        const self: *Self = @ptrCast(@alignCast(ptr));
-        self.cs_pin.put(0);
-        defer self.cs_pin.put(1);
-        return self.write_blocking(cmd, buffer);
-    }
-
-    fn read_blocking(self: *Self, cmd: u32, buffer: []u32) u32 {
-        self.pio.sm_set_enabled(self.sm, false);
-
-        const write_bits = 31;
-        const read_bits = buffer.len * 32 + 32 - 1;
-
-        self.pio.sm_exec_set_y(self.sm, read_bits);
-        self.pio.sm_exec_set_x(self.sm, write_bits);
-        self.pio.sm_exec_set_pindir(self.sm, 0b1);
-        self.pio.sm_exec_jmp(self.sm, cyw43spi_program.wrap_target.?);
-
-        self.pio.sm_set_enabled(self.sm, true);
-
-        const dma_ch = hal.dma.claim_unused_channel().?;
-        defer dma_ch.unclaim();
-
-        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{
-            .trigger = true,
-            .data_size = .size_32,
-            .enable = true,
-            .read_increment = true,
-            .write_increment = false,
-            .dreq = self.get_pio_tx_dreq(),
-        });
-
-        dma_ch.wait_for_finish_blocking();
-
-        dma_ch.setup_transfer_raw(@intFromPtr(buffer.ptr), self.get_pio_rx_fifo_addr(), buffer.len, .{
-            .trigger = true,
-            .data_size = .size_32,
-            .enable = true,
-            .read_increment = false,
-            .write_increment = true,
-            .dreq = self.get_pio_rx_dreq(),
-        });
-
-        dma_ch.wait_for_finish_blocking();
-
-        var status: u32 = 0;
-        dma_ch.setup_transfer_raw(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
-            .data_size = .size_32,
-            .enable = true,
-            .read_increment = false,
-            .write_increment = true,
-            .dreq = self.get_pio_rx_dreq(),
-        });
-
-        dma_ch.wait_for_finish_blocking();
-
-        return status;
-    }
-
-    fn write_blocking(self: *Self, cmd: u32, buffer: []const u32) u32 {
-        self.pio.sm_set_enabled(self.sm, false);
-
-        const write_bits = buffer.len * 32 + 32 - 1;
-        const read_bits = 32 - 1;
-
-        self.pio.sm_exec_set_x(self.sm, write_bits);
-        self.pio.sm_exec_set_y(self.sm, read_bits);
-        self.pio.sm_exec_set_pindir(self.sm, 0b1);
-        self.pio.sm_exec_jmp(self.sm, cyw43spi_program.wrap_target.?);
-
-        self.pio.sm_set_enabled(self.sm, true);
-
-        const dma_ch = hal.dma.claim_unused_channel().?;
-        defer dma_ch.unclaim();
-
-        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{
-            .trigger = true,
-            .data_size = .size_32,
-            .enable = true,
-            .read_increment = true,
-            .write_increment = false,
-            .dreq = self.get_pio_tx_dreq(),
-        });
-        dma_ch.wait_for_finish_blocking();
-
-        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(buffer.ptr), buffer.len, .{
-            .data_size = .size_32,
-            .enable = true,
-            .read_increment = true,
-            .write_increment = false,
-            .dreq = self.get_pio_tx_dreq(),
-        });
-        dma_ch.wait_for_finish_blocking();
-
-        var status: u32 = 0;
-        dma_ch.setup_transfer_raw(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
-            .data_size = .size_32,
-            .enable = true,
-            .read_increment = false,
-            .write_increment = true,
-            .dreq = self.get_pio_rx_dreq(),
-        });
-        dma_ch.wait_for_finish_blocking();
-
-        return status;
-    }
-
-    inline fn get_pio_tx_fifo_addr(self: *Self) u32 {
-        return @intFromPtr(self.pio.sm_get_tx_fifo(self.sm));
-    }
-
-    inline fn get_pio_rx_fifo_addr(self: *Self) u32 {
-        return @intFromPtr(self.pio.sm_get_rx_fifo(self.sm));
-    }
-
-    inline fn get_pio_tx_dreq(self: *Self) hal.dma.Dreq {
-        return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm));
-    }
-
-    inline fn get_pio_rx_dreq(self: *Self) hal.dma.Dreq {
-        return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4);
-    }
-
-    /// Cyw43_Spi interface implementation
-    pub fn cyw43_spi(self: *Self) Cyw43_Spi {
-        return .{
-            .ptr = self,
-            .vtable = &.{
-                .spi_read_blocking = spi_read_blocking,
-                .spi_write_blocking = spi_write_blocking,
-            },
-        };
-    }
-};
+fn status(self: *Cyw43PioSpi) u32 {
+    var val: u32 = 0;
+    self.dma_read(mem.bytesAsSlice(u32, mem.asBytes(&val)));
+    return val;
+}

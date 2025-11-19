@@ -7,7 +7,7 @@ const DigitalIO = mdf.base.Digital_IO;
 pub const delayus_callback = fn (delay: u32) void;
 
 /// SPI interface for CYW43
-pub const Cyw43_Spi = struct {
+pub const SpiInterface = struct {
     const Self = @This();
     ptr: *anyopaque,
     vtable: *const VTable,
@@ -35,7 +35,7 @@ pub const Cyw43_Bus = struct {
 
     const TestPattern = 0x12345678;
     pwr_pin: DigitalIO,
-    spi: *Cyw43_Spi,
+    spi: SpiInterface,
     internal_delay_ms: *const delayus_callback,
     backplane_window: u32 = 0xAAAA_AAAA,
 

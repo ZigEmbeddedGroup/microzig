@@ -465,44 +465,43 @@ pub fn clock_device() Clock_Device {
     };
 }
 
-const Cyw43PioSpi = microzig.hal.cyw49_pio_spi.Cyw43PioSpi;
-const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;
-const Cyw43_Bus = microzig.drivers.wireless.Cyw43_Bus;
-const Cyw43_Runner = microzig.drivers.wireless.Cyw43_Runner;
-
-pub const CYW43_Pio_Device_Config = struct {
-    spi: hal.cyw49_pio_spi.Cyw43PioSpi_Config,
-    pwr_pin: hal.gpio.Pin,
-};
-
-// TODO: CYW43 top level struct just for testing purpose (please redesign)
-pub const CYW43_Pio_Device = struct {
+pub const WiFi = struct {
     const Self = @This();
-    pwr_pin: GPIO_Device = undefined,
-    cyw43_pio_spi: Cyw43PioSpi = undefined,
-    cyw43_spi: Cyw43_Spi = undefined,
-    cyw43_bus: Cyw43_Bus = undefined,
-    cyw43_runner: Cyw43_Runner = undefined,
 
-    pub fn init(self: *Self, config: CYW43_Pio_Device_Config) !void {
+    spi: hal.Cyw43PioSpi = undefined,
+    bus: mdf.wireless.Cyw43_Bus = undefined,
+    runner: mdf.wireless.Cyw43_Runner = undefined,
+
+    pub const Config = struct {
+        spi: hal.Cyw43PioSpi.Config = .{},
+        pwr_pin: hal.gpio.Pin = hal.gpio.num(23),
+    };
+
+    pub fn init(self: *Self, config: Config) !void {
         std.log.info("before gpio init", .{});
 
-        self.cyw43_pio_spi = try hal.cyw49_pio_spi.init(config.spi);
-        self.cyw43_spi = self.cyw43_pio_spi.cyw43_spi();
+        self.spi = try hal.Cyw43PioSpi.init(config.spi);
 
         config.pwr_pin.set_function(.sio);
         config.pwr_pin.set_direction(.out);
         var pwr_gpio = GPIO_Device.init(config.pwr_pin);
 
-        self.cyw43_bus = .{ .pwr_pin = pwr_gpio.digital_io(), .spi = &self.cyw43_spi, .internal_delay_ms = hal.time.sleep_ms };
-        self.cyw43_runner = .{ .bus = &self.cyw43_bus, .internal_delay_ms = hal.time.sleep_ms };
+        self.bus = .{
+            .pwr_pin = pwr_gpio.digital_io(),
+            .spi = .{
+                .ptr = &self.spi,
+                .vtable = &.{
+                    .spi_read_blocking = hal.Cyw43PioSpi.read,
+                    .spi_write_blocking = hal.Cyw43PioSpi.write,
+                },
+            },
+            .internal_delay_ms = hal.time.sleep_ms,
+        };
+        self.runner = .{
+            .bus = &self.bus,
+            .internal_delay_ms = hal.time.sleep_ms,
+        };
 
-        try self.cyw43_runner.init();
-    }
-
-    pub fn test_loop(self: *Self) void {
-        while (true) {
-            self.cyw43_runner.run();
-        }
+        try self.runner.init();
     }
 };

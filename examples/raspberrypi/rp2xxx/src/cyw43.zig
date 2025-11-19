@@ -1,15 +1,12 @@
 //! This example is work in progress on CYW43xx WiFi/BT driver
-//! Tested on Pico W and Pico 2 W
-//! Driver code based on: https://github.com/embassy-rs/embassy/tree/main/cyw43
+//! Tested on Pico 2 W
 const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const pio = rp2xxx.pio;
-
 const drivers = microzig.hal.drivers;
-const CYW43_Pio_Device = drivers.CYW43_Pio_Device;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -27,34 +24,25 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    const cyw43_config = drivers.CYW43_Pio_Device_Config{
-        .spi = .{
-            .pio = pio.num(0),
-            .cs_pin = gpio.num(25),
-            .io_pin = gpio.num(24),
-            .clk_pin = gpio.num(29),
-        },
-        .pwr_pin = gpio.num(23),
-    };
-    var cyw43: CYW43_Pio_Device = .{};
-    try cyw43.init(cyw43_config);
+    var wifi: drivers.WiFi = .{};
+    try wifi.init(.{});
 
     // The driver isn't finished yet, so we're using this infinite test loop to process all internal driver events.
     // Eventually, this will be replaced by a dedicated driver task/thread.
     //cyw43.test_loop();
 
     // enable led by wifi regs
-    cyw43.cyw43_runner.bus.bp_write32(0x18000000 + 0x68, 1);
+    wifi.runner.bus.bp_write32(0x18000000 + 0x68, 1);
 
     var on: u32 = 1;
-    cyw43.cyw43_runner.read_clmver();
-    cyw43.cyw43_runner.read_mac();
+    wifi.runner.read_clmver();
+    wifi.runner.read_mac();
     while (true) {
         time.sleep_ms(1000);
         on = if (on == 1) 0 else 1;
 
         // toggle led by sending command
-        cyw43.cyw43_runner.led_on(on == 1);
+        wifi.runner.led_on(on == 1);
 
         // toggle led by using wifi regs
         // cyw43.cyw43_runner.bus.bp_write32(0x18000000 + 0x64, on);
