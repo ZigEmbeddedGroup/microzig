@@ -54,13 +54,7 @@ pub const Config = struct {
 pub const StopBits = STOP;
 pub const DataBits = WordBits;
 
-pub const Pins = struct {
-    tx: ?type = null,
-    rx: ?type = null,
-};
-
-pub fn Uart(comptime index: UartNum, comptime uart_pins: Pins) type {
-    _ = uart_pins;
+pub fn Uart(comptime index: UartNum) type {
     const regs = switch (index) {
         .UART1 => USART1,
         .UART2 => USART2,
@@ -163,5 +157,81 @@ pub fn Uart(comptime index: UartNum, comptime uart_pins: Pins) type {
             const data_with_parity_bit: u9 = regs.RDR.read().RDR;
             return @as(u8, @intCast(data_with_parity_bit & self.read_mask()));
         }
+
+        fn writer_fn(self: *Self, buffer: []const u8) error{}!usize {
+            for (buffer) |byte| {
+                self.tx(byte);
+            }
+            return buffer.len;
+        }
     };
+}
+
+pub fn UartWriter(comptime index: UartNum) type {
+    return struct {
+        uart: *Uart(index),
+        interface: std.Io.Writer,
+
+        pub fn init(uart: *Uart(index), buffer: []u8) UartWriter(index) {
+            return .{
+                .uart = uart,
+                .interface = .{
+                    .vtable = &.{
+                        .drain = drain,
+                    },
+                    .buffer = buffer,
+                },
+            };
+        }
+
+        pub fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+            const w: *UartWriter(index) = @alignCast(@fieldParentPtr("interface", io_w));
+            var n: u32 = 0;
+            if (io_w.buffer.len > 0) {
+                _ = try w.uart.writer_fn(io_w.buffered());
+                n += io_w.consumeAll();
+            }
+            for (data[0 .. data.len - 1]) |buf| {
+                n += try w.uart.writer_fn(buf);
+            }
+            const pattern = data[data.len - 1];
+            for (0..splat) |_| {
+                n += try w.uart.writer_fn(pattern);
+            }
+            return n;
+        }
+    };
+}
+
+var uart_logger: ?UartWriter(.UART1) = null;
+
+///Set a specific uart instance to be used for logging.
+///
+///Allows system logging over uart via:
+///pub const microzig_options = .{
+///    .logFn = hal.uart.log,
+///};
+pub fn init_logger(uart: *Uart(.UART1)) void {
+    uart_logger = .init(uart, &.{});
+    if (uart_logger) |*logger| {
+        var w = &logger.interface;
+        w.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    }
+}
+
+///Disables logging via the uart instance.
+pub fn deinit_logger() void {
+    uart_logger = null;
+}
+
+pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
+    const prefix = comptime level.asText() ++ switch (scope) {
+        .default => ": ",
+        else => " (" ++ @tagName(scope) ++ "): ",
+    };
+
+    if (uart_logger) |*logger| {
+        var w = &logger.interface;
+        w.print(prefix ++ format ++ "\r\n", args) catch {};
+    }
 }
