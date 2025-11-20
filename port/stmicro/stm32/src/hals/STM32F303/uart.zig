@@ -1,0 +1,167 @@
+const std = @import("std");
+const rcc = @import("rcc.zig");
+const microzig = @import("microzig");
+
+const RCC = microzig.chip.peripherals.RCC;
+const usart_t = microzig.chip.type.peripherals.usart_v3.USART;
+const STOP = microzig.chip.types.peripherals.usart_v3.STOP;
+const USART1 = microzig.chip.peripherals.USART1;
+const USART2 = microzig.chip.peripherals.USART2;
+const USART3 = microzig.chip.peripherals.USART3;
+const UART4 = microzig.chip.peripherals.UART4;
+const UART5 = microzig.chip.peripherals.UART5;
+
+const UartNum = enum(usize) {
+    UART1,
+    UART2,
+    UART3,
+    UART4,
+    UART5,
+};
+pub const WordBits = enum {
+    seven,
+    eight,
+    nine,
+};
+pub const Parity = enum {
+    none,
+    even,
+    odd,
+};
+
+pub const FlowControl = enum {
+    none,
+    CTS,
+    RTS,
+    CTS_RTS,
+};
+
+pub const ConfigError = error{
+    InvalidUartNum,
+    UnsupportedBaudRate,
+    UnsupportedFlowControl,
+};
+
+pub const Config = struct {
+    baud_rate: u32 = 115200,
+    word_bits: WordBits = .eight,
+    stop_bits: STOP = .Stop1,
+    parity: Parity = .none,
+    flow_control: FlowControl = .none,
+};
+
+// Make experimental happy
+pub const StopBits = STOP;
+pub const DataBits = WordBits;
+
+pub const Pins = struct {
+    tx: ?type = null,
+    rx: ?type = null,
+};
+
+pub fn Uart(comptime index: UartNum, comptime uart_pins: Pins) type {
+    _ = uart_pins;
+    const regs = switch (index) {
+        .UART1 => USART1,
+        .UART2 => USART2,
+        .UART3 => USART3,
+        .UART4 => UART4,
+        .UART5 => UART5,
+    };
+    return struct {
+        const Self = @This();
+
+        pub fn init(config: Config) !Self {
+            switch (index) {
+                .UART1 => RCC.APB2ENR.modify(.{ .USART1EN = 1 }),
+                .UART2 => RCC.APB1ENR.modify(.{ .USART2EN = 1 }),
+                .UART3 => RCC.APB1ENR.modify(.{ .USART3EN = 1 }),
+                .UART4 => RCC.APB1ENR.modify(.{ .UART4EN = 1 }),
+                .UART5 => RCC.APB1ENR.modify(.{ .UART5EN = 1 }),
+            }
+
+            if (regs.CR1.read().UE == 1)
+                @panic("Trying to initialize USART while it is already enabled");
+
+            // clear USART1 configuration to its default
+            regs.CR1.raw = 0;
+            regs.CR2.raw = 0;
+            regs.CR3.raw = 0;
+
+            switch (config.word_bits) {
+                .seven => regs.CR1.modify(.{ .M0 = .Bit8, .M1 = .Bit7 }),
+                .eight => regs.CR1.modify(.{ .M0 = .Bit8, .M1 = .M0 }),
+                .nine => regs.CR1.modify(.{ .M0 = .Bit9, .M1 = .M0 }),
+            }
+            switch (config.parity) {
+                .none => regs.CR1.modify(.{ .PCE = 0 }),
+                .even => regs.CR1.modify(.{ .PCE = 1, .PS = .Even }),
+                .odd => regs.CR1.modify(.{ .PCE = 1, .PS = .Odd }),
+            }
+
+            regs.CR2.modify(.{ .STOP = config.stop_bits });
+
+            // set the baud rate
+            // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
+            // from the chip, which can be affected by how the board configures the chip.
+            // In our case, these are accidentally the same at chip reset,
+            // if the board doesn't configure e.g. an HSE external crystal.
+            // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
+            // TODO: Do a rounding div, instead of a truncating div?
+            const usartdiv = @as(u16, @intCast(@divTrunc(if (index == .UART1) rcc.current_clock.apb2 else rcc.current_clock.apb1, 9600)));
+            regs.BRR.raw = usartdiv;
+            // TODO: We assume the default OVER8=0 configuration above.
+
+            // enable USART1, and its transmitter and receiver
+            regs.CR1.modify(.{ .UE = 1 });
+            regs.CR1.modify(.{ .TE = 1 });
+            regs.CR1.modify(.{ .RE = 1 });
+
+            return Self{};
+        }
+
+        pub fn get_or_init(config: Config) !Self {
+            if (regs.CR1.read().UE == 1) {
+                // UART1 already enabled, don't reinitialize and disturb things;
+                // instead read and use the actual configuration.
+                return Self{};
+            } else return init(config);
+        }
+
+        pub fn read_mask() u8 {
+            const cr1 = regs.CR1.read();
+            return if (cr1.PCE == 1 and cr1.M0 == .Bit8) 0x7F else 0xFF;
+        }
+
+        pub fn can_write(self: Self) bool {
+            _ = self;
+            return switch (regs.ISR.read().TXE) {
+                1 => true,
+                0 => false,
+            };
+        }
+
+        pub fn tx(self: Self, ch: u8) void {
+            while (!self.can_write()) {} // Wait for Previous transmission
+            regs.TDR.modify(.{ .DR = ch });
+        }
+
+        pub fn txflush(_: Self) void {
+            while (regs.ISR.read().TC == 0) {}
+        }
+
+        pub fn can_read(self: Self) bool {
+            _ = self;
+            return switch (regs.ISR.read().RXNE) {
+                1 => true,
+                0 => false,
+            };
+        }
+
+        pub fn rx(self: Self) u8 {
+            while (!self.can_read()) {} // Wait till the data is received
+            const data_with_parity_bit: u9 = regs.RDR.read().RDR;
+            return @as(u8, @intCast(data_with_parity_bit & self.read_mask()));
+        }
+    };
+}
