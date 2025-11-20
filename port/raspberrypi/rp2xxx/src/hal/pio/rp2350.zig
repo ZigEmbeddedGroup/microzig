@@ -46,6 +46,7 @@ pub const Pio = enum(u2) {
     pub const get_irq_regs = PioImpl.get_irq_regs;
     pub const sm_set_clkdiv = PioImpl.sm_set_clkdiv;
     pub fn get_gpio_base(self: Pio) u32 {
+        // Base is either 0 or 16
         return 0x10 & self.get_regs().GPIOBASE.raw;
     }
     pub const sm_set_exec_options = PioImpl.sm_set_exec_options;

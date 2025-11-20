@@ -40,6 +40,7 @@ pub const Pio = enum(u1) {
     pub const get_irq_regs = PioImpl.get_irq_regs;
     pub const sm_set_clkdiv = PioImpl.sm_set_clkdiv;
     pub fn get_gpio_base(self: Pio) u32 {
+        // There are only 32 GPIOs on rp2040, so the base is always 0
         _ = self;
         return 0;
     }
