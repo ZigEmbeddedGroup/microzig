@@ -17,89 +17,73 @@ pub const Runner = struct {
         try self.bus.init();
 
         // Init ALP (Active Low Power) clock
-        log.debug("init alp", .{});
-        _ = self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, consts.BACKPLANE_ALP_AVAIL_REQ);
+        {
+            _ = self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, consts.BACKPLANE_ALP_AVAIL_REQ);
+            _ = self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, 0x10);
+            const watermark = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK);
+            if (watermark != 0x10) {
+                log.err("unexpected watermark {x}", .{watermark});
+                return error.Cyw43Watermark;
+            }
+            // waiting for clock...
+            while (self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & consts.BACKPLANE_ALP_AVAIL == 0) {}
+            // clear request for ALP
+            self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0);
 
-        log.debug("set f2 watermark", .{});
-        _ = self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, 0x10);
-        const watermark = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK);
-        log.debug("watermark = 0x{X}", .{watermark});
-        std.debug.assert(watermark == 0x10);
-
-        log.debug("waiting for clock...", .{});
-        while (self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & consts.BACKPLANE_ALP_AVAIL == 0) {}
-        log.debug("clock ok", .{});
-
-        // clear request for ALP
-        log.debug("clear request for ALP", .{});
-        self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0);
-
-        const chip_id = self.bus.bp_read_int(u16, 0x1800_0000);
-        log.debug("chip ID: 0x{X}", .{chip_id});
-
+            // const chip_id = self.bus.bp_read_int(u16, chip.pmu_base_address);
+            // log.debug("chip ID: 0x{X}", .{chip_id});
+        }
         // Upload firmware
-        self.core_disable(.wlan);
-        self.core_disable(.socram); // TODO: is this needed if we reset right after?
-        self.core_reset(.socram);
+        {
+            self.core_disable(.wlan);
+            self.core_disable(.socram); // TODO: is this needed if we reset right after?
+            self.core_reset(.socram);
 
-        // this is 4343x specific stuff: Disable remap for SRAM_3
-        self.bus.bp_write_int(u32, CYW43439_Chip.socsram_base_address + 0x10, 3);
-        self.bus.bp_write_int(u32, CYW43439_Chip.socsram_base_address + 0x44, 0);
+            // this is 4343x specific stuff: Disable remap for SRAM_3
+            self.bus.bp_write_int(u32, chip.socsram_base_address + 0x10, 3);
+            self.bus.bp_write_int(u32, chip.socsram_base_address + 0x44, 0);
 
-        const ram_addr = CYW43439_Chip.atcm_ram_base_address;
+            const firmware = @embedFile("firmware/43439A0_7_95_61.bin");
+            self.bus.bp_write(chip.atcm_ram_base_address, firmware);
+        }
+        // Load nvram
+        {
+            const nvram_len = (NVRAM.len + 3) / 4 * 4; // Round up to 4 bytes.
+            const addr_magic = chip.atcm_ram_base_address + chip.chip_ram_size - 4;
+            const addr = addr_magic - nvram_len;
+            self.bus.bp_write(addr, NVRAM);
 
-        log.debug("loading fw", .{});
-        const firmware = @embedFile("firmware/43439A0_7_95_61.bin")[0..];
-        self.bus.bp_write(ram_addr, firmware);
-
-        log.debug("loading nvram", .{});
-        // Round up to 4 bytes.
-        const nvram_len = (NVRAM.len + 3) / 4 * 4;
-        self.bus.bp_write(ram_addr + CYW43439_Chip.chip_ram_size - 4 - nvram_len, NVRAM);
-
-        const nvram_len_words = nvram_len / 4;
-        const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
-        self.bus.bp_write_int(u32, ram_addr + CYW43439_Chip.chip_ram_size - 4, nvram_len_magic);
-
-        log.debug("starting up core...", .{});
+            const nvram_len_words = nvram_len / 4;
+            const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
+            self.bus.bp_write_int(u32, addr_magic, nvram_len_magic);
+        }
+        // starting up core...
         self.core_reset(.wlan);
-        std.debug.assert(self.core_is_up(.wlan));
+        try self.core_is_up(.wlan);
 
         // wait until HT clock is available; takes about 29ms
-        log.debug("wait for HT clock", .{});
         while (self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
 
         // "Set up the interrupt mask and enable interrupts"
-        log.debug("setup interrupt mask", .{});
-        self.bus.bp_write_int(u32, CYW43439_Chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
-
-        // Set up the interrupt mask and enable interrupts
-        // TODO - bluetooth interrupts
+        self.bus.bp_write_int(u32, chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
 
         self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
 
         // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."
-        // Sounds scary...
         self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, consts.SPI_F2_WATERMARK);
 
-        log.debug("waiting for F2 to be ready...", .{});
+        // waiting for F2 to be ready...
         while (self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS) & consts.STATUS_F2_RX_READY == 0) {}
 
-        log.debug("clear pad pulls", .{});
+        // clear pad pulls
         self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0);
         _ = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
 
         // start HT clock
         self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0x10);
-        log.debug("waiting for HT clock...", .{});
         while (self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
-        log.debug("clock ok", .{});
 
         self.log_init();
-
-        // TODO: bluetooth setup
-
-        log.debug("cyw43 runner init done", .{});
     }
 
     fn core_disable(self: *Self, core: Core) void {
@@ -141,27 +125,25 @@ pub const Runner = struct {
         self.sleep_ms(1);
     }
 
-    fn core_is_up(self: *Self, core: Core) bool {
+    fn core_is_up(self: *Self, core: Core) !void {
         const base = core.base_addr();
 
         const io = self.bus.bp_read_int(u8, base + consts.AI_IOCTRL_OFFSET);
 
         if (io & (consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN) != consts.AI_IOCTRL_BIT_CLOCK_EN) {
-            log.debug("core_is_up: returning false due to bad ioctrl 0x{X}", .{io});
-            return false;
+            log.err("core_is_up fail due to bad ioctrl 0x{X}", .{io});
+            return error.Cyw43CoreIsUp;
         }
 
         const r = self.bus.bp_read_int(u8, base + consts.AI_RESETCTRL_OFFSET);
         if (r & (consts.AI_RESETCTRL_BIT_RESET) != 0) {
-            log.debug("core_is_up: returning false due to bad resetctrl 0x{X}", .{r});
-            return false;
+            log.err("core_is_up fail due to bad resetctrl 0x{X}", .{r});
+            return error.Cyw43CoreIsUp;
         }
-
-        return true;
     }
 
     fn log_init(self: *Self) void {
-        const addr = CYW43439_Chip.atcm_ram_base_address + CYW43439_Chip.chip_ram_size - 4 - CYW43439_Chip.socram_srmem_size;
+        const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
         const shared_addr = self.bus.bp_read_int(u32, addr);
         log.debug("shared_addr 0x{X}", .{shared_addr});
 
@@ -294,6 +276,8 @@ pub const Runner = struct {
 };
 
 pub const Chip = struct {
+    const WRAPPER_REGISTER_OFFSET: u32 = 0x100000;
+
     arm_core_base_address: u32,
     socsram_base_address: u32,
     bluetooth_base_address: u32,
@@ -318,13 +302,12 @@ pub const Chip = struct {
     chanspec_ctl_sb_mask: u32,
 };
 
-const WRAPPER_REGISTER_OFFSET: u32 = 0x100000;
-
-const CYW43439_Chip: Chip = .{
-    .arm_core_base_address = 0x18003000 + WRAPPER_REGISTER_OFFSET,
+// CYW43439 chip values
+const chip: Chip = .{
+    .arm_core_base_address = 0x18003000 + Chip.WRAPPER_REGISTER_OFFSET,
     .socsram_base_address = 0x18004000,
     .bluetooth_base_address = 0x19000000,
-    .socsram_wrapper_base_address = 0x18004000 + WRAPPER_REGISTER_OFFSET,
+    .socsram_wrapper_base_address = 0x18004000 + Chip.WRAPPER_REGISTER_OFFSET,
     .sdiod_core_base_address = 0x18002000,
     .pmu_base_address = 0x18000000,
     .chip_ram_size = 512 * 1024,
@@ -359,9 +342,9 @@ const Core = enum(u2) {
 
     fn base_addr(self: Core) u32 {
         return switch (self) {
-            .wlan => CYW43439_Chip.arm_core_base_address,
-            .socram => CYW43439_Chip.socsram_wrapper_base_address,
-            .sdiod => CYW43439_Chip.sdiod_core_base_address,
+            .wlan => chip.arm_core_base_address,
+            .socram => chip.socsram_wrapper_base_address,
+            .sdiod => chip.sdiod_core_base_address,
         };
     }
 };
