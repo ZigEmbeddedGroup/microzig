@@ -118,10 +118,10 @@ pub const Bus = struct {
         }
     }
 
-    pub fn read_int(self: *Self, T: type, func: FuncType, addr: u17) T {
+    pub fn read_int(self: *Self, T: type, func: SpiCmd.Func, addr: u17) T {
         const cmd = SpiCmd{
             .cmd = .read,
-            .incr = .incremental,
+            .access = .incremental,
             .func = func,
             .addr = addr,
             .len = @sizeOf(T),
@@ -133,10 +133,10 @@ pub const Bus = struct {
         return @truncate(if (func == .backplane) buf[1] else buf[0]);
     }
 
-    pub fn read_words(self: *Self, func: FuncType, addr: u17, len: u11, buffer: []u32) u32 {
+    pub fn read_words(self: *Self, func: SpiCmd.Func, addr: u17, len: u11, buffer: []u32) u32 {
         const cmd = SpiCmd{
             .cmd = .read,
-            .incr = .incremental,
+            .access = .incremental,
             .func = func,
             .addr = addr,
             .len = len,
@@ -144,10 +144,10 @@ pub const Bus = struct {
         return self.spi.read(@bitCast(cmd), buffer);
     }
 
-    pub fn write_int(self: *Self, T: type, func: FuncType, addr: u17, value: T) void {
+    pub fn write_int(self: *Self, T: type, func: SpiCmd.Func, addr: u17, value: T) void {
         const cmd = SpiCmd{
             .cmd = .write,
-            .incr = .incremental,
+            .access = .incremental,
             .func = func,
             .addr = addr,
             .len = @sizeOf(T),
@@ -155,10 +155,10 @@ pub const Bus = struct {
         _ = self.spi.write(@bitCast(cmd), &.{@intCast(value)});
     }
 
-    pub fn write_words(self: *Self, func: FuncType, addr: u17, buffer: []u32) void {
+    pub fn write_words(self: *Self, func: SpiCmd.Func, addr: u17, buffer: []u32) void {
         const cmd = SpiCmd{
             .cmd = .write,
-            .incr = .incremental,
+            .access = .incremental,
             .func = func,
             .addr = addr,
             .len = @intCast((buffer.len) * 4),
@@ -189,7 +189,7 @@ pub const Bus = struct {
 
             self.backplane_set_window(current_addr);
 
-            const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
+            const cmd = SpiCmd{ .cmd = .read, .access = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
 
             // round `buf` to word boundary, add one extra word for the response delay
             const words_to_send = (len + 3) / 4 + 1;
@@ -235,7 +235,7 @@ pub const Bus = struct {
             self.backplane_set_window(current_addr);
             const cmd = SpiCmd{
                 .cmd = .write,
-                .incr = .incremental,
+                .access = .incremental,
                 .func = .backplane,
                 .addr = @truncate(window_offset),
                 .len = @truncate(len),
@@ -276,15 +276,15 @@ pub const Bus = struct {
         self.backplane_window = new_window;
     }
 
-    fn read_swapped(self: *Self, func: FuncType, addr: u17) u32 {
-        const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
+    fn read_swapped(self: *Self, func: SpiCmd.Func, addr: u17) u32 {
+        const cmd = SpiCmd{ .cmd = .read, .access = .incremental, .func = func, .addr = addr, .len = 4 };
         var buf = [1]u32{0};
         _ = self.spi.read(swap16(@bitCast(cmd)), &buf);
         return swap16(buf[0]);
     }
 
-    fn write_swapped(self: *Self, func: FuncType, addr: u17, value: u32) void {
-        const cmd = SpiCmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
+    fn write_swapped(self: *Self, func: SpiCmd.Func, addr: u17, value: u32) void {
+        const cmd = SpiCmd{ .cmd = .write, .access = .incremental, .func = func, .addr = addr, .len = 4 };
         _ = self.spi.write(swap16(@bitCast(cmd)), &.{swap16(value)});
     }
 
@@ -293,52 +293,53 @@ pub const Bus = struct {
     }
 };
 
-const CmdType = enum(u1) {
-    read = 0,
-    write = 1,
-};
-
-const IncrMode = enum(u1) {
-    fixed = 0, // Fixed address (no increment)
-    incremental = 1, // Incremental burst
-};
-
-const FuncType = enum(u2) {
-    bus = 0,
-    backplane = 1,
-    wlan = 2,
-    bt = 3,
-};
-
+// ref: datasheet page 19
 const SpiCmd = packed struct(u32) {
-    len: u11,
+    const CmdType = enum(u1) {
+        read = 0,
+        write = 1,
+    };
+
+    const Access = enum(u1) {
+        fixed = 0, //       Fixed address (no increment)
+        incremental = 1, // Incremental burst
+    };
+
+    const Func = enum(u2) {
+        bus = 0, //       Func 0: All SPI-specific registers
+        backplane = 1, // Func 1: Registers and memories belonging to other blocks in the chip (64 bytes max)
+        wlan = 2, //      Func 2: DMA channel 1. WLAN packets up to 2048 bytes.
+        bt = 3, //        Func 3: DMA channel 2 (optional). Packets up to 2048 bytes.
+    };
+
+    len: u11, // Packet length, max 2048 bytes
     addr: u17,
-    func: FuncType = .bus,
-    incr: IncrMode = .fixed,
+    func: Func = .bus,
+    access: Access = .fixed,
     cmd: CmdType,
 };
 
-const CtrlWordLength = enum(u1) {
-    word_16 = 0,
-    word_32 = 1,
-};
-
-const CtrlEndianness = enum(u1) {
-    little_endian = 0,
-    big_endian = 1,
-};
-
-const CtrlSpeedMode = enum(u1) {
-    normal = 0,
-    high_speed = 1,
-};
-
-const CtrlInterruptPolarity = enum(u1) {
-    low_polarity = 0,
-    high_polarity = 1,
-};
-
 const CtrlReg = packed struct(u8) {
+    const CtrlWordLength = enum(u1) {
+        word_16 = 0,
+        word_32 = 1,
+    };
+
+    const CtrlEndianness = enum(u1) {
+        little_endian = 0,
+        big_endian = 1,
+    };
+
+    const CtrlSpeedMode = enum(u1) {
+        normal = 0,
+        high_speed = 1,
+    };
+
+    const CtrlInterruptPolarity = enum(u1) {
+        low_polarity = 0,
+        high_polarity = 1,
+    };
+
     word_length: CtrlWordLength,
     endianness: CtrlEndianness,
     reserved1: u2 = 0,
@@ -351,7 +352,6 @@ const CtrlReg = packed struct(u8) {
 const ResponseDelay = packed struct(u8) {
     unknown: u8,
 };
-
 const StatusEnableReg = packed struct(u8) {
     status_enable: bool,
     interrupt_with_status: bool,

@@ -189,29 +189,26 @@ pub const Runner = struct {
     }
 
     pub fn event_get_rsp(self: *Self, data: []u32) u32 {
-        const val: u32 = self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS);
-        //log.debug("event_get_rsp {x} {}", .{ val, val & consts.STATUS_F2_PKT_AVAILABLE > 0 });
-        if (val != 0xffff and val & consts.STATUS_F2_PKT_AVAILABLE > 0) {
-            const rxlen = (val & consts.STATUS_F2_PKT_LEN_MASK) >> consts.STATUS_F2_PKT_LEN_SHIFT;
-            if (rxlen > 0) {
-                // Read event data if present
-                const bytes_len: usize = @min(rxlen, data.len * 4);
-                const words_len: usize = (@as(usize, @intCast(bytes_len)) + 3) / 4;
-                const rsp = self.bus.read_words(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
-                _ = rsp;
-                //log.debug("event_get_rsp read_words status: {x} rxlen: {} bytes_len: {} data.len: {} words_len: {}", .{ rsp, rxlen, bytes_len, data.len, words_len });
-                // for (data[0..words_len], 0..) |w, i| {
-                //     log.debug("response word {} {x}", .{ i, w });
-                // }
-            } else {
-                // ..or clear interrupt, and discard data
-                self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
-                const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
-                self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
-            }
-            return rxlen;
+        const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
+        // log.debug("event_get_rsp {any}", .{status});
+        if (!status.f2_packet_available) return 0;
+        if (status.packet_length > 0) {
+            // Read event data if present
+            const bytes_len: usize = @min(status.packet_length, data.len * 4);
+            const words_len: usize = (@as(usize, @intCast(bytes_len)) + 3) / 4;
+            const rsp = self.bus.read_words(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
+            _ = rsp;
+            //log.debug("event_get_rsp read_words status: {x} rxlen: {} bytes_len: {} data.len: {} words_len: {}", .{ rsp, rxlen, bytes_len, data.len, words_len });
+            // for (data[0..words_len], 0..) |w, i| {
+            //     log.debug("response word {} {x}", .{ i, w });
+            // }
+        } else {
+            // ..or clear interrupt, and discard data
+            self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
+            const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
+            self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
         }
-        return 0;
+        return status.packet_length;
     }
 
     pub fn read_clmver(self: *Self) void {
@@ -365,4 +362,18 @@ pub const SharedMemLog = extern struct {
     buf_size: u32,
     idx: u32,
     out_idx: u32,
+};
+
+// ref: datasheet 'Table 5. gSPI Status Field Details'
+const Status = packed struct {
+    data_not_available: bool, //  The requested read data is not available.
+    underflow: bool, //           FIFO underflow occurred due to current (F2, F3) read command.
+    overflow: bool, //            FIFO overflow occurred due to current (F1, F2, F3) write command.
+    f2_interrupt: bool, //        F2 channel interrupt.
+    _reserved1: u1,
+    f2_rx_ready: bool, //         F2 FIFO is ready to receive data (FIFO empty).
+    _reserved2: u2,
+    f2_packet_available: bool, // Packet is available/ready in F2 TX FIFO.
+    packet_length: u11, //        Length of packet available in F2 FIFO,
+    _reserved3: u12,
 };
