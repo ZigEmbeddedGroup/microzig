@@ -44,20 +44,20 @@ pub const Bus = struct {
 
         log.debug("read REG_BUS_TEST_RO", .{});
         while (true) {
-            const first_ro_test = self.read32_swapped(.bus, consts.REG_BUS_TEST_RO);
+            const first_ro_test = self.read_swapped(.bus, consts.REG_BUS_TEST_RO);
             log.debug("0x{X}", .{first_ro_test});
             if (first_ro_test == consts.FEEDBEAD)
                 break;
         }
 
         log.debug("write REG_BUS_TEST_RW", .{});
-        self.write32_swapped(.bus, consts.REG_BUS_TEST_RW, consts.TEST_PATTERN);
-        const first_rw_test = self.read32_swapped(.bus, consts.REG_BUS_TEST_RW);
+        self.write_swapped(.bus, consts.REG_BUS_TEST_RW, consts.TEST_PATTERN);
+        const first_rw_test = self.read_swapped(.bus, consts.REG_BUS_TEST_RW);
         log.debug("0x{X}", .{first_rw_test});
         std.debug.assert(first_rw_test == consts.TEST_PATTERN);
 
         log.debug("read REG_BUS_CTRL", .{});
-        const ctrl_reg_val = self.read32_swapped(.bus, consts.REG_BUS_CTRL);
+        const ctrl_reg_val = self.read_swapped(.bus, consts.REG_BUS_CTRL);
         log.debug("0b{b}", .{@as(u8, @truncate(ctrl_reg_val))});
 
         // Set 32-bit word length and keep default endianness: little endian
@@ -79,25 +79,25 @@ pub const Bus = struct {
         };
 
         log.debug("write REG_BUS_CTRL", .{});
-        self.write32_swapped(.bus, consts.REG_BUS_CTRL, @bitCast(setup_regs));
+        self.write_swapped(.bus, consts.REG_BUS_CTRL, @bitCast(setup_regs));
 
         log.debug("read REG_BUS_TEST_RO", .{});
-        const second_ro_test = self.read32(.bus, consts.REG_BUS_TEST_RO);
+        const second_ro_test = self.read_int(u32, .bus, consts.REG_BUS_TEST_RO);
         log.debug("0x{X}", .{second_ro_test});
         std.debug.assert(second_ro_test == consts.FEEDBEAD);
 
         log.debug("read REG_BUS_TEST_RW", .{});
-        const second_rw_test = self.read32(.bus, consts.REG_BUS_TEST_RW);
+        const second_rw_test = self.read_int(u32, .bus, consts.REG_BUS_TEST_RW);
         log.debug("0x{X}", .{second_rw_test});
         std.debug.assert(second_rw_test == consts.TEST_PATTERN);
 
         log.debug("write SPI_RESP_DELAY_F1 CYW43_BACKPLANE_READ_PAD_LEN_BYTES", .{});
-        self.write8(.bus, consts.SPI_RESP_DELAY_F1, consts.WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE);
+        self.write_int(u8, .bus, consts.SPI_RESP_DELAY_F1, consts.WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE);
 
         // TODO: Make sure error interrupt bits are clear?
         // cyw43_write_reg_u8(self, BUS_FUNCTION, SPI_INTERRUPT_REGISTER, DATA_UNAVAILABLE | COMMAND_ERROR | DATA_ERROR | F1_OVERFLOW) != 0)
         log.debug("Make sure error interrupt bits are clear", .{});
-        self.write8(.bus, consts.REG_BUS_INTERRUPT, (consts.IRQ_DATA_UNAVAILABLE | consts.IRQ_COMMAND_ERROR | consts.IRQ_DATA_ERROR | consts.IRQ_F1_OVERFLOW));
+        self.write_int(u8, .bus, consts.REG_BUS_INTERRUPT, (consts.IRQ_DATA_UNAVAILABLE | consts.IRQ_COMMAND_ERROR | consts.IRQ_DATA_ERROR | consts.IRQ_F1_OVERFLOW));
 
         // Enable a selection of interrupts
         // TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR
@@ -114,30 +114,22 @@ pub const Bus = struct {
         //    val = val | IRQ_F1_INTR;
         //}
 
-        self.write16(.bus, consts.REG_BUS_INTERRUPT_ENABLE, val);
+        self.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, val);
     }
 
-    pub inline fn read8(self: *Self, func: FuncType, addr: u17) u8 {
-        return @truncate(self.readn(func, addr, 1));
-    }
-
-    pub inline fn read16(self: *Self, func: FuncType, addr: u17) u16 {
-        return @truncate(self.readn(func, addr, 2));
-    }
-
-    pub inline fn read32(self: *Self, func: FuncType, addr: u17) u32 {
-        return self.readn(func, addr, 4);
-    }
-
-    fn readn(self: *Self, func: FuncType, addr: u17, len: u11) u32 {
-        const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = len };
-        var buff = [_]u32{0} ** 2;
+    pub fn read_int(self: *Self, T: type, func: FuncType, addr: u17) T {
+        const cmd = SpiCmd{
+            .cmd = .read,
+            .incr = .incremental,
+            .func = func,
+            .addr = addr,
+            .len = @sizeOf(T),
+        };
+        var buf = [_]u32{0} ** 2;
         // if we are reading from the backplane, we need an extra word for the response delay
-        const buff_len: usize = if (func == .backplane) 2 else 1;
-
-        _ = self.spi.read(@bitCast(cmd), buff[0..buff_len]);
-
-        return if (func == .backplane) buff[1] else buff[0];
+        const buf_len: usize = if (func == .backplane) 2 else 1;
+        _ = self.spi.read(@bitCast(cmd), buf[0..buf_len]);
+        return @truncate(if (func == .backplane) buf[1] else buf[0]);
     }
 
     pub fn read_words(self: *Self, func: FuncType, addr: u17, len: u11, buffer: []u32) u32 {
@@ -151,21 +143,15 @@ pub const Bus = struct {
         return self.spi.read(@bitCast(cmd), buffer);
     }
 
-    pub inline fn write8(self: *Self, func: FuncType, addr: u17, value: u8) void {
-        return self.writen(func, addr, value, 1);
-    }
-
-    pub inline fn write16(self: *Self, func: FuncType, addr: u17, value: u16) void {
-        return self.writen(func, addr, value, 2);
-    }
-
-    pub inline fn write32(self: *Self, func: FuncType, addr: u17, value: u32) void {
-        return self.writen(func, addr, value, 4);
-    }
-
-    fn writen(self: *Self, func: FuncType, addr: u17, value: u32, len: u11) void {
-        const cmd = SpiCmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
-        _ = self.spi.write(@bitCast(cmd), &.{value});
+    pub fn write_int(self: *Self, T: type, func: FuncType, addr: u17, value: T) void {
+        const cmd = SpiCmd{
+            .cmd = .write,
+            .incr = .incremental,
+            .func = func,
+            .addr = addr,
+            .len = @sizeOf(T),
+        };
+        _ = self.spi.write(@bitCast(cmd), &.{@intCast(value)});
     }
 
     pub fn write_words(self: *Self, func: FuncType, addr: u17, buffer: []u32) void {
@@ -218,33 +204,8 @@ pub const Bus = struct {
         }
     }
 
-    pub inline fn bp_read8(self: *Self, addr: u32) u8 {
-        return @truncate(self.backplane_readn(addr, 1));
-    }
-
-    pub inline fn bp_read16(self: *Self, addr: u32) u16 {
-        return @truncate(self.backplane_readn(addr, 2));
-    }
-
-    pub inline fn bp_read32(self: *Self, addr: u32) u32 {
-        return @truncate(self.backplane_readn(addr, 4));
-    }
-
-    pub fn backplane_readn(self: *Self, addr: u32, len: u11) u32 {
-        log.debug("backplane_readn addr = 0x{X} len = {}", .{ addr, len });
-
-        self.backplane_set_window(addr);
-
-        var bus_addr = addr & consts.BACKPLANE_ADDRESS_MASK;
-        if (len == 4) {
-            bus_addr |= consts.BACKPLANE_ADDRESS_32BIT_FLAG;
-        }
-
-        const val = self.readn(.backplane, @truncate(bus_addr), len);
-
-        log.debug("backplane_readn addr = 0x{X} len = {} val = 0x{X}", .{ addr, len, val });
-
-        return val;
+    pub fn bp_read_int(self: *Self, T: type, addr: u32) T {
+        return self.read_int(T, .backplane, self.backplane_window_addr(addr, @sizeOf(T)));
     }
 
     pub fn bp_write(self: *Self, addr: u32, data: []const u8) void {
@@ -285,58 +246,43 @@ pub const Bus = struct {
         }
     }
 
-    pub inline fn bp_write8(self: *Self, addr: u32, value: u8) void {
-        self.backplane_writen(addr, value, 1);
+    pub fn bp_write_int(self: *Self, T: type, addr: u32, value: T) void {
+        self.write_int(T, .backplane, self.backplane_window_addr(addr, @sizeOf(T)), value);
     }
 
-    pub inline fn bp_write16(self: *Self, addr: u32, value: u16) void {
-        self.backplane_writen(addr, value, 2);
-    }
-
-    pub inline fn bp_write32(self: *Self, addr: u32, value: u32) void {
-        self.backplane_writen(addr, value, 4);
-    }
-
-    pub fn backplane_writen(self: *Self, addr: u32, value: u32, len: u11) void {
-        log.debug("backplane_writen addr = 0x{X} len = {} val = 0x{X}", .{ addr, len, value });
-
+    fn backplane_window_addr(self: *Self, addr: u32, len: u11) u17 {
         self.backplane_set_window(addr);
-
         var bus_addr = addr & consts.BACKPLANE_ADDRESS_MASK;
         if (len == 4) {
             bus_addr |= consts.BACKPLANE_ADDRESS_32BIT_FLAG;
         }
-
-        self.writen(.backplane, @truncate(bus_addr), value, len);
+        return @truncate(bus_addr);
     }
 
     fn backplane_set_window(self: *Self, addr: u32) void {
         const new_window = addr & ~consts.BACKPLANE_ADDRESS_MASK;
 
         if (@as(u8, @truncate(new_window >> 24)) != @as(u8, @truncate(self.backplane_window >> 24))) {
-            self.write8(.backplane, consts.REG_BACKPLANE_BACKPLANE_ADDRESS_HIGH, @as(u8, @truncate(new_window >> 24)));
+            self.write_int(u8, .backplane, consts.REG_BACKPLANE_BACKPLANE_ADDRESS_HIGH, @as(u8, @truncate(new_window >> 24)));
         }
         if (@as(u8, @truncate(new_window >> 16)) != @as(u8, @truncate(self.backplane_window >> 16))) {
-            self.write8(.backplane, consts.REG_BACKPLANE_BACKPLANE_ADDRESS_MID, @as(u8, @truncate(new_window >> 16)));
+            self.write_int(u8, .backplane, consts.REG_BACKPLANE_BACKPLANE_ADDRESS_MID, @as(u8, @truncate(new_window >> 16)));
         }
         if (@as(u8, @truncate(new_window >> 8)) != @as(u8, @truncate(self.backplane_window >> 8))) {
-            self.write8(.backplane, consts.REG_BACKPLANE_BACKPLANE_ADDRESS_LOW, @as(u8, @truncate(new_window >> 8)));
+            self.write_int(u8, .backplane, consts.REG_BACKPLANE_BACKPLANE_ADDRESS_LOW, @as(u8, @truncate(new_window >> 8)));
         }
 
         self.backplane_window = new_window;
     }
 
-    fn read32_swapped(self: *Self, func: FuncType, addr: u17) u32 {
+    fn read_swapped(self: *Self, func: FuncType, addr: u17) u32 {
         const cmd = SpiCmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
-        const cmd_swapped = swap16(@bitCast(cmd));
-
-        var buff = [1]u32{0};
-        _ = self.spi.read(cmd_swapped, &buff);
-
-        return swap16(buff[0]);
+        var buf = [1]u32{0};
+        _ = self.spi.read(swap16(@bitCast(cmd)), &buf);
+        return swap16(buf[0]);
     }
 
-    fn write32_swapped(self: *Self, func: FuncType, addr: u17, value: u32) void {
+    fn write_swapped(self: *Self, func: FuncType, addr: u17, value: u32) void {
         const cmd = SpiCmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
         _ = self.spi.write(swap16(@bitCast(cmd)), &.{swap16(value)});
     }
