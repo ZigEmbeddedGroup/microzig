@@ -20,18 +20,3 @@ pub const pin_map = .{
     // W green
     .LD6 = "PE15",
 };
-
-const uart_pin: microzig.hal.uart.Pins = .{ .tx = null, .rx = null };
-
-pub fn debug_write(string: []const u8) void {
-    const uart1 = microzig.hal.uart.Uart(.UART1, uart_pin).get_or_init(.{
-        .baud_rate = 9600,
-        .word_bits = .eight,
-        .parity = .none,
-        .stop_bits = .Stop1,
-    }) catch unreachable;
-
-    for (string) |c| {
-        uart1.tx(c);
-    }
-}
