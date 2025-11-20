@@ -1,7 +1,5 @@
 pub const microzig = @import("microzig");
 
-pub const cpu_frequency = 8_000_000;
-
 pub const pin_map = .{
     // circle of LEDs, connected to GPIOE bits 8..15
 
@@ -23,15 +21,17 @@ pub const pin_map = .{
     .LD6 = "PE15",
 };
 
+const uart_pin: microzig.hal.uart.Pins = .{ .tx = null, .rx = null };
+
 pub fn debug_write(string: []const u8) void {
-    const uart1 = microzig.core.experimental.Uart(1, .{}).get_or_init(.{
+    const uart1 = microzig.hal.uart.Uart(.UART1, uart_pin).get_or_init(.{
         .baud_rate = 9600,
-        .data_bits = .eight,
-        .parity = null,
-        .stop_bits = .one,
+        .word_bits = .eight,
+        .parity = .none,
+        .stop_bits = .Stop1,
     }) catch unreachable;
 
-    const writer = uart1.writer();
-    _ = writer.write(string) catch unreachable;
-    uart1.internal.txflush();
+    for (string) |c| {
+        uart1.tx(c);
+    }
 }

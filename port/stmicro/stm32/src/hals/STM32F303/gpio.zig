@@ -92,8 +92,8 @@ pub const Pin = enum(usize) {
                 port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Alternate)) << (pin << 1));
                 port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(afmode.o_type)) << pin);
                 port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(afmode.resistor)) << (pin << 1));
-                var register = if (pin > 7) port.AFR[1] else port.AFR[0];
-                register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afmode.afr)) << (pin << 2));
+                const register = if (pin > 7) &port.AFR[1] else &port.AFR[0];
+                register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afmode.afr)) << ((pin % 8) << 2));
             },
         }
     }

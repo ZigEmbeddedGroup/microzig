@@ -48,33 +48,17 @@ const runtime_safety = std.debug.runtime_safety;
 
 const microzig = @import("microzig");
 pub const gpio = @import("STM32F303/gpio.zig");
+pub const uart = @import("STM32F303/uart.zig");
 
 const SPI1 = microzig.peripherals.SPI1;
 const RCC = microzig.chip.peripherals.RCC;
-const USART1 = microzig.chip.peripherals.USART1;
+
 const GPIOA = microzig.peripherals.GPIOA;
 const GPIOB = microzig.peripherals.GPIOB;
 const GPIOC = microzig.chip.peripherals.GPIOC;
 const I2C1 = microzig.peripherals.I2C1;
 
 pub const cpu = @import("cpu");
-
-pub const clock = struct {
-    pub const Domain = enum {
-        cpu,
-        ahb,
-        apb1,
-        apb2,
-    };
-};
-
-// Default clock frequencies after reset, see top comment for calculation
-pub const clock_frequencies = .{
-    .cpu = 8_000_000,
-    .ahb = 8_000_000,
-    .apb1 = 8_000_000,
-    .apb2 = 8_000_000,
-};
 
 pub fn parse_pin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
@@ -98,142 +82,6 @@ fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) voi
     var temp = reg.read();
     @field(temp, field_name) = value;
     reg.write(temp);
-}
-
-pub const uart = struct {
-    pub const DataBits = enum(u4) {
-        seven = 7,
-        eight = 8,
-    };
-
-    /// uses the values of USART_CR2.STOP
-    pub const StopBits = enum(u2) {
-        one = 0b00,
-        half = 0b01,
-        two = 0b10,
-        one_and_half = 0b11,
-    };
-
-    /// uses the values of USART_CR1.PS
-    pub const Parity = enum(u1) {
-        even = 0,
-        odd = 1,
-    };
-};
-
-pub fn Uart() type {
-    return struct {
-        parity_read_mask: u8,
-
-        const Self = @This();
-
-        pub fn init() !Self {
-            // The following must all be written when the USART is disabled (UE=0).
-            if (USART1.CR1.read().UE == 1)
-                @panic("Trying to initialize USART1 while it is already enabled");
-            // LATER: Alternatively, set UE=0 at this point?  Then wait for something?
-            // Or add a destroy() function which disables the USART?
-
-            // enable the USART1 clock
-            RCC.APB2ENR.modify(.{ .USART1EN = 1 });
-            // enable GPIOC clock
-            RCC.AHBENR.modify(.{ .GPIOCEN = 1 });
-            // set PC4+PC5 to alternate function 7, USART1_TX + USART1_RX
-            GPIOC.MODER.modify(.{ .@"MODER[4]" = .Alternate, .@"MODER[5]" = .Alternate });
-            GPIOC.AFR[0].modify(.{ .@"AFR[4]" = 7, .@"AFR[5]" = 7 });
-
-            // clear USART1 configuration to its default
-            USART1.CR1.raw = 0;
-            USART1.CR2.raw = 0;
-            USART1.CR3.raw = 0;
-
-            // set word length
-            // Per the reference manual, M[1:0] means
-            // - 00: 8 bits (7 data + 1 parity, or 8 data), probably the chip default
-            // - 01: 9 bits (8 data + 1 parity)
-            // - 10: 7 bits (7 data)
-            // So M1==1 means "7-bit mode" (in which
-            // "the Smartcard mode, LIN master mode and Auto baud rate [...] are not supported");
-            // and M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
-            USART1.CR1.modify(.{ .M0 = .Bit8, .M1 = .M0 });
-
-            // set parity
-            USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
-
-            // set number of stop bits
-            USART1.CR2.modify(.{ .STOP = .Stop1 });
-
-            // set the baud rate
-            // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
-            // from the chip, which can be affected by how the board configures the chip.
-            // In our case, these are accidentally the same at chip reset,
-            // if the board doesn't configure e.g. an HSE external crystal.
-            // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
-            // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @as(u16, @intCast(@divTrunc(clock_frequencies.apb2, 115200)));
-            USART1.BRR.raw = usartdiv;
-            // Above, ignore the BRR struct fields DIV_Mantissa and DIV_Fraction,
-            // those seem to be for another chipset; .svd file bug?
-            // TODO: We assume the default OVER8=0 configuration above.
-
-            // enable USART1, and its transmitter and receiver
-            USART1.CR1.modify(.{ .UE = 1 });
-            USART1.CR1.modify(.{ .TE = 1 });
-            USART1.CR1.modify(.{ .RE = 1 });
-
-            // For code simplicity, at cost of one or more register reads,
-            // we read back the actual configuration from the registers,
-            // instead of using the `config` values.
-            return read_from_registers();
-        }
-
-        pub fn get_or_init(config: microzig.uart.Config) !Self {
-            if (USART1.CR1.read().UE == 1) {
-                // UART1 already enabled, don't reinitialize and disturb things;
-                // instead read and use the actual configuration.
-                return read_from_registers();
-            } else return init(config);
-        }
-
-        fn read_from_registers() Self {
-            const cr1 = USART1.CR1.read();
-            // As documented in `init()`, M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
-            // So we always mask away the 9th bit, and if parity is enabled and it is in the 8th bit,
-            // then we also mask away the 8th bit.
-            return Self{ .parity_read_mask = if (cr1.PCE == 1 and cr1.M0 == .Bit8) 0x7F else 0xFF };
-        }
-
-        pub fn can_write(self: Self) bool {
-            _ = self;
-            return switch (USART1.ISR.read().TXE) {
-                1 => true,
-                0 => false,
-            };
-        }
-
-        pub fn tx(self: Self, ch: u8) void {
-            while (!self.can_write()) {} // Wait for Previous transmission
-            USART1.TDR.modify(.{ .DR = ch });
-        }
-
-        pub fn txflush(_: Self) void {
-            while (USART1.ISR.read().TC == 0) {}
-        }
-
-        pub fn can_read(self: Self) bool {
-            _ = self;
-            return switch (USART1.ISR.read().RXNE) {
-                1 => true,
-                0 => false,
-            };
-        }
-
-        pub fn rx(self: Self) u8 {
-            while (!self.can_read()) {} // Wait till the data is received
-            const data_with_parity_bit: u9 = USART1.RDR.read().RDR;
-            return @as(u8, @intCast(data_with_parity_bit & self.parity_read_mask));
-        }
-    };
 }
 
 const enable_stm32f303_debug = false;
