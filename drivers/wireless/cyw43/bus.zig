@@ -37,84 +37,85 @@ pub const Bus = struct {
 
     pub fn init(self: *Self) !void {
         // Init sequence
-        try self.pwr_pin.write(.low);
-        self.sleep_ms(50);
-        try self.pwr_pin.write(.high);
-        self.sleep_ms(250);
-
-        log.debug("read REG_BUS_TEST_RO", .{});
-        while (true) {
-            const first_ro_test = self.read_swapped(.bus, consts.REG_BUS_TEST_RO);
-            log.debug("0x{X}", .{first_ro_test});
-            if (first_ro_test == consts.FEEDBEAD)
-                break;
+        {
+            try self.pwr_pin.write(.low);
+            self.sleep_ms(50);
+            try self.pwr_pin.write(.high);
+            self.sleep_ms(250);
         }
+        // First read of ro test register
+        out: {
+            var val: u32 = 0;
+            for (0..8) |_| {
+                val = self.read_swapped(.bus, consts.REG_BUS_TEST_RO);
+                if (val == consts.FEEDBEAD)
+                    break :out;
+                self.sleep_ms(2);
+            }
+            log.err("ro register first read unexpected value: {x}", .{val});
+            return error.Cyw43NotFound;
+        }
+        // First write/read of rw test register
+        {
+            self.write_swapped(.bus, consts.REG_BUS_TEST_RW, consts.TEST_PATTERN);
+            const val = self.read_swapped(.bus, consts.REG_BUS_TEST_RW);
+            if (val != consts.TEST_PATTERN) {
+                log.err("rw register first read unexpected value: {x}", .{val});
+                return error.Cyw43TestReadFailed;
+            }
+        }
+        // Write setup registers
+        {
+            _ = self.read_swapped(.bus, consts.REG_BUS_CTRL);
+            // Set 32-bit word length and keep default endianness: little endian
+            const setup_regs = SetupRegs{
+                .ctrl = .{
+                    .word_length = .word_32,
+                    .endianness = .little_endian,
+                    .speed_mode = .high_speed,
+                    .interrupt_polarity = .high_polarity,
+                    .wake_up = true,
+                },
+                .response_delay = .{
+                    .unknown = 0x4, // 32-bit response delay?
+                },
+                .status_enable = .{
+                    .status_enable = true,
+                    .interrupt_with_status = true,
+                },
+            };
+            self.write_swapped(.bus, consts.REG_BUS_CTRL, @bitCast(setup_regs));
+        }
+        // Second read of ro and rw registers
+        {
+            const ro_val = self.read_int(u32, .bus, consts.REG_BUS_TEST_RO);
+            if (ro_val != consts.FEEDBEAD) {
+                log.err("ro register second read unexpected value: {x}", .{ro_val});
+                return error.Cyw43SecondTestReadFailed;
+            }
 
-        log.debug("write REG_BUS_TEST_RW", .{});
-        self.write_swapped(.bus, consts.REG_BUS_TEST_RW, consts.TEST_PATTERN);
-        const first_rw_test = self.read_swapped(.bus, consts.REG_BUS_TEST_RW);
-        log.debug("0x{X}", .{first_rw_test});
-        std.debug.assert(first_rw_test == consts.TEST_PATTERN);
-
-        log.debug("read REG_BUS_CTRL", .{});
-        const ctrl_reg_val = self.read_swapped(.bus, consts.REG_BUS_CTRL);
-        log.debug("0b{b}", .{@as(u8, @truncate(ctrl_reg_val))});
-
-        // Set 32-bit word length and keep default endianness: little endian
-        const setup_regs = FirstFourRegs{
-            .ctrl = .{
-                .word_length = .word_32,
-                .endianness = .little_endian,
-                .speed_mode = .high_speed,
-                .interrupt_polarity = .high_polarity,
-                .wake_up = true,
-            },
-            .response_delay = .{
-                .unknown = 0x4, // 32-bit response delay?
-            },
-            .status_enable = .{
-                .status_enable = true,
-                .interrupt_with_status = true,
-            },
-        };
-
-        log.debug("write REG_BUS_CTRL", .{});
-        self.write_swapped(.bus, consts.REG_BUS_CTRL, @bitCast(setup_regs));
-
-        log.debug("read REG_BUS_TEST_RO", .{});
-        const second_ro_test = self.read_int(u32, .bus, consts.REG_BUS_TEST_RO);
-        log.debug("0x{X}", .{second_ro_test});
-        std.debug.assert(second_ro_test == consts.FEEDBEAD);
-
-        log.debug("read REG_BUS_TEST_RW", .{});
-        const second_rw_test = self.read_int(u32, .bus, consts.REG_BUS_TEST_RW);
-        log.debug("0x{X}", .{second_rw_test});
-        std.debug.assert(second_rw_test == consts.TEST_PATTERN);
-
-        log.debug("write SPI_RESP_DELAY_F1 CYW43_BACKPLANE_READ_PAD_LEN_BYTES", .{});
-        self.write_int(u8, .bus, consts.SPI_RESP_DELAY_F1, consts.WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE);
-
-        // TODO: Make sure error interrupt bits are clear?
-        // cyw43_write_reg_u8(self, BUS_FUNCTION, SPI_INTERRUPT_REGISTER, DATA_UNAVAILABLE | COMMAND_ERROR | DATA_ERROR | F1_OVERFLOW) != 0)
-        log.debug("Make sure error interrupt bits are clear", .{});
-        self.write_int(u8, .bus, consts.REG_BUS_INTERRUPT, (consts.IRQ_DATA_UNAVAILABLE | consts.IRQ_COMMAND_ERROR | consts.IRQ_DATA_ERROR | consts.IRQ_F1_OVERFLOW));
-
-        // Enable a selection of interrupts
-        // TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR
-        log.debug("enable a selection of interrupts", .{});
-
-        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW |
-            consts.IRQ_F2_F3_FIFO_WR_OVERFLOW |
-            consts.IRQ_COMMAND_ERROR |
-            consts.IRQ_DATA_ERROR |
-            consts.IRQ_F2_PACKET_AVAILABLE |
-            consts.IRQ_F1_OVERFLOW;
-
-        //if bluetooth_enabled {
-        //    val = val | IRQ_F1_INTR;
-        //}
-
-        self.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, val);
+            const rw_val = self.read_int(u32, .bus, consts.REG_BUS_TEST_RW);
+            if (rw_val != consts.TEST_PATTERN) {
+                log.err("rw register second read unexpected value: {x}", .{rw_val});
+                return error.Cyw43SecondTestReadFailed;
+            }
+        }
+        { // bluetooth... TODO
+            self.write_int(u8, .bus, consts.SPI_RESP_DELAY_F1, consts.WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE);
+        }
+        // Set interrupts
+        {
+            // Clear error interrupt bits
+            self.write_int(u8, .bus, consts.REG_BUS_INTERRUPT, consts.IRQ_CLEAR);
+            // Enable a selection of interrupts
+            const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW |
+                consts.IRQ_F2_F3_FIFO_WR_OVERFLOW |
+                consts.IRQ_COMMAND_ERROR |
+                consts.IRQ_DATA_ERROR |
+                consts.IRQ_F2_PACKET_AVAILABLE |
+                consts.IRQ_F1_OVERFLOW;
+            self.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, val);
+        }
     }
 
     pub fn read_int(self: *Self, T: type, func: FuncType, addr: u17) T {
@@ -357,7 +358,7 @@ const StatusEnableReg = packed struct(u8) {
     reserved1: u6 = 0,
 };
 
-const FirstFourRegs = packed struct(u32) {
+const SetupRegs = packed struct(u32) {
     ctrl: CtrlReg,
     response_delay: ResponseDelay,
     status_enable: StatusEnableReg,

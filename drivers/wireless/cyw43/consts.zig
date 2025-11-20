@@ -106,6 +106,8 @@ pub const IRQ_F1_INTR: u16 = 0x2000;
 pub const IRQ_F2_INTR: u16 = 0x4000;
 pub const IRQ_F3_INTR: u16 = 0x8000;
 
+pub const IRQ_CLEAR = IRQ_DATA_UNAVAILABLE | IRQ_COMMAND_ERROR | IRQ_DATA_ERROR | IRQ_F1_OVERFLOW; // 0x0099
+
 // Bluetooth constants.
 pub const SPI_RESP_DELAY_F1: u32 = 0x001d;
 pub const WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE: u8 = 4;
