@@ -49,6 +49,7 @@ const runtime_safety = std.debug.runtime_safety;
 const microzig = @import("microzig");
 pub const gpio = @import("STM32F303/gpio.zig");
 pub const uart = @import("STM32F303/uart.zig");
+pub const rcc = @import("STM32F303/rcc.zig");
 
 const SPI1 = microzig.peripherals.SPI1;
 const RCC = microzig.chip.peripherals.RCC;
@@ -90,6 +91,52 @@ fn debug_print(comptime format: []const u8, args: anytype) void {
     if (enable_stm32f303_debug) {
         microzig.debug.writer().print(format, args) catch {};
     }
+}
+
+// Those are missing from the cortex_m4
+// Maybe a specificity from STM that have those FPU unit.
+const CPACP = microzig.mmio.Mmio(packed struct(u32) {
+    reserved1: u20 = 0,
+    CP10: u2,
+    CP11: u2,
+    reserved2: u8 = 0,
+});
+
+pub const FPCCR = microzig.mmio.Mmio(packed struct(u32) {
+    LSPACT: u1,
+    USER: u1,
+    S: u1,
+    THREAD: u1,
+    HFRDY: u1,
+    MMRDY: u1,
+    BFRDY: u1,
+    SFRDY: u1,
+    MONRDY: u1,
+    SPLIMVIOL: u1,
+    UFRDY: u1,
+    reserved0: u15 = 0,
+    TS: u1,
+    CLRONRETS: u1,
+    CLRONRET: u1,
+    LSPENS: u1,
+    LSPEN: u1,
+    ASPEN: u1,
+});
+
+pub const missing_peripherals = .{
+    .cpacr = @as(*volatile CPACP, @ptrFromInt(0xE000ED88)),
+    .fpccr = @as(*volatile FPCCR, @ptrFromInt(0xE000EF34)),
+};
+
+pub fn enable_fpu() void {
+    missing_peripherals.cpacr.modify(.{
+        .CP10 = 0b11,
+        .CP11 = 0b11,
+    });
+    missing_peripherals.fpccr.modify(.{
+        .ASPEN = 1,
+        .LSPEN = 1,
+    });
 }
 
 /// This implementation does not use AUTOEND=1

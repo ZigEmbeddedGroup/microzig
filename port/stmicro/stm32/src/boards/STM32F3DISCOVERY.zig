@@ -1,11 +1,9 @@
 pub const microzig = @import("microzig");
-<<<<<<< HEAD
-=======
+
 pub const hal = microzig.hal;
 pub const rcc = hal.rcc;
 pub const pins = hal.pins;
 const UART_LOG = microzig.hal.uart.Uart(.UART1);
->>>>>>> 6acb63ca (fixup! Add logging function for STM32F303)
 
 pub const pin_map = .{
     // circle of LEDs, connected to GPIOE bits 8..15
@@ -28,6 +26,15 @@ pub const pin_map = .{
     .LD6 = "PE15",
 };
 
+pub fn init() void {
+    rcc.enable_hse(8_000_000);
+    rcc.enable_pll(.HSE, .Div1, .Mul6) catch {
+        @panic("PLL faile to enable");
+    };
+    rcc.select_pll_for_sysclk() catch {
+        @panic("Faile to select sysclk");
+    };
+}
 
 var uart_log: ?UART_LOG = null;
 
