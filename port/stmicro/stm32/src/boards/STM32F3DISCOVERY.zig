@@ -1,4 +1,7 @@
 pub const microzig = @import("microzig");
+pub const hal = microzig.hal;
+pub const rcc = hal.rcc;
+pub const pins = hal.pins;
 
 pub const pin_map = .{
     // circle of LEDs, connected to GPIOE bits 8..15
@@ -20,3 +23,26 @@ pub const pin_map = .{
     // W green
     .LD6 = "PE15",
 };
+
+pub fn init() void {
+    hal.enable_fpu();
+    rcc.enable_hse(8_000_000);
+    rcc.enable_pll(.HSE, .Div1, .Mul6) catch {
+        @panic("PLL faile to enable");
+    };
+    rcc.select_pll_for_sysclk() catch {
+        @panic("Faile to select sysclk");
+    };
+}
+
+// Init should come first or the baud_rate would be too fast for the default HSI.
+pub fn init_log() void {
+    _ = (pins.GlobalConfiguration{
+        .GPIOC = .{
+            .PIN4 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
+            .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
+        },
+    }).apply();
+    const uart = try microzig.hal.uart.Uart(.UART1).init(.{ .baud_rate = 115200 });
+    microzig.hal.uart.init_logger(&uart);
+}

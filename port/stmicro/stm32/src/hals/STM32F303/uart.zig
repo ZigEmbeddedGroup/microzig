@@ -97,13 +97,10 @@ pub fn Uart(comptime index: UartNum) type {
 
             // set the baud rate
             // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
-            // from the chip, which can be affected by how the board configures the chip.
-            // In our case, these are accidentally the same at chip reset,
-            // if the board doesn't configure e.g. an HSE external crystal.
+            // from the chip
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
-            // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @as(u16, @intCast(@divTrunc(if (index == .UART1) rcc.current_clock.apb2 else rcc.current_clock.apb1, 9600)));
-            regs.BRR.raw = usartdiv;
+            const usartdiv = @divTrunc(if (index == .UART1) rcc.current_clock.usart1_clk else rcc.current_clock.p1_clk, config.baud_rate);
+            regs.BRR.raw = @as(u16, @intCast(usartdiv));
             // TODO: We assume the default OVER8=0 configuration above.
 
             // enable USART1, and its transmitter and receiver
