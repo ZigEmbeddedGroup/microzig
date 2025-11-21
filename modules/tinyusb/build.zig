@@ -8,8 +8,6 @@ pub fn build(b: *Build) !void {
 }
 
 pub fn addTinyUSBLib(b: *Build) void {
-    const tusb_dep = b.dependency("tusb", .{});
-    const tusb_src = tusb_dep.path("src");
     const module = b.addModule("tinyusb", .{
         .link_libc = false,
         // seems important to release fast to avoid some extra dependencies
@@ -17,9 +15,15 @@ pub fn addTinyUSBLib(b: *Build) void {
     });
 
     module.addIncludePath(b.path("cfiles"));
-    module.addCSourceFile(.{ .file = b.path("cfiles/printf.c") });
+
+    // Add printf implementation
+    const prntf_dep = b.dependency("printf", .{});
+    module.addIncludePath(prntf_dep.path(""));
+    module.addCSourceFile(.{ .file = prntf_dep.path("printf.c") });
 
     // TinyUSB src folder
+    const tusb_dep = b.dependency("tusb", .{});
+    const tusb_src = tusb_dep.path("src");
     module.addIncludePath(tusb_src);
     for (tinyusb_source_files) |file| {
         module.addCSourceFile(.{ .file = tusb_src.path(b, file) });

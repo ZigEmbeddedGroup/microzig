@@ -22,6 +22,10 @@
             .sha256 = "sha256:8f6903f8ceb0f991490a1e34074443c2a72b14dbd",
             .hash = "N-V-__8AAJH7PAM8M1Wj7e7momRRAp7hssKtI2VvX0vEz-_B",
         },
+        .printf = .{
+            .url = "https://github.com/mpaland/printf/archive/refs/tags/v4.0.0.zip",
+            .hash = "N-V-__8AALJuCQCrdHP5WGfuWR-16g1fK2VF3WA2C5p5e-jj",
+        },
     },
     .paths = .{
         "build.zig",
