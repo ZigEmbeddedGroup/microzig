@@ -47,6 +47,8 @@ pub fn build(b: *std.Build) void {
         // .{ .target = "board:waveshare/rp2040_plus_16m", .name = "rp2040-plus-16m" },
     };
 
+    const font8x8_dep = b.dependency("font8x8", .{});
+
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
         .{ .name = "i2c-accel", .file = "src/i2c_accel.zig" },
@@ -75,6 +77,9 @@ pub fn build(b: *std.Build) void {
         .{ .name = "cyw43", .file = "src/cyw43.zig" },
         .{ .name = "allocator", .file = "src/allocator.zig" },
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
+        .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
+            .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
+        } },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
@@ -84,12 +89,14 @@ pub fn build(b: *std.Build) void {
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
             .name = b.fmt("pico_{s}", .{example.name}),
             .file = example.file,
+            .imports = example.imports,
         }) catch @panic("out of memory");
 
         available_examples.append(.{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
+            .imports = example.imports,
         }) catch @panic("out of memory");
 
         if (example.works_with_riscv) {
@@ -97,6 +104,7 @@ pub fn build(b: *std.Build) void {
                 .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
                 .name = b.fmt("pico2_riscv_{s}", .{example.name}),
                 .file = example.file,
+                .imports = example.imports,
             }) catch @panic("out of memory");
         }
     }
@@ -117,6 +125,7 @@ pub fn build(b: *std.Build) void {
             .target = example.target,
             .optimize = optimize,
             .root_source_file = b.path(example.file),
+            .imports = example.imports,
         });
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
@@ -134,10 +143,12 @@ const Example = struct {
     target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
+    imports: []const std.Build.Module.Import = &.{},
 };
 
 const ChipAgnosticExample = struct {
     name: []const u8,
     file: []const u8,
     works_with_riscv: bool = true,
+    imports: []const std.Build.Module.Import = &.{},
 };
