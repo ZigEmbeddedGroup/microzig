@@ -125,7 +125,7 @@ pub fn build(b: *std.Build) void {
             .target = example.target,
             .optimize = optimize,
             .root_source_file = b.path(example.file),
-            .imports = example.imports
+            .imports = example.imports,
         });
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
