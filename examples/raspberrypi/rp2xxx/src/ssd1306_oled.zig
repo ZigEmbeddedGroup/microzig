@@ -13,8 +13,8 @@ const four_rows = empty_row ** 4;
 pub fn main() void {
     // Safe buffer size for rp2xxx to allocate, value can change for other chips
     const buffer_size = 200 * 1024; // 200 KB
-    var backinf_buffer: [buffer_size]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&backinf_buffer);
+    var backing_buffer: [buffer_size]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&backing_buffer);
 
     const sda_pin = gpio.num(8);
     const scl_pin = gpio.num(9);
