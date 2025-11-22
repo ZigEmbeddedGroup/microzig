@@ -872,10 +872,14 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw: *Firmware,
             c_sources: []const LazyPath,
             includes: []const LazyPath,
+            debug_printing: bool,
         ) void {
             const tusb_dep = fw.mb.dep.builder.dependency("modules/tinyusb", .{});
             const tusb_mod = tusb_dep.module("tinyusb");
             const target = root_build.resolveTargetQuery(fw.target.zig_target);
+
+            if (debug_printing)
+                tusb.enableDebug(tusb_mod);
 
             tusb_mod.resolved_target = target;
             for (c_sources) |source| {

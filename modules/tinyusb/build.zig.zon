@@ -25,6 +25,7 @@
         .printf = .{
             .url = "https://github.com/mpaland/printf/archive/refs/tags/v4.0.0.zip",
             .hash = "N-V-__8AALJuCQCrdHP5WGfuWR-16g1fK2VF3WA2C5p5e-jj",
+            .lazy = true,
         },
     },
     .paths = .{

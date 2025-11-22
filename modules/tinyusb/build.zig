@@ -15,13 +15,6 @@ pub fn addTinyUSBLib(b: *Build) void {
     });
     module.addIncludePath(b.path("cfiles"));
 
-    // Add printf implementation
-    const prntf_dep = b.dependency("printf", .{});
-    module.addIncludePath(prntf_dep.path(""));
-    module.addCSourceFile(.{ .file = prntf_dep.path("printf.c") });
-    module.addCMacro("CFG_TUSB_DEBUG_PRINTF", "printf_");
-    module.addCMacro("snprintf", "snprintf_");
-
     // TinyUSB src folder
     const tusb_dep = b.dependency("tusb", .{});
     const tusb_src = tusb_dep.path("src");
@@ -39,6 +32,8 @@ const SupportedChips = enum {
     RP2040,
 };
 
+/// Add chip specific things to built library
+// / TODO: Can this be a build option rather than a function call?
 pub fn addChip(b: *Build, module: *Build.Module, chip_name: []const u8) void {
     const option = std.meta.stringToEnum(
         SupportedChips,
@@ -56,6 +51,20 @@ pub fn addChip(b: *Build, module: *Build.Module, chip_name: []const u8) void {
             // pico-sdk headers
             addPicoSdkInclude(b, module);
         },
+    }
+}
+
+/// Enables debug logging in the generated tusb library
+/// TODO: Can this be controlled through build options somehow rather than a function like this?
+pub fn enableDebug(module: *Build.Module) void {
+    // Add printf implementation
+    const prntf_dep = module.owner.lazyDependency("printf", .{});
+    if (prntf_dep) |dep| {
+        module.addIncludePath(dep.path(""));
+        module.addCSourceFile(.{ .file = dep.path("printf.c") });
+        module.addCMacro("CFG_TUSB_DEBUG_PRINTF", "printf_");
+        module.addCMacro("snprintf", "snprintf_");
+        module.addCMacro("CFG_TUSB_DEBUG", "3");
     }
 }
 
