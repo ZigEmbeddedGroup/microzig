@@ -59,7 +59,7 @@ fn center_to_screen(buf: []u8, str: []u8) []u8 {
     const four_rows_len = four_rows.len;
     const padding = @divTrunc(ldc_row_len - str.len, 2);
 
-    // Copy the initial four rows (Could just memset)
+    // Copy the initial four rows
     @memcpy(buf[0..four_rows_len], four_rows);
 
     // Add left padding
