@@ -257,33 +257,34 @@ pub const SPI_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
     pub const WriteError = Datagram_Device.WriteError;
     pub const ReadError = Datagram_Device.ReadError;
-    pub const ChipSelect = struct {
-        pin: hal.gpio.Pin,
-        active_level: Digital_IO.State = .low,
-    };
 
     bus: hal.spi.SPI,
     chip_select: ?ChipSelect = null,
     rx_dummy_data: u8,
 
     pub const InitOptions = struct {
-        /// The active level for the chip select pin
-        active_level: Digital_IO.State = .low,
+        /// Chip select options
+        chip_select: ?ChipSelect = null,
 
         /// Which dummy byte should be sent during reads
         rx_dummy_data: u8 = 0x00,
     };
 
-    pub fn init(bus: hal.spi.SPI, chip_select: ChipSelect, rx_dummy_data: u8) SPI_Device {
-        if (chip_select) |cs| {
+    pub const ChipSelect = struct {
+        pin: hal.gpio.Pin,
+        active_level: Digital_IO.State = .low,
+    };
+
+    pub fn init(bus: hal.spi.SPI, options: InitOptions) SPI_Device {
+        if (options.chip_select) |cs| {
             cs.pin.set_function(.sio);
             cs.pin.set_direction(.out);
         }
 
         var dev: SPI_Device = .{
             .bus = bus,
-            .chip_select = chip_select,
-            .rx_dummy_data = rx_dummy_data,
+            .chip_select = options.chip_select,
+            .rx_dummy_data = options.rx_dummy_data,
         };
         // set the chip select to "deselect" the device
         dev.disconnect();
