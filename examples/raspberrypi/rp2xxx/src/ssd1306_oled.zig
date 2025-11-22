@@ -11,9 +11,8 @@ const empty_row: []const u8 = " " ** 16;
 const four_rows = empty_row ** 4;
 
 pub fn main() void {
-    // Safe buffer size for RP2040 to allocate, value can change for other Chips
-    // it has 256 kbs RAM buffer and I user 200kbs of it
-    const RP_buffer_size = 200 * 1024;
+    // Safe buffer size for rp2xxx to allocate, value can change for other chips
+    const buffer_size = 200 * 1024; // 200 KB
     var backinf_buffer: [RP_buffer_size]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&backinf_buffer);
 
