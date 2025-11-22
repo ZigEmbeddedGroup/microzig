@@ -7,6 +7,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
+const drivers = mdf.base;
 const peripherals = microzig.chip.peripherals;
 const I2C0 = peripherals.I2C0;
 const I2C1 = peripherals.I2C1;
@@ -26,48 +27,9 @@ pub const Config = struct {
     baud_rate: u32 = 100_000,
 };
 
-///
-/// 7-bit I²C address, without the read/write bit.
-///
-pub const Address = enum(u7) {
-    /// The general call addresses all devices on the bus using the I²C address 0.
-    pub const general_call: Address = @enumFromInt(0x00);
-
-    _,
-
-    pub fn new(addr: u7) Address {
-        var a = @as(Address, @enumFromInt(addr));
-        std.debug.assert(!a.is_reserved());
-        return a;
-    }
-
-    ///
-    /// Returns `true` if the Address is a reserved I²C address.
-    ///
-    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
-    ///
-    /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
-        const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
-    }
-
-    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
-    }
-};
-
-pub const TransactionError = error{
-    DeviceNotPresent,
-    NoAcknowledge,
-    Timeout,
-    TargetAddressReserved,
-    NoData,
-    TxFifoFlushed,
-    UnknownAbort,
-};
+pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
+pub const Error = drivers.I2C_Device.Error || error{TxFifoFlushed};
 
 pub const ConfigError = error{
     UnsupportedBaudRate,
@@ -321,7 +283,15 @@ pub const I2C = enum(u1) {
         return i2c.get_regs().IC_RXFLR.read().RXFLR;
     }
 
-    fn set_address(i2c: I2C, addr: Address) void {
+    // TODO: Could move the check into read/write and remove this struct
+    pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
+    fn set_address(i2c: I2C, addr: Address, allow_reserved: Allow_Reserved) Error!void {
+        if (allow_reserved == .dont_allow_reserved)
+            addr.check_reserved() catch return Error.IllegalAddress
+        else if (allow_reserved == .allow_general)
+            addr.check_reserved() catch |err| if (err != AddressError.GeneralCall)
+                return Error.IllegalAddress;
+
         i2c.disable();
         i2c.get_regs().IC_TAR.write(.{
             .IC_TAR = @intFromEnum(addr),
@@ -331,7 +301,7 @@ pub const I2C = enum(u1) {
         i2c.enable();
     }
 
-    fn check_and_clear_abort(i2c: I2C) TransactionError!void {
+    fn check_and_clear_abort(i2c: I2C) Error!void {
         const regs = i2c.get_regs();
         const abort_reason = regs.IC_TX_ABRT_SOURCE.read();
         if (@as(u32, @bitCast(abort_reason)) != 0) {
@@ -342,16 +312,17 @@ pub const I2C = enum(u1) {
 
             if (abort_reason.ABRT_7B_ADDR_NOACK == .ACTIVE) {
                 // Address byte wasn't acknowledged by any targets on the bus
-                return TransactionError.DeviceNotPresent;
+                return Error.DeviceNotPresent;
             } else if (abort_reason.ABRT_TXDATA_NOACK == .ABRT_TXDATA_NOACK_GENERATED) {
                 // Address byte was acknowledged, but a data byte wasn't
-                return TransactionError.NoAcknowledge;
+                return Error.NoAcknowledge;
             } else if (abort_reason.TX_FLUSH_CNT > 0) {
                 // A previous abort caused the TX FIFO to be flushed
-                return TransactionError.TxFifoFlushed;
+                //
+                return Error.TxFifoFlushed;
             } else {
                 std.log.err("Unknown abort reason, IC_TX_ABRT_SOURCE=0x{X}", .{@as(u32, @bitCast(abort_reason))});
-                return TransactionError.UnknownAbort;
+                return Error.UnknownAbort;
             }
         }
     }
@@ -396,7 +367,7 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) Error!void {
         return i2c.writev_blocking(addr, &.{data}, timeout);
     }
 
@@ -410,17 +381,15 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
+        try i2c.set_address(addr, .allow_general);
 
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(chunks);
         if (write_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         var deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        i2c.set_address(addr);
         const regs = i2c.get_regs();
 
         defer i2c.ensure_stop_condition(deadline);
@@ -466,7 +435,7 @@ pub const I2C = enum(u1) {
 
         try i2c.check_and_clear_abort();
         if (timed_out)
-            return TransactionError.Timeout;
+            return Error.Timeout;
     }
 
     /// Attempts to read number of bytes in provided slice from target device and blocks until one of the following occurs:
@@ -474,8 +443,8 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        return try i2c.readv_blocking(addr, &.{dst}, timeout);
+    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
+        return i2c.readv_blocking(addr, &.{dst}, timeout);
     }
 
     /// Attempts to read number of bytes in provided slice from target device and blocks until one of the following occurs:
@@ -488,17 +457,15 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
+        try i2c.set_address(addr, .dont_allow_reserved);
 
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(chunks);
         if (read_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        i2c.set_address(addr);
         const regs = i2c.get_regs();
 
         defer i2c.ensure_stop_condition(deadline);
@@ -526,7 +493,7 @@ pub const I2C = enum(u1) {
             }
 
             if (timed_out)
-                return TransactionError.Timeout;
+                return Error.Timeout;
 
             element.value_ptr.* = regs.IC_DATA_CMD.read().DAT;
         }
@@ -539,7 +506,7 @@ pub const I2C = enum(u1) {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
-    pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
         return i2c.writev_then_readv_blocking(addr, &.{src}, &.{dst}, timeout);
     }
 
@@ -558,18 +525,16 @@ pub const I2C = enum(u1) {
     ///       prefixes and suffixes won't need to be concatenated/inserted to the original buffer,
     ///       but can be managed in a separate memory.
     ///
-    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
+        try i2c.set_address(addr, .dont_allow_reserved);
 
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(write_chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(read_chunks);
 
         if (write_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        i2c.set_address(addr);
         const regs = i2c.get_regs();
 
         defer i2c.ensure_stop_condition(deadline);
@@ -605,7 +570,7 @@ pub const I2C = enum(u1) {
         }
 
         if (timed_out)
-            return TransactionError.Timeout;
+            return Error.Timeout;
 
         // Read back requested bytes immediately following a repeated start
         var read_iter = read_vec.iterator();
@@ -634,6 +599,6 @@ pub const I2C = enum(u1) {
         }
 
         if (timed_out)
-            return TransactionError.Timeout;
+            return Error.Timeout;
     }
 };

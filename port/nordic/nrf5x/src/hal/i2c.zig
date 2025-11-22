@@ -4,6 +4,7 @@ const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
 const compatibility = @import("compatibility.zig");
+const drivers = mdf.base;
 
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
@@ -32,48 +33,9 @@ const Config = struct {
     } = .@"100000",
 };
 
-///
-/// 7-bit I²C address, without the read/write bit.
-///
-pub const Address = enum(u7) {
-    /// The general call addresses all devices on the bus using the I²C address 0.
-    pub const general_call: Address = @enumFromInt(0x00);
-
-    _,
-
-    pub fn new(addr: u7) Address {
-        var a = @as(Address, @enumFromInt(addr));
-        std.debug.assert(!a.is_reserved());
-        return a;
-    }
-
-    ///
-    /// Returns `true` if the Address is a reserved I²C address.
-    ///
-    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
-    ///
-    /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
-        const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
-    }
-
-    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
-    }
-};
-
-pub const TransactionError = error{
-    DeviceNotPresent,
-    NoAcknowledge,
-    Timeout,
-    TargetAddressReserved,
-    NoData,
-    Overrun,
-    UnknownAbort,
-};
+pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
+pub const Error = drivers.I2C_Device.Error || error{Overrun};
 
 pub fn num(n: u1) I2C {
     return @as(I2C, @enumFromInt(n));
@@ -168,23 +130,23 @@ pub const I2C = enum(u1) {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
     }
 
-    fn write_byte(i2c: I2C, byte: u8, deadline: mdf.time.Deadline) TransactionError!void {
+    fn write_byte(i2c: I2C, byte: u8, deadline: mdf.time.Deadline) Error!void {
         const regs = i2c.get_regs();
         regs.TXD.write(.{ .TXD = byte });
         while (!i2c.tx_sent()) {
             if (deadline.is_reached_by(time.get_time_since_boot()))
-                return TransactionError.Timeout;
+                return Error.Timeout;
             try i2c.check_and_clear_error();
             std.mem.doNotOptimizeAway(0);
         }
         regs.EVENTS_TXDSENT.raw = 0;
     }
 
-    fn read_byte(i2c: I2C, deadline: mdf.time.Deadline) TransactionError!u8 {
+    fn read_byte(i2c: I2C, deadline: mdf.time.Deadline) Error!u8 {
         const regs = i2c.get_regs();
         while (!i2c.rx_ready()) {
             if (deadline.is_reached_by(time.get_time_since_boot()))
-                return TransactionError.Timeout;
+                return Error.Timeout;
             try i2c.check_and_clear_error();
             std.mem.doNotOptimizeAway(0);
         }
@@ -220,7 +182,15 @@ pub const I2C = enum(u1) {
         });
     }
 
-    fn set_address(i2c: I2C, addr: Address) void {
+    // TODO: Could move the check into read/write and remove this struct
+    pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
+    fn set_address(i2c: I2C, addr: Address, allow_reserved: Allow_Reserved) Error!void {
+        if (allow_reserved == .dont_allow_reserved)
+            addr.check_reserved() catch return Error.IllegalAddress
+        else if (allow_reserved == .allow_general)
+            addr.check_reserved() catch |err| if (err != AddressError.GeneralCall)
+                return Error.IllegalAddress;
+
         i2c.disable();
         defer i2c.enable();
         i2c.get_regs().ADDRESS.write(.{
@@ -228,7 +198,7 @@ pub const I2C = enum(u1) {
         });
     }
 
-    fn check_and_clear_error(i2c: I2C) TransactionError!void {
+    fn check_and_clear_error(i2c: I2C) Error!void {
         const regs = i2c.get_regs();
         const error_generated = regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated;
         if (error_generated) {
@@ -238,24 +208,24 @@ pub const I2C = enum(u1) {
             const error_src = try i2c.check_error();
             if (error_src != 0) {
                 std.log.err("Unknown error source, EVENTS_ERROR=0x{X}", .{error_src});
-                return TransactionError.UnknownAbort;
+                return Error.UnknownAbort;
             }
         }
     }
 
-    fn check_error(i2c: I2C) TransactionError!u32 {
+    fn check_error(i2c: I2C) Error!u32 {
         const regs = i2c.get_regs();
         const error_src = regs.ERRORSRC.read();
 
         if (error_src.OVERRUN == .Present) {
             // Byte was received before we read the last one
-            return TransactionError.Overrun;
+            return Error.Overrun;
         } else if (error_src.ANACK == .Present) {
             // NACK received after address (device not present)
-            return TransactionError.DeviceNotPresent;
+            return Error.DeviceNotPresent;
         } else if (error_src.DNACK == .Present) {
             // NACK received after sending data
-            return TransactionError.NoAcknowledge;
+            return Error.NoAcknowledge;
         }
         return @bitCast(error_src);
     }
@@ -265,7 +235,7 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) Error!void {
         return i2c.writev_blocking(addr, &.{data}, timeout);
     }
 
@@ -279,18 +249,15 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
+        try i2c.set_address(addr, .allow_general);
 
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(chunks);
         if (write_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-
-        i2c.set_address(addr);
 
         i2c.clear_shorts();
         i2c.clear_events();
@@ -313,7 +280,7 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
         return try i2c.readv_blocking(addr, &.{dst}, timeout);
     }
 
@@ -328,18 +295,15 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
+        try i2c.set_address(addr, .dont_allow_reserved);
 
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(chunks);
         if (read_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-
-        i2c.set_address(addr);
 
         i2c.clear_shorts();
         i2c.clear_events();
@@ -393,22 +357,19 @@ pub const I2C = enum(u1) {
     ///       prefixes and suffixes won't need to be concatenated/inserted to the original buffer,
     ///       but can be managed in a separate memory.
     ///
-    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) Error!void {
+        try i2c.set_address(addr, .dont_allow_reserved);
 
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(write_chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(read_chunks);
 
         if (write_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
         if (read_vec.size() == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-
-        i2c.set_address(addr);
 
         i2c.clear_shorts();
         i2c.clear_events();

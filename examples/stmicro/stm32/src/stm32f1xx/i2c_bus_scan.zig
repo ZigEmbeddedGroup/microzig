@@ -1,12 +1,11 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 
 const I2c = stm32.i2c;
 
@@ -33,6 +32,8 @@ pub fn main() !void {
     rcc.enable_clock(.I2C2);
     rcc.enable_clock(.TIM2);
 
+    time.init_timer(.TIM2);
+
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     //Set internal Pull-ups (not recommended for real applications)
@@ -45,12 +46,9 @@ pub fn main() !void {
     SCL.set_output_mode(.alternate_function_open_drain, .max_50MHz);
     SDA.set_output_mode(.alternate_function_open_drain, .max_50MHz);
 
-    const counter = timer.counter_device(rcc.get_clock(.TIM2));
-
     i2c.apply(config);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 
@@ -61,7 +59,7 @@ pub fn main() !void {
         std.log.info("starting i2c scan:", .{});
         for (1..127) |val| {
             const addr = I2c.Address.new(@intCast(val));
-            i2c.write_blocking(addr, &[_]u8{0}, counter.make_ms_timeout(100)) catch |err| {
+            i2c.write_blocking(addr, &[_]u8{0}, Duration.from_ms(100)) catch |err| {
                 if (err == error.UnrecoverableError) {
                     i2c.apply(config);
                 } else {
@@ -70,7 +68,6 @@ pub fn main() !void {
                 continue;
             };
             std.log.info("found device at 0x{x}", .{val});
-            counter.sleep_ms(1000);
         }
     }
 }

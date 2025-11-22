@@ -1,8 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const Slice_Vector = microzig.utilities.Slice_Vector;
-const hal = microzig.hal;
-const system = hal.system;
+const SliceVector = microzig.utilities.SliceVector;
+
+const clocks = @import("clocks.zig");
+const gpio = @import("gpio.zig");
+const system = @import("system.zig");
 
 const SPI_Regs = microzig.chip.types.peripherals.SPI2;
 
@@ -16,13 +18,21 @@ pub const BitMode = enum {
     quad,
 };
 
-pub const SPI_Instance = enum {
-    spi2,
+pub const instance = struct {
+    pub const SPI2 = num(2);
+    pub fn num(n: u2) SPI {
+        std.debug.assert(n == 2);
+        return @enumFromInt(n);
+    }
 };
 
-pub const SPI_Bus = struct {
+// TODO: add support for peripheral controlled chip select pins
+
+pub const SPI = enum(u2) {
+    _,
+
     pub const Config = struct {
-        clock_config: hal.clocks.Config,
+        clock_config: clocks.Config,
         baud_rate: u32,
         bit_order: BitOrder = .msb_first,
 
@@ -105,65 +115,122 @@ pub const SPI_Bus = struct {
         lsb_first = 1,
     };
 
-    regs: *volatile SPI_Regs,
-
-    pub fn init(instance: SPI_Instance) SPI_Bus {
-        return .{
-            .regs = switch (instance) {
-                .spi2 => microzig.chip.peripherals.SPI2,
-            },
-        };
-    }
-
-    pub fn apply(self: SPI_Bus, comptime config: Config) void {
+    pub fn apply(self: SPI, comptime config: Config) void {
         comptime config.validate() catch @compileError("invalid baud rate");
 
         system.enable_clocks_and_release_reset(.{
             .spi2 = true,
         });
 
-        self.regs.CLK_GATE.modify(.{
+        const regs = self.get_regs();
+
+        regs.CLK_GATE.modify(.{
             .CLK_EN = 1,
         });
 
         // this also enables using all 16 words
-        self.regs.USER.write_raw(0);
+        regs.USER.write_raw(0);
 
-        self.regs.CLK_GATE.modify(.{
+        regs.CLK_GATE.modify(.{
             .MST_CLK_ACTIVE = 1,
             .MST_CLK_SEL = 1,
         });
 
-        self.regs.CTRL.modify(.{
+        regs.CTRL.modify(.{
             .Q_POL = 0,
             .D_POL = 0,
             .WP_POL = 0,
         });
 
         // this also disables all cs lines
-        self.regs.MISC.write_raw(0);
+        regs.MISC.write_raw(0);
 
-        self.regs.SLAVE.write_raw(0);
+        regs.SLAVE.write_raw(0);
 
-        self.regs.CLOCK.write_raw(config.get_clock_config());
+        regs.CLOCK.write_raw(config.get_clock_config());
 
-        self.regs.DMA_INT_CLR.modify(.{
+        regs.DMA_INT_CLR.modify(.{
             .TRANS_DONE_INT_CLR = 1,
         });
 
-        self.regs.DMA_INT_ENA.modify(.{
+        regs.DMA_INT_ENA.modify(.{
             .TRANS_DONE_INT_ENA = 1,
         });
 
         self.set_bit_order(config.bit_order);
     }
 
+    // TODO: not sure if this is the best way to do this
+    pub inline fn connect_pins(_: SPI, pins: struct {
+        data: union(enum) {
+            single_one_wire: ?gpio.Pin,
+            single_two_wires: struct {
+                mosi: ?gpio.Pin = null,
+                miso: ?gpio.Pin = null,
+            },
+            dual: struct {
+                bit0: ?gpio.Pin = null,
+                bit1: ?gpio.Pin = null,
+            },
+            quad: struct {
+                bit0: ?gpio.Pin = null,
+                bit1: ?gpio.Pin = null,
+                bit2: ?gpio.Pin = null,
+                bit3: ?gpio.Pin = null,
+            },
+        } = .{ .single_one_wire = null },
+        clk: ?gpio.Pin = null,
+    }) void {
+        switch (pins.data) {
+            .single_one_wire => |maybe_pin| if (maybe_pin) |pin| {
+                pin.connect_input_to_peripheral(.{ .signal = .fspid });
+                pin.connect_peripheral_to_output(.{ .signal = .fspid });
+            },
+            .single_two_wires => |maybe_pins| {
+                if (maybe_pins.mosi) |mosi| {
+                    mosi.connect_input_to_peripheral(.{ .signal = .fspid });
+                }
+                if (maybe_pins.miso) |miso| {
+                    miso.connect_input_to_peripheral(.{ .signal = .fspiq });
+                }
+            },
+            .dual => |maybe_pins| {
+                if (maybe_pins.bit0) |bit0| {
+                    bit0.connect_input_to_peripheral(.{ .signal = .fspid });
+                    bit0.connect_peripheral_to_output(.{ .signal = .fspid });
+                }
+                if (maybe_pins.bit1) |bit1| {
+                    bit1.connect_input_to_peripheral(.{ .signal = .fspiq });
+                    bit1.connect_peripheral_to_output(.{ .signal = .fspiq });
+                }
+            },
+            .quad => |maybe_pins| {
+                if (maybe_pins.bit0) |bit0| {
+                    bit0.connect_input_to_peripheral(.{ .signal = .fspid });
+                    bit0.connect_peripheral_to_output(.{ .signal = .fspid });
+                }
+                if (maybe_pins.bit1) |bit1| {
+                    bit1.connect_input_to_peripheral(.{ .signal = .fspiq });
+                    bit1.connect_peripheral_to_output(.{ .signal = .fspiq });
+                }
+                if (maybe_pins.bit2) |bit2| {
+                    bit2.connect_input_to_peripheral(.{ .signal = .fspiwp });
+                    bit2.connect_peripheral_to_output(.{ .signal = .fspiwp });
+                }
+                if (maybe_pins.bit3) |bit3| {
+                    bit3.connect_input_to_peripheral(.{ .signal = .fspihd });
+                    bit3.connect_peripheral_to_output(.{ .signal = .fspihd });
+                }
+            },
+        }
+    }
+
     pub fn writev_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer_vec: []const []const u8,
         bit_mode: BitMode,
     ) void {
-        const vec: Slice_Vector([]const u8) = .init(buffer_vec);
+        const vec: SliceVector([]const u8) = .init(buffer_vec);
         var iter = vec.iterator();
 
         var remaining = vec.size();
@@ -185,7 +252,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn write_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer: []const u8,
         bit_mode: BitMode,
     ) void {
@@ -196,11 +263,11 @@ pub const SPI_Bus = struct {
     }
 
     pub fn readv_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer_vec: []const []u8,
         bit_mode: BitMode,
     ) usize {
-        const vec: Slice_Vector([]u8) = .init(buffer_vec);
+        const vec: SliceVector([]u8) = .init(buffer_vec);
         var iter = vec.iterator();
 
         const total_len = vec.size();
@@ -227,7 +294,7 @@ pub const SPI_Bus = struct {
     }
 
     pub fn read_blocking(
-        self: SPI_Bus,
+        self: SPI,
         buffer: []u8,
         bit_mode: BitMode,
     ) usize {
@@ -238,13 +305,13 @@ pub const SPI_Bus = struct {
     }
 
     pub fn transceivev_blocking(
-        self: SPI_Bus,
+        self: SPI,
         write_buffer_vec: []const []const u8,
         read_buffer_vec: []const []u8,
     ) void {
-        const write_vec: Slice_Vector([]const u8) = .init(write_buffer_vec);
+        const write_vec: SliceVector([]const u8) = .init(write_buffer_vec);
         var write_iter = write_vec.iterator();
-        const read_vec: Slice_Vector([]const u8) = .init(read_buffer_vec);
+        const read_vec: SliceVector([]const u8) = .init(read_buffer_vec);
         var read_iter = read_vec.iterator();
 
         var remaining = write_vec.size();
@@ -270,22 +337,29 @@ pub const SPI_Bus = struct {
     }
 
     pub fn transceive_blocking(
-        self: SPI_Bus,
+        self: SPI,
         write_buffer: []const u8,
         read_buffer: []u8,
     ) void {
         self.transceivev_blocking(&.{write_buffer}, &.{read_buffer});
     }
 
-    fn set_bit_order(self: SPI_Bus, bit_order: BitOrder) void {
-        self.regs.CTRL.modify(.{
+    inline fn get_regs(self: SPI) *volatile SPI_Regs {
+        std.debug.assert(@intFromEnum(self) == 2);
+        return microzig.chip.peripherals.SPI2;
+    }
+
+    fn set_bit_order(self: SPI, bit_order: BitOrder) void {
+        const regs = self.get_regs();
+        regs.CTRL.modify(.{
             .RD_BIT_ORDER = @intFromEnum(bit_order),
             .WR_BIT_ORDER = @intFromEnum(bit_order),
         });
     }
 
-    fn fill_fifo(self: SPI_Bus, iter: *Slice_Vector([]const u8).Iterator, len: usize) void {
-        const fifo: *volatile [16]u32 = @ptrCast(&self.regs.W0);
+    fn fill_fifo(self: SPI, iter: *SliceVector([]const u8).Iterator, len: usize) void {
+        const regs = self.get_regs();
+        const fifo: *volatile [16]u32 = @ptrCast(&regs.W0);
 
         var i: usize = 0;
         var word: u32 = 0;
@@ -302,8 +376,9 @@ pub const SPI_Bus = struct {
         }
     }
 
-    fn read_fifo(self: SPI_Bus, iter: *Slice_Vector([]u8).Iterator, len: usize) void {
-        const fifo: *volatile [16]u32 = @ptrCast(&self.regs.W0);
+    fn read_fifo(self: SPI, iter: *SliceVector([]u8).Iterator, len: usize) void {
+        const regs = self.get_regs();
+        const fifo: *volatile [16]u32 = @ptrCast(&regs.W0);
 
         var i: usize = 0;
         while (i < len) : (i += 1) {
@@ -315,13 +390,15 @@ pub const SPI_Bus = struct {
     }
 
     fn start_transfer_generic(
-        self: SPI_Bus,
+        self: SPI,
         write: bool,
         read: bool,
         data_bitlen: u18,
         bit_mode: BitMode,
     ) void {
-        self.regs.USER.modify(.{
+        const regs = self.get_regs();
+
+        regs.USER.modify(.{
             .DOUTDIN = @intFromBool(write and read),
             .SIO = @intFromBool(bit_mode == .single_one_wire),
 
@@ -335,7 +412,7 @@ pub const SPI_Bus = struct {
             .FWRITE_QUAD = @intFromBool(bit_mode == .quad),
         });
 
-        self.regs.CTRL.modify(.{
+        regs.CTRL.modify(.{
             .FCMD_DUAL = @intFromBool(bit_mode == .dual),
             .FCMD_QUAD = @intFromBool(bit_mode == .quad),
             .FADDR_DUAL = @intFromBool(bit_mode == .dual),
@@ -344,32 +421,33 @@ pub const SPI_Bus = struct {
             .FREAD_QUAD = @intFromBool(bit_mode == .quad),
         });
 
-        self.regs.MS_DLEN.write(.{
+        regs.MS_DLEN.write(.{
             .MS_DATA_BITLEN = @intCast(data_bitlen - 1),
         });
 
-        self.regs.DMA_INT_CLR.modify(.{
+        regs.DMA_INT_CLR.modify(.{
             .TRANS_DONE_INT_CLR = 1,
         });
 
-        self.regs.DMA_CONF.modify(.{
+        regs.DMA_CONF.modify(.{
             .RX_AFIFO_RST = 1,
             .BUF_AFIFO_RST = 1,
             .DMA_AFIFO_RST = 1,
         });
 
-        self.regs.CMD.modify(.{
+        regs.CMD.modify(.{
             .UPDATE = 1,
         });
 
-        while (self.regs.CMD.read().UPDATE == 1) {}
+        while (regs.CMD.read().UPDATE == 1) {}
 
-        self.regs.CMD.modify(.{
+        regs.CMD.modify(.{
             .USR = 1,
         });
     }
 
-    fn wait_for_transfer_blocking(self: SPI_Bus) void {
-        while (self.regs.DMA_INT_RAW.read().TRANS_DONE_INT_RAW != 1) {}
+    fn wait_for_transfer_blocking(self: SPI) void {
+        const regs = self.get_regs();
+        while (regs.DMA_INT_RAW.read().TRANS_DONE_INT_RAW != 1) {}
     }
 };

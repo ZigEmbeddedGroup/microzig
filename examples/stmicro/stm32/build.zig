@@ -33,12 +33,15 @@ pub fn build(b: *std.Build) void {
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c_bus_scan", .file = "src/stm32f1xx/i2c_bus_scan.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_hd44780", .file = "src/stm32f1xx/hd44780.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_ssd1306", .file = "src/stm32f1xx/ssd1306.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_spi", .file = "src/stm32f1xx/spi.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_usb_hid", .file = "src/stm32f1xx/usb_hid.zig" },
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_usb_cdc", .file = "src/stm32f1xx/usb_cdc.zig" },
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_rcc", .file = "src/stm32f1xx/rcc.zig" },
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_timer", .file = "src/stm32f1xx/timer.zig" },
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_timer_capture", .file = "src/stm32f1xx/timer_capture.zig" },
+        .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_rtc", .file = "src/stm32f1xx/rtc.zig" },
+        .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_EXTI", .file = "src/stm32f1xx/EXTI.zig" },
     };
 
     for (available_examples) |example| {

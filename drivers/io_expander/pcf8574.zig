@@ -7,19 +7,22 @@ const SetBiasError = Digital_IO.SetBiasError;
 const SetDirError = Digital_IO.SetDirError;
 const WriteError = Digital_IO.WriteError;
 
+const I2CAddress = mdf.base.I2C_Device.Address;
+
 pub const PCF8574_Config = struct {
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    I2C_Device: type = mdf.base.I2C_Device,
 };
 
 pub fn PCF8574(comptime config: PCF8574_Config) type {
     return struct {
         const Self = @This();
-        interface: config.Datagram_Device,
+        interface: config.I2C_Device,
+        address: mdf.base.I2C_Device.Address,
         pins: u8 = 0,
         pin_arr: [8]u8 = undefined,
 
         inline fn update(self: *const Self) !void {
-            try self.interface.write(&[1]u8{self.pins});
+            try self.interface.write(self.address, &[1]u8{self.pins});
         }
 
         pub fn put(self: *Self, pin: u3, st: State) !void {
@@ -42,12 +45,12 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
         pub fn read(self: *Self, pin: u3) !State {
             const mask: u8 = @as(u8, 1) << pin;
             var pkg: [1]u8 = .{mask | self.pins};
-            const read_value = try self.interface.read(&pkg); //keep pullup enable until next call
+            const read_value = try self.interface.read(self.address, &pkg); //keep pullup enable until next call
             return if (read_value & mask != 0) State.high else State.low;
         }
 
-        pub fn init(datagram: config.Datagram_Device) Self {
-            var obj = Self{ .interface = datagram };
+        pub fn init(datagram: config.I2C_Device, address: I2CAddress) Self {
+            var obj = Self{ .interface = datagram, .address = address };
             for (0..obj.pin_arr.len) |index| {
                 obj.pin_arr[index] = @intCast(index);
             }
@@ -62,7 +65,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
         };
 
         fn read_fn(ctx: *anyopaque) ReadError!State {
-            const pin_ref: *u8 = @alignCast(@ptrCast(ctx));
+            const pin_ref: *u8 = @ptrCast(@alignCast(ctx));
             const index = pin_ref.*;
             const pin_base: *[8]u8 = @ptrFromInt(@intFromPtr(pin_ref) - index); //just 1 byte
             var PCF_base: *Self = @alignCast(@fieldParentPtr("pin_arr", pin_base));
@@ -71,7 +74,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
         }
 
         fn write_fn(ctx: *anyopaque, state: State) WriteError!void {
-            const pin_ref: *u8 = @alignCast(@ptrCast(ctx));
+            const pin_ref: *u8 = @ptrCast(@alignCast(ctx));
             const index = pin_ref.*;
             const pin_base: *[8]u8 = @ptrFromInt(@intFromPtr(pin_ref) - index); //just 1 byte
             var PCF_base: *Self = @alignCast(@fieldParentPtr("pin_arr", pin_base));

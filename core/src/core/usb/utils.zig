@@ -36,7 +36,7 @@ pub const BosConfig = struct {
         if (cfg_desc_type != @intFromEnum(exp_desc_type)) {
             return null;
         } else {
-            return @constCast(@ptrCast(bos_cfg.ptr));
+            return @ptrCast(@constCast(bos_cfg.ptr));
         }
     }
 

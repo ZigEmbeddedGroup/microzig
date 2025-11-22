@@ -1,12 +1,18 @@
-const builtin = @import("builtin");
+const std = @import("std");
 const printer = @import("printer");
 
 pub const Test = struct {
     address: u64,
-    query_result: printer.DebugInfo.QueryResult,
+    expected: struct {
+        line: u32,
+        column: u32,
+        file_path: []const u8,
+        function_name: ?[]const u8,
+        module_name: ?[]const u8,
+    },
 };
 
 pub const Data = struct {
-    elf_path: []const u8,
+    zig_version: []const u8,
     tests: []const Test,
 };

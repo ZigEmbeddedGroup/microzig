@@ -11,6 +11,8 @@ const Value = tokenizer.Value;
 const Expression = @import("Expression.zig");
 const Chip = @import("../../chip.zig").Chip;
 
+const BoundedArray = @import("bounded-array").BoundedArray;
+
 pub const Options = struct {
     max_defines: u32 = 16,
     max_programs: u32 = 16,
@@ -56,10 +58,10 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
             programs: BoundedPrograms,
         };
 
-        const BoundedDefines = std.BoundedArray(DefineWithIndex, options.max_defines);
-        const BoundedPrograms = std.BoundedArray(BoundedProgram, options.max_programs);
-        const BoundedInstructions = std.BoundedArray(Instruction(chip), 32);
-        const BoundedLabels = std.BoundedArray(Label, 32);
+        const BoundedDefines = BoundedArray(DefineWithIndex, options.max_defines);
+        const BoundedPrograms = BoundedArray(BoundedProgram, options.max_programs);
+        const BoundedInstructions = BoundedArray(Instruction(chip), 32);
+        const BoundedLabels = BoundedArray(Label, 32);
         const Label = struct {
             name: []const u8,
             index: u5,
@@ -84,7 +86,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                 return assembler.Program{
                     .name = &name_const,
                     .defines = blk: {
-                        var tmp = std.BoundedArray(assembler.Define, options.max_defines).init(0) catch unreachable;
+                        var tmp = BoundedArray(assembler.Define, options.max_defines).init(0) catch unreachable;
                         for (bounded.defines.slice()) |define| {
                             comptime var define_name: [define.name.len]u8 = undefined;
                             std.mem.copyForwards(u8, &define_name, define.name);

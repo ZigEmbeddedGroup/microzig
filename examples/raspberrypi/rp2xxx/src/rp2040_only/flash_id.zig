@@ -7,7 +7,6 @@ const gpio = rp2xxx.gpio;
 const flash = rp2xxx.flash;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -25,14 +24,13 @@ pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);
 
     while (true) {
         const serial_number = flash.id();
-        const hex_serial_number = std.fmt.fmtSliceHexLower(&serial_number);
+        const hex_serial_number = std.fmt.bytesToHex(&serial_number, .lower);
         std.log.info("serial number: {s}", .{hex_serial_number});
         time.sleep_ms(1000);
     }

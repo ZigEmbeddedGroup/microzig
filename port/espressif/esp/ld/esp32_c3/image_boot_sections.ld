@@ -1,12 +1,12 @@
 SECTIONS
 {
-  .irom.skip (NOLOAD) :
+  .flash_text_offset (NOLOAD) :
   {
     /* Skip 0x20 bytes for the esp image format mapping header. */
     . += 0x20;
   } > IROM
 
-  .text :
+  .flash.text :
   {
     KEEP(*(microzig_flash_start))
     *(.text*)
@@ -20,21 +20,31 @@ SECTIONS
     . += 16;
   } > IROM
 
-  .drom.dummy (NOLOAD) :
+  /* Dummy section to offset the rodata section after the text section */
+  .flash_rodata_dummy (NOLOAD) :
   {
-    . = ORIGIN(DROM) + 0x20 + SIZEOF(.text);
+    . = ALIGN(ALIGNOF(.flash_text_offset)) + SIZEOF(.flash_text_offset);
+    . = ALIGN(ALIGNOF(.flash.text)) + SIZEOF(.flash.text);
 
     /* Add alignment of MMU page size + 0x20 bytes for the mapping header. */
     . = ALIGN(0x10000) + 0x20;
   } > DROM
 
-  .rodata :
+  /* Keep section name used by esp-idf. This would be the first thing in the image */
+  .flash.appdesc : ALIGN(0x10)
   {
     KEEP(*(.app_desc))
+
+    /* Prevent gap between .app_desc and .rodata */
+    . = ALIGN(ALIGNOF(.flash.rodata));
+  } > DROM
+
+  .flash.rodata : ALIGN(0x10)
+  {
     *(.rodata*)
   } > DROM
 
-  .ram_text :
+  .ram.text :
   {
     KEEP(*(.ram_text))
 
@@ -42,9 +52,9 @@ SECTIONS
      * and offset done here (NOLOAD) */
   } > IRAM
 
-  .dram.dummy (NOLOAD) :
+  .ram_data_dummy (NOLOAD) :
   {
-    . = ORIGIN(DRAM) + SIZEOF(.ram_text);
+    . = ALIGN(ALIGNOF(.ram.text)) + SIZEOF(.ram.text);
   } > DRAM
 
   .data :

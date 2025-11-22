@@ -61,9 +61,11 @@ pub fn build(b: *std.Build) !void {
 
     const generate_exe = b.addExecutable(.{
         .name = "generate",
-        .root_source_file = b.path("src/generate.zig"),
-        .target = b.graph.host,
-        .optimize = generate_optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/generate.zig"),
+            .target = b.graph.host,
+            .optimize = generate_optimize,
+        }),
     });
     generate_exe.root_module.addImport("regz", regz);
 

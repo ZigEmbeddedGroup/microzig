@@ -44,7 +44,7 @@ pub const Address = enum(u7) {
     /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
     ///
     /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) Address.Error!void {
+    pub fn check_reserved(addr: Address) Address.Error!void {
         const value: u7 = @intFromEnum(addr);
 
         switch (value) {
@@ -77,58 +77,52 @@ ptr: *anyopaque,
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
 
-pub fn set_address(dev: I2C_Device, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
-    const set_address_fn = dev.vtable.set_address_fn orelse return InterfaceError.Unsupported;
-    return set_address_fn(dev.ptr, addr, allow_reserved);
-}
-
 /// Writes a single `datagram` to the device.
-pub fn write(dev: I2C_Device, datagram: []const u8) InterfaceError!void {
-    return try dev.writev(&.{datagram});
+pub fn write(dev: I2C_Device, address: Address, datagram: []const u8) InterfaceError!void {
+    return try dev.writev(address, &.{datagram});
 }
 
 /// Writes multiple `datagrams` to the device.
-pub fn writev(dev: I2C_Device, datagrams: []const []const u8) InterfaceError!void {
+pub fn writev(dev: I2C_Device, address: Address, datagrams: []const []const u8) InterfaceError!void {
     const writev_fn = dev.vtable.writev_fn orelse return InterfaceError.Unsupported;
-    return writev_fn(dev.ptr, datagrams);
+    return writev_fn(dev.ptr, address, datagrams);
 }
 
 /// Writes then reads a single `datagram` to the device.
-pub fn write_then_read(dev: I2C_Device, src: []const u8, dst: []u8) InterfaceError!void {
-    return try dev.writev_then_readv(&.{src}, &.{dst});
+pub fn write_then_read(dev: I2C_Device, address: Address, src: []const u8, dst: []u8) InterfaceError!void {
+    return try dev.writev_then_readv(address, &.{src}, &.{dst});
 }
 
 /// Writes a slice of datagrams to the device, then reads back into another slice of datagrams
 pub fn writev_then_readv(
     dev: I2C_Device,
+    address: Address,
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) InterfaceError!void {
     const writev_then_readv_fn = dev.vtable.writev_then_readv_fn orelse return InterfaceError.Unsupported;
-    return writev_then_readv_fn(dev.ptr, write_chunks, read_chunks);
+    return writev_then_readv_fn(dev.ptr, address, write_chunks, read_chunks);
 }
 
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagram`.
-pub fn read(dev: I2C_Device, datagram: []u8) InterfaceError!usize {
-    return try dev.readv(&.{datagram});
+pub fn read(dev: I2C_Device, address: Address, datagram: []u8) InterfaceError!usize {
+    return try dev.readv(address, &.{datagram});
 }
 
 /// Reads multiple `datagrams` from the device.
 /// Function returns the number of bytes written in `datagrams`.
-pub fn readv(dev: I2C_Device, datagrams: []const []u8) InterfaceError!usize {
+pub fn readv(dev: I2C_Device, address: Address, datagrams: []const []u8) InterfaceError!usize {
     const readv_fn = dev.vtable.readv_fn orelse return InterfaceError.Unsupported;
-    return readv_fn(dev.ptr, datagrams);
+    return readv_fn(dev.ptr, address, datagrams);
 }
 
-pub const Allow_Reserved = enum { allow_general, allow_reserved, dont_allow_reserved };
-
 pub const VTable = struct {
-    set_address_fn: ?*const fn (*anyopaque, Address, Allow_Reserved) InterfaceError!void,
-    writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) InterfaceError!void,
-    readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) InterfaceError!usize,
+    writev_fn: ?*const fn (*anyopaque, Address, datagrams: []const []const u8) InterfaceError!void,
+    readv_fn: ?*const fn (*anyopaque, Address, datagrams: []const []u8) InterfaceError!usize,
     writev_then_readv_fn: ?*const fn (
         *anyopaque,
+        Address,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
     ) InterfaceError!void = null,
@@ -137,7 +131,7 @@ pub const VTable = struct {
 /// A device implementation that can be used to write unit tests for datagram devices.
 pub const Test_Device = struct {
     arena: std.heap.ArenaAllocator,
-    packets: std.ArrayList([]u8),
+    packets: std.array_list.Managed([]u8),
 
     // If empty, reads are supported, but don't yield data.
     // If `null`, reads are not supported.
@@ -158,7 +152,7 @@ pub const Test_Device = struct {
     pub fn init(input: ?[]const []const u8, write_enabled: bool) Test_Device {
         return Test_Device{
             .arena = std.heap.ArenaAllocator.init(std.testing.allocator),
-            .packets = std.ArrayList([]u8).init(std.testing.allocator),
+            .packets = std.array_list.Managed([]u8).init(std.testing.allocator),
 
             .input_sequence = input,
             .input_sequence_pos = 0,
@@ -191,18 +185,9 @@ pub const Test_Device = struct {
         };
     }
 
-    fn set_address(ctx: *anyopaque, addr: Address, allow_reserved: Allow_Reserved) InterfaceError!void {
+    fn writev(ctx: *anyopaque, address: Address, datagrams: []const []const u8) InterfaceError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
-        if (allow_reserved == .dont_allow_reserved)
-            addr.is_reserved() catch return Error.IllegalAddress
-        else if (allow_reserved == .allow_general)
-            addr.is_reserved() catch |err| if (err != Address.Error.GeneralCall)
-                return Error.IllegalAddress;
-        td.addr = addr;
-    }
-
-    fn writev(ctx: *anyopaque, datagrams: []const []const u8) InterfaceError!void {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx));
+        _ = address;
 
         if (!td.write_enabled) {
             return error.Unsupported;
@@ -231,8 +216,9 @@ pub const Test_Device = struct {
         td.packets.append(dg) catch return error.UnknownAbort;
     }
 
-    fn readv(ctx: *anyopaque, datagrams: []const []u8) InterfaceError!usize {
+    fn readv(ctx: *anyopaque, address: Address, datagrams: []const []u8) InterfaceError!usize {
         const td: *Test_Device = @ptrCast(@alignCast(ctx));
+        _ = address;
 
         const inputs = td.input_sequence orelse return error.Unsupported;
 
@@ -271,20 +257,19 @@ pub const Test_Device = struct {
         return written;
     }
 
-    fn writev_then_readv(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) InterfaceError!void {
-        try Test_Device.writev(ctx, write_chunks);
-        _ = try Test_Device.readv(ctx, read_chunks);
+    fn writev_then_readv(ctx: *anyopaque, address: Address, write_chunks: []const []const u8, read_chunks: []const []u8) InterfaceError!void {
+        try Test_Device.writev(ctx, address, write_chunks);
+        _ = try Test_Device.readv(ctx, address, read_chunks);
     }
 
     const vtable = I2C_Device.VTable{
-        .set_address_fn = Test_Device.set_address,
         .writev_fn = Test_Device.writev,
         .readv_fn = Test_Device.readv,
         .writev_then_readv_fn = Test_Device.writev_then_readv,
     };
 };
 
-test "Address.is_reserved returns correct error types" {
+test "Address.check_reserved returns correct error types" {
     const TestCase = struct {
         address: u7,
         expected_error: ?Address.Error,
@@ -310,7 +295,7 @@ test "Address.is_reserved returns correct error types" {
     for (test_cases) |test_case| {
         const addr: Address = @enumFromInt(test_case.address);
         if (test_case.expected_error) |expected_error| {
-            std.testing.expectError(expected_error, addr.is_reserved()) catch |err| {
+            std.testing.expectError(expected_error, addr.check_reserved()) catch |err| {
                 std.debug.print(
                     "Failed test case: {s} (address 0x{X:0>2})\n",
                     .{ test_case.description, test_case.address },
@@ -318,7 +303,7 @@ test "Address.is_reserved returns correct error types" {
                 return err;
             };
         } else {
-            addr.is_reserved() catch |err| {
+            addr.check_reserved() catch |err| {
                 std.debug.print(
                     "Expected valid address but got error for: {s} (address 0x{X:0>2})\n",
                     .{ test_case.description, test_case.address },
@@ -339,17 +324,18 @@ test Test_Device {
 
     var buffer: [16]u8 = undefined;
 
-    const dd = td.i2c_device();
+    const id = td.i2c_device();
+    const addr: Address = @enumFromInt(0);
 
     {
         // The first input datagram will be received here:
-        const recv_len = try dd.read(&buffer);
+        const recv_len = try id.read(addr, &buffer);
         try std.testing.expectEqualStrings("first datagram", buffer[0..recv_len]);
     }
 
     {
         // The second one here:
-        const recv_len = try dd.read(&buffer);
+        const recv_len = try id.read(addr, &buffer);
         try std.testing.expectEqualStrings("second datagram", buffer[0..recv_len]);
     }
 
@@ -357,16 +343,16 @@ test Test_Device {
         // The third datagram will overrun our buffer, so we're receiving an error
         // which tells us that the whole buffer is filled, but there's data that
         // was discarded:
-        try std.testing.expectError(error.BufferOverrun, dd.read(&buffer));
+        try std.testing.expectError(error.BufferOverrun, id.read(addr, &buffer));
         try std.testing.expectEqualStrings("the very third d", &buffer);
     }
 
     // As there's no fourth datagram available, the test device will yield
     // an `IoError` for when no datagrams are available anymore:
-    try std.testing.expectError(error.NoData, dd.read(&buffer));
+    try std.testing.expectError(error.NoData, id.read(addr, &buffer));
 
-    try dd.write("Hello, World!");
-    try dd.writev(&.{ "See", " you ", "soon!" });
+    try id.write(addr, "Hello, World!");
+    try id.writev(addr, &.{ "See", " you ", "soon!" });
 
     // Check if we had exactly these datagrams:
     try td.expect_sent(&.{

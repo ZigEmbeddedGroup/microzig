@@ -17,7 +17,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.1
 
       - name: Download and install GitHub CLI
         run: |
@@ -26,6 +26,10 @@ jobs:
 
       - name: Authenticate with GitHub CLI
         run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Build Website
+        run: zig build --summary all
+        working-directory: website
 
       - name: List, download, unpack, and generate metadata
         run: |
@@ -61,9 +65,7 @@ jobs:
           echo "Generating metadata.json"
           echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > website/zig-out/downloads/microzig/metadata.json
 
-      - name: Build Website
-        run: zig build --summary all
-        working-directory: website
+
 
       - name: List Contents
         run: tree zig-out
@@ -75,7 +77,6 @@ jobs:
         with:
           path: website/zig-out
 
-
   # Deploy job
   deploy:
     # Add a dependency to the build job
@@ -83,8 +84,8 @@ jobs:
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
 
     # Deploy to the github-pages environment
     environment:

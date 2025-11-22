@@ -23,6 +23,7 @@ pub const lookup_function = chip_specific.lookup_function;
 
 pub fn lookup_and_cache_data(comptime code: Data) ?*const anyopaque {
     const S = struct {
+        const _code = code;
         var data: ?*const anyopaque = null;
     };
 
@@ -32,6 +33,7 @@ pub fn lookup_and_cache_data(comptime code: Data) ?*const anyopaque {
 
 pub fn lookup_and_cache_function(comptime code: Function) ?*const anyopaque {
     const S = struct {
+        const _code = code;
         var f: ?*const anyopaque = null;
     };
 
@@ -57,7 +59,7 @@ pub const chip_specific = switch (chip) {
 pub fn popcount32(x: u32) u32 {
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.popcount32 = @alignCast(@ptrCast(lookup_and_cache_function(.popcount32)));
+            const f: *const signatures.popcount32 = @ptrCast(@alignCast(lookup_and_cache_function(.popcount32)));
             return f(x);
         },
         // RP2350, supports fast assembly version
@@ -69,7 +71,7 @@ pub fn popcount32(x: u32) u32 {
 pub fn reverse32(x: u32) u32 {
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.reverse32 = @alignCast(@ptrCast(lookup_and_cache_function(.reverse32)));
+            const f: *const signatures.reverse32 = @ptrCast(@alignCast(lookup_and_cache_function(.reverse32)));
             return f(x);
         },
         // RP2350, supports fast assembly version
@@ -81,7 +83,7 @@ pub fn reverse32(x: u32) u32 {
 pub fn clz32(x: u32) u32 {
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.clz32 = @alignCast(@ptrCast(lookup_and_cache_function(.clz32)));
+            const f: *const signatures.clz32 = @ptrCast(@alignCast(lookup_and_cache_function(.clz32)));
             return f(x);
         },
         // RP2350, supports fast assembly version
@@ -93,7 +95,7 @@ pub fn clz32(x: u32) u32 {
 pub fn ctz32(x: u32) u32 {
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.ctz32 = @alignCast(@ptrCast(lookup_and_cache_function(.ctz32)));
+            const f: *const signatures.ctz32 = @ptrCast(@alignCast(lookup_and_cache_function(.ctz32)));
             return f(x);
         },
         // RP2350, supports fast assembly version
@@ -109,8 +111,8 @@ pub fn ctz32(x: u32) u32 {
 pub fn memset(dest: []u8, c: u8) []u8 {
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.memset = @alignCast(@ptrCast(lookup_and_cache_function(.memset)));
-            return f(dest.ptr, c, dest.len);
+            const f: *const signatures.memset = @ptrCast(@alignCast(lookup_and_cache_function(.memset)));
+            return f(dest.ptr, c, dest.len)[0..dest.len];
         },
         .RP2350 => {
             @memset(dest, c);
@@ -119,12 +121,13 @@ pub fn memset(dest: []u8, c: u8) []u8 {
     }
 }
 
-/// Copies n bytes from src to dest. The number of bytes copied is the size of the smaller slice.
+/// Copies bytes from src to dest (must have the same length).
 pub fn memcpy(dest: []u8, src: []const u8) []u8 {
+    std.debug.assert(dest.len == src.len);
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.memcpy = @alignCast(@ptrCast(lookup_and_cache_function(.memcpy)));
-            return f(dest.ptr, src.ptr, dest.len);
+            const f: *const signatures.memcpy = @ptrCast(@alignCast(lookup_and_cache_function(.memcpy)));
+            return f(dest.ptr, src.ptr, dest.len)[0..dest.len];
         },
         .RP2350 => {
             @memcpy(dest, src);
@@ -143,7 +146,7 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
 /// Restore all QSPI pad controls to their default state, and connect the SSI to
 /// the QSPI pads
 pub inline fn connect_internal_flash() void {
-    const f: *const signatures.connect_internal_flash = @alignCast(@ptrCast(lookup_function(.connect_internal_flash)));
+    const f: *const signatures.connect_internal_flash = @ptrCast(@alignCast(lookup_function(.connect_internal_flash)));
     f();
 }
 
@@ -154,7 +157,7 @@ pub inline fn connect_internal_flash() void {
 /// freshly-programmed code and data is visible to the debug host, without
 /// having to know exactly what kind of flash device is connected.
 pub inline fn flash_enter_cmd_xip() void {
-    const f: *const signatures.flash_enter_cmd_xip = @alignCast(@ptrCast(lookup_function(.flash_enter_cmd_xip)));
+    const f: *const signatures.flash_enter_cmd_xip = @ptrCast(@alignCast(lookup_function(.flash_enter_cmd_xip)));
     f();
 }
 
@@ -164,7 +167,7 @@ pub inline fn flash_enter_cmd_xip() void {
 /// returning the SSI to XIP mode (e.g. by a call to _flash_flush_cache). This
 /// function configures the SSI with a fixed SCK clock divisor of /6.
 pub inline fn flash_exit_xip() void {
-    const f: *const signatures.flash_exit_xip = @alignCast(@ptrCast(lookup_function(.flash_exit_xip)));
+    const f: *const signatures.flash_exit_xip = @ptrCast(@alignCast(lookup_function(.flash_exit_xip)));
     f();
 }
 
@@ -172,7 +175,7 @@ pub inline fn flash_exit_xip() void {
 /// There are few cases where you should call this method (resetting core 1 is much better).
 /// This method does not return and should only ever be called on core 1.
 pub inline fn flash_flush_cache() void {
-    const f: *const signatures.flash_flush_cache = @alignCast(@ptrCast(lookup_function(.flash_flush_cache)));
+    const f: *const signatures.flash_flush_cache = @ptrCast(@alignCast(lookup_function(.flash_flush_cache)));
     f();
 }
 
@@ -182,7 +185,7 @@ pub inline fn flash_flush_cache() void {
 /// erase where possible, for much higher erase speed. addr must be aligned to a
 /// 4096-byte sector, and count must be a multiple of 4096 bytes.
 pub inline fn flash_range_erase(addr: u32, count: usize, block_size: u32, block_cmd: u8) void {
-    const f: *const signatures.flash_range_erase = @alignCast(@ptrCast(lookup_function(.flash_range_erase)));
+    const f: *const signatures.flash_range_erase = @ptrCast(@alignCast(lookup_function(.flash_range_erase)));
     f(addr, count, block_size, block_cmd);
 }
 
@@ -190,7 +193,7 @@ pub inline fn flash_range_erase(addr: u32, count: usize, block_size: u32, block_
 /// start of flash) and count bytes in size. addr must be aligned to a 256-byte
 /// boundary, and the length of data must be a multiple of 256.
 pub inline fn flash_range_program(addr: u32, data: []const u8) void {
-    const f: *const signatures.flash_range_program = @alignCast(@ptrCast(lookup_function(.flash_range_program)));
+    const f: *const signatures.flash_range_program = @ptrCast(@alignCast(lookup_function(.flash_range_program)));
     f(addr, data.ptr, data.len);
 }
 
@@ -198,20 +201,15 @@ pub inline fn flash_range_program(addr: u32, data: []const u8) void {
 pub fn reset_to_usb_boot() void {
     switch (chip) {
         .RP2040 => {
-            const f: *const signatures.reset_to_usb_boot = @alignCast(@ptrCast(lookup_function(.reset_to_usb_boot)));
+            const f: *const signatures.reset_to_usb_boot = @ptrCast(@alignCast(lookup_function(.reset_to_usb_boot)));
             f(0, 0);
         },
         .RP2350 => {
             // 0x0002 - reset to bootsel
             // 0x0100 - block until reset
-            const f: *const signatures.reboot = @alignCast(@ptrCast(lookup_function(.reboot)));
+            const f: *const signatures.reboot = @ptrCast(@alignCast(lookup_function(.reboot)));
             _ = f(0x0002 | 0x0100, 10, 0, 0);
             unreachable;
         },
     }
-}
-
-comptime {
-    // export intrinsics
-    _ = chip_specific;
 }

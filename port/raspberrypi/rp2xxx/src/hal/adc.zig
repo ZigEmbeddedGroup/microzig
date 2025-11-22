@@ -60,10 +60,11 @@ pub fn apply(config: Config) void {
     });
 
     if (config.sample_frequency) |sample_frequency| {
+        assert(sample_frequency <= 500_000);
         const cycles = (48_000_000 * 256) / @as(u64, sample_frequency);
         ADC.DIV.write(.{
             .FRAC = @as(u8, @truncate(cycles)),
-            .INT = @as(u16, @intCast((cycles >> 8) - 1)),
+            .INT = @as(u16, @intCast((cycles >> 8))),
         });
     }
 

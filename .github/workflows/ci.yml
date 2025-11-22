@@ -7,21 +7,21 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.14.1
+  ZIG_VERSION: 0.15.1
 
 jobs:
   formatting-check:
     name: Formatting check
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Setup Zig
-      uses: mlugg/setup-zig@v2
-      with:
-        version: ${{ env.ZIG_VERSION }}
-    - name: Run zig fmt
-      run: zig fmt --check .
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Run zig fmt
+        run: zig fmt --check .
 
   unit-test-regz:
     name: Unit Test Regz
@@ -165,14 +165,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example_dir:
-          [
+        example_dir: [
             espressif/esp,
             gigadevice/gd32,
-          #microchip/avr,
+            #microchip/avr,
             microchip/atsam,
             nordic/nrf5x,
             nxp/lpc,
+            nxp/mcx,
             stmicro/stm32,
             raspberrypi/rp2xxx,
             wch/ch32v,
@@ -220,7 +220,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.1
       - name: Build Website
         run: zig build
         working-directory: website
@@ -241,8 +241,8 @@ jobs:
           MICROZIG_VERSION=$(zig build package -- get-version)
           echo microzig version: $MICROZIG_VERSION
           zig build package -- http://localhost:8000
-          python3 -m http.server 8000 --directory boxzer-out &
-          sleep 1
+          python3 -m http.server --directory boxzer-out &
+          sleep 5
 
           cd tools/package-test
           zig fetch --save=microzig http://localhost:8000/${MICROZIG_VERSION}/microzig.tar.gz

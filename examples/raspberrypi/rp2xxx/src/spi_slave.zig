@@ -7,7 +7,6 @@ const gpio = rp2xxx.gpio;
 const chip = rp2xxx.compatibility.chip;
 
 const uart = rp2xxx.uart.instance.num(0);
-const uart_baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 pub const microzig_options = microzig.Options{
@@ -37,7 +36,6 @@ pub fn main() !void {
 
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = uart_baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
 

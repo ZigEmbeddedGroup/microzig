@@ -41,6 +41,6 @@ inline fn busy_delay(comptime ms: u32) void {
 
     var i: u32 = 0;
     while (i < limit) : (i += 1) {
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
