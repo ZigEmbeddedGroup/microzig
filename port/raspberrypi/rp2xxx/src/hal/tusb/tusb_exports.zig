@@ -10,6 +10,9 @@ const tusb_logger = std.log.scoped(.tusb);
 
 export fn _putchar(char: u8) void {
     if (char_index < charbuf.len and char != '\n') {
+        if (char == '\r') {
+            return;
+        }
         charbuf[char_index] = char;
         char_index += 1;
     } else {
@@ -17,6 +20,9 @@ export fn _putchar(char: u8) void {
         char_index = 0;
     }
 }
+
+// TODO: not sure why this is needed or if it's really right but seems to work.
+export const _ctype_: u8 = undefined;
 
 export fn panic(format: [*c]const u8, ...) void {
     const z_str: []const u8 = std.mem.span(format);

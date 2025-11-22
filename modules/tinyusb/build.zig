@@ -13,13 +13,14 @@ pub fn addTinyUSBLib(b: *Build) void {
         // seems important to release fast to avoid some extra dependencies
         .optimize = .ReleaseFast,
     });
-
     module.addIncludePath(b.path("cfiles"));
 
     // Add printf implementation
     const prntf_dep = b.dependency("printf", .{});
     module.addIncludePath(prntf_dep.path(""));
     module.addCSourceFile(.{ .file = prntf_dep.path("printf.c") });
+    module.addCMacro("CFG_TUSB_DEBUG_PRINTF", "printf_");
+    module.addCMacro("snprintf", "snprintf_");
 
     // TinyUSB src folder
     const tusb_dep = b.dependency("tusb", .{});
