@@ -37,12 +37,16 @@ pub fn main() !void {
     // wifi.runner.bus.bp_write32(0x18000000 + 0x68, 1);
 
     var on: u32 = 1;
-    wifi.runner.read_clmver();
-    wifi.runner.read_mac();
+    //wifi.runner.read_clmver();
+    try wifi.runner.read_mac();
+
+    try wifi.runner.join("", "");
+    log.debug("join end\n\n", .{});
+
     while (true) {
         time.sleep_ms(500);
         // toggle led by sending command
-        wifi.runner.led_on(on == 1);
+        try wifi.runner.led_on(on == 1);
         on = if (on == 1) 0 else 1;
 
         // toggle led by using wifi regs

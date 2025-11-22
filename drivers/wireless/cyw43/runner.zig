@@ -83,6 +83,31 @@ pub const Runner = struct {
         self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0x10);
         while (self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
 
+        // Load Country Locale Matrix (CLM)
+        {
+            const data = @embedFile("firmware/43439A0_clm.bin");
+            const chunk_len = 512;
+
+            var clr: extern struct {
+                name: [8]u8 = "clmload\x00".*,
+                flag: u16 = 0,
+                typ: u16 = 2,
+                len: u32 = 0,
+                crc: u32 = 0,
+            } = .{};
+
+            var nbytes: usize = 0;
+            while (nbytes < data.len) {
+                const n = @min(chunk_len, data.len - nbytes);
+                clr.flag = 1 << 12 | (if (nbytes > 0) @as(u16, 0) else 2) | (if (nbytes + n >= data.len) @as(u16, 4) else 0);
+                clr.len = n;
+                const cmd_name = std.mem.asBytes(&clr);
+                // HACK: remove 1 byte from name, set_var adds sentinel, works because crc is always 0
+                try self.set_var(cmd_name[0 .. cmd_name.len - 1], data[nbytes..][0..n]);
+                nbytes += n;
+            }
+        }
+
         self.log_init();
     }
 
@@ -190,7 +215,7 @@ pub const Runner = struct {
 
     pub fn event_get_rsp(self: *Self, data: []u32) u32 {
         const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
-        // log.debug("event_get_rsp {any}", .{status});
+        //log.debug("event_get_rsp {any}", .{status});
         if (!status.f2_packet_available) return 0;
         if (status.packet_length > 0) {
             // Read event data if present
@@ -203,39 +228,105 @@ pub const Runner = struct {
             //     log.debug("response word {} {x}", .{ i, w });
             // }
         } else {
-            // ..or clear interrupt, and discard data
-            self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
-            const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
-            self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
+            // // ..or clear interrupt, and discard data
+            // self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
+            // const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
+            // self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
         }
         return status.packet_length;
     }
 
-    pub fn read_clmver(self: *Self) void {
+    pub fn read_clmver(self: *Self) !void {
         const data: [300]u8 = undefined;
         var req = ioctl.Request.init(.get_var, "clmver", false, &data);
         self.bus.write_words(.wlan, 0, req.as_slice());
-        self.read_response(300);
+        try self.wait_response(.get_var);
+        //self.read_response(300);
     }
 
-    pub fn read_mac(self: *Self) void {
+    pub fn read_mac(self: *Self) !void {
         const mac: [6]u8 = undefined;
 
         var req = ioctl.Request.init(.get_var, "cur_etheraddr", false, &mac);
         self.bus.write_words(.wlan, 0, req.as_slice());
-        self.read_response(6);
+        try self.wait_response(.get_var);
+        //self.read_response(6);
     }
 
-    pub fn led_on(self: *Self, on: bool) void {
+    pub fn led_on(self: *Self, on: bool) !void {
         var data: [8]u8 = @splat(0);
         data[0] = 1;
         if (on) {
             data[4] = 1;
         }
+        try self.set_var("gpioout", &data);
 
-        var req = ioctl.Request.init(.set_var, "gpioout", true, &data);
+        // var req = ioctl.Request.init(.set_var, "gpioout", true, &data);
+        // self.bus.write_words(.wlan, 0, req.as_slice());
+        // self.read_response(0);
+    }
+
+    fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
+        var req = ioctl.Request.init(.set_var, name, true, data);
         self.bus.write_words(.wlan, 0, req.as_slice());
-        self.read_response(0);
+        try self.wait_response(.set_var);
+    }
+
+    fn set_var32(self: *Self, name: []const u8, value: u32) !void {
+        var req = ioctl.Request.init(.set_var, name, true, std.mem.asBytes(&value));
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.wait_response(.set_var);
+    }
+
+    fn ioctl_wr_int32(self: *Self, cmd: ioctl.Cmd, value: u32) !void {
+        try self.ioctl_wr_data(cmd, std.mem.asBytes(&value));
+    }
+
+    fn ioctl_wr_data(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
+        var req = ioctl.Request.init(cmd, "", true, data);
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.wait_response(cmd);
+    }
+
+    pub fn wait_response(self: *Self, cmd: ioctl.Cmd) !void {
+        var sleeps: usize = 0;
+        while (sleeps < 8) {
+            var rsp: ioctl.Response = .empty;
+            const len = self.event_get_rsp(rsp.as_slice());
+            //log.debug("wait_response len:    {}", .{len});
+            if (len == 0) {
+                self.sleep_ms(10);
+                sleeps += 1;
+                continue;
+            }
+
+            if (rsp.bus.len ^ rsp.bus.notlen != 0xffff) {
+                log.err("ioctl: invalid reponse len {x} {x}", .{ rsp.bus.len, rsp.bus.notlen });
+                return error.IoctlInvalidBusLen;
+            }
+            if (rsp.bus.chan == .control) {
+                const ctl = rsp.ioctl();
+                if (ctl.cmd == cmd) {
+                    // apsta, ampdu_rx_factor commands are returing status 0xFFFFFFFB
+                    if (ctl.status == 0 or ctl.status == 0xFFFFFFFB) {
+                        return;
+                    }
+                    log.err("bus: {}", .{rsp.bus});
+                    log.err("clt: {}", .{ctl});
+                    log.err("data: {x}", .{rsp.data(255)});
+                    log.err("data: '{s}'", .{rsp.data(255)});
+                    return error.IoctlInvalicCommandStatus;
+                }
+            } else {
+                // TODO handle event
+                log.debug("EVENT in wait_reponse {} {}", .{ sleeps, cmd });
+                log.debug("bus: {}", .{rsp.bus});
+                log.debug("bdc: {}", .{rsp.bdc()});
+                log.debug("data: {x}", .{rsp.data(255)});
+            }
+        }
+        log.err("ioctl: missing response in wait_response", .{});
+        return error.IoctlNoResponse;
     }
 
     pub fn read_response(self: *Self, data_len: usize) void {
@@ -258,6 +349,122 @@ pub const Runner = struct {
             log.debug("read_response data:  '{x}'", .{rsp.data(data_len)});
             break;
             //self.sleep_ms(10);
+        }
+    }
+
+    pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
+        _ = ssid;
+        _ = pwd;
+        const bus = &self.bus;
+
+        // Clear pullups
+        {
+            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0xf);
+            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0);
+            const val = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
+            log.debug("REG_BACKPLANE_PULL_UP value: {}", .{val});
+        }
+        // Clear data unavail error
+        {
+            const val = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
+            if (val & 1 > 0)
+                self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, val);
+        }
+        // Set sleep KSO (should poll to check for success)
+        {
+            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_SLEEP_CSR, 1);
+            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_SLEEP_CSR, 1);
+            const val = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
+            log.debug("REG_BACKPLANE_SLEEP_CSR value: {}", .{val});
+        }
+        // Set country
+        {
+            // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
+            // abbrev++rev++code in u32
+            const buf = "XX\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "XX\x00\x00";
+            //const buf = ioctl.hexToBytes("58580000FFFFFFFF585800000000000000000000");
+            //const buf = ioctl.hexToBytes("58580000FFFFFFFF58580000");
+            //const buf = "HR\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "HR\x00\x00";
+            try self.set_var("country", buf);
+        }
+        try self.ioctl_wr_int32(.set_antdiv, 0);
+        // Data aggregation
+        {
+            try self.set_var32("bus:txglom", 0x00);
+            try self.set_var32("apsta", 0x01);
+            try self.set_var32("ampdu_ba_wsize", 0x08);
+            try self.set_var32("ampdu_mpdu", 0x04);
+            try self.set_var32("ampdu_rx_factor", 0x00);
+            self.sleep_ms(150);
+        }
+        // Enable events
+        {
+            // using events list from: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L38
+            // ref: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L74
+            // can be something like:
+            // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/control.rs#L242
+            const buf = ioctl.hexToBytes("000000008B120102004000000000800100000000000000000000");
+            //const buf = ioctl.hexToBytes("00000000ffffffffffffffffffffffffffffffffffffffffffffffff");
+            try self.set_var("bsscfg:event_msgs", &buf);
+            self.sleep_ms(50);
+        }
+        // Enable multicast
+        {
+            var buf: [64]u8 = @splat(0); // space for 10 addresses
+            @memcpy(buf[0..4], &[_]u8{ 0x01, 0x00, 0x00, 0x00 }); // number of addresses
+            @memcpy(buf[4..][0..6], &[_]u8{ 0x01, 0x00, 0x5E, 0x00, 0x00, 0xFB }); // address
+            try self.set_var("mcast_list", &buf);
+            self.sleep_ms(50);
+        }
+        // join_restart function
+        {
+            try self.ioctl_wr_data(.up, &.{});
+            try self.ioctl_wr_int32(.set_gmode, 1);
+            try self.ioctl_wr_int32(.set_band, 0);
+            try self.set_var32("pm2_sleep_ret", 0xc8);
+            try self.set_var32("bcn_li_bcn", 1);
+            try self.set_var32("bcn_li_dtim", 1);
+            try self.set_var32("assoc_listen", 0x0a);
+
+            try self.ioctl_wr_int32(.set_infra, 1);
+            try self.ioctl_wr_int32(.set_auth, 0);
+            try self.ioctl_wr_int32(.set_wsec, 6); // wpa security
+
+            try self.set_var("bsscfg:sup_wpa", "\x00\x00\x00\x00\x01\x00\x00\x00");
+            try self.set_var("bsscfg:sup_wpa2_eapver", "\x00\x00\x00\x00\xFF\xFF\xFF\xFF");
+            try self.set_var("bsscfg:sup_wpa_tmo", "\x00\x00\x00\x00\xC4\x09\x00\x00");
+            self.sleep_ms(2);
+
+            // TODO hardcoded pwd
+            try self.ioctl_wr_data(.set_wsec_pmk, &ioctl.hexToBytes("0A0001005065726F5A6465726F31"));
+            try self.ioctl_wr_int32(.set_infra, 1);
+            try self.ioctl_wr_int32(.set_auth, 0);
+            try self.ioctl_wr_int32(.set_wpa_auth, 0x80); // wpa
+
+            // TODO hardcoded ssid
+            try self.ioctl_wr_data(.set_ssid, &ioctl.hexToBytes("080000006E696E617A617261"));
+        }
+
+        for (0..100 * 60) |i| {
+            var rsp: ioctl.Response = .empty;
+            const len = self.event_get_rsp(rsp.as_slice());
+            if (len > 0) {
+                if (rsp.bus.len ^ rsp.bus.notlen != 0xffff) {
+                    log.err("ioctl: invalid reponse len {x} {x}", .{ rsp.bus.len, rsp.bus.notlen });
+                    return error.IoctlInvalidBusLen;
+                }
+                if (rsp.bus.chan == .control) {
+                    log.debug("loop control {}", .{i});
+                    log.debug("bus: {}", .{rsp.bus});
+                    log.debug("clt: {}", .{rsp.ioctl()});
+                } else {
+                    log.debug("loop for event {}", .{i});
+                    log.debug("bus: {}", .{rsp.bus});
+                    log.debug("bdc: {}", .{rsp.bdc()});
+                    log.debug("data: {x}", .{rsp.data(255)});
+                }
+            }
+            self.sleep_ms(10);
         }
     }
 

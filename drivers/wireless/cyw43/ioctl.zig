@@ -33,15 +33,26 @@ const IoctlHeader = extern struct {
     flags: u16 = 0,
     id: u16,
     status: u32 = 0,
-
-    const Cmd = enum(u32) {
-        get_var = 262,
-        set_var = 263,
-        _,
-    };
 };
 
-pub const BcdHeader = extern struct {
+pub const Cmd = enum(u32) {
+    up = 2,
+    down = 3,
+    set_infra = 20,
+    set_auth = 22,
+    set_ssid = 26,
+    set_antdiv = 64,
+    set_gmode = 110,
+    set_wsec = 134,
+    set_band = 142,
+    set_wpa_auth = 165,
+    get_var = 262,
+    set_var = 263,
+    set_wsec_pmk = 268,
+    _,
+};
+
+pub const BdcHeader = extern struct {
     flags: u8,
     priority: u8,
     flags2: u8,
@@ -56,19 +67,24 @@ pub const Response = extern struct {
     bus: BusHeader align(4),
     buffer: [IOCTL_MAX_BLKLEN - @sizeOf(BusHeader)]u8,
 
-    pub fn ioctl_pos(self: *Self) usize {
+    fn header2_pos(self: *Self) usize {
         return self.bus.hdrlen - @sizeOf(BusHeader);
     }
 
     pub fn ioctl(self: *Self) IoctlHeader {
-        return @bitCast(self.buffer[self.ioctl_pos()..][0..@sizeOf(IoctlHeader)].*);
+        return @bitCast(self.buffer[self.header2_pos()..][0..@sizeOf(IoctlHeader)].*);
+    }
+
+    pub fn bdc(self: *Self) BdcHeader {
+        return @bitCast(self.buffer[self.header2_pos()..][0..@sizeOf(BdcHeader)].*);
     }
 
     pub fn data(self: *Self, data_len: usize) []const u8 {
-        const pos = self.ioctl_pos() + @sizeOf(IoctlHeader);
-        const len = self.bus.len - @sizeOf(IoctlHeader);
-        if (pos < len) {
-            const data_buf = self.buffer[pos..len];
+        const pos: usize = self.header2_pos() +
+            if (self.bus.chan == .control) @as(usize, @sizeOf(IoctlHeader)) else @as(usize, @sizeOf(BdcHeader));
+        const buffer_len = self.bus.len - @sizeOf(BusHeader);
+        if (pos < buffer_len) {
+            const data_buf = self.buffer[pos..buffer_len];
             return data_buf[0..@min(data_len, data_buf.len)];
         }
         return &.{};
@@ -89,8 +105,9 @@ pub const Request = extern struct {
     hdr: IoctlHeader,
     data: [IOCTL_MAX_BLKLEN - @sizeOf(BusHeader) - @sizeOf(IoctlHeader)]u8,
 
-    pub fn init(cmd: IoctlHeader.Cmd, name: []const u8, set: bool, data: []const u8) Self {
-        const txdlen: u16 = @intCast(((name.len + 1 + data.len + 3) / 4) * 4); // name has 0 sentinel that's why (+1)
+    pub fn init(cmd: Cmd, name: []const u8, set: bool, data: []const u8) Self {
+        const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0); // name has sentinel
+        const txdlen: u16 = @intCast(((name_len + data.len + 3) / 4) * 4);
         const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(IoctlHeader);
         const txlen: u16 = hdrlen + txdlen;
 
@@ -110,11 +127,11 @@ pub const Request = extern struct {
             .id = ioctl_reqid,
             .flags = if (set) 0x02 else 0,
         };
-        if (name.len > 0) {
+        if (name_len > 0) {
             @memcpy(req.data[0..name.len], name);
         }
         if (data.len > 0 and set) {
-            @memcpy(req.data[name.len + 1 ..][0..data.len], data);
+            @memcpy(req.data[name_len..][0..data.len], data);
         }
         return req;
     }
@@ -258,7 +275,7 @@ test "parse response2" {
     try testing.expectEqualSlices(u8, expected, rsp.data(6));
 }
 
-fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
+pub fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
     var res: [hex.len / 2]u8 = undefined;
     _ = std.fmt.hexToBytes(&res, hex) catch unreachable;
     return res;
