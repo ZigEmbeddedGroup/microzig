@@ -2,7 +2,7 @@
     .name = .mz_tools_linter,
     .version = "0.0.0",
     .fingerprint = 0x334c50d4d1fddc14,
-    .minimum_zig_version = "0.14.1",
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{},
     .paths = .{
         "build.zig",

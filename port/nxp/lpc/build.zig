@@ -60,10 +60,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) void {
+    const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
+
     const lpc176x5x_patch_elf_exe = b.addExecutable(.{
         .name = "lpc176x5x-patchelf",
-        .root_source_file = b.path("src/tools/patchelf.zig"),
-        .target = b.graph.host,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tools/patchelf.zig"),
+            .optimize = optimize,
+            .target = target,
+        }),
     });
     b.installArtifact(lpc176x5x_patch_elf_exe);
 }

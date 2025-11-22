@@ -231,9 +231,15 @@ pub const interrupt = struct {
 pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
 
-pub const startup_logic = switch (cpu_config.boot_mode) {
-    .direct => struct {
-        comptime {
+pub const startup_logic = struct {
+    extern fn microzig_main() noreturn;
+
+    comptime {
+        if (cpu_config.boot_mode == .direct) {
+            if (microzig.config.ram_image) {
+                @compileError("RAM images are not supported in direct boot mode");
+            }
+
             // See this:
             // https://github.com/espressif/esp32c3-direct-boot-example
 
@@ -253,87 +259,46 @@ pub const startup_logic = switch (cpu_config.boot_mode) {
                 \\.byte 0x1d, 0x04, 0xdb, 0xae
             );
         }
+    }
 
-        extern fn microzig_main() noreturn;
+    const _start_link_section = if (microzig.config.ram_image)
+        "microzig_ram_start"
+    else
+        "microzig_flash_start";
 
-        fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
-            interrupt.disable_interrupts();
+    fn _start() linksection(_start_link_section) callconv(.c) noreturn {
+        interrupt.disable_interrupts();
 
-            const eos = comptime microzig.utilities.get_end_of_stack();
-            asm volatile ("mv sp, %[eos]"
-                :
-                : [eos] "r" (@as(u32, @intFromPtr(eos))),
-            );
+        asm volatile (
+            \\.option push
+            \\.option norelax
+            \\la gp, __global_pointer$
+            \\.option pop
+        );
 
-            asm volatile (
-                \\.option push
-                \\.option norelax
-                \\la gp, __global_pointer$
-                \\.option pop
-            );
+        const eos = comptime microzig.utilities.get_end_of_stack();
+        asm volatile (
+            \\mv sp, %[eos]
+            \\
+            :
+            : [eos] "r" (@as(u32, @intFromPtr(eos))),
+        );
 
-            microzig.utilities.initialize_system_memories();
-
-            init_interrupts();
-
-            microzig_main();
+        switch (cpu_config.boot_mode) {
+            .direct => microzig.utilities.initialize_system_memories(.all),
+            .image => microzig.utilities.initialize_system_memories(.bss_only),
         }
 
-        fn export_impl() void {
-            @export(&_start, .{ .name = "_start" });
-        }
-    },
-    .image => struct {
-        extern fn microzig_main() noreturn;
+        init_interrupts();
 
-        const sections = struct {
-            extern var microzig_bss_start: u8;
-            extern var microzig_bss_end: u8;
-        };
+        interrupt.enable_interrupts();
 
-        fn _start() callconv(.naked) noreturn {
-            const eos = comptime microzig.utilities.get_end_of_stack();
-            asm volatile (
-                \\mv sp, %[eos]
-                \\jal _start_c
-                :
-                : [eos] "r" (@as(u32, @intFromPtr(eos))),
-            );
-        }
-
-        fn _start_c() callconv(.c) noreturn {
-            interrupt.disable_interrupts();
-
-            asm volatile (
-                \\.option push
-                \\.option norelax
-                \\la gp, __global_pointer$
-                \\.option pop
-            );
-
-            // fill .bss with zeroes
-            {
-                const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
-                const bss_end: [*]u8 = @ptrCast(&sections.microzig_bss_end);
-                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
-
-                @memset(bss_start[0..bss_len], 0);
-            }
-
-            init_interrupts();
-
-            microzig_main();
-        }
-
-        fn export_impl() void {
-            @export(&_start, .{ .name = "_start" });
-            @export(&_start_c, .{ .name = "_start_c" });
-        }
-    },
+        microzig_main();
+    }
 };
 
 pub fn export_startup_logic() void {
-    startup_logic.export_impl();
+    @export(&startup_logic._start, .{ .name = "_start" });
 }
 
 /// Gets interrupts into a known state after the bootloader.

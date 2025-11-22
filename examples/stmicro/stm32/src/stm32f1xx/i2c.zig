@@ -4,8 +4,8 @@ const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 
 const i2c = stm32.i2c;
 
@@ -32,8 +32,7 @@ pub fn main() !void {
     rcc.enable_clock(.USART1);
     rcc.enable_clock(.I2C2);
     rcc.enable_clock(.TIM2);
-
-    const counter = timer.counter_device(rcc.get_clock(.TIM2));
+    time.init_timer(.TIM2);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
@@ -50,7 +49,6 @@ pub fn main() !void {
     i2c2.apply(config);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 
@@ -61,7 +59,7 @@ pub fn main() !void {
     while (true) {
         for (0..0xFF) |val| {
             std.log.info("sending {d}", .{val});
-            i2c2.write_blocking(ADDR, &.{@intCast(val)}, counter.make_ms_timeout(5000)) catch |err| {
+            i2c2.write_blocking(ADDR, &.{@intCast(val)}, Duration.from_ms(5000)) catch |err| {
                 std.log.err("send to send data | error {any}", .{err});
                 if (err == error.UnrecoverableError) {
                     //Reset I2C peripheral
@@ -72,8 +70,8 @@ pub fn main() !void {
                 continue;
             };
 
-            std.log.info("receiving data from the slave", .{});
-            i2c2.read_blocking(ADDR, &to_read, counter.make_ms_timeout(1000)) catch |err| {
+            std.log.info("receiving data from the device", .{});
+            i2c2.read_blocking(ADDR, &to_read, Duration.from_ms(1000)) catch |err| {
                 std.log.err("fail to read data | error {any}", .{err});
                 if (err == error.UnrecoverableError) {
                     //Reset I2C peripheral
@@ -84,7 +82,7 @@ pub fn main() !void {
                 continue;
             };
             std.log.info("data received: {}", .{to_read[0]});
-            counter.sleep_ms(1000);
+            time.sleep_ms(1000);
         }
     }
 }

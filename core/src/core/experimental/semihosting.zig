@@ -38,25 +38,60 @@ pub const Debug = struct {
     };
 
     //WriteC and Write0 write direct to the Debug terminal, no context need
-    const Writer = std.io.Writer(void, anyerror, writerfn);
+    pub const Writer = struct {
+        interface: std.Io.Writer,
+    };
+
+    pub fn writer(buffer: []u8) Writer {
+        return .{
+            .interface = .{
+                .vtable = &.{
+                    .drain = drain,
+                },
+                .buffer = buffer,
+            },
+        };
+    }
 
     pub const Argv = extern struct {
         buffer: [*]u8,
         len: usize,
     };
 
+    fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const buf = io_w.buffered();
+
+        var ret: usize = 0;
+        if (buf.len > 0) {
+            ret += try writerfn({}, buf);
+            _ = io_w.consumeAll();
+        }
+        for (data[0 .. data.len - 1]) |d| {
+            ret += try writerfn({}, d);
+        }
+        for (0..splat) |_| {
+            const to_splat = data[data.len - 1];
+            ret += try writerfn({}, to_splat);
+        }
+
+        return ret;
+    }
+
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
-    fn writerfn(_: void, data: []const u8) anyerror!usize {
-        var len = data.len;
+    fn writerfn(_: void, data: []const u8) std.Io.Writer.Error!usize {
+        const len = data.len;
+        if (len == 0) return 0;
 
         if (len != 1) {
             const tmp_c = data[len - 1]; //check if last char is a sentinel
             if (tmp_c != 0) {
-                len -= 1; //last char is gonna be change to '\0'
+                // Temporarily change last char to null byte
                 var tmp_data: []u8 = @constCast(data);
-                tmp_data[len] = 0;
+                tmp_data[len - 1] = 0;
                 write0(@ptrCast(tmp_data.ptr));
-                tmp_data[len] = tmp_c;
+                tmp_data[len - 1] = tmp_c;
+                // Write the last character separately
+                write_byte(tmp_c);
                 return len;
             }
             write0(@ptrCast(data.ptr));
@@ -69,8 +104,10 @@ pub const Debug = struct {
     ///writes to the Debug terminal.
     ///NOTE: if available, always use `stdout`
     pub fn print(comptime fmt: []const u8, args: anytype) void {
-        const dbg_w = Writer{ .context = {} };
-        dbg_w.print(fmt, args) catch return;
+        var buf: [256]u8 = undefined;
+        var dbg_w = writer(&buf);
+        dbg_w.interface.print(fmt, args) catch return;
+        dbg_w.interface.flush() catch return;
     }
 
     ///get C errno value
@@ -95,16 +132,18 @@ pub const Debug = struct {
         const MAGIC: [4]u8 = .{ 0x53, 0x48, 0x46, 0x42 };
         var magic_buffer: [4]u8 = undefined;
 
-        //try open extension file
+        // Try opening the extension file
         const ext_file = fs.open(":semihosting-features", .R) catch return false;
 
-        //check the size
+        // Check the size
         const byte_size = ext_file.size() catch return false;
         if (byte_size < (MAGIC.len + feature_byte + 1)) return false;
 
-        _ = ext_file.reader().read(&magic_buffer) catch return false;
+        var read_buf: [256]u8 = undefined;
+        var file_reader = ext_file.reader(&read_buf);
+        _ = file_reader.interface.readSliceShort(&magic_buffer) catch return false;
 
-        //check the magic number
+        // Check the magic number
         for (magic_buffer, MAGIC) |number, magic| {
             if (number != magic) return false;
         }
@@ -112,7 +151,10 @@ pub const Debug = struct {
         //get feature byte and check feature bit
         ext_file.seek(feature_byte + 4) catch return false;
 
-        const ext_byte = ext_file.reader().readByte() catch return false;
+        var ext_byte_buf: [1]u8 = undefined;
+        _ = file_reader.interface.readSliceShort(&ext_byte_buf) catch return false;
+        const ext_byte = ext_byte_buf[0];
+
         return (ext_byte & @as(u8, 1) << feature_bit) != 0;
     }
 
@@ -247,9 +289,18 @@ pub const fs = struct {
 
     pub const File = enum(usize) {
         _,
-        const Writer = std.io.Writer(File, anyerror, writefn);
-        const Reader = std.io.Reader(File, anyerror, readfn);
-        fn writefn(ctx: File, data: []const u8) anyerror!usize {
+
+        pub const Writer = struct {
+            file: File,
+            interface: std.Io.Writer,
+        };
+
+        pub const Reader = struct {
+            file: File,
+            interface: std.Io.Reader,
+        };
+
+        fn writefn(ctx: File, data: []const u8) std.Io.Writer.Error!usize {
             const w_file = RWFile{
                 .file = ctx,
                 .buf = @constCast(data.ptr),
@@ -260,7 +311,7 @@ pub const fs = struct {
             return data.len - ret;
         }
 
-        fn readfn(ctx: File, out: []u8) anyerror!usize {
+        fn readfn(ctx: File, out: []u8) std.Io.Reader.Error!usize {
             var r_file = RWFile{
                 .file = ctx,
                 .buf = out.ptr,
@@ -268,23 +319,69 @@ pub const fs = struct {
             };
 
             const ret = sys_read(&r_file);
-            if (ret == -1) return error.ReadFail;
+            if (ret == -1) return error.ReadFailed;
             return out.len - @as(usize, @bitCast(ret));
         }
 
-        pub fn writer(file: File) Writer {
-            return Writer{ .context = file };
+        pub fn writer(file: File, buffer: []u8) Writer {
+            return .{
+                .file = file,
+                .interface = .{
+                    .vtable = &.{
+                        .drain = drain,
+                    },
+                    .buffer = buffer,
+                },
+            };
         }
 
-        pub fn reader(file: File) Reader {
-            return Reader{ .context = file };
+        pub fn reader(file: File, buffer: []u8) Reader {
+            return .{
+                .file = file,
+                .interface = .{
+                    .vtable = &.{
+                        .stream = stream,
+                    },
+                    .buffer = buffer,
+                    .seek = 0,
+                    .end = 0,
+                },
+            };
+        }
+
+        fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+            const w: *Writer = @fieldParentPtr("interface", io_w);
+            _ = splat;
+            // TODO: implement splat
+            var ret: usize = 0;
+            for (data) |d| {
+                const n = try writefn(w.file, d);
+                ret += n;
+                if (n != d.len)
+                    return ret;
+            }
+
+            return ret;
+        }
+
+        fn stream(io_r: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+            const r: *Reader = @fieldParentPtr("interface", io_r);
+            // TODO: limit
+            _ = limit;
+
+            var buf: [256]u8 = undefined;
+            const n = try r.file.readfn(&buf);
+            try w.writeAll(buf[0..n]);
+            return n;
         }
 
         //Write Functions
 
         pub fn print(file: File, comptime fmt: []const u8, args: anytype) void {
-            const wrt = Writer{ .context = file };
-            wrt.print(fmt, args) catch return;
+            var buf: [256]u8 = undefined;
+            var wrt = file.writer(&buf);
+            wrt.interface.print(fmt, args) catch return;
+            wrt.interface.flush() catch return;
         }
 
         //Read Functions
@@ -373,13 +470,12 @@ fn call(number: Syscalls, param: *const anyopaque) isize {
     return asm volatile (
         \\mov r0, %[num]
         \\mov r1, %[p]
-        \\BKPT #0xAB
+        \\bkpt #0xAB
         \\mov %[ret], r0
         : [ret] "=r" (-> isize),
         : [num] "r" (number),
           [p] "r" (param),
-        : "memory", "r0", "r1"
-    );
+        : .{ .memory = true, .r0 = true, .r1 = true });
 }
 
 //WriteC does not have return

@@ -29,7 +29,6 @@ pub fn main() !void {
     uart.apply(.{
         .tx_pin = board.uart_tx,
         .rx_pin = board.uart_rx,
-        .baud_rate = .@"115200",
     });
 
     nrf.uart.init_logger(uart);
@@ -43,10 +42,10 @@ pub fn main() !void {
         .sda_pin = gpio.num(0, 10),
     });
 
-    // Create i2c datagram device
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x48), null);
+    // Create i2c device
+    var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c device to driver to create sensor instance
-    const temp_sensor = try TMP117.init(i2c_device.datagram_device());
+    const temp_sensor = try TMP117.init(i2c_device.i2c_device(), @enumFromInt(0x48));
 
     const temp_sensor_address = 0x48;
     var temp_buf: [2]u8 = undefined;

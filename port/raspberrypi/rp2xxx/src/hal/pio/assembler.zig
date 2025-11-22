@@ -1,6 +1,9 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const microzig = @import("microzig");
+const BoundedArray = @import("bounded-array").BoundedArray;
+
 const Chip = @import("../chip.zig").Chip;
 const tokenizer = @import("assembler/tokenizer.zig");
 const encoder = @import("assembler/encoder.zig");
@@ -46,7 +49,7 @@ pub const Output = struct {
         comptime name: []const u8,
     ) u32 {
         return for (output.defines) |define| {
-            if (std.mem.eql(u8, define.name, define))
+            if (std.mem.eql(u8, name, define.name))
                 break define;
         } else @panic(std.fmt.comptimePrint("define '{s}' not found", .{name}));
     }
@@ -58,16 +61,18 @@ pub const AssembleOptions = struct {
 };
 
 pub const Diagnostics = struct {
-    message: std.BoundedArray(u8, 256),
+    message: BoundedArray(u8, 256),
     index: u32,
 
     pub fn init(index: u32, comptime fmt: []const u8, args: anytype) Diagnostics {
         var ret = Diagnostics{
-            .message = std.BoundedArray(u8, 256).init(0) catch unreachable,
+            .message = BoundedArray(u8, 256).init(0) catch unreachable,
             .index = index,
         };
 
-        ret.message.writer().print(fmt, args) catch unreachable;
+        var writer = ret.message.writer();
+
+        writer.interface.print(fmt, args) catch unreachable;
         return ret;
     }
 };
@@ -81,13 +86,13 @@ fn comptime_copy(comptime T: type, comptime slice: []const T) []const T {
 pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
     const tokens = try tokenizer.tokenize(chip, source, diags, options.tokenize);
     const encoder_output = try encoder.encode(chip, tokens.slice(), diags, options.encode);
-    var programs = std.BoundedArray(Program, options.encode.max_programs).init(0) catch unreachable;
+    var programs = BoundedArray(Program, options.encode.max_programs).init(0) catch unreachable;
     for (encoder_output.programs.slice()) |bounded|
         try programs.append(bounded.to_exported_program());
 
     return Output{
         .defines = blk: {
-            var tmp = std.BoundedArray(Define, options.encode.max_defines).init(0) catch unreachable;
+            var tmp = BoundedArray(Define, options.encode.max_defines).init(0) catch unreachable;
             for (encoder_output.global_defines.slice()) |define|
                 tmp.append(.{
                     .name = define.name,

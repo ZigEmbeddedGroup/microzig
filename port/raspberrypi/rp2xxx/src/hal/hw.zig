@@ -50,5 +50,5 @@ pub fn xor_alias(ptr: anytype) @TypeOf(ptr) {
 }
 
 pub inline fn tight_loop_contents() void {
-    asm volatile ("" ::: "memory");
+    asm volatile ("" ::: .{ .memory = true });
 }

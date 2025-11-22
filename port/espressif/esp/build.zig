@@ -18,8 +18,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const riscv32_common_mod = riscv32_common_dep.module("riscv32-common");
 
+    const esp_image_dep = b.dependency("microzig/tools/esp-image", .{});
+    const esp_image_mod = esp_image_dep.module("esp_image");
+
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
+        .imports = b.allocator.dupe(std.Build.Module.Import, &.{
+            .{
+                .name = "esp_image",
+                .module = esp_image_mod,
+            },
+        }) catch @panic("OOM"),
     };
 
     const chip_esp32_c3: microzig.Target = .{
@@ -126,10 +135,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/hal.zig"),
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hal.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const unit_tests_run = b.addRunArtifact(unit_tests);

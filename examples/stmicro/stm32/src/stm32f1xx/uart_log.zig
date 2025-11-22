@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 
@@ -20,7 +19,6 @@ pub fn main() !void {
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 

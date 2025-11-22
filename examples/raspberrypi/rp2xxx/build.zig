@@ -25,11 +25,14 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
+
         .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
-        .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_interrupts", .file = "src/interrupts.zig" },
-        .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_interrupts", .file = "src/interrupts.zig" },
+        .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_system-timer", .file = "src/system_timer.zig" },
+        .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_system-timer", .file = "src/system_timer.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_random_data", .file = "src/rp2350_only/random_data.zig" },
         .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_random_data", .file = "src/rp2350_only/random_data.zig" },
@@ -46,7 +49,9 @@ pub fn build(b: *std.Build) void {
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
+        .{ .name = "i2c-accel", .file = "src/i2c_accel.zig" },
         .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
+        .{ .name = "i2c-hall-effect", .file = "src/i2c_hall_effect.zig" },
         .{ .name = "pwm", .file = "src/pwm.zig" },
         .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
@@ -58,19 +63,21 @@ pub fn build(b: *std.Build) void {
         .{ .name = "ws2812", .file = "src/ws2812.zig" },
         .{ .name = "blinky", .file = "src/blinky.zig" },
         .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
+        .{ .name = "gpio-interrupts", .file = "src/gpio_irq.zig" },
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
-        .{ .name = "interrupts", .file = "src/interrupts.zig" },
+        .{ .name = "system_timer", .file = "src/system_timer.zig" },
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
         .{ .name = "dma", .file = "src/dma.zig" },
         .{ .name = "cyw43", .file = "src/cyw43.zig" },
+        .{ .name = "allocator", .file = "src/allocator.zig" },
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
     };
 
-    var available_examples = std.ArrayList(Example).init(b.allocator);
+    var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         available_examples.append(.{

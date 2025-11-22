@@ -2,6 +2,7 @@ const std = @import("std");
 
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
+const drivers = mdf.base;
 const peripherals = microzig.chip.peripherals;
 const compatibility = @import("compatibility.zig");
 
@@ -34,49 +35,13 @@ const Config = struct {
     } = .@"100000",
 };
 
-///
-/// 7-bit I²C address, without the read/write bit.
-///
-pub const Address = enum(u7) {
-    /// The general call addresses all devices on the bus using the I²C address 0.
-    pub const general_call: Address = @enumFromInt(0x00);
-
-    _,
-
-    pub fn new(addr: u7) Address {
-        var a = @as(Address, @enumFromInt(addr));
-        std.debug.assert(!a.is_reserved());
-        return a;
-    }
-
-    ///
-    /// Returns `true` if the Address is a reserved I²C address.
-    ///
-    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
-    ///
-    /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
-        const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
-    }
-
-    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
-    }
-};
-
-pub const TransactionError = error{
-    DeviceNotPresent,
-    NoAcknowledge,
-    Timeout,
-    TargetAddressReserved,
-    NoData,
+pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
+pub const Error = drivers.I2C_Device.Error || error{
     Overrun,
+    Receive,
     TooMuchData,
     Transmit,
-    Receive,
 };
 
 /// Create an I2C instance from a peripheral number (0 or 1).
@@ -182,7 +147,7 @@ pub const I2C = enum(u1) {
         // nRF52831
         const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
         if (std.math.cast(tx_cnt_type, buf.len) == null)
-            return TransactionError.TooMuchData;
+            return Error.TooMuchData;
 
         const regs = i2c.get_regs();
         regs.TXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
@@ -197,7 +162,7 @@ pub const I2C = enum(u1) {
         // nRF52831
         const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
         if (std.math.cast(rx_cnt_type, buf.len) == null)
-            return TransactionError.TooMuchData;
+            return Error.TooMuchData;
         regs.RXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
@@ -245,45 +210,45 @@ pub const I2C = enum(u1) {
     }
 
     /// Check for I2C transaction errors by reading the ERRORSRC register.
-    /// Returns the raw error source value on success, or a specific TransactionError.
-    fn check_error(i2c: I2C) TransactionError!u32 {
+    /// Returns the raw error source value on success, or a specific Error.
+    fn check_error(i2c: I2C) Error!u32 {
         const regs = i2c.get_regs();
         const abort_reason = regs.ERRORSRC.read();
 
         if (abort_reason.OVERRUN == .Received) {
             // Byte was received before we read the last one
-            return TransactionError.Overrun;
+            return Error.Overrun;
         } else if (abort_reason.ANACK == .Received) {
             // NACK received after address (device not present)
-            return TransactionError.DeviceNotPresent;
+            return Error.DeviceNotPresent;
         } else if (abort_reason.DNACK == .Received) {
             // NACK received after sending data
-            return TransactionError.NoAcknowledge;
+            return Error.NoAcknowledge;
         }
         return @bitCast(abort_reason);
     }
 
     /// Verify that the expected number of bytes were received via DMA.
     /// Returns error if actual received count doesn't match expected length.
-    fn check_rx(i2c: I2C, len: usize) TransactionError!void {
+    fn check_rx(i2c: I2C, len: usize) Error!void {
         const regs = i2c.get_regs();
         const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
         if (bytes_read != len)
-            return TransactionError.Receive;
+            return Error.Receive;
     }
 
     /// Verify that the expected number of bytes were transmitted via DMA.
     /// Returns error if actual transmitted count doesn't match expected length.
-    fn check_tx(i2c: I2C, len: usize) TransactionError!void {
+    fn check_tx(i2c: I2C, len: usize) Error!void {
         const regs = i2c.get_regs();
         const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
         if (bytes_written != len)
-            return TransactionError.Transmit;
+            return Error.Transmit;
     }
 
     /// Wait until the I2C task completes, is suspended, encounters an error, or times out.
     /// Automatically triggers a stop on error and handles the stop event.
-    fn wait(i2c: I2C, deadline: mdf.time.Deadline) TransactionError!void {
+    fn wait(i2c: I2C, deadline: mdf.time.Deadline) Error!void {
         const regs = i2c.get_regs();
         while (true) {
             if (regs.EVENTS_SUSPENDED.read().EVENTS_SUSPENDED == .Generated or
@@ -299,7 +264,7 @@ pub const I2C = enum(u1) {
             }
             if (deadline.is_reached_by(time.get_time_since_boot())) {
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
-                return TransactionError.Timeout;
+                return Error.Timeout;
             }
         }
     }
@@ -310,7 +275,7 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
+    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) Error!void {
         return i2c.writev_blocking(addr, &.{data}, timeout);
     }
 
@@ -324,12 +289,14 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
+        addr.check_reserved() catch |err| switch (err) {
+            AddressError.GeneralCall => {},
+            else => return Error.IllegalAddress,
+        };
 
         if (chunks.len == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
@@ -387,13 +354,12 @@ pub const I2C = enum(u1) {
     ///
     /// NOTE: readv_blocking is unsupported because of a bug in the chip, where subsequent reads
     /// cannot be performed without sending an extra START event.
-    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
+        addr.check_reserved() catch return Error.IllegalAddress;
 
         // TODO: We can handle this if for some reason we want to send a start and immediate stop?
         if (dst.len == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
@@ -429,15 +395,14 @@ pub const I2C = enum(u1) {
     ///
     /// This is useful for the common scenario of writing an address to a target device, and then
     /// immediately reading bytes from that address
-    pub fn write_then_read_blocking(i2c: I2C, addr: Address, data: []const u8, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
-        if (addr.is_reserved())
-            return TransactionError.TargetAddressReserved;
+    pub fn write_then_read_blocking(i2c: I2C, addr: Address, data: []const u8, dst: []u8, timeout: ?mdf.time.Duration) Error!void {
+        addr.check_reserved() catch return Error.IllegalAddress;
 
         // TODO: We can handle this actually
         if (data.len == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
         if (dst.len == 0)
-            return TransactionError.NoData;
+            return Error.NoData;
 
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);

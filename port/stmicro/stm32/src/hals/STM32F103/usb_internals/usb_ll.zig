@@ -1,9 +1,11 @@
 const std = @import("std");
 const PMA = @import("usb_pma.zig");
-const timeout = @import("../drivers.zig").Timeout;
 
 const microzig = @import("microzig");
+const time = microzig.hal.time;
 const interrupt = microzig.interrupt;
+const Duration = microzig.drivers.time.Duration;
+const Deadline = microzig.drivers.time.Deadline;
 
 const USB = microzig.chip.peripherals.USB;
 const USBTypes = microzig.chip.types.peripherals.usb_v1;
@@ -272,26 +274,27 @@ fn usb_check(config: Config) InitError!PMA.Config {
     return btable_conf;
 }
 
-pub fn usb_init(comptime config: Config, startup: timeout) void {
+pub fn usb_init(comptime config: Config, startup: Duration) void {
     const btable_conf = comptime usb_check(config) catch unreachable;
     PMA.comptime_check(btable_conf);
     inner_init(config, btable_conf, startup) catch unreachable;
 }
 
-pub fn usb_runtime_init(config: Config, startup: timeout) InitError!void {
+pub fn usb_runtime_init(config: Config, startup: Duration) InitError!void {
     const btable_conf = try usb_check(config);
     try inner_init(config, btable_conf, startup);
 }
 
-fn inner_init(config: Config, PMA_conf: PMA.Config, startup: timeout) InitError!void {
-    interrupt.disable(.USB_LP_CAN1_RX0);
+fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError!void {
+    //interrupt.disable(.USB_LP_CAN1_RX0); //NOTE: some error with this function is disabling all interrupts
+    const deadline = Deadline.init_relative(time.get_time_since_boot(), startup);
 
     //force USB reset before init
     USB.CNTR.modify(.{
         .PDWN = 0,
         .FRES = 1,
     });
-    while (!startup.check_timeout()) {
+    while (!deadline.is_reached_by(time.get_time_since_boot())) {
         asm volatile ("nop");
     }
     USB.CNTR.modify(.{ .FRES = 0 });
@@ -328,17 +331,17 @@ fn inner_init(config: Config, PMA_conf: PMA.Config, startup: timeout) InitError!
 
 fn change_rx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
     const corrent = USB.EPR[EPC].read();
+    const valid: u2 = @as(u2, @intFromEnum(corrent.STAT_RX)) ^ @as(u2, @intFromEnum(status));
     const DTOG_val = switch (pid) {
         .no_change, .endpoint_ctr => @as(u1, 0),
         .force_data0 => corrent.DTOG_RX,
         .force_data1 => corrent.DTOG_RX ^ @as(u1, 1),
     };
-
-    const valid: u2 = @as(u2, @intFromEnum(corrent.STAT_RX)) ^ @as(u2, @intFromEnum(status));
-
     USB.EPR[EPC].modify(.{
         .STAT_RX = @as(USBTypes.STAT, @enumFromInt(valid)),
         .DTOG_RX = DTOG_val,
+        .STAT_TX = @as(USBTypes.STAT, @enumFromInt(0)),
+        .DTOG_TX = 0,
     });
 }
 
@@ -355,6 +358,8 @@ fn change_tx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
     USB.EPR[EPC].modify(.{
         .STAT_TX = @as(USBTypes.STAT, @enumFromInt(valid)),
         .DTOG_TX = DTOG_val,
+        .STAT_RX = @as(USBTypes.STAT, @enumFromInt(0)),
+        .DTOG_RX = 0,
     });
 }
 
@@ -432,7 +437,7 @@ pub fn default_reset_handler() void {
     });
 }
 
-pub fn usb_handler() callconv(.C) void {
+pub fn usb_handler() callconv(.c) void {
     const event = USB.ISTR.read();
     if (event.RESET == 1) {
         USB.ISTR.modify(.{ .RESET = 0 });
@@ -449,7 +454,13 @@ pub fn usb_handler() callconv(.C) void {
         const EPR = USB.EPR[ep].read();
         if (endpoints[ep]) |*epc| {
             if (EPR.CTR_RX == 1) {
-                USB.EPR[ep].modify(.{ .CTR_RX = 0 });
+                USB.EPR[ep].modify(.{
+                    .CTR_RX = 0,
+                    .STAT_RX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .DTOG_RX = 0,
+                    .STAT_TX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .DTOG_TX = 0,
+                });
                 epc.toggle_pid(.RX);
                 if (EPR.SETUP == 1) {
                     if (epc.setup_callback) |callback| {
@@ -463,7 +474,13 @@ pub fn usb_handler() callconv(.C) void {
             }
 
             if (EPR.CTR_TX == 1) {
-                USB.EPR[ep].modify(.{ .CTR_TX = 0 });
+                USB.EPR[ep].modify(.{
+                    .CTR_TX = 0,
+                    .STAT_RX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .DTOG_RX = 0,
+                    .STAT_TX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .DTOG_TX = 0,
+                });
                 epc.toggle_pid(.TX);
                 if (epc.tx_callback) |callback| {
                     callback(epc.ep_control, epc.user_param);

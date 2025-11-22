@@ -141,7 +141,10 @@ pub const interrupt = struct {
     }
 
     pub const exception = struct {
-        const ppb = microzig.chip.peripherals.PPB;
+        const ppb = switch (cortex_m) {
+            .cortex_m7 => microzig.chip.peripherals.SCB,
+            else => microzig.cpu.peripherals.ppb,
+        };
 
         pub fn is_enabled(comptime excpt: Exception) bool {
             switch (cortex_m) {
@@ -494,7 +497,7 @@ pub const interrupt = struct {
     }
 
     pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
-        peripherals.nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority);
+        nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority);
     }
 
     pub fn get_priority(comptime int: ExternalInterrupt) Priority {
@@ -538,6 +541,93 @@ pub fn clrex() void {
     asm volatile ("clrex");
 }
 
+/// Atomic operations with fallback to critical sections for Cortex-M0/M0+
+pub const atomic = struct {
+    pub const has_native_atomics = switch (cortex_m) {
+        .cortex_m0, .cortex_m0plus => false,
+        else => true,
+    };
+
+    /// Atomic add
+    pub fn add(comptime T: type, ptr: *T, delta: T) T {
+        if (has_native_atomics) {
+            return @atomicRmw(T, ptr, .Add, delta, .monotonic);
+        } else {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            const old_value = ptr.*;
+            ptr.* = old_value +% delta;
+            return old_value;
+        }
+    }
+
+    /// Atomic load
+    pub fn load(comptime T: type, ptr: *const T, comptime ordering: std.builtin.AtomicOrder) T {
+        if (has_native_atomics) {
+            return @atomicLoad(T, ptr, ordering);
+        } else {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            return ptr.*;
+        }
+    }
+
+    /// Atomic store
+    pub fn store(comptime T: type, ptr: *T, value: T, comptime ordering: std.builtin.AtomicOrder) void {
+        if (has_native_atomics) {
+            @atomicStore(T, ptr, value, ordering);
+        } else {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            ptr.* = value;
+        }
+    }
+
+    /// Atomic compare and swap
+    pub fn cmpxchg(comptime T: type, ptr: *T, expected_value: T, new_value: T, comptime success_ordering: std.builtin.AtomicOrder, comptime failure_ordering: std.builtin.AtomicOrder) ?T {
+        if (has_native_atomics) {
+            return @cmpxchgWeak(T, ptr, expected_value, new_value, success_ordering, failure_ordering);
+        } else {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            const current = ptr.*;
+            if (current == expected_value) {
+                ptr.* = new_value;
+                return null;
+            }
+            return current;
+        }
+    }
+
+    /// Atomic read-modify-write
+    pub fn rmw(comptime T: type, ptr: *T, comptime op: std.builtin.AtomicRmwOp, operand: T, comptime ordering: std.builtin.AtomicOrder) T {
+        if (has_native_atomics) {
+            return @atomicRmw(T, ptr, op, operand, ordering);
+        } else {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            const old_value = ptr.*;
+            ptr.* = switch (op) {
+                .Xchg => operand,
+                .Add => old_value +% operand,
+                .Sub => old_value -% operand,
+                .And => old_value & operand,
+                .Nand => ~(old_value & operand),
+                .Or => old_value | operand,
+                .Xor => old_value ^ operand,
+                .Max => @max(old_value, operand),
+                .Min => @min(old_value, operand),
+            };
+            return old_value;
+        }
+    }
+};
+
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.
 /// Available when using a RAM vector table or a RAM image.
 pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
@@ -564,9 +654,7 @@ pub const startup_logic = struct {
     }
 
     pub fn _start() callconv(.c) noreturn {
-        if (!is_ram_image) {
-            microzig.utilities.initialize_system_memories();
-        }
+        microzig.utilities.initialize_system_memories(.auto);
 
         if (using_ram_vector_table or is_ram_image) {
             asm volatile (
@@ -578,8 +666,7 @@ pub const startup_logic = struct {
                 :
                 : [_vector_table] "r" (&ram_vector_table),
                   [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
-                : "memory", "r0", "r1"
-            );
+                : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
         microzig_main();
@@ -615,6 +702,20 @@ pub const startup_logic = struct {
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
+        // Apply HAL-level default interrupts first (if any)
+        if (microzig.config.has_hal) {
+            if (@hasDecl(microzig.hal, "default_interrupts")) {
+                for (@typeInfo(@TypeOf(microzig.hal.default_interrupts)).@"struct".fields) |field| {
+                    const maybe_handler = @field(microzig.hal.default_interrupts, field.name);
+                    if (maybe_handler) |handler|
+                        @field(tmp, field.name) = handler;
+                }
+            }
+        }
+
+        // Apply user-set interrupts
+        // TODO: We might want to fail compilation if any interrupt is already set, since that
+        // could e.g. disable timekeeping
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);
             if (maybe_handler) |handler| {
@@ -658,10 +759,12 @@ const systick_base = scs_base + 0x0010;
 const nvic_base = scs_base + 0x0100;
 const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
+const fpu_base = scs_base + 0x0F34;
 
 const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
-const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
+const mpu_present = @hasDecl(properties, "cpu.mpuPresent") and std.mem.eql(u8, properties.@"cpu.mpuPresent", "true");
+const fpu_present = @hasDecl(properties, "cpu.fpuPresent") and std.mem.eql(u8, properties.@"cpu.fpuPresent", "true");
 
 const core = blk: {
     break :blk switch (cortex_m) {
@@ -684,6 +787,12 @@ pub const peripherals = struct {
     /// System Control Block (SCB).
     pub const scb: *volatile types.peripherals.SystemControlBlock = @ptrFromInt(scb_base);
 
+    /// Floating Point Unit (FPU).
+    pub const fpu: *volatile types.peripherals.FloatingPointUnit = if (fpu_present)
+        @ptrFromInt(fpu_base)
+    else
+        @compileError("this CPU does not have an FPU");
+
     /// Nested Vector Interrupt Controller (NVIC).
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
 
@@ -694,7 +803,7 @@ pub const peripherals = struct {
     pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
         @ptrFromInt(mpu_base)
     else
-        @compileError("This chip does not have a MPU.");
+        @compileError("this CPU does not have an MPU");
 
     pub const dbg: (if (@hasDecl(core, "DebugRegisters"))
         *volatile core.DebugRegisters
@@ -716,6 +825,12 @@ pub const types = struct {
     pub const peripherals = struct {
         /// System Control Block (SCB).
         pub const SystemControlBlock = core.SystemControlBlock;
+
+        /// Floating Point Unit (FPU).
+        pub const FloatingPointUnit = if (@hasDecl(core, "FloatingPointUnit"))
+            core.FloatingPointUnit
+        else
+            @compileError("this CPU does not have an FPU definition");
 
         /// Nested Vector Interrupt Controller (NVIC).
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
@@ -781,6 +896,6 @@ pub const types = struct {
         pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
             core.MemoryProtectionUnit
         else
-            @compileError("This cpu does not have a MPU.");
+            @compileError("this CPU does not have an MPU definition");
     };
 };

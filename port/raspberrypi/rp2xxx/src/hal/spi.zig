@@ -204,7 +204,7 @@ pub const SPI = enum(u1) {
 
     /// Disable SPI, pre-fill the TX FIFO as much as possible, and then re-enable to start transmission.
     /// Leads to performance gains in thoroughput. Returns how many bytes were consumed from src.
-    fn prime_tx_fifo(spi: SPI, comptime PacketType: type, src_iter: *microzig.utilities.Slice_Vector([]const PacketType).Iterator) usize {
+    fn prime_tx_fifo(spi: SPI, comptime PacketType: type, src_iter: *microzig.utilities.SliceVector([]const PacketType).Iterator) usize {
         const spi_regs = spi.get_regs();
         spi_regs.SSPCR1.modify(.{
             .SSE = 0,
@@ -262,8 +262,8 @@ pub const SPI = enum(u1) {
     pub fn transceive_vecs_blocking(spi: SPI, comptime PacketType: type, src_vecs: []const []const PacketType, dst_vecs: []const []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
-        const src_data = microzig.utilities.Slice_Vector([]const PacketType).init(src_vecs);
-        const dst_data = microzig.utilities.Slice_Vector([]PacketType).init(dst_vecs);
+        const src_data = microzig.utilities.SliceVector([]const PacketType).init(src_vecs);
+        const dst_data = microzig.utilities.SliceVector([]PacketType).init(dst_vecs);
 
         var rx_remaining = src_data.size();
         var tx_remaining = dst_data.size();
@@ -317,7 +317,7 @@ pub const SPI = enum(u1) {
     pub fn writev_blocking(spi: SPI, comptime PacketType: type, src_vec: []const []const PacketType) void {
         comptime validate_bitwidth(PacketType);
 
-        var src_iter = microzig.utilities.Slice_Vector([]const u8).init(src_vec).iterator();
+        var src_iter = microzig.utilities.SliceVector([]const u8).init(src_vec).iterator();
 
         _ = spi.prime_tx_fifo(PacketType, &src_iter);
 
@@ -376,7 +376,7 @@ pub const SPI = enum(u1) {
     pub fn readv_blocking(spi: SPI, comptime PacketType: type, repeated_tx_data: PacketType, dst_vec: []const []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
-        const dst_data = microzig.utilities.Slice_Vector([]PacketType).init(dst_vec);
+        const dst_data = microzig.utilities.SliceVector([]PacketType).init(dst_vec);
 
         const spi_regs = spi.get_regs();
         var rx_remaining = dst_data.size();

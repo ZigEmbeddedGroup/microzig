@@ -12,8 +12,6 @@ const GPIOE = peripherals.GPIOE;
 
 const GPIO = @TypeOf(GPIOA);
 
-const log = std.log.scoped(.gpio);
-
 pub const Function = enum {};
 
 pub const Mode = union(enum) {

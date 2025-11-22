@@ -5,6 +5,8 @@ pub const ExitType = enum {
     enter_sleep_mode,
     reset_watchdog,
     out_of_gas,
+    infinite_loop,
+    program_exit,
     system_exit,
 };
 
@@ -67,6 +69,7 @@ pub const TestSuiteConfig = struct {
     mileage: ?u32 = 0,
 
     cpu: ?[]const u8 = null,
+    cpus: ?[][]const u8 = null, // Alternative to cpu: run test against multiple MCUs
     optimize: std.builtin.OptimizeMode = .ReleaseSmall,
 
     gcc_flags: []const []const u8 = &.{
@@ -78,7 +81,7 @@ pub const TestSuiteConfig = struct {
     },
 
     pub fn to_string(config: TestSuiteConfig, b: *std.Build) []const u8 {
-        return std.json.stringifyAlloc(b.allocator, config, .{
+        return std.json.Stringify.valueAlloc(b.allocator, config, .{
             .whitespace = .indent_2,
             .emit_null_optional_fields = true,
             .emit_strings_as_arrays = false,
@@ -87,10 +90,11 @@ pub const TestSuiteConfig = struct {
     }
 
     pub fn load(allocator: std.mem.Allocator, file: std.fs.File) !TestSuiteConfig {
-        var reader = std.json.reader(allocator, file.reader());
-        defer reader.deinit();
+        var buf: [4096]u8 = undefined;
+        var file_reader = file.reader(&buf);
+        var json_reader = std.json.Reader.init(allocator, &file_reader.interface);
 
-        return try std.json.parseFromTokenSourceLeaky(TestSuiteConfig, allocator, &reader, .{
+        return try std.json.parseFromTokenSourceLeaky(TestSuiteConfig, allocator, &json_reader, .{
             .allocate = .alloc_always,
         });
     }

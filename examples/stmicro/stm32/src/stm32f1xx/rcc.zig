@@ -24,7 +24,7 @@ const clk_config = rcc.Config{
 };
 
 pub fn main() !void {
-    try rcc.clock_init(clk_config);
+    try rcc.apply_clock(clk_config);
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.AFIO);
     rcc.enable_clock(.USART1);
@@ -32,7 +32,6 @@ pub fn main() !void {
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 
