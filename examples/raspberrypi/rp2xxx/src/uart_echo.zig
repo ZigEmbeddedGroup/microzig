@@ -1,8 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 
 const rp2xxx = microzig.hal;
+const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
 
@@ -33,8 +33,7 @@ pub fn main() !void {
         };
 
         //tries to write one byte with 100ms timeout
-        const now = rp2xxx.time.get_time_since_boot();
-        uart.write_blocking(&data, .init_relative(now, .from_ms(100))) catch {
+        uart.write_blocking(&data, time.deadline_in_ms(100)) catch {
             uart.clear_errors();
         };
         // Toggle the led every time we think we've received a character so we
