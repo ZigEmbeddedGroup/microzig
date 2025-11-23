@@ -1,8 +1,19 @@
+//! An IOCTL (Input/Output Control) call is sent by the Pico host CPU (RP2040)
+//! to the ARM CPU in the WiFi chip, to read or write configuration data, or send
+//! a specific command.
 //!
-//! https://github.com/embassy-rs/embassy/blob/main/cyw43/src/structs.rs
+//! An event is an unsolicited block of data sent from the WiFi CPU to the host;
+//! it can be a notification that an action is complete, or some data that has
+//! arrived over the WiFi network.
+//!
+//! https://iosoft.blog/2022/12/06/picowi_part3/
+//!
+//! https://github.com/embassy-rs/embassy/blob/main/cyw43/src/structs.rs !
 //! https://github.com/jbentham/picowi/blob/main/lib/picowi_ioctl.h
+//!
 const std = @import("std");
 const mem = std.mem;
+const assert = std.debug.assert;
 const testing = std.testing;
 const log = std.log.scoped(.ioctl);
 
@@ -28,7 +39,8 @@ const BusHeader = extern struct {
     chan: Chan,
     /// Length of next data frame, reserved for Tx
     nextlen: u8 = 0,
-    /// Data offset
+    /// Data offset from the start of the packet.
+    /// Includes BusHeader length and padding after BusHeader.
     hdrlen: u8,
     /// Flow control bits, reserved for Tx
     flow: u8 = 0,
@@ -50,6 +62,11 @@ const CdcHeader = extern struct {
     flags: u16 = 0,
     id: u16,
     status: u32 = 0,
+
+    pub fn status_ok(self: CdcHeader) bool {
+        //dev/ apsta, ampdu_rx_factor commands are returing status 0xFFFFFFFB
+        return self.status == 0 or self.status == 0xFFFFFFFB;
+    }
 };
 
 pub const Cmd = enum(u32) {
@@ -74,8 +91,27 @@ pub const BdcHeader = extern struct {
     priority: u8,
     flags2: u8,
     offset: u8,
+
+    // Padding after bdc header where data or event bytes starts
+    fn padding(self: BdcHeader) usize {
+        return @as(usize, self.offset) * 4;
+    }
 };
 
+// Structure:
+//  - 12 bytes BusHeader
+//  - xx padding bytes (defined by BusHeader.hdrlen)
+// than if chan == .control
+//  - 16 bytes of cdc header
+//  - xx result data in the case of get_var control command
+// if chan == .event
+//  - 4 bytes bdc header
+//  - xx bdc padding bytes (defined in BdcHeader.offset)
+//  - 73 bytes of EventPacket
+//  - other event bytes
+// if chan == .data
+//  - 4 bytes bdc header
+//  - data, from this position to the end of the packet
 pub const Response = extern struct {
     const Self = @This();
     pub const min_len = @sizeOf(BusHeader) + @sizeOf(CdcHeader);
@@ -84,46 +120,42 @@ pub const Response = extern struct {
     bus: BusHeader align(4),
     buffer: [max_packet_length - @sizeOf(BusHeader)]u8,
 
-    // Number of padding bytes bus header before cdc/bdc header
+    // Number of padding bytes after bus header before cdc/bdc header
     fn padding(self: *Self) usize {
         return self.bus.hdrlen - @sizeOf(BusHeader);
     }
 
     pub fn cdc(self: *Self) CdcHeader {
+        assert(self.bus.chan != .data or self.bus.chan == .event);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(CdcHeader)].*);
     }
 
     pub fn bdc(self: *Self) BdcHeader {
+        assert(self.bus.chan != .control);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(BdcHeader)].*);
     }
 
-    pub fn data(self: *Self, n: usize) []const u8 {
-        const pos: usize = self.padding() +
-            if (self.bus.chan == .control) @as(usize, @sizeOf(CdcHeader)) else @as(usize, @sizeOf(BdcHeader));
-        const tail = self.bus.len - @sizeOf(BusHeader);
-        if (pos < tail) {
-            const data_buf = self.buffer[pos..tail];
-            return data_buf[0..@min(n, data_buf.len)];
-        }
-        return &.{};
-    }
-
-    pub fn event(self: *Self) !EventPacket {
-        if (self.bus.chan != .event) return error.IoctlChanNotEvent;
-        const head: usize = self.padding() + @sizeOf(BdcHeader) + @as(usize, self.bdc().offset) * 4;
+    pub fn data(self: *Self) []const u8 {
+        const head: usize = self.padding() + switch (self.bus.chan) {
+            .control => @sizeOf(CdcHeader),
+            .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),
+        };
         const tail = self.bus.len - @sizeOf(BusHeader);
         if (head > tail) {
-            // log.debug("kaki je ovo event", .{});
-            // log.debug("bus: {}", .{self.bus});
-            // log.debug("bdc: {}", .{self.bdc()});
-            // log.debug("data: {x}", .{self.data(max_packet_length)});
-            // log.debug("data: {s}", .{self.data(max_packet_length)});
+            return &.{};
+        }
+        return self.buffer[head..tail];
+    }
+
+    pub fn event(self: *Self) EventPacket {
+        assert(self.bus.chan == .event);
+        const buf = self.data();
+        if (buf.len < @sizeOf(EventPacket)) {
             var zero = mem.zeroes(EventPacket);
             zero.msg.event_type = .none;
             return zero;
         }
-        const buf = self.buffer[head..tail];
-        if (buf.len < @sizeOf(EventPacket)) return error.IoctlEvent;
+        //if (buf.len < @sizeOf(EventPacket)) return error.IoctlEvent;
         var evt: EventPacket = @bitCast(buf[0..@sizeOf(EventPacket)].*);
         std.mem.byteSwapAllFields(EventPacket, &evt);
         return evt;
@@ -153,7 +185,7 @@ pub const Request = extern struct {
     hdr: CdcHeader,
     data: [max_packet_length - @sizeOf(BusHeader) - @sizeOf(CdcHeader)]u8,
 
-    pub fn init(cmd: Cmd, name: []const u8, set: bool, data: []const u8) Self {
+    pub fn init(cmd: Cmd, name: []const u8, data: []const u8) Self {
         const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0); // name has sentinel
         const txdlen: u16 = @intCast(((name_len + data.len + 3) / 4) * 4);
         const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(CdcHeader);
@@ -173,12 +205,12 @@ pub const Request = extern struct {
             .cmd = cmd,
             .outlen = txdlen,
             .id = ioctl_reqid,
-            .flags = if (set) 0x02 else 0,
+            .flags = if (data.len > 0) 0x02 else 0,
         };
         if (name_len > 0) {
             @memcpy(req.data[0..name.len], name);
         }
-        if (data.len > 0 and set) {
+        if (data.len > 0) {
             @memcpy(req.data[name_len..][0..data.len], data);
         }
         return req;
@@ -195,18 +227,16 @@ pub const Request = extern struct {
 
 test "write command" {
     {
-        const mac: [6]u8 = undefined;
-
         tx_seq = 2;
         ioctl_reqid = 2;
-        var req = Request.init(.get_var, "cur_etheraddr", false, &mac);
+        var req = Request.init(.get_var, "cur_etheraddr", &.{});
 
-        const expected = &hexToBytes("3000CFFF0300000C00000000060100001400000000000300000000006375725F65746865726164647200000000000000");
+        const expected = &hexToBytes("2C00D3FF0300000C00000000060100001000000000000300000000006375725F657468657261646472000000");
         const buf = mem.asBytes(&req)[0..req.bus.len];
         try std.testing.expectEqualSlices(u8, expected, buf);
 
-        try testing.expectEqual(48, expected.len);
-        try testing.expectEqual(48 / 4, req.as_slice().len);
+        try testing.expectEqual(44, expected.len);
+        try testing.expectEqual(44 / 4, req.as_slice().len);
     }
     {
         tx_seq = 6;
@@ -215,7 +245,7 @@ test "write command" {
         var data: [8]u8 = @splat(0);
         data[0] = 1;
         data[4] = 1;
-        var req = Request.init(.set_var, "gpioout", true, &data);
+        var req = Request.init(.set_var, "gpioout", &data);
         const buf = mem.asBytes(&req)[0..req.bus.len];
         try std.testing.expectEqualSlices(u8, expected, buf);
     }
@@ -244,31 +274,7 @@ test "parse response" {
     try testing.expectEqual(0, ioctl.flags);
     try testing.expectEqual(0, ioctl.status);
 
-    try testing.expectEqualSlices(u8, expected, rsp.data(expected.len));
-}
-
-test "parse response2" {
-    const expected = &hexToBytes("2CCF67F3B7EA");
-    const rsp_data = &hexToBytes("0001fffe020000dc0012000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100001400000000000100000000002ccf67f3b7ea6865726164647200000000000000");
-    var rsp: Response = .empty;
-    @memcpy(mem.asBytes(&rsp)[0..rsp_data.len], rsp_data);
-
-    try testing.expectEqual(256, rsp.bus.len);
-    try testing.expectEqual(0xffff, rsp.bus.len ^ rsp.bus.not_len);
-    try testing.expectEqual(2, rsp.bus.seq);
-    try testing.expectEqual(220, rsp.bus.hdrlen);
-    try testing.expectEqual(18, rsp.bus.credit);
-    try testing.expectEqual(0, rsp.bus.nextlen);
-
-    const ioctl = rsp.cdc();
-    try testing.expectEqual(.get_var, ioctl.cmd);
-    try testing.expectEqual(20, ioctl.outlen);
-    try testing.expectEqual(0, ioctl.inlen);
-    try testing.expectEqual(1, ioctl.id);
-    try testing.expectEqual(0, ioctl.flags);
-    try testing.expectEqual(0, ioctl.status);
-
-    try testing.expectEqualSlices(u8, expected, rsp.data(6));
+    try testing.expectEqualSlices(u8, expected, rsp.data()[0..expected.len]);
 }
 
 pub fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
@@ -555,3 +561,10 @@ pub const EventStatus = enum(u32) {
     cs_abort = 15,
     _,
 };
+
+test "show sizes" {
+    std.debug.print("BusHeader: {}\n", .{@sizeOf(BusHeader)});
+    std.debug.print("BdcHeader: {}\n", .{@sizeOf(BdcHeader)});
+    std.debug.print("CdcHeader: {}\n", .{@sizeOf(CdcHeader)});
+    std.debug.print("EventPacket: {}\n", .{@sizeOf(EventPacket)});
+}

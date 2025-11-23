@@ -37,21 +37,26 @@ pub fn main() !void {
     // wifi.runner.bus.bp_write32(0x18000000 + 0x68, 1);
 
     var on: u32 = 1;
-    //wifi.runner.read_clmver();
-    try wifi.runner.read_mac();
+
+    const mac = try wifi.runner.read_mac();
+    log.debug("mac address: {x}", .{mac});
 
     try wifi.runner.join("", "");
-    log.debug("join end\n\n", .{});
+    log.debug("join end", .{});
+    try wifi.runner.show_clm_ver();
 
+    //for (0..10) |_| {
     while (true) {
         time.sleep_ms(500);
         // toggle led by sending command
-        try wifi.runner.led_on(on == 1);
+        try wifi.runner.led_set(on == 1);
         on = if (on == 1) 0 else 1;
 
         // toggle led by using wifi regs
         //wifi.runner.bus.bp_write32(0x18000000 + 0x64, on);
     }
+
+    rp2xxx.rom.reset_to_usb_boot();
 }
 
 // wifi.led.put()

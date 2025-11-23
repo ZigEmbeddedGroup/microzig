@@ -4,6 +4,7 @@ const NVRAM = @import("nvram.zig").NVRAM;
 const Bus = @import("bus.zig").Bus;
 const ioctl = @import("ioctl.zig");
 const assert = std.debug.assert;
+const mem = std.mem;
 
 const log = std.log.scoped(.cyw43_runner);
 
@@ -214,56 +215,73 @@ pub const Runner = struct {
         }
     }
 
-    pub fn read_clmver(self: *Self) !void {
-        const data: [300]u8 = undefined;
-        var req = ioctl.Request.init(.get_var, "clmver", false, &data);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.response_wait(.get_var);
-    }
-
-    pub fn read_mac(self: *Self) !void {
-        const mac: [6]u8 = undefined;
-
-        var req = ioctl.Request.init(.get_var, "cur_etheraddr", false, &mac);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.response_wait(.get_var);
-    }
-
-    pub fn led_on(self: *Self, on: bool) !void {
-        var data: [8]u8 = @splat(0);
-        data[0] = 1;
-        if (on) {
-            data[4] = 1;
+    pub fn show_clm_ver(self: *Self) !void {
+        var data: [300]u8 = @splat(0);
+        const n = try self.get_var("clmver", &data);
+        var iter = mem.splitScalar(u8, data[0..n], 0x0a);
+        log.debug("clmver:", .{});
+        while (iter.next()) |line| {
+            if (line.len == 0 or line[0] == 0x00) continue;
+            log.debug("  {s}", .{line});
         }
+    }
+
+    pub fn read_mac(self: *Self) ![6]u8 {
+        var mac: [6]u8 = @splat(0);
+        const n = try self.get_var("cur_etheraddr", &mac);
+        if (n != mac.len) {
+            log.err("read_mac unexpected read bytes: {}", .{n});
+            return error.ReadMacFailed;
+        }
+        return mac;
+    }
+
+    pub fn led_set(self: *Self, on: bool) !void {
+        try self.gpio_set(0, on);
+    }
+
+    pub fn gpio_set(self: *Self, pin: u2, on: bool) !void {
+        var data: [8]u8 = @splat(0);
+        data[0] = @as(u8, 1) << pin;
+        data[4] = if (on) 1 else 0;
         try self.set_var("gpioout", &data);
     }
 
-    fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
-        var req = ioctl.Request.init(.set_var, name, true, data);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.response_wait(.set_var);
-    }
-
     fn set_var32(self: *Self, name: []const u8, value: u32) !void {
-        var req = ioctl.Request.init(.set_var, name, true, std.mem.asBytes(&value));
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.response_wait(.set_var);
+        try self.request(.set_var, name, mem.asBytes(&value));
     }
 
-    fn ioctl_wr_int32(self: *Self, cmd: ioctl.Cmd, value: u32) !void {
-        try self.ioctl_wr_data(cmd, std.mem.asBytes(&value));
+    fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
+        try self.request(.set_var, name, data);
     }
 
-    fn ioctl_wr_data(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
-        var req = ioctl.Request.init(cmd, "", true, data);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.response_wait(cmd);
+    fn set_cmd32(self: *Self, cmd: ioctl.Cmd, value: u32) !void {
+        try self.request(cmd, "", mem.asBytes(&value));
     }
 
-    fn response_wait(self: *Self, cmd: ioctl.Cmd) !void {
+    fn set_cmd(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
+        try self.request(cmd, "", data);
+    }
+
+    fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
+        const cmd: ioctl.Cmd = .get_var;
+        var req = ioctl.Request.init(cmd, name, data);
+        self.bus.write(.wlan, 0, req.as_slice());
+        return try self.response_poll(cmd, data);
+    }
+
+    // send command to the wifi chip and wait for response
+    fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) !void {
+        var req = ioctl.Request.init(cmd, name, data);
+        self.bus.write(.wlan, 0, req.as_slice());
+        _ = try self.response_poll(cmd, null);
+    }
+
+    fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
         var sleeps: usize = 0;
         while (sleeps < 8) {
             var rsp: ioctl.Response = .empty;
+            // NOTE this is huge struct 1536 bytes on 4k pico stack
             const len = self.read_packet(rsp.as_slice());
             if (len == 0) {
                 self.sleep_ms(10);
@@ -275,13 +293,18 @@ pub const Runner = struct {
                 .control => {
                     const ctl = rsp.cdc();
                     if (ctl.cmd == cmd) {
-                        // apsta, ampdu_rx_factor commands are returing status 0xFFFFFFFB
-                        if (ctl.status == 0 or ctl.status == 0xFFFFFFFB) {
-                            return;
+                        if (ctl.status_ok()) {
+                            if (data) |d| {
+                                const rsp_data = rsp.data();
+                                const n = @min(rsp_data.len, d.len);
+                                @memcpy(d[0..n], rsp_data[0..n]);
+                                return n;
+                            }
+                            return 0;
                         }
                         log.err("bus: {}", .{rsp.bus});
                         log.err("clt: {}", .{ctl});
-                        log.err("data: {x}", .{rsp.data(255)});
+                        log.err("data: {x}", .{rsp.data()});
                         return error.IoctlInvalicCommandStatus;
                     }
                 },
@@ -293,6 +316,7 @@ pub const Runner = struct {
         return error.IoctlNoResponse;
     }
 
+    // read packet from the wifi chip
     fn read_packet(self: *Self, data: []u32) u11 {
         const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
         //log.debug("event_get_rsp {any}", .{status});
@@ -351,7 +375,7 @@ pub const Runner = struct {
             //const buf = "HR\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "HR\x00\x00";
             try self.set_var("country", buf);
         }
-        try self.ioctl_wr_int32(.set_antdiv, 0);
+        try self.set_cmd32(.set_antdiv, 0);
         // Data aggregation
         {
             try self.set_var32("bus:txglom", 0x00);
@@ -382,17 +406,17 @@ pub const Runner = struct {
         }
         // join_restart function
         {
-            try self.ioctl_wr_data(.up, &.{});
-            try self.ioctl_wr_int32(.set_gmode, 1);
-            try self.ioctl_wr_int32(.set_band, 0);
+            try self.set_cmd(.up, &.{});
+            try self.set_cmd32(.set_gmode, 1);
+            try self.set_cmd32(.set_band, 0);
             try self.set_var32("pm2_sleep_ret", 0xc8);
             try self.set_var32("bcn_li_bcn", 1);
             try self.set_var32("bcn_li_dtim", 1);
             try self.set_var32("assoc_listen", 0x0a);
 
-            try self.ioctl_wr_int32(.set_infra, 1);
-            try self.ioctl_wr_int32(.set_auth, 0);
-            try self.ioctl_wr_int32(.set_wsec, 6); // wpa security
+            try self.set_cmd32(.set_infra, 1);
+            try self.set_cmd32(.set_auth, 0);
+            try self.set_cmd32(.set_wsec, 6); // wpa security
 
             try self.set_var("bsscfg:sup_wpa", "\x00\x00\x00\x00\x01\x00\x00\x00");
             try self.set_var("bsscfg:sup_wpa2_eapver", "\x00\x00\x00\x00\xFF\xFF\xFF\xFF");
@@ -400,13 +424,13 @@ pub const Runner = struct {
             self.sleep_ms(2);
 
             // TODO hardcoded pwd
-            try self.ioctl_wr_data(.set_wsec_pmk, &ioctl.hexToBytes("0A0001005065726F5A6465726F31"));
-            try self.ioctl_wr_int32(.set_infra, 1);
-            try self.ioctl_wr_int32(.set_auth, 0);
-            try self.ioctl_wr_int32(.set_wpa_auth, 0x80); // wpa
+            try self.set_cmd(.set_wsec_pmk, &ioctl.hexToBytes("0A0001005065726F5A6465726F31"));
+            try self.set_cmd32(.set_infra, 1);
+            try self.set_cmd32(.set_auth, 0);
+            try self.set_cmd32(.set_wpa_auth, 0x80); // wpa
 
             // TODO hardcoded ssid
-            try self.ioctl_wr_data(.set_ssid, &ioctl.hexToBytes("080000006E696E617A617261"));
+            try self.set_cmd(.set_ssid, &ioctl.hexToBytes("080000006E696E617A617261"));
         }
         log.debug("join_wait", .{});
         try self.join_wait(30 * 1000);
@@ -425,7 +449,7 @@ pub const Runner = struct {
             try rsp.validate(len);
             switch (rsp.bus.chan) {
                 .event => {
-                    const evt = (try rsp.event()).msg;
+                    const evt = rsp.event().msg;
                     log.debug(
                         "event type: {s:<15}, status: {s}",
                         .{ @tagName(evt.event_type), @tagName(evt.status) },
@@ -449,7 +473,7 @@ pub const Runner = struct {
     fn handle_event(self: *Runner, rsp: *ioctl.Response) !void {
         _ = self;
         assert(rsp.bus.chan == .event);
-        const evt = (try rsp.event()).msg;
+        const evt = rsp.event().msg;
         log.debug(
             "event type: {s:<15}, status: {s} ",
             .{ @tagName(evt.event_type), @tagName(evt.status) },
@@ -458,7 +482,8 @@ pub const Runner = struct {
 
     fn handle_data(self: *Runner, rsp: *ioctl.Response) !void {
         _ = self;
-        log.debug("data packet len: {}", .{rsp.bus.len});
+        const data = rsp.data();
+        log.debug("data packet len: {}, data: {} {x}...", .{ rsp.bus.len, data.len, data[0..@min(16, data.len)] });
     }
 
     fn sleep_ms(self: *Self, delay: u32) void {
