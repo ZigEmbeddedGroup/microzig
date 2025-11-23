@@ -25,7 +25,7 @@ const InterruptGroupEntry = struct {
 const Context = struct {
     db: *Database,
     arena: std.heap.ArenaAllocator,
-    interrupt_groups: std.StringHashMapUnmanaged(std.ArrayListUnmanaged(InterruptGroupEntry)) = .{},
+    interrupt_groups: std.StringHashMapUnmanaged(std.ArrayList(InterruptGroupEntry)) = .empty,
     inferred_register_group_offsets: std.AutoArrayHashMapUnmanaged(StructID, u64) = .{},
 
     fn init(db: *Database) Context {
@@ -270,23 +270,26 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
         break :blk max_value;
     };
 
-    var field_sizes = std.ArrayList(u64).init(allocator);
-    defer field_sizes.deinit();
+    var field_sizes: std.ArrayList(u64) = .empty;
+    defer field_sizes.deinit(allocator);
 
-    var register_it = module_node.iterate(&.{}, &.{"register"});
+    var register_it = module_node.iterate(&.{"register-group"}, &.{"register"});
     while (register_it.next()) |register_node| {
         var bitfield_it = register_node.iterate(&.{}, &.{"bitfield"});
         while (bitfield_it.next()) |bitfield_node| {
             if (bitfield_node.get_attribute("values")) |values| {
                 if (std.mem.eql(u8, values, value_group_name)) {
+                    log.debug("found values={s}", .{values});
                     const mask_str = bitfield_node.get_attribute("mask") orelse continue;
                     const mask = try std.fmt.parseInt(u64, mask_str, 0);
-                    try field_sizes.append(@popCount(mask));
+                    try field_sizes.append(allocator, @popCount(mask));
                     // TODO: assert consecutive
                 }
             }
         }
     }
+
+    log.debug("found field usage count of: {}", .{field_sizes.items.len});
 
     // if all the field sizes are the same, and the max value can fit in there,
     // then set the size of the enum. If there are no usages of an enum, then
@@ -305,8 +308,10 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
                 return error.InconsistentEnumSizes;
         }
 
-        if (max_value > 0 and (std.math.log2_int(u64, max_value) + 1) > ret.?)
-            return error.EnumMaxValueTooBig;
+        if (max_value > 0 and (std.math.log2_int(u64, max_value) + 1) > ret.?) {
+            log.warn("Uses of this enum are smaller than the calculated size", .{});
+            return std.math.log2_int(u64, max_value);
+        }
 
         break :blk @intCast(ret.?);
     };
@@ -369,7 +374,7 @@ fn load_module_type(ctx: *Context, node: xml.Node) !void {
     // registers. This operation needs to be done in
     // `loadModuleInstance()` as well
     if (get_inlined_register_group(node, name)) |register_group_node| {
-        try load_register_group_children(ctx, register_group_node, struct_id);
+        try load_register_group_children(ctx, register_group_node, peripheral, struct_id);
     } else {
         var register_group_it = node.iterate(&.{}, &.{"register-group"});
         while (register_group_it.next()) |register_group_node|
@@ -407,18 +412,69 @@ fn load_module_interrupt_group_entry(
 fn load_register_group_children(
     ctx: *Context,
     node: xml.Node,
+    peripheral: PeripheralID,
     parent: StructID,
 ) !void {
     var mode_it = node.iterate(&.{}, &.{"mode"});
     while (mode_it.next()) |mode_node|
         load_mode(ctx, mode_node, parent) catch |err| {
-            log.err("{}: failed to load mode: {}", .{ parent, err });
+            log.err("{f}: failed to load mode: {}", .{ parent, err });
             return err;
         };
 
-    var register_it = node.iterate(&.{}, &.{ "register", "register-group" });
+    var register_it = node.iterate(&.{}, &.{"register"});
     while (register_it.next()) |register_node|
         try load_register(ctx, register_node, parent);
+
+    var register_group_it = node.iterate(&.{}, &.{"register-group"});
+    while (register_group_it.next()) |register_group_node|
+        try load_nested_register_group(ctx, register_group_node, peripheral, parent);
+}
+
+fn load_nested_register_group(
+    ctx: *Context,
+    node: xml.Node,
+    peripheral: PeripheralID,
+    parent: StructID,
+) !void {
+    const db = ctx.db;
+    log.debug("load_nested_register_group: peripheral={f} parent={f}", .{ peripheral, parent });
+
+    validate_attrs(node, &.{
+        "name",
+        "name-in-module",
+        "offset",
+        "size",
+        "count",
+        "caption",
+    });
+
+    const name = node.get_attribute("name") orelse return error.MissingRegisterName;
+    const name_in_module = node.get_attribute("name-in-module") orelse return error.MissingNameInModule;
+
+    const peripheral_struct_id = try db.get_peripheral_struct(peripheral);
+    log.debug("  peripheral_struct_id={f}", .{peripheral_struct_id});
+    const struct_id = try db.get_struct_decl_id_by_name(peripheral_struct_id, name_in_module);
+    log.debug("  struct_id={f}", .{struct_id});
+
+    try db.add_nested_struct_field(parent, .{
+        .name = name,
+        .struct_id = struct_id,
+        .offset_bytes = if (node.get_attribute("offset")) |offset_str|
+            try std.fmt.parseInt(u64, offset_str, 0)
+        else
+            return error.MissingRegisterOffset,
+        .description = node.get_attribute("caption"),
+
+        .size_bytes = if (node.get_attribute("size")) |size_str|
+            try std.fmt.parseInt(u64, size_str, 0)
+        else
+            null,
+        .count = if (node.get_attribute("count")) |count_str|
+            try std.fmt.parseInt(u64, count_str, 0)
+        else
+            null,
+    });
 }
 
 fn infer_register_group_offset(ctx: *Context, node: xml.Node, struct_id: StructID) !void {
@@ -433,19 +489,14 @@ fn infer_register_group_offset(ctx: *Context, node: xml.Node, struct_id: StructI
 
     if (min) |m| {
         try ctx.inferred_register_group_offsets.put(ctx.arena.allocator(), struct_id, m);
-        log.debug("inferred offset of {}: {} bytes", .{ struct_id, m });
+        log.debug("inferred offset of {f}: {} bytes", .{ struct_id, m });
     }
 }
 
 // loads a register group which is under a peripheral or under another
 // register-group
-//
-// TODO: implement nested register groups
 fn load_register_group(ctx: *Context, node: xml.Node, parent: PeripheralID) !void {
     const db = ctx.db;
-
-    //switch (parent) {
-    //    .peripheral =>
 
     validate_attrs(node, &.{
         "name",
@@ -454,19 +505,6 @@ fn load_register_group(ctx: *Context, node: xml.Node, parent: PeripheralID) !voi
         "section",
         "size",
     });
-    //    .register_group => validate_attrs(node, &.{
-    //        "name",
-    //        "modes",
-    //        "size",
-    //        "name-in-module",
-    //        "caption",
-    //        "count",
-    //        "start-index",
-    //        "offset",
-    //    }),
-    //}
-
-    // TODO: for now just making register groups into structs.
 
     const parent_struct_id = try db.get_peripheral_struct(parent);
     const struct_id = try db.create_nested_struct(parent_struct_id, .{
@@ -479,7 +517,7 @@ fn load_register_group(ctx: *Context, node: xml.Node, parent: PeripheralID) !voi
     });
 
     try infer_register_group_offset(ctx, node, struct_id);
-    try load_register_group_children(ctx, node, struct_id);
+    try load_register_group_children(ctx, node, parent, struct_id);
     // TODO: infer register group size?
     // Do register groups ever operate as just namespaces?
 
@@ -518,7 +556,7 @@ fn assign_modes_to_register(
     parent: StructID,
     mode_names: []const u8,
 ) !void {
-    log.debug("assigning mode_names='{s}' to {} from {}", .{ mode_names, register_id, parent });
+    log.debug("assigning mode_names='{s}' to {f} from {f}", .{ mode_names, register_id, parent });
     const db = ctx.db;
 
     const modes = try db.get_struct_modes(ctx.arena.allocator(), parent);
@@ -545,7 +583,7 @@ fn load_register(
     parent: StructID,
 ) !void {
     const db = ctx.db;
-    log.debug("load_register: parent={}", .{parent});
+    log.debug("load_register: parent={f}", .{parent});
 
     validate_attrs(node, &.{
         "rw",
@@ -567,7 +605,7 @@ fn load_register(
     const name = node.get_attribute("name") orelse return error.MissingRegisterName;
 
     const register_group_offset = ctx.inferred_register_group_offsets.get(parent) orelse 0;
-    log.debug("{} inferred offset: {}", .{ parent, register_group_offset });
+    log.debug("{f} inferred offset: {}", .{ parent, register_group_offset });
 
     const register_id = try db.create_register(parent, .{
         .name = name,
@@ -786,6 +824,8 @@ fn load_enum(
         .size_bits = size_bits,
     });
 
+    log.debug("{f}: name={s} inferred_size={}", .{ enum_id, name, size_bits });
+
     var value_it = node.iterate(&.{}, &.{"value"});
     while (value_it.next()) |value_node|
         load_enum_field(ctx, value_node, enum_id) catch {};
@@ -844,7 +884,7 @@ fn load_module_instances(
 fn peripheral_is_inlined(ctx: *Context, struct_id: StructID) !bool {
     // inlined peripherals do not have any register groups
     const struct_decls = try ctx.db.get_struct_decls(ctx.arena.allocator(), struct_id);
-    log.debug("{} has {} struct decls. Is inlined: {}", .{ struct_id, struct_decls.len, struct_decls.len == 0 });
+    log.debug("{f} has {} struct decls. Is inlined: {}", .{ struct_id, struct_decls.len, struct_decls.len == 0 });
     return (struct_decls.len == 0);
 }
 
@@ -862,6 +902,7 @@ fn load_module_instance(
 
     const struct_id = try ctx.db.get_peripheral_struct(peripheral_id);
 
+    //
     // register-group never has an offset in a module, so we can safely assume
     // that they're used as variants of a peripheral, and never used like
     // clusters in SVD.

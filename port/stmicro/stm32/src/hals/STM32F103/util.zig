@@ -48,3 +48,21 @@ pub fn find_clock_tree(comptime name: []const u8) type {
     if (std.mem.indexOf(u8, name, "107")) |_| return F105_7;
     return F103;
 }
+
+pub fn load_timer_interrupt(handler: *const fn () callconv(.c) void) microzig.cpu.InterruptOptions {
+    var int_op: microzig.cpu.InterruptOptions = .{};
+    if (@hasField(microzig.cpu.InterruptOptions, "TIM2")) {
+        int_op.TIM2 = .{ .c = handler };
+    }
+    if (@hasField(microzig.cpu.InterruptOptions, "TIM3")) {
+        int_op.TIM3 = .{ .c = handler };
+    }
+    if (@hasField(microzig.cpu.InterruptOptions, "TIM4")) {
+        int_op.TIM4 = .{ .c = handler };
+    }
+    if (@hasField(microzig.cpu.InterruptOptions, "TIM5")) {
+        int_op.TIM5 = .{ .c = handler };
+    }
+
+    return int_op;
+}

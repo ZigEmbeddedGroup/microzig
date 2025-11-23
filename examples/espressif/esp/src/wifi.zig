@@ -52,7 +52,7 @@ var buffer: [50 * 1024]u8 = undefined;
 pub fn main() !void {
     // var fba: std.heap.FixedBufferAllocator = .init(&buffer);
     // const allocator = fba.threadSafeAllocator();
-    var alloc = microzig.allocator.init_with_buffer(&buffer);
+    var alloc = microzig.Allocator.init_with_buffer(&buffer);
     const allocator = alloc.allocator();
 
     microzig.cpu.interrupt.enable_interrupts();
@@ -205,17 +205,15 @@ const IPFormatter = struct {
         return .{ .addr = addr };
     }
 
-    pub fn format(addr: IPFormatter, comptime fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = opt;
+    pub fn format(addr: IPFormatter, writer: *std.Io.Writer) !void {
         try writer.writeAll(std.mem.sliceTo(c.ip4addr_ntoa(@as(*const c.ip4_addr_t, @ptrCast(&addr.addr))), 0));
     }
 };
 
-fn netif_status_callback(netif_c: [*c]c.netif) callconv(.C) void {
+fn netif_status_callback(netif_c: [*c]c.netif) callconv(.c) void {
     const netif: *c.netif = netif_c;
 
-    std.log.info("netif status changed ip to {}", .{IPFormatter.init(netif.ip_addr)});
+    std.log.info("netif status changed ip to {f}", .{IPFormatter.init(netif.ip_addr)});
 }
 
 export fn sys_now() callconv(.c) u32 {

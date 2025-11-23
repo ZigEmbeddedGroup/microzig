@@ -1,6 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const compatibility = microzig.hal.compatibility;
+
+const compatibility = @import("compatibility.zig");
 
 /// Clock config init error.
 pub const Error = error{

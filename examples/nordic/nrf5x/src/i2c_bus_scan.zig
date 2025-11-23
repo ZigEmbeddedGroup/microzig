@@ -25,7 +25,6 @@ pub fn main() !void {
     uart.apply(.{
         .tx_pin = board.uart_tx,
         .rx_pin = board.uart_rx,
-        .baud_rate = .@"115200",
     });
 
     nrf.uart.init_logger(uart);
@@ -45,8 +44,8 @@ pub fn main() !void {
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
-            if (e != i2c.TransactionError.DeviceNotPresent and
-                e != i2c.TransactionError.TargetAddressReserved)
+            if (e != i2c.Error.DeviceNotPresent and
+                e != i2c.Error.IllegalAddress)
                 std.log.info("Error {any}", .{e});
             continue;
         };
@@ -67,8 +66,8 @@ pub fn main() !void {
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0dma.read_blocking(a, &rx_data, null) catch |e| {
-            if (e != i2c.TransactionError.DeviceNotPresent and
-                e != i2c.TransactionError.TargetAddressReserved)
+            if (e != i2c.Error.DeviceNotPresent and
+                e != i2c.Error.IllegalAddress)
                 std.log.info("Error {any}", .{e});
             continue;
         };

@@ -17,12 +17,10 @@ pub const Timer = struct {
     arg: ?*anyopaque,
     deadline: time.Deadline,
     periodic: ?time.Duration,
+    list_node: std.SinglyLinkedList.Node = .{},
 };
 
-const TimerList = std.SinglyLinkedList(Timer);
-const TimerListNode = TimerList.Node;
-
-var timer_list: TimerList = .{};
+var timer_list: std.SinglyLinkedList = .{};
 
 // pub fn init(allocator: Allocator) !void {
 //     const task = try multitasking.Task.create(allocator, timer_task, null, 8192);
@@ -30,32 +28,26 @@ var timer_list: TimerList = .{};
 // }
 
 pub fn add(allocator: Allocator, ets_timer: *c.ets_timer, callback: CallbackFn, arg: ?*anyopaque) !void {
-    const timer: Timer = .{
+    const timer = try allocator.create(Timer);
+    timer.* = .{
         .ets_timer = ets_timer,
         .callback = callback,
         .arg = arg,
         .deadline = .init_absolute(null),
         .periodic = null,
     };
-
-    const node = try allocator.create(TimerListNode);
-    node.* = .{
-        .data = timer,
-    };
-
-    timer_list.prepend(node);
+    timer_list.prepend(&timer.list_node);
 }
 
 pub fn remove(allocator: Allocator, timer: *Timer) void {
-    const node: *TimerListNode = @fieldParentPtr("data", timer);
-    timer_list.remove(node);
-    allocator.destroy(node);
+    timer_list.remove(&timer.list_node);
+    allocator.destroy(timer);
 }
 
 pub fn find(ets_timer: *c.ets_timer) ?*Timer {
     var current_node = timer_list.first;
     while (current_node) |node| : (current_node = node.next) {
-        const timer = &node.data;
+        const timer: *Timer = @alignCast(@fieldParentPtr("list_node", node));
         if (timer.ets_timer == ets_timer) {
             return timer;
         }
@@ -95,7 +87,7 @@ pub fn tick() void {
 fn find_next_due(now: time.Absolute) ?*Timer {
     var current_node = timer_list.first;
     while (current_node) |node| : (current_node = node.next) {
-        const timer = &node.data;
+        const timer: *Timer = @alignCast(@fieldParentPtr("list_node", node));
         if (timer.deadline.is_reached_by(now)) {
             return timer;
         }

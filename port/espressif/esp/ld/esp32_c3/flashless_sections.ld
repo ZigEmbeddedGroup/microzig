@@ -7,6 +7,7 @@ SECTIONS
     KEEP(*(microzig_ram_start))
     *(.text*)
     KEEP(*(.ram_text))
+
     *(.rwtext*)
 
     /* wifi rwtext */

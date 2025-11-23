@@ -756,13 +756,13 @@ pub const ClockTree = struct {
         const HSE_Timeoutval = ClockNodeTypes{
             .source = .{
                 .value = if (config.HSE_Timeout) |val| val.get() else 100,
-                .limit = .{ .max = 4294967295, .min = 1 },
+                .limit = .{ .max = 4294967295.0, .min = 1 },
             },
         };
         const LSE_Timeoutval = ClockNodeTypes{
             .source = .{
                 .value = if (config.LSE_Timeout) |val| val.get() else 5000,
-                .limit = .{ .max = 4294967295, .min = 1 },
+                .limit = .{ .max = 4294967295.0, .min = 1 },
             },
         };
         const HSICalibrationValueval = ClockNodeTypes{

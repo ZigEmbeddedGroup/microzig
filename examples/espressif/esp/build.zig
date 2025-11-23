@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
         .{ .name = "i2c_temp", .file = "src/i2c_temp.zig" },
         .{ .name = "i2c_display_sh1106", .file = "src/i2c_display_sh1106.zig" },
+        .{ .name = "ledc_pwm_servo", .file = "src/ledc_pwm_servo.zig" },
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "systimer", .file = "src/systimer.zig" },
@@ -69,6 +70,11 @@ pub fn build(b: *std.Build) void {
     }
 
     for (targeted_examples) |targeted_example| {
+        // If we specify example, only select the ones that match
+        if (maybe_example) |selected_example|
+            if (!std.mem.containsAtLeast(u8, targeted_example.example.name, 1, selected_example))
+                continue;
+
         const target_desc = targeted_example.target.get_target_desc(mb);
         const example = targeted_example.example;
 

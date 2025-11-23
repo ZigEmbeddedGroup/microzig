@@ -1,40 +1,12 @@
 SECTIONS
 {
-  .rodata.skip (NOLOAD) :
+  .flash_text_offset (NOLOAD) :
   {
     /* Skip 0x20 bytes for the esp image format mapping header. */
     . += 0x20;
-  } > DROM
-
-  .rodata : ALIGN(4)
-  {
-    . = ALIGN(4);
-    KEEP(*(.app_desc))
-    *(.rodata*)
-    *(.srodata*)
-    . = ALIGN(4);
-  } > DROM
-
-  .rodata.wifi : ALIGN(4)
-  {
-    . = ALIGN(4);
-    *(.rodata_wlog_*.*)
-    . = ALIGN(4);
-  } > DROM
-
-  .text.dummy (NOLOAD) : ALIGN(4)
-  {
-    . = ALIGN(ALIGNOF(.rodata));
-    . = ALIGN(ALIGNOF(.rodata.wifi));
-
-    . = . + SIZEOF(.rodata.skip);
-    . = . + SIZEOF(.rodata);
-    . = . + SIZEOF(.rodata.wifi);
-
-    . = ALIGN(0x10000) + 0x20;
   } > IROM
 
-  .text :
+  .flash.text :
   {
     KEEP(*(microzig_flash_start))
     *(.text*)
@@ -48,19 +20,48 @@ SECTIONS
     . += 16;
   } > IROM
 
-  .ram_text : ALIGN(4)
+  /* Dummy section to offset the rodata section after the text section */
+  .flash_rodata_dummy (NOLOAD) :
   {
-    . = ALIGN(4);
+    . = ALIGN(ALIGNOF(.flash_text_offset)) + SIZEOF(.flash_text_offset);
+    . = ALIGN(ALIGNOF(.flash.text)) + SIZEOF(.flash.text);
+
+    /* Add alignment of MMU page size + 0x20 bytes for the mapping header. */
+    . = ALIGN(0x10000) + 0x20;
+  } > DROM
+
+  /* Keep section name used by esp-idf. This would be the first thing in the image */
+  .flash.appdesc : ALIGN(0x10)
+  {
+    KEEP(*(.app_desc))
+
+    /* Prevent gap between .app_desc and .rodata */
+    . = ALIGN(ALIGNOF(.flash.rodata));
+  } > DROM
+
+  .flash.rodata : ALIGN(0x10)
+  {
+    *(.rodata*)
+    *(.srodata*)
+
+    . = ALIGN(ALIGNOF(.flash.rodata.wifi));
+  } > DROM
+
+  .flash.rodata.wifi : ALIGN(0x10)
+  {
+    *(.rodata_wlog_*.*)
+  } > DROM
+
+  .ram.text :
+  {
     KEEP(*(.ram_text))
-    . = ALIGN(4);
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
   } > IRAM
 
-  .ram_text.wifi : ALIGN(4)
+  .ram.text.wifi :
   {
-    . = ALIGN(4);
     *( .wifi0iram  .wifi0iram.*)
     *( .wifirxiram  .wifirxiram.*)
     *( .wifislprxiram  .wifislprxiram.*)
@@ -69,43 +70,33 @@ SECTIONS
     *( .iram1  .iram1.*)
     *( .wifiextrairam.* )
     *( .coexiram.* )
-    . = ALIGN(4);
   } > IRAM
 
-  .data.dummy (NOLOAD) : ALIGN(4)
+  .ram_data_dummy (NOLOAD) :
   {
-    . = . + SIZEOF(.ram_text) + SIZEOF(.ram_text.wifi);
+    . = ALIGN(ALIGNOF(.ram.text)) + SIZEOF(.ram.text);
+    . = ALIGN(ALIGNOF(.ram.text.wifi)) + SIZEOF(.ram.text.wifi);
   } > DRAM
 
-  .data : ALIGN(4)
+  .data :
   {
     microzig_data_start = .;
-    . = ALIGN (4);
-
     *(.sdata*)
     *(.data*)
-
     microzig_data_end = .;
-    . = ALIGN (4);
   } > DRAM
 
-  .data.wifi : ALIGN(4)
+  .data.wifi :
   {
-    . = ALIGN (4);
     *(.dram1*)
-    . = ALIGN (4);
   }
 
-  .bss (NOLOAD) : ALIGN (4)
+  .bss (NOLOAD) :
   {
     microzig_bss_start = .;
-    . = ALIGN (4);
-
     *(.sbss*)
     *(.bss*)
-
     microzig_bss_end = .;
-    . = ALIGN (4);
   } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);

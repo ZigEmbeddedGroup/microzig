@@ -4,11 +4,21 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
+pub const bootmeta = @import("hal/bootmeta.zig");
 pub const clocks = @import("hal/clocks.zig");
+pub const compatibility = @import("hal/compatibility.zig");
+pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
+pub const dcp = switch (compatibility.chip) {
+    .RP2040 => @compileError("RP2040 doesn't support DCP"),
+    .RP2350 => switch (compatibility.arch) {
+        .arm => @import("hal/dcp.zig"),
+        .riscv => @compileError("RP2350 riscv doesn't support DCP"),
+    },
+};
 pub const dma = @import("hal/dma.zig");
+pub const drivers = @import("hal/drivers.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
-pub const irq = @import("hal/irq.zig");
 pub const multicore = @import("hal/multicore.zig");
 pub const mutex = @import("hal/mutex.zig");
 pub const pins = @import("hal/pins.zig");
@@ -22,20 +32,21 @@ pub const rtc = switch (compatibility.chip) {
     .RP2350 => @import("hal/always_on_timer.zig"),
 };
 pub const spi = @import("hal/spi.zig");
+pub const system_timer = @import("hal/system_timer.zig");
 pub const i2c = @import("hal/i2c.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
-pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
-pub const drivers = @import("hal/drivers.zig");
-pub const compatibility = @import("hal/compatibility.zig");
-pub const bootmeta = @import("hal/bootmeta.zig");
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test and compatibility.chip == .RP2350) {
         _ = bootmeta;
+
+        if (compatibility.arch == .arm and microzig.options.hal.use_dcp) {
+            _ = dcp;
+        }
     }
 
     // On the RP2040, we need to import the `atomic.zig` file to export some global
@@ -52,11 +63,21 @@ pub const HAL_Options = switch (compatibility.chip) {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
 
-            /// Next metadata block to link after image_def. **Last block in the
-            /// chain must link back to the first one** (to
+            /// Next metadata block to link after image_def. **Last block in
+            /// the chain must link back to the first one** (to
             /// `bootmeta.image_def_block`).
             next_block: ?*const anyopaque = null,
         } = .{},
+
+        /// Enable the FPU and lazy state preservation. Leads to much faster
+        /// single precision floating point arithmetic. If you want a custom
+        /// setup set this to false and configure the fpu yourself. Ignored on
+        /// riscv.
+        enable_fpu: bool = is_fpu_used,
+
+        /// Enable the DCP and export intrinsics. Leads to faster double
+        /// precision floating point arithmetic. Ignored on riscv.
+        use_dcp: bool = true,
     },
 };
 
@@ -73,9 +94,13 @@ pub inline fn init() void {
     init_sequence(clock_config);
 }
 
+const is_fpu_used: bool = builtin.abi.float() == .hard;
+
 /// Allows user to easily swap in their own clock config while still
-/// using the reccomended initialization sequence
+/// using the recommended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
+    maybe_enable_fpu_and_dcp();
+
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 
@@ -104,6 +129,40 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     resets.unreset_block_wait(resets.masks.all);
 }
 
+/// Enables fpu and/or dcp on RP2350 arm if requested in HAL options. On RP2350
+/// riscv and RP2040 this is a noop. Called in init_sequence and on core1
+/// startup.
+pub fn maybe_enable_fpu_and_dcp() void {
+    if (compatibility.chip == .RP2350 and
+        compatibility.arch == .arm)
+    {
+        if (microzig.options.hal.enable_fpu) {
+            if (is_fpu_used) {
+                // enable lazy state preservation
+                microzig.cpu.peripherals.fpu.FPCCR.modify(.{
+                    .ASPEN = 1,
+                    .LSPEN = 1,
+                });
+
+                // enable the FPU for the current core
+                microzig.cpu.peripherals.scb.CPACR.modify(.{
+                    .CP10 = .full_access,
+                    .CP11 = .full_access,
+                });
+            } else {
+                @compileError("target doesn't have FPU features enabled");
+            }
+        }
+
+        if (microzig.options.hal.use_dcp) {
+            // enable the DCP for the current core
+            microzig.cpu.peripherals.scb.CPACR.modify(.{
+                .CP4 = .full_access,
+            });
+        }
+    }
+}
+
 pub fn get_cpu_id() u32 {
     return SIO.CPUID.read().CPUID;
 }
@@ -113,4 +172,5 @@ test "hal tests" {
     _ = usb;
     _ = i2c;
     _ = uart;
+    _ = mutex;
 }

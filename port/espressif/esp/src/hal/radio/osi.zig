@@ -72,7 +72,7 @@ pub fn __assert_func(
 ) callconv(.c) void {
     switch (builtin.mode) {
         .Debug, .ReleaseSafe => {
-            log.err("assertion failed: `{?s}` in file {?s}, line {}, function {?s}", .{
+            log.err("assertion failed: `{s}` in file {s}, line {}, function {s}", .{
                 failed_expr orelse "",
                 file orelse "",
                 line,

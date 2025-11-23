@@ -4,10 +4,8 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
 pub const CPU_Options = struct {
-    /// When true, interrupt vectors are moved to RAM so handlers can be set at runtime.
-    ram_vectors: bool = false,
-    /// When true, the RAM vectors are placed in section `ram_vectors`.
-    has_ram_vectors_section: bool = false,
+    /// When true, the vector table lives in RAM.
+    ram_vector_table: bool = false,
 };
 
 pub const scb_base_offset = 0x0cfc;
@@ -240,9 +238,76 @@ pub const SystemControlBlock = extern struct {
     _AFSR: u32,
     reserved1: [18]u32,
     /// Coprocessor Access Control Register.
-    CPACR: u32,
+    CPACR: mmio.Mmio(packed struct(u32) {
+        CP0: Privilege,
+        CP1: Privilege,
+        CP2: Privilege,
+        CP3: Privilege,
+        CP4: Privilege,
+        CP5: Privilege,
+        CP6: Privilege,
+        CP7: Privilege,
+        reserved16: u4,
+        CP10: Privilege,
+        CP11: Privilege,
+        reserved24: u8,
+
+        pub const Privilege = enum(u2) {
+            /// Access denied. Any attempted access generates a NOCP UsageFault.
+            access_denied = 0b00,
+            /// Privileged access only. An unprivileged access generates a NOCP UsageFault.
+            priviledged_access_only = 0b01,
+            reserved = 0b10,
+            /// Full access.
+            full_access = 0b11,
+        };
+    }),
     /// Non-secure Access Control Register.
     NSACR: u32,
+};
+
+pub const FloatingPointUnit = extern struct {
+    FPCCR: mmio.Mmio(packed struct(u32) {
+        LSPACT: u1,
+        USER: u1,
+        S: u1,
+        THREAD: u1,
+        HFRDY: u1,
+        MMRDY: u1,
+        BFRDY: u1,
+        SFRDY: u1,
+        MONRDY: u1,
+        SPLIMVIOL: u1,
+        UFRDY: u1,
+        reserved0: u15 = 0,
+        TS: u1,
+        CLRONRETS: u1,
+        CLRONRET: u1,
+        LSPENS: u1,
+        /// Automatic state preservation enable. Enables lazy context save of
+        /// floating-point state. The possible values of this bit are:
+        /// 0 = Disable automatic lazy context save.
+        /// 1 = Enable automatic lazy state preservation for floating-point
+        /// context.
+        ///
+        /// Writes to this bit from Non-secure state are ignored if LSPENS is
+        /// set to one.
+        LSPEN: u1,
+        /// Automatic state preservation enable. Enables CONTROL.FPCA setting
+        /// on execution of a floating-point instruction. This results in
+        /// automatic hardware state preservation and restoration, for
+        /// floating-point context, on exception entry and exit. The possible
+        /// values of this bit are:
+        /// 1 = Enable CONTROL.FPCA setting on execution of a floating-point
+        /// instruction.
+        /// 0 = Disable CONTROL.FPCA setting on execution of a
+        /// floating-point instruction.
+        ASPEN: u1,
+    }),
+    FPCAR: u32,
+    FPDSCR: u32,
+    MVFR0: u32,
+    MVFR1: u32,
 };
 
 pub const NestedVectorInterruptController = extern struct {

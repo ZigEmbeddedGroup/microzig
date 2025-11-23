@@ -2,10 +2,8 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
 pub const CPU_Options = struct {
-    /// When true, interrupt vectors are moved to RAM so handlers can be set at runtime.
-    ram_vectors: bool = false,
-    /// When true, the RAM vectors are placed in section `ram_vectors`.
-    has_ram_vectors_section: bool = false,
+    /// When true, the vector table lives in RAM.
+    ram_vector_table: bool = false,
 };
 
 pub const scb_base_offset = 0x0d00;
@@ -33,7 +31,22 @@ pub const SystemControlBlock = extern struct {
     /// Vector Table Offset Register
     VTOR: u32,
     /// Application Interrupt and Reset Control Register
-    AIRCR: u32,
+    AIRCR: mmio.Mmio(packed struct(u32) {
+        /// Reserved for Debug use. Must be written as 0.
+        VECTRESET: u1, // WO
+        /// Reserved for Debug use. Must be written as 0.
+        VECTCLRACTIVE: u1, // WO
+        /// System reset request
+        SYSRESETREQ: u1, // WO
+        reserved0: u5 = 0, // [7:3] Reserved
+        /// Interrupt priority grouping
+        PRIGROUP: u3, // RW
+        reserved1: u4 = 0, // [14:11] Reserved
+        /// Endianness: 0 = Little, 1 = Big
+        ENDIANNESS: u1, // RO
+        /// VECTKEY (write) / VECTKEYSTAT (read)
+        VECTKEY: u16, // RW (write 0x5FA to update)
+    }),
     /// System Control Register
     SCR: u32,
     /// Configuration Control Register
@@ -46,10 +59,46 @@ pub const SystemControlBlock = extern struct {
         reserved1: u3 = 0,
         BFHFNMIGN: u1,
         STKALIGN: u1,
-        padding: u22 = 0,
+        reserved16: u6 = 0,
+        /// DC
+        DC: u1,
+        /// IC
+        IC: u1,
+        /// BP
+        BP: u1,
+        padding: u13 = 0,
     }),
-    /// System Handlers Priority Registers
-    SHP: [3]u8,
+
+    /// System Handler Priority Register 1 (SHPR1)
+    SHPR1: mmio.Mmio(packed struct(u32) {
+        /// Priority of system handler 4, MemManage
+        PRI_4: u8,
+        /// Priority of system handler 5, BusFault
+        PRI_5: u8,
+        /// Priority of system handler 6, UsageFault
+        PRI_6: u8,
+        /// Reserved bits [31:24]
+        reserved0: u8 = 0,
+    }),
+
+    /// System Handler Priority Register 2 (SHPR2)
+    SHPR2: mmio.Mmio(packed struct(u32) {
+        /// Reserved bits [23:0]
+        reserved0: u24 = 0,
+        /// Priority of system handler 11, SVCall
+        PRI_11: u8,
+    }),
+
+    /// System Handler Priority Register 3 (SHPR3)
+    SHPR3: mmio.Mmio(packed struct(u32) {
+        /// Reserved bits [15:0]
+        reserved0: u16 = 0,
+        /// Priority of system handler 14, PendSV
+        PRI_14: u8,
+        /// Priority of system handler 15, SysTick
+        PRI_15: u8,
+    }),
+
     /// System Handler Contol and State Register
     SHCSR: u32,
     /// Configurable Fault Status Register
@@ -79,7 +128,15 @@ pub const SystemControlBlock = extern struct {
     MMFR: [4]u32,
     /// Instruction Set Attributes Register
     ISAR: [5]u32,
-    RESERVED0: [5]u32,
+    RESERVED0: [1]u32,
+    /// Offset: 0x078 (R/ )  Cache Level ID register
+    CLIDR: u32,
+    /// Offset: 0x07C (R/ )  Cache Type register
+    CTR: u32,
+    /// Offset: 0x080 (R/ )  Cache Size ID Register
+    CCSIDR: u32,
+    /// Offset: 0x084 (R/W)  Cache Size Selection Register
+    CSSELR: u32,
     /// Coprocessor Access Control Register
     CPACR: u32,
 };
@@ -101,7 +158,7 @@ pub const NestedVectorInterruptController = extern struct {
     IABR: [7]u32,
     reserved4: [57]u32,
     /// Interrupt Priority Registers
-    IP: [239]u8,
+    IPR: [239]u8,
     reserved5: [2577]u8,
     /// Software Trigger Interrupt Register
     STIR: u32,
@@ -307,4 +364,46 @@ pub const TPIU = extern struct {
         padding: u16 = 0,
     }),
     reserved3: [13]u32,
+};
+
+pub const FloatingPointUnit = extern struct {
+    FPCCR: mmio.Mmio(packed struct(u32) {
+        LSPACT: u1,
+        USER: u1,
+        S: u1,
+        THREAD: u1,
+        HFRDY: u1,
+        MMRDY: u1,
+        BFRDY: u1,
+        SFRDY: u1,
+        MONRDY: u1,
+        SPLIMVIOL: u1,
+        UFRDY: u1,
+        reserved0: u15 = 0,
+        TS: u1,
+        CLRONRETS: u1,
+        CLRONRET: u1,
+        LSPENS: u1,
+        /// Automatic state preservation enable. Enables lazy context save of
+        /// floating-point state. The possible values of this bit are:
+        /// 0 = Disable automatic lazy context save.
+        /// 1 = Enable automatic lazy state preservation for floating-point
+        /// context.
+        ///
+        /// Writes to this bit from Non-secure state are ignored if LSPENS is
+        /// set to one.
+        LSPEN: u1,
+        /// Automatic state preservation enable. Enables CONTROL.FPCA setting
+        /// on execution of a floating-point instruction. This results in
+        /// automatic hardware state preservation and restoration, for
+        /// floating-point context, on exception entry and exit. The possible
+        /// values of this bit are:
+        /// 1 = Enable CONTROL.FPCA setting on execution of a floating-point
+        /// instruction.
+        /// 0 = Disable CONTROL.FPCA setting on execution of a
+        /// floating-point instruction.
+        ASPEN: u1,
+    }),
+    FPCAR: u32,
+    FPDSCR: u32,
 };

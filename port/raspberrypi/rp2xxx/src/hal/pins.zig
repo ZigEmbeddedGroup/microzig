@@ -22,6 +22,11 @@ pub const Direction = enum(u2) {
     unknown,
 };
 
+pub const Enabled = enum(u1) {
+    enabled,
+    disabled,
+};
+
 pub const PinFlags = if (has_rp2350b) [48]u1 else [32]u1;
 
 pub const Pin = enum {
@@ -81,7 +86,7 @@ pub const Pin = enum {
         drive_strength: ?gpio.DriveStrength = null,
         pull: ?gpio.Pull = null,
         slew_rate: ?gpio.SlewRate = null,
-        schmitt_trigger: ?gpio.SchmittTrigger = null,
+        schmitt_trigger: ?Enabled = null,
 
         pub fn get_direction(comptime config: Configuration) Direction {
             return if (config.direction) |direction|
@@ -941,7 +946,7 @@ pub const GlobalConfiguration = struct {
                 }
 
                 if (pin_config.schmitt_trigger) |enabled| {
-                    gpio.num(gpio_num).set_schmitt_trigger(enabled);
+                    gpio.num(gpio_num).set_schmitt_trigger_enabled(enabled == .enabled);
                 }
 
                 if (pin_config.drive_strength) |drive_strength| {

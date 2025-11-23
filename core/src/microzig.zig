@@ -30,7 +30,7 @@ pub const board = if (config.has_board) @import("board") else void;
 /// Contains device-independent drivers for peripherial devices.
 pub const drivers = @import("drivers");
 
-pub const allocator = @import("allocator.zig");
+pub const Allocator = @import("Allocator.zig");
 pub const core = @import("core.zig");
 pub const concurrency = @import("concurrency.zig");
 pub const interrupt = @import("interrupt.zig");
@@ -109,7 +109,7 @@ pub fn hang() noreturn {
     cpu.interrupt.disable_interrupts();
     while (true) {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 

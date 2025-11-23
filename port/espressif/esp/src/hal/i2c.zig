@@ -1,6 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
+const drivers = mdf.base;
 const peripherals = microzig.chip.peripherals;
 pub const I2C0 = peripherals.I2C0;
 
@@ -16,45 +17,13 @@ pub const ConfigError = error{
     PeripheralDisabled,
 };
 
-pub const Error = error{
+pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
+pub const Error = drivers.I2C_Device.Error || error{
     FifoExceeded,
-    AcknowledgeCheckFailed,
-    Timeout,
     ArbitrationLost,
     ExecutionIncomplete,
     CommandNumberExceeded,
-    ZeroLengthInvalid,
-    TargetAddressReserved,
-};
-
-///
-/// 7-bit I²C address, without the read/write bit.
-///
-pub const Address = enum(u7) {
-    _,
-
-    pub fn new(addr: u7) Address {
-        var a = @as(Address, @enumFromInt(addr));
-        std.debug.assert(!a.is_reserved());
-        return a;
-    }
-
-    ///
-    /// Returns `true` if the Address is a reserved I²C address.
-    ///
-    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
-    ///
-    /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
-        const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
-    }
-
-    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
-    }
 };
 
 const Opcode = enum(u4) {
@@ -141,12 +110,6 @@ const OperationType = enum(u1) {
     read = 1,
 };
 
-/// Pins used by the I2C interface
-pub const Pins = struct {
-    sda: gpio.Pin,
-    scl: gpio.Pin,
-};
-
 pub const instance = struct {
     pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub fn num(n: u1) I2C {
@@ -169,25 +132,11 @@ pub const I2C = enum(u1) {
         return I2C0;
     }
 
-    pub fn apply(self: I2C, pins: Pins, frequency: u32) ConfigError!void {
+    pub fn apply(self: I2C, frequency: u32) ConfigError!void {
         const regs = self.get_regs();
 
         // Enable I2C peripheral clock and take it out of reset
         microzig.hal.system.enable_clocks_and_release_reset(.{ .i2c_ext0 = true });
-
-        // Setup SDA pin
-        pins.sda.set_open_drain_output(true);
-        pins.sda.set_input_enable(true);
-        pins.sda.set_pullup(true);
-        pins.sda.connect_peripheral_to_output(.i2cext0_sda);
-        pins.sda.connect_input_to_peripheral(.i2cext0_sda);
-
-        // Setup SCL pin
-        pins.scl.set_open_drain_output(true);
-        pins.scl.set_input_enable(true);
-        pins.scl.set_pullup(true);
-        pins.scl.connect_peripheral_to_output(.i2cext0_scl);
-        pins.scl.connect_input_to_peripheral(.i2cext0_scl);
 
         // Reset entire peripheral (also resets fifo)
         self.reset();
@@ -218,6 +167,21 @@ pub const I2C = enum(u1) {
 
         // Propagate configuration changes
         self.update_config();
+    }
+
+    pub fn connect_pins(_: I2C, pins: struct {
+        sda: ?gpio.Pin = null,
+        scl: ?gpio.Pin = null,
+    }) void {
+        if (pins.sda) |sda_pin| {
+            sda_pin.connect_peripheral_to_output(.{ .signal = .i2cext0_sda });
+            sda_pin.connect_input_to_peripheral(.{ .signal = .i2cext0_sda });
+        }
+
+        if (pins.scl) |scl_pin| {
+            scl_pin.connect_peripheral_to_output(.{ .signal = .i2cext0_scl });
+            scl_pin.connect_input_to_peripheral(.{ .signal = .i2cext0_scl });
+        }
     }
 
     /// Reset the I2C controller
@@ -346,13 +310,14 @@ pub const I2C = enum(u1) {
         if (interrupts.TIME_OUT_INT_RAW == 1) {
             return Error.Timeout;
         } else if (interrupts.NACK_INT_RAW == 1) {
-            return Error.AcknowledgeCheckFailed;
+            return Error.NoAcknowledge;
         } else if (interrupts.ARBITRATION_LOST_INT_RAW == 1) {
             return Error.ArbitrationLost;
         } else if (interrupts.TRANS_COMPLETE_INT_RAW == 1 and self.get_regs().SR.read().RESP_REC == 0) {
-            return Error.AcknowledgeCheckFailed;
+            return Error.NoAcknowledge;
         }
     }
+
     /// Propagate configuration to the peripheral
     inline fn update_config(self: I2C) void {
         self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
@@ -397,7 +362,7 @@ pub const I2C = enum(u1) {
         cmd_start_idx: *usize,
     ) !void {
         if (buffer.len == 0)
-            return Error.ZeroLengthInvalid;
+            return Error.NoData;
 
         const max_len = if (will_continue) I2C_CHUNK_SIZE else I2C_CHUNK_SIZE + 1;
         const initial_len: u8 = @truncate(if (will_continue) buffer.len else buffer.len - 1);
@@ -562,7 +527,7 @@ pub const I2C = enum(u1) {
     pub fn readv_blocking(self: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) !void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(chunks);
 
         var is_first_chunk = true;
         // Always saving room for the address byte. With a custom iterator we could make sure only the first chunk is 31 (room for address)
@@ -595,8 +560,8 @@ pub const I2C = enum(u1) {
         will_continue: bool,
         deadline: mdf.time.Deadline,
     ) !void {
-        if (addr.is_reserved())
-            return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.TargetAddressReserved;
+
         self.clear_interrupts();
 
         // Short circuit for zero length reads as that would be an invalid operation.
@@ -649,7 +614,7 @@ pub const I2C = enum(u1) {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         // TODO: Write a new utility that does similar but that will coalesce into a specified size
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(chunks);
         if (write_vec.size() == 0)
             return self.write_operation_blocking(addr, &.{}, start, stop, deadline);
 
@@ -699,8 +664,10 @@ pub const I2C = enum(u1) {
         stop: bool,
         deadline: mdf.time.Deadline,
     ) Error!void {
-        if (addr.is_reserved())
-            return Error.TargetAddressReserved;
+        addr.check_reserved() catch |err| switch (err) {
+            AddressError.GeneralCall => {},
+            else => return Error.TargetAddressReserved,
+        };
 
         // Short circuit for zero length writes without start or end as that would be an
         // invalid operation. Write lengths in the TRM are 1-255.

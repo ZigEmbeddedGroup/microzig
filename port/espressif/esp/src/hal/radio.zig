@@ -17,6 +17,7 @@ const c = @import("esp-wifi-driver");
 pub const wifi = @import("radio/wifi.zig");
 pub const bluetooth = @import("radio/bluetooth.zig");
 
+const efuse = @import("efuse.zig");
 const osi = @import("radio/osi.zig");
 const timer = @import("radio/timer.zig");
 const multitasking = @import("radio/multitasking.zig");
@@ -81,26 +82,12 @@ pub fn tick() void {
     timer.tick();
 }
 
-// TODO: maybe this can be moved in an efuse hal
-pub fn read_base_mac() [6]u8 {
-    const EFUSE = microzig.chip.peripherals.EFUSE;
-
-    var mac: [6]u8 = undefined;
-
-    const low_32_bits: u32 = EFUSE.RD_MAC_SPI_SYS_0.read().MAC_0;
-    const high_16_bits: u16 = EFUSE.RD_MAC_SPI_SYS_1.read().MAC_1;
-    @memcpy(mac[0..4], std.mem.asBytes(&low_32_bits));
-    @memcpy(mac[4..6], std.mem.asBytes(&high_16_bits));
-
-    return mac;
-}
-
 pub fn read_mac(iface: enum {
     sta,
     ap,
     bt,
 }) [6]u8 {
-    var mac = read_base_mac();
+    var mac = efuse.read_mac();
     switch (iface) {
         .sta => {},
         .ap => mac[5] += 1,

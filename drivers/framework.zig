@@ -43,9 +43,12 @@ pub const led = struct {
 };
 
 pub const sensor = struct {
-    pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
+    pub const AS5600 = @import("sensor/AS5600.zig").AS5600;
     pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
     pub const MLX90640 = @import("sensor/MLX90640.zig").MLX90640;
+    pub const MPU_6050 = @import("sensor/MPU-6050.zig").MPU_6050;
+    pub const TLV493D = @import("sensor/TLV493D.zig").TLV493D;
+    pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
 };
 
 pub const stepper = struct {
@@ -200,6 +203,7 @@ pub const base = struct {
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
     pub const Clock_Device = @import("base/Clock_Device.zig");
+    pub const I2C_Device = @import("base/I2C_Device.zig");
 };
 
 test {
@@ -212,9 +216,11 @@ test {
     _ = input.debounced_button;
     _ = input.rotary_encoder;
 
-    _ = sensor.TMP117;
     _ = sensor.ICM_20948;
     _ = sensor.MLX90640;
+    _ = sensor.MPU_6050;
+    _ = sensor.TLV493D;
+    _ = sensor.TMP117;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;
@@ -229,4 +235,6 @@ test {
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
     _ = base.Digital_IO;
+    _ = base.Clock_Device;
+    _ = base.I2C_Device;
 }

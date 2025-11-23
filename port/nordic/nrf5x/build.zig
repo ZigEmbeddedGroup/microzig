@@ -52,7 +52,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patches = @import("patches/nrf51.zig").patches,
         },
-        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+        .hal = hal,
     };
 
     const chip_nrf52832: microzig.Target = .{
@@ -76,7 +76,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patches = @import("patches/nrf528xx.zig").patches,
         },
-        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+        .hal = hal,
     };
 
     const chip_nrf52833: microzig.Target = .{
@@ -100,7 +100,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patches = @import("patches/nrf528xx.zig").patches,
         },
-        .hal = .{ .root_source_file = b.path("src/hal.zig") },
+        .hal = hal,
     };
 
     const chip_nrf52840: microzig.Target = .{
@@ -189,10 +189,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/hal.zig"),
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hal.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const unit_tests_run = b.addRunArtifact(unit_tests);

@@ -2,6 +2,10 @@ const std = @import("std");
 const printer = @import("printer");
 const serial = @import("serial");
 
+var elf_file_reader_buf: [1024]u8 = undefined;
+var in_stream_buf: [1024]u8 = undefined;
+var out_stream_buf: [1024]u8 = undefined;
+
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
     defer _ = debug_allocator.deinit();
@@ -18,14 +22,13 @@ pub fn main() !void {
 
     const elf_file = try std.fs.cwd().openFile(elf_path, .{});
     defer elf_file.close();
+    var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
 
-    var elf = try printer.Elf.init(allocator, elf_file);
+    var elf: printer.Elf = try .init(allocator, &elf_file_reader);
     defer elf.deinit(allocator);
 
-    var debug_info = try printer.DebugInfo.init(allocator, elf);
+    var debug_info: printer.DebugInfo = try .init(allocator, elf);
     defer debug_info.deinit(allocator);
-
-    var annotator: printer.Annotator = .init;
 
     const serial_device = try std.fs.cwd().openFile(serial_device_path, .{});
     defer serial_device.close();
@@ -33,6 +36,7 @@ pub fn main() !void {
         .baud_rate = baud_rate,
     });
     try serial.flushSerialPort(serial_device, .both);
+    var in_stream = serial_device.reader(&in_stream_buf);
 
     {
         var flash_cmd: std.process.Child = .init(&.{
@@ -52,13 +56,15 @@ pub fn main() !void {
         }
     }
 
-    const stdout = std.io.getStdOut();
-    const out_stream = stdout.writer();
-    const out_tty_config = std.io.tty.detectConfig(stdout);
+    const stdout = std.fs.File.stdout();
+    var out_stream = stdout.writer(&out_stream_buf);
+    const out_tty_config = std.Io.tty.detectConfig(stdout);
 
-    var buf: [4096]u8 = undefined;
-    while (true) {
-        const n = try serial_device.read(&buf);
-        try annotator.process(buf[0..n], elf, &debug_info, out_stream, out_tty_config);
-    }
+    try printer.annotate(
+        &in_stream.interface,
+        &out_stream.interface,
+        out_tty_config,
+        elf,
+        &debug_info,
+    );
 }

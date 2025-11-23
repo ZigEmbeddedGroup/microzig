@@ -12,6 +12,7 @@ const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const GPTimer = stm32.timer.GPTimer;
+const time = stm32.time;
 
 //gpios
 const ch1 = gpio.Pin.from_port(.A, 0);
@@ -25,7 +26,6 @@ pub const microzig_options = microzig.Options{
 };
 
 const comp = GPTimer.init(.TIM2);
-const counter = GPTimer.init(.TIM3).into_counter_mode();
 
 var global_uptime: i32 = 0;
 var global_downtime: i32 = 0;
@@ -38,7 +38,7 @@ var duty_cycle: f32 = 0;
 //since the timer is reset at each rising edge,
 //the value of ch2 marks the moment when the signal went from high to low, indicating the duty cycle.
 //the value of ch1 marks the point when the signal goes back to high before the timer resets, indicating the period.
-fn isr_tim2() callconv(.C) void {
+fn isr_tim2() callconv(.c) void {
     const flags = comp.get_interrupt_flags();
     if (flags.channel2) {
         const rev_ch1 = comp.read_ccr(0);
@@ -64,7 +64,7 @@ pub fn main() !void {
     //first we need to enable the clocks for the GPIO and TIM peripherals
 
     //use HSE as system clock source, more stable than HSI
-    try rcc.clock_init(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
+    try rcc.apply_clock(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
 
     //enable GPIOA and TIM2, TIM3, AFIO clocks
     //AFIO is needed for alternate function remapping, not used in this example but eneble for easy remapping
@@ -75,28 +75,26 @@ pub fn main() !void {
     rcc.enable_clock(.AFIO);
     rcc.enable_clock(.USART1);
 
+    time.init_timer(.TIM3);
+
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     try uart.apply_runtime(.{
-        .baud_rate = 115200,
         .clock_speed = rcc.get_clock(.USART1),
     });
 
     stm32.uart.init_logger(&uart);
 
-    //counter device to genereate delays
-    const cd = counter.counter_device(rcc.get_clock(.TIM2)); //8MHz clock
-
     //set PA0 (TI1) to input
     ch1.set_input_mode(.floating);
 
     //configure the timer for a frequency of 1MHz counting upwards
-    //enable slave mode to reset the counter on the rising edge of TI1 (after filtering)
+    //enable sync mode to reset the counter on the rising edge of TI1 (after filtering)
     //filter only can be configured by channel 1 (index 0)
     comp.timer_general_config(.{
         .prescaler = 7,
         .counter_mode = .{ .up = {} },
-        .slave_config = .{
+        .sync_config = .{
             .trigger_source = .TI1FP1,
             .mode = .ResetMode,
         },
@@ -128,6 +126,6 @@ pub fn main() !void {
         std.log.info("freq: {d}HZ", .{freq});
         std.log.info("duty: {d:.2}%", .{duty_cycle});
 
-        cd.sleep_ms(1350);
+        time.sleep_ms(1350);
     }
 }

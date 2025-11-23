@@ -59,8 +59,11 @@ pub const Target = struct {
     /// if present.
     board: ?Board = null,
 
-    /// Provide a custom linker script for the hardware or define a custom generation.
+    /// Provides a custom linker script for the hardware or define a custom generation.
     linker_script: LinkerScript = .{},
+
+    /// Determines the location of the stack.
+    stack: Stack = .{ .ram_region_index = 0 },
 
     /// (optional) Explicitly set the entry point.
     entry: ?Build.Step.Compile.Entry = null,
@@ -194,7 +197,7 @@ pub const BinaryFormat = union(enum) {
     dfu,
 
     /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
-    uf2: uf2.FamilyId,
+    uf2: uf2.Options,
 
     /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
     esp: esp_image.Options,
@@ -246,6 +249,15 @@ pub const LinkerScript = struct {
             } = .flash,
         },
     };
+};
+
+pub const Stack = union(enum) {
+    /// Place the stack at a fixed address.
+    address: usize,
+    /// Place the stack at the end of the n-th ram memory region.
+    ram_region_index: usize,
+    /// Place the stack at a symbol's address.
+    symbol_name: []const u8,
 };
 
 /// A descriptor for memory regions in a microcontroller.

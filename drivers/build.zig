@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
 
     const test_suite = b.addTest(.{
         .root_module = drivers_mod,
-        .target = b.graph.host,
+        .use_llvm = true,
     });
 
     const run_tests = b.addRunArtifact(test_suite);

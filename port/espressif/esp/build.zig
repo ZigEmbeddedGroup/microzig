@@ -29,6 +29,23 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const riscv32_common_mod = riscv32_common_dep.module("riscv32-common");
 
+    const esp_image_dep = b.dependency("microzig/tools/esp-image", .{});
+    const esp_image_mod = esp_image_dep.module("esp_image");
+
+    const hal: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hal.zig"),
+        .imports = b.allocator.dupe(std.Build.Module.Import, &.{
+            .{
+                .name = "esp_image",
+                .module = esp_image_mod,
+            },
+            .{
+                .name = "esp-wifi-driver",
+                .module = dep.module("esp-wifi-driver"),
+            },
+        }) catch @panic("OOM"),
+    };
+
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .{ .esp = .{
@@ -64,15 +81,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .name = "DRAM", .tag = .ram, .offset = 0x3FC7C000 + 0x4000, .length = 313 * 1024, .access = .rw },
             },
         },
-        .hal = .{
-            .root_source_file = b.path("src/hal.zig"),
-            .imports = b.allocator.dupe(Import, &.{
-                .{
-                    .name = "esp-wifi-driver",
-                    .module = dep.module("esp-wifi-driver"),
-                },
-            }) catch @panic("OOM"),
-        },
+        .hal = hal,
         .linker_script = .{
             .generate = .memory_regions,
             .file = generate_linker_script(
@@ -132,10 +141,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/hal.zig"),
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hal.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const unit_tests_run = b.addRunArtifact(unit_tests);

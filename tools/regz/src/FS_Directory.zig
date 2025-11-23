@@ -5,7 +5,7 @@ const vtable = Directory.VTable{
 };
 
 pub fn create_file(ctx: *anyopaque, filename: []const u8, contents: []const u8) Directory.CreateFileError!void {
-    const fs: *FS_Directory = @alignCast(@ptrCast(ctx));
+    const fs: *FS_Directory = @ptrCast(@alignCast(ctx));
     const file: std.fs.File = if (std.fs.path.dirname(filename)) |dirname| blk: {
         var dir = fs.dir.makeOpenPath(dirname, .{}) catch return error.System;
         defer dir.close();

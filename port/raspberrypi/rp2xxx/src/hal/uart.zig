@@ -44,7 +44,7 @@ pub const ConfigError = error{
 
 pub const Config = struct {
     clock_config: clocks.config.Global,
-    baud_rate: u32,
+    baud_rate: u32 = 115200,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
     parity: Parity = .none,
@@ -60,8 +60,9 @@ pub const ReceiveError = error{
     BreakError,
     ParityError,
     FramingError,
-    Timeout,
 };
+
+pub const ReceiveBlockingError = ReceiveError || error{Timeout};
 
 pub const ErrorStates = packed struct(u4) {
     overrun_error: bool = false,
@@ -143,7 +144,7 @@ pub const UART = enum(u1) {
     _,
 
     pub const Writer = std.io.GenericWriter(UART, TransmitError, generic_writer_fn);
-    pub const Reader = std.io.GenericReader(UART, ReceiveError, generic_reader_fn);
+    pub const Reader = std.io.GenericReader(UART, ReceiveBlockingError, generic_reader_fn);
 
     pub fn writer(uart: UART) Writer {
         return .{ .context = uart };
@@ -153,7 +154,7 @@ pub const UART = enum(u1) {
         return .{ .context = uart };
     }
 
-    fn get_regs(uart: UART) *volatile UartRegs {
+    pub inline fn get_regs(uart: UART) *volatile UartRegs {
         return switch (@intFromEnum(uart)) {
             0 => UART0_reg,
             1 => UART1_reg,
@@ -241,6 +242,37 @@ pub const UART = enum(u1) {
         };
     }
 
+    /// Enables/disables interrupts for a given UART.
+    pub inline fn set_interrupts_enabled(uart: UART, enable: struct {
+        rim: ?bool = null,
+        ctsm: ?bool = null,
+        dcdm: ?bool = null,
+        dsrm: ?bool = null,
+        rx: ?bool = null,
+        tx: ?bool = null,
+        rt: ?bool = null,
+        fe: ?bool = null,
+        pe: ?bool = null,
+        be: ?bool = null,
+        oe: ?bool = null,
+    }) void {
+        const uart_regs = uart.get_regs();
+        const reg = uart_regs.UARTIMSC.read();
+        uart_regs.UARTIMSC.write(.{
+            .RIMIM = if (enable.rim) |e| @intFromBool(e) else reg.RIMIM,
+            .CTSMIM = if (enable.ctsm) |e| @intFromBool(e) else reg.CTSMIM,
+            .DCDMIM = if (enable.dcdm) |e| @intFromBool(e) else reg.DCDMIM,
+            .DSRMIM = if (enable.dsrm) |e| @intFromBool(e) else reg.DSRMIM,
+            .TXIM = if (enable.tx) |e| @intFromBool(e) else reg.TXIM,
+            .RXIM = if (enable.rx) |e| @intFromBool(e) else reg.RXIM,
+            .RTIM = if (enable.rt) |e| @intFromBool(e) else reg.RTIM,
+            .FEIM = if (enable.fe) |e| @intFromBool(e) else reg.FEIM,
+            .PEIM = if (enable.pe) |e| @intFromBool(e) else reg.PEIM,
+            .BEIM = if (enable.be) |e| @intFromBool(e) else reg.BEIM,
+            .OEIM = if (enable.oe) |e| @intFromBool(e) else reg.OEIM,
+        });
+    }
+
     /// Write bytes to uart TX line and block until transaction is complete.
     ///
     /// Note that this does NOT disable reception while this is happening,
@@ -262,7 +294,7 @@ pub const UART = enum(u1) {
         const uart_regs = uart.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        var iter = microzig.utilities.Slice_Vector([]const u8).init(payloads).iterator();
+        var iter = microzig.utilities.SliceVector([]const u8).init(payloads).iterator();
         while (iter.next_chunk(null)) |payload| {
             var offset: usize = uart.prime_tx_fifo(payload);
             while (offset < payload.len) {
@@ -338,7 +370,7 @@ pub const UART = enum(u1) {
     /// Returns a transaction error immediately if it occurs and doesn't
     /// complete the transaction. Errors are preserved for further inspection,
     /// so must be cleared with clear_errors() before another transaction is attempted.
-    pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?mdf.time.Duration) ReceiveError!void {
+    pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?mdf.time.Duration) ReceiveBlockingError!void {
         return uart.readv_blocking(&.{buffer}, timeout);
     }
 
@@ -352,10 +384,10 @@ pub const UART = enum(u1) {
     /// Returns a transaction error immediately if it occurs and doesn't
     /// complete the transaction. Errors are preserved for further inspection,
     /// so must be cleared with clear_errors() before another transaction is attempted.
-    pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?mdf.time.Duration) ReceiveError!void {
+    pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?mdf.time.Duration) ReceiveBlockingError!void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        var iter = microzig.utilities.Slice_Vector([]u8).init(buffers).iterator();
+        var iter = microzig.utilities.SliceVector([]u8).init(buffers).iterator();
         while (iter.next_chunk(null)) |buffer| {
             for (buffer) |*byte| {
                 while (!uart.is_readable()) {
@@ -367,14 +399,20 @@ pub const UART = enum(u1) {
     }
 
     /// Convenience function for waiting for a single byte to come across the RX line.
-    pub fn read_word(uart: UART, timeout: ?mdf.time.Duration) ReceiveError!u8 {
+    pub fn read_word_blocking(uart: UART, timeout: ?mdf.time.Duration) ReceiveBlockingError!u8 {
         var byte: [1]u8 = undefined;
         try uart.read_blocking(&byte, timeout);
         return byte[0];
     }
 
+    /// Read a single byte from the RX line if available otherwise returns `null`.
+    pub fn read_word(uart: UART) ReceiveError!?u8 {
+        if (!uart.is_readable()) return null;
+        return try uart.read_rx_fifo_with_error_check();
+    }
+
     /// Wraps read_blocking() for use as a GenericReader
-    fn generic_reader_fn(uart: UART, buffer: []u8) ReceiveError!usize {
+    fn generic_reader_fn(uart: UART, buffer: []u8) ReceiveBlockingError!usize {
         try uart.read_blocking(buffer, null);
         return buffer.len;
     }

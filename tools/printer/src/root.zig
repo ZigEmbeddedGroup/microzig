@@ -1,106 +1,69 @@
 const std = @import("std");
+const Io = std.Io;
 
 pub const Elf = @import("Elf.zig");
 pub const DebugInfo = @import("DebugInfo.zig");
 
-/// Takes data and displays it, as well as annotating addresses where it's
-/// necessary.
-pub const Annotator = struct {
-    state: State,
-
-    pub const init: Annotator = .{ .state = .waiting };
-
-    pub const State = union(enum) {
-        waiting,
-        reading_address: struct {
-            buf: [16]u8,
-            digit_count: usize,
-        },
-        print_address: u64,
-    };
-
-    pub fn process(
-        self: *Annotator,
-        data: []const u8,
-        elf: Elf,
-        debug_info: *DebugInfo,
-        out_stream: anytype,
-        out_tty_config: std.io.tty.Config,
-    ) !void {
-        var index: usize = 0;
-
-        loop: switch (self.state) {
-            .waiting => {
-                if (std.mem.indexOf(u8, data[index..], "0x")) |start_hex_index| {
-                    try out_stream.writeAll(data[index..][0 .. start_hex_index + 2]);
-                    index += start_hex_index + 2;
-
-                    continue :loop .{ .reading_address = .{
-                        .buf = undefined,
-                        .digit_count = 0,
-                    } };
-                }
-                self.state = .waiting;
+/// Reads lines one by one from in_stream and outputs them with annotated
+/// addresses to out_stream. Returns after it reaches the end of the stream.
+pub fn annotate(
+    in_stream: *Io.Reader,
+    out_stream: *Io.Writer,
+    out_tty_config: std.io.tty.Config,
+    elf: Elf,
+    debug_info: *DebugInfo,
+) !void {
+    while (true) {
+        const line = in_stream.takeDelimiterInclusive('\n') catch |err| switch (err) {
+            error.ReadFailed => return error.ReadFailed,
+            error.EndOfStream => {
+                try output_line(in_stream.buffered(), out_stream, out_tty_config, elf, debug_info);
+                try out_stream.flush();
+                return;
             },
-            .reading_address => |old_state| {
-                var new_state = old_state;
+            error.StreamTooLong => return error.StreamTooLong,
+        };
 
-                while (index < data.len) : ({
-                    index += 1;
-                    new_state.digit_count += 1;
-                }) {
-                    if (std.ascii.isHex(data[index])) {
-                        if (new_state.digit_count >= 16) {
-                            continue :loop .waiting;
-                        }
-
-                        new_state.buf[new_state.digit_count] = data[index];
-                    } else {
-                        if (new_state.digit_count == 8 or new_state.digit_count == 16) {
-                            const address = std.fmt.parseInt(
-                                u64,
-                                new_state.buf[0..new_state.digit_count],
-                                16,
-                            ) catch unreachable; // we know this is valid
-
-                            continue :loop .{ .print_address = address };
-                        } else {
-                            continue :loop .waiting;
-                        }
-                    }
-
-                    try out_stream.writeByte(data[index]);
-                }
-
-                self.state = .{ .reading_address = new_state };
-            },
-            .print_address => |address| {
-                if (std.mem.indexOfScalar(u8, data[index..], '\n')) |new_line_index| {
-                    if (elf.is_address_executable(address)) {
-                        const query_result = debug_info.query(address);
-
-                        try out_stream.writeAll(data[index..][0 .. new_line_index + 1]);
-                        index += new_line_index + 1;
-
-                        try output_location_info(out_stream, out_tty_config, address, query_result);
-                        if (query_result.source_location) |src_loc| {
-                            try output_source_line(out_stream, out_tty_config, src_loc);
-                        }
-                    }
-
-                    continue :loop .waiting;
-                }
-
-                self.state = .{ .print_address = address };
-            },
-        }
-
-        try out_stream.writeAll(data[index..]);
+        try output_line(line, out_stream, out_tty_config, elf, debug_info);
+        try out_stream.flush();
     }
-};
+}
+
+fn output_line(
+    line: []const u8,
+    out_stream: *Io.Writer,
+    out_tty_config: std.io.tty.Config,
+    elf: Elf,
+    debug_info: *DebugInfo,
+) !void {
+    try out_stream.writeAll(line);
+
+    const prefix_index = std.mem.indexOf(u8, line, "0x") orelse return;
+    var after_prefix = line[prefix_index + 2 ..];
+
+    var hex_digit_count: u32 = 0;
+    for (after_prefix) |c| {
+        if (!std.ascii.isHex(c) or hex_digit_count > 16) {
+            break;
+        } else {
+            hex_digit_count += 1;
+        }
+    }
+
+    if (hex_digit_count != 8 and hex_digit_count != 16) return;
+
+    const address = std.fmt.parseInt(u64, after_prefix[0..hex_digit_count], 16) catch unreachable;
+    if (elf.is_address_executable(address)) {
+        const query_result = debug_info.query(address);
+        try output_location_info(out_stream, out_tty_config, address, query_result);
+        if (query_result.source_location) |src_loc| {
+            try output_source_line(out_stream, out_tty_config, src_loc);
+        }
+    }
+}
 
 fn output_location_info(
-    out_stream: anytype,
+    out_stream: *Io.Writer,
     out_tty_config: std.io.tty.Config,
     address: u64,
     query_result: DebugInfo.QueryResult,
@@ -108,7 +71,7 @@ fn output_location_info(
     try out_tty_config.setColor(out_stream, .bold);
 
     if (query_result.source_location) |src_loc| {
-        try out_stream.print("{s}:{}:{}", .{
+        try out_stream.print("{f}:{}:{}", .{
             std.fs.path.fmtJoin(&.{ src_loc.dir_path, src_loc.file_path }),
             src_loc.line,
             src_loc.column,
@@ -130,7 +93,7 @@ fn output_location_info(
 }
 
 fn output_source_line(
-    out_stream: anytype,
+    out_stream: *Io.Writer,
     out_tty_config: std.io.tty.Config,
     src_loc: DebugInfo.ResolvedSourceLocation,
 ) !void {
@@ -140,33 +103,37 @@ fn output_source_line(
     const file = dir.openFile(src_loc.file_path, .{}) catch return;
     defer file.close();
 
-    var buf_reader = std.io.bufferedReader(file.reader());
-    const in_stream = buf_reader.reader();
+    var r_buf: [512]u8 = undefined;
+    var file_reader = file.reader(&r_buf);
 
     var line_count: u32 = 1;
-    var buf: [150]u8 = undefined;
+    var line_buf: [128]u8 = undefined;
     const src_line: struct {
         line: []const u8,
         too_long: bool,
-    } = loop: while (true) : (line_count += 1) {
-        var too_long = false;
-
-        const line = in_stream.readUntilDelimiterOrEof(&buf, '\n') catch |err| switch (err) {
-            error.StreamTooLong => blk: {
-                try in_stream.skipUntilDelimiterOrEof('\n');
-                too_long = true;
-                break :blk &buf;
+    } = while (line_count < src_loc.line) : (line_count += 1) {
+        _ = file_reader.interface.discardDelimiterInclusive('\n') catch |err| {
+            if (err == error.EndOfStream) {
+                return error.InvalidLineNumber;
+            } else {
+                return err;
+            }
+        };
+    } else blk: {
+        const line = file_reader.interface.takeDelimiterExclusive('\n') catch |err| switch (err) {
+            error.EndOfStream => return error.InvalidLineNumber,
+            error.StreamTooLong => break :blk .{
+                .line = &line_buf,
+                .too_long = true,
             },
             else => return err,
-        } orelse return;
+        };
 
-        if (src_loc.line == line_count) {
-            break :loop .{
-                .line = line,
-                .too_long = too_long,
-            };
-        }
-    } else return;
+        break :blk .{
+            .line = line,
+            .too_long = false,
+        };
+    };
 
     try out_stream.print("{s}", .{src_line.line});
     if (src_line.too_long) {
@@ -177,7 +144,7 @@ fn output_source_line(
     if (src_loc.column > 0) {
         const space_needed = src_loc.column - 1;
 
-        try out_stream.writeByteNTimes(' ', space_needed);
+        try out_stream.splatByteAll(' ', space_needed);
         try out_tty_config.setColor(out_stream, .green);
         try out_stream.writeAll("^");
         try out_tty_config.setColor(out_stream, .reset);
