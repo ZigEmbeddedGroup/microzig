@@ -293,10 +293,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .out = null,
                     .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
-                    .side_set = null,
-                    .in_base = null,
                 };
                 try sm_set_pin_mappings(self, sm, pin_config);
 
@@ -322,10 +319,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .out = null,
                     .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
-                    .side_set = null,
-                    .in_base = null,
                 };
                 try sm_set_pin_mappings(self, sm, pin_config);
                 self.sm_exec(sm, .{
