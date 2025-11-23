@@ -59,7 +59,7 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     config.io_pin.set_pull(.disabled);
     config.io_pin.set_schmitt_trigger_enabled(true);
 
-    config.pio.set_input_sync_bypass(to_pio_pin_num(config.io_pin));
+    try config.pio.set_input_sync_bypass(config.io_pin);
 
     config.io_pin.set_drive_strength(.@"12mA");
     config.io_pin.set_slew_rate(.fast);
@@ -74,10 +74,10 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
         // Default max value from pico-sdk 62.5Mhz
         .clkdiv = .{ .int = 2, .frac = 0 },
         .pin_mappings = .{
-            .out = .{ .base = to_pio_pin_num(config.io_pin), .count = 1 },
-            .set = .{ .base = to_pio_pin_num(config.io_pin), .count = 1 },
-            .side_set = .{ .base = to_pio_pin_num(config.clk_pin), .count = 1 },
-            .in_base = to_pio_pin_num(config.io_pin),
+            .out = .single(config.io_pin),
+            .set = .single(config.io_pin),
+            .side_set = .single(config.io_pin),
+            .in_base = config.io_pin,
         },
         .shift = .{
             .out_shiftdir = .left,
@@ -87,11 +87,11 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
         },
     });
 
-    config.pio.sm_set_pindir(sm, to_pio_pin_num(config.clk_pin), 1, .out);
-    config.pio.sm_set_pindir(sm, to_pio_pin_num(config.io_pin), 1, .out);
+    try config.pio.sm_set_pindir(sm, config.clk_pin, 1, .out);
+    try config.pio.sm_set_pindir(sm, config.io_pin, 1, .out);
 
-    config.pio.sm_set_pin(sm, to_pio_pin_num(config.clk_pin), 1, 0);
-    config.pio.sm_set_pin(sm, to_pio_pin_num(config.io_pin), 1, 0);
+    try config.pio.sm_set_pin(sm, config.clk_pin, 1, 0);
+    try config.pio.sm_set_pin(sm, config.io_pin, 1, 0);
 
     return .{
         .pio = config.pio,
@@ -100,10 +100,6 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
         .io_pin = config.io_pin,
         .clk_pin = config.clk_pin,
     };
-}
-
-fn to_pio_pin_num(pin: hal.gpio.Pin) u5 {
-    return @truncate(@intFromEnum(pin));
 }
 
 pub const Cyw43PioSpi = struct {

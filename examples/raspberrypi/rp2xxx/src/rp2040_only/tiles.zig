@@ -83,10 +83,7 @@ pub fn main() !void {
     pio.sm_load_and_start_program(sm, ws2812_program, .{
         .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(div),
         .pin_mappings = .{
-            .side_set = .{
-                .base = @intFromEnum(led_pin),
-                .count = 1,
-            },
+            .side_set = .single(led_pin),
         },
         .shift = .{
             .out_shiftdir = .left,

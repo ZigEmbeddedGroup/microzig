@@ -148,6 +148,8 @@ pub const time = struct {
     ///       would ever reach an uptime of over 500.000 years.
     ///
     pub const Deadline = struct {
+        pub const no_deadline: Deadline = .init_absolute(null);
+
         const disabled_sentinel = Absolute.from_us(std.math.maxInt(u64));
 
         timeout: Absolute,
