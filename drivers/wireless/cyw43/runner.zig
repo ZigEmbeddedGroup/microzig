@@ -3,6 +3,7 @@ const consts = @import("consts.zig");
 const NVRAM = @import("nvram.zig").NVRAM;
 const Bus = @import("bus.zig").Bus;
 const ioctl = @import("ioctl.zig");
+const assert = std.debug.assert;
 
 const log = std.log.scoped(.cyw43_runner);
 
@@ -213,7 +214,86 @@ pub const Runner = struct {
         }
     }
 
-    pub fn event_get_rsp(self: *Self, data: []u32) u32 {
+    pub fn read_clmver(self: *Self) !void {
+        const data: [300]u8 = undefined;
+        var req = ioctl.Request.init(.get_var, "clmver", false, &data);
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.response_wait(.get_var);
+    }
+
+    pub fn read_mac(self: *Self) !void {
+        const mac: [6]u8 = undefined;
+
+        var req = ioctl.Request.init(.get_var, "cur_etheraddr", false, &mac);
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.response_wait(.get_var);
+    }
+
+    pub fn led_on(self: *Self, on: bool) !void {
+        var data: [8]u8 = @splat(0);
+        data[0] = 1;
+        if (on) {
+            data[4] = 1;
+        }
+        try self.set_var("gpioout", &data);
+    }
+
+    fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
+        var req = ioctl.Request.init(.set_var, name, true, data);
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.response_wait(.set_var);
+    }
+
+    fn set_var32(self: *Self, name: []const u8, value: u32) !void {
+        var req = ioctl.Request.init(.set_var, name, true, std.mem.asBytes(&value));
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.response_wait(.set_var);
+    }
+
+    fn ioctl_wr_int32(self: *Self, cmd: ioctl.Cmd, value: u32) !void {
+        try self.ioctl_wr_data(cmd, std.mem.asBytes(&value));
+    }
+
+    fn ioctl_wr_data(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
+        var req = ioctl.Request.init(cmd, "", true, data);
+        self.bus.write_words(.wlan, 0, req.as_slice());
+        try self.response_wait(cmd);
+    }
+
+    fn response_wait(self: *Self, cmd: ioctl.Cmd) !void {
+        var sleeps: usize = 0;
+        while (sleeps < 8) {
+            var rsp: ioctl.Response = .empty;
+            const len = self.read_packet(rsp.as_slice());
+            if (len == 0) {
+                self.sleep_ms(10);
+                sleeps += 1;
+                continue;
+            }
+            try rsp.validate(len);
+            switch (rsp.bus.chan) {
+                .control => {
+                    const ctl = rsp.cdc();
+                    if (ctl.cmd == cmd) {
+                        // apsta, ampdu_rx_factor commands are returing status 0xFFFFFFFB
+                        if (ctl.status == 0 or ctl.status == 0xFFFFFFFB) {
+                            return;
+                        }
+                        log.err("bus: {}", .{rsp.bus});
+                        log.err("clt: {}", .{ctl});
+                        log.err("data: {x}", .{rsp.data(255)});
+                        return error.IoctlInvalicCommandStatus;
+                    }
+                },
+                .event => try self.handle_event(&rsp),
+                .data => try self.handle_data(&rsp),
+            }
+        }
+        log.err("ioctl: missing response in wait_response", .{});
+        return error.IoctlNoResponse;
+    }
+
+    fn read_packet(self: *Self, data: []u32) u11 {
         const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
         //log.debug("event_get_rsp {any}", .{status});
         if (!status.f2_packet_available) return 0;
@@ -236,122 +316,6 @@ pub const Runner = struct {
         return status.packet_length;
     }
 
-    pub fn read_clmver(self: *Self) !void {
-        const data: [300]u8 = undefined;
-        var req = ioctl.Request.init(.get_var, "clmver", false, &data);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.wait_response(.get_var);
-        //self.read_response(300);
-    }
-
-    pub fn read_mac(self: *Self) !void {
-        const mac: [6]u8 = undefined;
-
-        var req = ioctl.Request.init(.get_var, "cur_etheraddr", false, &mac);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.wait_response(.get_var);
-        //self.read_response(6);
-    }
-
-    pub fn led_on(self: *Self, on: bool) !void {
-        var data: [8]u8 = @splat(0);
-        data[0] = 1;
-        if (on) {
-            data[4] = 1;
-        }
-        try self.set_var("gpioout", &data);
-
-        // var req = ioctl.Request.init(.set_var, "gpioout", true, &data);
-        // self.bus.write_words(.wlan, 0, req.as_slice());
-        // self.read_response(0);
-    }
-
-    fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
-        var req = ioctl.Request.init(.set_var, name, true, data);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.wait_response(.set_var);
-    }
-
-    fn set_var32(self: *Self, name: []const u8, value: u32) !void {
-        var req = ioctl.Request.init(.set_var, name, true, std.mem.asBytes(&value));
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.wait_response(.set_var);
-    }
-
-    fn ioctl_wr_int32(self: *Self, cmd: ioctl.Cmd, value: u32) !void {
-        try self.ioctl_wr_data(cmd, std.mem.asBytes(&value));
-    }
-
-    fn ioctl_wr_data(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
-        var req = ioctl.Request.init(cmd, "", true, data);
-        self.bus.write_words(.wlan, 0, req.as_slice());
-        try self.wait_response(cmd);
-    }
-
-    pub fn wait_response(self: *Self, cmd: ioctl.Cmd) !void {
-        var sleeps: usize = 0;
-        while (sleeps < 8) {
-            var rsp: ioctl.Response = .empty;
-            const len = self.event_get_rsp(rsp.as_slice());
-            //log.debug("wait_response len:    {}", .{len});
-            if (len == 0) {
-                self.sleep_ms(10);
-                sleeps += 1;
-                continue;
-            }
-
-            if (rsp.bus.len ^ rsp.bus.notlen != 0xffff) {
-                log.err("ioctl: invalid reponse len {x} {x}", .{ rsp.bus.len, rsp.bus.notlen });
-                return error.IoctlInvalidBusLen;
-            }
-            if (rsp.bus.chan == .control) {
-                const ctl = rsp.ioctl();
-                if (ctl.cmd == cmd) {
-                    // apsta, ampdu_rx_factor commands are returing status 0xFFFFFFFB
-                    if (ctl.status == 0 or ctl.status == 0xFFFFFFFB) {
-                        return;
-                    }
-                    log.err("bus: {}", .{rsp.bus});
-                    log.err("clt: {}", .{ctl});
-                    log.err("data: {x}", .{rsp.data(255)});
-                    log.err("data: '{s}'", .{rsp.data(255)});
-                    return error.IoctlInvalicCommandStatus;
-                }
-            } else {
-                // TODO handle event
-                log.debug("EVENT in wait_reponse {} {}", .{ sleeps, cmd });
-                log.debug("bus: {}", .{rsp.bus});
-                log.debug("bdc: {}", .{rsp.bdc()});
-                log.debug("data: {x}", .{rsp.data(255)});
-            }
-        }
-        log.err("ioctl: missing response in wait_response", .{});
-        return error.IoctlNoResponse;
-    }
-
-    pub fn read_response(self: *Self, data_len: usize) void {
-        var rsp: ioctl.Response = .empty;
-
-        while (true) {
-            rsp = .empty;
-            const len = self.event_get_rsp(rsp.as_slice());
-            log.debug("read_response len:    {}", .{len});
-            if (len == 0) {
-                break;
-            }
-            //log.debug("read_response buffer: {x}", .{std.mem.asBytes(&rsp)[0..len]});
-            log.debug("read_response bus:    {}", .{rsp.bus});
-            if (rsp.bus.len ^ rsp.bus.notlen != 0xffff) {
-                log.err("invalid reponse len {} {}", .{ rsp.bus.len, rsp.bus.notlen });
-                break;
-            }
-            log.debug("read_response ioctl: {}", .{rsp.ioctl()});
-            log.debug("read_response data:  '{x}'", .{rsp.data(data_len)});
-            break;
-            //self.sleep_ms(10);
-        }
-    }
-
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
         _ = ssid;
         _ = pwd;
@@ -361,8 +325,8 @@ pub const Runner = struct {
         {
             bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0xf);
             bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0);
-            const val = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
-            log.debug("REG_BACKPLANE_PULL_UP value: {}", .{val});
+            _ = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
+            //log.debug("REG_BACKPLANE_PULL_UP value: {}", .{val});
         }
         // Clear data unavail error
         {
@@ -374,8 +338,8 @@ pub const Runner = struct {
         {
             bus.write_int(u8, .backplane, consts.REG_BACKPLANE_SLEEP_CSR, 1);
             bus.write_int(u8, .backplane, consts.REG_BACKPLANE_SLEEP_CSR, 1);
-            const val = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
-            log.debug("REG_BACKPLANE_SLEEP_CSR value: {}", .{val});
+            _ = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
+            //log.debug("REG_BACKPLANE_SLEEP_CSR value: {}", .{val});
         }
         // Set country
         {
@@ -444,28 +408,57 @@ pub const Runner = struct {
             // TODO hardcoded ssid
             try self.ioctl_wr_data(.set_ssid, &ioctl.hexToBytes("080000006E696E617A617261"));
         }
+        log.debug("join_wait", .{});
+        try self.join_wait(30 * 1000);
+    }
 
-        for (0..100 * 60) |i| {
+    fn join_wait(self: *Runner, wait_ms: u32) !void {
+        var delay: u32 = 0;
+        while (delay < wait_ms) {
             var rsp: ioctl.Response = .empty;
-            const len = self.event_get_rsp(rsp.as_slice());
-            if (len > 0) {
-                if (rsp.bus.len ^ rsp.bus.notlen != 0xffff) {
-                    log.err("ioctl: invalid reponse len {x} {x}", .{ rsp.bus.len, rsp.bus.notlen });
-                    return error.IoctlInvalidBusLen;
-                }
-                if (rsp.bus.chan == .control) {
-                    log.debug("loop control {}", .{i});
-                    log.debug("bus: {}", .{rsp.bus});
-                    log.debug("clt: {}", .{rsp.ioctl()});
-                } else {
-                    log.debug("loop for event {}", .{i});
-                    log.debug("bus: {}", .{rsp.bus});
-                    log.debug("bdc: {}", .{rsp.bdc()});
-                    log.debug("data: {x}", .{rsp.data(255)});
-                }
+            const len = self.read_packet(rsp.as_slice());
+            if (len == 0) {
+                self.sleep_ms(ioctl.response_wait);
+                delay += ioctl.response_wait;
+                continue;
             }
-            self.sleep_ms(10);
+            try rsp.validate(len);
+            switch (rsp.bus.chan) {
+                .event => {
+                    const evt = (try rsp.event()).msg;
+                    log.debug(
+                        "event type: {s:<15}, status: {s}",
+                        .{ @tagName(evt.event_type), @tagName(evt.status) },
+                    );
+                    if (evt.event_type == .set_ssid) {
+                        if (evt.status == .success) {
+                            return;
+                        } else {
+                            log.err("join failed status: {s}, event: {}", .{ @tagName(evt.status), evt });
+                            return error.JoinFailed;
+                        }
+                    }
+                },
+                .control => {},
+                .data => {},
+            }
         }
+        return error.JoinTimeout;
+    }
+
+    fn handle_event(self: *Runner, rsp: *ioctl.Response) !void {
+        _ = self;
+        assert(rsp.bus.chan == .event);
+        const evt = (try rsp.event()).msg;
+        log.debug(
+            "event type: {s:<15}, status: {s} ",
+            .{ @tagName(evt.event_type), @tagName(evt.status) },
+        );
+    }
+
+    fn handle_data(self: *Runner, rsp: *ioctl.Response) !void {
+        _ = self;
+        log.debug("data packet len: {}", .{rsp.bus.len});
     }
 
     fn sleep_ms(self: *Self, delay: u32) void {
