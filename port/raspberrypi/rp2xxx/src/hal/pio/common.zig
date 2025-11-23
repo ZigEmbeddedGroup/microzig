@@ -178,9 +178,8 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                     .none => insn,
                     .jmpslot => blk: {
                         // Add the base address of the program to the jmp offset so it's relative to the start
-                        const Jmp = packed struct(u16) { address: u5, reset: u11 };
-                        var jmp: Jmp = @bitCast(insn);
-                        jmp.address += offset;
+                        var jmp: Instruction(chip) = @bitCast(insn);
+                        jmp.payload.jmp.address += offset;
                         break :blk @as(u16, @bitCast(jmp));
                     },
                 };
