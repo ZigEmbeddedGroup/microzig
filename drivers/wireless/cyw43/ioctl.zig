@@ -568,3 +568,31 @@ test "show sizes" {
     std.debug.print("CdcHeader: {}\n", .{@sizeOf(CdcHeader)});
     std.debug.print("EventPacket: {}\n", .{@sizeOf(EventPacket)});
 }
+
+test "pwd encode" {
+    var buf: [36]u8 = @splat(0);
+
+    try testing.expectEqualSlices(
+        u8,
+        &hexToBytes("0A0001005065726F5A6465726F31"),
+        encode_pwd(&buf, "PeroZdero1"),
+    );
+
+    try testing.expectEqualSlices(
+        u8,
+        &hexToBytes("080000006E696E617A617261"),
+        encode_ssid(&buf, "ninazara"),
+    );
+}
+
+pub fn encode_pwd(buf: []u8, pwd: []const u8) []u8 {
+    mem.writeInt(u32, buf[0..4], @intCast(pwd.len | 0x10000), .little);
+    @memcpy(buf[4..][0..pwd.len], pwd);
+    return buf[0 .. 4 + pwd.len];
+}
+
+pub fn encode_ssid(buf: []u8, ssid: []const u8) []u8 {
+    mem.writeInt(u32, buf[0..4], @intCast(ssid.len), .little);
+    @memcpy(buf[4..][0..ssid.len], ssid);
+    return buf[0 .. 4 + ssid.len];
+}

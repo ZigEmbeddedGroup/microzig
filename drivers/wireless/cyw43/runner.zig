@@ -341,8 +341,6 @@ pub const Runner = struct {
     }
 
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
-        _ = ssid;
-        _ = pwd;
         const bus = &self.bus;
 
         // Clear pullups
@@ -396,9 +394,9 @@ pub const Runner = struct {
             try self.set_var("bsscfg:event_msgs", &buf);
             self.sleep_ms(50);
         }
+        var buf: [64]u8 = @splat(0); // space for 10 addresses
         // Enable multicast
         {
-            var buf: [64]u8 = @splat(0); // space for 10 addresses
             @memcpy(buf[0..4], &[_]u8{ 0x01, 0x00, 0x00, 0x00 }); // number of addresses
             @memcpy(buf[4..][0..6], &[_]u8{ 0x01, 0x00, 0x5E, 0x00, 0x00, 0xFB }); // address
             try self.set_var("mcast_list", &buf);
@@ -423,21 +421,23 @@ pub const Runner = struct {
             try self.set_var("bsscfg:sup_wpa_tmo", "\x00\x00\x00\x00\xC4\x09\x00\x00");
             self.sleep_ms(2);
 
-            // TODO hardcoded pwd
-            try self.set_cmd(.set_wsec_pmk, &ioctl.hexToBytes("0A0001005065726F5A6465726F31"));
+            try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
             try self.set_cmd32(.set_infra, 1);
             try self.set_cmd32(.set_auth, 0);
             try self.set_cmd32(.set_wpa_auth, 0x80); // wpa
 
-            // TODO hardcoded ssid
-            try self.set_cmd(.set_ssid, &ioctl.hexToBytes("080000006E696E617A617261"));
+            try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
         }
-        log.debug("join_wait", .{});
+
         try self.join_wait(30 * 1000);
     }
 
     fn join_wait(self: *Runner, wait_ms: u32) !void {
+        log.debug("wifi join", .{});
         var delay: u32 = 0;
+        var link_up: bool = false;
+        var link_auth: bool = false;
+
         while (delay < wait_ms) {
             var rsp: ioctl.Response = .empty;
             const len = self.read_packet(rsp.as_slice());
@@ -451,16 +451,32 @@ pub const Runner = struct {
                 .event => {
                     const evt = rsp.event().msg;
                     log.debug(
-                        "event type: {s:<15}, status: {s}",
-                        .{ @tagName(evt.event_type), @tagName(evt.status) },
+                        "  event type: {s:<15}, status: {s} flags: {x}",
+                        .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
                     );
-                    if (evt.event_type == .set_ssid) {
-                        if (evt.status == .success) {
-                            return;
-                        } else {
-                            log.err("join failed status: {s}, event: {}", .{ @tagName(evt.status), evt });
-                            return error.JoinFailed;
-                        }
+                    switch (evt.event_type) {
+                        .link => {
+                            if (evt.flags & 1 == 0) return error.JoinLinkDown;
+                            link_up = true;
+                        },
+                        .psk_sup => {
+                            if (evt.status != .unsolicited) return error.JoinWpaHandshake;
+                            link_auth = true;
+                        },
+                        .assoc => {
+                            if (evt.status != .success) return error.JoinAssocRequest;
+                        },
+                        .auth => {
+                            if (evt.status != .success) return error.JoinAuthRequest;
+                        },
+                        .disassoc_ind => {
+                            return error.JoinDisassocIndication;
+                        },
+                        else => {},
+                    }
+                    if (evt.event_type == .set_ssid and link_up and link_auth) {
+                        log.debug("join OK", .{});
+                        return;
                     }
                 },
                 .control => {},
