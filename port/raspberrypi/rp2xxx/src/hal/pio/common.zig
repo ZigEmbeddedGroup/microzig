@@ -273,7 +273,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             });
         }
 
-        pub fn sm_set_pin_mappings(self: EnumType, sm: StateMachine, options: PinMappingOptions) !void {
+        pub fn sm_set_pin_mappings(self: EnumType, sm: StateMachine, options: PinMappingOptions, side_set_optional: bool) !void {
             const sm_regs = self.get_sm_regs(sm);
             sm_regs.pinctrl.modify(.{
                 .OUT_BASE = if (options.out) |out| try pin_to_index(self, out.low) else 0,
@@ -283,7 +283,11 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 .SET_COUNT = if (options.set) |set| set.count() else 0,
 
                 .SIDESET_BASE = if (options.side_set) |side_set| try pin_to_index(self, side_set.low) else 0,
-                .SIDESET_COUNT = if (options.side_set) |side_set| side_set.count() else 0,
+                // If side set is set, but optional, we have to account for the 'enable' bit here.
+                .SIDESET_COUNT = if (options.side_set) |side_set|
+                    side_set.count() + @intFromBool(side_set_optional)
+                else
+                    0,
 
                 .IN_BASE = if (options.in_base) |in_base| try pin_to_index(self, in_base) else 0,
             });
@@ -298,7 +302,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 const pin_config: PinMappingOptions = .{
                     .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
                 };
-                try sm_set_pin_mappings(self, sm, pin_config);
+                try sm_set_pin_mappings(self, sm, pin_config, false);
 
                 self.sm_exec(sm, .{
                     .payload = .{
@@ -324,7 +328,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 const pin_config: PinMappingOptions = .{
                     .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
                 };
-                try sm_set_pin_mappings(self, sm, pin_config);
+                try sm_set_pin_mappings(self, sm, pin_config, false);
                 self.sm_exec(sm, .{
                     .payload = .{
                         .set = .{
@@ -481,7 +485,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             self.sm_set_clkdiv(sm, options.clkdiv);
             try self.sm_set_exec_options(sm, options.exec);
             self.sm_set_shift_options(sm, options.shift);
-            try self.sm_set_pin_mappings(sm, options.pin_mappings);
+            try self.sm_set_pin_mappings(sm, options.pin_mappings, options.exec.side_set_optional);
 
             self.sm_clear_fifos(sm);
             self.sm_clear_debug(sm);
