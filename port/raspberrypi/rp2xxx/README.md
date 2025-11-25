@@ -32,10 +32,9 @@ HAL and register definitions for the RP2040 and RP2350 chips.
     - This linker builds the bootrom and creates an import, for the later build to `@embedFile`,
       pad and slap the CRC on.
 - *rp2040.ld*:
-  - Includes `.boot2` section.
-    - Which is the embedded bootloader file, embedded in _bootrom.zig_.
-      - `export const bootloader_data: [256]u8 linksection(".boot2") = prepare_boot_sector(@embedFile("bootloader"));`
-        - The `prepare_boot_sector` pads it up and calculates the CRC on the end.
+  - Includes `.boot2` section. Which is the embedded bootloader file, embedded in _bootrom.zig_.
+    - `export const bootloader_data: [256]u8 linksection(".boot2") = prepare_boot_sector(@embedFile("bootloader"));`
+    - The `prepare_boot_sector` pads it up and calculates the CRC on the end.
   - `microzig_flash_start` is where the vector table is placed, at the start of flash.
 
 ## MicroZig RAM Image Support
@@ -44,8 +43,7 @@ HAL and register definitions for the RP2040 and RP2350 chips.
 - 0x15000000-0x15004000 is 'flash cache', which can be used as extra RAM.
 > All data must be in blocks without the UF2_FLAG_NOT_MAIN_FLASH marking which relates to content to
 > be ignored rather than Flash vs RAM.
-  - This is a flag on each 512-byte block of the uf2. TODO: Need to make sure our output UF2 file
-    has this set correctly.
+  - This is a flag on each 512-byte block of the uf2.
 
 ### Overview
 MicroZig supports RAM images through the `ram_image` configuration option. When enabled:
@@ -54,7 +52,7 @@ MicroZig supports RAM images through the `ram_image` configuration option. When 
 - `VTOR` is configured to point to the RAM vector table at runtime
 - Memory initialization skips `.data` copy (since everything is already in RAM)
 
-The rp2xxx bootrom, when flashing a UF2 file jumps to the *lowest address flashed*, so if there are
+The rp2xxx bootrom, when flashing a UF2 file, jumps to the *lowest address flashed*, so if there are
 no flash blocks (in the 0x10000000 range), then it'll just to RAM instead.
 
 ### Build Configuration
@@ -77,10 +75,6 @@ RAM image linker scripts (e.g., `ld/rp2350/arm_ram_image_sections.ld`) add:
 - Contains image definition block for bootrom
 - Specifies image type, CPU architecture, security settings
 - For ARM RAM images, includes custom entry point to override default vector table expectation
-
-**`.ram_vectors` section** (NOLOAD):
-- Space for runtime-modifiable vector table
-- Not initialized from flash
 
 ### RP2350 Boot Metadata System
 RP2350 bootrom requires metadata blocks to identify and validate images. For RAM images on ARM:
