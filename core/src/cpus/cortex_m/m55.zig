@@ -186,18 +186,18 @@ pub const SystemControlBlock = extern struct {
     /// System Handler Priority Registers.
     SHPR: [12]u8,
     /// System Handler Control and State Register.
-    SHCSR: u32,
+    SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
         /// MemManage Fault Register.
-        MMFSR: u8,
+        MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
-        BFSR: u8,
+        BFSR: shared.scb.BFSR,
         /// Usage Fault Status Register.
-        UFSR: u16,
+        UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: u32,
+    HFSR: mmio.Mmio(shared.scb.HFSR),
     /// Debug Fault Status Register.
     DFSR: u32,
     /// MemManage Fault Address Register.

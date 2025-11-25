@@ -232,7 +232,7 @@ pub const SystemControlBlock = extern struct {
         UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: shared.scb.HFSR,
+    HFSR: mmio.Mmio(shared.scb.HFSR),
     reserved0: u32 = 0,
     /// MemManage Fault Address Register.
     MMFAR: u32,

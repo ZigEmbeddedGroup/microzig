@@ -697,41 +697,39 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    const DummyVectorTable = extern struct {
-        initial_stack_pointer: usize,
-        Reset: Handler,
-    };
+    // Validate that the VectorTable type has all the fault handlers that the CPU expects
+    comptime {
+        if (@hasDecl(core, "cpu_flags")) {
+            const flags = core.cpu_flags;
+            if ((flags.has_hard_fault and !@hasField(VectorTable, HardFault_name)) or
+                (flags.has_bus_fault and !@hasField(VectorTable, BusFault_name)) or
+                (flags.has_mem_manage_fault and !@hasField(VectorTable, MemManageFault_name)) or
+                (flags.has_usage_fault and !@hasField(VectorTable, UsageFault_name)))
+                @compileError("The CPU configures a fault vector, but it is not present in the VectorTable type!");
+        }
+    }
 
+    // If we are using a RAM vector table, we can use a dummy one (only 8 bytes) that only provides
+    // the reset vector and the initial stack pointer.
     const FlashVectorTable = if (using_ram_vector_table)
-        DummyVectorTable
+        extern struct {
+            initial_stack_pointer: usize,
+            Reset: Handler,
+        }
     else
         VectorTable;
 
-    // If we are using a RAM vector table, we can use a dummy one (only 8
-    // bytes) that only provides the reset vector and the initial stack
-    // pointer.
-    // Must be aligned to 256 as VTOR ignores the lower 8 bits of the address.
+    // The vector table in flash must be aligned to 256 as VTOR ignores the lower 8 bits of the
+    // address.
     const _vector_table: FlashVectorTable align(256) = if (is_ram_image) {
-        @compileError("`_vector_table` is not available in a RAM image");
-    } else if (using_ram_vector_table) blk: {
-        if (cpu_flags.has_hard_fault and !@hasField(VectorTable, HardFault_name)) {
-            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
-        }
-        if (cpu_flags.has_bus_fault and !@hasField(VectorTable, BusFault_name)) {
-            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
-        }
-        if (cpu_flags.has_mem_manage_fault and !@hasField(VectorTable, MemManageFault_name)) {
-            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
-        }
-        if (cpu_flags.has_usage_fault and !@hasField(VectorTable, UsageFault_name)) {
-            @compileError("The CPU configures a vector, but none present in the VectorTable type!");
-        }
-
-        break :blk .{
+        @compileError("`_vector_table` is not available in a RAM image. Use `ram_vector_table` instead.");
+    } else if (using_ram_vector_table)
+        .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
-        };
-    } else generate_vector_table();
+        }
+    else
+        generate_vector_table();
 
     fn generate_vector_table() VectorTable {
         var tmp: VectorTable = .{
@@ -776,9 +774,8 @@ pub const startup_logic = struct {
             return struct {
                 pub const handle = debugExceptionHandler(name);
             };
-        } else {
-            return ReleaseExceptionHandler;
         }
+        return ReleaseExceptionHandler;
     }
 
     const IrqHandlerFn = *const fn () callconv(.c) void;
@@ -821,7 +818,7 @@ pub const startup_logic = struct {
 /// Read more here:
 ///     https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
 pub const debug = struct {
-    const logger = std.log.scoped(.cortex_m3_debug);
+    const logger = std.log.scoped(.cortex_m_debug);
 
     /// This frame is pushed mostly by the CPU itself, and we move it into
     /// the parameter register, so we can inspect it.
@@ -863,7 +860,7 @@ pub const debug = struct {
     }
 
     pub fn hard_fault_handler() callconv(.c) void {
-        const hfsr = peripherals.scb.HFSR;
+        const hfsr = peripherals.scb.HFSR.read();
 
         logger.err("Hard Fault:", .{});
         logger.err("  VECTTBL:  {}", .{hfsr.VECTTBL});
@@ -915,18 +912,14 @@ pub const debug = struct {
         const ufsr = peripherals.scb.CFSR.read().UFSR;
 
         logger.err("Usage Fault:", .{});
-        logger.err("  context                         =  r0:0x{X:0>8}  r1:0x{X:0>8}  r2:0x{X:0>8}    r3:0x{X:0>8}", .{
-            context.r0,
-            context.r1,
-            context.r2,
-            context.r3,
-        });
-        logger.err("                                    r12:0x{X:0>8}  lr:0x{X:0>8}  ra:0x{X:0>8}  xpsr:0x{X:0>8}", .{
-            context.r12,
-            context.lr,
-            context.return_address,
-            context.xpsr,
-        });
+        logger.err(
+            "  context                         =  r0:0x{X:0>8}  r1:0x{X:0>8}  r2:0x{X:0>8}    r3:0x{X:0>8}",
+            .{ context.r0, context.r1, context.r2, context.r3 },
+        );
+        logger.err(
+            "                                    r12:0x{X:0>8}  lr:0x{X:0>8}  ra:0x{X:0>8}  xpsr:0x{X:0>8}",
+            .{ context.r12, context.lr, context.return_address, context.xpsr },
+        );
         logger.err("  undefined instruction     = {}", .{ufsr.undefined_instruction});
         logger.err("  invalid state             = {}", .{ufsr.invalid_state});
         logger.err("  invalid pc load           = {}", .{ufsr.invalid_pc_load});
@@ -934,7 +927,7 @@ pub const debug = struct {
         logger.err("  unaligned memory access   = {}", .{ufsr.unaligned_memory_access});
         logger.err("  divide by zero            = {}", .{ufsr.divide_by_zero});
 
-        @panic("usage fault");
+        @panic("Usage fault");
     }
 };
 
@@ -988,8 +981,6 @@ const core = blk: {
         .cortex_m7 => @import("cortex_m/m7.zig"),
     };
 };
-
-const cpu_flags: shared.CpuFlags = core.cpu_flags;
 
 pub const utils = switch (cortex_m) {
     .cortex_m7 => @import("cortex_m/m7_utils.zig"),

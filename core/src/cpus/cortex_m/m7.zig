@@ -99,7 +99,7 @@ pub const SystemControlBlock = extern struct {
     }),
 
     /// System Handler Contol and State Register
-    SHCSR: u32,
+    SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register
     CFSR: u32,
     /// MemManage Fault Status Register
@@ -109,7 +109,7 @@ pub const SystemControlBlock = extern struct {
     /// UsageFault Status Register
     UFSR: u32,
     /// HardFault Status Register
-    HFSR: u32,
+    HFSR: mmio.Mmio(shared.scb.HFSR),
     /// MemManage Fault Address Register
     MMAR: u32,
     /// BusFault Address Register

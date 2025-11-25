@@ -1,8 +1,15 @@
 const microzig = @import("microzig");
+const builtin = @import("builtin");
 const mmio = microzig.mmio;
 const shared = @import("shared_types.zig");
 
-pub const CPU_Options = shared.Basic_Options;
+pub const CPU_Options = struct {
+    /// If true, the Cortex-M interrupts will be initialized with a more verbose variant
+    /// of the interrupt handlers which print the interrupt name.
+    ///
+    /// NOTE: This option is enabled in debug builds by default.
+    verbose_unhandled_irq: bool = (builtin.mode == .Debug),
+};
 
 pub const scb_base_offset = 0x0d00;
 
@@ -128,7 +135,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// The processor also wakes up on execution of an SEV instruction or an external event.
         SEVONPEND: u1,
-        reserved2: u17 = 0,
+        reserved2: u27 = 0,
     }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
