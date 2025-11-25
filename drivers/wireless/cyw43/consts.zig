@@ -1,4 +1,10 @@
+// References:
+//   https://github.com/embassy-rs/embassy/blob/abb1d8286e2415686150e2e315ca1c380659c3c3/cyw43/src/consts.rs
+//   https://github.com/jbentham/picowi/blob/main/lib/picowi_regs.h
+//   https://github.com/georgerobotics/cyw43-driver/blob/dd7568229f3bf7a37737b9e1ef250c26efe75b23/src/cyw43_ll.c#L126
+
 // Register addresses
+// reference datasheet page 22 'Table 6. gSPI Registers'
 pub const REG_BUS_CTRL: u32 = 0x0;
 pub const REG_BUS_RESPONSE_DELAY: u32 = 0x1;
 pub const REG_BUS_STATUS_ENABLE: u32 = 0x2;
@@ -42,9 +48,9 @@ pub const STATUS_F3_PKT_AVAILABLE: u32 = 0x00100000;
 pub const STATUS_F3_PKT_LEN_MASK: u32 = 0xFFE00000;
 pub const STATUS_F3_PKT_LEN_SHIFT: u32 = 21;
 
-pub const REG_BACKPLANE_GPIO_SELECT: u32 = 0x10005;
-pub const REG_BACKPLANE_GPIO_OUTPUT: u32 = 0x10006;
-pub const REG_BACKPLANE_GPIO_ENABLE: u32 = 0x10007;
+// pub const REG_BACKPLANE_GPIO_SELECT: u32 = 0x10005;
+// pub const REG_BACKPLANE_GPIO_OUTPUT: u32 = 0x10006;
+// pub const REG_BACKPLANE_GPIO_ENABLE: u32 = 0x10007;
 pub const REG_BACKPLANE_FUNCTION2_WATERMARK: u32 = 0x10008;
 pub const REG_BACKPLANE_DEVICE_CONTROL: u32 = 0x10009;
 pub const REG_BACKPLANE_BACKPLANE_ADDRESS_LOW: u32 = 0x1000A;
@@ -111,3 +117,7 @@ pub const IRQ_CLEAR = IRQ_DATA_UNAVAILABLE | IRQ_COMMAND_ERROR | IRQ_DATA_ERROR 
 // Bluetooth constants.
 pub const SPI_RESP_DELAY_F1: u32 = 0x001d;
 pub const WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE: u8 = 4;
+
+const BACKPLANE_BASE_ADDR = 0x18000000; // CHIPCOMMON_BASE_ADDRESS
+pub const REG_BACKPLANE_GPIO_OUTPUT = (BACKPLANE_BASE_ADDR + 0x64);
+pub const REG_BACKPLANE_GPIO_ENABLE = (BACKPLANE_BASE_ADDR + 0x68);

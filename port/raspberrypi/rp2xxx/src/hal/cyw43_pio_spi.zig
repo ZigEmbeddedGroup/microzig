@@ -53,6 +53,7 @@ pub const Config = struct {
     cs_pin: hal.gpio.Pin = hal.gpio.num(25),
     io_pin: hal.gpio.Pin = hal.gpio.num(24),
     clk_pin: hal.gpio.Pin = hal.gpio.num(29),
+    pwr_pin: hal.gpio.Pin = hal.gpio.num(23),
 };
 
 pub fn init(config: Config) !Cyw43PioSpi {

@@ -18,6 +18,8 @@ pub const microzig_options = microzig.Options{
     .logFn = rp2xxx.uart.log,
 };
 
+var wifi_interface: drivers.WiFi = .{};
+
 pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
@@ -26,37 +28,19 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    var wifi: drivers.WiFi = .{};
-    try wifi.init(.{});
+    try wifi_interface.init(.{});
+    var wifi = &wifi_interface.driver;
 
-    // The driver isn't finished yet, so we're using this infinite test loop to process all internal driver events.
-    // Eventually, this will be replaced by a dedicated driver task/thread.
-    //cyw43.test_loop();
-
-    // enable led by wifi regs
-    // wifi.runner.bus.bp_write32(0x18000000 + 0x68, 1);
-
-    var on: u32 = 1;
-
-    const mac = try wifi.runner.read_mac();
+    const mac = try wifi.read_mac();
     log.debug("mac address: {x}", .{mac});
 
-    try wifi.runner.join("", "");
-    log.debug("join end", .{});
-    try wifi.runner.show_clm_ver();
+    try wifi.join("ninazara", "PeroZdero1");
+    try wifi.show_clm_ver();
 
-    //for (0..10) |_| {
     while (true) {
         time.sleep_ms(500);
-        // toggle led by sending command
-        try wifi.runner.led_set(on == 1);
-        on = if (on == 1) 0 else 1;
-
-        // toggle led by using wifi regs
-        //wifi.runner.bus.bp_write32(0x18000000 + 0x64, on);
+        wifi.led_toggle();
     }
 
     rp2xxx.rom.reset_to_usb_boot();
 }
-
-// wifi.led.put()

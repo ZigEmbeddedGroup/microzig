@@ -69,7 +69,7 @@ pub const IO_expander = struct {
 };
 
 pub const wireless = struct {
-    pub const cyw43 = @import("wireless/cyw43.zig");
+    pub const Cyw43 = @import("wireless/cyw43/runner.zig").Runner;
 };
 
 pub const time = struct {

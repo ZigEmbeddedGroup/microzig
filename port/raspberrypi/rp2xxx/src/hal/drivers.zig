@@ -467,27 +467,23 @@ pub fn clock_device() Clock_Device {
 
 pub const WiFi = struct {
     const Self = @This();
+    pub const Config = hal.Cyw43PioSpi.Config;
+    const led_pin: u2 = 0; // led is connected to the gpio pin 0 on pico w
 
     spi: hal.Cyw43PioSpi = undefined,
-    runner: mdf.wireless.cyw43.Runner = undefined,
-
-    pub const Config = struct {
-        spi: hal.Cyw43PioSpi.Config = .{},
-        pwr_pin: hal.gpio.Pin = hal.gpio.num(23),
-    };
+    driver: mdf.wireless.Cyw43 = undefined,
+    pwr_pin: GPIO_Device = undefined,
 
     pub fn init(self: *Self, config: Config) !void {
-        std.log.info("before gpio init", .{});
-
-        self.spi = try hal.Cyw43PioSpi.init(config.spi);
+        self.spi = try hal.Cyw43PioSpi.init(config);
 
         config.pwr_pin.set_function(.sio);
         config.pwr_pin.set_direction(.out);
-        var pwr_gpio = GPIO_Device.init(config.pwr_pin);
+        self.pwr_pin = GPIO_Device.init(config.pwr_pin);
 
-        self.runner = .{
+        self.driver = .{
             .bus = .{
-                .pwr_pin = pwr_gpio.digital_io(),
+                .pwr_pin = self.pwr_pin.digital_io(),
                 .spi = .{
                     .ptr = &self.spi,
                     .vtable = &.{
@@ -497,8 +493,10 @@ pub const WiFi = struct {
                 },
                 .sleep_ms = hal.time.sleep_ms,
             },
+            .led_pin = led_pin,
         };
 
-        try self.runner.init();
+        try self.driver.init();
+        self.driver.gpio_enable(led_pin);
     }
 };

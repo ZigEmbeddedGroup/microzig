@@ -135,7 +135,7 @@ pub const Response = extern struct {
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(BdcHeader)].*);
     }
 
-    pub fn data(self: *Self) []const u8 {
+    pub fn data(self: *Self) []u8 {
         const head: usize = self.padding() + switch (self.bus.chan) {
             .control => @sizeOf(CdcHeader),
             .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),

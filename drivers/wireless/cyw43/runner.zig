@@ -14,6 +14,10 @@ pub const Runner = struct {
     chip_log_state: LogState = .{},
 
     bus: Bus,
+    // NOTE this is huge struct 1536 bytes
+    // pico stack is 4k, allocate Runner on the heap
+    rsp: ioctl.Response = .empty,
+    led_pin: ?u2 = null,
 
     pub fn init(self: *Self) !void {
         try self.bus.init();
@@ -236,17 +240,6 @@ pub const Runner = struct {
         return mac;
     }
 
-    pub fn led_set(self: *Self, on: bool) !void {
-        try self.gpio_set(0, on);
-    }
-
-    pub fn gpio_set(self: *Self, pin: u2, on: bool) !void {
-        var data: [8]u8 = @splat(0);
-        data[0] = @as(u8, 1) << pin;
-        data[4] = if (on) 1 else 0;
-        try self.set_var("gpioout", &data);
-    }
-
     fn set_var32(self: *Self, name: []const u8, value: u32) !void {
         try self.request(.set_var, name, mem.asBytes(&value));
     }
@@ -278,13 +271,13 @@ pub const Runner = struct {
     }
 
     fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
+        var rsp = &self.rsp;
         var sleeps: usize = 0;
         while (sleeps < 8) {
-            var rsp: ioctl.Response = .empty;
-            // NOTE this is huge struct 1536 bytes on 4k pico stack
+            rsp.* = .empty;
             const len = self.read_packet(rsp.as_slice());
             if (len == 0) {
-                self.sleep_ms(10);
+                self.sleep_ms(ioctl.response_wait);
                 sleeps += 1;
                 continue;
             }
@@ -308,8 +301,8 @@ pub const Runner = struct {
                         return error.IoctlInvalicCommandStatus;
                     }
                 },
-                .event => try self.handle_event(&rsp),
-                .data => try self.handle_data(&rsp),
+                .event => try self.handle_event(rsp),
+                .data => try self.handle_data(rsp),
             }
         }
         log.err("ioctl: missing response in wait_response", .{});
@@ -325,8 +318,8 @@ pub const Runner = struct {
             // Read event data if present
             const bytes_len: usize = @min(status.packet_length, data.len * 4);
             const words_len: usize = (@as(usize, @intCast(bytes_len)) + 3) / 4;
-            const rsp = self.bus.read_words(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
-            _ = rsp;
+            // NOTE: this returns status
+            _ = self.bus.read_words(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
             //log.debug("event_get_rsp read_words status: {x} rxlen: {} bytes_len: {} data.len: {} words_len: {}", .{ rsp, rxlen, bytes_len, data.len, words_len });
             // for (data[0..words_len], 0..) |w, i| {
             //     log.debug("response word {} {x}", .{ i, w });
@@ -433,13 +426,14 @@ pub const Runner = struct {
     }
 
     fn join_wait(self: *Runner, wait_ms: u32) !void {
-        log.debug("wifi join", .{});
+        var rsp = &self.rsp;
         var delay: u32 = 0;
         var link_up: bool = false;
         var link_auth: bool = false;
 
+        log.debug("wifi join", .{});
         while (delay < wait_ms) {
-            var rsp: ioctl.Response = .empty;
+            rsp.* = .empty;
             const len = self.read_packet(rsp.as_slice());
             if (len == 0) {
                 self.sleep_ms(ioctl.response_wait);
@@ -486,6 +480,33 @@ pub const Runner = struct {
         return error.JoinTimeout;
     }
 
+    pub fn data_poll(self: *Self, wait_ms: u32) ![]u8 {
+        var rsp = &self.rsp;
+        var delay: u32 = 0;
+        while (true) {
+            rsp.* = .empty;
+            const len = self.read_packet(rsp.as_slice());
+            if (len == 0) {
+                if (delay >= wait_ms) break;
+                self.sleep_ms(ioctl.response_wait);
+                delay += ioctl.response_wait;
+                continue;
+            }
+            try rsp.validate(len);
+            switch (rsp.bus.chan) {
+                .control => {
+                    log.debug("unexpected command:", .{});
+                    log.debug("  bus: {}", .{rsp.bus});
+                    log.debug("  cdc: {}", .{rsp.cdc()});
+                    log.debug("  data: {x}", .{rsp.data()});
+                },
+                .event => try self.handle_event(rsp),
+                .data => return rsp.data(),
+            }
+        }
+        return &.{};
+    }
+
     fn handle_event(self: *Runner, rsp: *ioctl.Response) !void {
         _ = self;
         assert(rsp.bus.chan == .event);
@@ -506,10 +527,35 @@ pub const Runner = struct {
         self.bus.sleep_ms(delay);
     }
 
-    pub fn run(self: *Self) void {
-        while (true) {
-            self.log_read();
-        }
+    pub fn gpio_enable(self: *Self, pin: u2) void {
+        self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_ENABLE, @as(u32, 1) << pin);
+    }
+
+    pub fn gpio_set(self: *Self, val: u32) void {
+        self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
+    }
+
+    pub fn gpio_toggle(self: *Self, pin: u2) void {
+        var val = self.bus.bp_read_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT);
+        val = val ^ @as(u32, 1) << pin;
+        self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
+    }
+
+    fn led_set(self: *Self, on: bool) void {
+        self.gpio_set(if (on) 1 else 0);
+        // to set led on the pico by sending command
+        //try self.gpio_out(0, on);
+    }
+
+    pub fn led_toggle(self: *Self) void {
+        self.gpio_toggle(self.led_pin.?);
+    }
+
+    fn gpio_out(self: *Self, pin: u2, on: bool) !void {
+        var data: [8]u8 = @splat(0);
+        data[0] = @as(u8, 1) << pin;
+        data[4] = if (on) 1 else 0;
+        try self.set_var("gpioout", &data);
     }
 };
 
