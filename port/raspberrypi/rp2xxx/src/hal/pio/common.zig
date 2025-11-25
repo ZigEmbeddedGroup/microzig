@@ -517,11 +517,9 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             program: Program,
             options: LoadAndStartProgramOptions(chip),
         ) !void {
+            // We don't account for the optional bit here because it's not known to the pin_mappings
             const expected_side_set_pins = if (program.side_set) |side_set|
-                if (side_set.optional)
-                    side_set.count + 1
-                else
-                    side_set.count
+                side_set.count
             else
                 0;
 
