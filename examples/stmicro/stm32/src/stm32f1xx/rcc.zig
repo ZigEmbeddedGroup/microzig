@@ -16,15 +16,20 @@ pub const microzig_options = microzig.Options{
 
 const clk_config = rcc.Config{
     .PLLSource = .RCC_PLLSOURCE_HSE,
-    .HSEDivPLL = .RCC_HSE_PREDIV_DIV2,
+    .HSEDivPLL = .RCC_HSE_PREDIV_DIV1,
     .PLLMUL = .RCC_PLL_MUL2,
-    .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
-    .APB1Prescaler = .RCC_HCLK_DIV1,
-    .MCOMult = .RCC_MCO1SOURCE_SYSCLK,
+    .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+    .APB1CLKDivider = .RCC_HCLK_DIV2,
+    .RCC_MCOSource = .RCC_MCO1SOURCE_SYSCLK,
+    .flags = .{
+        .HSEOscillator = true,
+        .MCOUsed_ForRCC = true,
+        .MCOConfig = true,
+    },
 };
 
 pub fn main() !void {
-    try rcc.apply_clock(clk_config);
+    _ = try rcc.apply(clk_config);
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.AFIO);
     rcc.enable_clock(.USART1);

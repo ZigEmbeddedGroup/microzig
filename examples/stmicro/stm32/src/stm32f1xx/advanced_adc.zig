@@ -48,7 +48,12 @@ fn adc_to_temp(val: usize) f32 {
 }
 
 pub fn main() !void {
-    try rcc.apply_clock(.{ .ADCprescaler = .RCC_ADCPCLK2_DIV2 });
+    _ = try rcc.apply(.{
+        .ADCPresc = .RCC_ADCPCLK2_DIV2,
+        .flags = .{
+            .USE_ADC1 = true,
+        },
+    });
 
     rcc.enable_clock(.DMA1);
     rcc.enable_clock(.TIM2);
