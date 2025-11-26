@@ -30,12 +30,12 @@ pub const board = if (config.has_board) @import("board") else void;
 /// Contains device-independent drivers for peripherial devices.
 pub const drivers = @import("drivers");
 
-pub const Allocator = @import("Allocator.zig");
 pub const core = @import("core.zig");
 pub const concurrency = @import("concurrency.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const mmio = @import("mmio.zig");
 pub const utilities = @import("utilities.zig");
+pub const Allocator = @import("allocator.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub const panic = std.debug.FullPanic(struct {
