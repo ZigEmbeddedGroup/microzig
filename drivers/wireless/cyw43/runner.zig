@@ -430,6 +430,7 @@ pub const Runner = struct {
         var delay: u32 = 0;
         var link_up: bool = false;
         var link_auth: bool = false;
+        var set_ssid: bool = false;
 
         log.debug("wifi join", .{});
         while (delay < wait_ms) {
@@ -466,9 +467,13 @@ pub const Runner = struct {
                         .disassoc_ind => {
                             return error.JoinDisassocIndication;
                         },
+                        .set_ssid => {
+                            if (evt.status != .success) return error.JoinSetSsid;
+                            set_ssid = true;
+                        },
                         else => {},
                     }
-                    if (evt.event_type == .set_ssid and link_up and link_auth) {
+                    if (set_ssid and link_up and link_auth) {
                         log.debug("join OK", .{});
                         return;
                     }
@@ -480,7 +485,7 @@ pub const Runner = struct {
         return error.JoinTimeout;
     }
 
-    pub fn data_poll(self: *Self, wait_ms: u32) ![]u8 {
+    pub fn data_poll(self: *Self, wait_ms: u32) !?[]u8 {
         var rsp = &self.rsp;
         var delay: u32 = 0;
         while (true) {
@@ -504,7 +509,7 @@ pub const Runner = struct {
                 .data => return rsp.data(),
             }
         }
-        return &.{};
+        return null;
     }
 
     fn handle_event(self: *Runner, rsp: *ioctl.Response) !void {
@@ -541,7 +546,7 @@ pub const Runner = struct {
         self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
     }
 
-    fn led_set(self: *Self, on: bool) void {
+    pub fn led_set(self: *Self, on: bool) void {
         self.gpio_set(if (on) 1 else 0);
         // to set led on the pico by sending command
         //try self.gpio_out(0, on);
@@ -556,6 +561,20 @@ pub const Runner = struct {
         data[0] = @as(u8, 1) << pin;
         data[4] = if (on) 1 else 0;
         try self.set_var("gpioout", &data);
+    }
+
+    pub fn send(self: *Self, data: []const u8) !void {
+        var tx_msg = ioctl.TxMsg.init(data);
+        for (0..10) |_| {
+            const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
+            if (status.f2_rx_ready) {
+                // log.debug("send: {x}", .{mem.asBytes(&tx_msg)[0..tx_msg.bus.len]});
+                self.bus.write(.wlan, 0, tx_msg.as_slice());
+                return;
+            }
+            self.sleep_ms(1);
+        }
+        return error.BusReadyTimeout;
     }
 };
 

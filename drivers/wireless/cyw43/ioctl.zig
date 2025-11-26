@@ -218,10 +218,40 @@ pub const Request = extern struct {
 
     pub fn as_slice(self: *Self) []u32 {
         return mem.bytesAsSlice(u32, mem.asBytes(self)[0..self.bus.len]);
-        // var buf: []u32 = undefined;
-        // buf.ptr = @ptrCast(@alignCast(self));
-        // buf.len = @intCast(self.bus.len / 4);
-        // return buf;
+    }
+};
+
+pub const TxMsg = extern struct {
+    const Self = @This();
+    const header_size = @sizeOf(BusHeader) + 2 + @sizeOf(BdcHeader);
+    const empty: TxMsg = mem.zeroes(TxMsg);
+
+    bus: BusHeader align(4) = mem.zeroes(BusHeader),
+    _padding: u16 = 0,
+    bdc: BdcHeader = mem.zeroes(BdcHeader),
+    data: [max_packet_length - header_size]u8 = @splat(0),
+
+    pub fn init(data: []const u8) Self {
+        const txlen: u16 = header_size + @as(u16, @intCast(data.len));
+
+        tx_seq +|= 1;
+        var req: Self = .empty;
+        req.bus = .{
+            .len = txlen,
+            .not_len = ~txlen,
+            .seq = tx_seq,
+            .chan = .data,
+            .hdrlen = @sizeOf(BusHeader) + 2,
+        };
+        req.bdc.flags = 0x20;
+        @memcpy(req.data[0..data.len], data);
+        return req;
+    }
+
+    pub fn as_slice(self: *Self) []u32 {
+        // round to u32, 4 bytes
+        const round_len: u16 = @intCast(((self.bus.len + 3) / 4) * 4);
+        return mem.bytesAsSlice(u32, mem.asBytes(self)[0..round_len]);
     }
 };
 

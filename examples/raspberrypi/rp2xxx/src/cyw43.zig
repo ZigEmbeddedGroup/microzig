@@ -7,6 +7,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const pio = rp2xxx.pio;
 const drivers = microzig.hal.drivers;
+const net = @import("net.zig");
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -32,14 +33,24 @@ pub fn main() !void {
     var wifi = &wifi_interface.driver;
 
     const mac = try wifi.read_mac();
+    net.set(mac, [4]u8{ 192, 168, 190, 90 });
+
     log.debug("mac address: {x}", .{mac});
 
     try wifi.join("ninazara", "PeroZdero1");
     try wifi.show_clm_ver();
 
     while (true) {
-        time.sleep_ms(500);
+        //time.sleep_ms(500);
         wifi.led_toggle();
+        if (try wifi.data_poll(500)) |data| {
+            if (net.handle(data) catch |err| {
+                log.err("net handle {}", .{err});
+                continue;
+            }) |rsp| {
+                try wifi.send(rsp);
+            }
+        }
     }
 
     rp2xxx.rom.reset_to_usb_boot();
