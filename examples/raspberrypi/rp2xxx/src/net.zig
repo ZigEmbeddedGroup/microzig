@@ -87,16 +87,17 @@ pub const Ip = extern struct {
 
     const Protocol = enum(u8) {
         icmp = 1,
+        _,
     };
 
-    version__header_length: u8,
-    service: u8,
+    version__header_length: u8 = 0x45,
+    service: u8 = 0,
     total_length: u16,
     identification: u16,
-    flags__fragment_offset: u16,
-    ttl: u8,
+    flags__fragment_offset: u16 = 0x4000,
+    ttl: u8 = 64,
     protocol: Protocol,
-    checksum: u16,
+    checksum: u16 = 0,
     source: IpAddr,
     destination: IpAddr,
 
@@ -136,8 +137,8 @@ pub const Icmp = extern struct {
         _,
     };
     typ: Type,
-    code: u8,
-    checksum: u16,
+    code: u8 = 0,
+    checksum: u16 = 0,
     identifier: u16,
     sequence: u16,
 
@@ -369,6 +370,44 @@ pub fn handle(rx_bytes: []const u8) !?[]const u8 {
             var pos: usize = try eth_rsp.encode(&buffer);
             pos += try arp_rsp.encode(buffer[pos..]);
             return buffer[0..pos];
+        }
+    }
+    if (eth.protocol == .ip) {
+        const ip = try Ip.decode(bytes);
+        if (bytes.len < ip.total_length) return error.InsufficientBuffer;
+
+        bytes = bytes[0..ip.total_length][@sizeOf(Ip)..];
+        if (ip.protocol == .icmp and mem.eql(u8, &ip.destination, &local.ip)) {
+            const icmp = try Icmp.decode(bytes);
+            const data = bytes[@sizeOf(Icmp)..];
+            if (icmp.typ == .request) {
+                log.debug("ping request from ip: {any} mac: {x}", .{ ip.source[0..4], eth.source[0..6] });
+                var eth_rsp: Ethernet = .{
+                    .destination = eth.source,
+                    .source = local.mac,
+                    .protocol = .ip,
+                };
+                var ip_rsp: Ip = .{
+                    .service = ip.service,
+                    .identification = ip.identification,
+                    .protocol = .icmp,
+                    .source = ip.destination,
+                    .destination = ip.source,
+                    .total_length = ip.total_length,
+                };
+                var icmp_rsp: Icmp = .{
+                    .typ = .reply,
+                    .identifier = icmp.identifier,
+                    .sequence = icmp.sequence,
+                };
+
+                var pos = try eth_rsp.encode(&buffer);
+                pos += try ip_rsp.encode(buffer[pos..]);
+                @memcpy(buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
+                pos += try icmp_rsp.encode(buffer[pos..][0 .. data.len + @sizeOf(Icmp)]);
+                pos += data.len;
+                return buffer[0..pos];
+            }
         }
     }
     return null;
