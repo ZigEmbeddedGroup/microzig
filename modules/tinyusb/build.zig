@@ -6,6 +6,10 @@ const Build = std.Build;
 pub fn build(b: *Build) !void {
     addTinyUSBLib(b);
 }
+const tusb_h_contents =
+    \\#include_next "tusb.h"
+    \\#define TU_ATTR_FAST_FUNC       __attribute__((section(".ram_text")))
+;
 
 pub fn addTinyUSBLib(b: *Build) void {
     const module = b.addModule("tinyusb", .{
@@ -13,7 +17,8 @@ pub fn addTinyUSBLib(b: *Build) void {
         // seems important to release fast to avoid some extra dependencies
         .optimize = .ReleaseFast,
     });
-    module.addIncludePath(b.path("cfiles"));
+    const wf_step = b.addWriteFile("tusb.h", tusb_h_contents);
+    module.addIncludePath(wf_step.getDirectory());
 
     // TinyUSB src folder
     const tusb_dep = b.dependency("tusb", .{});
@@ -48,6 +53,16 @@ pub fn addChip(b: *Build, module: *Build.Module, chip_name: []const u8) void {
             module.addCMacro("CFG_TUSB_OS", "OPT_OS_NONE");
             module.addCMacro("PICO_RP2040", "1");
             module.addCMacro("BOARD_TUD_RHPORT", "0");
+            module.addCMacro("PICO_RP2040_USB_FAST_IRQ", "1");
+            module.addCMacro("__not_in_flash(group)", "__attribute__((section(\".ram_text\")))");
+
+            // add empty files for pico headers to be happy
+            // TODO: empty seems to work but maybe we'd prefer to add something.
+            // TODO: is the step order implicit when doing addIncludePath due to lazy directories
+            const wf_step = b.addWriteFiles();
+            _ = wf_step.add("pico/config_autogen.h", "");
+            _ = wf_step.add("pico/version.h", "");
+            module.addIncludePath(wf_step.getDirectory());
             // pico-sdk headers
             addPicoSdkInclude(b, module);
         },
@@ -130,9 +145,11 @@ const tinyusb_source_files = [_][]const u8{
 };
 
 fn addPicoSdkInclude(b: *std.Build, m: *std.Build.Module) void {
-    const pico_sdk_dep = b.dependency("pico_sdk", .{});
-    for (rp_2040_includes) |dir| {
-        m.addIncludePath(pico_sdk_dep.path(dir));
+    const pico_sdk_dep = b.lazyDependency("pico_sdk", .{});
+    if (pico_sdk_dep) |pico_dep| {
+        for (rp_2040_includes) |dir| {
+            m.addIncludePath(pico_dep.path(dir));
+        }
     }
 }
 
