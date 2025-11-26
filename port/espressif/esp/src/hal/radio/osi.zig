@@ -86,6 +86,10 @@ pub fn __assert_func(
 }
 
 pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
+    // Avoid multiple allocations at the same time as it causes a panic
+    microzig.cpu.interrupt.disable_interrupts();
+    defer microzig.cpu.interrupt.enable_interrupts();
+
     log.debug("malloc {}", .{len});
 
     const buf = allocator.rawAlloc(@sizeOf(usize) + len, .@"4", @returnAddress()) orelse {
@@ -108,6 +112,10 @@ pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
 }
 
 pub fn free(ptr: ?*anyopaque) callconv(.c) void {
+    // Avoid multiple frees at the same time as it causes a panic
+    microzig.cpu.interrupt.disable_interrupts();
+    defer microzig.cpu.interrupt.enable_interrupts();
+
     log.debug("free {?}", .{ptr});
 
     if (ptr == null) {
