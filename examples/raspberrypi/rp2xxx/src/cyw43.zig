@@ -45,7 +45,7 @@ pub fn main() !void {
         wifi.led_toggle();
         if (try wifi.data_poll(500)) |data| {
             if (net.handle(data) catch |err| {
-                log.err("net handle {}", .{err});
+                log.err("net handle {} on data: {x}", .{ err, data });
                 continue;
             }) |rsp| {
                 try wifi.send(rsp);

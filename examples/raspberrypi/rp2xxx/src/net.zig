@@ -1,10 +1,13 @@
 const std = @import("std");
 const mem = std.mem;
+const assert = std.debug.assert;
 const testing = std.testing;
 const builtin = @import("builtin");
 const native_endian = builtin.cpu.arch.endian();
 
 const log = std.log.scoped(.net);
+
+var buffer: [128]u8 = @splat(0);
 
 var local: struct {
     mac: Mac = @splat(0),
@@ -86,44 +89,53 @@ pub const Ip = extern struct {
     const Self = @This();
 
     const Protocol = enum(u8) {
-        icmp = 1,
+        icmp = 0x01,
+        igmp = 0x02,
+        tcp = 0x06,
+        udp = 0x11,
         _,
     };
+    // fields reference: tcp/ip illustrated, page 183
 
-    version__header_length: u8 = 0x45,
-    service: u8 = 0,
-    total_length: u16,
-    identification: u16,
-    flags__fragment_offset: u16 = 0x4000,
-    ttl: u8 = 64,
-    protocol: Protocol,
-    checksum: u16 = 0,
-    source: IpAddr,
-    destination: IpAddr,
-
-    pub fn version(self: Ip) u4 {
-        return @truncate((self.version__header_length & 0xf0) >> 4);
-    }
-
-    pub fn header_length(self: Ip) u8 {
-        return (self.version__header_length & 0x0f) * 4;
-    }
-
-    pub fn flags(self: Ip) u3 {
-        return @truncate((self.flags__fragment_offset & 0b1110_0000_0000_0000) >> 13);
-    }
-
-    pub fn fragment_offset(self: Ip) u13 {
-        return @truncate((self.flags__fragment_offset & 0b0001_1111_1111_1111));
-    }
+    header: packed struct {
+        length: u4 = 5, // number of 4 byte words in this header
+        version: u4 = 4, // 4 for ip v4
+    } = .{},
+    service: packed struct { // used for special processing when it is forwarded
+        ecn: u2 = 0, // explicit congestion notification
+        ds: u6 = 0, // differentiated services field
+    } = .{},
+    total_length: u16, // this header and payload length
+    identification: u16, // all fragments have same identification
+    fragment: packed struct {
+        offset: u13 = 0,
+        mf: bool = false, // more fragment follows (this is not the last fragment)
+        df: bool = true, // don't fragment, this is the only/last fragment
+        _: u1 = 0,
+    } = .{},
+    ttl: u8 = 64, // time to live
+    protocol: Protocol, // type of data found in payload
+    checksum: u16 = 0, // checksum of the this header only
+    source: IpAddr, // source ip address
+    destination: IpAddr, // destintaion ip address
 
     pub fn decode(bytes: []const u8) !Self {
-        return try decodeAny(Self, bytes, @sizeOf(Self));
+        const header_length: u8 = (bytes[0] & 0x0f) * 4;
+        if (bytes.len < header_length) return error.InsufficientBuffer;
+        return try decodeAny(Self, bytes[0..header_length], header_length);
     }
 
     pub fn encode(self: *Self, bytes: []u8) !usize {
         self.checksum = 0;
         return try encodeAny(Self, self, bytes, @sizeOf(Self));
+    }
+
+    pub fn payload_length(self: Self) u16 {
+        return self.total_length - @as(u16, self.header.length) * 4;
+    }
+
+    pub fn options_length(self: Self) u16 {
+        return @as(u16, self.header.length) * 4 - @sizeOf(Ip);
     }
 };
 
@@ -136,6 +148,7 @@ pub const Icmp = extern struct {
         unreahable = 3,
         _,
     };
+
     typ: Type,
     code: u8 = 0,
     checksum: u16 = 0,
@@ -151,6 +164,13 @@ pub const Icmp = extern struct {
         return try encodeAny(Self, self, bytes, bytes.len);
     }
 };
+
+comptime {
+    assert(@sizeOf(Ethernet) == 14);
+    assert(@sizeOf(Arp) == 28);
+    assert(@sizeOf(Ip) == 20);
+    assert(@sizeOf(Icmp) == 8);
+}
 
 // c_len number of bytes for checksum calculation
 fn decodeAny(T: type, bytes: []const u8, c_len: usize) !T {
@@ -259,11 +279,11 @@ test "decode arp reponse" {
 test "ip decode/encode" {
     const net_bytes = hexToBytes("45000054b055400040018bbcc0a8beebc0a8be5a");
     var ip = try Ip.decode(&net_bytes);
-    try testing.expectEqual(4, ip.version());
-    try testing.expectEqual(20, ip.header_length());
+    try testing.expectEqual(4, ip.header.version);
+    try testing.expectEqual(5, ip.header.length);
     try testing.expectEqual(84, ip.total_length);
     try testing.expectEqual(0xb055, ip.identification);
-    try testing.expectEqual(0x2, ip.flags());
+    try testing.expect(ip.fragment.df);
     try testing.expectEqual(64, ip.ttl);
     try testing.expectEqual(.icmp, ip.protocol);
     try testing.expectEqual(0x8bbc, ip.checksum);
@@ -303,11 +323,11 @@ test "decode whole icmp packet" {
     // ip
     bytes = bytes[@sizeOf(Ethernet)..];
     var ip = try Ip.decode(bytes);
-    try testing.expectEqual(4, ip.version());
-    try testing.expectEqual(20, ip.header_length());
+    try testing.expectEqual(4, ip.header.version);
+    try testing.expectEqual(5, ip.header.length);
     try testing.expectEqual(84, ip.total_length);
     try testing.expectEqual(0xb055, ip.identification);
-    try testing.expectEqual(0x2, ip.flags());
+    try testing.expect(ip.fragment.df);
     try testing.expectEqual(64, ip.ttl);
     try testing.expectEqual(.icmp, ip.protocol);
     try testing.expectEqual(0x8bbc, ip.checksum);
@@ -413,4 +433,17 @@ pub fn handle(rx_bytes: []const u8) !?[]const u8 {
     return null;
 }
 
-var buffer: [128]u8 = @splat(0);
+test "ip with options" {
+    var bytes: []const u8 = &hexToBytes("01005e0000fb1ae829c3ec78080046c00020f3d700000102d09ac0a8be01e00000fb9404000011640da0e00000fb");
+
+    const eth = try Ethernet.decode(bytes);
+    bytes = bytes[@sizeOf(Ethernet)..];
+    const ip = try Ip.decode(bytes);
+
+    try testing.expectEqual(.ip, eth.protocol);
+    try testing.expectEqual(6, ip.header.length); // 24 bytes header instead of default 20
+    try testing.expectEqual(32, ip.total_length);
+    try testing.expectEqual(4, ip.options_length());
+    try testing.expectEqual(8, ip.payload_length());
+    try testing.expectEqual(.igmp, ip.protocol);
+}
