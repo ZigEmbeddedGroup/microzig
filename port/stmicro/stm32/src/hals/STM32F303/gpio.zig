@@ -1,56 +1,129 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
+pub const peripherals = microzig.chip.peripherals;
+
+const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
+const GPIO = gpio_v2.GPIO;
+const MODER = gpio_v2.MODER;
+const PUPDR = gpio_v2.PUPDR;
+const OT = gpio_v2.OT;
+const AFIO = microzig.chip.peripherals.AFIO;
+
+pub const Function = enum {};
+
+pub const Port = enum {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+};
 
 pub const Mode = union(enum) {
     input: InputMode,
     output: OutputMode,
+    analog: AnalogMode,
+    alternate_function: AlternateFunction,
 };
 
-pub const InputMode = enum(u2) {
-    analog,
-    floating,
-    pull_up,
-    pull_down,
+pub const InputMode = struct {
+    resistor: PUPDR,
 };
 
-pub const OutputMode = enum(u2) {
-    push_pull,
-    open_drain,
+pub const OutputMode = struct { resistor: PUPDR, o_type: OT };
+
+pub const AnalogMode = enum(u2) {
+    //todo
+    _,
 };
 
-// TODO: Add the following
-// pub const Speed = enum(u2) {
-//     low,
-//     medium,
-//     high,
-// };
+pub const AF = enum(u4) {
+    AF0,
+    AF1,
+    AF2,
+    AF3,
+    AF4,
+    AF5,
+    AF6,
+    AF7,
+};
 
-pub const Pin = struct {
-    port_id: []const u8,
-    number_str: []const u8,
+pub const AlternateFunction = struct {
+    afr: AF,
+    resistor: PUPDR = .Floating,
+    o_type: OT = .PushPull,
+};
 
-    pub fn init(port_id: []const u8, number_str: []const u8) Pin {
-        return Pin{
-            .port_id = port_id,
-            .number_str = number_str,
-        };
+// TODO Check the manual
+pub const Speed = enum(u2) {
+    reserved,
+    max_10MHz,
+    max_2MHz,
+    max_50MHz,
+};
+
+// This is mostly internal to hal for writing configuration.
+// Public implementation is provided in the pins.zig file.
+pub const Pin = enum(usize) {
+    _,
+
+    inline fn write_pin_config(gpio: Pin, mode: Mode) void {
+        const port = gpio.get_port();
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+        const modMask: u32 = @as(u32, 0b11) << (pin << 1);
+        const afrMask: u32 = @as(u32, 0b1111) << ((pin % 8) << 2);
+
+        switch (mode) {
+            .input => |imode| {
+                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Input)) << (pin << 1));
+                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(imode.resistor)) << (pin << 1));
+            },
+            .output => |omode| {
+                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Output)) << (pin << 1));
+                port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(omode.o_type)) << pin);
+                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(omode.resistor)) << (pin << 1));
+            },
+            .analog => {},
+            .alternate_function => |afmode| {
+                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Alternate)) << (pin << 1));
+                port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(afmode.o_type)) << pin);
+                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(afmode.resistor)) << (pin << 1));
+                const register = if (pin > 7) &port.AFR[1] else &port.AFR[0];
+                register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afmode.afr)) << ((pin % 8) << 2));
+            },
+        }
     }
 
-    pub fn configure(comptime self: @This()) void {
-        const port_peripheral = @field(peripherals, "GPIO" ++ self.port_id);
-        // TODO: Support input
-        port_peripheral.MODER.modify_one("MODER[" ++ self.number_str ++ "]", .Output);
-        // TODO: Support different modes, for input and for output
-        port_peripheral.OTYPER.modify_one("OT[" ++ self.number_str ++ "]", .PushPull);
-        // TODO: Support different speeds
-        port_peripheral.OSPEEDR.modify_one("OSPEEDR[" ++ self.number_str ++ "]", .LowSpeed);
-        // TODO: Support pull-up / pull-down
-        port_peripheral.PUPDR.modify_one("PUPDR[" ++ self.number_str ++ "]", .Floating);
+    pub fn mask(gpio: Pin) u32 {
+        const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
+        return @as(u32, 1) << pin;
     }
 
-    pub fn toggle(comptime self: @This()) void {
-        @field(peripherals, "GPIO" ++ self.port_id).ODR.toggle_one("ODR[" ++ self.number_str ++ "]", .High);
+    //NOTE: should invalid pins panic or just be ignored?
+    pub fn get_port(gpio: Pin) *volatile GPIO {
+        const port: usize = @divFloor(@intFromEnum(gpio), 16);
+        switch (port) {
+            0 => return if (@hasDecl(peripherals, "GPIOA")) peripherals.GPIOA else @panic("Invalid Pin"),
+            1 => return if (@hasDecl(peripherals, "GPIOB")) peripherals.GPIOB else @panic("Invalid Pin"),
+            2 => return if (@hasDecl(peripherals, "GPIOC")) peripherals.GPIOC else @panic("Invalid Pin"),
+            3 => return if (@hasDecl(peripherals, "GPIOD")) peripherals.GPIOD else @panic("Invalid Pin"),
+            4 => return if (@hasDecl(peripherals, "GPIOE")) peripherals.GPIOE else @panic("Invalid Pin"),
+            5 => return if (@hasDecl(peripherals, "GPIOF")) peripherals.GPIOF else @panic("Invalid Pin"),
+            6 => return if (@hasDecl(peripherals, "GPIOG")) peripherals.GPIOG else @panic("Invalid Pin"),
+            else => @panic("The STM32 only has ports 0..6 (A..G)"),
+        }
+    }
+
+    pub inline fn set_mode(gpio: Pin, mode: Mode) void {
+        gpio.write_pin_config(mode);
+    }
+
+    pub fn from_port(port: Port, pin: u4) Pin {
+        const value: usize = pin + (@as(usize, 16) * @intFromEnum(port));
+        return @enumFromInt(value);
     }
 };

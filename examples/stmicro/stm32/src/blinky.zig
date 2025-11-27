@@ -21,26 +21,33 @@ pub fn main() !void {
             };
             break :res .{ pins, all_leds };
         } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32F3DISCOVERY")) {
-            const pins = (stm32.pins.GlobalConfiguration{ .GPIOE = .{
-                .PE8 = .{ .mode = .{ .output = .push_pull } },
-                .PE9 = .{ .mode = .{ .output = .push_pull } },
-                .PE10 = .{ .mode = .{ .output = .push_pull } },
-                .PE11 = .{ .mode = .{ .output = .push_pull } },
-                .PE12 = .{ .mode = .{ .output = .push_pull } },
-                .PE13 = .{ .mode = .{ .output = .push_pull } },
-                .PE14 = .{ .mode = .{ .output = .push_pull } },
-                .PE15 = .{ .mode = .{ .output = .push_pull } },
-            } }).apply();
+            const pins = (stm32.pins.GlobalConfiguration{
+                .GPIOC = .{
+                    .PIN4 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
+                    .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
+                },
+                .GPIOE = .{
+                    .PIN8 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN9 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN10 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN11 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN12 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN13 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN14 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                    .PIN15 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+                },
+            }).apply();
             const all_leds = .{
-                pins.PE8,
-                pins.PE9,
-                pins.PE10,
-                pins.PE11,
-                pins.PE12,
-                pins.PE13,
-                pins.PE14,
-                pins.PE15,
+                pins.PIN8,
+                pins.PIN9,
+                pins.PIN10,
+                pins.PIN11,
+                pins.PIN12,
+                pins.PIN13,
+                pins.PIN14,
+                pins.PIN15,
             };
+
             break :res .{ pins, all_leds };
         } else {
             @compileError("blinky is not (yet?) implemented for this target");

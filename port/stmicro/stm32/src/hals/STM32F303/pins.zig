@@ -1,86 +1,115 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const comptimePrint = std.fmt.comptimePrint;
 const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
+
+const RCC = microzig.chip.peripherals.RCC;
+const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
+const OSPEEDR = gpio_v2.OSPEEDR;
 
 const gpio = @import("gpio.zig");
 
-/// For now this is always a GPIO pin configuration
-const PinConfiguration = struct {
-    name: ?[:0]const u8 = null,
-    mode: ?gpio.Mode = null,
+pub const Pin = enum {
+    PIN0,
+    PIN1,
+    PIN2,
+    PIN3,
+    PIN4,
+    PIN5,
+    PIN6,
+    PIN7,
+    PIN8,
+    PIN9,
+    PIN10,
+    PIN11,
+    PIN12,
+    PIN13,
+    PIN14,
+    PIN15,
+    pub const Configuration = struct {
+        name: ?[:0]const u8 = null,
+        mode: ?gpio.Mode = null,
+        speed: ?OSPEEDR = null,
+    };
 };
 
-fn GPIO(comptime port: []const u8, comptime num: []const u8, comptime mode: gpio.Mode) type {
-    if (mode == .input) @compileError("TODO: implement GPIO input mode");
+pub const InputGPIO = struct {
+    pin: gpio.Pin,
+    pub inline fn read(self: @This()) u1 {
+        const port = self.pin.get_port();
+        return if (port.IDR.raw & gpio.mask() != 0)
+            1
+        else
+            0;
+    }
+};
+
+pub const OutputGPIO = struct {
+    pin: gpio.Pin,
+
+    pub inline fn put(self: @This(), value: u1) void {
+        var port = self.pin.get_port();
+        switch (value) {
+            0 => port.BSRR.raw = @intCast(self.pin.mask() << 16),
+            1 => port.BSRR.raw = self.pin.mask(),
+        }
+    }
+
+    pub inline fn low(self: @This()) void {
+        self.put(0);
+    }
+
+    pub inline fn high(self: @This()) void {
+        self.put(1);
+    }
+
+    pub inline fn toggle(self: @This()) void {
+        var port = self.pin.get_port();
+        port.ODR.raw ^= self.pin.mask();
+    }
+};
+
+pub const AlternateFunction = struct {
+    // Empty on perpose it should not be used as a GPIO.
+};
+
+const Analog = struct {
+    pin: gpio.Pin,
+};
+
+pub fn GPIO(comptime mode: gpio.Mode) type {
     return switch (mode) {
-        .input => struct {
-            const pin = gpio.Pin.init(port, num);
-
-            pub inline fn read(_: @This()) u1 {
-                return pin.read();
-            }
-        },
-        .output => packed struct {
-            const pin = gpio.Pin.init(port, num);
-
-            pub inline fn put(_: @This(), value: u1) void {
-                pin.put(value);
-            }
-
-            pub inline fn toggle(_: @This()) void {
-                pin.toggle();
-            }
-
-            fn configure(_: @This(), pin_config: PinConfiguration) void {
-                _ = pin_config; // Later: use for GPIO pin speed etc.
-                pin.configure();
-            }
-        },
+        .input => InputGPIO,
+        .output => OutputGPIO,
+        .alternate_function => AlternateFunction,
+        .analog => Analog,
     };
 }
 
-/// This is a helper empty struct with comptime constants for parsing an STM32 pin name.
-/// Example: PinDescription("PE9").gpio_port_id = "E"
-/// Example: PinDescription("PA12").gpio_port_number_str = "12"
-fn PinDescription(comptime spec: []const u8) type {
-    const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
-
-    if (spec[0] != 'P')
-        @compileError(invalid_format_msg);
-    if (spec[1] < 'A' or spec[1] > 'F')
-        @compileError(invalid_format_msg);
-
-    const gpio_pin_number_int: comptime_int = std.fmt.parseInt(u4, spec[2..], 10) catch @compileError(invalid_format_msg);
-    return struct {
-        /// 'A'...'F'
-        const gpio_port_id = spec[1..2];
-        const gpio_pin_number_str = std.fmt.comptimePrint("{d}", .{gpio_pin_number_int});
-    };
-}
-
-/// Based on the fields in `config`, returns a struct {
-///     PE11: GPIO(...),
-///     PF7: GPIO(...),
-/// }
-/// Later: Also support non-GPIO pins?
 pub fn Pins(comptime config: GlobalConfiguration) type {
     comptime {
         var fields: []const StructField = &.{};
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
             if (@field(config, port_field.name)) |port_config| {
-                for (@typeInfo(PortConfiguration()).@"struct".fields) |field| {
+                for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
                     if (@field(port_config, field.name)) |pin_config| {
-                        const D = PinDescription(field.name);
-                        fields = fields ++ &[_]StructField{.{
+                        var pin_field = StructField{
                             .is_comptime = false,
-                            .name = pin_config.name orelse field.name,
-                            .type = GPIO(D.gpio_port_id, D.gpio_pin_number_str, pin_config.mode orelse .{ .input = .floating }),
                             .default_value_ptr = null,
-                            .alignment = @alignOf(field.type),
-                        }};
+
+                            // initialized below:
+                            .name = undefined,
+                            .type = undefined,
+                            .alignment = undefined,
+                        };
+
+                        pin_field.name = pin_config.name orelse field.name;
+                        pin_field.type = GPIO(pin_config.mode orelse .{ .input = .{.floating} });
+                        pin_field.alignment = @alignOf(field.type);
+
+                        fields = fields ++ &[_]StructField{pin_field};
                     }
                 }
             }
@@ -97,59 +126,101 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
     }
 }
 
-/// Returns the struct {
-///     PA0: ?PinConfiguration = null,
-///     ...
-///     PF15: ?PinConfiguration = null,
-/// }
-fn PortConfiguration() type {
-    @setEvalBranchQuota(200000);
-    var fields: []const StructField = &.{};
-    for ("ABCDEF") |gpio_port_id| {
-        for (0..16) |gpio_pin_number_int| {
-            fields = fields ++ &[_]StructField{.{
-                .is_comptime = false,
-                .name = std.fmt.comptimePrint("P{c}{d}", .{ gpio_port_id, gpio_pin_number_int }),
-                .type = ?PinConfiguration,
-                .default_value_ptr = &@as(?PinConfiguration, null),
-                .alignment = @alignOf(?PinConfiguration),
-            }};
+pub const Port = enum {
+    GPIOA,
+    GPIOB,
+    GPIOC,
+    GPIOD,
+    GPIOE,
+    GPIOF,
+    GPIOG,
+    pub const Configuration = struct {
+        PIN0: ?Pin.Configuration = null,
+        PIN1: ?Pin.Configuration = null,
+        PIN2: ?Pin.Configuration = null,
+        PIN3: ?Pin.Configuration = null,
+        PIN4: ?Pin.Configuration = null,
+        PIN5: ?Pin.Configuration = null,
+        PIN6: ?Pin.Configuration = null,
+        PIN7: ?Pin.Configuration = null,
+        PIN8: ?Pin.Configuration = null,
+        PIN9: ?Pin.Configuration = null,
+        PIN10: ?Pin.Configuration = null,
+        PIN11: ?Pin.Configuration = null,
+        PIN12: ?Pin.Configuration = null,
+        PIN13: ?Pin.Configuration = null,
+        PIN14: ?Pin.Configuration = null,
+        PIN15: ?Pin.Configuration = null,
+
+        comptime {
+            const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
+            const config_field_count = @typeInfo(Configuration).@"struct".fields.len;
+            if (pin_field_count != config_field_count)
+                @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
         }
+    };
+};
+
+pub const GlobalConfiguration = struct {
+    GPIOA: ?Port.Configuration = null,
+    GPIOB: ?Port.Configuration = null,
+    GPIOC: ?Port.Configuration = null,
+    GPIOD: ?Port.Configuration = null,
+    GPIOE: ?Port.Configuration = null,
+    GPIOF: ?Port.Configuration = null,
+    GPIOG: ?Port.Configuration = null,
+
+    comptime {
+        const port_field_count = @typeInfo(Port).@"enum".fields.len;
+        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".fields.len;
+        if (port_field_count != config_field_count)
+            @compileError(comptimePrint("{} {}", .{ port_field_count, config_field_count }));
     }
 
-    return @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .is_tuple = false,
-            .fields = fields,
-            .decls = &.{},
-        },
-    });
-}
-pub const GlobalConfiguration = struct {
-    GPIOA: ?PortConfiguration() = null,
-    GPIOB: ?PortConfiguration() = null,
-    GPIOC: ?PortConfiguration() = null,
-    GPIOD: ?PortConfiguration() = null,
-    GPIOE: ?PortConfiguration() = null,
-    GPIOF: ?PortConfiguration() = null,
+    pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
+        var ret: Pins(config) = undefined;
 
-    pub fn apply(comptime config: @This()) Pins(config) {
-        const pins: Pins(config) = undefined; // Later: something seems incomplete here...
+        comptime var used_gpios: u16 = 0;
 
-        inline for (@typeInfo(@This()).@"struct".fields) |port_field| {
-            const gpio_port_name = port_field.name;
-            if (@field(config, gpio_port_name)) |port_config| {
-                peripherals.RCC.AHBENR.modify_one(gpio_port_name ++ "EN", 1);
+        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+            if (@field(config, port_field.name)) |port_config| {
+                _ = port_config;
+                const port = @intFromEnum(@field(Port, port_field.name));
+                used_gpios |= 1 << port;
+            }
+        }
 
-                inline for (@typeInfo(PortConfiguration()).@"struct".fields) |pin_field| {
-                    if (@field(port_config, pin_field.name)) |pin_config| {
-                        @field(pins, pin_field.name).configure(pin_config);
+        if (used_gpios != 0) {
+            RCC.AHBENR.modify(.{
+                .GPIOAEN = 0b1 & used_gpios,
+                .GPIOBEN = 0b1 & (used_gpios >> 1),
+                .GPIOCEN = 0b1 & (used_gpios >> 2),
+                .GPIODEN = 0b1 & (used_gpios >> 3),
+                .GPIOEEN = 0b1 & (used_gpios >> 4),
+                .GPIOFEN = 0b1 & (used_gpios >> 5),
+                .GPIOGEN = 0b1 & (used_gpios >> 6),
+                .GPIOHEN = 0b1 & (used_gpios >> 7),
+            });
+        }
+
+        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+            if (@field(config, port_field.name)) |port_config| {
+                inline for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
+                    if (@field(port_config, field.name)) |pin_config| {
+                        const port = @intFromEnum(@field(Port, port_field.name));
+                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
+                        pin.set_mode(pin_config.mode.?);
+                        switch (pin_config.mode orelse .input) {
+                            .input => @field(ret, pin_config.name orelse field.name) = InputGPIO{ .pin = pin },
+                            .output => @field(ret, pin_config.name orelse field.name) = OutputGPIO{ .pin = pin },
+                            .analog => @field(ret, pin_config.name orelse field.name) = Analog{},
+                            .alternate_function => @field(ret, pin_config.name orelse field.name) = AlternateFunction{},
+                        }
                     }
                 }
             }
         }
 
-        return pins;
+        return ret;
     }
 };
