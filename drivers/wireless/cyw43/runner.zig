@@ -92,7 +92,6 @@ pub const Runner = struct {
         // Load Country Locale Matrix (CLM)
         {
             const data = @embedFile("firmware/43439A0_clm.bin");
-            const chunk_len = 512;
 
             var clr: extern struct {
                 name: [8]u8 = "clmload\x00".*,
@@ -104,7 +103,7 @@ pub const Runner = struct {
 
             var nbytes: usize = 0;
             while (nbytes < data.len) {
-                const n = @min(chunk_len, data.len - nbytes);
+                const n = @min(ioctl.Request.max_data_len, data.len - nbytes);
                 clr.flag = 1 << 12 | (if (nbytes > 0) @as(u16, 0) else 2) | (if (nbytes + n >= data.len) @as(u16, 4) else 0);
                 clr.len = n;
                 const cmd_name = std.mem.asBytes(&clr);
@@ -220,7 +219,7 @@ pub const Runner = struct {
     }
 
     pub fn show_clm_ver(self: *Self) !void {
-        var data: [300]u8 = @splat(0);
+        var data: [128]u8 = @splat(0);
         const n = try self.get_var("clmver", &data);
         var iter = mem.splitScalar(u8, data[0..n], 0x0a);
         log.debug("clmver:", .{});

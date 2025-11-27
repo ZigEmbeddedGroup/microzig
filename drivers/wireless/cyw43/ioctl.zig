@@ -181,9 +181,12 @@ pub const Response = extern struct {
 // https://github.com/embassy-rs/embassy/blob/eb4e4100acbe03ee1d3726c948f91b6927a18125/cyw43/src/runner.rs#L320
 pub const Request = extern struct {
     const Self = @This();
+    pub const max_data_len = 256;
+    pub const max_name_len = 32; // including sntinel
+
     bus: BusHeader align(4),
     hdr: CdcHeader,
-    data: [max_packet_length - @sizeOf(BusHeader) - @sizeOf(CdcHeader)]u8,
+    data: [max_name_len + max_data_len]u8,
 
     pub fn init(cmd: Cmd, name: []const u8, data: []const u8) Self {
         const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0); // name has sentinel
