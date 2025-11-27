@@ -516,7 +516,7 @@ pub fn send_packet(iface: Interface, data: []const u8) (error{TooManyPacketsInFl
     _ = @atomicRmw(usize, &packets_in_flight, .Add, 1, .acq_rel);
     errdefer _ = @atomicRmw(usize, &packets_in_flight, .Sub, 1, .acq_rel);
 
-    try c_result(c.esp_wifi_internal_tx(@intFromEnum(iface), @constCast(@ptrCast(data.ptr)), @intCast(data.len)));
+    try c_result(c.esp_wifi_internal_tx(@intFromEnum(iface), @ptrCast(@constCast(data.ptr)), @intCast(data.len)));
 }
 
 fn tx_done_cb(
@@ -526,6 +526,11 @@ fn tx_done_cb(
     _: bool,
 ) callconv(.c) void {
     log.debug("tx_done_cb", .{});
+
+    if (packets_in_flight == 0) {
+        log.warn("ignoring tx_done_cb as there are no packets in flight", .{});
+        return;
+    }
 
     _ = @atomicRmw(usize, &packets_in_flight, .Sub, 1, .acq_rel);
 }

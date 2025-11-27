@@ -22,7 +22,7 @@ high_boundary: usize,
 
 /// An optional fallback allocator that is used when the allocator runs out of memory.
 /// This allows allocation from multiple disjoint memory regions.
-fallback: ?std.mem.Allocator = null,
+fallback: ?*Alloc = null,
 
 /// A mutex used to protect access to the allocator.
 mutex: microzig.interrupt.Mutex = .{},

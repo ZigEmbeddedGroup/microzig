@@ -86,6 +86,10 @@ pub fn __assert_func(
 }
 
 pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
+    // Avoid multiple allocations at the same time as it causes a panic
+    microzig.cpu.interrupt.disable_interrupts();
+    defer microzig.cpu.interrupt.enable_interrupts();
+
     log.debug("malloc {}", .{len});
 
     const buf = allocator.rawAlloc(@sizeOf(usize) + len, .@"4", @returnAddress()) orelse {
@@ -93,7 +97,7 @@ pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
         return null;
     };
 
-    const alloc_len: *usize = @alignCast(@ptrCast(buf));
+    const alloc_len: *usize = @ptrCast(@alignCast(buf));
     alloc_len.* = len;
     return @ptrFromInt(@intFromPtr(buf) + @sizeOf(usize));
 }
@@ -108,12 +112,19 @@ pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
 }
 
 pub fn free(ptr: ?*anyopaque) callconv(.c) void {
+    // Avoid multiple frees at the same time as it causes a panic
+    microzig.cpu.interrupt.disable_interrupts();
+    defer microzig.cpu.interrupt.enable_interrupts();
+
     log.debug("free {?}", .{ptr});
 
-    std.debug.assert(ptr != null);
+    if (ptr == null) {
+        log.warn("ignoring free(null) called by 0x{x}", .{@returnAddress()});
+        return;
+    }
 
     const buf_ptr: [*]u8 = @ptrFromInt(@intFromPtr(ptr) - @sizeOf(usize));
-    const buf_len: *usize = @alignCast(@ptrCast(buf_ptr));
+    const buf_len: *usize = @ptrCast(@alignCast(buf_ptr));
     allocator.rawFree(buf_ptr[0 .. @sizeOf(usize) + buf_len.*], .@"4", @returnAddress());
 }
 
@@ -227,7 +238,7 @@ pub fn set_isr(
             // bellow.
 
             wifi_interrupt_handler = .{
-                .f = @alignCast(@ptrCast(f)),
+                .f = @ptrCast(@alignCast(f)),
                 .arg = arg,
             };
         },
@@ -309,7 +320,7 @@ pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
 pub fn semphr_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("semphr_delete {?}", .{ptr});
 
-    allocator.destroy(@as(*u32, @alignCast(@ptrCast(ptr))));
+    allocator.destroy(@as(*u32, @ptrCast(@alignCast(ptr))));
 }
 
 pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
@@ -319,7 +330,7 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
     const timeout = tick;
     const start = hal.time.get_time_since_boot();
 
-    const sem: *u32 = @alignCast(@ptrCast(ptr));
+    const sem: *u32 = @ptrCast(@alignCast(ptr));
 
     while (true) {
         const res: bool = blk: {
@@ -356,7 +367,7 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
 pub fn semphr_give(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("semphr_give {?}", .{ptr});
 
-    const sem: *u32 = @alignCast(@ptrCast(ptr));
+    const sem: *u32 = @ptrCast(@alignCast(ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
@@ -405,14 +416,14 @@ pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
 pub fn mutex_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("mutex_delete {?}", .{ptr});
 
-    const mutex: *Mutex = @alignCast(@ptrCast(ptr));
+    const mutex: *Mutex = @ptrCast(@alignCast(ptr));
     allocator.destroy(mutex);
 }
 
 pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex lock {?}", .{ptr});
 
-    const mutex: *Mutex = @alignCast(@ptrCast(ptr));
+    const mutex: *Mutex = @ptrCast(@alignCast(ptr));
     const cur_task_id: usize = @intFromPtr(multitasking.current_task);
 
     while (true) {
@@ -446,7 +457,7 @@ pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
 pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex unlock {?}", .{ptr});
 
-    const mutex: *Mutex = @alignCast(@ptrCast(ptr));
+    const mutex: *Mutex = @ptrCast(@alignCast(ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
@@ -541,14 +552,14 @@ pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
 pub fn queue_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("queue_delete {?}", .{ptr});
 
-    const queue: *Queue = @alignCast(@ptrCast(ptr));
+    const queue: *Queue = @ptrCast(@alignCast(ptr));
     queue.destroy();
 }
 
 // NOTE: here we ignore the timeout. The rust version doesn't use it.
 fn queue_send_common(ptr: ?*anyopaque, item_ptr: ?*anyopaque) callconv(.c) i32 {
-    const queue: *Queue = @alignCast(@ptrCast(ptr));
-    const item: [*]const u8 = @alignCast(@ptrCast(item_ptr));
+    const queue: *Queue = @ptrCast(@alignCast(ptr));
+    const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
@@ -570,7 +581,7 @@ pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
 pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*anyopaque) callconv(.c) i32 {
     log.debug("queue_send_from_isr {?} {?} {?}", .{ ptr, item_ptr, _hptw });
 
-    @as(*u32, @alignCast(@ptrCast(_hptw))).* = 1;
+    @as(*u32, @ptrCast(@alignCast(_hptw))).* = 1;
     return queue_send_common(ptr, item_ptr);
 }
 
@@ -589,8 +600,8 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const timeout = block_time_tick;
     const start = hal.time.get_time_since_boot();
 
-    const queue: *Queue = @alignCast(@ptrCast(ptr));
-    const item: [*]u8 = @alignCast(@ptrCast(item_ptr));
+    const queue: *Queue = @ptrCast(@alignCast(ptr));
+    const item: [*]u8 = @ptrCast(@alignCast(item_ptr));
 
     while (true) {
         {
@@ -616,7 +627,7 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
 pub fn queue_msg_waiting(ptr: ?*anyopaque) callconv(.c) u32 {
     log.debug("queue_msg_waiting {?}", .{ptr});
 
-    const queue: *Queue = @alignCast(@ptrCast(ptr));
+    const queue: *Queue = @ptrCast(@alignCast(ptr));
     return queue.len;
 }
 
@@ -655,7 +666,7 @@ fn task_create_common(
 
     const task: *multitasking.Task = multitasking.Task.create(
         allocator,
-        @alignCast(@ptrCast(task_func)),
+        @ptrCast(@alignCast(task_func)),
         param,
         stack_depth,
     ) catch {
@@ -664,7 +675,7 @@ fn task_create_common(
     };
     multitasking.schedule_task(task);
 
-    @as(*usize, @alignCast(@ptrCast(task_handle))).* = @intFromPtr(task);
+    @as(*usize, @ptrCast(@alignCast(task_handle))).* = @intFromPtr(task);
 
     return 1;
 }
@@ -963,7 +974,7 @@ pub fn timer_arm(ets_timer_ptr: ?*anyopaque, ms: u32, repeat: bool) callconv(.c)
 pub fn timer_disarm(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
     log.debug("timer_disarm {?}", .{ets_timer_ptr});
 
-    const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+    const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
@@ -978,7 +989,7 @@ pub fn timer_disarm(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
 pub fn timer_done(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
     log.debug("timer_done {?}", .{ets_timer_ptr});
 
-    const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+    const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
@@ -995,8 +1006,8 @@ pub fn timer_done(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
 pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?*anyopaque) callconv(.c) void {
     log.debug("timer_setfn {?} {?} {?}", .{ ets_timer_ptr, callback_ptr, arg });
 
-    const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
-    const callback: timer.CallbackFn = @alignCast(@ptrCast(callback_ptr));
+    const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
+    const callback: timer.CallbackFn = @ptrCast(@alignCast(callback_ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
@@ -1022,7 +1033,7 @@ pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?
 pub fn timer_arm_us(ets_timer_ptr: ?*anyopaque, us: u32, repeat: bool) callconv(.c) void {
     log.debug("timer_arm_us {?} {} {}", .{ ets_timer_ptr, us, repeat });
 
-    const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+    const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
 
     // TODO: locking
     const cs = enter_critical_section();
@@ -1196,7 +1207,7 @@ pub fn wifi_delete_queue(ptr: ?*anyopaque) callconv(.c) void {
 
     std.debug.assert(ptr == @as(?*anyopaque, @ptrCast(wifi_queue_handle)));
 
-    const queue: *Queue = @alignCast(@ptrCast(ptr));
+    const queue: *Queue = @ptrCast(@alignCast(ptr));
     queue.destroy();
 
     wifi_queue_handle = null;
