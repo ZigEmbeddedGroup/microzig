@@ -573,9 +573,15 @@ pub const Runner = struct {
         try self.set_var("gpioout", &data);
     }
 
-    pub fn send(self: *Self, payload_len: usize) !void {
-        const len: usize = tx_header + payload_len;
-        const rounded_len: usize = ((len + 3) / 4) * 4;
+    pub fn recv(ptr: *anyopaque, wait_ms: u32) anyerror!?[]const u8 {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        return self.data_poll(wait_ms);
+    }
+
+    pub fn send(ptr: *anyopaque, payload_len: u16) anyerror!void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        const len: u16 = tx_header + payload_len;
+        const rounded_len: u16 = ((len + 3) / 4) * 4;
         assert(rounded_len & 0b11 == 0 and rounded_len <= self.tx_buffer.len);
 
         const hdr = ioctl.TxMsg.init(@intCast(len));

@@ -7,20 +7,167 @@ const native_endian = builtin.cpu.arch.endian();
 
 const log = std.log.scoped(.net);
 
-pub const max_packet_len = 1536;
+const broadcast_mac: Mac = .{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+const broadcast_ip: Ip = .{ 0xff, 0xff, 0xff, 0xff };
 
-pub var tx_buffer: []u8 = undefined;
-pub var interface_header_len: usize = 0;
+pub const Net = struct {
+    const Self = @This();
 
-var local: struct {
-    mac: Mac = @splat(0),
-    ip: IpAddr = @splat(0),
-} = .{};
+    mac: Mac,
+    ip: IpAddr,
+    driver: struct {
+        tx_buffer: []u8,
+        ptr: *anyopaque,
+        recv: *const fn (*anyopaque, u32) anyerror!?[]const u8,
+        send: *const fn (*anyopaque, u16) anyerror!void,
+    },
 
-pub fn init(mac: Mac, ip: IpAddr) void {
-    local.mac = mac;
-    local.ip = ip;
-}
+    // recv packets until there is no packet for wait_ms
+    pub fn poll(self: *Self, wait_ms: u32) !void {
+        while (try self.recv(wait_ms)) |bytes| {
+            try self.send(try self.handle(bytes));
+        }
+    }
+
+    fn send(self: *Self, n: usize) !void {
+        if (n == 0) return;
+        try self.driver.send(self.driver.ptr, @intCast(n));
+    }
+
+    fn recv(self: *Self, wait_ms: u32) !?[]const u8 {
+        return try self.driver.recv(self.driver.ptr, wait_ms);
+    }
+
+    pub fn get_mac(self: *Self, ip: IpAddr) !Mac {
+        try self.poll(0);
+        for (0..10) |_| {
+            try self.send_arp_request(ip);
+            while (try self.recv(100)) |bytes| {
+                if (try parse_arp_response(bytes, ip)) |mac| return mac;
+                try self.send(try self.handle(bytes));
+            }
+        }
+        return error.Timeout;
+    }
+
+    pub fn send_arp_request(self: *Self, ip: IpAddr) !void {
+        const driver = &self.driver;
+        const tx_buffer = self.driver.tx_buffer;
+        var eth_rsp: Ethernet = .{
+            .destination = broadcast_mac,
+            .source = self.mac,
+            .protocol = .arp,
+        };
+        var arp_rsp: Arp = .{
+            .opcode = .request,
+            .sender_mac = self.mac,
+            .sender_ip = self.ip,
+            .target_mac = broadcast_mac,
+            .target_ip = ip,
+        };
+        var pos: usize = 0;
+        pos += try eth_rsp.encode(tx_buffer[pos..]);
+        pos += try arp_rsp.encode(tx_buffer[pos..]);
+        try driver.send(driver.ptr, @intCast(pos));
+    }
+
+    fn parse_arp_response(rx_bytes: []const u8, ip: IpAddr) !?Mac {
+        var bytes: []const u8 = rx_bytes;
+        const eth = try Ethernet.decode(bytes);
+        bytes = bytes[@sizeOf(Ethernet)..];
+        if (eth.protocol == .arp) {
+            const arp = try Arp.decode(bytes);
+            bytes = bytes[@sizeOf(Arp)..];
+            if (arp.opcode == .response and mem.eql(u8, &ip, &arp.sender_ip)) {
+                return arp.sender_mac;
+            }
+        }
+        return null;
+    }
+
+    fn handle(self: *Self, rx_bytes: []const u8) !usize {
+        var bytes: []const u8 = rx_bytes;
+        const eth = try Ethernet.decode(bytes);
+        bytes = bytes[@sizeOf(Ethernet)..];
+
+        const tx_buffer = self.driver.tx_buffer;
+        var pos: usize = 0;
+
+        if (eth.protocol == .arp) {
+            const arp = try Arp.decode(bytes);
+            bytes = bytes[@sizeOf(Arp)..];
+
+            if (arp.opcode == .request and mem.eql(u8, &arp.target_ip, &self.ip)) {
+                log.debug("arp request from ip: {any} mac: {x}", .{ arp.sender_ip[0..4], arp.sender_mac[0..6] });
+
+                var eth_rsp: Ethernet = .{
+                    .destination = arp.sender_mac,
+                    .source = self.mac,
+                    .protocol = .arp,
+                };
+                var arp_rsp: Arp = .{
+                    .opcode = .response,
+                    .sender_mac = self.mac,
+                    .sender_ip = self.ip,
+                    .target_mac = arp.sender_mac,
+                    .target_ip = arp.sender_ip,
+                };
+
+                pos += try eth_rsp.encode(tx_buffer[pos..]);
+                pos += try arp_rsp.encode(tx_buffer[pos..]);
+                return pos;
+            }
+
+            if (arp.opcode == .response) {
+                log.debug("arp response from ip: {any} mac: {x} arp: {}", .{
+                    arp.sender_ip[0..4],
+                    arp.sender_mac[0..6],
+                    arp,
+                });
+            }
+        }
+        if (eth.protocol == .ip) {
+            const ip = try Ip.decode(bytes);
+            if (bytes.len < ip.total_length) return error.InsufficientBuffer;
+            if (ip.fragment.mf) return error.IpFragmented;
+
+            bytes = bytes[0..ip.total_length][@sizeOf(Ip)..];
+            if (ip.protocol == .icmp and mem.eql(u8, &ip.destination, &self.ip)) {
+                const icmp = try Icmp.decode(bytes);
+                const data = bytes[@sizeOf(Icmp)..];
+                if (icmp.typ == .request) {
+                    log.debug("ping request from ip: {any} mac: {x}", .{ ip.source[0..4], eth.source[0..6] });
+                    var eth_rsp: Ethernet = .{
+                        .destination = eth.source,
+                        .source = self.mac,
+                        .protocol = .ip,
+                    };
+                    var ip_rsp: Ip = .{
+                        .service = ip.service,
+                        .identification = ip.identification,
+                        .protocol = .icmp,
+                        .source = ip.destination,
+                        .destination = ip.source,
+                        .total_length = ip.total_length,
+                    };
+                    var icmp_rsp: Icmp = .{
+                        .typ = .reply,
+                        .identifier = icmp.identifier,
+                        .sequence = icmp.sequence,
+                    };
+
+                    pos += try eth_rsp.encode(tx_buffer[pos..]);
+                    pos += try ip_rsp.encode(tx_buffer[pos..]);
+                    @memcpy(tx_buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
+                    pos += try icmp_rsp.encode(tx_buffer[pos..][0 .. data.len + @sizeOf(Icmp)]);
+                    pos += data.len;
+                    return pos;
+                }
+            }
+        }
+        return 0;
+    }
+};
 
 const Mac = [6]u8;
 const IpAddr = [4]u8;
@@ -236,16 +383,17 @@ test "arp request" {
     try testing.expectEqualSlices(u8, &[_]u8{ 192, 168, 190, 1 }, &arp.sender_ip);
     try testing.expectEqualSlices(u8, &[_]u8{ 192, 168, 190, 235 }, &arp.target_ip);
     {
-        init(.{ 0x58, 0x47, 0xca, 0x75, 0xfd, 0xbc }, .{ 192, 168, 190, 235 });
+        const local_mac = .{ 0x58, 0x47, 0xca, 0x75, 0xfd, 0xbc };
+        const local_ip: IpAddr = .{ 192, 168, 190, 235 };
         var eth_rsp: Ethernet = .{
             .destination = arp.sender_mac,
-            .source = local.mac,
+            .source = local_mac,
             .protocol = .arp,
         };
         var arp_rsp: Arp = .{
             .opcode = .response,
-            .sender_mac = local.mac,
-            .sender_ip = local.ip,
+            .sender_mac = local_mac,
+            .sender_ip = local_ip,
             .target_mac = arp.sender_mac,
             .target_ip = arp.sender_ip,
         };
@@ -365,78 +513,6 @@ pub fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
     var res: [hex.len / 2]u8 = undefined;
     _ = std.fmt.hexToBytes(&res, hex) catch unreachable;
     return res;
-}
-
-pub fn handle(rx_bytes: []const u8) !usize {
-    var bytes: []const u8 = rx_bytes;
-    const eth = try Ethernet.decode(bytes);
-    bytes = bytes[@sizeOf(Ethernet)..];
-    var pos: usize = 0;
-
-    if (eth.protocol == .arp) {
-        const arp = try Arp.decode(bytes);
-        bytes = bytes[@sizeOf(Arp)..];
-
-        if (arp.opcode == .request and mem.eql(u8, &arp.target_ip, &local.ip)) {
-            log.debug("arp request from ip: {any} mac: {x}", .{ arp.sender_ip[0..4], arp.sender_mac[0..6] });
-
-            var eth_rsp: Ethernet = .{
-                .destination = arp.sender_mac,
-                .source = local.mac,
-                .protocol = .arp,
-            };
-            var arp_rsp: Arp = .{
-                .opcode = .response,
-                .sender_mac = local.mac,
-                .sender_ip = local.ip,
-                .target_mac = arp.sender_mac,
-                .target_ip = arp.sender_ip,
-            };
-
-            pos += try eth_rsp.encode(tx_buffer[pos..]);
-            pos += try arp_rsp.encode(tx_buffer[pos..]);
-            return pos;
-        }
-    }
-    if (eth.protocol == .ip) {
-        const ip = try Ip.decode(bytes);
-        if (bytes.len < ip.total_length) return error.InsufficientBuffer;
-
-        bytes = bytes[0..ip.total_length][@sizeOf(Ip)..];
-        if (ip.protocol == .icmp and mem.eql(u8, &ip.destination, &local.ip)) {
-            const icmp = try Icmp.decode(bytes);
-            const data = bytes[@sizeOf(Icmp)..];
-            if (icmp.typ == .request) {
-                log.debug("ping request from ip: {any} mac: {x}", .{ ip.source[0..4], eth.source[0..6] });
-                var eth_rsp: Ethernet = .{
-                    .destination = eth.source,
-                    .source = local.mac,
-                    .protocol = .ip,
-                };
-                var ip_rsp: Ip = .{
-                    .service = ip.service,
-                    .identification = ip.identification,
-                    .protocol = .icmp,
-                    .source = ip.destination,
-                    .destination = ip.source,
-                    .total_length = ip.total_length,
-                };
-                var icmp_rsp: Icmp = .{
-                    .typ = .reply,
-                    .identifier = icmp.identifier,
-                    .sequence = icmp.sequence,
-                };
-
-                pos += try eth_rsp.encode(tx_buffer[pos..]);
-                pos += try ip_rsp.encode(tx_buffer[pos..]);
-                @memcpy(tx_buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
-                pos += try icmp_rsp.encode(tx_buffer[pos..][0 .. data.len + @sizeOf(Icmp)]);
-                pos += data.len;
-                return pos;
-            }
-        }
-    }
-    return 0;
 }
 
 test "ip with options" {

@@ -7,7 +7,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const pio = rp2xxx.pio;
 const drivers = microzig.hal.drivers;
-const net = @import("net.zig");
+const Net = @import("net.zig").Net;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -35,22 +35,29 @@ pub fn main() !void {
     const mac = try wifi.read_mac();
     log.debug("mac address: {x}", .{mac});
 
-    net.init(mac, [4]u8{ 192, 168, 190, 90 });
-    net.tx_buffer = wifi.get_tx_buffer();
+    var net = Net{
+        .mac = mac,
+        .ip = [4]u8{ 192, 168, 190, 90 },
+        .driver = .{
+            .tx_buffer = wifi.get_tx_buffer(),
+            .ptr = wifi,
+            .recv = drivers.WiFi.Driver.recv,
+            .send = drivers.WiFi.Driver.send,
+        },
+    };
 
     try wifi.join("ninazara", "PeroZdero1");
     try wifi.show_clm_ver();
 
     while (true) {
-        //time.sleep_ms(500);
+        time.sleep_ms(500);
         wifi.led_toggle();
-        if (try wifi.data_poll(500)) |data| {
-            const n = net.handle(data) catch |err| {
-                log.err("net handle {} on data: {x}", .{ err, data });
-                continue;
-            };
-            if (n > 0) try wifi.send(n);
-        }
+        net.poll(500) catch |err| {
+            log.err("net pool {}", .{err});
+        };
+        const hydra_ip: [4]u8 = .{ 192, 168, 190, 235 };
+        const hydra_mac = try net.get_mac(hydra_ip);
+        log.debug("hydra mac: {x}", .{hydra_mac[0..6]});
     }
 
     rp2xxx.rom.reset_to_usb_boot();

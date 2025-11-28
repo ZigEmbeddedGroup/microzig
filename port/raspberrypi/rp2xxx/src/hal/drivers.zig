@@ -467,11 +467,12 @@ pub fn clock_device() Clock_Device {
 
 pub const WiFi = struct {
     const Self = @This();
+    pub const Driver = mdf.wireless.Cyw43;
     pub const Config = hal.Cyw43PioSpi.Config;
     const led_pin: u2 = 0; // led is connected to the gpio pin 0 on pico w
 
     spi: hal.Cyw43PioSpi = undefined,
-    driver: mdf.wireless.Cyw43 = undefined,
+    driver: Driver = undefined,
     pwr_pin: GPIO_Device = undefined,
 
     pub fn init(self: *Self, config: Config) !void {
