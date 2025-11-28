@@ -10,6 +10,11 @@ const log = std.log.scoped(.cyw43_runner);
 
 pub const Runner = struct {
     const Self = @This();
+
+    const tx_header = 12 + 2 + 4; // BusHeader + 2 bytes padding + BdcHeader
+    const tx_mtu = 1500;
+    const tx_padding = 2; // so we can send tx_buffer as u32 slice (dma transfers 4 byte chunks)
+
     const chip_log = std.log.scoped(.cyw43_chip);
     chip_log_state: LogState = .{},
 
@@ -18,6 +23,12 @@ pub const Runner = struct {
     // pico stack is 4k, allocate Runner on the heap
     rsp: ioctl.Response = .empty,
     led_pin: ?u2 = null,
+
+    tx_buffer: [tx_header + tx_mtu + tx_padding]u8 align(4) = @splat(0),
+
+    pub fn get_tx_buffer(self: *Self) []u8 {
+        return self.tx_buffer[tx_header..][0..tx_mtu];
+    }
 
     pub fn init(self: *Self) !void {
         try self.bus.init();
@@ -562,13 +573,20 @@ pub const Runner = struct {
         try self.set_var("gpioout", &data);
     }
 
-    pub fn send(self: *Self, data: []const u8) !void {
-        var tx_msg = ioctl.TxMsg.init(data);
+    pub fn send(self: *Self, payload_len: usize) !void {
+        const len: usize = tx_header + payload_len;
+        const rounded_len: usize = ((len + 3) / 4) * 4;
+        assert(rounded_len & 0b11 == 0 and rounded_len <= self.tx_buffer.len);
+
+        const hdr = ioctl.TxMsg.init(@intCast(len));
+        self.tx_buffer[0..tx_header].* = @bitCast(hdr);
+        const slice: []u32 = @alignCast(mem.bytesAsSlice(u32, self.tx_buffer[0..rounded_len]));
+
         for (0..10) |_| {
             const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
             if (status.f2_rx_ready) {
                 // log.debug("send: {x}", .{mem.asBytes(&tx_msg)[0..tx_msg.bus.len]});
-                self.bus.write(.wlan, 0, tx_msg.as_slice());
+                self.bus.write(.wlan, 0, slice);
                 return;
             }
             self.sleep_ms(1);

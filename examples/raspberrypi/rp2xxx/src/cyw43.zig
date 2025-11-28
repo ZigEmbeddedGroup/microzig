@@ -33,9 +33,10 @@ pub fn main() !void {
     var wifi = &wifi_interface.driver;
 
     const mac = try wifi.read_mac();
-    net.set(mac, [4]u8{ 192, 168, 190, 90 });
-
     log.debug("mac address: {x}", .{mac});
+
+    net.init(mac, [4]u8{ 192, 168, 190, 90 });
+    net.tx_buffer = wifi.get_tx_buffer();
 
     try wifi.join("ninazara", "PeroZdero1");
     try wifi.show_clm_ver();
@@ -44,12 +45,11 @@ pub fn main() !void {
         //time.sleep_ms(500);
         wifi.led_toggle();
         if (try wifi.data_poll(500)) |data| {
-            if (net.handle(data) catch |err| {
+            const n = net.handle(data) catch |err| {
                 log.err("net handle {} on data: {x}", .{ err, data });
                 continue;
-            }) |rsp| {
-                try wifi.send(rsp);
-            }
+            };
+            if (n > 0) try wifi.send(n);
         }
     }
 

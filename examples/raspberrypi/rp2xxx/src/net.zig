@@ -7,14 +7,17 @@ const native_endian = builtin.cpu.arch.endian();
 
 const log = std.log.scoped(.net);
 
-var buffer: [128]u8 = @splat(0);
+pub const max_packet_len = 1536;
+
+pub var tx_buffer: []u8 = undefined;
+pub var interface_header_len: usize = 0;
 
 var local: struct {
     mac: Mac = @splat(0),
     ip: IpAddr = @splat(0),
 } = .{};
 
-pub fn set(mac: Mac, ip: IpAddr) void {
+pub fn init(mac: Mac, ip: IpAddr) void {
     local.mac = mac;
     local.ip = ip;
 }
@@ -233,7 +236,7 @@ test "arp request" {
     try testing.expectEqualSlices(u8, &[_]u8{ 192, 168, 190, 1 }, &arp.sender_ip);
     try testing.expectEqualSlices(u8, &[_]u8{ 192, 168, 190, 235 }, &arp.target_ip);
     {
-        set(.{ 0x58, 0x47, 0xca, 0x75, 0xfd, 0xbc }, .{ 192, 168, 190, 235 });
+        init(.{ 0x58, 0x47, 0xca, 0x75, 0xfd, 0xbc }, .{ 192, 168, 190, 235 });
         var eth_rsp: Ethernet = .{
             .destination = arp.sender_mac,
             .source = local.mac,
@@ -247,6 +250,7 @@ test "arp request" {
             .target_ip = arp.sender_ip,
         };
 
+        var buffer: [128]u8 = undefined;
         var pos: usize = try eth_rsp.encode(&buffer);
         pos += try arp_rsp.encode(buffer[pos..]);
         const rsp = buffer[0..pos];
@@ -348,6 +352,7 @@ test "decode whole icmp packet" {
     const data = bytes[@sizeOf(Icmp)..];
     try testing.expectEqual(56, data.len);
 
+    var buffer: [128]u8 = undefined;
     var pos = try eth.encode(&buffer);
     pos += try ip.encode(buffer[pos..]);
     @memcpy(buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
@@ -362,10 +367,11 @@ pub fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
     return res;
 }
 
-pub fn handle(rx_bytes: []const u8) !?[]const u8 {
+pub fn handle(rx_bytes: []const u8) !usize {
     var bytes: []const u8 = rx_bytes;
     const eth = try Ethernet.decode(bytes);
     bytes = bytes[@sizeOf(Ethernet)..];
+    var pos: usize = 0;
 
     if (eth.protocol == .arp) {
         const arp = try Arp.decode(bytes);
@@ -387,9 +393,9 @@ pub fn handle(rx_bytes: []const u8) !?[]const u8 {
                 .target_ip = arp.sender_ip,
             };
 
-            var pos: usize = try eth_rsp.encode(&buffer);
-            pos += try arp_rsp.encode(buffer[pos..]);
-            return buffer[0..pos];
+            pos += try eth_rsp.encode(tx_buffer[pos..]);
+            pos += try arp_rsp.encode(tx_buffer[pos..]);
+            return pos;
         }
     }
     if (eth.protocol == .ip) {
@@ -421,16 +427,16 @@ pub fn handle(rx_bytes: []const u8) !?[]const u8 {
                     .sequence = icmp.sequence,
                 };
 
-                var pos = try eth_rsp.encode(&buffer);
-                pos += try ip_rsp.encode(buffer[pos..]);
-                @memcpy(buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
-                pos += try icmp_rsp.encode(buffer[pos..][0 .. data.len + @sizeOf(Icmp)]);
+                pos += try eth_rsp.encode(tx_buffer[pos..]);
+                pos += try ip_rsp.encode(tx_buffer[pos..]);
+                @memcpy(tx_buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
+                pos += try icmp_rsp.encode(tx_buffer[pos..][0 .. data.len + @sizeOf(Icmp)]);
                 pos += data.len;
-                return buffer[0..pos];
+                return pos;
             }
         }
     }
-    return null;
+    return 0;
 }
 
 test "ip with options" {

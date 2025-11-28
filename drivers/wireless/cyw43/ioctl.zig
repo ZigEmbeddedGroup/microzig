@@ -17,7 +17,7 @@ const assert = std.debug.assert;
 const testing = std.testing;
 const log = std.log.scoped(.ioctl);
 
-// Max IOCTL length (really 1536)
+// Max IOCTL length (really 1536txms) TODO: decide
 const max_packet_length = 1600;
 // Time to wait for ioctl response (msec)
 pub const response_wait = 30;
@@ -226,16 +226,16 @@ pub const Request = extern struct {
 
 pub const TxMsg = extern struct {
     const Self = @This();
-    const header_size = @sizeOf(BusHeader) + 2 + @sizeOf(BdcHeader);
+    //const header_size = @sizeOf(BusHeader) + 2 + @sizeOf(BdcHeader);
     const empty: TxMsg = mem.zeroes(TxMsg);
 
-    bus: BusHeader align(4) = mem.zeroes(BusHeader),
+    bus: BusHeader = mem.zeroes(BusHeader),
     _padding: u16 = 0,
     bdc: BdcHeader = mem.zeroes(BdcHeader),
-    data: [max_packet_length - header_size]u8 = @splat(0),
+    //data: [max_packet_length - header_size]u8 = @splat(0),
 
-    pub fn init(data: []const u8) Self {
-        const txlen: u16 = header_size + @as(u16, @intCast(data.len));
+    pub fn init(txlen: u16) Self {
+        //const txlen: u16 = @sizeOf(Self) + @as(u16, @intCast(data.len));
 
         tx_seq +|= 1;
         var req: Self = .empty;
@@ -247,7 +247,7 @@ pub const TxMsg = extern struct {
             .hdrlen = @sizeOf(BusHeader) + 2,
         };
         req.bdc.flags = 0x20;
-        @memcpy(req.data[0..data.len], data);
+        //@memcpy(req.data[0..data.len], data);
         return req;
     }
 
@@ -257,6 +257,14 @@ pub const TxMsg = extern struct {
         return mem.bytesAsSlice(u32, mem.asBytes(self)[0..round_len]);
     }
 };
+
+comptime {
+    assert(@sizeOf(BusHeader) == 12);
+    assert(@sizeOf(BdcHeader) == 4);
+    assert(@sizeOf(CdcHeader) == 16);
+    assert(@sizeOf(EventPacket) == 72);
+    assert(@sizeOf(TxMsg) == 18);
+}
 
 test "write command" {
     {
@@ -594,13 +602,6 @@ pub const EventStatus = enum(u32) {
     cs_abort = 15,
     _,
 };
-
-test "show sizes" {
-    std.debug.print("BusHeader: {}\n", .{@sizeOf(BusHeader)});
-    std.debug.print("BdcHeader: {}\n", .{@sizeOf(BdcHeader)});
-    std.debug.print("CdcHeader: {}\n", .{@sizeOf(CdcHeader)});
-    std.debug.print("EventPacket: {}\n", .{@sizeOf(EventPacket)});
-}
 
 test "pwd encode" {
     var buf: [36]u8 = @splat(0);
