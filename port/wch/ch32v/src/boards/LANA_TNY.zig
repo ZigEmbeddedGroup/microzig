@@ -18,7 +18,6 @@ pub const pin_config = ch32v.pins.GlobalConfiguration{
         .PIN0 = .{
             .name = "ws2812",
             .mode = .{ .output = .general_purpose_push_pull },
-            .speed = .max_50MHz,
         },
     },
 };
