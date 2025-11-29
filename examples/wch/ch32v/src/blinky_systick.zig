@@ -10,6 +10,7 @@ else
     hal.gpio.Pin.init(0, 3); // PA3
 
 pub const microzig_options: microzig.Options = .{
+    .overwrite_hal_interrupts = true,
     .interrupts = .{
         .SysTick = sys_tick_handler,
     },
