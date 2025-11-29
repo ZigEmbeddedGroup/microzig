@@ -737,29 +737,34 @@ pub const startup_logic = struct {
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
-        // Apply HAL-level default interrupts first (if any)
-        if (microzig.config.has_hal) {
-            if (@hasDecl(microzig.hal, "default_interrupts")) {
-                for (@typeInfo(@TypeOf(microzig.hal.default_interrupts)).@"struct".fields) |field| {
-                    const maybe_handler = @field(microzig.hal.default_interrupts, field.name);
-                    if (maybe_handler) |handler|
-                        @field(tmp, field.name) = handler;
-                }
-            }
-        }
-
-        // Apply user-set interrupts
-        // TODO: We might want to fail compilation if any interrupt is already set, since that
-        // could e.g. disable timekeeping
+        // Apply interrupts
         for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
             const maybe_handler = @field(microzig.options.interrupts, field.name);
-            @field(tmp, field.name) = if (maybe_handler) |handler|
-                handler
-            else
-                default_exception_handler(field.name);
+            const maybe_default = get_hal_default_handler(field.name);
+
+            @field(tmp, field.name) = blk: {
+                if (maybe_handler) |handler| {
+                    if (!microzig.options.overwrite_hal_interrupts and maybe_default != null)
+                        @compileError(std.fmt.comptimePrint(
+                            \\Interrupt {s} is used internally by the HAL; overriding it may cause malfunction.
+                            \\If you are sure of what you are doing, set "overwrite_hal_interrupts" to true in: "microzig_options".
+                            \\
+                        , .{field.name}));
+                    break :blk handler;
+                } else break :blk maybe_default orelse default_exception_handler(field.name);
+            };
         }
 
         return tmp;
+    }
+
+    fn get_hal_default_handler(comptime handler_name: []const u8) ?microzig.interrupt.Handler {
+        if (microzig.config.has_hal) {
+            if (@hasDecl(microzig.hal, "default_interrupts")) {
+                return @field(microzig.hal.default_interrupts, handler_name);
+            }
+        }
+        return null;
     }
 
     fn default_exception_handler(comptime name: []const u8) microzig.interrupt.Handler {
