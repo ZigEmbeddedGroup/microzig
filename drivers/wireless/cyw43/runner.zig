@@ -329,7 +329,7 @@ pub const Runner = struct {
             const bytes_len: usize = @min(status.packet_length, data.len * 4);
             const words_len: usize = (@as(usize, @intCast(bytes_len)) + 3) / 4;
             // NOTE: this returns status
-            _ = self.bus.read_words(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
+            _ = self.bus.read(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
             //log.debug("event_get_rsp read_words status: {x} rxlen: {} bytes_len: {} data.len: {} words_len: {}", .{ rsp, rxlen, bytes_len, data.len, words_len });
             // for (data[0..words_len], 0..) |w, i| {
             //     log.debug("response word {} {x}", .{ i, w });

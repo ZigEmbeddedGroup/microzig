@@ -16,13 +16,13 @@ pub const SpiInterface = struct {
     }
 
     /// Writes `buffer` to SPI.
-    pub fn write(self: *Self, cmd: u32, buffer: []const u32) u32 {
-        return self.vtable.write(self.ptr, cmd, buffer);
+    pub fn write(self: *Self, cmd: u32, buffers: []const []const u32) u32 {
+        return self.vtable.write(self.ptr, cmd, buffers);
     }
 
     pub const VTable = struct {
         read: *const fn (*anyopaque, cmd: u32, buffer: []u32) u32,
-        write: *const fn (*anyopaque, cmd: u32, buffer: []const u32) u32,
+        write: *const fn (*anyopaque, cmd: u32, buffers: []const []const u32) u32,
     };
 };
 
@@ -127,13 +127,15 @@ pub const Bus = struct {
             .len = @sizeOf(T),
         };
         var buf = [_]u32{0} ** 2;
-        // if we are reading from the backplane, we need an extra word for the response delay
+        // When making a ‘backplane’ read, the first 4 return bytes are
+        // discarded; they are padding to give the remote peripheral time to
+        // respond.
         const buf_len: usize = if (func == .backplane) 2 else 1;
         _ = self.spi.read(@bitCast(cmd), buf[0..buf_len]);
         return @truncate(if (func == .backplane) buf[1] else buf[0]);
     }
 
-    pub fn read_words(self: *Self, func: SpiCmd.Func, addr: u17, len: u11, buffer: []u32) u32 {
+    pub fn read(self: *Self, func: SpiCmd.Func, addr: u17, len: u11, buffer: []u32) u32 {
         const cmd = SpiCmd{
             .cmd = .read,
             .access = .incremental,
@@ -152,7 +154,7 @@ pub const Bus = struct {
             .addr = addr,
             .len = @sizeOf(T),
         };
-        _ = self.spi.write(@bitCast(cmd), &.{@intCast(value)});
+        _ = self.spi.write(@bitCast(cmd), &.{&.{@intCast(value)}});
     }
 
     pub fn write(self: *Self, func: SpiCmd.Func, addr: u17, buffer: []u32) void {
@@ -163,11 +165,10 @@ pub const Bus = struct {
             .addr = addr,
             .len = @intCast((buffer.len) * 4),
         };
-        _ = self.spi.write(@bitCast(cmd), buffer);
+        _ = self.spi.write(@bitCast(cmd), &.{buffer});
     }
 
     pub fn bp_read(self: *Self, addr: u32, data: []u8) void {
-        log.debug("bp_read addr = 0x{X}", .{addr});
 
         // It seems the HW force-aligns the addr
         // to 2 if data.len() >= 2
@@ -177,27 +178,23 @@ pub const Bus = struct {
         // std.debug.assert(addr % 4 == 0);
 
         var buf: [consts.BACKPLANE_MAX_TRANSFER_SIZE / 4 + 1]u32 = undefined;
-
         var current_addr = addr;
         var remaining_data = data;
 
         while (remaining_data.len > 0) {
             const window_offs = current_addr & consts.BACKPLANE_ADDRESS_MASK;
             const window_remaining = consts.BACKPLANE_WINDOW_SIZE - @as(usize, @intCast(window_offs));
-
             const len: usize = @min(remaining_data.len, consts.BACKPLANE_MAX_TRANSFER_SIZE, window_remaining);
 
             self.backplane_set_window(current_addr);
 
             const cmd = SpiCmd{ .cmd = .read, .access = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
-
             // round `buf` to word boundary, add one extra word for the response delay
-            const words_to_send = (len + 3) / 4 + 1;
-            _ = self.spi.read(@bitCast(cmd), buf[0..words_to_send]);
+            const wlen = (len + 3) / 4 + 1;
+            _ = self.spi.read(@bitCast(cmd), buf[0..wlen]);
 
             const u32_data_slice = buf[1..];
             var u8_buf_view = std.mem.sliceAsBytes(u32_data_slice);
-
             @memcpy(remaining_data[0..len], u8_buf_view[0..len]);
 
             current_addr += @as(u32, @intCast(len));
@@ -210,7 +207,7 @@ pub const Bus = struct {
     }
 
     pub fn bp_write(self: *Self, addr: u32, data: []const u8) void {
-        log.debug("bp_write addr = 0x{X} len = {}", .{ addr, data.len });
+        //log.debug("bp_write addr = 0x{X} len = {}", .{ addr, data.len });
 
         // It seems the HW force-aligns the addr
         // to 2 if data.len() >= 2
@@ -240,7 +237,7 @@ pub const Bus = struct {
                 .addr = @truncate(window_offset),
                 .len = @truncate(len),
             };
-            _ = self.spi.write(@bitCast(cmd), words[0..wlen]);
+            _ = self.spi.write(@bitCast(cmd), &.{words[0..wlen]});
 
             current_addr += @as(u32, @intCast(len));
             remaining = remaining[len..];
@@ -285,7 +282,7 @@ pub const Bus = struct {
 
     fn write_swapped(self: *Self, func: SpiCmd.Func, addr: u17, value: u32) void {
         const cmd = SpiCmd{ .cmd = .write, .access = .incremental, .func = func, .addr = addr, .len = 4 };
-        _ = self.spi.write(swap16(@bitCast(cmd)), &.{swap16(value)});
+        _ = self.spi.write(swap16(@bitCast(cmd)), &.{&.{swap16(value)}});
     }
 
     inline fn swap16(x: u32) u32 {

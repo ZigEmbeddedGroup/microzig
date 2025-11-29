@@ -129,17 +129,23 @@ pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
     return self.status();
 }
 
-pub fn write(ptr: *anyopaque, cmd: u32, buffer: []const u32) u32 {
+pub fn write(ptr: *anyopaque, cmd: u32, buffers: []const []const u32) u32 {
     const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
     self.cs_pin.put(0);
     defer self.cs_pin.put(1);
 
     self.channel = hal.dma.claim_unused_channel();
     defer self.channel.?.unclaim();
+    var data_len: u32 = 0;
+    for (buffers) |buffer| {
+        data_len += buffer.len;
+    }
 
-    self.prep(31, buffer.len * 32 + 32 - 1);
+    self.prep(31, data_len * 32 + 32 - 1);
     self.dma_write(&.{cmd});
-    self.dma_write(buffer);
+    for (buffers) |buffer| {
+        self.dma_write(buffer);
+    }
     return self.status();
 }
 
