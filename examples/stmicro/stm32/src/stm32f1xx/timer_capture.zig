@@ -23,6 +23,7 @@ const TX = gpio.Pin.from_port(.A, 9);
 pub const microzig_options = microzig.Options{
     .logFn = stm32.uart.log,
     .interrupts = .{ .TIM2 = .{ .c = isr_tim2 } },
+    .overwrite_hal_interrupts = true,
 };
 
 const comp = GPTimer.init(.TIM2);

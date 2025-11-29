@@ -88,6 +88,7 @@ pub const Options = struct {
         }
     }.log,
     interrupts: InterruptOptions = .{},
+    overwrite_hal_interrupts: bool = false, //force overwrite the Hal default interrupts
     cpu: CPU_Options = .{},
     hal: HAL_Options = .{},
 
