@@ -134,9 +134,9 @@ pub const Net = struct {
                 const icmp = try Icmp.decode(bytes);
                 const data = bytes[@sizeOf(Icmp)..];
                 if (icmp.typ == .request) {
-                    log.debug("ping request from ip: {any} mac: {x}", .{ ip.source[0..4], eth.source[0..6] });
+                    log.debug("ping request from ip: {any}, mac: {x}, data.len {}", .{ ip.source[0..4], eth.source[0..6], data.len });
 
-                    var header: [@sizeOf(Ethernet) + @sizeOf(Ip)]u8 = undefined;
+                    var header: [@sizeOf(Ethernet) + @sizeOf(Ip) + @sizeOf(Icmp)]u8 = undefined;
                     var eth_rsp: Ethernet = .{
                         .destination = eth.source,
                         .source = self.mac,
@@ -150,19 +150,16 @@ pub const Net = struct {
                         .destination = ip.source,
                         .total_length = ip.total_length,
                     };
-                    _ = try ip_rsp.encode(header[try eth_rsp.encode(header[0..])..]);
-
-                    var payload: [512]u8 align(4) = undefined;
                     var icmp_rsp: Icmp = .{
                         .typ = .reply,
                         .identifier = icmp.identifier,
                         .sequence = icmp.sequence,
                     };
-                    const n = @min(payload.len, data.len);
-                    @memcpy(payload[@sizeOf(Icmp)..][0..n], data[0..n]);
-                    _ = try icmp_rsp.encode(payload[0 .. n + @sizeOf(Icmp)]);
+                    var pos = try eth_rsp.encode(header[0..]);
+                    pos += try ip_rsp.encode(header[pos..]);
+                    pos += try icmp_rsp.encode(header[pos..], data);
 
-                    try self.send(&header, payload[0 .. n + @sizeOf(Icmp)]);
+                    try self.send(&header, data);
                     return;
                 }
             }
@@ -202,7 +199,7 @@ pub const Udp = struct {
         };
         var pos = try eth.encode(header[0..]);
         pos += try ip.encode(header[pos..]);
-        pos += try udp.encode(header[pos..]);
+        pos += try udp.encode(header[pos..], payload);
 
         try self.net.send(header[0..pos], payload);
     }
@@ -229,7 +226,7 @@ pub const Ethernet = extern struct {
     }
 
     pub fn encode(self: *Self, bytes: []u8) !usize {
-        return try encodeAny(Self, self, bytes, 0);
+        return try encodeAny(Self, self, bytes);
     }
 };
 
@@ -270,7 +267,7 @@ pub const Arp = extern struct {
     }
 
     pub fn encode(self: *Self, bytes: []u8) !usize {
-        return try encodeAny(Self, self, bytes, 0);
+        return try encodeAny(Self, self, bytes);
     }
 };
 
@@ -315,8 +312,9 @@ pub const Ip = extern struct {
     }
 
     pub fn encode(self: *Self, bytes: []u8) !usize {
-        self.checksum = 0;
-        return try encodeAny(Self, self, bytes, @sizeOf(Self));
+        const n = try encodeAny(Self, self, bytes);
+        self.checksum = 0xffff ^ checksum(0, bytes[0..n]);
+        return n;
     }
 
     pub fn payload_length(self: Self) u16 {
@@ -348,9 +346,11 @@ pub const Icmp = extern struct {
         return try decodeAny(Self, bytes, bytes.len);
     }
 
-    pub fn encode(self: *Self, bytes: []u8) !usize {
+    pub fn encode(self: *Self, bytes: []u8, payload: []const u8) !usize {
         self.checksum = 0;
-        return try encodeAny(Self, self, bytes, bytes.len);
+        const n = try encodeAny(Self, self, bytes);
+        set_checksum(Self, bytes[0..n], payload);
+        return n;
     }
 };
 
@@ -360,11 +360,13 @@ pub const UdpHeader = extern struct {
     source_port: u16,
     destination_port: u16,
     length: u16, // udp header and payload in bytes
-    checksum: u16,
+    checksum: u16 = 0,
 
-    pub fn encode(self: *Self, bytes: []u8) !usize {
+    pub fn encode(self: *Self, bytes: []u8, payload: []const u8) !usize {
         self.checksum = 0;
-        return try encodeAny(Self, self, bytes, 0);
+        const n = try encodeAny(Self, self, bytes);
+        set_checksum(Self, bytes[0..n], payload);
+        return n;
     }
 };
 
@@ -378,7 +380,7 @@ comptime {
 // c_len number of bytes for checksum calculation
 fn decodeAny(T: type, bytes: []const u8, c_len: usize) !T {
     if (c_len > 0) {
-        if (0xffff ^ add_csum(0, bytes[0..c_len]) != 0) return error.Checksum;
+        if (0xffff ^ checksum(0, bytes[0..c_len]) != 0) return error.Checksum;
     }
     if (bytes.len < @sizeOf(T)) return error.InsufficientBuffer;
 
@@ -389,7 +391,15 @@ fn decodeAny(T: type, bytes: []const u8, c_len: usize) !T {
     return t;
 }
 
-fn add_csum(prev: u16, bytes: []const u8) u16 {
+fn set_checksum(T: type, header: []u8, payload: []const u8) void {
+    var sum = checksum(0, header);
+    if (payload.len > 0) {
+        sum = checksum(sum, payload);
+    }
+    mem.writeInt(u16, header[@offsetOf(T, "checksum")..][0..2], 0xffff ^ sum, .little);
+}
+
+fn checksum(prev: u16, bytes: []const u8) u16 {
     const round_len = (bytes.len & ~@as(usize, 0x01));
     const slice = mem.bytesAsSlice(u16, bytes[0..round_len]);
 
@@ -406,16 +416,12 @@ fn add_csum(prev: u16, bytes: []const u8) u16 {
     return sum;
 }
 
-pub fn encodeAny(T: type, t: *T, bytes: []u8, c_len: usize) !usize {
+pub fn encodeAny(T: type, t: *T, bytes: []u8) !usize {
     if (bytes.len < @sizeOf(T)) return error.InsufficientBuffer;
     if (native_endian == .little) {
         std.mem.byteSwapAllFields(T, t);
     }
     @memcpy(bytes[0..@sizeOf(T)], mem.asBytes(t));
-
-    if (@hasField(T, "checksum") and c_len > 0) {
-        mem.writeInt(u16, bytes[@offsetOf(T, "checksum")..][0..2], 0xffff ^ add_csum(0, bytes[0..c_len]), .little);
-    }
     return @sizeOf(T);
 }
 
@@ -559,8 +565,8 @@ test "decode whole icmp packet" {
     var buffer: [128]u8 = undefined;
     var pos = try eth.encode(&buffer);
     pos += try ip.encode(buffer[pos..]);
-    @memcpy(buffer[pos + @sizeOf(Icmp) ..][0..data.len], data);
-    pos += try icmp.encode(buffer[pos..][0 .. data.len + @sizeOf(Icmp)]);
+    pos += try icmp.encode(buffer[pos..], data);
+    @memcpy(buffer[pos..][0..data.len], data);
     pos += data.len;
     try testing.expectEqualSlices(u8, &net_bytes, buffer[0..pos]);
 }
