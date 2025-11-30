@@ -199,7 +199,7 @@ pub const Udp = struct {
         };
         var pos = try eth.encode(header[0..]);
         pos += try ip.encode(header[pos..]);
-        pos += try udp.encode(header[pos..], payload);
+        pos += try udp.encode(header[pos..], &ip, payload);
 
         try self.net.send(header[0..pos], payload);
     }
@@ -312,8 +312,9 @@ pub const Ip = extern struct {
     }
 
     pub fn encode(self: *Self, bytes: []u8) !usize {
+        self.checksum = 0;
         const n = try encodeAny(Self, self, bytes);
-        self.checksum = 0xffff ^ checksum(0, bytes[0..n]);
+        set_checksum(Self, "", bytes[0..n], "");
         return n;
     }
 
@@ -349,7 +350,7 @@ pub const Icmp = extern struct {
     pub fn encode(self: *Self, bytes: []u8, payload: []const u8) !usize {
         self.checksum = 0;
         const n = try encodeAny(Self, self, bytes);
-        set_checksum(Self, bytes[0..n], payload);
+        set_checksum(Self, "", bytes[0..n], payload);
         return n;
     }
 };
@@ -362,10 +363,27 @@ pub const UdpHeader = extern struct {
     length: u16, // udp header and payload in bytes
     checksum: u16 = 0,
 
-    pub fn encode(self: *Self, bytes: []u8, payload: []const u8) !usize {
+    const PseudoHeader = extern struct {
+        source: IpAddr,
+        destination: IpAddr,
+        _: u8 = 0,
+        protocol: Ip.Protocol,
+        length: u16,
+    };
+
+    pub fn encode(self: *Self, bytes: []u8, ip: *Ip, payload: []const u8) !usize {
         self.checksum = 0;
+        var pseudo_header: PseudoHeader = .{
+            .source = ip.source,
+            .destination = ip.destination,
+            .protocol = .udp,
+            .length = self.length,
+        };
+        if (native_endian == .little) {
+            std.mem.byteSwapAllFields(PseudoHeader, &pseudo_header);
+        }
         const n = try encodeAny(Self, self, bytes);
-        set_checksum(Self, bytes[0..n], payload);
+        set_checksum(Self, mem.asBytes(&pseudo_header), bytes[0..n], payload);
         return n;
     }
 };
@@ -391,8 +409,12 @@ fn decodeAny(T: type, bytes: []const u8, c_len: usize) !T {
     return t;
 }
 
-fn set_checksum(T: type, header: []u8, payload: []const u8) void {
-    var sum = checksum(0, header);
+fn set_checksum(T: type, pseudo_header: []const u8, header: []u8, payload: []const u8) void {
+    var sum: u16 = 0;
+    if (pseudo_header.len > 0) {
+        sum = checksum(sum, pseudo_header);
+    }
+    sum = checksum(sum, header);
     if (payload.len > 0) {
         sum = checksum(sum, payload);
     }
@@ -416,6 +438,8 @@ fn checksum(prev: u16, bytes: []const u8) u16 {
     return sum;
 }
 
+// this is swapping fields so t is unusable after this
+// TODO: make copy to avoid swap problem
 pub fn encodeAny(T: type, t: *T, bytes: []u8) !usize {
     if (bytes.len < @sizeOf(T)) return error.InsufficientBuffer;
     if (native_endian == .little) {
@@ -590,4 +614,26 @@ test "ip with options" {
     try testing.expectEqual(4, ip.options_length());
     try testing.expectEqual(8, ip.payload_length());
     try testing.expectEqual(.igmp, ip.protocol);
+}
+
+test "udp checksum" {
+    var ip: Ip = .{
+        .source = [_]u8{ 192, 168, 190, 90 },
+        .destination = [_]u8{ 192, 168, 190, 235 },
+        .protocol = .udp,
+        .total_length = 0,
+        .identification = 0,
+    };
+    var udp: UdpHeader = .{
+        .source_port = 4660,
+        .destination_port = 9999,
+        .length = 28,
+    };
+    const payload: []const u8 = &hexToBytes("68656c6c6f2066726f6d207069636f203238360a");
+
+    var buf: [64]u8 = @splat(0);
+    const n = try udp.encode(&buf, &ip, payload);
+
+    const expected = hexToBytes("1234270f001c4cd3");
+    try testing.expectEqualSlices(u8, &expected, buf[0..n]);
 }
