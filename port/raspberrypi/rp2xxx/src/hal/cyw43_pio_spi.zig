@@ -144,7 +144,7 @@ pub fn write(ptr: *anyopaque, cmd: u32, buffers: []const []const u32) u32 {
     self.prep(31, data_len * 32 + 32 - 1);
     self.dma_write(&.{cmd});
     for (buffers) |buffer| {
-        self.dma_write(buffer);
+        if (buffer.len > 0) self.dma_write(buffer);
     }
     return self.status();
 }

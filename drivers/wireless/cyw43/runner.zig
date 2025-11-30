@@ -11,10 +11,6 @@ const log = std.log.scoped(.cyw43_runner);
 pub const Runner = struct {
     const Self = @This();
 
-    const tx_header = 12 + 2 + 4; // BusHeader + 2 bytes padding + BdcHeader
-    const tx_mtu = 1500;
-    const tx_padding = 2; // so we can send tx_buffer as u32 slice (dma transfers 4 byte chunks)
-
     const chip_log = std.log.scoped(.cyw43_chip);
     chip_log_state: LogState = .{},
 
@@ -23,12 +19,6 @@ pub const Runner = struct {
     // pico stack is 4k, allocate Runner on the heap
     rsp: ioctl.Response = .empty,
     led_pin: ?u2 = null,
-
-    tx_buffer: [tx_header + tx_mtu + tx_padding]u8 align(4) = @splat(0),
-
-    pub fn get_tx_buffer(self: *Self) []u8 {
-        return self.tx_buffer[tx_header..][0..tx_mtu];
-    }
 
     pub fn init(self: *Self) !void {
         try self.bus.init();
@@ -65,12 +55,12 @@ pub const Runner = struct {
         }
         // Load nvram
         {
-            const nvram_len = (NVRAM.len + 3) / 4 * 4; // Round up to 4 bytes.
+            const nvram_len = ((NVRAM.len + 3) >> 2) * 4; // Round up to 4 bytes.
             const addr_magic = chip.atcm_ram_base_address + chip.chip_ram_size - 4;
             const addr = addr_magic - nvram_len;
             self.bus.bp_write(addr, NVRAM);
 
-            const nvram_len_words = nvram_len / 4;
+            const nvram_len_words = (nvram_len >> 2);
             const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
             self.bus.bp_write_int(u32, addr_magic, nvram_len_magic);
         }
@@ -186,7 +176,7 @@ pub const Runner = struct {
     fn log_init(self: *Self) void {
         const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
         const shared_addr = self.bus.bp_read_int(u32, addr);
-        log.debug("shared_addr 0x{X}", .{shared_addr});
+        //log.debug("shared_addr 0x{X}", .{shared_addr});
 
         var shared: SharedMemData = undefined;
         self.bus.bp_read(shared_addr, std.mem.asBytes(&shared));
@@ -321,13 +311,13 @@ pub const Runner = struct {
 
     // read packet from the wifi chip
     fn read_packet(self: *Self, data: []u32) u11 {
-        const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
-        //log.debug("event_get_rsp {any}", .{status});
-        if (!status.f2_packet_available) return 0;
-        if (status.packet_length > 0) {
+        const sts = self.status();
+
+        if (!sts.f2_packet_available) return 0;
+        if (sts.packet_length > 0) {
             // Read event data if present
-            const bytes_len: usize = @min(status.packet_length, data.len * 4);
-            const words_len: usize = (@as(usize, @intCast(bytes_len)) + 3) / 4;
+            const bytes_len: usize = @min(sts.packet_length, data.len * 4);
+            const words_len: usize = (bytes_len + 3) >> 2;
             // NOTE: this returns status
             _ = self.bus.read(.wlan, 0, @intCast(bytes_len), data[0..words_len]);
             //log.debug("event_get_rsp read_words status: {x} rxlen: {} bytes_len: {} data.len: {} words_len: {}", .{ rsp, rxlen, bytes_len, data.len, words_len });
@@ -340,7 +330,7 @@ pub const Runner = struct {
             // const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
             // self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
         }
-        return status.packet_length;
+        return sts.packet_length;
     }
 
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
@@ -578,26 +568,41 @@ pub const Runner = struct {
         return self.data_poll(wait_ms);
     }
 
-    pub fn send(ptr: *anyopaque, payload_len: u16) anyerror!void {
+    pub fn send(ptr: *anyopaque, header: []const u8, payload: []const u8) anyerror!void {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        const len: u16 = tx_header + payload_len;
-        const rounded_len: u16 = ((len + 3) / 4) * 4;
-        assert(rounded_len & 0b11 == 0 and rounded_len <= self.tx_buffer.len);
+        if (!self.status().f2_rx_ready) return error.CywNotReady;
 
-        const hdr = ioctl.TxMsg.init(@intCast(len));
-        self.tx_buffer[0..tx_header].* = @bitCast(hdr);
-        const slice: []u32 = @alignCast(mem.bytesAsSlice(u32, self.tx_buffer[0..rounded_len]));
+        assert(header.len <= 14 + 20 + 8);
+        // 12 bytes bus header
+        // 2 bytes padding
+        // 4 bytes cdc padding
+        // --- align 2
+        // 14 bytes ethernet header
+        // -- align 4
+        // 20 bytes ip header   | 28 bytes arp header
+        // 8 bytes udp header   |
+        var header_buf: [(12 + 2 + 4 + 14 + 20 + 8) >> 2]u32 = @splat(0);
+        var header_bytes: []u8 = mem.asBytes(&header_buf);
 
-        for (0..10) |_| {
-            const status: Status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
-            if (status.f2_rx_ready) {
-                // log.debug("send: {x}", .{mem.asBytes(&tx_msg)[0..tx_msg.bus.len]});
-                self.bus.write(.wlan, 0, slice);
-                return;
-            }
-            self.sleep_ms(1);
-        }
-        return error.BusReadyTimeout;
+        const hdr = ioctl.TxMsg.init(@intCast(@sizeOf(ioctl.TxMsg) + header.len + payload.len));
+        header_bytes[0..@sizeOf(ioctl.TxMsg)].* = @bitCast(hdr);
+        @memcpy(header_bytes[@sizeOf(ioctl.TxMsg)..][0..header.len], header);
+
+        assert((@sizeOf(ioctl.TxMsg) + header.len) & 0b11 == 0);
+        const header_words = header_buf[0 .. (@sizeOf(ioctl.TxMsg) + header.len) >> 2];
+        const payload_words, const payload_padding = ioctl.bytes_to_words(payload);
+
+        const parts: [3][]const u32 = .{
+            header_words,
+            payload_words,
+            if (payload_padding) |p| &.{p} else &.{},
+        };
+
+        self.bus.writev(.wlan, 0, &parts);
+    }
+
+    pub fn status(self: *Self) Status {
+        return @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
     }
 };
 

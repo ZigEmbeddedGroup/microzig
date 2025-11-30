@@ -190,7 +190,7 @@ pub const Request = extern struct {
 
     pub fn init(cmd: Cmd, name: []const u8, data: []const u8) Self {
         const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0); // name has sentinel
-        const txdlen: u16 = @intCast(((name_len + data.len + 3) / 4) * 4);
+        const txdlen: u16 = @intCast(((name_len + data.len + 3) >> 2) * 4);
         const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(CdcHeader);
         const txlen: u16 = hdrlen + txdlen;
 
@@ -251,11 +251,11 @@ pub const TxMsg = extern struct {
         return req;
     }
 
-    pub fn as_slice(self: *Self) []u32 {
-        // round to u32, 4 bytes
-        const round_len: u16 = @intCast(((self.bus.len + 3) / 4) * 4);
-        return mem.bytesAsSlice(u32, mem.asBytes(self)[0..round_len]);
-    }
+    // pub fn as_slice(self: *Self) []u32 {
+    //     // round to u32, 4 bytes
+    //     const round_len: u16 = @intCast(((self.bus.len + 3) / 4) * 4);
+    //     return mem.bytesAsSlice(u32, mem.asBytes(self)[0..round_len]);
+    // }
 };
 
 comptime {
@@ -629,4 +629,42 @@ pub fn encode_ssid(buf: []u8, ssid: []const u8) []u8 {
     mem.writeInt(u32, buf[0..4], @intCast(ssid.len), .little);
     @memcpy(buf[4..][0..ssid.len], ssid);
     return buf[0 .. 4 + ssid.len];
+}
+
+test "to word" {
+    //const bytes: []const u8 align(4) = &hexToBytes("aabbccddeeff1122334455");
+    const bytes: []const u8 align(4) = &hexToBytes("11223344");
+
+    const words, const padding = bytes_to_words(bytes);
+
+    // const padding_bytes_len = bytes.len & 0b11;
+    // const round_len = bytes.len - padding_bytes_len;
+    // const slice: []const u32 = @alignCast(mem.bytesAsSlice(u32, @constCast(bytes)[0..round_len]));
+
+    // var padding_word: u32 = 0;
+    // for (0..padding_bytes_len) |i| {
+    //     const b = bytes[bytes.len - 1 - i];
+    //     padding_word = (padding_word << 8) | b;
+    // }
+
+    //std.debug.print("u8: {x} {} {}\n", .{ bytes, bytes.len, padding_bytes_len });
+    for (words) |w| {
+        std.debug.print("slice: {x}\n", .{w});
+    }
+    if (padding) |p| {
+        std.debug.print("padding: {x}\n", .{p});
+    }
+}
+
+pub fn bytes_to_words(bytes: []const u8) struct { []const u32, ?u32 } {
+    const padding_bytes = bytes.len & 0b11;
+    const round_len = bytes.len - padding_bytes;
+    const words: []const u32 = @alignCast(mem.bytesAsSlice(u32, @constCast(bytes)[0..round_len]));
+
+    var padding_word: u32 = 0;
+    for (0..padding_bytes) |i| {
+        const b = bytes[bytes.len - 1 - i];
+        padding_word = (padding_word << 8) | b;
+    }
+    return .{ words, if (padding_bytes == 0) null else padding_word };
 }

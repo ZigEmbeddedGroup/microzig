@@ -168,6 +168,19 @@ pub const Bus = struct {
         _ = self.spi.write(@bitCast(cmd), &.{buffer});
     }
 
+    pub fn writev(self: *Self, func: SpiCmd.Func, addr: u17, buffers: []const []const u32) void {
+        var len: usize = 0;
+        for (buffers) |b| len += b.len;
+        const cmd = SpiCmd{
+            .cmd = .write,
+            .access = .incremental,
+            .func = func,
+            .addr = addr,
+            .len = @intCast(len * 4),
+        };
+        _ = self.spi.write(@bitCast(cmd), buffers);
+    }
+
     pub fn bp_read(self: *Self, addr: u32, data: []u8) void {
 
         // It seems the HW force-aligns the addr
@@ -190,7 +203,7 @@ pub const Bus = struct {
 
             const cmd = SpiCmd{ .cmd = .read, .access = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
             // round `buf` to word boundary, add one extra word for the response delay
-            const wlen = (len + 3) / 4 + 1;
+            const wlen = ((len + 3) >> 2) + 1;
             _ = self.spi.read(@bitCast(cmd), buf[0..wlen]);
 
             const u32_data_slice = buf[1..];
@@ -224,7 +237,7 @@ pub const Bus = struct {
             const window_offset = current_addr & consts.BACKPLANE_ADDRESS_MASK;
             const window_remaining = consts.BACKPLANE_WINDOW_SIZE - @as(usize, @intCast(window_offset));
             const len: usize = @min(remaining.len, consts.BACKPLANE_MAX_TRANSFER_SIZE, window_remaining);
-            const wlen = (len + 3) / 4; // len in words
+            const wlen = (len + 3) >> 2; // len in words
 
             // copy to words buffer
             @memcpy(std.mem.sliceAsBytes(&words)[0..len], remaining[0..len]);
