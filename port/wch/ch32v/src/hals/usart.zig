@@ -209,6 +209,11 @@ pub const USART = enum(u2) {
     }
 
     /// Check for errors and return them
+    /// TRM 18.10.1 (USARTx_STATR): PE/FE/NE (and IDLE) are cleared by reading the status register
+    /// then reading the data register. ORE is also cleared by the SR→DR read sequence. Note the TRM
+    /// caveat for PE:
+    /// > Before this bit is cleared, the software must wait for RXNE to be set.
+    /// Our call sites only invoke check_errors() after RXNE is set.
     fn check_errors(usart: USART) ReceiveError!void {
         const regs = usart.get_regs();
         const status = regs.STATR.read();
