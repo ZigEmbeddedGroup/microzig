@@ -144,6 +144,8 @@ pub const I2C = enum(u1) {
     }
 
     /// Generate STOP and wait for bus to be released (used in error cleanup)
+    /// TRM 19.12.7 (I2Cx_STAR2): BUSY is cleared when a STOP bit is detected.
+    /// Waiting for BUSY == 0 ensures the bus is idle after issuing STOP.
     fn cleanup_stop(i2c: I2C) void {
         i2c.generate_stop();
 
@@ -163,6 +165,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Common wait for STAR1/STAR2 flag with timeout
+    /// Note: Error flags reside in STAR1; we poll check_errors() only on STAR1 path.
     inline fn wait_flag_reg(i2c: I2C, comptime use_star2: bool, comptime flag_name: []const u8, expected: u1, deadline: mdf.time.Deadline) Error!void {
         const regs = i2c.get_regs();
         var iterations: u32 = 0;
@@ -188,6 +191,9 @@ pub const I2C = enum(u1) {
     }
 
     /// Check and clear error flags
+    /// TRM 19.12.6 (I2Cx_STAR1): AF, ARLO, BERR, OVR are cleared by software
+    /// by writing 0 (or by hardware when PE becomes 0). Clear only bits observed
+    /// set to avoid clearing a flag that latched after the status read.
     fn check_errors(i2c: I2C) Error!void {
         const regs = i2c.get_regs();
         const star1 = regs.STAR1.read();
