@@ -4,6 +4,7 @@ pub const pins = @import("pins.zig");
 pub const gpio = @import("gpio.zig");
 pub const clocks = @import("clocks.zig");
 pub const time = @import("time.zig");
+pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
 
 pub const default_interrupts: microzig.cpu.InterruptOptions = .{
@@ -19,5 +20,6 @@ test "hal tests" {
     _ = clocks;
     _ = gpio;
     _ = time;
+    _ = i2c;
     _ = usart;
 }
