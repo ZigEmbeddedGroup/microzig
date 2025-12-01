@@ -148,12 +148,7 @@ pub const I2C = enum(u1) {
         i2c.generate_stop();
 
         // Wait for BUSY to clear (with simple iteration timeout, ignore deadline)
-        const regs = i2c.get_regs();
-        var iterations: u32 = 0;
-        while (regs.STAR2.read().BUSY == 1) {
-            iterations += 1;
-            if (iterations > 100_000) break; // Give up after timeout
-        }
+        i2c.wait_flag_star2("BUSY", 0, .no_deadline) catch {};
     }
 
     /// Enable/disable ACK
@@ -167,39 +162,29 @@ pub const I2C = enum(u1) {
         i2c.get_regs().DATAR.write_raw(addr_byte);
     }
 
-    /// Wait for a specific flag in STAR1 with timeout
-    fn wait_flag(i2c: I2C, comptime flag_name: []const u8, expected: u1, deadline: mdf.time.Deadline) Error!void {
+    /// Common wait for STAR1/STAR2 flag with timeout
+    inline fn wait_flag_reg(i2c: I2C, comptime use_star2: bool, comptime flag_name: []const u8, expected: u1, deadline: mdf.time.Deadline) Error!void {
         const regs = i2c.get_regs();
-        // Also use iteration count as failsafe in case time isn't working
         var iterations: u32 = 0;
-        while (@field(regs.STAR1.read(), flag_name) != expected) {
-            // Check for errors while waiting
-            try i2c.check_errors();
-
+        while ((if (use_star2) @field(regs.STAR2.read(), flag_name) else @field(regs.STAR1.read(), flag_name)) != expected) {
+            if (!use_star2) {
+                // Only STAR1 has error flags we should poll while waiting
+                try i2c.check_errors();
+            }
             iterations += 1;
-            if (iterations > 100_000) {
-                return Error.Timeout;
-            }
-            if (deadline.is_reached_by(hal.time.get_time_since_boot())) {
-                return Error.Timeout;
-            }
+            if (iterations > 100_000) return Error.Timeout;
+            if (deadline.is_reached_by(hal.time.get_time_since_boot())) return Error.Timeout;
         }
     }
 
+    /// Wait for a specific flag in STAR1 with timeout
+    inline fn wait_flag_star1(i2c: I2C, comptime flag_name: []const u8, expected: u1, deadline: mdf.time.Deadline) Error!void {
+        return i2c.wait_flag_reg(false, flag_name, expected, deadline);
+    }
+
     /// Wait for a specific flag in STAR2 with timeout
-    fn wait_flag_star2(i2c: I2C, comptime flag_name: []const u8, expected: u1, deadline: mdf.time.Deadline) Error!void {
-        const regs = i2c.get_regs();
-        // Also use iteration count as failsafe in case time isn't working
-        var iterations: u32 = 0;
-        while (@field(regs.STAR2.read(), flag_name) != expected) {
-            iterations += 1;
-            if (iterations > 100_000) {
-                return Error.Timeout;
-            }
-            if (deadline.is_reached_by(hal.time.get_time_since_boot())) {
-                return Error.Timeout;
-            }
-        }
+    inline fn wait_flag_star2(i2c: I2C, comptime flag_name: []const u8, expected: u1, deadline: mdf.time.Deadline) Error!void {
+        return i2c.wait_flag_reg(true, flag_name, expected, deadline);
     }
 
     /// Check and clear error flags
@@ -251,13 +236,13 @@ pub const I2C = enum(u1) {
         errdefer i2c.cleanup_stop();
 
         // Wait for SB (Start Bit) flag
-        try i2c.wait_flag("SB", 1, deadline);
+        try i2c.wait_flag_star1("SB", 1, deadline);
 
         // Send address with write bit
         i2c.send_address(addr, .write);
 
         // Wait for ADDR flag (errors like NACK are checked while waiting)
-        try i2c.wait_flag("ADDR", 1, deadline);
+        try i2c.wait_flag_star1("ADDR", 1, deadline);
 
         // Clear ADDR by reading SR2
         _ = regs.STAR2.read();
@@ -266,14 +251,14 @@ pub const I2C = enum(u1) {
         var iter = write_vec.iterator();
         while (iter.next_element()) |element| {
             // Wait for TXE (Transmit buffer Empty)
-            try i2c.wait_flag("TXE", 1, deadline);
+            try i2c.wait_flag_star1("TXE", 1, deadline);
 
             // Write data to DATAR
             regs.DATAR.write_raw(element.value);
         }
 
         // Wait for BTF (Byte Transfer Finished) - ensures last byte is transmitted
-        try i2c.wait_flag("BTF", 1, deadline);
+        try i2c.wait_flag_star1("BTF", 1, deadline);
 
         // Generate STOP condition
         i2c.generate_stop();
@@ -309,13 +294,13 @@ pub const I2C = enum(u1) {
         errdefer i2c.cleanup_stop();
 
         // Wait for SB (Start Bit) flag
-        try i2c.wait_flag("SB", 1, deadline);
+        try i2c.wait_flag_star1("SB", 1, deadline);
 
         // Send address with read bit
         i2c.send_address(addr, .read);
 
         // Wait for ADDR flag (errors like NACK are checked while waiting)
-        try i2c.wait_flag("ADDR", 1, deadline);
+        try i2c.wait_flag_star1("ADDR", 1, deadline);
 
         // Handle single byte read specially
         if (total_bytes == 1) {
@@ -329,7 +314,7 @@ pub const I2C = enum(u1) {
             i2c.generate_stop();
 
             // Wait for RxNE
-            try i2c.wait_flag("RxNE", 1, deadline);
+            try i2c.wait_flag_star1("RxNE", 1, deadline);
 
             // Read data
             var iter = read_vec.iterator();
@@ -358,7 +343,7 @@ pub const I2C = enum(u1) {
                 }
 
                 // Wait for RxNE
-                try i2c.wait_flag("RxNE", 1, deadline);
+                try i2c.wait_flag_star1("RxNE", 1, deadline);
 
                 // Read data
                 element.value_ptr.* = regs.DATAR.read().DATAR;
