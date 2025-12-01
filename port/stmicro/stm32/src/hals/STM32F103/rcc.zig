@@ -221,8 +221,6 @@ fn config_LSI() void {
 }
 
 fn config_HSE(config: *const ClockTree.Config_Output) ClockInitError!void {
-    rcc.CR.modify(.{ .HSEON = 1 });
-
     const max_wait: u32 = blk: {
         if (config.HSE_Timout) |val| {
             if (val != 0) {
@@ -232,6 +230,9 @@ fn config_HSE(config: *const ClockTree.Config_Output) ClockInitError!void {
         break :blk std.math.maxInt(u32);
     };
     var ticks: usize = calc_wait_ticks(max_wait - 1);
+
+    rcc.CR.modify_one("HSEBYP", @intFromBool(config.flags.HSEByPass));
+    rcc.CR.modify(.{ .HSEON = 1 });
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == 0) return error.HSETimeout;
         ticks -= 1;
@@ -249,6 +250,8 @@ fn config_LSE(config: *const ClockTree.Config_Output) ClockInitError!void {
         break :blk std.math.maxInt(u32);
     };
     var ticks: usize = calc_wait_ticks(max_wait - 1);
+
+    rcc.BDCR.modify_one("LSEBYP", @intFromBool(config.flags.LSEByPass));
     rcc.BDCR.modify(.{ .LSEON = 1 });
     while (rcc.BDCR.read().LSERDY == 0) {
         if (ticks == 0) return error.LSETimeout;
