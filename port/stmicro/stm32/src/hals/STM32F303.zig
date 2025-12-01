@@ -44,12 +44,12 @@ pub const pins = @import("STM32F303/pins.zig");
 // and therefore USART1 runs on 8 MHz.
 
 const std = @import("std");
-const runtime_safety = std.debug.runtime_safety;
 
 const microzig = @import("microzig");
 pub const gpio = @import("STM32F303/gpio.zig");
 pub const uart = @import("STM32F303/uart.zig");
 pub const rcc = @import("STM32F303/rcc.zig");
+pub const i2c = @import("STM32F303/i2c.zig");
 
 const SPI1 = microzig.peripherals.SPI1;
 const RCC = microzig.chip.peripherals.RCC;
@@ -60,6 +60,17 @@ const GPIOC = microzig.chip.peripherals.GPIOC;
 const I2C1 = microzig.peripherals.I2C1;
 
 pub const cpu = @import("cpu");
+
+pub fn enable_fpu() void {
+    microzig.cpu.peripherals.scb.CPACR.modify(.{
+        .CP10 = .full_access,
+        .CP11 = .full_access,
+    });
+    microzig.cpu.peripherals.fpu.FPCCR.modify(.{
+        .ASPEN = 1,
+        .LSPEN = 1,
+    });
+}
 
 pub fn parse_pin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
@@ -83,266 +94,6 @@ fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) voi
     var temp = reg.read();
     @field(temp, field_name) = value;
     reg.write(temp);
-}
-
-const enable_stm32f303_debug = false;
-
-fn debug_print(comptime format: []const u8, args: anytype) void {
-    if (enable_stm32f303_debug) {
-        microzig.debug.writer().print(format, args) catch {};
-    }
-}
-
-// Those are missing from the cortex_m4
-// Maybe a specificity from STM that have those FPU unit.
-const CPACP = microzig.mmio.Mmio(packed struct(u32) {
-    reserved1: u20 = 0,
-    CP10: u2,
-    CP11: u2,
-    reserved2: u8 = 0,
-});
-
-pub const FPCCR = microzig.mmio.Mmio(packed struct(u32) {
-    LSPACT: u1,
-    USER: u1,
-    S: u1,
-    THREAD: u1,
-    HFRDY: u1,
-    MMRDY: u1,
-    BFRDY: u1,
-    SFRDY: u1,
-    MONRDY: u1,
-    SPLIMVIOL: u1,
-    UFRDY: u1,
-    reserved0: u15 = 0,
-    TS: u1,
-    CLRONRETS: u1,
-    CLRONRET: u1,
-    LSPENS: u1,
-    LSPEN: u1,
-    ASPEN: u1,
-});
-
-pub const missing_peripherals = .{
-    .cpacr = @as(*volatile CPACP, @ptrFromInt(0xE000ED88)),
-    .fpccr = @as(*volatile FPCCR, @ptrFromInt(0xE000EF34)),
-};
-
-pub fn enable_fpu() void {
-    missing_peripherals.cpacr.modify(.{
-        .CP10 = 0b11,
-        .CP11 = 0b11,
-    });
-    missing_peripherals.fpccr.modify(.{
-        .ASPEN = 1,
-        .LSPEN = 1,
-    });
-}
-
-/// This implementation does not use AUTOEND=1
-pub fn I2CController(comptime index: usize, comptime source_pins: microzig.i2c.Pins) type {
-    if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
-    if (source_pins.scl != null or source_pins.sda != null)
-        @compileError("TODO: custom pins are not currently supported");
-
-    return struct {
-        const Self = @This();
-
-        pub fn init(config: microzig.i2c.Config) !Self {
-            // CONFIGURE I2C1
-            // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
-            // if GPIO port B is configured for alternate function 4 for these PB pins.
-
-            // 1. Enable the I2C CLOCK and GPIO CLOCK
-            RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
-            RCC.AHBENR.modify(.{ .IOPBEN = 1 });
-            debug_print("I2C1 configuration step 1 complete\r\n", .{});
-            // 2. Configure the I2C PINs for ALternate Functions
-            //  a) Select Alternate Function in MODER Register
-            GPIOB.MODER.modify(.{ .MODER6 = 0b10, .MODER7 = 0b10 });
-            //  b) Select Open Drain Output
-            GPIOB.OTYPER.modify(.{ .OT6 = 1, .OT7 = 1 });
-            //  c) Select High SPEED for the PINs
-            GPIOB.OSPEEDR.modify(.{ .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
-            //  d) Select Pull-up for both the Pins
-            GPIOB.PUPDR.modify(.{ .PUPDR6 = 0b01, .PUPDR7 = 0b01 });
-            //  e) Configure the Alternate Function in AFR Register
-            GPIOB.AFRL.modify(.{ .AFRL6 = 4, .AFRL7 = 4 });
-            debug_print("I2C1 configuration step 2 complete\r\n", .{});
-
-            // 3. Reset the I2C
-            I2C1.CR1.modify(.{ .PE = 0 });
-            while (I2C1.CR1.read().PE == 1) {}
-            // DO NOT RCC.APB1RSTR.modify(.{ .I2C1RST = 1 });
-            debug_print("I2C1 configuration step 3 complete\r\n", .{});
-
-            // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
-            // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
-            // but copying an example from the reference manual, RM0316 section 28.4.9.)
-            if (config.target_speed != 100_000) @panic("TODO: Support speeds other than 100 kHz");
-            I2C1.TIMINGR.modify(.{
-                .PRESC = 1,
-                .SCLL = 0x13,
-                .SCLH = 0xF,
-                .SDADEL = 0x2,
-                .SCLDEL = 0x4,
-            });
-            debug_print("I2C1 configuration steps 4-6 complete\r\n", .{});
-
-            // 7. Program the I2C_CR1 register to enable the peripheral
-            I2C1.CR1.modify(.{ .PE = 1 });
-            debug_print("I2C1 configuration step 7 complete\r\n", .{});
-
-            return Self{};
-        }
-
-        pub const WriteState = struct {
-            address: u7,
-            buffer: [255]u8 = undefined,
-            buffer_size: u8 = 0,
-
-            pub fn start(address: u7) !WriteState {
-                return WriteState{ .address = address };
-            }
-
-            pub fn write_all(self: *WriteState, bytes: []const u8) !void {
-                debug_print("I2C1 writeAll() with {d} byte(s); buffer={any}\r\n", .{ bytes.len, self.buffer[0..self.buffer_size] });
-
-                std.debug.assert(self.buffer_size < 255);
-                for (bytes) |b| {
-                    self.buffer[self.buffer_size] = b;
-                    self.buffer_size += 1;
-                    if (self.buffer_size == 255) {
-                        try self.send_buffer(1);
-                    }
-                }
-            }
-
-            fn send_buffer(self: *WriteState, reload: u1) !void {
-                debug_print("I2C1 sendBuffer() with {d} byte(s); RELOAD={d}; buffer={any}\r\n", .{ self.buffer_size, reload, self.buffer[0..self.buffer_size] });
-                if (self.buffer_size == 0) @panic("write of 0 bytes not supported");
-
-                std.debug.assert(reload == 0 or self.buffer_size == 255); // see TODOs below
-
-                // As master, initiate write from address, 7 bit address
-                I2C1.CR2.modify(.{
-                    .ADD10 = 0,
-                    .SADD1 = self.address,
-                    .RD_WRN = 0, // write
-                    .NBYTES = self.buffer_size,
-                    .RELOAD = reload,
-                });
-                if (reload == 0) {
-                    I2C1.CR2.modify(.{ .START = 1 });
-                } else {
-                    // TODO: The RELOAD=1 path is untested but doesn't seem to work yet,
-                    // even though we make sure that we set NBYTES=255 per the docs.
-                }
-                for (self.buffer[0..self.buffer_size]) |b| {
-                    // wait for empty transmit buffer
-                    while (I2C1.ISR.read().TXE == 0) {
-                        debug_print("I2C1 waiting for ready to send (TXE=0)\r\n", .{});
-                    }
-                    debug_print("I2C1 ready to send (TXE=1)\r\n", .{});
-                    // Write data byte
-                    I2C1.TXDR.modify(.{ .TXDATA = b });
-                }
-                self.buffer_size = 0;
-                debug_print("I2C1 data written\r\n", .{});
-                if (reload == 1) {
-                    // TODO: The RELOAD=1 path is untested but doesn't seem to work yet,
-                    // the following loop never seems to finish.
-                    while (I2C1.ISR.read().TCR == 0) {
-                        debug_print("I2C1 waiting transmit complete (TCR=0)\r\n", .{});
-                    }
-                    debug_print("I2C1 transmit complete (TCR=1)\r\n", .{});
-                } else {
-                    while (I2C1.ISR.read().TC == 0) {
-                        debug_print("I2C1 waiting for transmit complete (TC=0)\r\n", .{});
-                    }
-                    debug_print("I2C1 transmit complete (TC=1)\r\n", .{});
-                }
-            }
-
-            pub fn stop(self: *WriteState) !void {
-                try self.send_buffer(0);
-                // Communication STOP
-                debug_print("I2C1 STOPping\r\n", .{});
-                I2C1.CR2.modify(.{ .STOP = 1 });
-                while (I2C1.ISR.read().BUSY == 1) {}
-                debug_print("I2C1 STOPped\r\n", .{});
-            }
-
-            pub fn restart_read(self: *WriteState) !ReadState {
-                try self.send_buffer(0);
-                return ReadState{ .address = self.address };
-            }
-            pub fn restart_write(self: *WriteState) !WriteState {
-                try self.send_buffer(0);
-                return WriteState{ .address = self.address };
-            }
-        };
-
-        pub const ReadState = struct {
-            address: u7,
-            read_allowed: if (runtime_safety) bool else void = if (runtime_safety) true else {},
-
-            pub fn start(address: u7) !ReadState {
-                return ReadState{ .address = address };
-            }
-
-            /// Fails with ReadError if incorrect number of bytes is received.
-            pub fn read_no_eof(self: *ReadState, buffer: []u8) !void {
-                if (runtime_safety and !self.read_allowed) @panic("second read call not allowed");
-                std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
-
-                // As master, initiate read from accelerometer, 7 bit address
-                I2C1.CR2.modify(.{
-                    .ADD10 = 0,
-                    .SADD1 = self.address,
-                    .RD_WRN = 1, // read
-                    .NBYTES = @as(u8, @intCast(buffer.len)),
-                });
-                debug_print("I2C1 prepared for read of {} byte(s) from 0b{b:0<7}\r\n", .{ buffer.len, self.address });
-
-                // Communication START
-                I2C1.CR2.modify(.{ .START = 1 });
-                debug_print("I2C1 RXNE={}\r\n", .{I2C1.ISR.read().RXNE});
-                debug_print("I2C1 STARTed\r\n", .{});
-                debug_print("I2C1 RXNE={}\r\n", .{I2C1.ISR.read().RXNE});
-
-                if (runtime_safety) self.read_allowed = false;
-
-                for (buffer, 0..) |_, i| {
-                    // Wait for data to be received
-                    while (I2C1.ISR.read().RXNE == 0) {
-                        debug_print("I2C1 waiting for data (RXNE=0)\r\n", .{});
-                    }
-                    debug_print("I2C1 data ready (RXNE=1)\r\n", .{});
-
-                    // Read first data byte
-                    buffer[i] = I2C1.RXDR.read().RXDATA;
-                }
-                debug_print("I2C1 data: {any}\r\n", .{buffer});
-            }
-
-            pub fn stop(_: *ReadState) !void {
-                // Communication STOP
-                I2C1.CR2.modify(.{ .STOP = 1 });
-                while (I2C1.ISR.read().BUSY == 1) {}
-                debug_print("I2C1 STOPped\r\n", .{});
-            }
-
-            pub fn restart_read(self: *ReadState) !ReadState {
-                debug_print("I2C1 no action for restart\r\n", .{});
-                return ReadState{ .address = self.address };
-            }
-            pub fn restart_write(self: *ReadState) !WriteState {
-                debug_print("I2C1 no action for restart\r\n", .{});
-                return WriteState{ .address = self.address };
-            }
-        };
-    };
 }
 
 /// An STM32F303 SPI bus
@@ -408,7 +159,6 @@ pub fn SpiBus(comptime index: usize) type {
         pub fn begin_transfer(_: Self, comptime cs_pin: type, config: microzig.spi.DeviceConfig) void {
             _ = config; // for future use
             gpio.write(cs_pin, .low); // select the given device, TODO: support inverse CS devices
-            debug_print("enabled SPI1\r\n", .{});
         }
 
         /// The basic operation in the current simplistic implementation:
@@ -421,27 +171,19 @@ pub fn SpiBus(comptime index: usize) type {
             const dr_byte_size = @sizeOf(@TypeOf(SPI1.DR.raw));
 
             // wait unril ready for write
-            while (SPI1.SR.read().TXE == 0) {
-                debug_print("SPI1 TXE == 0\r\n", .{});
-            }
-            debug_print("SPI1 TXE == 1\r\n", .{});
+            while (SPI1.SR.read().TXE == 0) {}
 
             // write
             const write_byte = if (optional_write_byte) |b| b else undefined; // dummy value
             @as([dr_byte_size]u8, @bitCast(SPI1.DR.*))[0] = write_byte;
-            debug_print("Sent: {X:2}.\r\n", .{write_byte});
 
             // wait until read processed
-            while (SPI1.SR.read().RXNE == 0) {
-                debug_print("SPI1 RXNE == 0\r\n", .{});
-            }
-            debug_print("SPI1 RXNE == 1\r\n", .{});
+            while (SPI1.SR.read().RXNE == 0) {}
 
             // read
             const data_read = SPI1.DR.raw;
             _ = SPI1.SR.read(); // clear overrun flag
             const dr_lsb = @as([dr_byte_size]u8, @bitCast(data_read))[0];
-            debug_print("Received: {X:2} (DR = {X:8}).\r\n", .{ dr_lsb, data_read });
             if (optional_read_pointer) |read_pointer| read_pointer.* = dr_lsb;
         }
 
@@ -462,7 +204,7 @@ pub fn SpiBus(comptime index: usize) type {
         pub fn end_transfer(_: Self, comptime cs_pin: type, config: microzig.spi.DeviceConfig) void {
             _ = config; // for future use
             // no delay should be needed here, since we know SPIx_SR's TXE is 1
-            debug_print("(disabling SPI1)\r\n", .{});
+
             gpio.write(cs_pin, .high); // deselect the given device, TODO: support inverse CS devices
             // HACK: wait long enough to make any device end an ongoing transfer
             var i: u8 = 255; // with the default clock, this seems to delay ~185 microseconds

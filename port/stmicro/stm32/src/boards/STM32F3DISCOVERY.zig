@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const microzig = @import("microzig");
 
 pub const hal = microzig.hal;
@@ -27,8 +29,9 @@ pub const pin_map = .{
 };
 
 pub fn init() void {
+    hal.enable_fpu();
     rcc.enable_hse(8_000_000);
-    rcc.enable_pll(.HSE, .Div1, .Mul6) catch {
+    rcc.enable_pll(.HSE, .Div1, .Mul5) catch {
         @panic("PLL faile to enable");
     };
     rcc.select_pll_for_sysclk() catch {

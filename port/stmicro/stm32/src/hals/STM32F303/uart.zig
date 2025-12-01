@@ -1,6 +1,7 @@
 const std = @import("std");
 const rcc = @import("rcc.zig");
 const microzig = @import("microzig");
+const emus_type = @import("enums_type.zig");
 
 const RCC = microzig.chip.peripherals.RCC;
 const usart_t = microzig.chip.type.peripherals.usart_v3.USART;
@@ -10,14 +11,8 @@ const USART2 = microzig.chip.peripherals.USART2;
 const USART3 = microzig.chip.peripherals.USART3;
 const UART4 = microzig.chip.peripherals.UART4;
 const UART5 = microzig.chip.peripherals.UART5;
+const UARTType = emus_type.UARTType;
 
-const UartNum = enum(usize) {
-    UART1,
-    UART2,
-    UART3,
-    UART4,
-    UART5,
-};
 pub const WordBits = enum {
     seven,
     eight,
@@ -54,7 +49,7 @@ pub const Config = struct {
 pub const StopBits = STOP;
 pub const DataBits = WordBits;
 
-pub fn Uart(comptime index: UartNum) type {
+pub fn Uart(comptime index: UARTType) type {
     const regs = switch (index) {
         .UART1 => USART1,
         .UART2 => USART2,
@@ -164,7 +159,7 @@ pub fn Uart(comptime index: UartNum) type {
     };
 }
 
-pub fn UartWriter(comptime index: UartNum) type {
+pub fn UartWriter(comptime index: UARTType) type {
     return struct {
         uart: *Uart(index),
         interface: std.Io.Writer,

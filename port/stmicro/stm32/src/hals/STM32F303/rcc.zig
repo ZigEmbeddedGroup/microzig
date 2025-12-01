@@ -4,6 +4,8 @@ const GPIOF = microzig.chip.peripherals.GPIOF;
 const FLASH = microzig.chip.peripherals.FLASH;
 const PREDIV = microzig.chip.types.peripherals.rcc_f3v1.PREDIV;
 const PLLMUL = microzig.chip.types.peripherals.rcc_f3v1.PLLMUL;
+const ICSW = microzig.chip.types.peripherals.rcc_f3v1.ICSW;
+const emus_type = @import("enums_type.zig");
 
 pub const ClockName = enum {
     HSE,
@@ -89,12 +91,24 @@ pub fn select_pll_for_sysclk() RccErrorConfig!void {
     } else {
         current_clock.p1_clk = current_clock.pllout;
     }
-    RCC.CFGR.modify(.{ .SW = .PLL1_P });
     current_clock.sys_clk = current_clock.pllout;
+    adjust_flash();
+    RCC.CFGR.modify(.{ .SW = .PLL1_P });
     current_clock.h_clk = current_clock.pllout;
     current_clock.p2_clk = current_clock.pllout;
     current_clock.usart1_clk = current_clock.pllout;
-    adjust_flash();
+}
+
+pub fn enable_i2c(comptime i2cindex: emus_type.I2CType, clock: ICSW) void {
+    RCC.APB1ENR.modify(switch (i2cindex) {
+        .I2C1 => .{ .I2C1EN = 1 },
+        .I2C2 => .{ .I2C2EN = 1 },
+    });
+
+    RCC.CFGR3.modify(switch (i2cindex) {
+        .I2C1 => .{ .I2C1SW = clock },
+        .I2C2 => .{ .I2C2SW = clock },
+    });
 }
 
 fn adjust_flash() void {
