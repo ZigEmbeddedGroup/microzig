@@ -185,6 +185,25 @@ pub const GlobalConfiguration = struct {
     }
 
     pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
+        // Check if we need to enable AFIO for GPIOD PD0/PD1 remapping
+        comptime var needs_pd01_remap = false;
+        if (config.GPIOD) |gpiod_config| {
+            if (gpiod_config.PIN0 != null or gpiod_config.PIN1 != null) {
+                needs_pd01_remap = true;
+            }
+        }
+
+        // Enable clocks first for PD0/PD1 remapping (must be done before remap)
+        if (needs_pd01_remap) {
+            // Enable AFIO and GPIOD clocks
+            RCC.APB2PCENR.modify(.{ .AFIOEN = 1, .IOPDEN = 1 });
+
+            // Remap PD0/PD1 from OSCIN/OSCOUT to GPIO
+            // On CH32V20x, AFIO.PCFR1.PD01_RM = 1 selects PD0/PD1 as GPIO pins.
+            const AFIO = microzig.chip.peripherals.AFIO;
+            AFIO.PCFR1.modify(.{ .PD01_RM = 1 });
+        }
+
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
             if (@field(config, port_field.name)) |port_config| {
                 comptime var input_gpios: u16 = 0;

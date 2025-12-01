@@ -3,6 +3,7 @@ pub const peripherals = microzig.chip.peripherals;
 
 pub const pins = @import("ch32v003/pins.zig");
 pub const gpio = @import("ch32v003/gpio.zig");
+pub const time = @import("time.zig");
 
 // pub fn init() void {}
 
