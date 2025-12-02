@@ -473,18 +473,11 @@ pub const WiFi = struct {
 
     spi: hal.Cyw43PioSpi = undefined,
     driver: Driver = undefined,
-    pwr_pin: GPIO_Device = undefined,
 
     pub fn init(self: *Self, config: Config) !void {
         self.spi = try hal.Cyw43PioSpi.init(config);
-
-        config.pwr_pin.set_function(.sio);
-        config.pwr_pin.set_direction(.out);
-        self.pwr_pin = GPIO_Device.init(config.pwr_pin);
-
         self.driver = .{
             .bus = .{
-                .pwr_pin = self.pwr_pin.digital_io(),
                 .spi = .{
                     .ptr = &self.spi,
                     .vtable = &.{

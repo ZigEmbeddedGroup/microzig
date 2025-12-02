@@ -43,43 +43,47 @@ const Cyw43PioSpi = @This();
 
 pio: hal.pio.Pio,
 sm: hal.pio.StateMachine,
-cs_pin: hal.gpio.Pin,
-io_pin: hal.gpio.Pin,
-clk_pin: hal.gpio.Pin,
+// cs_pin: hal.gpio.Pin,
+// io_pin: hal.gpio.Pin,
+// clk_pin: hal.gpio.Pin,
 channel: ?hal.dma.Channel = null, // current dma channel
+pins: Pins,
 
 pub const Config = struct {
     pio: hal.pio.Pio = hal.pio.num(0),
-    cs_pin: hal.gpio.Pin = hal.gpio.num(25),
-    io_pin: hal.gpio.Pin = hal.gpio.num(24),
-    clk_pin: hal.gpio.Pin = hal.gpio.num(29),
-    pwr_pin: hal.gpio.Pin = hal.gpio.num(23),
+    pins: Pins = .{},
+};
+
+pub const Pins = struct {
+    cs: hal.gpio.Pin = hal.gpio.num(25),
+    io: hal.gpio.Pin = hal.gpio.num(24),
+    clk: hal.gpio.Pin = hal.gpio.num(29),
+    pwr: hal.gpio.Pin = hal.gpio.num(23),
 };
 
 pub fn init(config: Config) !Cyw43PioSpi {
     const sm = try config.pio.claim_unused_state_machine();
+    const pins = config.pins;
 
     // Chip select pin setup
-    config.cs_pin.set_function(.sio);
-    config.cs_pin.set_direction(.out);
-    config.cs_pin.put(1);
+    pins.cs.set_function(.sio);
+    pins.cs.set_direction(.out);
+    pins.cs.put(1);
 
     // IO pin setup
-    config.pio.gpio_init(config.io_pin);
-    config.io_pin.set_output_disabled(false);
-    config.io_pin.set_pull(.disabled);
-    config.io_pin.set_schmitt_trigger_enabled(true);
-
-    try config.pio.set_input_sync_bypass(config.io_pin);
-
-    config.io_pin.set_drive_strength(.@"12mA");
-    config.io_pin.set_slew_rate(.fast);
+    config.pio.gpio_init(pins.io);
+    pins.io.set_output_disabled(false);
+    pins.io.set_pull(.disabled);
+    pins.io.set_schmitt_trigger_enabled(true);
+    config.pio.set_input_sync_bypass(pin_num(pins.io));
+    pins.io.set_drive_strength(.@"12mA");
+    pins.io.set_slew_rate(.fast);
 
     // Clock pin setup
-    config.pio.gpio_init(config.clk_pin);
-    config.clk_pin.set_output_disabled(false);
-    config.clk_pin.set_drive_strength(.@"12mA");
-    config.clk_pin.set_slew_rate(.fast);
+    config.pio.gpio_init(pins.clk);
+    pins.clk.set_output_disabled(false);
+    pins.clk.set_drive_strength(.@"12mA");
+    pins.clk.set_slew_rate(.fast);
 
     try config.pio.sm_load_and_start_program(sm, cyw43spi_program, .{
         // TODO: int = 2 gives 62.5Mhz on pico, but it is too much on pico2
@@ -87,10 +91,10 @@ pub fn init(config: Config) !Cyw43PioSpi {
         // 50MHz i recomended by datasheet
         .clkdiv = .{ .int = 3, .frac = 0 },
         .pin_mappings = .{
-            .out = .single(config.io_pin),
-            .set = .single(config.io_pin),
-            .side_set = .single(config.io_pin),
-            .in_base = config.io_pin,
+            .out = .{ .base = pin_num(pins.io), .count = 1 },
+            .set = .{ .base = pin_num(pins.io), .count = 1 },
+            .side_set = .{ .base = pin_num(pins.clk), .count = 1 },
+            .in_base = pin_num(pins.io),
         },
         .shift = .{
             .out_shiftdir = .left,
@@ -109,16 +113,14 @@ pub fn init(config: Config) !Cyw43PioSpi {
     return .{
         .pio = config.pio,
         .sm = sm,
-        .cs_pin = config.cs_pin,
-        .io_pin = config.io_pin,
-        .clk_pin = config.clk_pin,
+        .pins = pins,
     };
 }
 
 pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
     const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
-    self.cs_pin.put(0);
-    defer self.cs_pin.put(1);
+    self.pins.cs.put(0);
+    defer self.pins.cs.put(1);
 
     self.channel = hal.dma.claim_unused_channel();
     defer self.channel.?.unclaim();
@@ -131,8 +133,8 @@ pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
 
 pub fn write(ptr: *anyopaque, cmd: u32, buffers: []const []const u32) u32 {
     const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
-    self.cs_pin.put(0);
-    defer self.cs_pin.put(1);
+    self.pins.cs.put(0);
+    defer self.pins.cs.put(1);
 
     self.channel = hal.dma.claim_unused_channel();
     defer self.channel.?.unclaim();

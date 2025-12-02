@@ -1,7 +1,5 @@
 const std = @import("std");
-const mdf = @import("../../framework.zig");
 const consts = @import("consts.zig");
-const DigitalIO = mdf.base.Digital_IO;
 
 const log = std.log.scoped(.cyw43_bus);
 
@@ -30,19 +28,11 @@ pub const SpiInterface = struct {
 pub const Bus = struct {
     const Self = @This();
 
-    pwr_pin: DigitalIO,
     spi: SpiInterface,
     sleep_ms: *const fn (delay: u32) void,
     backplane_window: u32 = 0xAAAA_AAAA,
 
     pub fn init(self: *Self) !void {
-        // Init sequence
-        {
-            try self.pwr_pin.write(.low);
-            self.sleep_ms(50);
-            try self.pwr_pin.write(.high);
-            self.sleep_ms(250);
-        }
         // First read of ro test register
         out: {
             var val: u32 = 0;
@@ -168,15 +158,13 @@ pub const Bus = struct {
         _ = self.spi.write(@bitCast(cmd), &.{buffer});
     }
 
-    pub fn writev(self: *Self, func: SpiCmd.Func, addr: u17, buffers: []const []const u32) void {
-        var len: usize = 0;
-        for (buffers) |b| len += b.len;
+    pub fn writev(self: *Self, func: SpiCmd.Func, addr: u17, buffers: []const []const u32, bytes_len: u11) void {
         const cmd = SpiCmd{
             .cmd = .write,
             .access = .incremental,
             .func = func,
             .addr = addr,
-            .len = @intCast(len * 4),
+            .len = bytes_len,
         };
         _ = self.spi.write(@bitCast(cmd), buffers);
     }
