@@ -225,8 +225,8 @@ pub const Ethernet = extern struct {
         return try decodeAny(Self, bytes, 0);
     }
 
-    pub fn encode(self: *Self, bytes: []u8) !usize {
-        return try encodeAny(Self, self, bytes);
+    pub fn encode(self: Self, bytes: []u8) !usize {
+        return try encodeAny(self, bytes);
     }
 };
 
@@ -266,8 +266,8 @@ pub const Arp = extern struct {
         return try decodeAny(Self, bytes, 0);
     }
 
-    pub fn encode(self: *Self, bytes: []u8) !usize {
-        return try encodeAny(Self, self, bytes);
+    pub fn encode(self: Self, bytes: []u8) !usize {
+        return try encodeAny(self, bytes);
     }
 };
 
@@ -313,7 +313,7 @@ pub const Ip = extern struct {
 
     pub fn encode(self: *Self, bytes: []u8) !usize {
         self.checksum = 0;
-        const n = try encodeAny(Self, self, bytes);
+        const n = try encodeAny(self.*, bytes);
         set_checksum(Self, "", bytes[0..n], "");
         return n;
     }
@@ -349,7 +349,7 @@ pub const Icmp = extern struct {
 
     pub fn encode(self: *Self, bytes: []u8, payload: []const u8) !usize {
         self.checksum = 0;
-        const n = try encodeAny(Self, self, bytes);
+        const n = try encodeAny(self.*, bytes);
         set_checksum(Self, "", bytes[0..n], payload);
         return n;
     }
@@ -382,7 +382,7 @@ pub const UdpHeader = extern struct {
         if (native_endian == .little) {
             std.mem.byteSwapAllFields(PseudoHeader, &pseudo_header);
         }
-        const n = try encodeAny(Self, self, bytes);
+        const n = try encodeAny(self.*, bytes);
         set_checksum(Self, mem.asBytes(&pseudo_header), bytes[0..n], payload);
         return n;
     }
@@ -393,6 +393,7 @@ comptime {
     assert(@sizeOf(Arp) == 28);
     assert(@sizeOf(Ip) == 20);
     assert(@sizeOf(Icmp) == 8);
+    assert(@sizeOf(UdpHeader) == 8);
 }
 
 // c_len number of bytes for checksum calculation
@@ -438,14 +439,14 @@ fn checksum(prev: u16, bytes: []const u8) u16 {
     return sum;
 }
 
-// this is swapping fields so t is unusable after this
-// TODO: make copy to avoid swap problem
-pub fn encodeAny(T: type, t: *T, bytes: []u8) !usize {
+pub fn encodeAny(t: anytype, bytes: []u8) !usize {
+    const T = @TypeOf(t);
     if (bytes.len < @sizeOf(T)) return error.InsufficientBuffer;
+    var mt: T = t; // muttable copy of the t
     if (native_endian == .little) {
-        std.mem.byteSwapAllFields(T, t);
+        std.mem.byteSwapAllFields(T, &mt);
     }
-    @memcpy(bytes[0..@sizeOf(T)], mem.asBytes(t));
+    @memcpy(bytes[0..@sizeOf(T)], mem.asBytes(&mt));
     return @sizeOf(T);
 }
 

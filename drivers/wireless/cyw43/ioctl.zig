@@ -28,9 +28,10 @@ pub const response_pool_interval = 10;
 var ioctl_reqid: u16 = 0;
 var tx_seq: u8 = 0;
 
+// SDPCM (Serial Data Packet Communication Module) header
 // SDIO/SPI Bus Layer (SDPCM) header
 // ref: https://iosoft.blog/2022/12/06/picowi_part3/
-const BusHeader = extern struct {
+const SdpHeader = extern struct {
     len: u16,
     not_len: u16,
     /// Rx/Tx sequence number
@@ -114,33 +115,33 @@ pub const BdcHeader = extern struct {
 //  - data, from this position to the end of the packet
 pub const Response = extern struct {
     const Self = @This();
-    pub const min_len = @sizeOf(BusHeader) + @sizeOf(CdcHeader);
+    pub const min_len = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
     pub const empty = std.mem.zeroes(Response);
 
-    bus: BusHeader align(4),
-    buffer: [max_packet_length - @sizeOf(BusHeader)]u8,
+    sdp: SdpHeader align(4),
+    buffer: [max_packet_length - @sizeOf(SdpHeader)]u8,
 
     // Number of padding bytes after bus header before cdc/bdc header
     fn padding(self: *Self) usize {
-        return self.bus.hdrlen - @sizeOf(BusHeader);
+        return self.sdp.hdrlen - @sizeOf(SdpHeader);
     }
 
     pub fn cdc(self: *Self) CdcHeader {
-        assert(self.bus.chan != .data or self.bus.chan == .event);
+        assert(self.sdp.chan != .data or self.sdp.chan == .event);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(CdcHeader)].*);
     }
 
     pub fn bdc(self: *Self) BdcHeader {
-        assert(self.bus.chan != .control);
+        assert(self.sdp.chan != .control);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(BdcHeader)].*);
     }
 
     pub fn data(self: *Self) []u8 {
-        const head: usize = self.padding() + switch (self.bus.chan) {
+        const head: usize = self.padding() + switch (self.sdp.chan) {
             .control => @sizeOf(CdcHeader),
             .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),
         };
-        const tail = self.bus.len - @sizeOf(BusHeader);
+        const tail = self.sdp.len - @sizeOf(SdpHeader);
         if (head > tail) {
             return &.{};
         }
@@ -148,7 +149,7 @@ pub const Response = extern struct {
     }
 
     pub fn event(self: *Self) EventPacket {
-        assert(self.bus.chan == .event);
+        assert(self.sdp.chan == .event);
         const buf = self.data();
         if (buf.len < @sizeOf(EventPacket)) {
             var zero = mem.zeroes(EventPacket);
@@ -162,12 +163,12 @@ pub const Response = extern struct {
     }
 
     pub fn validate(self: *Self, n: u16) !void {
-        if (self.bus.len != n) {
-            log.err("invalid reponse len actual: {} packet: {}", .{ self.bus.len, n });
+        if (self.sdp.len != n) {
+            log.err("invalid reponse len actual: {} packet: {}", .{ self.sdp.len, n });
             return error.IoctlInvalidBusLen;
         }
-        if (self.bus.len ^ self.bus.not_len != 0xffff) {
-            log.err("invalid reponse not len len: {x} notlen: {x}", .{ self.bus.len, self.bus.not_len });
+        if (self.sdp.len ^ self.sdp.not_len != 0xffff) {
+            log.err("invalid reponse not len len: {x} notlen: {x}", .{ self.sdp.len, self.sdp.not_len });
             return error.IoctlInvalidNotBusLen;
         }
     }
@@ -184,25 +185,25 @@ pub const Request = extern struct {
     pub const max_data_len = 256;
     pub const max_name_len = 32; // including sntinel
 
-    bus: BusHeader align(4),
+    sdp: SdpHeader align(4),
     hdr: CdcHeader,
     data: [max_name_len + max_data_len]u8,
 
     pub fn init(cmd: Cmd, name: []const u8, data: []const u8) Self {
         const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0); // name has sentinel
         const txdlen: u16 = @intCast(((name_len + data.len + 3) >> 2) * 4);
-        const hdrlen: u16 = @sizeOf(BusHeader) + @sizeOf(CdcHeader);
+        const hdrlen: u16 = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
         const txlen: u16 = hdrlen + txdlen;
 
         tx_seq +|= 1;
         ioctl_reqid +|= 1;
         var req = std.mem.zeroes(Self);
-        req.bus = .{
+        req.sdp = .{
             .len = txlen,
             .not_len = ~txlen,
             .seq = tx_seq,
             .chan = .control,
-            .hdrlen = @sizeOf(BusHeader),
+            .hdrlen = @sizeOf(SdpHeader),
         };
         req.hdr = .{
             .cmd = cmd,
@@ -220,46 +221,35 @@ pub const Request = extern struct {
     }
 
     pub fn as_slice(self: *Self) []u32 {
-        return mem.bytesAsSlice(u32, mem.asBytes(self)[0..self.bus.len]);
+        return mem.bytesAsSlice(u32, mem.asBytes(self)[0..self.sdp.len]);
     }
 };
 
 pub const TxMsg = extern struct {
     const Self = @This();
-    //const header_size = @sizeOf(BusHeader) + 2 + @sizeOf(BdcHeader);
-    const empty: TxMsg = mem.zeroes(TxMsg);
 
-    bus: BusHeader = mem.zeroes(BusHeader),
+    sdp: SdpHeader = mem.zeroes(SdpHeader),
     _padding: u16 = 0,
     bdc: BdcHeader = mem.zeroes(BdcHeader),
-    //data: [max_packet_length - header_size]u8 = @splat(0),
 
-    pub fn init(txlen: u16) Self {
-        //const txlen: u16 = @sizeOf(Self) + @as(u16, @intCast(data.len));
-
+    pub fn init(data_len: u16) Self {
         tx_seq +|= 1;
-        var req: Self = .empty;
-        req.bus = .{
+        const txlen = @sizeOf(TxMsg) + data_len;
+        var self: Self = .{};
+        self.sdp = .{
             .len = txlen,
             .not_len = ~txlen,
             .seq = tx_seq,
             .chan = .data,
-            .hdrlen = @sizeOf(BusHeader) + 2,
+            .hdrlen = @sizeOf(SdpHeader) + 2,
         };
-        req.bdc.flags = 0x20;
-        //@memcpy(req.data[0..data.len], data);
-        return req;
+        self.bdc.flags = 0x20;
+        return self;
     }
-
-    // pub fn as_slice(self: *Self) []u32 {
-    //     // round to u32, 4 bytes
-    //     const round_len: u16 = @intCast(((self.bus.len + 3) / 4) * 4);
-    //     return mem.bytesAsSlice(u32, mem.asBytes(self)[0..round_len]);
-    // }
 };
 
 comptime {
-    assert(@sizeOf(BusHeader) == 12);
+    assert(@sizeOf(SdpHeader) == 12);
     assert(@sizeOf(BdcHeader) == 4);
     assert(@sizeOf(CdcHeader) == 16);
     assert(@sizeOf(EventPacket) == 72);
@@ -273,7 +263,7 @@ test "write command" {
         var req = Request.init(.get_var, "cur_etheraddr", &.{});
 
         const expected = &hexToBytes("2C00D3FF0300000C00000000060100001000000000000300000000006375725F657468657261646472000000");
-        const buf = mem.asBytes(&req)[0..req.bus.len];
+        const buf = mem.asBytes(&req)[0..req.sdp.len];
         try std.testing.expectEqualSlices(u8, expected, buf);
 
         try testing.expectEqual(44, expected.len);
@@ -287,7 +277,7 @@ test "write command" {
         data[0] = 1;
         data[4] = 1;
         var req = Request.init(.set_var, "gpioout", &data);
-        const buf = mem.asBytes(&req)[0..req.bus.len];
+        const buf = mem.asBytes(&req)[0..req.sdp.len];
         try std.testing.expectEqualSlices(u8, expected, buf);
     }
 }
@@ -300,12 +290,12 @@ test "parse response" {
     var rsp: Response = .empty;
     @memcpy(mem.asBytes(&rsp)[0..rsp_data.len], rsp_data);
 
-    try testing.expectEqual(256, rsp.bus.len);
-    try testing.expectEqual(0xffff, rsp.bus.len ^ rsp.bus.not_len);
-    try testing.expectEqual(4, rsp.bus.seq);
-    try testing.expectEqual(220, rsp.bus.hdrlen);
-    try testing.expectEqual(20, rsp.bus.credit);
-    try testing.expectEqual(0, rsp.bus.nextlen);
+    try testing.expectEqual(256, rsp.sdp.len);
+    try testing.expectEqual(0xffff, rsp.sdp.len ^ rsp.sdp.not_len);
+    try testing.expectEqual(4, rsp.sdp.seq);
+    try testing.expectEqual(220, rsp.sdp.hdrlen);
+    try testing.expectEqual(20, rsp.sdp.credit);
+    try testing.expectEqual(0, rsp.sdp.nextlen);
 
     const ioctl = rsp.cdc();
     try testing.expectEqual(.get_var, ioctl.cmd);

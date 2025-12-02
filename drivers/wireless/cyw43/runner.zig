@@ -282,7 +282,7 @@ pub const Runner = struct {
                 continue;
             }
             try rsp.validate(len);
-            switch (rsp.bus.chan) {
+            switch (rsp.sdp.chan) {
                 .control => {
                     const ctl = rsp.cdc();
                     if (ctl.cmd == cmd) {
@@ -295,7 +295,7 @@ pub const Runner = struct {
                             }
                             return 0;
                         }
-                        log.err("bus: {}", .{rsp.bus});
+                        log.err("bus: {}", .{rsp.sdp});
                         log.err("clt: {}", .{ctl});
                         log.err("data: {x}", .{rsp.data()});
                         return error.IoctlInvalicCommandStatus;
@@ -442,7 +442,7 @@ pub const Runner = struct {
                 continue;
             }
             try rsp.validate(len);
-            switch (rsp.bus.chan) {
+            switch (rsp.sdp.chan) {
                 .event => {
                     const evt = rsp.event().msg;
                     log.debug(
@@ -498,10 +498,10 @@ pub const Runner = struct {
                 continue;
             }
             try rsp.validate(len);
-            switch (rsp.bus.chan) {
+            switch (rsp.sdp.chan) {
                 .control => {
                     log.debug("unexpected command:", .{});
-                    log.debug("  bus: {}", .{rsp.bus});
+                    log.debug("  bus: {}", .{rsp.sdp});
                     log.debug("  cdc: {}", .{rsp.cdc()});
                     log.debug("  data: {x}", .{rsp.data()});
                 },
@@ -514,7 +514,7 @@ pub const Runner = struct {
 
     fn handle_event(self: *Runner, rsp: *ioctl.Response) !void {
         _ = self;
-        assert(rsp.bus.chan == .event);
+        assert(rsp.sdp.chan == .event);
         const evt = rsp.event().msg;
         log.debug(
             "event type: {s:<15}, status: {s} ",
@@ -525,7 +525,7 @@ pub const Runner = struct {
     fn handle_data(self: *Runner, rsp: *ioctl.Response) !void {
         _ = self;
         const data = rsp.data();
-        log.debug("data packet len: {}, data: {} {x}...", .{ rsp.bus.len, data.len, data[0..@min(16, data.len)] });
+        log.debug("data packet len: {}, data: {} {x}...", .{ rsp.sdp.len, data.len, data[0..@min(16, data.len)] });
     }
 
     fn sleep_ms(self: *Self, delay: u32) void {
@@ -568,37 +568,45 @@ pub const Runner = struct {
         return self.data_poll(wait_ms);
     }
 
-    pub fn send(ptr: *anyopaque, header: []const u8, payload: []const u8) anyerror!void {
+    // UDP  : 14 (Eth) + 20 (IPv4) + 8 (UDP)  = 42 bytes
+    // ICMP : 14 (Eth) + 20 (IPv4) + 8 (ICMP) = 42 bytes
+    // ARP  : 14 (Eth) + 28 (ARP)             = 42 bytes
+    // header:
+    // 12 bytes sdp header
+    //  2 bytes padding (aligns ethernet to 4 bytes)
+    //  4 bytes cdc header
+    // --- align 2
+    // 14 bytes ethernet header
+    // -- align 4
+    // 20 bytes ip header    | 28 bytes arp header | 20 bytes ip
+    //  8 bytes udp header   |                     |  8 bytes icmp header
+    pub fn send(ptr: *anyopaque, net_header: []const u8, payload: []const u8) anyerror!void {
+        const bus_header_len = @sizeOf(ioctl.TxMsg); // 18 = 12 + 2 + 4;
+        const net_header_len = 42;
+
+        assert(net_header.len == net_header_len);
         const self: *Self = @ptrCast(@alignCast(ptr));
         if (!self.status().f2_rx_ready) return error.CywNotReady;
 
-        assert(header.len <= 14 + 20 + 8);
-        // 12 bytes bus header
-        // 2 bytes padding
-        // 4 bytes cdc padding
-        // --- align 2
-        // 14 bytes ethernet header
-        // -- align 4
-        // 20 bytes ip header   | 28 bytes arp header
-        // 8 bytes udp header   |
-        var header_buf: [(12 + 2 + 4 + 14 + 20 + 8) >> 2]u32 = @splat(0);
-        var header_bytes: []u8 = mem.asBytes(&header_buf);
+        var header_words: [(bus_header_len + net_header_len) >> 2]u32 = @splat(0);
+        var header_bytes: []u8 = mem.asBytes(&header_words);
 
-        const hdr = ioctl.TxMsg.init(@intCast(@sizeOf(ioctl.TxMsg) + header.len + payload.len));
-        header_bytes[0..@sizeOf(ioctl.TxMsg)].* = @bitCast(hdr);
-        @memcpy(header_bytes[@sizeOf(ioctl.TxMsg)..][0..header.len], header);
+        const hdr = ioctl.TxMsg.init(@intCast(net_header.len + payload.len));
+        header_bytes[0..bus_header_len].* = @bitCast(hdr);
+        @memcpy(header_bytes[bus_header_len..][0..net_header.len], net_header);
 
-        assert((@sizeOf(ioctl.TxMsg) + header.len) & 0b11 == 0);
-        const header_words = header_buf[0 .. (@sizeOf(ioctl.TxMsg) + header.len) >> 2];
         const payload_words, const payload_padding = ioctl.bytes_to_words(payload);
 
-        const parts: [3][]const u32 = .{
-            header_words,
-            payload_words,
-            if (payload_padding) |p| &.{p} else &.{},
-        };
-
-        self.bus.writev(.wlan, 0, &parts);
+        self.bus.writev(
+            .wlan,
+            0,
+            &[3][]const u32{
+                &header_words,
+                payload_words,
+                if (payload_padding) |p| &.{p} else &.{},
+            },
+            @intCast(bus_header_len + net_header.len + payload.len),
+        );
     }
 
     pub fn status(self: *Self) Status {
