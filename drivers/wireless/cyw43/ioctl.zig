@@ -17,8 +17,6 @@ const assert = std.debug.assert;
 const testing = std.testing;
 const log = std.log.scoped(.ioctl);
 
-// Max IOCTL length (really 1536txms) TODO: decide
-const max_packet_length = 1600;
 // Time to wait for ioctl response (msec)
 pub const response_wait = 30;
 // Polling interval for ioctl responses
@@ -54,6 +52,17 @@ const SdpHeader = extern struct {
         event = 1,
         data = 2,
     };
+
+    pub fn validate(sdp: SdpHeader, n: u16) !void {
+        if (sdp.len != n) {
+            log.err("invalid reponse len actual: {} packet: {}", .{ sdp.len, n });
+            return error.IoctlInvalidBusLen;
+        }
+        if (sdp.len ^ sdp.not_len != 0xffff) {
+            log.err("invalid reponse not len len: {x} notlen: {x}", .{ sdp.len, sdp.not_len });
+            return error.IoctlInvalidNotBusLen;
+        }
+    }
 };
 
 const CdcHeader = extern struct {
@@ -100,7 +109,7 @@ const BdcHeader = extern struct {
 };
 
 // Structure:
-//  - 12 bytes BusHeader
+//  - 12 bytes sdp header
 //  - xx padding bytes (defined by BusHeader.hdrlen)
 // than if chan == .control
 //  - 16 bytes of cdc header
@@ -112,31 +121,43 @@ const BdcHeader = extern struct {
 //  - other event bytes
 // if chan == .data
 //  - 4 bytes bdc header
+//  - bdc padding = bdc.offset * 4
 //  - data, from this position to the end of the packet
-pub const Response = extern struct {
+//
+// For data packet response, sdp padding is 2 bytes, ad bdc padding 4 bytes,
+// that gives 12 + 2 + 4 + 4 = 22 bytes of bus header, before data.
+//
+pub const Response = struct {
     const Self = @This();
-    pub const min_len = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
-    pub const empty = std.mem.zeroes(Response);
 
-    sdp: SdpHeader align(4),
-    buffer: [max_packet_length - @sizeOf(SdpHeader)]u8,
+    sdp: SdpHeader,
+    buffer: []const u8,
+
+    pub fn init(buf: []const u8) !Self {
+        const sdp: SdpHeader = @bitCast(buf[0..@sizeOf(SdpHeader)].*);
+        try sdp.validate(@intCast(buf.len));
+        return .{
+            .sdp = sdp,
+            .buffer = buf[@sizeOf(SdpHeader)..],
+        };
+    }
 
     // Number of padding bytes after bus header before cdc/bdc header
-    fn padding(self: *Self) usize {
+    fn padding(self: Self) usize {
         return self.sdp.hdrlen - @sizeOf(SdpHeader);
     }
 
-    pub fn cdc(self: *Self) CdcHeader {
+    pub fn cdc(self: Self) CdcHeader {
         assert(self.sdp.chan != .data or self.sdp.chan == .event);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(CdcHeader)].*);
     }
 
-    pub fn bdc(self: *Self) BdcHeader {
+    pub fn bdc(self: Self) BdcHeader {
         assert(self.sdp.chan != .control);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(BdcHeader)].*);
     }
 
-    pub fn data(self: *Self) []u8 {
+    pub fn data(self: Self) []const u8 {
         const head: usize = self.padding() + switch (self.sdp.chan) {
             .control => @sizeOf(CdcHeader),
             .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),
@@ -148,7 +169,7 @@ pub const Response = extern struct {
         return self.buffer[head..tail];
     }
 
-    pub fn event(self: *Self) EventPacket {
+    pub fn event(self: Self) EventPacket {
         assert(self.sdp.chan == .event);
         const buf = self.data();
         if (buf.len < @sizeOf(EventPacket)) {
@@ -156,72 +177,52 @@ pub const Response = extern struct {
             zero.msg.event_type = .none;
             return zero;
         }
-        //if (buf.len < @sizeOf(EventPacket)) return error.IoctlEvent;
         var evt: EventPacket = @bitCast(buf[0..@sizeOf(EventPacket)].*);
         std.mem.byteSwapAllFields(EventPacket, &evt);
         return evt;
     }
-
-    pub fn validate(self: *Self, n: u16) !void {
-        if (self.sdp.len != n) {
-            log.err("invalid reponse len actual: {} packet: {}", .{ self.sdp.len, n });
-            return error.IoctlInvalidBusLen;
-        }
-        if (self.sdp.len ^ self.sdp.not_len != 0xffff) {
-            log.err("invalid reponse not len len: {x} notlen: {x}", .{ self.sdp.len, self.sdp.not_len });
-            return error.IoctlInvalidNotBusLen;
-        }
-    }
-
-    pub fn as_slice(self: *Self) []u32 {
-        return mem.bytesAsSlice(u32, mem.asBytes(self));
-    }
 };
 
-pub const Request = extern struct {
-    const Self = @This();
-    pub const max_data_len = 256;
-    pub const max_name_len = 32; // including sentinel
+/// Format command request
+pub fn request(buf: []u8, cmd: Cmd, name: []const u8, data: []const u8) []const u8 {
+    // name length with sentinel
+    const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0);
+    // length of name and data rounded to 4 bytes
+    const payload_len: u16 = @intCast(((name_len + data.len + 3) >> 2) * 4);
+    const header_len: u16 = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
+    const txlen: u16 = header_len + payload_len;
 
-    sdp: SdpHeader align(4),
-    hdr: CdcHeader,
-    data: [max_name_len + max_data_len]u8,
+    tx_seq +|= 1;
+    ioctl_reqid +|= 1;
 
-    pub fn init(cmd: Cmd, name: []const u8, data: []const u8) Self {
-        const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0); // name has sentinel
-        const txdlen: u16 = @intCast(((name_len + data.len + 3) >> 2) * 4);
-        const hdrlen: u16 = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
-        const txlen: u16 = hdrlen + txdlen;
-
-        tx_seq +|= 1;
-        ioctl_reqid +|= 1;
-        var req = std.mem.zeroes(Self);
-        req.sdp = .{
-            .len = txlen,
-            .not_len = ~txlen,
-            .seq = tx_seq,
-            .chan = .control,
-            .hdrlen = @sizeOf(SdpHeader),
-        };
-        req.hdr = .{
-            .cmd = cmd,
-            .outlen = txdlen,
-            .id = ioctl_reqid,
-            .flags = if (data.len > 0) 0x02 else 0,
-        };
-        if (name_len > 0) {
-            @memcpy(req.data[0..name.len], name);
-        }
-        if (data.len > 0) {
-            @memcpy(req.data[name_len..][0..data.len], data);
-        }
-        return req;
+    const sdp: SdpHeader = .{
+        .len = txlen,
+        .not_len = ~txlen,
+        .seq = tx_seq,
+        .chan = .control,
+        .hdrlen = @sizeOf(SdpHeader),
+    };
+    buf[0..@sizeOf(SdpHeader)].* = @bitCast(sdp);
+    const cdc: CdcHeader = .{
+        .cmd = cmd,
+        .outlen = payload_len,
+        .id = ioctl_reqid,
+        .flags = if (data.len > 0) 0x02 else 0,
+    };
+    buf[@sizeOf(SdpHeader)..][0..@sizeOf(CdcHeader)].* = @bitCast(cdc);
+    if (name_len > 0) {
+        @memcpy(buf[header_len..][0..name.len], name);
+        buf[header_len..][name.len] = 0; // sentinel
     }
-
-    pub fn as_slice(self: *Self) []u32 {
-        return mem.bytesAsSlice(u32, mem.asBytes(self)[0..self.sdp.len]);
+    if (data.len > 0) {
+        @memcpy(buf[header_len + name_len ..][0..data.len], data);
     }
-};
+    // set paddnig bytes to 0
+    for (header_len + name_len + data.len..txlen) |i| {
+        buf[i] = 0;
+    }
+    return buf[0..txlen];
+}
 
 pub const TxMsg = extern struct {
     const Self = @This();
@@ -254,18 +255,16 @@ comptime {
     assert(@sizeOf(TxMsg) == 18);
 }
 
-test "write command" {
+test "request" {
     {
         tx_seq = 2;
         ioctl_reqid = 2;
-        var req = Request.init(.get_var, "cur_etheraddr", &.{});
+
+        var buf: [64]u8 = undefined;
+        const req = request(&buf, .get_var, "cur_etheraddr", &.{});
 
         const expected = &hexToBytes("2C00D3FF0300000C00000000060100001000000000000300000000006375725F657468657261646472000000");
-        const buf = mem.asBytes(&req)[0..req.sdp.len];
-        try std.testing.expectEqualSlices(u8, expected, buf);
-
-        try testing.expectEqual(44, expected.len);
-        try testing.expectEqual(44 / 4, req.as_slice().len);
+        try std.testing.expectEqualSlices(u8, expected, req);
     }
     {
         tx_seq = 6;
@@ -274,19 +273,17 @@ test "write command" {
         var data: [8]u8 = @splat(0);
         data[0] = 1;
         data[4] = 1;
-        var req = Request.init(.set_var, "gpioout", &data);
-        const buf = mem.asBytes(&req)[0..req.sdp.len];
-        try std.testing.expectEqualSlices(u8, expected, buf);
+        var buf: [64]u8 = undefined;
+        const req = request(&buf, .set_var, "gpioout", &data);
+        try std.testing.expectEqualSlices(u8, expected, req);
     }
 }
 
 test "parse response" {
     const expected = &hexToBytes("2CCF67F3B7EA");
-    const rsp_data = &hexToBytes("0001FFFE040000DC0014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100001400000000000300000000002CCF67F3B7EA6865726164647200000000000000");
-    try testing.expectEqual(256, rsp_data.len);
-
-    var rsp: Response = .empty;
-    @memcpy(mem.asBytes(&rsp)[0..rsp_data.len], rsp_data);
+    const rsp_bytes = &hexToBytes("0001FFFE040000DC0014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100001400000000000300000000002CCF67F3B7EA6865726164647200000000000000");
+    try testing.expectEqual(256, rsp_bytes.len);
+    const rsp = try Response.init(rsp_bytes);
 
     try testing.expectEqual(256, rsp.sdp.len);
     try testing.expectEqual(0xffff, rsp.sdp.len ^ rsp.sdp.not_len);
@@ -619,35 +616,14 @@ pub fn encode_ssid(buf: []u8, ssid: []const u8) []u8 {
     return buf[0 .. 4 + ssid.len];
 }
 
-test "to word" {
-    //const bytes: []const u8 align(4) = &hexToBytes("aabbccddeeff1122334455");
-    const bytes: []const u8 align(4) = &hexToBytes("11223344");
-
-    const words, const padding = bytes_to_words(bytes);
-
-    // const padding_bytes_len = bytes.len & 0b11;
-    // const round_len = bytes.len - padding_bytes_len;
-    // const slice: []const u32 = @alignCast(mem.bytesAsSlice(u32, @constCast(bytes)[0..round_len]));
-
-    // var padding_word: u32 = 0;
-    // for (0..padding_bytes_len) |i| {
-    //     const b = bytes[bytes.len - 1 - i];
-    //     padding_word = (padding_word << 8) | b;
-    // }
-
-    //std.debug.print("u8: {x} {} {}\n", .{ bytes, bytes.len, padding_bytes_len });
-    for (words) |w| {
-        std.debug.print("slice: {x}\n", .{w});
-    }
-    if (padding) |p| {
-        std.debug.print("padding: {x}\n", .{p});
-    }
-}
-
 pub fn bytes_to_words(bytes: []const u8) struct { []const u32, ?u32 } {
     const padding_bytes = bytes.len & 0b11;
     const round_len = bytes.len - padding_bytes;
-    const words: []const u32 = @alignCast(mem.bytesAsSlice(u32, @constCast(bytes)[0..round_len]));
+    const words: []const u32 =
+        if (round_len > 0)
+            @alignCast(mem.bytesAsSlice(u32, @constCast(bytes)[0..round_len]))
+        else
+            &.{};
 
     var padding_word: u32 = 0;
     for (0..padding_bytes) |i| {
@@ -655,4 +631,25 @@ pub fn bytes_to_words(bytes: []const u8) struct { []const u32, ?u32 } {
         padding_word = (padding_word << 8) | b;
     }
     return .{ words, if (padding_bytes == 0) null else padding_word };
+}
+
+test bytes_to_words {
+    {
+        const hex = hexToBytes("aabbcc");
+        var bytes: [hex.len]u8 align(4) = undefined;
+        @memcpy(&bytes, &hex);
+
+        const words, const padding = bytes_to_words(&bytes);
+        try testing.expectEqual(0, words.len);
+        try testing.expectEqual(0xccbbaa, padding.?);
+    }
+    {
+        const hex = hexToBytes("aabbccddeeff1122334455");
+        var bytes: [hex.len]u8 align(4) = undefined;
+        @memcpy(&bytes, &hex);
+
+        const words, const padding = bytes_to_words(&bytes);
+        try testing.expectEqualSlices(u32, &.{ 0xddccbbaa, 0x2211ffee }, words);
+        try testing.expectEqual(0x554433, padding.?);
+    }
 }

@@ -147,7 +147,7 @@ pub const Bus = struct {
         _ = self.spi.write(@bitCast(cmd), &.{&.{@intCast(value)}});
     }
 
-    pub fn write(self: *Self, func: SpiCmd.Func, addr: u17, buffer: []u32) void {
+    pub fn write(self: *Self, func: SpiCmd.Func, addr: u17, buffer: []const u32) void {
         const cmd = SpiCmd{
             .cmd = .write,
             .access = .incremental,

@@ -22,7 +22,8 @@ pub const microzig_options = microzig.Options{
 
 var wifi_interface: drivers.WiFi = .{};
 
-var tx_buffer: [1500]u8 align(4) = @splat(0);
+var rx_buffer: [1536]u8 align(4) = undefined; // 1500 (payload 1472 + ip 20 + udp 8) + 14 ethernet + 22 bus (12 sdp + 2 padding + 4 bdc + 4 padding)
+var tx_buffer: [1472]u8 align(4) = undefined; // 1472 payload + ip 20 + udp 8  = 1500
 
 pub fn main() !void {
     // init uart logging
@@ -42,11 +43,11 @@ pub fn main() !void {
         .mac = mac,
         .ip = [4]u8{ 192, 168, 190, 90 },
         .driver = .{
-            .tx_buffer = &tx_buffer,
             .ptr = wifi,
             .recv = drivers.WiFi.Driver.recv,
             .send = drivers.WiFi.Driver.send,
         },
+        .rx_buffer = &rx_buffer,
     };
 
     try wifi.join("ninazara", "PeroZdero1");
@@ -66,7 +67,7 @@ pub fn main() !void {
         },
     };
 
-    var i: usize = 0;
+    var i: usize = 1000;
     while (true) : (i +%= 1) {
         time.sleep_ms(500);
         wifi.led_toggle();

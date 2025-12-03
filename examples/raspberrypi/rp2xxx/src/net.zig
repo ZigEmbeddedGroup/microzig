@@ -17,11 +17,11 @@ pub const Net = struct {
     mac: Mac,
     ip: IpAddr,
     driver: struct {
-        tx_buffer: []u8,
         ptr: *anyopaque,
-        recv: *const fn (*anyopaque, u32) anyerror!?[]const u8,
+        recv: *const fn (*anyopaque, []u8, u32) anyerror!?[]const u8,
         send: *const fn (*anyopaque, []const u8, []const u8) anyerror!void,
     },
+    rx_buffer: []u8,
 
     fn ip_identification(self: *Self) u16 {
         self.identification +%= 1;
@@ -40,7 +40,7 @@ pub const Net = struct {
     }
 
     fn recv(self: *Self, wait_ms: u32) !?[]const u8 {
-        return try self.driver.recv(self.driver.ptr, wait_ms);
+        return try self.driver.recv(self.driver.ptr, self.rx_buffer, wait_ms);
     }
 
     pub fn get_mac(self: *Self, ip: IpAddr) !Mac {

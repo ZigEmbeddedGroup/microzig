@@ -15,10 +15,9 @@ pub const Runner = struct {
     chip_log_state: LogState = .{},
 
     bus: Bus,
-    // NOTE this is huge struct 1536 bytes
-    // pico stack is 4k, allocate Runner on the heap
-    rsp: ioctl.Response = .empty,
     led_pin: ?u2 = null,
+
+    buffer: [2048]u8 align(4) = undefined,
 
     pub fn init(self: *Self) !void {
         try self.bus.init();
@@ -104,7 +103,7 @@ pub const Runner = struct {
 
             var nbytes: usize = 0;
             while (nbytes < data.len) {
-                const n = @min(ioctl.Request.max_data_len, data.len - nbytes);
+                const n = @min(256 - 48, data.len - nbytes);
                 clr.flag = 1 << 12 | (if (nbytes > 0) @as(u16, 0) else 2) | (if (nbytes + n >= data.len) @as(u16, 4) else 0);
                 clr.len = n;
                 const cmd_name = std.mem.asBytes(&clr);
@@ -257,31 +256,39 @@ pub const Runner = struct {
     }
 
     fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
+        var buf: [256]u8 align(4) = undefined;
         const cmd: ioctl.Cmd = .get_var;
-        var req = ioctl.Request.init(cmd, name, data);
-        self.bus.write(.wlan, 0, req.as_slice());
-        return try self.response_poll(cmd, data);
+        const req = ioctl.request(&buf, cmd, name, data);
+        self.bus.write(.wlan, 0, as_const_words(req));
+        return try self.response_poll(&buf, cmd, data);
     }
 
     // send command to the wifi chip and wait for response
     fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) !void {
-        var req = ioctl.Request.init(cmd, name, data);
-        self.bus.write(.wlan, 0, req.as_slice());
-        _ = try self.response_poll(cmd, null);
+        var buf: [256]u8 align(4) = undefined;
+        const req = ioctl.request(&buf, cmd, name, data);
+        self.bus.write(.wlan, 0, as_const_words(req));
+        _ = try self.response_poll(&buf, cmd, null);
     }
 
-    fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
-        var rsp = &self.rsp;
+    fn as_const_words(buf: []const u8) []const u32 {
+        return @alignCast(mem.bytesAsSlice(u32, buf));
+    }
+
+    fn as_words(buf: []u8) []u32 {
+        return @alignCast(mem.bytesAsSlice(u32, buf));
+    }
+
+    fn response_poll(self: *Self, buf: []u8, cmd: ioctl.Cmd, data: ?[]u8) !usize {
         var sleeps: usize = 0;
         while (sleeps < 8) {
-            rsp.* = .empty;
-            const len = self.read_packet(rsp.as_slice());
+            const len = self.read_packet(as_words(buf));
             if (len == 0) {
                 self.sleep_ms(ioctl.response_wait);
                 sleeps += 1;
                 continue;
             }
-            try rsp.validate(len);
+            const rsp = try ioctl.Response.init(buf[0..len]);
             switch (rsp.sdp.chan) {
                 .control => {
                     const ctl = rsp.cdc();
@@ -289,7 +296,7 @@ pub const Runner = struct {
                         if (ctl.status_ok()) {
                             if (data) |d| {
                                 const rsp_data = rsp.data();
-                                //log.debug("rsp_data.len: {}, d.len: {}, len: {}", .{ rsp_data.len, d.len, len });
+                                // log.debug("rsp_data.len: {}, d.len: {}, len: {}", .{ rsp_data.len, d.len, len });
                                 const n = @min(rsp_data.len, d.len);
                                 @memcpy(d[0..n], rsp_data[0..n]);
                                 return n;
@@ -362,9 +369,6 @@ pub const Runner = struct {
             // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
             // abbrev++rev++code in u32
             const buf = "XX\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "XX\x00\x00";
-            //const buf = ioctl.hexToBytes("58580000FFFFFFFF585800000000000000000000");
-            //const buf = ioctl.hexToBytes("58580000FFFFFFFF58580000");
-            //const buf = "HR\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "HR\x00\x00";
             try self.set_var("country", buf);
         }
         try self.set_cmd32(.set_antdiv, 0);
@@ -384,7 +388,6 @@ pub const Runner = struct {
             // can be something like:
             // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/control.rs#L242
             const buf = ioctl.hexToBytes("000000008B120102004000000000800100000000000000000000");
-            //const buf = ioctl.hexToBytes("00000000ffffffffffffffffffffffffffffffffffffffffffffffff");
             try self.set_var("bsscfg:event_msgs", &buf);
             self.sleep_ms(50);
         }
@@ -427,7 +430,7 @@ pub const Runner = struct {
     }
 
     fn join_wait(self: *Runner, wait_ms: u32) !void {
-        var rsp = &self.rsp;
+        var buf: [512]u8 = undefined;
         var delay: u32 = 0;
         var link_up: bool = false;
         var link_auth: bool = false;
@@ -435,14 +438,13 @@ pub const Runner = struct {
 
         log.debug("wifi join", .{});
         while (delay < wait_ms) {
-            rsp.* = .empty;
-            const len = self.read_packet(rsp.as_slice());
+            const len = self.read_packet(as_words(&buf));
             if (len == 0) {
                 self.sleep_ms(ioctl.response_wait);
                 delay += ioctl.response_wait;
                 continue;
             }
-            try rsp.validate(len);
+            const rsp = try ioctl.Response.init(buf[0..len]);
             switch (rsp.sdp.chan) {
                 .event => {
                     const evt = rsp.event().msg;
@@ -486,34 +488,7 @@ pub const Runner = struct {
         return error.JoinTimeout;
     }
 
-    pub fn data_poll(self: *Self, wait_ms: u32) !?[]u8 {
-        var rsp = &self.rsp;
-        var delay: u32 = 0;
-        while (true) {
-            rsp.* = .empty;
-            const len = self.read_packet(rsp.as_slice());
-            if (len == 0) {
-                if (delay >= wait_ms) break;
-                self.sleep_ms(ioctl.response_wait);
-                delay += ioctl.response_wait;
-                continue;
-            }
-            try rsp.validate(len);
-            switch (rsp.sdp.chan) {
-                .control => {
-                    log.debug("unexpected command:", .{});
-                    log.debug("  bus: {}", .{rsp.sdp});
-                    log.debug("  cdc: {}", .{rsp.cdc()});
-                    log.debug("  data: {x}", .{rsp.data()});
-                },
-                .event => try self.handle_event(rsp),
-                .data => return rsp.data(),
-            }
-        }
-        return null;
-    }
-
-    fn handle_event(self: *Runner, rsp: *ioctl.Response) !void {
+    fn handle_event(self: *Runner, rsp: ioctl.Response) !void {
         _ = self;
         assert(rsp.sdp.chan == .event);
         const evt = rsp.event().msg;
@@ -523,7 +498,7 @@ pub const Runner = struct {
         );
     }
 
-    fn handle_data(self: *Runner, rsp: *ioctl.Response) !void {
+    fn handle_data(self: *Runner, rsp: ioctl.Response) !void {
         _ = self;
         const data = rsp.data();
         log.debug("data packet len: {}, data: {} {x}...", .{ rsp.sdp.len, data.len, data[0..@min(16, data.len)] });
@@ -564,9 +539,32 @@ pub const Runner = struct {
         try self.set_var("gpioout", &data);
     }
 
-    pub fn recv(ptr: *anyopaque, wait_ms: u32) anyerror!?[]const u8 {
+    pub fn recv(ptr: *anyopaque, buffer: []u8, wait_ms: u32) anyerror!?[]const u8 {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        return self.data_poll(wait_ms);
+
+        var delay: u32 = 0;
+        while (true) {
+            const len = self.read_packet(as_words(buffer));
+            if (len == 0) {
+                if (delay >= wait_ms) break;
+                self.sleep_ms(ioctl.response_wait);
+                delay += ioctl.response_wait;
+                continue;
+            }
+            const rsp = try ioctl.Response.init(buffer[0..len]);
+            // log.debug("recv len: len: {} hdrlen: {}", .{ len, rsp.sdp.hdrlen });
+            switch (rsp.sdp.chan) {
+                .control => {
+                    log.debug("unexpected command:", .{});
+                    log.debug("  bus: {}", .{rsp.sdp});
+                    log.debug("  cdc: {}", .{rsp.cdc()});
+                    log.debug("  data: {x}", .{rsp.data()});
+                },
+                .event => try self.handle_event(rsp),
+                .data => return rsp.data(),
+            }
+        }
+        return null;
     }
 
     // UDP  : 14 (Eth) + 20 (IPv4) + 8 (UDP)  = 42 bytes
