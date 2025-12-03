@@ -69,9 +69,10 @@ pub fn main() !void {
 }
 
 fn fresh_start() bool {
+    const power_down: bool = hal.Reset_Reason == .POR_or_PDR;
     rcc.enable_clock(.PWR);
     rcc.enable_clock(.BKP);
     const data: u32 = (@as(u32, bkp.BackupData1[1].data) << 16) | bkp.BackupData1[0].data;
     rcc.disable_all_clocks();
-    return data != 0xDEADBEEF;
+    return (data != 0xDEADBEEF) or power_down;
 }

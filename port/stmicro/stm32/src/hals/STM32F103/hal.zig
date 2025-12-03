@@ -21,7 +21,7 @@ const util = @import("util.zig");
 //temporary solution
 pub const default_interrupts = util.load_timer_interrupt(time.TIM_handler);
 
-pub var RESET: rcc.ResetReason = .POR_or_PDR;
+pub var Reset_Reason: rcc.ResetReason = .POR_or_PDR;
 pub fn init() void {
-    RESET = rcc.get_reset_reason();
+    Reset_Reason = rcc.get_reset_reason();
 }

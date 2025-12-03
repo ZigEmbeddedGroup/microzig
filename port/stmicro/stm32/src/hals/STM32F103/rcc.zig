@@ -1,5 +1,6 @@
-//NOTE: this file is only valid for densities: Low, Medium, High, and XL. Connectivity line devices are not supported in this version.
+//NOTE: this file is only valid for densities: Low, Medium and High. Connectivity/XL line devices are not supported in this version.
 //TODO: Add support for 105/107
+
 const std = @import("std");
 const microzig = @import("microzig");
 
@@ -15,8 +16,8 @@ const flash = microzig.chip.peripherals.FLASH;
 const PLLMUL = microzig.chip.types.peripherals.rcc_f1.PLLMUL;
 const PLLSRC = microzig.chip.types.peripherals.rcc_f1.PLLSRC;
 const PLLXTPRE = microzig.chip.types.peripherals.rcc_f1.PLLXTPRE;
-const PRE = microzig.chip.types.peripherals.rcc_f1.PPRE;
-const HPRE = microzig.chip.types.peripherals.rcc_f1.HPRE;
+const PPRE = microzig.chip.types.peripherals.rcc_f1.PPRE; //apb prescaler
+const HPRE = microzig.chip.types.peripherals.rcc_f1.HPRE; // ahb prescaler
 const ADCPRE = microzig.chip.types.peripherals.rcc_f1.ADCPRE;
 const USBPRE = microzig.chip.types.peripherals.rcc_f1.USBPRE;
 const RTCSEL = microzig.chip.types.peripherals.rcc_f1.RTCSEL;
@@ -111,82 +112,140 @@ pub fn apply(comptime config: ClockTree.Config) ClockInitError!ClockTree.Clock_O
 }
 
 fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
+    const latency: flash_v1.LATENCY = if (config.FLatency) |lat| @enumFromInt(@as(u3, @intFromEnum(lat))) else .WS0;
+    const prefetch = if (config.PREFETCH_ENABLE) |pre| (pre == .@"1") else false;
+    const apb1: ?PPRE = if (config.APB1CLKDivider) |pre| @enumFromInt(@as(u3, @intFromEnum(pre))) else null;
+    const apb2: ?PPRE = if (config.APB2CLKDivider) |pre| @enumFromInt(@as(u3, @intFromEnum(pre))) else null;
+    const ahb: ?HPRE = if (config.AHBCLKDivider) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else null;
+    const adc: ?ADCPRE = if (config.ADCPresc) |pre| @enumFromInt(@as(u2, @intFromEnum(pre))) else null;
+    const sys_clk: SW = if (config.SYSCLKSource) |src| @enumFromInt(@as(u2, @intFromEnum(src))) else .HSI;
+    //USB prescaler enum is inverted
+    const usb: ?USBPRE = if (config.USBPrescaler) |pre| @enumFromInt(@as(u1, @intFromEnum(pre)) ^ 1) else null;
+
     secure_enable();
-    set_flash(&config);
+    set_flash(latency, prefetch);
 
-    //MAIN CLOCK CONFIG
-    if (config.HSICalibrationValue) |val| {
-        config_HSI(@intFromFloat(val));
-    }
-
-    if (config.EnableHSE) |en| {
-        switch (en) {
-            .true => try config_HSE(&config),
-            else => {}, //TODO disable HSE
+    hse_config: {
+        if (config.EnableHSE) |en| {
+            switch (en) {
+                .true => {
+                    const timout = if (config.HSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+                    try enable_hse(config.flags.HSEByPass, timout);
+                    break :hse_config;
+                },
+                else => {},
+            }
         }
+        disable_hse();
     }
 
-    if (config.PLLUsed) |en| {
-        if (en != 0) {
-            config_PLL(&config);
-            init_pll();
+    pll_config: {
+        if (config.PLLUsed) |en| {
+            if (en != 0) {
+                const source: PLLSRC = if (config.PLLSource) |src| @enumFromInt(@as(u1, @intFromEnum(src))) else PLLSRC.HSI_Div2;
+                const mul: PLLMUL = if (config.PLLMUL) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else PLLMUL.Mul2;
+                const pre_div: PLLXTPRE = if (config.HSEDivPLL) |pre| @enumFromInt(@as(u1, @intFromEnum(pre))) else PLLXTPRE.Div1;
+                config_pll(source, mul, pre_div);
+                enable_pll();
+                break :pll_config;
+            }
         }
-        //TODO disable PLL
+        disable_pll();
     }
 
-    config_peripherals(&config);
+    set_peripherals_prescaler(apb1, apb2, ahb, adc, usb);
 
     //BACKUP DOMAIN CLOCK CONFIG
 
-    if (config.EnableLSE) |en| {
-        switch (en) {
-            .true => try config_LSE(&config),
-            else => {}, //TODO: disable LSE
+    lse_config: {
+        if (config.EnableLSE) |en| {
+            switch (en) {
+                .true => {
+                    const timeout = if (config.LSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+                    const bypass = config.flags.LSEByPass;
+                    try enable_lse(timeout, bypass);
+                    break :lse_config;
+                },
+                else => {},
+            }
         }
+        disable_lse();
     }
 
-    if (config.LSIUsed) |en| {
-        if (en != 0) config_LSI();
-        //TODO: disable LSI
-
+    lsi_config: {
+        if (config.LSIUsed) |en| {
+            set_lsi(en != 0);
+            break :lsi_config;
+        }
+        set_lsi(false);
     }
 
-    if (config.RTCEnable) |en| {
-        switch (en) {
-            .true => config_RTC(&config),
-            else => {}, //TODO: disable RTC
-        }
-    }
+    rtc_config: {
+        if (config.RTCEnable) |en| {
+            switch (en) {
+                .true => {
+                    if (config.RTCClockSelection) |s| {
+                        const source = switch (s) {
+                            .RCC_RTCCLKSOURCE_HSE_DIV128 => RTCSEL.HSE,
+                            .RCC_RTCCLKSOURCE_LSE => RTCSEL.LSE,
+                            .RCC_RTCCLKSOURCE_LSI => RTCSEL.LSI,
+                        };
 
-    if (config.MCOEnable) |en| {
-        switch (en) {
-            .true => config_MCO(&config),
-            else => {}, //TODO disable MCO
+                        config_rtc(source);
+                        break :rtc_config;
+                    }
+                },
+                else => {},
+            }
         }
+        config_rtc(.DISABLE);
+    }
+    mco_config: {
+        if (config.MCOEnable) |en| {
+            switch (en) {
+                .true => {
+                    if (config.RCC_MCOSource) |src| {
+                        const source: MCOSEL = switch (src) {
+                            .RCC_MCO1SOURCE_HSE => .HSE,
+                            .RCC_MCO1SOURCE_HSI => .HSI,
+                            .RCC_MCO1SOURCE_PLLCLK => .PLL,
+                            .RCC_MCO1SOURCE_SYSCLK => .SYS,
+                        };
+                        config_mco(source);
+                        break :mco_config;
+                    }
+                },
+                else => {},
+            }
+        }
+        config_mco(.DISABLE);
     }
 
     //SYSTEM CLOCK CONFIG
-    config_system_clock(&config);
+    config_system_clock(sys_clk);
+
+    //in case of HSI not used, we have to disable it here
+    //becuse the system clock configuration 'secure_enable' enables it by default
+    hsi_config: {
+        if (config.HSIUsed) |en| {
+            set_hsi(en != 0);
+            if (config.HSICalibrationValue) |val| {
+                calib_hsi(@intFromFloat(val));
+            }
+            break :hsi_config;
+        }
+        set_hsi(false);
+    }
 }
 
-fn set_flash(config: *const ClockTree.Config_Output) void {
-    if (config.FLatency) |lat| {
-        const val: flash_v1.LATENCY = @enumFromInt(@as(u3, @intFromEnum(lat)));
-        flash.ACR.modify_one("LATENCY", val);
-    }
-
-    if (config.PREFETCH_ENABLE) |pre| {
-        const val: u1 = @intFromBool(pre == .@"1");
-        flash.ACR.modify_one("PRFTBE", val);
-    }
+pub inline fn set_flash(latency: flash_v1.LATENCY, prefetch: bool) void {
+    flash.ACR.modify_one("LATENCY", latency);
+    flash.ACR.modify_one("PRFTBE", @intFromBool(prefetch));
 }
 
 //force HSI Clock and clear any clock configs
-fn secure_enable() void {
-    rcc.CR.modify(.{ .HSION = 1 });
-    while (rcc.CR.read().HSIRDY != 1) {
-        asm volatile ("" ::: .{ .memory = true });
-    }
+pub fn secure_enable() void {
+    set_hsi(true);
 
     rcc.BDCR.raw = 0;
     rcc.CFGR.raw = 0;
@@ -202,9 +261,19 @@ fn secure_enable() void {
     });
 }
 
-fn config_HSI(value: usize) void {
+pub fn set_hsi(on: bool) void {
+    rcc.CR.modify(.{ .HSION = @intFromBool(on) });
+    if (on) {
+        while (rcc.CR.read().HSIRDY == 0) {
+            asm volatile ("" ::: .{ .memory = true });
+        }
+    }
+}
+
+///configure the HSI calibration value
+pub fn calib_hsi(calib: usize) void {
     //secure_enable has already started the HSE
-    const trim: u5 = @truncate(value);
+    const trim: u5 = @truncate(calib);
     rcc.CR.modify(.{ .HSITRIM = trim });
 
     //wait for the HSI to stabilize
@@ -213,25 +282,27 @@ fn config_HSI(value: usize) void {
     }
 }
 
-fn config_LSI() void {
-    rcc.CSR.modify(.{ .LSION = 1 });
-    while (rcc.CSR.read().LSIRDY == 0) {
-        asm volatile ("" ::: .{ .memory = true });
+fn set_lsi(on: bool) void {
+    rcc.CSR.modify(.{ .LSION = @intFromBool(on) });
+    if (on) {
+        while (rcc.CSR.read().LSIRDY == 0) {
+            asm volatile ("" ::: .{ .memory = true });
+        }
     }
 }
 
-fn config_HSE(config: *const ClockTree.Config_Output) ClockInitError!void {
+pub fn enable_hse(bypass: bool, timeout: ?usize) ClockInitError!void {
     const max_wait: u32 = blk: {
-        if (config.HSE_Timout) |val| {
+        if (timeout) |val| {
             if (val != 0) {
-                break :blk @intFromFloat(val);
+                break :blk val;
             }
         }
-        break :blk std.math.maxInt(u32);
+        break :blk std.math.maxInt(usize);
     };
     var ticks: usize = calc_wait_ticks(max_wait - 1);
 
-    rcc.CR.modify_one("HSEBYP", @intFromBool(config.flags.HSEByPass));
+    rcc.CR.modify_one("HSEBYP", @intFromBool(bypass));
     rcc.CR.modify(.{ .HSEON = 1 });
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == 0) return error.HSETimeout;
@@ -240,18 +311,22 @@ fn config_HSE(config: *const ClockTree.Config_Output) ClockInitError!void {
     }
 }
 
-fn config_LSE(config: *const ClockTree.Config_Output) ClockInitError!void {
+pub inline fn disable_hse() void {
+    rcc.CR.modify(.{ .HSEON = 0 });
+}
+
+fn enable_lse(timeout: ?usize, bypass: bool) ClockInitError!void {
     const max_wait: u32 = blk: {
-        if (config.LSE_Timout) |val| {
+        if (timeout) |val| {
             if (val != 0) {
-                break :blk @intFromFloat(val);
+                break :blk val;
             }
         }
         break :blk std.math.maxInt(u32);
     };
     var ticks: usize = calc_wait_ticks(max_wait - 1);
 
-    rcc.BDCR.modify_one("LSEBYP", @intFromBool(config.flags.LSEByPass));
+    rcc.BDCR.modify_one("LSEBYP", @intFromBool(bypass));
     rcc.BDCR.modify(.{ .LSEON = 1 });
     while (rcc.BDCR.read().LSERDY == 0) {
         if (ticks == 0) return error.LSETimeout;
@@ -260,126 +335,91 @@ fn config_LSE(config: *const ClockTree.Config_Output) ClockInitError!void {
     }
 }
 
-fn config_PLL(config: *const ClockTree.Config_Output) void {
-    if (config.PLLSource) |src| {
-        const s: u1 = @intFromEnum(src);
-        const val: PLLSRC = @enumFromInt(s);
-        rcc.CFGR.modify(.{ .PLLSRC = val });
-    }
+pub inline fn disable_lse() void {
+    rcc.BDCR.modify(.{ .LSEON = 0 });
+}
 
-    if (config.HSEDivPLL) |pre| {
-        const p: u1 = @intFromEnum(pre);
-        const val: PLLXTPRE = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .PLLXTPRE = val });
-    }
-
-    if (config.PLLMUL) |pre| {
-        const p: u32 = @intFromEnum(pre);
-        const val: PLLMUL = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .PLLMUL = val });
-    }
+pub fn config_pll(source: PLLSRC, mul: PLLMUL, pre_div: PLLXTPRE) void {
+    rcc.CFGR.modify(.{ .PLLSRC = source });
+    rcc.CFGR.modify(.{ .PLLMUL = mul });
+    rcc.CFGR.modify(.{ .PLLXTPRE = pre_div });
 }
 
 //TODO: Add STM32F105/7 devices peri
-fn config_peripherals(config: *const ClockTree.Config_Output) void {
-    if (config.APB1CLKDivider) |pre| {
-        const p: u32 = @intFromEnum(pre);
-        const val: PRE = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .PPRE1 = val });
+pub fn set_peripherals_prescaler(
+    apb1: ?PPRE,
+    apb2: ?PPRE,
+    ahb: ?HPRE,
+    adc: ?ADCPRE,
+    usb: ?USBPRE,
+) void {
+    if (apb1) |pre| {
+        rcc.CFGR.modify(.{ .PPRE1 = pre });
     }
 
-    if (config.APB2CLKDivider) |pre| {
-        const p: u32 = @intFromEnum(pre);
-        const val: PRE = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .PPRE2 = val });
+    if (apb2) |pre| {
+        rcc.CFGR.modify(.{ .PPRE2 = pre });
     }
 
-    if (config.AHBCLKDivider) |pre| {
-        const p: u32 = @intFromEnum(pre);
-        const val: HPRE = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .HPRE = val });
+    if (ahb) |pre| {
+        rcc.CFGR.modify(.{ .HPRE = pre });
     }
 
-    if (config.ADCPresc) |pre| {
-        const p: u32 = @intFromEnum(pre);
-        const val: ADCPRE = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .ADCPRE = val });
+    if (adc) |pre| {
+        rcc.CFGR.modify(.{ .ADCPRE = pre });
     }
 
-    if (config.USBPrescaler) |pre| {
-        const p: u1 = switch (pre) {
-            .RCC_USBCLKSOURCE_PLL_DIV1_5 => 0,
-            .RCC_USBCLKSOURCE_PLL => 1,
-        };
-        const val: USBPRE = @enumFromInt(p);
-        rcc.CFGR.modify(.{ .USBPRE = val });
+    if (usb) |pre| {
+        rcc.CFGR.modify(.{ .USBPRE = pre });
     }
 }
 
-fn config_system_clock(config: *const ClockTree.Config_Output) void {
-    if (config.SYSCLKSource) |src| {
-        const val: u2 = @intFromEnum(src);
-        const e_val: SW = @enumFromInt(val);
-
-        rcc.CFGR.modify(.{ .SW = e_val });
-        while (true) {
-            const sws = rcc.CFGR.read().SWS;
-            if (sws == e_val) break;
-            asm volatile ("" ::: .{ .memory = true });
-        }
+fn config_system_clock(system_clock: SW) void {
+    rcc.CFGR.modify(.{ .SW = system_clock });
+    while (true) {
+        const sws = rcc.CFGR.read().SWS;
+        if (sws == system_clock) break;
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 
-fn init_pll() void {
+pub fn enable_pll() void {
     rcc.CR.modify(.{ .PLLON = 1 });
     while (rcc.CR.read().PLLRDY == 0) {
         asm volatile ("" ::: .{ .memory = true });
     }
 }
 
-fn config_RTC(config: *const ClockTree.Config_Output) void {
-    if (config.RTCClockSelection) |src| {
-        //enable backup domain
-        enable_clock(.PWR);
-        enable_clock(.BKP);
-        power.backup_domain_protection(false);
-
-        var rtcs: RTCSEL = .DISABLE;
-        switch (src) {
-            .RCC_RTCCLKSOURCE_HSE_DIV128 => {
-                rtcs = .HSE;
-                reset_backup_domain(); //HSE as RTC source requires full reset of the bkp domain
-                power.backup_domain_protection(false);
-            },
-            .RCC_RTCCLKSOURCE_LSE => {
-                rtcs = .LSE;
-            },
-            .RCC_RTCCLKSOURCE_LSI => {
-                rtcs = .LSI;
-            },
-        }
-
-        rcc.BDCR.modify(.{ .RTCSEL = rtcs });
-        power.backup_domain_protection(true);
-
-        // Disable and reset clocks to avoid potential conflicts with the main application
-        disable_clock(.BKP);
-        reset_clock(.BKP);
-        disable_clock(.PWR);
-        reset_clock(.PWR);
+pub fn disable_pll() void {
+    rcc.CR.modify(.{ .PLLON = 0 });
+    while (rcc.CR.read().PLLRDY != 0) {
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 
-fn config_MCO(config: *const ClockTree.Config_Output) void {
-    if (config.RCC_MCOSource) |src| {
-        const mco: MCOSEL = switch (src) {
-            .RCC_MCO1SOURCE_HSE => .HSE,
-            .RCC_MCO1SOURCE_HSI => .HSI,
-            .RCC_MCO1SOURCE_PLLCLK => .PLL,
-            .RCC_MCO1SOURCE_SYSCLK => .SYS,
-        };
-        rcc.CFGR.modify(.{ .MCOSEL = mco });
+pub fn config_rtc(source: RTCSEL) void {
+
+    //enable backup domain write acess
+    enable_clock(.PWR);
+    enable_clock(.BKP);
+    power.backup_domain_protection(false);
+    if (source == .HSE) {
+        reset_backup_domain(); //HSE as RTC source requires full reset of the bkp domain
+        power.backup_domain_protection(false);
     }
+
+    rcc.BDCR.modify(.{ .RTCSEL = source });
+    power.backup_domain_protection(true);
+
+    // Disable and reset clocks to avoid potential conflicts with the main application
+    disable_clock(.BKP);
+    reset_clock(.BKP);
+    disable_clock(.PWR);
+    reset_clock(.PWR);
+}
+
+pub fn config_mco(source: MCOSEL) void {
+    rcc.CFGR.modify(.{ .MCOSEL = source });
 }
 
 ///after the reset, the BDRD becomes read_only until access is released by the power register
@@ -394,7 +434,7 @@ pub fn reset_backup_domain() void {
 
 ///configure the power and clock registers before enabling the RTC
 ///this function also can be called from `rtc.enable()`
-pub fn enable_RTC(on: bool) void {
+pub fn enable_rtc(on: bool) void {
     rcc.BDCR.modify(.{ .RTCEN = @intFromBool(on) });
 }
 
@@ -521,7 +561,7 @@ pub fn set_clock(peri: RccPeriferals, state: u1) void {
         .BKP => rcc.APB1ENR.modify(.{ .BKPEN = state }),
         .PWR => rcc.APB1ENR.modify(.{ .PWREN = state }),
         .DAC => rcc.APB1ENR.modify(.{ .DACEN = state }), //F103xE
-        .RTC => enable_RTC(state != 0),
+        .RTC => enable_rtc(state != 0),
     }
 }
 
