@@ -36,7 +36,7 @@ pub const Runner = struct {
             // clear request for ALP
             self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0);
 
-            // const chip_id = self.bus.bp_read_int(u16, chip.pmu_base_address);
+            // const chip_id = self.bus.read_int(u16, .backplane, chip.pmu_base_address);
             // log.debug("chip ID: 0x{X}", .{chip_id});
         }
         // Upload firmware
@@ -46,22 +46,22 @@ pub const Runner = struct {
             self.core_reset(.socram);
 
             // this is 4343x specific stuff: Disable remap for SRAM_3
-            self.bus.bp_write_int(u32, chip.socsram_base_address + 0x10, 3);
-            self.bus.bp_write_int(u32, chip.socsram_base_address + 0x44, 0);
+            self.bus.write_int(u32, .backplane, chip.socsram_base_address + 0x10, 3);
+            self.bus.write_int(u32, .backplane, chip.socsram_base_address + 0x44, 0);
 
             const firmware = @embedFile("firmware/43439A0_7_95_61.bin");
-            self.bus.bp_write(chip.atcm_ram_base_address, firmware);
+            self.bus.backplane_write(chip.atcm_ram_base_address, firmware);
         }
         // Load nvram
         {
             const nvram_len = ((NVRAM.len + 3) >> 2) * 4; // Round up to 4 bytes.
             const addr_magic = chip.atcm_ram_base_address + chip.chip_ram_size - 4;
             const addr = addr_magic - nvram_len;
-            self.bus.bp_write(addr, NVRAM);
+            self.bus.backplane_write(addr, NVRAM);
 
             const nvram_len_words = (nvram_len >> 2);
             const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
-            self.bus.bp_write_int(u32, addr_magic, nvram_len_magic);
+            self.bus.write_int(u32, .backplane, addr_magic, nvram_len_magic);
         }
         // starting up core...
         self.core_reset(.wlan);
@@ -71,7 +71,7 @@ pub const Runner = struct {
         while (self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
 
         // "Set up the interrupt mask and enable interrupts"
-        self.bus.bp_write_int(u32, chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
+        self.bus.write_int(u32, .backplane, chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
 
         self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
 
@@ -113,28 +113,28 @@ pub const Runner = struct {
             }
         }
 
-        self.log_init();
+        // self.log_init();
     }
 
     fn core_disable(self: *Self, core: Core) void {
         const base = core.base_addr();
 
         // Dummy read?
-        _ = self.bus.bp_read_int(u8, base + consts.AI_RESETCTRL_OFFSET);
+        _ = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
 
         // Check it isn't already reset
-        const r = self.bus.bp_read_int(u8, base + consts.AI_RESETCTRL_OFFSET);
+        const r = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
         if (r & consts.AI_RESETCTRL_BIT_RESET != 0) {
             return;
         }
 
-        self.bus.bp_write_int(u8, base + consts.AI_IOCTRL_OFFSET, 0);
-        _ = self.bus.bp_read_int(u8, base + consts.AI_IOCTRL_OFFSET);
+        self.bus.write_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET, 0);
+        _ = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
 
         self.sleep_ms(1);
 
-        self.bus.bp_write_int(u8, base + consts.AI_RESETCTRL_OFFSET, consts.AI_RESETCTRL_BIT_RESET);
-        _ = self.bus.bp_read_int(u8, base + consts.AI_RESETCTRL_OFFSET);
+        self.bus.write_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET, consts.AI_RESETCTRL_BIT_RESET);
+        _ = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
     }
 
     fn core_reset(self: *Self, core: Core) void {
@@ -142,15 +142,15 @@ pub const Runner = struct {
 
         const base = core.base_addr();
 
-        self.bus.bp_write_int(u8, base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN);
-        _ = self.bus.bp_read_int(u8, base + consts.AI_IOCTRL_OFFSET);
+        self.bus.write_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN);
+        _ = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
 
-        self.bus.bp_write_int(u8, base + consts.AI_RESETCTRL_OFFSET, 0);
+        self.bus.write_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET, 0);
 
         self.sleep_ms(1);
 
-        self.bus.bp_write_int(u8, base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_CLOCK_EN);
-        _ = self.bus.bp_read_int(u8, base + consts.AI_IOCTRL_OFFSET);
+        self.bus.write_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_CLOCK_EN);
+        _ = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
 
         self.sleep_ms(1);
     }
@@ -158,14 +158,14 @@ pub const Runner = struct {
     fn core_is_up(self: *Self, core: Core) !void {
         const base = core.base_addr();
 
-        const io = self.bus.bp_read_int(u8, base + consts.AI_IOCTRL_OFFSET);
+        const io = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
 
         if (io & (consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN) != consts.AI_IOCTRL_BIT_CLOCK_EN) {
             log.err("core_is_up fail due to bad ioctrl 0x{X}", .{io});
             return error.Cyw43CoreIsUp;
         }
 
-        const r = self.bus.bp_read_int(u8, base + consts.AI_RESETCTRL_OFFSET);
+        const r = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
         if (r & (consts.AI_RESETCTRL_BIT_RESET) != 0) {
             log.err("core_is_up fail due to bad resetctrl 0x{X}", .{r});
             return error.Cyw43CoreIsUp;
@@ -174,18 +174,18 @@ pub const Runner = struct {
 
     fn log_init(self: *Self) void {
         const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
-        const shared_addr = self.bus.bp_read_int(u32, addr);
+        const shared_addr = self.bus.read_int(u32, .backplane, addr);
         //log.debug("shared_addr 0x{X}", .{shared_addr});
 
         var shared: SharedMemData = undefined;
-        self.bus.bp_read(shared_addr, std.mem.asBytes(&shared));
+        self.bus.backplane_read(shared_addr, std.mem.asBytes(&shared));
 
         self.chip_log_state.addr = shared.console_addr + 8;
     }
 
     fn log_read(self: *Self) void {
         var chip_log_mem: SharedMemLog = undefined;
-        self.bus.bp_read(self.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
+        self.bus.backplane_read(self.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
 
         const idx = chip_log_mem.idx;
 
@@ -197,7 +197,7 @@ pub const Runner = struct {
         // Read entire buf for now. We could read only what we need, but then we
         // run into annoying alignment issues in `bp_read`.
         var buf: [1024]u8 = undefined;
-        self.bus.bp_read(chip_log_mem.buf, &buf);
+        self.bus.backplane_read(chip_log_mem.buf, &buf);
 
         while (self.chip_log_state.last_idx != idx) {
             const b = buf[self.chip_log_state.last_idx];
@@ -509,17 +509,17 @@ pub const Runner = struct {
     }
 
     pub fn gpio_enable(self: *Self, pin: u2) void {
-        self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_ENABLE, @as(u32, 1) << pin);
+        self.bus.write_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_ENABLE, @as(u32, 1) << pin);
     }
 
     pub fn gpio_set(self: *Self, val: u32) void {
-        self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
+        self.bus.write_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
     }
 
     pub fn gpio_toggle(self: *Self, pin: u2) void {
-        var val = self.bus.bp_read_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT);
+        var val = self.bus.read_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_OUTPUT);
         val = val ^ @as(u32, 1) << pin;
-        self.bus.bp_write_int(u32, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
+        self.bus.write_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
     }
 
     pub fn led_set(self: *Self, on: bool) void {

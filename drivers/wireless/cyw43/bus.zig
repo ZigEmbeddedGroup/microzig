@@ -108,7 +108,11 @@ pub const Bus = struct {
         }
     }
 
-    pub fn read_int(self: *Self, T: type, func: SpiCmd.Func, addr: u17) T {
+    pub fn read_int(self: *Self, T: type, func: SpiCmd.Func, waddr: u32) T {
+        const addr: u17 = if (func == .backplane and waddr > consts.REG_BACKPLANE_SLEEP_CSR)
+            self.backplane_window_addr(waddr, @sizeOf(T))
+        else
+            @intCast(waddr);
         const cmd = SpiCmd{
             .cmd = .read,
             .access = .incremental,
@@ -136,7 +140,11 @@ pub const Bus = struct {
         return self.spi.read(@bitCast(cmd), buffer);
     }
 
-    pub fn write_int(self: *Self, T: type, func: SpiCmd.Func, addr: u17, value: T) void {
+    pub fn write_int(self: *Self, T: type, func: SpiCmd.Func, waddr: u32, value: T) void {
+        const addr: u17 = if (func == .backplane and waddr > consts.REG_BACKPLANE_SLEEP_CSR)
+            self.backplane_window_addr(waddr, @sizeOf(T))
+        else
+            @intCast(waddr);
         const cmd = SpiCmd{
             .cmd = .write,
             .access = .incremental,
@@ -169,8 +177,8 @@ pub const Bus = struct {
         _ = self.spi.write(@bitCast(cmd), buffers);
     }
 
-    pub fn bp_read(self: *Self, addr: u32, data: []u8) void {
-
+    pub fn backplane_read(self: *Self, addr: u32, data: []u8) void {
+        log.debug("bp_read addr = 0x{X} len = {}", .{ addr, data.len });
         // It seems the HW force-aligns the addr
         // to 2 if data.len() >= 2
         // to 4 if data.len() >= 4
@@ -203,12 +211,8 @@ pub const Bus = struct {
         }
     }
 
-    pub fn bp_read_int(self: *Self, T: type, addr: u32) T {
-        return self.read_int(T, .backplane, self.backplane_window_addr(addr, @sizeOf(T)));
-    }
-
-    pub fn bp_write(self: *Self, addr: u32, data: []const u8) void {
-        //log.debug("bp_write addr = 0x{X} len = {}", .{ addr, data.len });
+    pub fn backplane_write(self: *Self, addr: u32, data: []const u8) void {
+        log.debug("bp_write addr = 0x{X} len = {}", .{ addr, data.len });
 
         // It seems the HW force-aligns the addr
         // to 2 if data.len() >= 2
@@ -243,10 +247,6 @@ pub const Bus = struct {
             current_addr += @as(u32, @intCast(len));
             remaining = remaining[len..];
         }
-    }
-
-    pub fn bp_write_int(self: *Self, T: type, addr: u32, value: T) void {
-        self.write_int(T, .backplane, self.backplane_window_addr(addr, @sizeOf(T)), value);
     }
 
     fn backplane_window_addr(self: *Self, addr: u32, len: u11) u17 {
