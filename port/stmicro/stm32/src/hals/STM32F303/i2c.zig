@@ -6,48 +6,16 @@ const I2CType = emus_type.I2CType;
 const I2C_t = microzig.chip.types.peripherals.i2c_v2.I2C;
 const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
+const mdb = microzig.drivers.base;
 
-pub const AddressMode = enum {
-    @"7bits",
-    @"10bits",
-};
-
-pub const Address = struct {
-    mode: AddressMode = .@"7bits",
-    addr: u10,
-
-    pub fn new(addr: u7) Address {
-        return .{ .addr = addr };
-    }
-
-    pub fn new_10bits(addr: u10) Address {
-        return .{
-            .addr = addr,
-            .mode = .@"10bits",
-        };
-    }
-};
-
-pub const Config = struct {
-    speed: usize,
-};
+pub const Address = mdb.I2C_Device.Address;
+const I2C_Device = mdb.I2C_Device;
+const InterfaceError = mdb.I2C_Device.InterfaceError;
 
 pub const ConfigError = error{
     PCLKUnderflow,
     PCLKOverflow,
-    SpeedOverflow,
-    SpeedUnderflow,
-    InvalidAddress,
-    InvalidTrise,
-    InvalidCCR,
 };
-
-// pub const Error = drivers.I2C_Device.Error || error{
-//     ArbitrationLoss,
-//     BusError,
-//     BusTimeout,
-//     UnrecoverableError,
-// };
 
 // 100khz for now
 const TimmingSpec_Standard = .{
@@ -62,25 +30,11 @@ const TimmingSpec_Standard = .{
     .t_min_af = 0.05,
 };
 
-fn calc_CCR(pclk: usize, speed: usize, duty: ?bool) usize {
-    const mult_val: f32 = if (duty) |val| if (val) 25 else 3 else 2;
-    const fpclk: f32 = @floatFromInt(pclk);
-    const fspeed: f32 = @floatFromInt(speed);
-    return @as(usize, @intFromFloat(@ceil(fpclk / (mult_val * fspeed))));
-}
-
-fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) ConfigError {
-    if (@inComptime()) {
-        @compileError(std.fmt.comptimePrint(msg, fmt_args));
-    } else {
-        return err;
-    }
-}
-
 fn get_regs(comptime instance: I2CType) *volatile I2C_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
-pub const I2C = struct {
+
+const I2C = struct {
     regs: *volatile I2C_t,
 
     fn compute_presc() ConfigError!struct { f32, u4 } {
@@ -141,6 +95,10 @@ pub const I2C = struct {
         return @as(u8, @intFromFloat(@round(real_sclh)));
     }
 
+    // TODO this should configure
+    // Interupt,
+    // Frequency
+    // Others...
     pub fn apply(i2c: *const I2C) ConfigError!void {
         const regs = i2c.regs;
 
@@ -165,12 +123,12 @@ pub const I2C = struct {
         regs.CR1.modify(.{ .PE = 1 });
     }
 
-    pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []u8) void {
+    pub fn read_blocking(i2c: *const I2C, addr: Address, chunks: []u8) void {
         const regs = i2c.regs;
 
         regs.CR2.modify(.{
             .NBYTES = @as(u8, @intCast(chunks.len)),
-            .SADD = addr.addr << 1,
+            .SADD = @as(u10, @intCast(@intFromEnum(addr))) << 1,
             .DIR = .Read,
         });
         regs.CR2.modify(.{
@@ -187,12 +145,12 @@ pub const I2C = struct {
         });
     }
 
-    fn writev_blocking(i2c: *const I2C, addr: Address, comptime restart: bool, chunks: []const u8) void {
+    fn write_blocking_intern(i2c: *const I2C, addr: Address, comptime restart: bool, chunks: []const u8) void {
         const regs = i2c.regs;
 
         regs.CR2.modify(.{
             .NBYTES = @as(u8, @intCast(chunks.len)),
-            .SADD = addr.addr << 1,
+            .SADD = @as(u10, @intCast(@intFromEnum(addr))) << 1,
             .AUTOEND = if (restart) .Software else .Automatic,
             .DIR = .Write,
         });
@@ -216,27 +174,74 @@ pub const I2C = struct {
     }
 
     pub fn write_blocking_restart(i2c: *const I2C, address: Address, data: []const u8) void {
-        return i2c.writev_blocking(address, true, data);
+        return i2c.write_blocking_intern(address, true, data);
     }
 
     pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8) void {
-        return i2c.writev_blocking(address, false, data);
-    }
-
-    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8) void {
-        return i2c.readv_blocking(address, data);
-    }
-
-    ///use this function to check if the i2c is busy in multi-master mode
-    ///NOTE: in single master mode
-    ///having a busy state before the start condition means that the bus is in an error state.
-    pub fn is_busy(i2c: *const I2C) bool {
-        const regs = i2c.regs;
-        return regs.SR2.read().BUSY == 1;
+        return i2c.write_blocking_intern(address, false, data);
     }
 
     pub fn init(comptime instance: I2CType) I2C {
         hal.rcc.enable_i2c(instance, .SYS);
         return .{ .regs = get_regs(instance) };
+    }
+};
+
+pub const I2CDevice = struct {
+    i2c: I2C,
+    const device_vtable = I2C_Device.VTable{
+        .writev_fn = I2CDevice.writev_fn,
+        .readv_fn = I2CDevice.readv_fn,
+        .writev_then_readv_fn = I2CDevice.writev_then_readv_fn,
+    };
+    fn writev_fn(dev: *anyopaque, addr: Address, datagrams: []const []const u8) InterfaceError!void {
+        const i2c: *I2CDevice = @ptrCast(@alignCast(dev));
+        addr.check_reserved() catch {
+            return InterfaceError.TargetAddressReserved;
+        };
+        for (datagrams) |chunk| {
+            i2c.i2c.write_blocking(addr, chunk);
+        }
+    }
+
+    fn readv_fn(dev: *anyopaque, addr: Address, datagrams: []const []u8) InterfaceError!usize {
+        const i2c: *I2CDevice = @ptrCast(@alignCast(dev));
+        addr.check_reserved() catch {
+            return InterfaceError.TargetAddressReserved;
+        };
+        var read: usize = 0;
+        for (datagrams) |chunk| {
+            i2c.i2c.read_blocking(addr, chunk);
+            read += chunk.len;
+        }
+        return read;
+    }
+
+    fn writev_then_readv_fn(
+        dev: *anyopaque,
+        addr: Address,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) InterfaceError!void {
+        const i2c: *I2CDevice = @ptrCast(@alignCast(dev));
+        addr.check_reserved() catch {
+            return InterfaceError.TargetAddressReserved;
+        };
+        for (write_chunks, 0..) |chunk, index| {
+            i2c.i2c.write_blocking_restart(addr, chunk);
+            i2c.i2c.read_blocking(addr, read_chunks[index]);
+        }
+    }
+
+    pub fn apply(i2c: *const I2CDevice) ConfigError!void {
+        try i2c.i2c.apply();
+    }
+
+    pub fn init(comptime instance: I2CType) I2CDevice {
+        return .{ .i2c = I2C.init(instance) };
+    }
+
+    pub fn as_device(i2c: *I2CDevice) I2C_Device {
+        return .{ .ptr = @ptrCast(i2c), .vtable = &device_vtable };
     }
 };
