@@ -289,6 +289,7 @@ pub const Runner = struct {
                         if (ctl.status_ok()) {
                             if (data) |d| {
                                 const rsp_data = rsp.data();
+                                //log.debug("rsp_data.len: {}, d.len: {}, len: {}", .{ rsp_data.len, d.len, len });
                                 const n = @min(rsp_data.len, d.len);
                                 @memcpy(d[0..n], rsp_data[0..n]);
                                 return n;
@@ -614,7 +615,7 @@ pub const Runner = struct {
     }
 };
 
-pub const Chip = struct {
+const Chip = struct {
     const WRAPPER_REGISTER_OFFSET: u32 = 0x100000;
 
     arm_core_base_address: u32,
@@ -688,7 +689,7 @@ const Core = enum(u2) {
     }
 };
 
-pub const SharedMemData = extern struct {
+const SharedMemData = extern struct {
     flags: u32,
     trap_addr: u32,
     assert_exp_addr: u32,
@@ -699,7 +700,7 @@ pub const SharedMemData = extern struct {
     fwid: u32,
 };
 
-pub const SharedMemLog = extern struct {
+const SharedMemLog = extern struct {
     buf: u32,
     buf_size: u32,
     idx: u32,

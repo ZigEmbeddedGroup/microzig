@@ -318,47 +318,47 @@ const SpiCmd = packed struct(u32) {
 };
 
 const CtrlReg = packed struct(u8) {
-    const CtrlWordLength = enum(u1) {
+    const WordLength = enum(u1) {
         word_16 = 0,
         word_32 = 1,
     };
 
-    const CtrlEndianness = enum(u1) {
+    const Endianness = enum(u1) {
         little_endian = 0,
         big_endian = 1,
     };
 
-    const CtrlSpeedMode = enum(u1) {
+    const SpeedMode = enum(u1) {
         normal = 0,
         high_speed = 1,
     };
 
-    const CtrlInterruptPolarity = enum(u1) {
+    const InterruptPolarity = enum(u1) {
         low_polarity = 0,
         high_polarity = 1,
     };
 
-    word_length: CtrlWordLength,
-    endianness: CtrlEndianness,
+    word_length: WordLength,
+    endianness: Endianness,
     reserved1: u2 = 0,
-    speed_mode: CtrlSpeedMode,
-    interrupt_polarity: CtrlInterruptPolarity,
+    speed_mode: SpeedMode,
+    interrupt_polarity: InterruptPolarity,
     reserved3: u1 = 0,
     wake_up: bool,
 };
 
-const ResponseDelay = packed struct(u8) {
-    unknown: u8,
-};
-const StatusEnableReg = packed struct(u8) {
-    status_enable: bool,
-    interrupt_with_status: bool,
-    reserved1: u6 = 0,
-};
-
 const SetupRegs = packed struct(u32) {
+    const ResponseDelay = packed struct(u8) {
+        unknown: u8,
+    };
+    const StatusEnable = packed struct(u8) {
+        status_enable: bool,
+        interrupt_with_status: bool,
+        reserved1: u6 = 0,
+    };
+
     ctrl: CtrlReg,
     response_delay: ResponseDelay,
-    status_enable: StatusEnableReg,
+    status_enable: StatusEnable,
     reserved1: u8 = 0,
 };

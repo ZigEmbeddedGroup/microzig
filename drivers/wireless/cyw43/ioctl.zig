@@ -87,7 +87,7 @@ pub const Cmd = enum(u32) {
     _,
 };
 
-pub const BdcHeader = extern struct {
+const BdcHeader = extern struct {
     flags: u8,
     priority: u8,
     flags2: u8,
@@ -178,12 +178,10 @@ pub const Response = extern struct {
     }
 };
 
-// TODO: add 2 bytes padding to the data packet
-// https://github.com/embassy-rs/embassy/blob/eb4e4100acbe03ee1d3726c948f91b6927a18125/cyw43/src/runner.rs#L320
 pub const Request = extern struct {
     const Self = @This();
     pub const max_data_len = 256;
-    pub const max_name_len = 32; // including sntinel
+    pub const max_name_len = 32; // including sentinel
 
     sdp: SdpHeader align(4),
     hdr: CdcHeader,
