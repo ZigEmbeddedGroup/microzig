@@ -438,33 +438,31 @@ pub const I2C = enum(u1) {
                 try self.add_cmd(cmd_start_idx, .{ .write = .{
                     .ack_exp = .ack,
                     .ack_check_en = true,
-                    .length = @bitCast(write_len - 1),
+                    .length = 1,
                 } });
                 try self.add_cmd(cmd_start_idx, .{ .write = .{
                     .ack_exp = .ack,
                     .ack_check_en = true,
-                    .length = 1,
+                    .length = @bitCast(write_len - 1),
                 } });
             } else {
                 try self.add_cmd(cmd_start_idx, .{ .write = .{
                     .ack_exp = .ack,
                     .ack_check_en = true,
+                    .length = 1,
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = 1,
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
                     .length = @bitCast(write_len - 2),
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
                 } });
             }
         }
-
-        self.update_config();
 
         // Load address and R/W bit
         if (start)
