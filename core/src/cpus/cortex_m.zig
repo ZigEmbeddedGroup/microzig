@@ -646,8 +646,8 @@ pub const atomic = struct {
 /// Enables the FPU.
 ///
 /// NOTE: This function is automatically called on cpu startup if the cpu has
-/// an fpu and hard float is enabled for the target. HAL's also call this in
-/// the startup of other cores.
+/// an fpu and hard float is enabled. HAL's also call this in the startup of
+/// other cores.
 pub inline fn enable_fpu() void {
     // Taken from the rust crate cortex-m-rt.
     asm volatile (

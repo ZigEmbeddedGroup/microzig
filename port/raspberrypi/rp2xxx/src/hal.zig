@@ -43,10 +43,6 @@ comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test and compatibility.chip == .RP2350) {
         _ = bootmeta;
-
-        if (compatibility.arch == .arm and microzig.options.hal.use_dcp) {
-            _ = dcp;
-        }
     }
 
     // On the RP2040, we need to import the `atomic.zig` file to export some global
@@ -94,6 +90,9 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     if (compatibility.chip == .RP2350 and
         compatibility.arch == .arm and microzig.options.hal.use_dcp)
     {
+        // Export double floating point intrinsics
+        _ = dcp;
+
         enable_dcp();
     }
 
