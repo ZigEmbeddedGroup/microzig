@@ -28,8 +28,8 @@ var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
 var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
 
 // This is our device configuration
-pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
-    .device_descriptor = &.{
+pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
+    &.{
         .bcd_usb = .from(0x0200),
         .device_triple = .{
             .class = .Miscellaneous,
@@ -45,16 +45,16 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .serial_s = 3,
         .num_configurations = 1,
     },
-    .config_descriptor = @ptrCast(&usb_config_descriptor),
-    .lang_descriptor = .English,
-    .descriptor_strings = &.{
+    @ptrCast(&usb_config_descriptor),
+    .English,
+    &.{
         .from_str("Raspberry Pi"),
         .from_str("Pico Test Device"),
         .from_str("someserial"),
         .from_str("Board CDC"),
     },
-    .drivers = &drivers,
-};
+    &drivers,
+);
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
