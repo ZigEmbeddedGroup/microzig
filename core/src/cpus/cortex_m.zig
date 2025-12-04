@@ -686,7 +686,7 @@ pub const startup_logic = struct {
         );
     }
 
-    pub fn _start() callconv(.c) void {
+    pub fn _start() callconv(.c) noreturn {
         microzig.utilities.initialize_system_memories(.auto);
 
         if (using_ram_vector_table or is_ram_image) {
