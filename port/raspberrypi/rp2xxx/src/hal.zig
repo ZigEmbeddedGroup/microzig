@@ -87,8 +87,8 @@ pub inline fn init() void {
 /// Allows user to easily swap in their own clock config while still
 /// using the recommended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
-    if (compatibility.chip == .RP2350 and
-        compatibility.arch == .arm and microzig.options.hal.use_dcp)
+    if (compatibility.chip == .RP2350 and compatibility.arch == .arm and
+        microzig.options.hal.use_dcp)
     {
         // Export double floating point intrinsics
         _ = dcp;
@@ -129,9 +129,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 /// NOTE: Called automatically in the hal startup sequence and in core1
 /// startup.
 pub inline fn enable_dcp() void {
-    if (!(compatibility.chip == .RP2350 and
-        compatibility.arch == .arm))
-    {
+    if (!(compatibility.chip == .RP2350 and compatibility.arch == .arm)) {
         @compileError("Enable DCP is only available on RP2350 arm");
     }
 
