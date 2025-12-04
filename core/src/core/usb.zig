@@ -251,7 +251,7 @@ pub fn Usb(comptime f: anytype) type {
                             if (S.debug_mode) log.info("        Device", .{});
 
                             var bw = BufferWriter{ .buffer = &S.tmp };
-                            try bw.write(&usb_config.?.device_descriptor.serialize());
+                            try bw.write(@ptrCast(usb_config.?.device_descriptor));
 
                             CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                         },
@@ -274,14 +274,8 @@ pub fn Usb(comptime f: anytype) type {
                                     // descriptor.
                                     break :StringBlk @ptrCast(&usb_config.?.lang_descriptor);
                                 } else {
-                                    // Otherwise, set up one of our strings.
-                                    const s = std.mem.sliceAsBytes(usb_config.?.descriptor_strings[i - 1]);
-                                    const len = 2 + s.len;
-
                                     var wb = BufferWriter{ .buffer = &S.tmp };
-                                    try wb.write_int(u8, @intCast(len));
-                                    try wb.write_int(u8, 0x03);
-                                    try wb.write(s);
+                                    try wb.write(usb_config.?.descriptor_strings[i - 1].data);
 
                                     break :StringBlk wb.get_written_slice();
                                 }
@@ -307,7 +301,7 @@ pub fn Usb(comptime f: anytype) type {
                             };
 
                             var bw = BufferWriter{ .buffer = &S.tmp };
-                            try bw.write(&dqd.serialize());
+                            try bw.write(@ptrCast(&dqd));
 
                             CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                         },
@@ -502,7 +496,7 @@ pub const DeviceConfiguration = struct {
     device_descriptor: *const descriptor.Device,
     config_descriptor: []const u8,
     lang_descriptor: descriptor.Language,
-    descriptor_strings: []const []const u16,
+    descriptor_strings: []const descriptor.String,
     drivers: []types.UsbClassDriver,
 };
 

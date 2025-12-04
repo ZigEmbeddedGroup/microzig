@@ -64,10 +64,6 @@ pub const Device = extern struct {
         num_configurations: u8,
         /// Reserved for future use; must be 0
         reserved: u8 = 0,
-
-        pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-            return @bitCast(this);
-        }
     };
 
     comptime {
@@ -98,10 +94,6 @@ pub const Device = extern struct {
     serial_s: u8,
     /// Number of configurations supported by this device.
     num_configurations: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 
     pub fn qualifier(this: @This()) Qualifier {
         return .{
@@ -163,10 +155,6 @@ pub const Configuration = extern struct {
     /// Maximum device power consumption in units of 2mA.
     max_current: MaxCurrent,
 
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
-
     pub fn create(configuration_s: u8, attributes: Attributes, max_current_ma: u9, payload: anytype) struct { @This(), @TypeOf(payload) } {
         const Payload = @TypeOf(payload);
 
@@ -191,11 +179,15 @@ pub const Configuration = extern struct {
     }
 };
 
-pub fn string(comptime value: []const u8) []const u8 {
-    @setEvalBranchQuota(10000);
-    const encoded: []const u8 = @ptrCast(std.unicode.utf8ToUtf16LeStringLiteral(value));
-    return &[2]u8{ encoded.len + 2, @intFromEnum(Type.String) } ++ encoded;
-}
+pub const String = struct {
+    data: []const u8,
+
+    pub fn from_str(comptime string: []const u8) @This() {
+        @setEvalBranchQuota(10000);
+        const encoded: []const u8 = std.mem.sliceAsBytes(std.unicode.utf8ToUtf16LeStringLiteral(string));
+        return .{ .data = &[2]u8{ encoded.len + 2, @intFromEnum(Type.String) } ++ encoded };
+    }
+};
 
 /// String descriptor 0.
 pub const Language = extern struct {
@@ -211,10 +203,6 @@ pub const Language = extern struct {
     lang: types.U16Le,
 
     pub const English: @This() = .{ .lang = .from(0x0409) };
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 /// Describes an endpoint within an interface
@@ -259,10 +247,6 @@ pub const Endpoint = extern struct {
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 /// Description of an interface within a configuration.
@@ -291,10 +275,6 @@ pub const Interface = extern struct {
     interface_protocol: u8,
     /// Index of interface name within string descriptor table.
     interface_s: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };
 
 /// USB interface association descriptor (IAD) allows the device to group interfaces that belong to a function.
@@ -321,8 +301,4 @@ pub const InterfaceAssociation = extern struct {
     function_protocol: u8,
     // Index of the string descriptor describing the associated interfaces.
     function: u8,
-
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
 };

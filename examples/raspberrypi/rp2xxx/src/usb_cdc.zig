@@ -1,6 +1,4 @@
 const std = @import("std");
-const utf8_to_utf16_le = std.unicode.utf8ToUtf16LeStringLiteral;
-
 const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
@@ -9,8 +7,6 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = rp2xxx.usb;
 
-const descriptor = microzig.core.usb.descriptor;
-
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -18,7 +14,7 @@ const uart_rx_pin = gpio.num(1);
 
 const usb_dev = rp2xxx.usb.Usb(.{});
 
-const usb_config_descriptor = descriptor.Configuration.create(
+const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
     .{ .self_powered = true },
     100,
@@ -52,10 +48,10 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .config_descriptor = @ptrCast(&usb_config_descriptor),
     .lang_descriptor = .English,
     .descriptor_strings = &.{
-        utf8_to_utf16_le("Raspberry Pi"),
-        utf8_to_utf16_le("Pico Test Device"),
-        utf8_to_utf16_le("someserial"),
-        utf8_to_utf16_le("Board CDC"),
+        .from_str("Raspberry Pi"),
+        .from_str("Pico Test Device"),
+        .from_str("someserial"),
+        .from_str("Board CDC"),
     },
     .drivers = &drivers,
 };

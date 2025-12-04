@@ -24,10 +24,6 @@ pub const Descriptor = extern struct {
     ep_out: descriptor.Endpoint,
     ep_in: descriptor.Endpoint,
 
-    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
-        return @bitCast(this);
-    }
-
     pub fn create(first_interface: u8, string_ids: anytype, endpoints: anytype) @This() {
         const endpoint_notifi_size = 8;
         const endpoint_size = 64;
