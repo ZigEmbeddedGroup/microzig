@@ -79,10 +79,6 @@ pub const HidDescType = enum(u8) {
     Hid = 0x21,
     Report = 0x22,
     Physical = 0x23,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
 pub const HidRequestType = enum(u8) {
@@ -92,10 +88,6 @@ pub const HidRequestType = enum(u8) {
     SetReport = 0x09,
     SetIdle = 0x0a,
     SetProtocol = 0x0b,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
 /// USB HID descriptor
@@ -559,16 +551,12 @@ pub const HidClassDriver = struct {
         switch (setup.request_type.type) {
             .Standard => {
                 if (stage == .Setup) {
-                    const hid_desc_type = HidDescType.from_u8(@intCast((setup.value >> 8) & 0xff));
-                    const request_code = types.SetupRequest.from_u8(setup.request);
+                    const hid_desc_type = std.meta.intToEnum(HidDescType, (setup.value >> 8) & 0xff) catch return false;
+                    const request_code = std.meta.intToEnum(types.SetupRequest, setup.request) catch return false;
 
-                    if (hid_desc_type == null or request_code == null) {
-                        return false;
-                    }
-
-                    if (request_code.? == .GetDescriptor and hid_desc_type == .Hid) {
+                    if (request_code == .GetDescriptor and hid_desc_type == .Hid) {
                         self.device.?.control_transfer(setup, self.hid_descriptor);
-                    } else if (request_code.? == .GetDescriptor and hid_desc_type == .Report) {
+                    } else if (request_code == .GetDescriptor and hid_desc_type == .Report) {
                         self.device.?.control_transfer(setup, self.report_descriptor);
                     } else {
                         return false;
@@ -576,10 +564,8 @@ pub const HidClassDriver = struct {
                 }
             },
             .Class => {
-                const hid_request_type = HidRequestType.from_u8(setup.request);
-                if (hid_request_type == null) return false;
-
-                switch (hid_request_type.?) {
+                const hid_request_type = std.meta.intToEnum(HidRequestType, setup.request) catch return false;
+                switch (hid_request_type) {
                     .SetIdle => {
                         if (stage == .Setup) {
                             // TODO: The host is attempting to limit bandwidth by requesting that

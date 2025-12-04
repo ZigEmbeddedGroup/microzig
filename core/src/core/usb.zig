@@ -172,9 +172,7 @@ pub fn Usb(comptime f: anytype) type {
                             log.info("Device.Class", .{});
                         },
                         .Standard => {
-                            const req = types.SetupRequest.from_u8(setup.request);
-                            if (req == null) return;
-                            switch (req.?) {
+                            switch (std.meta.intToEnum(types.SetupRequest, setup.request) catch return) {
                                 .SetAddress => {
                                     new_address = @as(u8, @intCast(setup.value & 0xff));
                                     f.usb_start_tx(.ep0, ack);
@@ -205,14 +203,13 @@ pub fn Usb(comptime f: anytype) type {
                                     }
                                 },
                                 .SetFeature => {
-                                    const feature = types.FeatureSelector.from_u8(@intCast(setup.value >> 8));
-                                    if (feature) |feat| {
+                                    if (std.meta.intToEnum(types.FeatureSelector, setup.value >> 8)) |feat| {
                                         switch (feat) {
                                             .DeviceRemoteWakeup, .EndpointHalt => f.usb_start_tx(.ep0, ack),
                                             // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                                             .TestMode => {},
                                         }
-                                    }
+                                    } else |_| {}
                                 },
                             }
                         },

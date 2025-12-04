@@ -37,10 +37,6 @@ pub const TransferType = enum(u2) {
     Isochronous = 1,
     Bulk = 2,
     Interrupt = 3,
-
-    pub inline fn as_number(self: @This()) u2 {
-        return @intFromEnum(self);
-    }
 };
 
 pub const ControlStage = enum {
@@ -56,10 +52,6 @@ pub const SetupRequest = enum(u8) {
     SetAddress = 0x05,
     GetDescriptor = 0x06,
     SetConfiguration = 0x09,
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
 pub const FeatureSelector = enum(u8) {
@@ -67,10 +59,6 @@ pub const FeatureSelector = enum(u8) {
     DeviceRemoteWakeup = 0x01,
     TestMode = 0x02,
     // The remaining features only apply to OTG devices.
-
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
 };
 
 /// USB deals in two different transfer directions, called OUT (host-to-device)
