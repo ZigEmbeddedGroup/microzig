@@ -29,7 +29,6 @@ pub const pin_map = .{
 };
 
 pub fn init() void {
-    hal.enable_fpu();
     rcc.enable_hse(8_000_000);
     rcc.enable_pll(.HSE, .Div1, .Mul5) catch {
         @panic("PLL faile to enable");

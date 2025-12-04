@@ -643,6 +643,25 @@ pub const atomic = struct {
     }
 };
 
+/// Enables the FPU and sets up lazy state preservation.
+///
+/// NOTE: This function is automatically called on cpu startup if the cpu has
+/// an fpu and hard float is enabled for the target. HAL's also call this in
+/// the startup of other cores.
+pub inline fn enable_fpu() void {
+    // enable lazy state preservation
+    peripherals.fpu.FPCCR.modify(.{
+        .ASPEN = 1,
+        .LSPEN = 1,
+    });
+
+    // enable the FPU for the current core
+    peripherals.scb.CPACR.modify(.{
+        .CP10 = .full_access,
+        .CP11 = .full_access,
+    });
+}
+
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.
 /// Available when using a RAM vector table or a RAM image.
 pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
@@ -684,6 +703,10 @@ pub const startup_logic = struct {
                 : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
+        if (fpu_present and builtin.abi.float() == .hard) {
+            enable_fpu();
+        }
+
         if (@hasField(types.peripherals.SystemControlBlock, "SHCSR")) {
             // Enable distinction between MemFault, BusFault and UsageFault:
             peripherals.scb.SHCSR.modify(.{
@@ -694,7 +717,7 @@ pub const startup_logic = struct {
             enable_fault_irq();
         }
 
-        microzig_main();
+        @call(.never_inline, microzig_main, .{});
     }
 
     // Validate that the VectorTable type has all the fault handlers that the CPU expects

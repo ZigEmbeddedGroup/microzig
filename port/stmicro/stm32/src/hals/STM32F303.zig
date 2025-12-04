@@ -61,17 +61,6 @@ const I2C1 = microzig.peripherals.I2C1;
 
 pub const cpu = @import("cpu");
 
-pub fn enable_fpu() void {
-    microzig.cpu.peripherals.scb.CPACR.modify(.{
-        .CP10 = .full_access,
-        .CP11 = .full_access,
-    });
-    microzig.cpu.peripherals.fpu.FPCCR.modify(.{
-        .ASPEN = 1,
-        .LSPEN = 1,
-    });
-}
-
 pub fn parse_pin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
