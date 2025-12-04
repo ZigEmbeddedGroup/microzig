@@ -18,20 +18,25 @@ pub const Net = struct {
     ip: IpAddr,
     driver: struct {
         ptr: *anyopaque,
-        recv: *const fn (*anyopaque, []u8, u32) anyerror!?[]const u8,
+        recv: *const fn (*anyopaque, []u8) anyerror!?[]const u8,
         send: *const fn (*anyopaque, []const u8, []const u8) anyerror!void,
     },
     rx_buffer: []u8,
+    sleep_ms: *const fn (delay: u32) void,
 
     fn ip_identification(self: *Self) u16 {
         self.identification +%= 1;
         return self.identification;
     }
 
-    // recv packets until there is no packet for wait_ms
     pub fn poll(self: *Self, wait_ms: u32) !void {
-        while (try self.recv(wait_ms)) |bytes| {
-            try self.handle(bytes);
+        var delay: u32 = 0;
+        while (delay < wait_ms) {
+            while (try self.recv()) |bytes| {
+                try self.handle(bytes);
+            }
+            self.sleep_ms(10);
+            delay += 10;
         }
     }
 
@@ -39,17 +44,20 @@ pub const Net = struct {
         try self.driver.send(self.driver.ptr, header, payload);
     }
 
-    fn recv(self: *Self, wait_ms: u32) !?[]const u8 {
-        return try self.driver.recv(self.driver.ptr, self.rx_buffer, wait_ms);
+    fn recv(self: *Self) !?[]const u8 {
+        return try self.driver.recv(self.driver.ptr, self.rx_buffer);
     }
 
     pub fn get_mac(self: *Self, ip: IpAddr) !Mac {
         try self.poll(0);
         for (0..10) |_| {
             try self.send_arp_request(ip);
-            while (try self.recv(100)) |bytes| {
-                if (try parse_arp_response(bytes, ip)) |mac| return mac;
-                try self.handle(bytes);
+            for (0..10) |_| {
+                while (try self.recv()) |bytes| {
+                    if (try parse_arp_response(bytes, ip)) |mac| return mac;
+                    try self.handle(bytes);
+                }
+                self.sleep_ms(10);
             }
         }
         return error.Timeout;

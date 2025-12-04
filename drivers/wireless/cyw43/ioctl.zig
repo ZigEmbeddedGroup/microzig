@@ -22,10 +22,6 @@ pub const response_wait = 30;
 // Polling interval for ioctl responses
 pub const response_pool_interval = 10;
 
-// TODO
-var ioctl_reqid: u16 = 0;
-var tx_seq: u8 = 0;
-
 // SDPCM (Serial Data Packet Communication Module) header
 // SDIO/SPI Bus Layer (SDPCM) header
 // ref: https://iosoft.blog/2022/12/06/picowi_part3/
@@ -183,8 +179,19 @@ pub const Response = struct {
     }
 };
 
+pub fn response(buf: []const u8) !Response {
+    return Response.init(buf);
+}
+
 /// Format command request
-pub fn request(buf: []u8, cmd: Cmd, name: []const u8, data: []const u8) []const u8 {
+pub fn request(
+    buf: []u8,
+    cmd: Cmd,
+    name: []const u8,
+    data: []const u8,
+    request_id: u16,
+    tx_sequence: u8,
+) []const u8 {
     // name length with sentinel
     const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0);
     // length of name and data rounded to 4 bytes
@@ -192,13 +199,10 @@ pub fn request(buf: []u8, cmd: Cmd, name: []const u8, data: []const u8) []const 
     const header_len: u16 = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
     const txlen: u16 = header_len + payload_len;
 
-    tx_seq +|= 1;
-    ioctl_reqid +|= 1;
-
     const sdp: SdpHeader = .{
         .len = txlen,
         .not_len = ~txlen,
-        .seq = tx_seq,
+        .seq = tx_sequence,
         .chan = .control,
         .hdrlen = @sizeOf(SdpHeader),
     };
@@ -206,7 +210,7 @@ pub fn request(buf: []u8, cmd: Cmd, name: []const u8, data: []const u8) []const 
     const cdc: CdcHeader = .{
         .cmd = cmd,
         .outlen = payload_len,
-        .id = ioctl_reqid,
+        .id = request_id,
         .flags = if (data.len > 0) 0x02 else 0,
     };
     buf[@sizeOf(SdpHeader)..][0..@sizeOf(CdcHeader)].* = @bitCast(cdc);
@@ -231,14 +235,13 @@ pub const TxMsg = extern struct {
     _padding: u16 = 0,
     bdc: BdcHeader = mem.zeroes(BdcHeader),
 
-    pub fn init(data_len: u16) Self {
-        tx_seq +|= 1;
+    pub fn init(data_len: u16, tx_sequence: u8) Self {
         const txlen = @sizeOf(TxMsg) + data_len;
         var self: Self = .{};
         self.sdp = .{
             .len = txlen,
             .not_len = ~txlen,
-            .seq = tx_seq,
+            .seq = tx_sequence,
             .chan = .data,
             .hdrlen = @sizeOf(SdpHeader) + 2,
         };
@@ -246,6 +249,12 @@ pub const TxMsg = extern struct {
         return self;
     }
 };
+
+pub const tx_header_len = @sizeOf(TxMsg);
+
+pub fn tx_header(data_len: u16, tx_sequence: u8) [tx_header_len]u8 {
+    return @bitCast(TxMsg.init(data_len, tx_sequence));
+}
 
 comptime {
     assert(@sizeOf(SdpHeader) == 12);
@@ -257,24 +266,19 @@ comptime {
 
 test "request" {
     {
-        tx_seq = 2;
-        ioctl_reqid = 2;
-
         var buf: [64]u8 = undefined;
-        const req = request(&buf, .get_var, "cur_etheraddr", &.{});
+        const req = request(&buf, .get_var, "cur_etheraddr", &.{}, 3, 3);
 
         const expected = &hexToBytes("2C00D3FF0300000C00000000060100001000000000000300000000006375725F657468657261646472000000");
         try std.testing.expectEqualSlices(u8, expected, req);
     }
     {
-        tx_seq = 6;
-        ioctl_reqid = 6;
         const expected = &hexToBytes("2C00D3FF0700000C00000000070100001000000002000700000000006770696F6F7574000100000001000000");
         var data: [8]u8 = @splat(0);
         data[0] = 1;
         data[4] = 1;
         var buf: [64]u8 = undefined;
-        const req = request(&buf, .set_var, "gpioout", &data);
+        const req = request(&buf, .set_var, "gpioout", &data, 7, 7);
         try std.testing.expectEqualSlices(u8, expected, req);
     }
 }

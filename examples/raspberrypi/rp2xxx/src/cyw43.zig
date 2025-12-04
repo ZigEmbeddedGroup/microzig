@@ -20,7 +20,7 @@ pub const microzig_options = microzig.Options{
     .logFn = rp2xxx.uart.log,
 };
 
-var wifi_interface: drivers.WiFi = .{};
+var wifi_driver: drivers.WiFi = .{};
 
 var rx_buffer: [1536]u8 align(4) = undefined; // 1500 (payload 1472 + ip 20 + udp 8) + 14 ethernet + 22 bus (12 sdp + 2 padding + 4 bdc + 4 padding)
 var tx_buffer: [1472]u8 align(4) = undefined; // 1472 payload + ip 20 + udp 8  = 1500
@@ -33,25 +33,21 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    try wifi_interface.init(.{});
-    var wifi = &wifi_interface.driver;
-
-    const mac = try wifi.read_mac();
-    log.debug("mac address: {x}", .{mac});
+    var wifi = try wifi_driver.init(.{});
+    log.debug("mac address: {x}", .{wifi.mac});
 
     var net = Net{
-        .mac = mac,
+        .mac = wifi.mac,
         .ip = [4]u8{ 192, 168, 190, 90 },
         .driver = .{
             .ptr = wifi,
-            .recv = drivers.WiFi.Driver.recv,
-            .send = drivers.WiFi.Driver.send,
+            .recv = drivers.WiFi.recv,
+            .send = drivers.WiFi.send,
         },
         .rx_buffer = &rx_buffer,
+        .sleep_ms = time.sleep_ms,
     };
-
     try wifi.join("ninazara", "PeroZdero1");
-    try wifi.show_clm_ver();
 
     const hydra_ip: [4]u8 = .{ 192, 168, 190, 235 };
     const hydra_mac = try net.get_mac(hydra_ip);

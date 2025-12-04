@@ -39,13 +39,10 @@ fn pin_num(pin: hal.gpio.Pin) u5 {
     return @truncate(@intFromEnum(pin));
 }
 
-const Cyw43PioSpi = @This();
+const Self = @This();
 
 pio: hal.pio.Pio,
 sm: hal.pio.StateMachine,
-// cs_pin: hal.gpio.Pin,
-// io_pin: hal.gpio.Pin,
-// clk_pin: hal.gpio.Pin,
 channel: ?hal.dma.Channel = null, // current dma channel
 pins: Pins,
 
@@ -61,7 +58,7 @@ pub const Pins = struct {
     pwr: hal.gpio.Pin = hal.gpio.num(23),
 };
 
-pub fn init(config: Config) !Cyw43PioSpi {
+pub fn init(config: Config) !Self {
     const sm = try config.pio.claim_unused_state_machine();
     const pins = config.pins;
 
@@ -118,7 +115,7 @@ pub fn init(config: Config) !Cyw43PioSpi {
 }
 
 pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
-    const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
+    const self: *Self = @ptrCast(@alignCast(ptr));
     self.pins.cs.put(0);
     defer self.pins.cs.put(1);
 
@@ -132,7 +129,7 @@ pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
 }
 
 pub fn write(ptr: *anyopaque, cmd: u32, buffers: []const []const u32) u32 {
-    const self: *Cyw43PioSpi = @ptrCast(@alignCast(ptr));
+    const self: *Self = @ptrCast(@alignCast(ptr));
     self.pins.cs.put(0);
     defer self.pins.cs.put(1);
 
@@ -151,7 +148,7 @@ pub fn write(ptr: *anyopaque, cmd: u32, buffers: []const []const u32) u32 {
     return self.status();
 }
 
-fn prep(self: *Cyw43PioSpi, read_bits: u32, write_bits: u32) void {
+fn prep(self: *Self, read_bits: u32, write_bits: u32) void {
     self.pio.sm_set_enabled(self.sm, false);
     self.pio.sm_exec_set_y(self.sm, read_bits);
     self.pio.sm_exec_set_x(self.sm, write_bits);
@@ -160,7 +157,7 @@ fn prep(self: *Cyw43PioSpi, read_bits: u32, write_bits: u32) void {
     self.pio.sm_set_enabled(self.sm, true);
 }
 
-fn dma_read(self: *Cyw43PioSpi, data: []u32) void {
+fn dma_read(self: *Self, data: []u32) void {
     const ch = self.channel.?;
     const rx_fifo_addr = @intFromPtr(self.pio.sm_get_rx_fifo(self.sm));
     ch.setup_transfer_raw(@intFromPtr(data.ptr), rx_fifo_addr, data.len, .{
@@ -174,7 +171,7 @@ fn dma_read(self: *Cyw43PioSpi, data: []u32) void {
     ch.wait_for_finish_blocking();
 }
 
-fn dma_write(self: *Cyw43PioSpi, data: []const u32) void {
+fn dma_write(self: *Self, data: []const u32) void {
     const ch = self.channel.?;
     const tx_fifo_addr = @intFromPtr(self.pio.sm_get_tx_fifo(self.sm));
     ch.setup_transfer_raw(tx_fifo_addr, @intFromPtr(data.ptr), data.len, .{
@@ -190,7 +187,7 @@ fn dma_write(self: *Cyw43PioSpi, data: []const u32) void {
 
 // By default it sends status after each read/write.
 // ref: datasheet 'Table 6. gSPI Registers' status enable has default 1
-fn status(self: *Cyw43PioSpi) u32 {
+fn status(self: *Self) u32 {
     var val: u32 = 0;
     self.dma_read(mem.bytesAsSlice(u32, mem.asBytes(&val)));
     return val;

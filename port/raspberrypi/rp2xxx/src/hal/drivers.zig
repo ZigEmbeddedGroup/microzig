@@ -468,29 +468,26 @@ pub fn clock_device() Clock_Device {
 pub const WiFi = struct {
     const Self = @This();
     pub const Driver = mdf.wireless.Cyw43;
-    pub const Config = hal.Cyw43PioSpi.Config;
+    pub const recv = Driver.recv;
+    pub const send = Driver.send;
+
+    const Spi = hal.Cyw43PioSpi;
+    pub const Config = Spi.Config;
+
     const led_pin: u2 = 0; // led is connected to the gpio pin 0 on pico w
 
-    spi: hal.Cyw43PioSpi = undefined,
-    driver: Driver = undefined,
+    spi: Spi = undefined,
+    driver: Driver = .{},
 
-    pub fn init(self: *Self, config: Config) !void {
-        self.spi = try hal.Cyw43PioSpi.init(config);
-        self.driver = .{
-            .bus = .{
-                .spi = .{
-                    .ptr = &self.spi,
-                    .vtable = &.{
-                        .read = hal.Cyw43PioSpi.read,
-                        .write = hal.Cyw43PioSpi.write,
-                    },
-                },
-                .sleep_ms = hal.time.sleep_ms,
+    pub fn init(self: *Self, config: Config) !*Driver {
+        self.spi = try Spi.init(config);
+        try self.driver.init(.{
+            .ptr = &self.spi,
+            .vtable = &.{
+                .read = Spi.read,
+                .write = Spi.write,
             },
-            .led_pin = led_pin,
-        };
-
-        try self.driver.init();
-        self.driver.gpio_enable(led_pin);
+        }, hal.time.sleep_ms, led_pin);
+        return &self.driver;
     }
 };
