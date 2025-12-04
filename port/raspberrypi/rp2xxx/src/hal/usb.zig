@@ -255,7 +255,7 @@ pub fn F(comptime config: UsbConfig) type {
 
             const ep = hardware_endpoint_get_by_address(.in(ep_num));
             // wait for controller to give processor ownership of the buffer before writing it.
-            while (ep.buffer_control.?.read().AVAILABLE_0 == 1) {}
+            // while (ep.buffer_control.?.read().AVAILABLE_0 == 1) {}
 
             // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
             std.mem.copyForwards(u8, ep.data_buffer[0..buffer.len], buffer);
