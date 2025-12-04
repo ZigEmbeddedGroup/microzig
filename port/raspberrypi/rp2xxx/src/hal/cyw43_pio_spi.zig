@@ -59,8 +59,9 @@ pub const Pins = struct {
 };
 
 pub fn init(config: Config) !Self {
-    const sm = try config.pio.claim_unused_state_machine();
     const pins = config.pins;
+    const pio = config.pio;
+    const sm = try pio.claim_unused_state_machine();
 
     // Chip select pin setup
     pins.cs.set_function(.sio);
@@ -68,21 +69,21 @@ pub fn init(config: Config) !Self {
     pins.cs.put(1);
 
     // IO pin setup
-    config.pio.gpio_init(pins.io);
+    pio.gpio_init(pins.io);
     pins.io.set_output_disabled(false);
     pins.io.set_pull(.disabled);
     pins.io.set_schmitt_trigger_enabled(true);
-    config.pio.set_input_sync_bypass(pin_num(pins.io));
+    pio.set_input_sync_bypass(pin_num(pins.io));
     pins.io.set_drive_strength(.@"12mA");
     pins.io.set_slew_rate(.fast);
 
     // Clock pin setup
-    config.pio.gpio_init(pins.clk);
+    pio.gpio_init(pins.clk);
     pins.clk.set_output_disabled(false);
     pins.clk.set_drive_strength(.@"12mA");
     pins.clk.set_slew_rate(.fast);
 
-    try config.pio.sm_load_and_start_program(sm, cyw43spi_program, .{
+    try pio.sm_load_and_start_program(sm, cyw43spi_program, .{
         // TODO: int = 2 gives 62.5Mhz on pico, but it is too much on pico2
         // This should depend on pico/pico2: 2/3
         // 50MHz i recomended by datasheet
@@ -108,7 +109,7 @@ pub fn init(config: Config) !Self {
     try config.pio.sm_set_pin(sm, config.io_pin, 1, 0);
 
     return .{
-        .pio = config.pio,
+        .pio = pio,
         .sm = sm,
         .pins = pins,
     };

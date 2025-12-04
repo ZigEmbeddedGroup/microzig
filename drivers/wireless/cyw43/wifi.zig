@@ -257,7 +257,7 @@ pub const WiFi = struct {
                         log.err("bus: {}", .{rsp.sdp});
                         log.err("clt: {}", .{ctl});
                         log.err("data: {x}", .{rsp.data()});
-                        return error.WiFiInvalidCommandStatus;
+                        return error.Cyw43InvalidCommandStatus;
                     }
                 },
                 .event => self.handle_event(rsp),
@@ -265,7 +265,7 @@ pub const WiFi = struct {
             }
         }
         log.err("ioctl: missing response in wait_response", .{});
-        return error.IoctlNoResponse;
+        return error.Cyw43NoResponse;
     }
 
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
@@ -381,24 +381,24 @@ pub const WiFi = struct {
                     );
                     switch (evt.event_type) {
                         .link => {
-                            if (evt.flags & 1 == 0) return error.JoinLinkDown;
+                            if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
                             link_up = true;
                         },
                         .psk_sup => {
-                            if (evt.status != .unsolicited) return error.JoinWpaHandshake;
+                            if (evt.status != .unsolicited) return error.Cyw43JoinWpaHandshake;
                             link_auth = true;
                         },
                         .assoc => {
-                            if (evt.status != .success) return error.JoinAssocRequest;
+                            if (evt.status != .success) return error.Cyw43JoinAssocRequest;
                         },
                         .auth => {
-                            if (evt.status != .success) return error.JoinAuthRequest;
+                            if (evt.status != .success) return error.Cyw43JoinAuthRequest;
                         },
                         .disassoc_ind => {
-                            return error.JoinDisassocIndication;
+                            return error.Cyw43JoinDisassocIndication;
                         },
                         .set_ssid => {
-                            if (evt.status != .success) return error.JoinSetSsid;
+                            if (evt.status != .success) return error.Cyw43JoinSetSsid;
                             set_ssid = true;
                         },
                         else => {},
@@ -412,7 +412,7 @@ pub const WiFi = struct {
                 .data => {},
             }
         }
-        return error.JoinTimeout;
+        return error.Cyw43JoinTimeout;
     }
 
     //TODO replace all handle methods with show unexpected
@@ -462,7 +462,7 @@ pub const WiFi = struct {
         const net_header_len = 42;
 
         assert(net_header.len == net_header_len);
-        if (!self.status().f2_rx_ready) return error.CywNotReady;
+        if (!self.status().f2_rx_ready) return error.Cyw43NotReady;
 
         var header_words: [(ioctl.tx_header_len + net_header_len) >> 2]u32 = @splat(0);
         var header_bytes: []u8 = mem.asBytes(&header_words);

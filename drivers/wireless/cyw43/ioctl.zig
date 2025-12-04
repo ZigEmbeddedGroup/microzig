@@ -52,11 +52,11 @@ const SdpHeader = extern struct {
     pub fn validate(sdp: SdpHeader, n: u16) !void {
         if (sdp.len != n) {
             log.err("invalid reponse len actual: {} packet: {}", .{ sdp.len, n });
-            return error.IoctlInvalidBusLen;
+            return error.Cyw43SdpInvalidBusLen;
         }
         if (sdp.len ^ sdp.not_len != 0xffff) {
             log.err("invalid reponse not len len: {x} notlen: {x}", .{ sdp.len, sdp.not_len });
-            return error.IoctlInvalidNotBusLen;
+            return error.Cyw43SdpInvalidNotBusLen;
         }
     }
 };

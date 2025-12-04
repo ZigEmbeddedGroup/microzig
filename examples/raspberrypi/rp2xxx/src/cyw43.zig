@@ -76,11 +76,6 @@ pub fn main() !void {
             log.err("udp send: {}", .{err});
             continue;
         };
-        // const hydra_ip: [4]u8 = .{ 192, 168, 190, 235 };
-        // const hydra_mac = net.get_mac(hydra_ip) catch |err| {
-        //     log.err("net_get_mac: {}", .{err});
-        //     continue;
-        // };
     }
 
     rp2xxx.rom.reset_to_usb_boot();

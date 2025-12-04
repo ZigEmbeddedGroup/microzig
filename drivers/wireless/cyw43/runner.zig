@@ -1,9 +1,4 @@
 const std = @import("std");
-const consts = @import("consts.zig");
-const NVRAM = @import("nvram.zig").NVRAM;
-
-const ioctl = @import("ioctl.zig");
-const assert = std.debug.assert;
 const mem = std.mem;
 
 const SpiInterface = @import("bus.zig").SpiInterface;
