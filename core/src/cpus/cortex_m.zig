@@ -649,17 +649,19 @@ pub const atomic = struct {
 /// an fpu and hard float is enabled for the target. HAL's also call this in
 /// the startup of other cores.
 pub inline fn enable_fpu() void {
+    // enable the FPU for the current core
+    peripherals.scb.CPACR.modify(.{
+        .CP10 = .full_access,
+        .CP11 = .full_access,
+    });
+
     // enable lazy state preservation
     peripherals.fpu.FPCCR.modify(.{
         .ASPEN = 1,
         .LSPEN = 1,
     });
 
-    // enable the FPU for the current core
-    peripherals.scb.CPACR.modify(.{
-        .CP10 = .full_access,
-        .CP11 = .full_access,
-    });
+    asm volatile ("dmb; isb");
 }
 
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.
@@ -993,10 +995,13 @@ const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
 const fpu_base = scs_base + 0x0F34;
 
-const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
-const mpu_present = @hasDecl(properties, "cpu.mpuPresent") and std.mem.eql(u8, properties.@"cpu.mpuPresent", "true");
-const fpu_present = @hasDecl(properties, "cpu.fpuPresent") and std.mem.eql(u8, properties.@"cpu.fpuPresent", "true");
+const mpu_present = @hasDecl(microzig.chip, "properties") and
+    @hasDecl(microzig.chip.properties, "cpu.mpuPresent") and
+    std.mem.eql(u8, microzig.chip.properties.@"cpu.mpuPresent", "true");
+const fpu_present = @hasDecl(microzig.chip, "properties") and
+    @hasDecl(microzig.chip.properties, "cpu.fpuPresent") and
+    std.mem.eql(u8, microzig.chip.properties.@"cpu.fpuPresent", "true");
 
 const core = blk: {
     break :blk switch (cortex_m) {
