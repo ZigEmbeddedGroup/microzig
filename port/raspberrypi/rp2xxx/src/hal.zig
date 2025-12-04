@@ -126,6 +126,9 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 }
 
 /// Enables dcp on RP2350 arm.
+///
+/// NOTE: Called automatically in the hal startup sequence and in core1
+/// startup.
 pub inline fn enable_dcp() void {
     if (!(compatibility.chip == .RP2350 and
         compatibility.arch == .arm))

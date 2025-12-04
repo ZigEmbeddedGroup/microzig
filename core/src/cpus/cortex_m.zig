@@ -643,25 +643,22 @@ pub const atomic = struct {
     }
 };
 
-/// Enables the FPU and sets up lazy state preservation.
+/// Enables the FPU.
 ///
 /// NOTE: This function is automatically called on cpu startup if the cpu has
 /// an fpu and hard float is enabled for the target. HAL's also call this in
 /// the startup of other cores.
 pub inline fn enable_fpu() void {
-    // enable the FPU for the current core
-    peripherals.scb.CPACR.modify(.{
-        .CP10 = .full_access,
-        .CP11 = .full_access,
-    });
-
-    // enable lazy state preservation
-    peripherals.fpu.FPCCR.modify(.{
-        .ASPEN = 1,
-        .LSPEN = 1,
-    });
-
-    asm volatile ("dmb; isb");
+    // Taken from the rust crate cortex-m-rt.
+    asm volatile (
+        \\ldr r0, =0xE000ED88
+        \\ldr r1, =(0b1111 << 20)
+        \\ldr r2, [r0]
+        \\orr r2, r2, r1
+        \\str r2, [r0]
+        \\dsb
+        \\isb
+    );
 }
 
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.
@@ -675,7 +672,7 @@ else
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) void {
+    pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) noreturn {
         const eos = comptime microzig.utilities.get_end_of_stack();
         asm volatile (
             \\
@@ -689,7 +686,7 @@ pub const startup_logic = struct {
         );
     }
 
-    pub fn _start() callconv(.c) noreturn {
+    pub fn _start() callconv(.c) void {
         microzig.utilities.initialize_system_memories(.auto);
 
         if (using_ram_vector_table or is_ram_image) {
@@ -705,7 +702,7 @@ pub const startup_logic = struct {
                 : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
-        if (fpu_present and builtin.abi.float() == .hard) {
+        if (builtin.abi.float() == .hard) {
             enable_fpu();
         }
 
