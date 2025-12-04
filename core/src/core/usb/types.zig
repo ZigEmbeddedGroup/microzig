@@ -211,20 +211,20 @@ pub const UsbClassDriver = struct {
     fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
     fn_transfer: *const fn (ptr: *anyopaque, ep: Endpoint, data: []u8) void,
 
-    pub fn init(self: *@This(), device: UsbDevice) void {
+    pub fn init(self: *const @This(), device: UsbDevice) void {
         return self.fn_init(self.ptr, device);
     }
 
     /// Driver open (set config) operation. Must return length of consumed driver config data.
-    pub fn open(self: *@This(), cfg: []const u8) !usize {
+    pub fn open(self: *const @This(), cfg: []const u8) !usize {
         return self.fn_open(self.ptr, cfg);
     }
 
-    pub fn class_control(self: *@This(), stage: ControlStage, setup: *const SetupPacket) bool {
+    pub fn class_control(self: *const @This(), stage: ControlStage, setup: *const SetupPacket) bool {
         return self.fn_class_control(self.ptr, stage, setup);
     }
 
-    pub fn transfer(self: *@This(), ep: Endpoint, data: []u8) void {
+    pub fn transfer(self: *const @This(), ep: Endpoint, data: []u8) void {
         return self.fn_transfer(self.ptr, ep, data);
     }
 };
