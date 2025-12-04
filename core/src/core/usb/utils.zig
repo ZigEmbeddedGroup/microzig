@@ -1,4 +1,5 @@
 const std = @import("std");
+const descriptor = @import("descriptor.zig");
 const types = @import("types.zig");
 
 pub const BosConfig = struct {
@@ -9,8 +10,8 @@ pub const BosConfig = struct {
         return bos_cfg[DESC_OFFSET_LEN];
     }
 
-    pub fn get_desc_type(bos_cfg: []const u8) ?types.DescType {
-        return types.DescType.from_u8(bos_cfg[DESC_OFFSET_TYPE]);
+    pub fn get_desc_type(bos_cfg: []const u8) ?descriptor.Type {
+        return @enumFromInt(bos_cfg[DESC_OFFSET_TYPE]);
     }
 
     pub fn get_data_u8(bos_cfg: []const u8, offset: u16) u8 {
@@ -31,7 +32,9 @@ pub const BosConfig = struct {
     /// Only for temporal u8 fields use as u16 fields will have wrong values because BOS endianness
     pub fn try_get_desc_as(comptime T: type, bos_cfg: []const u8) ?*const T {
         if (bos_cfg.len == 0) return null;
-        const exp_desc_type = @field(T, "const_descriptor_type");
+        const desc_fld = @typeInfo(T).@"struct".fields[1];
+        std.debug.assert(std.mem.eql(u8, "descriptor_type", desc_fld.name));
+        const exp_desc_type: descriptor.Type = @as(*const desc_fld.type, @ptrCast(desc_fld.default_value_ptr.?)).*;
         const cfg_desc_type = bos_cfg[DESC_OFFSET_TYPE];
         if (cfg_desc_type != @intFromEnum(exp_desc_type)) {
             return null;

@@ -1,11 +1,12 @@
 const std = @import("std");
 
 const types = @import("types.zig");
+const descriptor = @import("descriptor.zig");
 const utils = @import("utils.zig");
 
 const utilities = @import("../../utilities.zig");
 
-const DescType = types.DescType;
+const DescType = descriptor.Type;
 const bos = utils.BosConfig;
 
 pub const DescSubType = enum(u8) {
@@ -132,9 +133,9 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
     return struct {
         device: ?types.UsbDevice = null,
-        ep_notif: u8 = 0,
-        ep_in: u8 = 0,
-        ep_out: u8 = 0,
+        ep_notif: types.Endpoint.Num = .ep0,
+        ep_in: types.Endpoint.Num = .ep0,
+        ep_out: types.Endpoint.Num = .ep0,
 
         line_state: u8 = 0,
         line_coding: CdcLineCoding = undefined,
@@ -179,14 +180,14 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 return 0;
             }
             const len = self.tx.read(&self.epin_buf);
-            self.device.?.endpoint_transfer(self.ep_in, self.epin_buf[0..len]);
+            self.device.?.endpoint_transfer(.in(self.ep_in), self.epin_buf[0..len]);
             return len;
         }
 
         fn prep_out_transaction(self: *@This()) void {
             if (self.rx.get_writable_len() >= usb.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
-                self.device.?.endpoint_transfer(self.ep_out, &.{});
+                self.device.?.endpoint_transfer(.out(self.ep_out), &.{});
             }
         }
 
@@ -205,7 +206,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             var self: *@This() = @ptrCast(@alignCast(ptr));
             var curr_cfg = cfg;
 
-            if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+            if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
                 if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Cdc)) return types.DriverErrors.UnsupportedInterfaceClassType;
                 if (desc_itf.interface_subclass != @intFromEnum(CdcCommSubClassType.AbstractControlModel)) return types.DriverErrors.UnsupportedInterfaceSubClassType;
             } else {
@@ -218,19 +219,20 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 curr_cfg = bos.get_desc_next(curr_cfg);
             }
 
-            if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                self.ep_notif = desc_ep.endpoint_address;
+            if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
+                std.debug.assert(desc_ep.endpoint.dir == .In);
+                self.ep_notif = desc_ep.endpoint.num;
                 curr_cfg = bos.get_desc_next(curr_cfg);
             }
 
-            if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+            if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
                 if (desc_itf.interface_class == @intFromEnum(types.ClassCode.CdcData)) {
                     curr_cfg = bos.get_desc_next(curr_cfg);
                     for (0..2) |_| {
-                        if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                            switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                                .In => self.ep_in = desc_ep.endpoint_address,
-                                .Out => self.ep_out = desc_ep.endpoint_address,
+                        if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
+                            switch (desc_ep.endpoint.dir) {
+                                .In => self.ep_in = desc_ep.endpoint.num,
+                                .Out => self.ep_out = desc_ep.endpoint.num,
                             }
                             self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                             curr_cfg = bos.get_desc_next(curr_cfg);
@@ -286,20 +288,20 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             return true;
         }
 
-        fn transfer(ptr: *anyopaque, ep_addr: u8, data: []u8) void {
+        fn transfer(ptr: *anyopaque, ep: types.Endpoint, data: []u8) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
-            if (ep_addr == self.ep_out) {
+            if (ep == types.Endpoint.out(self.ep_out)) {
                 self.rx.write(data) catch {};
                 self.prep_out_transaction();
             }
 
-            if (ep_addr == self.ep_in) {
+            if (ep == types.Endpoint.in(self.ep_in)) {
                 if (self.write_flush() == 0) {
                     // If there is no data left, a empty packet should be sent if
                     // data len is multiple of EP Packet size and not zero
                     if (self.tx.get_readable_len() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
-                        self.device.?.endpoint_transfer(self.ep_in, &.{});
+                        self.device.?.endpoint_transfer(.in(self.ep_in), &.{});
                     }
                 }
             }
