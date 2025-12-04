@@ -275,7 +275,7 @@ pub fn Usb(comptime f: anytype) type {
                                     break :StringBlk @ptrCast(&usb_config.?.lang_descriptor);
                                 } else {
                                     // Otherwise, set up one of our strings.
-                                    const s = usb_config.?.descriptor_strings[i - 1];
+                                    const s = std.mem.sliceAsBytes(usb_config.?.descriptor_strings[i - 1]);
                                     const len = 2 + s.len;
 
                                     var wb = BufferWriter{ .buffer = &S.tmp };
@@ -502,7 +502,7 @@ pub const DeviceConfiguration = struct {
     device_descriptor: *const descriptor.Device,
     config_descriptor: []const u8,
     lang_descriptor: descriptor.Language,
-    descriptor_strings: []const []const u8,
+    descriptor_strings: []const []const u16,
     drivers: []types.UsbClassDriver,
 };
 
@@ -638,24 +638,6 @@ const BufferReader = struct {
     }
 };
 
-pub const UsbUtils = struct {
-    /// Convert an utf8 into an utf16 (little endian) string
-    pub fn utf8_to_utf16_le(comptime s: []const u8) [s.len << 1]u8 {
-        const l = s.len << 1;
-        var ret: [l]u8 = @splat(0);
-        var i: usize = 0;
-        while (i < s.len) : (i += 1) {
-            ret[i << 1] = s[i];
-        }
-        return ret;
-    }
-};
-
 test "tests" {
     _ = hid;
-}
-
-test "utf8 to utf16" {
-    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &UsbUtils.utf8_to_utf16_le("My Vendor"));
-    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &UsbUtils.utf8_to_utf16_le("Raspberry Pi"));
 }

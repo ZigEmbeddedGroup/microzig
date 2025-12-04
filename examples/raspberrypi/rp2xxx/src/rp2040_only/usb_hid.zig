@@ -1,4 +1,6 @@
 const std = @import("std");
+const utf8_to_utf16_le = std.unicode.utf8ToUtf16LeStringLiteral;
+
 const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
@@ -46,9 +48,9 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .config_descriptor = &usb_config_descriptor,
     .lang_descriptor = .English,
     .descriptor_strings = &.{
-        &usb.utils.utf8_to_utf16_le("Raspberry Pi"),
-        &usb.utils.utf8_to_utf16_le("Pico Test Device"),
-        &usb.utils.utf8_to_utf16_le("cafebabe"),
+        utf8_to_utf16_le("Raspberry Pi"),
+        utf8_to_utf16_le("Pico Test Device"),
+        utf8_to_utf16_le("cafebabe"),
     },
     .drivers = &drivers,
 };

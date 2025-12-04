@@ -16,7 +16,6 @@ pub const hid = usb.hid;
 pub const cdc = usb.cdc;
 pub const vendor = usb.vendor;
 pub const templates = usb.templates.DescriptorsConfigTemplates;
-pub const utils = usb.UsbUtils;
 const EpNum = usb.types.Endpoint.Num;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
