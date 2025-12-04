@@ -43,6 +43,7 @@
 
 const std = @import("std");
 
+const descriptor = @import("descriptor.zig");
 const types = @import("types.zig");
 const utils = @import("utils.zig");
 
@@ -538,7 +539,7 @@ pub const HidClassDriver = struct {
         var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
         var curr_cfg = cfg;
 
-        if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+        if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
             if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return types.DriverErrors.UnsupportedInterfaceClassType;
         } else {
             return types.DriverErrors.ExpectedInterfaceDescriptor;
@@ -553,10 +554,10 @@ pub const HidClassDriver = struct {
         }
 
         for (0..2) |_| {
-            if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
-                switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                    .In => self.ep_in = desc_ep.endpoint_address,
-                    .Out => self.ep_out = desc_ep.endpoint_address,
+            if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
+                switch (desc_ep.endpoint.dir) {
+                    .In => self.ep_in = @bitCast(desc_ep.endpoint),
+                    .Out => self.ep_out = @bitCast(desc_ep.endpoint),
                 }
                 self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                 curr_cfg = bos.get_desc_next(curr_cfg);
@@ -643,7 +644,7 @@ pub const HidClassDriver = struct {
         return true;
     }
 
-    fn transfer(_: *anyopaque, _: u8, _: []u8) void {}
+    fn transfer(_: *anyopaque, _: types.Endpoint, _: []u8) void {}
 
     pub fn driver(self: *@This()) types.UsbClassDriver {
         return .{

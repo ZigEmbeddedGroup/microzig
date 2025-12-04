@@ -268,11 +268,11 @@ pub fn Usb(comptime f: anytype) type {
                             // String descriptor index is in bottom 8 bits of
                             // `value`.
                             const i: usize = @intCast(setup.value & 0xff);
-                            const bytes = StringBlk: {
+                            const bytes: []const u8 = StringBlk: {
                                 if (i == 0) {
                                     // Special index 0 requests the language
                                     // descriptor.
-                                    break :StringBlk usb_config.?.lang_descriptor;
+                                    break :StringBlk @ptrCast(&usb_config.?.lang_descriptor);
                                 } else {
                                     // Otherwise, set up one of our strings.
                                     const s = usb_config.?.descriptor_strings[i - 1];
@@ -501,7 +501,7 @@ pub fn Usb(comptime f: anytype) type {
 pub const DeviceConfiguration = struct {
     device_descriptor: *const descriptor.Device,
     config_descriptor: []const u8,
-    lang_descriptor: []const u8,
+    lang_descriptor: descriptor.Language,
     descriptor_strings: []const []const u8,
     drivers: []types.UsbClassDriver,
 };

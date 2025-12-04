@@ -1,131 +1,107 @@
 const std = @import("std");
-
-const types = @import("types.zig");
 const descriptor = @import("descriptor.zig");
-const utils = @import("utils.zig");
+const types = @import("types.zig");
 
 const utilities = @import("../../utilities.zig");
+const bos = @import("utils.zig").BosConfig;
 
-const DescType = descriptor.Type;
-const bos = utils.BosConfig;
-
-pub const DescSubType = enum(u8) {
-    Header = 0x00,
-    CallManagement = 0x01,
-    ACM = 0x02,
-    Union = 0x06,
-
-    pub fn from_u16(v: u16) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
-};
-
-pub const CdcManagementRequestType = enum(u8) {
+pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
     GetLineCoding = 0x21,
     SetControlLineState = 0x22,
     SendBreak = 0x23,
+};
 
-    pub fn from_u8(v: u8) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
+pub const Descriptor = extern struct {
+    itf_assoc: descriptor.InterfaceAssociation,
+    itf_notifi: descriptor.Interface,
+    cdc_header: descriptor.cdc.Header,
+    cdc_call_mgmt: descriptor.cdc.CallManagement,
+    cdc_acm: descriptor.cdc.AbstractControlModel,
+    cdc_union: descriptor.cdc.Union,
+    ep_notifi: descriptor.Endpoint,
+    itf_data: descriptor.Interface,
+    ep_out: descriptor.Endpoint,
+    ep_in: descriptor.Endpoint,
+
+    pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
+        return @bitCast(this);
+    }
+
+    pub fn create(first_interface: u8, string_ids: anytype, endpoints: anytype) @This() {
+        const endpoint_notifi_size = 8;
+        const endpoint_size = 64;
+        return .{
+            .itf_assoc = .{
+                .first_interface = first_interface,
+                .interface_count = 2,
+                .function_class = 2,
+                .function_subclass = 2,
+                .function_protocol = 0,
+                .function = 0,
+            },
+            .itf_notifi = .{
+                .interface_number = first_interface,
+                .alternate_setting = 0,
+                .num_endpoints = 1,
+                .interface_class = 2,
+                .interface_subclass = 2,
+                .interface_protocol = 0,
+                .interface_s = string_ids.name,
+            },
+            .cdc_header = .{ .bcd_cdc = .from(0x0120) },
+            .cdc_call_mgmt = .{
+                .capabilities = 0,
+                .data_interface = first_interface + 1,
+            },
+            .cdc_acm = .{ .capabilities = 6 },
+            .cdc_union = .{
+                .master_interface = first_interface,
+                .slave_interface_0 = first_interface + 1,
+            },
+            .ep_notifi = .{
+                .endpoint = .in(endpoints.notifi),
+                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                .max_packet_size = .from(endpoint_notifi_size),
+                .interval = 16,
+            },
+            .itf_data = .{
+                .interface_number = first_interface + 1,
+                .alternate_setting = 0,
+                .num_endpoints = 2,
+                .interface_class = 10,
+                .interface_subclass = 0,
+                .interface_protocol = 0,
+                .interface_s = 0,
+            },
+            .ep_out = .{
+                .endpoint = .out(endpoints.data),
+                .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                .max_packet_size = .from(endpoint_size),
+                .interval = 0,
+            },
+            .ep_in = .{
+                .endpoint = .in(endpoints.data),
+                .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                .max_packet_size = .from(endpoint_size),
+                .interval = 0,
+            },
+        };
     }
 };
 
-pub const CdcCommSubClassType = enum(u8) {
-    AbstractControlModel = 2,
-};
-
-pub const CdcHeaderDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `Header`.
-    descriptor_subtype: DescSubType = DescSubType.Header,
-    // USB Class Definitions for Communication Devices Specification release
-    // number in binary-coded decimal. Typically 0x01_10.
-    bcd_cdc: u16 align(1),
-
-    pub fn serialize(self: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = @intCast(self.bcd_cdc & 0xff);
-        out[4] = @intCast((self.bcd_cdc >> 8) & 0xff);
-        return out;
-    }
-};
-
-pub const CdcCallManagementDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `CallManagement`.
-    descriptor_subtype: DescSubType = DescSubType.CallManagement,
-    // Capabilities. Should be 0x00 for use as a serial device.
-    capabilities: u8,
-    // Data interface number.
-    data_interface: u8,
-
-    pub fn serialize(self: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = self.capabilities;
-        out[4] = self.data_interface;
-        return out;
-    }
-};
-
-pub const CdcAcmDescriptor = extern struct {
-    length: u8 = 4,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `ACM`.
-    descriptor_subtype: DescSubType = DescSubType.ACM,
-    // Capabilities. Should be 0x02 for use as a serial device.
-    capabilities: u8,
-
-    pub fn serialize(self: *const @This()) [4]u8 {
-        var out: [4]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = self.capabilities;
-        return out;
-    }
-};
-
-pub const CdcUnionDescriptor = extern struct {
-    length: u8 = 5,
-    // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: DescType = DescType.CsInterface,
-    // Subtype of this descriptor, must be `Union`.
-    descriptor_subtype: DescSubType = DescSubType.Union,
-    // The interface number of the communication or data class interface
-    // designated as the master or controlling interface for the union.
-    master_interface: u8,
-    // The interface number of the first slave or associated interface in the
-    // union.
-    slave_interface_0: u8,
-
-    pub fn serialize(self: *const @This()) [5]u8 {
-        var out: [5]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intFromEnum(self.descriptor_subtype);
-        out[3] = self.master_interface;
-        out[4] = self.slave_interface_0;
-        return out;
-    }
-};
-
-pub const CdcLineCoding = extern struct {
+pub const LineCoding = extern struct {
     bit_rate: u32 align(1),
     stop_bits: u8,
     parity: u8,
     data_bits: u8,
+
+    pub const init: @This() = .{
+        .bit_rate = 115200,
+        .stop_bits = 0,
+        .parity = 0,
+        .data_bits = 8,
+    };
 };
 
 pub fn CdcClassDriver(comptime usb: anytype) type {
@@ -137,7 +113,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         ep_in: types.Endpoint.Num = .ep0,
         ep_out: types.Endpoint.Num = .ep0,
 
-        line_coding: CdcLineCoding = undefined,
+        line_coding: LineCoding = undefined,
 
         rx: FIFO = .empty,
         tx: FIFO = .empty,
@@ -204,16 +180,19 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             var self: *@This() = @ptrCast(@alignCast(ptr));
             var curr_cfg = cfg;
 
+            // const desc: Descriptor = std.mem.bytesAsValue(Descriptor, cfg);
+            // _ = desc;
+
             if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
                 if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Cdc)) return types.DriverErrors.UnsupportedInterfaceClassType;
-                if (desc_itf.interface_subclass != @intFromEnum(CdcCommSubClassType.AbstractControlModel)) return types.DriverErrors.UnsupportedInterfaceSubClassType;
+                if (desc_itf.interface_subclass != @intFromEnum(descriptor.cdc.SubType.AbstractControlModel)) return types.DriverErrors.UnsupportedInterfaceSubClassType;
             } else {
                 return types.DriverErrors.ExpectedInterfaceDescriptor;
             }
 
             curr_cfg = bos.get_desc_next(curr_cfg);
 
-            while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == DescType.CsInterface) {
+            while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == .CsInterface) {
                 curr_cfg = bos.get_desc_next(curr_cfg);
             }
 
@@ -245,7 +224,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
             var self: *@This() = @ptrCast(@alignCast(ptr));
 
-            if (CdcManagementRequestType.from_u8(setup.request)) |request| {
+            if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| {
                 switch (request) {
                     .SetLineCoding => {
                         switch (stage) {
@@ -281,7 +260,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                         }
                     },
                 }
-            }
+            } else |_| {}
 
             return true;
         }

@@ -7,6 +7,8 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = rp2xxx.usb;
 
+const descriptor = microzig.core.usb.descriptor;
+
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -14,10 +16,15 @@ const uart_rx_pin = gpio.num(1);
 
 const usb_dev = rp2xxx.usb.Usb(.{});
 
-const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
-const usb_config_descriptor =
-    usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
-    usb.templates.cdc_descriptor(0, 4, .in(.ep1), 8, .out(.ep2), .in(.ep2), 64);
+const usb_config_descriptor = descriptor.Configuration.create(
+    0,
+    .{ .self_powered = true },
+    100,
+    usb.cdc.Descriptor.create(0, .{ .name = 4 }, .{ .notifi = .ep1, .data = .ep2 }),
+);
+
+// usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
+// usb.templates.cdc_descriptor(0, 4, .in(.ep1), 8, .out(.ep2), .in(.ep2), 64);
 
 var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
 var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
@@ -33,15 +40,15 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         },
         .max_packet_size0 = 64,
         .vendor = .from(0x2E8A),
-        .product = .from(0x000a),
+        .product = .from(0x000A),
         .bcd_device = .from(0x0100),
         .manufacturer_s = 1,
         .product_s = 2,
-        .serial_s = 0,
+        .serial_s = 3,
         .num_configurations = 1,
     },
-    .config_descriptor = &usb_config_descriptor,
-    .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
+    .config_descriptor = @ptrCast(&usb_config_descriptor),
+    .lang_descriptor = .English,
     .descriptor_strings = &.{
         &usb.utils.utf8_to_utf16_le("Raspberry Pi"),
         &usb.utils.utf8_to_utf16_le("Pico Test Device"),

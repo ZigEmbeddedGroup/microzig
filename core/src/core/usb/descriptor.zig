@@ -2,15 +2,11 @@ const std = @import("std");
 const types = @import("types.zig");
 const assert = std.debug.assert;
 
-// pub const cdc = @import("descriptor/cdc.zig");
-// pub const hid = @import("descriptor/hid.zig");
-// pub const vendor = @import("descriptor/vendor.zig");
+pub const cdc = @import("descriptor/cdc.zig");
 
-// test "descriptor tests" {
-//     _ = cdc;
-//     _ = hid;
-//     _ = vendor;
-// }
+test "descriptor tests" {
+    _ = cdc;
+}
 
 pub const Type = enum(u8) {
     Device = 0x01,
@@ -169,6 +165,29 @@ pub const Configuration = extern struct {
 
     pub fn serialize(this: @This()) [@sizeOf(@This())]u8 {
         return @bitCast(this);
+    }
+
+    pub fn create(configuration_s: u8, attributes: Attributes, max_current_ma: u9, payload: anytype) struct { @This(), @TypeOf(payload) } {
+        const Payload = @TypeOf(payload);
+
+        comptime var num_interfaces = 0;
+
+        for (@typeInfo(Payload).@"struct".fields) |fld| {
+            switch (fld.type) {
+                Interface => num_interfaces += 1,
+                InterfaceAssociation, Endpoint, cdc.Header, cdc.CallManagement, cdc.AbstractControlModel, cdc.Union => {},
+                else => @compileLog(fld),
+            }
+        }
+
+        return .{ .{
+            .total_length = .from(@sizeOf(@This()) + @sizeOf(Payload)),
+            .num_interfaces = num_interfaces,
+            .configuration_value = 1,
+            .configuration_s = configuration_s,
+            .attributes = attributes,
+            .max_current = .from_ma(max_current_ma),
+        }, payload };
     }
 };
 

@@ -34,7 +34,7 @@ pub const BosConfig = struct {
         if (bos_cfg.len == 0) return null;
         const desc_fld = @typeInfo(T).@"struct".fields[1];
         std.debug.assert(std.mem.eql(u8, "descriptor_type", desc_fld.name));
-        const exp_desc_type: descriptor.Type = @as(*const desc_fld.type, @ptrCast(desc_fld.default_value_ptr.?)).*;
+        const exp_desc_type = @as(*const desc_fld.type, @ptrCast(desc_fld.default_value_ptr.?)).*;
         const cfg_desc_type = bos_cfg[DESC_OFFSET_TYPE];
         if (cfg_desc_type != @intFromEnum(exp_desc_type)) {
             return null;
