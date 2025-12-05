@@ -2,15 +2,12 @@
 //TODO: Add support for 105/107
 
 const std = @import("std");
+const ClockTree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
 const microzig = @import("microzig");
-
-const find_clocktree = @import("mcu_trees.zig").find_clock_tree;
-const ClockTree = find_clocktree(microzig.config.chip_name);
 const power = @import("power.zig");
 
 //expose only the configuration structs
 pub const Config = ClockTree.Config;
-
 const flash_v1 = microzig.chip.types.peripherals.flash_f1;
 const flash = microzig.chip.peripherals.FLASH;
 const PLLMUL = microzig.chip.types.peripherals.rcc_f1.PLLMUL;

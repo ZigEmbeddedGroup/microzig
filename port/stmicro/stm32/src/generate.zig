@@ -89,6 +89,9 @@ fn generate_chips_file(
     chip_files: []const std.json.Parsed(ChipFile),
 ) !void {
     try writer.writeAll(
+        \\//AUTOMATICALLY GENERATED FILE!
+        \\//For modifications, consider editing the generation script in generate.zig
+        \\
         \\const std = @import("std");
         \\const microzig = @import("microzig/build-internals");
         \\
@@ -108,6 +111,12 @@ fn generate_chips_file(
         \\    const b = dep.builder;
         \\    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
         \\    var ret: Self = undefined;
+        \\    const hal_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
+        \\     .{ 
+        \\          .name = "ClockTree",
+        \\          .module = std.Build.Module.create(b, .{ .root_source_file = b.path("stm32-clocks/lib.zig") }),
+        \\      },
+        \\    }) catch @panic("out of memory");
         \\
         \\
     );
@@ -255,6 +264,7 @@ fn generate_chips_file(
             try writer.writeAll(
                 \\        .hal = .{
                 \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
+                \\            .imports = hal_imports,
                 \\        },
                 \\
             );
