@@ -11,19 +11,6 @@ pub const CpuFlags = struct {
     has_mem_manage_fault: bool,
 };
 
-pub const options = struct {
-    pub const Ram_Vector_Options = struct {
-        /// If true, interrupt vectors are moved to RAM so handlers can be set at runtime.
-        ram_vector_table: bool = false,
-
-        /// If true, the Cortex-M interrupts will be initialized with a more verbose variant
-        /// of the interrupt handlers which print the interrupt name.
-        ///
-        /// NOTE: This option is enabled in debug builds by default.
-        verbose_unhandled_irq: bool = (builtin.mode == .Debug),
-    };
-};
-
 pub const scb = struct {
     pub const SHCSR = packed struct(u32) {
         /// [0]
