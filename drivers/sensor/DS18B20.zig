@@ -28,8 +28,8 @@ pub const DS18B20 = struct {
     const CMD_WRITE_SCRATCHPAD = 0x4E;
     const CMD_READ_SCRATCHPAD = 0xBE;
     const CMD_COPY_SCRATCHPAD = 0x48;
-    // const CMD_REACLL_SCRATCHPAD = 0xB8;
-    // const CMD_READ_POWER_SUPPLY = 0xB4;
+    const CMD_REACLL_SCRATCHPAD = 0xB8;
+    const CMD_READ_POWER_SUPPLY = 0xB4;
 
     pub const Alarms = struct { th: u8, tl: u8 };
 
@@ -47,6 +47,11 @@ pub const DS18B20 = struct {
                 .SixteenthDegree12 => 0.0625,
             };
         }
+    };
+
+    pub const PowerSupply = enum {
+        Parasite,
+        External,
     };
 
     pub const Error = error{DeviceNotPresent};
@@ -179,6 +184,25 @@ pub const DS18B20 = struct {
         self.clock_dev.sleep_ms(10);
     }
 
+    pub fn recall_config_from_eeprom(self: *const DS18B20) !void {
+        if (!(try self.reset())) return error.DeviceNotFound;
+        try self.write_byte(CMD_SKIP_ROM);
+        try self.write_byte(CMD_REACLL_SCRATCHPAD);
+    }
+
+    pub fn read_power_supply(self: *const DS18B20) !PowerSupply {
+        if (!(try self.reset())) return error.DeviceNotFound;
+        try self.write_byte(CMD_SKIP_ROM);
+        try self.write_byte(CMD_READ_POWER_SUPPLY);
+
+        const supply = try self.read_bit();
+        return if (supply == 1) .External else .Parasite;
+    }
+
+    /// Initiates a temperature conversion.
+    /// This must be done prior to reading the temperature.
+    /// Depending on the resolution, the conversion may take up to 750ms.
+    /// An error is returned if the device is not present.
     pub fn initiate_temperature_conversion(self: *const Self) !void {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
@@ -186,6 +210,13 @@ pub const DS18B20 = struct {
         try self.write_byte(CMD_CONVERT_T);
     }
 
+    /// Reads the temperature from the sensor.
+    /// The conversion must be initiated prior to calling this function using
+    /// initiate_temperature_conversion().
+    /// If resolution is provided, it is used to calculate the temperature.
+    /// Otherwise, the resolution is read from the sensor.
+    /// Returns temperature in Celsius.
+    /// An error is returned if the device is not present.
     pub fn read_temperature(self: *const Self, resolution: ?Resolution) !f32 {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
