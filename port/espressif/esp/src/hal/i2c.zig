@@ -221,7 +221,8 @@ pub const I2C = enum(u1) {
         // Make sure the FIFO operates in FIFO mode
         self.get_regs().FIFO_CONF.modify(.{
             .NONFIFO_EN = 0,
-            .FIFO_PRT_EN = 0,
+            // Handle data larger than FIFO size
+            .FIFO_PRT_EN = 1,
         });
 
         self.get_regs().INT_CLR.modify(.{
@@ -435,6 +436,7 @@ pub const I2C = enum(u1) {
                     .length = @bitCast(write_len),
                 } });
             } else if (start) {
+                // Account for 1 byte of load address and R/W bit
                 try self.add_cmd(cmd_start_idx, .{ .write = .{
                     .ack_exp = .ack,
                     .ack_check_en = true,
@@ -446,20 +448,11 @@ pub const I2C = enum(u1) {
                     .length = @bitCast(write_len - 1),
                 } });
             } else {
+                // Continue transmission
                 try self.add_cmd(cmd_start_idx, .{ .write = .{
                     .ack_exp = .ack,
                     .ack_check_en = true,
-                    .length = 1,
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len - 2),
+                    .length = @bitCast(write_len),
                 } });
             }
         }
@@ -628,10 +621,12 @@ pub const I2C = enum(u1) {
         while (remaining != 0) {
             const max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
                 remaining
-            else if (remaining > I2C_CHUNK_SIZE + 2)
+            else if (is_first_chunk)
+                // Reserve space for start byte
                 I2C_CHUNK_SIZE
             else
-                I2C_CHUNK_SIZE - 2;
+                // Fully use the FIFO
+                I2C_CHUNK_SIZE + 1;
 
             const buffer_remaining = max_chunk_size - buffer_level;
             if (buffer_remaining == 0) {
