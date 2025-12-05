@@ -429,32 +429,11 @@ pub const I2C = enum(u1) {
         const write_len: u8 = @truncate(if (start) bytes.len + 1 else bytes.len);
 
         if (write_len > 0) {
-            if (write_len < 2) {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len),
-                } });
-            } else if (start) {
-                // Account for 1 byte of load address and R/W bit
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len - 1),
-                } });
-            } else {
-                // Continue transmission
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len),
-                } });
-            }
+            try self.add_cmd(cmd_start_idx, .{ .write = .{
+                .ack_exp = .ack,
+                .ack_check_en = true,
+                .length = @bitCast(write_len),
+            } });
         }
 
         // Load address and R/W bit
