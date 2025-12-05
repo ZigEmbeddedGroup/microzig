@@ -6,19 +6,18 @@ const I2CType = emus_type.I2CType;
 const I2C_t = microzig.chip.types.peripherals.i2c_v2.I2C;
 const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
-const mdb = microzig.drivers.base;
+const drivers = microzig.drivers.base;
 
-pub const Address = mdb.I2C_Device.Address;
-const I2C_Device = mdb.I2C_Device;
-const InterfaceError = mdb.I2C_Device.InterfaceError;
+pub const Address = drivers.I2C_Device.Address;
+const InterfaceError = drivers.I2C_Device.InterfaceError;
 
 pub const ConfigError = error{
     PCLKUnderflow,
     PCLKOverflow,
 };
 
-// 100khz for now
-const TimmingSpec_Standard = .{
+// 100Khz for now
+const TimingSpec_Standard = .{
     .t_low = 4.7,
     .t_high = 4.0,
     .t_rise = 1.0,
@@ -38,8 +37,8 @@ const I2C = struct {
     regs: *volatile I2C_t,
 
     fn compute_presc() ConfigError!struct { f32, u4 } {
-        // Let first see if we need to prescal.
-        // 100Khx = 10us period ~ 5us for SCLL/SCLH
+        // Let first see if we need to prescale.
+        // 100Khz = 10us period ~ 5us for SCLL/SCLH
         const t_sckl = 1_000_000.0 / @as(f32, @floatFromInt(hal.rcc.current_clock.sys_clk));
 
         // t_presc = 0.1us accomonddate for most timing register
@@ -56,7 +55,7 @@ const I2C = struct {
     }
 
     fn comput_hold_time(t_presc: f32) ConfigError!u4 {
-        const real_sdadel = (TimmingSpec_Standard.t_fall + TimmingSpec_Standard.t_min_vd_ack - TimmingSpec_Standard.t_max_af) / t_presc;
+        const real_sdadel = (TimingSpec_Standard.t_fall + TimingSpec_Standard.t_min_vd_ack - TimingSpec_Standard.t_max_af) / t_presc;
         if (real_sdadel > 15.0) {
             std.log.info("Hold time is too short consider lowering the i2cclk frequency", .{});
             return ConfigError.PCLKOverflow;
@@ -67,7 +66,7 @@ const I2C = struct {
     }
 
     fn comput_setup_time(t_presc: f32) ConfigError!u4 {
-        const real_scdel = (TimmingSpec_Standard.t_rise + TimmingSpec_Standard.t_su_dat) / t_presc;
+        const real_scdel = (TimingSpec_Standard.t_rise + TimingSpec_Standard.t_su_dat) / t_presc;
         if (real_scdel > 15.0) {
             std.log.info("Setup time is too short consider lowering the i2cclk frequency", .{});
             return ConfigError.PCLKOverflow;
@@ -78,7 +77,7 @@ const I2C = struct {
     }
 
     fn comput_low_time(t_presc: f32) ConfigError!u8 {
-        const real_scll = ((TimmingSpec_Standard.t_low - TimmingSpec_Standard.t_min_af - 2 * t_presc) / t_presc) - 1;
+        const real_scll = ((TimingSpec_Standard.t_low - TimingSpec_Standard.t_min_af - 2 * t_presc) / t_presc) - 1;
         if (real_scll > 256.0) {
             std.log.info("Clock low time is too short consider lowering the i2cclk frequency", .{});
             return ConfigError.PCLKOverflow;
@@ -87,7 +86,7 @@ const I2C = struct {
     }
 
     fn comput_high_time(t_presc: f32) ConfigError!u8 {
-        const real_sclh = ((TimmingSpec_Standard.t_high - TimmingSpec_Standard.t_min_af - 2 * t_presc) / t_presc) - 1;
+        const real_sclh = ((TimingSpec_Standard.t_high - TimingSpec_Standard.t_min_af - 2 * t_presc) / t_presc) - 1;
         if (real_sclh > 256.0) {
             std.log.info("Clock high time is too short consider lowering the i2cclk frequency", .{});
             return ConfigError.PCLKOverflow;
@@ -187,15 +186,15 @@ const I2C = struct {
     }
 };
 
-pub const I2CDevice = struct {
+pub const I2C_Device = struct {
     i2c: I2C,
-    const device_vtable = I2C_Device.VTable{
-        .writev_fn = I2CDevice.writev_fn,
-        .readv_fn = I2CDevice.readv_fn,
-        .writev_then_readv_fn = I2CDevice.writev_then_readv_fn,
+    const device_vtable = drivers.I2C_Device.VTable{
+        .writev_fn = I2C_Device.writev_fn,
+        .readv_fn = I2C_Device.readv_fn,
+        .writev_then_readv_fn = I2C_Device.writev_then_readv_fn,
     };
     fn writev_fn(dev: *anyopaque, addr: Address, datagrams: []const []const u8) InterfaceError!void {
-        const i2c: *I2CDevice = @ptrCast(@alignCast(dev));
+        const i2c: *I2C_Device = @ptrCast(@alignCast(dev));
         addr.check_reserved() catch {
             return InterfaceError.TargetAddressReserved;
         };
@@ -205,7 +204,7 @@ pub const I2CDevice = struct {
     }
 
     fn readv_fn(dev: *anyopaque, addr: Address, datagrams: []const []u8) InterfaceError!usize {
-        const i2c: *I2CDevice = @ptrCast(@alignCast(dev));
+        const i2c: *I2C_Device = @ptrCast(@alignCast(dev));
         addr.check_reserved() catch {
             return InterfaceError.TargetAddressReserved;
         };
@@ -223,7 +222,7 @@ pub const I2CDevice = struct {
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
     ) InterfaceError!void {
-        const i2c: *I2CDevice = @ptrCast(@alignCast(dev));
+        const i2c: *I2C_Device = @ptrCast(@alignCast(dev));
         addr.check_reserved() catch {
             return InterfaceError.TargetAddressReserved;
         };
@@ -233,15 +232,15 @@ pub const I2CDevice = struct {
         }
     }
 
-    pub fn apply(i2c: *const I2CDevice) ConfigError!void {
+    pub fn apply(i2c: *const I2C_Device) ConfigError!void {
         try i2c.i2c.apply();
     }
 
-    pub fn init(comptime instance: I2CType) I2CDevice {
+    pub fn init(comptime instance: I2CType) I2C_Device {
         return .{ .i2c = I2C.init(instance) };
     }
 
-    pub fn as_device(i2c: *I2CDevice) I2C_Device {
-        return .{ .ptr = @ptrCast(i2c), .vtable = &device_vtable };
+    pub fn i2c_device(i2c: *I2C_Device) drivers.I2C_Device {
+        return .{ .ptr = i2c, .vtable = &device_vtable };
     }
 };

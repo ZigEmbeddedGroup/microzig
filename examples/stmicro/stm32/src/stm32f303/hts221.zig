@@ -33,9 +33,9 @@ pub noinline fn main() !void {
         },
     }).apply();
 
-    var i2c1 = stm32.i2c.I2CDevice.init(.I2C1);
+    var i2c1 = stm32.i2c.I2C_Device.init(.I2C1);
     try i2c1.apply();
-    var device = i2c1.as_device();
+    var device = i2c1.i2c_device();
 
     var hts221 = HTS221.init(&device);
     try hts221.configure(.{
