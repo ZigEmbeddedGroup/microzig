@@ -10,21 +10,30 @@ const log = std.log.scoped(.cyw43_runner);
 pub const Runner = struct {
     const Self = @This();
 
+    pub const Buffer = [770]u32;
+
     bus: Bus = undefined,
     wifi: WiFi = undefined,
     led_pin: ?u2 = null,
     mac: [6]u8 = @splat(0),
+
+    buffer: *Buffer = undefined,
 
     pub fn init(
         self: *Self,
         spi: SpiInterface,
         sleep_ms: *const fn (delay: u32) void,
         led_pin: ?u2,
+        buffer: *Buffer,
     ) !void {
         self.bus = .{ .spi = spi, .sleep_ms = sleep_ms };
         try self.bus.init();
 
-        self.wifi = .{ .bus = &self.bus };
+        self.wifi = .{
+            .bus = &self.bus,
+            .tx_words = buffer[0..385],
+            .rx_words = buffer[385..],
+        };
         try self.wifi.init();
 
         if (led_pin) |pin| {
@@ -32,6 +41,12 @@ pub const Runner = struct {
             self.wifi.gpio_enable(pin);
         }
         self.mac = try self.read_mac();
+    }
+
+    pub fn tx_buffer(self: *Self) []u8 {
+        // first word is reserved for bus command
+        // then 18 bytes are bus header
+        return mem.sliceAsBytes(self.wifi.tx_words[1..])[18..];
     }
 
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
@@ -65,26 +80,19 @@ pub const Runner = struct {
         self.wifi.gpio_toggle(self.led_pin.?);
     }
 
-    pub fn recv(ptr: *anyopaque, buffer: []u8) anyerror!?[]const u8 {
+    pub fn recv(ptr: *anyopaque) anyerror!?[]const u8 {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        return self.wifi.recv(buffer);
+        return self.wifi.recv();
     }
 
-    // UDP  : 14 (Eth) + 20 (IPv4) + 8 (UDP)  = 42 bytes
-    // ICMP : 14 (Eth) + 20 (IPv4) + 8 (ICMP) = 42 bytes
-    // ARP  : 14 (Eth) + 28 (ARP)             = 42 bytes
-    // header:
-    // 12 bytes sdp header
-    //  2 bytes padding (aligns ethernet to 4 bytes)
-    //  4 bytes cdc header
-    // --- align 2
-    // 14 bytes ethernet header
-    // -- align 4
-    // 20 bytes ip header    | 28 bytes arp header | 20 bytes ip
-    //  8 bytes udp header   |                     |  8 bytes icmp header
-    pub fn send(ptr: *anyopaque, net_header: []const u8, payload: []const u8) anyerror!void {
+    // data is network header + payload, network header is
+    //   UDP  : 14 (Eth) + 20 (IPv4) + 8 (UDP)  = 42 bytes
+    //   ICMP : 14 (Eth) + 20 (IPv4) + 8 (ICMP) = 42 bytes
+    //   ARP  : 14 (Eth) + 28 (ARP)             = 42 bytes
+    //
+    pub fn send(ptr: *anyopaque, data: []const u8) anyerror!void {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        try self.wifi.send(net_header, payload);
+        try self.wifi.send(data);
     }
 };
 

@@ -17,6 +17,9 @@ pub const WiFi = struct {
     ioctl_request_id: u16 = 0,
     ioctl_tx_sequence: u8 = 0,
 
+    tx_words: []u32,
+    rx_words: []u32,
+
     pub fn init(self: *Self) !void {
         const bus = self.bus;
 
@@ -211,34 +214,34 @@ pub const WiFi = struct {
 
     // send command to the wifi chip and wait for response
     fn set_request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) !void {
-        var buf: [512]u8 align(4) = undefined;
+        self.request(cmd, name, data);
+        _ = try self.response_poll(cmd, null);
+    }
+
+    fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
         self.ioctl_request_id +%= 1;
         self.ioctl_tx_sequence +%= 1;
-        const req = ioctl.request(&buf, cmd, name, data, self.ioctl_request_id, self.ioctl_tx_sequence);
-        self.bus.write(.wlan, 0, as_const_words(req));
-        _ = try self.response_poll(&buf, cmd, null);
+        const tx_bytes = mem.sliceAsBytes(self.tx_words[1..]);
+        const bytes = ioctl.request(tx_bytes, cmd, name, data, self.ioctl_request_id, self.ioctl_tx_sequence);
+        const words_len = ((bytes.len + 3) >> 2) + 1;
+        self.bus.write(.wlan, 0, @intCast(bytes.len), self.tx_words[0..words_len]);
     }
 
     pub fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
-        var buf: [512]u8 align(4) = undefined;
-        const cmd: ioctl.Cmd = .get_var;
-        self.ioctl_request_id +%= 1;
-        self.ioctl_tx_sequence +%= 1;
-        const req = ioctl.request(&buf, cmd, name, data, self.ioctl_request_id, self.ioctl_tx_sequence);
-        self.bus.write(.wlan, 0, as_const_words(req));
-        return try self.response_poll(&buf, cmd, data);
+        self.request(.get_var, name, data);
+        return try self.response_poll(.get_var, data);
     }
 
-    fn response_poll(self: *Self, buf: []u8, cmd: ioctl.Cmd, data: ?[]u8) !usize {
+    fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
         var sleeps: usize = 0;
+        //TODO: umjesto sleeps mjeri vrijeme
         while (sleeps < 8) {
-            const len = self.read_packet(as_words(buf));
-            if (len == 0) {
+            const buf = self.read_packet() orelse {
                 self.sleep_ms(ioctl.response_wait);
                 sleeps += 1;
                 continue;
-            }
-            const rsp = try ioctl.response(buf[0..@min(len, buf.len)]);
+            };
+            const rsp = try ioctl.response(buf);
             switch (rsp.sdp.chan) {
                 .control => {
                     // TODO: trebam li usporediti request_id s necim? ili samo ctl.cmd
@@ -357,7 +360,6 @@ pub const WiFi = struct {
     }
 
     fn join_wait(self: *Self, wait_ms: u32) !void {
-        var buf: [512]u8 = undefined;
         var delay: u32 = 0;
         var link_up: bool = false;
         var link_auth: bool = false;
@@ -365,13 +367,12 @@ pub const WiFi = struct {
 
         log.debug("wifi join", .{});
         while (delay < wait_ms) {
-            const len = self.read_packet(as_words(&buf));
-            if (len == 0) {
+            const buf = self.read_packet() orelse {
                 self.sleep_ms(ioctl.response_wait);
                 delay += ioctl.response_wait;
                 continue;
-            }
-            const rsp = try ioctl.response(buf[0..len]);
+            };
+            const rsp = try ioctl.response(buf);
             switch (rsp.sdp.chan) {
                 .event => {
                     const evt = rsp.event().msg;
@@ -445,11 +446,10 @@ pub const WiFi = struct {
         self.bus.sleep_ms(delay);
     }
 
-    pub fn recv(self: *Self, buffer: []u8) !?[]const u8 {
+    pub fn recv(self: *Self) !?[]const u8 {
         while (true) {
-            const len = self.read_packet(as_words(buffer));
-            if (len == 0) return null;
-            const rsp = try ioctl.response(buffer[0..len]);
+            const buf = self.read_packet() orelse return null;
+            const rsp = try ioctl.response(buf);
             switch (rsp.sdp.chan) {
                 .control => self.handle_control(rsp),
                 .event => self.handle_event(rsp),
@@ -458,57 +458,51 @@ pub const WiFi = struct {
         }
     }
 
-    pub fn send(self: *Self, net_header: []const u8, payload: []const u8) anyerror!void {
-        const net_header_len = 42;
-
-        assert(net_header.len == net_header_len);
-        if (!self.status().f2_rx_ready) return error.Cyw43NotReady;
-
-        var header_words: [(ioctl.tx_header_len + net_header_len) >> 2]u32 = @splat(0);
-        var header_bytes: []u8 = mem.asBytes(&header_words);
-
+    // bus header:
+    // 12 bytes sdp header
+    //  2 bytes padding (aligns ethernet to 4 bytes)
+    //  4 bytes cdc header
+    // --- align 2
+    // 14 bytes ethernet header
+    // -- align 4
+    // 20 bytes ip header    | 28 bytes arp header | 20 bytes ip
+    //  8 bytes udp header   |                     |  8 bytes icmp header
+    // ... payload
+    pub fn send(self: *Self, data: []const u8) anyerror!void {
+        // add header to the start of the tx_words
+        // leave one word at the start for bus command
         self.ioctl_tx_sequence +%= 1;
-        header_bytes[0..ioctl.tx_header_len].* = ioctl.tx_header(@intCast(net_header.len + payload.len), self.ioctl_tx_sequence);
-        @memcpy(header_bytes[ioctl.tx_header_len..][0..net_header.len], net_header);
-
-        const payload_words, const payload_padding = ioctl.bytes_to_words(payload);
-
-        self.bus.writev(
-            .wlan,
-            0,
-            &[3][]const u32{
-                &header_words,
-                payload_words,
-                if (payload_padding) |p| &.{p} else &.{},
-            },
-            @intCast(ioctl.tx_header_len + net_header.len + payload.len),
-        );
+        const tx_bytes = mem.sliceAsBytes(self.tx_words[1..]);
+        tx_bytes[0..ioctl.tx_header_len].* = ioctl.tx_header(@intCast(data.len), self.ioctl_tx_sequence);
+        // copy data to the tx_words if not already there
+        if (&tx_bytes[ioctl.tx_header_len] != &data[0]) {
+            @memcpy(tx_bytes[ioctl.tx_header_len..][0..data.len], data);
+        }
+        // bus write
+        const bytes_len = ioctl.tx_header_len + data.len;
+        const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
+        self.bus.write(.wlan, 0, @intCast(bytes_len), self.tx_words[0..words_len]);
     }
 
     // read packet from the wifi chip
-    fn read_packet(self: *Self, buf: []u32) u11 {
+    fn read_packet(self: *Self) ?[]const u8 {
         const st = self.status();
-        if (!st.f2_packet_available) return 0;
-        if (st.packet_length > 0) {
-            if (st.packet_length > buf.len * 4) {
-                log.err(
-                    "read_packet packet_length: {}, buf.len {}",
-                    .{ st.packet_length, buf.len * 4 },
-                );
-            }
-            // Read event data if present
-            const bytes_len: usize = @min(st.packet_length, buf.len * 4);
-            const words_len: usize = (bytes_len + 3) >> 2;
-            // NOTE: this returns status
-            _ = self.bus.read(.wlan, 0, @intCast(bytes_len), buf[0..words_len]);
-        } else {
-            // TODO: activate if not pooling
-            // // ..or clear interrupt, and discard data
-            // self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
-            // const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
-            // self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
+        if (st.f2_packet_available and st.packet_length > 0) {
+            assert(st.packet_length < self.rx_words.len * 4);
+            const words_len: usize = ((st.packet_length + 3) >> 2) + 1; // add one word for the status
+            const words = self.rx_words[0..words_len];
+            self.bus.read(.wlan, 0, st.packet_length, words);
+            // TODO: make use of this status in the read loop we know that it is available and what is length
+            const st2: Status = @bitCast(words[words.len - 1]);
+            _ = st2;
+            return mem.sliceAsBytes(words)[0..st.packet_length];
         }
-        return st.packet_length;
+        // TODO: do we need this, probably when irq is used
+        // // ..or clear interrupt, and discard data
+        // self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
+        // const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
+        // self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
+        return null;
     }
 
     pub fn status(self: *Self) Status {

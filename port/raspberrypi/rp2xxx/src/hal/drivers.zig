@@ -479,15 +479,20 @@ pub const WiFi = struct {
     spi: Spi = undefined,
     chip: Chip = .{}, // cyw43 chip interface
 
-    pub fn init(self: *Self, config: Config) !*Chip {
+    pub fn init(self: *Self, config: Config, buffer: *Chip.Buffer) !*Chip {
         self.spi = try Spi.init(config);
-        try self.chip.init(.{
-            .ptr = &self.spi,
-            .vtable = &.{
-                .read = Spi.read,
-                .write = Spi.write,
+        try self.chip.init(
+            .{
+                .ptr = &self.spi,
+                .vtable = &.{
+                    .read = Spi.read,
+                    .write = Spi.write,
+                },
             },
-        }, hal.time.sleep_ms, led_pin);
+            hal.time.sleep_ms,
+            led_pin,
+            buffer,
+        );
         return &self.chip;
     }
 };

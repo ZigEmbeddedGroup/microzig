@@ -115,7 +115,7 @@ pub fn init(config: Config) !Self {
     };
 }
 
-pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
+pub fn read(ptr: *anyopaque, words: []u32) void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     self.pins.cs.put(0);
     defer self.pins.cs.put(1);
@@ -123,30 +123,24 @@ pub fn read(ptr: *anyopaque, cmd: u32, buffer: []u32) u32 {
     self.channel = hal.dma.claim_unused_channel();
     defer self.channel.?.unclaim();
 
-    self.prep(buffer.len * 32 + 32 - 1, 31);
-    self.dma_write(&.{cmd});
-    self.dma_read(buffer);
-    return self.status();
+    self.prep(words.len * 32 - 1, 31);
+    self.dma_write(words[0..1]);
+    self.dma_read(words); // last word is status
 }
 
-pub fn write(ptr: *anyopaque, cmd: u32, buffers: []const []const u32) u32 {
+// By default it sends status after each read/write.
+// ref: datasheet 'Table 6. gSPI Registers' status enable has default 1
+pub fn write(ptr: *anyopaque, words: []u32) void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     self.pins.cs.put(0);
     defer self.pins.cs.put(1);
 
     self.channel = hal.dma.claim_unused_channel();
     defer self.channel.?.unclaim();
-    var data_len: u32 = 0;
-    for (buffers) |buffer| {
-        data_len += buffer.len;
-    }
 
-    self.prep(31, data_len * 32 + 32 - 1);
-    self.dma_write(&.{cmd});
-    for (buffers) |buffer| {
-        if (buffer.len > 0) self.dma_write(buffer);
-    }
-    return self.status();
+    self.prep(31, words.len * 32 - 1);
+    self.dma_write(words);
+    self.dma_read(words[0..1]); // read status into first word
 }
 
 fn prep(self: *Self, read_bits: u32, write_bits: u32) void {
@@ -184,12 +178,4 @@ fn dma_write(self: *Self, data: []const u32) void {
         .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm)),
     });
     ch.wait_for_finish_blocking();
-}
-
-// By default it sends status after each read/write.
-// ref: datasheet 'Table 6. gSPI Registers' status enable has default 1
-fn status(self: *Self) u32 {
-    var val: u32 = 0;
-    self.dma_read(mem.bytesAsSlice(u32, mem.asBytes(&val)));
-    return val;
 }

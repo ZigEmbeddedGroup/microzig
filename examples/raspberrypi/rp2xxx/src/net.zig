@@ -18,11 +18,11 @@ pub const Net = struct {
     ip: IpAddr,
     driver: struct {
         ptr: *anyopaque,
-        recv: *const fn (*anyopaque, []u8) anyerror!?[]const u8,
-        send: *const fn (*anyopaque, []const u8, []const u8) anyerror!void,
+        recv: *const fn (*anyopaque) anyerror!?[]const u8,
+        send: *const fn (*anyopaque, []const u8) anyerror!void,
     },
-    rx_buffer: []u8,
     sleep_ms: *const fn (delay: u32) void,
+    tx_buffer: []u8,
 
     fn ip_identification(self: *Self) u16 {
         self.identification +%= 1;
@@ -40,12 +40,12 @@ pub const Net = struct {
         }
     }
 
-    fn send(self: *Self, header: []const u8, payload: []const u8) !void {
-        try self.driver.send(self.driver.ptr, header, payload);
+    fn send(self: *Self, data: []const u8) !void {
+        try self.driver.send(self.driver.ptr, data);
     }
 
     fn recv(self: *Self) !?[]const u8 {
-        return try self.driver.recv(self.driver.ptr, self.rx_buffer);
+        return try self.driver.recv(self.driver.ptr);
     }
 
     pub fn get_mac(self: *Self, ip: IpAddr) !Mac {
@@ -64,7 +64,6 @@ pub const Net = struct {
     }
 
     pub fn send_arp_request(self: *Self, ip: IpAddr) !void {
-        var header: [@sizeOf(Ethernet) + @sizeOf(Arp)]u8 = undefined;
         var eth_rsp: Ethernet = .{
             .destination = broadcast_mac,
             .source = self.mac,
@@ -77,8 +76,9 @@ pub const Net = struct {
             .target_mac = broadcast_mac,
             .target_ip = ip,
         };
-        _ = try arp_rsp.encode(header[try eth_rsp.encode(&header)..]);
-        try self.send(&header, &.{});
+        var pos = try eth_rsp.encode(self.tx_buffer);
+        pos += try arp_rsp.encode(self.tx_buffer[pos..]);
+        try self.send(self.tx_buffer[0..pos]);
     }
 
     fn parse_arp_response(rx_bytes: []const u8, ip: IpAddr) !?Mac {
@@ -105,8 +105,10 @@ pub const Net = struct {
             bytes = bytes[@sizeOf(Arp)..];
 
             if (arp.opcode == .request and mem.eql(u8, &arp.target_ip, &self.ip)) {
-                log.debug("arp request from ip: {any} mac: {x}", .{ arp.sender_ip[0..4], arp.sender_mac[0..6] });
-                var header: [@sizeOf(Ethernet) + @sizeOf(Arp)]u8 = undefined;
+                log.debug(
+                    "arp request from ip: {any} mac: {x}",
+                    .{ arp.sender_ip[0..4], arp.sender_mac[0..6] },
+                );
                 var eth_rsp: Ethernet = .{
                     .destination = arp.sender_mac,
                     .source = self.mac,
@@ -119,17 +121,17 @@ pub const Net = struct {
                     .target_mac = arp.sender_mac,
                     .target_ip = arp.sender_ip,
                 };
-                _ = try arp_rsp.encode(header[try eth_rsp.encode(&header)..]);
-                try self.send(&header, &.{});
+                var pos = try eth_rsp.encode(self.tx_buffer);
+                pos += try arp_rsp.encode(self.tx_buffer[pos..]);
+                try self.send(self.tx_buffer[0..pos]);
                 return;
             }
 
             if (arp.opcode == .response) {
-                log.debug("arp response from ip: {any} mac: {x} arp: {}", .{
-                    arp.sender_ip[0..4],
-                    arp.sender_mac[0..6],
-                    arp,
-                });
+                log.debug(
+                    "arp response from ip: {any} mac: {x} arp: {}",
+                    .{ arp.sender_ip[0..4], arp.sender_mac[0..6], arp },
+                );
             }
         }
         if (eth.protocol == .ip) {
@@ -142,9 +144,10 @@ pub const Net = struct {
                 const icmp = try Icmp.decode(bytes);
                 const data = bytes[@sizeOf(Icmp)..];
                 if (icmp.typ == .request) {
-                    log.debug("ping request from ip: {any}, mac: {x}, data.len {}", .{ ip.source[0..4], eth.source[0..6], data.len });
-
-                    var header: [@sizeOf(Ethernet) + @sizeOf(Ip) + @sizeOf(Icmp)]u8 = undefined;
+                    log.debug(
+                        "ping request from ip: {any}, mac: {x}, data.len {}",
+                        .{ ip.source[0..4], eth.source[0..6], data.len },
+                    );
                     var eth_rsp: Ethernet = .{
                         .destination = eth.source,
                         .source = self.mac,
@@ -163,11 +166,12 @@ pub const Net = struct {
                         .identifier = icmp.identifier,
                         .sequence = icmp.sequence,
                     };
-                    var pos = try eth_rsp.encode(header[0..]);
-                    pos += try ip_rsp.encode(header[pos..]);
-                    pos += try icmp_rsp.encode(header[pos..], data);
-
-                    try self.send(&header, data);
+                    var pos = try eth_rsp.encode(self.tx_buffer[0..]);
+                    pos += try ip_rsp.encode(self.tx_buffer[pos..]);
+                    pos += try icmp_rsp.encode(self.tx_buffer[pos..], data);
+                    @memcpy(self.tx_buffer[pos..][0..data.len], data);
+                    pos += data.len;
+                    try self.send(self.tx_buffer[0..pos]);
                     return;
                 }
             }
@@ -185,8 +189,17 @@ pub const Udp = struct {
         port: u16,
     },
 
+    const header_len = @sizeOf(Ethernet) + @sizeOf(Ip) + @sizeOf(UdpHeader);
+
+    pub fn tx_buffer(self: *Self) []u8 {
+        return self.net.tx_buffer[header_len..];
+    }
+
     pub fn send(self: *Self, payload: []const u8) !void {
-        var header: [@sizeOf(Ethernet) + @sizeOf(Ip) + @sizeOf(UdpHeader)]u8 = undefined;
+        const tx_payload = self.tx_buffer()[0..payload.len];
+        if (tx_payload.ptr != payload.ptr) {
+            @memcpy(tx_payload, payload);
+        }
         var eth: Ethernet = .{
             .destination = self.destination.mac,
             .source = self.net.mac,
@@ -205,11 +218,11 @@ pub const Udp = struct {
             .length = @intCast(@sizeOf(UdpHeader) + payload.len),
             .checksum = 0,
         };
+        const header = self.net.tx_buffer[0..header_len];
         var pos = try eth.encode(header[0..]);
         pos += try ip.encode(header[pos..]);
         pos += try udp.encode(header[pos..], &ip, payload);
-
-        try self.net.send(header[0..pos], payload);
+        try self.net.send(self.net.tx_buffer[0 .. header_len + payload.len]);
     }
 };
 
