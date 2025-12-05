@@ -737,14 +737,14 @@ pub const startup_logic = struct {
         } else if (!fpu_present and microzig.options.cpu.enable_fpu) {
             @compileError(
                 \\FPU enable requested though the chip doesn't appear to have an
-                \\FPU. If your chip does have an FPU please add the `cpu.fpuPresent`
-                \\equal to `true` property to your chip file, either manually or
-                \\via patches. If you want to use patches, you can use something like
+                \\FPU. If your chip does have an FPU please add the `fpu_present`
+                \\equal to `true` property to your chip file, either manually or via
+                \\patches. If you want to use patches, you can use something like
                 \\this:
                 \\```
                 \\.{ .set_device_property = .{
                 \\    .device_name = "CHIP_NAME",
-                \\    .key = "cpu.fpuPresent",
+                \\    .key = "fpu_present",
                 \\    .value = "true"
                 \\} },
                 \\```
@@ -1041,11 +1041,15 @@ const fpu_base = scs_base + 0x0F34;
 
 // TODO: will have to standardize this with regz code generation
 const mpu_present = @hasDecl(microzig.chip, "properties") and
-    @hasDecl(microzig.chip.properties, "cpu.mpuPresent") and
-    std.mem.eql(u8, microzig.chip.properties.@"cpu.mpuPresent", "true");
+    @hasDecl(microzig.chip.properties, "mpu_present") and
+    is_property_true(microzig.chip.properties.mpu_present);
 const fpu_present = @hasDecl(microzig.chip, "properties") and
-    @hasDecl(microzig.chip.properties, "cpu.fpuPresent") and
-    std.mem.eql(u8, microzig.chip.properties.@"cpu.fpuPresent", "true");
+    @hasDecl(microzig.chip.properties, "fpu_present") and
+    is_property_true(microzig.chip.properties.fpu_present);
+
+fn is_property_true(value: []const u8) bool {
+    return std.mem.eql(u8, value, "true") or std.mem.eql(u8, value, "1");
+}
 
 const core = blk: {
     break :blk switch (cortex_m) {

@@ -30,7 +30,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .register_definition = .{
                 .atdf = atpack_dep.path("samd51a/atdf/ATSAMD51J19A.atdf"),
             },
-            .patches = @import("src/patches/ATSAMD51J19A.zig").patches,
             .memory_regions = &.{
                 .{ .tag = .flash, .offset = 0x00000000, .length = 512 * 1024, .access = .rx }, // Embedded Flash
                 .{ .tag = .ram, .offset = 0x20000000, .length = 192 * 1024, .access = .rwx }, // Embedded SRAM
