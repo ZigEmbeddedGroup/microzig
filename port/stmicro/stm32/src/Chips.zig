@@ -28552,6 +28552,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L471QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28576,6 +28579,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28602,6 +28608,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L471RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28626,6 +28635,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28652,6 +28664,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L471VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28676,6 +28691,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28702,6 +28720,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L471ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28726,6 +28747,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28752,6 +28776,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L475RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28776,6 +28803,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28802,6 +28832,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L475VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28826,6 +28859,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28852,6 +28888,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L475VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28876,6 +28915,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28902,6 +28944,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476JG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28926,6 +28971,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -28952,6 +29000,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476MG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -28976,6 +29027,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -29002,6 +29056,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -29026,6 +29083,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -29052,6 +29112,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -29076,6 +29139,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -29102,6 +29168,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -29126,6 +29195,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -29152,6 +29224,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -29176,6 +29251,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 
@@ -29202,6 +29280,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+        },
     };
 
     ret.STM32L476ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -29226,6 +29307,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x10000000, .length = 0x8000, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x18000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32L47X.zig"),
         },
     };
 

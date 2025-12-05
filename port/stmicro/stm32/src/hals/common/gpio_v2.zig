@@ -1,7 +1,7 @@
 const std = @import("std");
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
+
+const assert = std.debug.assert;
 pub const peripherals = microzig.chip.peripherals;
 
 const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
@@ -56,14 +56,6 @@ pub const AlternateFunction = struct {
     afr: AF,
     resistor: PUPDR = .Floating,
     o_type: OT = .PushPull,
-};
-
-// TODO Check the manual
-pub const Speed = enum(u2) {
-    reserved,
-    max_10MHz,
-    max_2MHz,
-    max_50MHz,
 };
 
 // This is mostly internal to hal for writing configuration.
