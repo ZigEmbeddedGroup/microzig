@@ -2136,6 +2136,32 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
                     .device_id = device_id,
                 });
             },
+            .set_device_property => |set_prop| {
+                const device_id = try db.get_device_id_by_name(set_prop.device_name) orelse {
+                    return error.DeviceNotFound;
+                };
+
+                db.exec(
+                    \\UPDATE device_properties
+                    \\SET
+                    \\  value = ?,
+                    \\  description = ?
+                    \\WHERE
+                    \\  device_id = ? AND
+                    \\  key = ?
+                , .{
+                    .value = set_prop.value,
+                    .description = set_prop.description,
+                    .device_id = device_id,
+                    .key = set_prop.key,
+                }) catch {
+                    try db.add_device_property(device_id, .{
+                        .key = set_prop.key,
+                        .value = set_prop.value,
+                        .description = set_prop.description,
+                    });
+                };
+            },
             .add_enum => |add_enum| {
                 const struct_id = try db.get_struct_ref(add_enum.parent);
 

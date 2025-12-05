@@ -702,8 +702,22 @@ pub const startup_logic = struct {
                 : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
-        if (builtin.abi.float() == .hard) {
+        if (fpu_present and builtin.abi.float() == .hard) {
             enable_fpu();
+        } else if (!fpu_present and builtin.abi.float() == .hard) {
+            @compileError(
+                \\Hard float enabled though the chip doesn't have an FPU. If
+                \\your chip has an FPU please add the `cpu.fpuPresent` = `true`
+                \\property to your chip file, either manually or via patches.
+                \\If you want to use patches, you can use something like this:
+                \\```
+                \\.{ .set_device_property = .{
+                \\    .device_name = "CHIP_NAME",
+                \\    .key = "cpu.fpuPresent",
+                \\    .value = "true"
+                \\} },
+                \\```
+            );
         }
 
         if (@hasField(types.peripherals.SystemControlBlock, "SHCSR")) {
