@@ -196,10 +196,6 @@ pub const Udp = struct {
     }
 
     pub fn send(self: *Self, payload: []const u8) !void {
-        const tx_payload = self.tx_buffer()[0..payload.len];
-        if (tx_payload.ptr != payload.ptr) {
-            @memcpy(tx_payload, payload);
-        }
         var eth: Ethernet = .{
             .destination = self.destination.mac,
             .source = self.net.mac,
@@ -218,11 +214,15 @@ pub const Udp = struct {
             .length = @intCast(@sizeOf(UdpHeader) + payload.len),
             .checksum = 0,
         };
-        const header = self.net.tx_buffer[0..header_len];
-        var pos = try eth.encode(header[0..]);
-        pos += try ip.encode(header[pos..]);
-        pos += try udp.encode(header[pos..], &ip, payload);
-        try self.net.send(self.net.tx_buffer[0 .. header_len + payload.len]);
+        const tx_buf = self.net.tx_buffer;
+        var pos = try eth.encode(tx_buf[0..]);
+        pos += try ip.encode(tx_buf[pos..]);
+        pos += try udp.encode(tx_buf[pos..], &ip, payload);
+        assert(pos == header_len);
+        if (&tx_buf[header_len] != &payload[0]) {
+            @memcpy(tx_buf[header_len..][0..payload.len], payload);
+        }
+        try self.net.send(tx_buf[0 .. header_len + payload.len]);
     }
 };
 
