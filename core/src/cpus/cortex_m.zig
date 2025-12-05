@@ -716,6 +716,8 @@ pub const startup_logic = struct {
             enable_fault_irq();
         }
 
+        // If the compiler gets too aggressive with inlining we might get some
+        // floating point operations before the FPU is enabled.
         @call(.never_inline, microzig_main, .{});
     }
 
