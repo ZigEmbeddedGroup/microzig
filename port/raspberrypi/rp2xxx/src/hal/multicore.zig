@@ -79,7 +79,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
             // TODO: protect stack using MPU
             _ = stack_base;
             if (microzig.hal.compatibility.chip == .RP2350) {
-                if (builtin.abi.float() == .hard) {
+                if (microzig.options.cpu.enable_fpu) {
                     microzig.cpu.enable_fpu();
                 }
 

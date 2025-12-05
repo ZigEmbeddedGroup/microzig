@@ -670,7 +670,7 @@ pub inline fn enable_fpu() void {
         inline .cortex_m0,
         .cortex_m0plus,
         .cortex_m3,
-        => |flavor| @compileError("FPU not supported on " ++ @tagName(flavor)),
+        => |flavour| @compileError("FPU not supported on " ++ @tagName(flavour)),
         else => {},
     }
 
@@ -716,7 +716,7 @@ pub const startup_logic = struct {
 
         if (using_ram_vector_table or is_ram_image) {
             switch (cortex_m) {
-                .cortex_m0 => @compileError("RAM image and RAM vector table are not supported on cortex m0"),
+                .cortex_m0 => @compileError("RAM image and RAM vector table are not supported on cortex_m0"),
                 else => {},
             }
 

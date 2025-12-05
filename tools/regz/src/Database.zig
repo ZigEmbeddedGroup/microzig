@@ -435,6 +435,20 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
         }
     }
 
+    for (T.sql_opts.unique_constraints) |unique_constraint| {
+        try fbs.writeAll(",\nUNIQUE(");
+        first = true;
+        for (unique_constraint) |col_name| {
+            if (first) {
+                first = false;
+            } else {
+                try fbs.writeAll(", ");
+            }
+            try fbs.writeAll(col_name);
+        }
+        try fbs.writeAll(")");
+    }
+
     for (T.sql_opts.foreign_keys) |foreign_key| {
         try fbs.writeAll(",\n");
 
@@ -2141,26 +2155,21 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
                     return error.DeviceNotFound;
                 };
 
-                db.exec(
-                    \\UPDATE device_properties
-                    \\SET
-                    \\  value = ?,
-                    \\  description = ?
-                    \\WHERE
-                    \\  device_id = ? AND
-                    \\  key = ?
+                try db.exec(
+                    \\INSERT INTO device_properties
+                    \\  (device_id, key, value, description)
+                    \\VALUES
+                    \\  (?, ?, ?, ?)
+                    \\ON CONFLICT(device_id, key)
+                    \\DO UPDATE SET
+                    \\  value = excluded.value,
+                    \\  description = excluded.description;
                 , .{
+                    .device_id = @intFromEnum(device_id),
+                    .key = set_prop.key,
                     .value = set_prop.value,
                     .description = set_prop.description,
-                    .device_id = device_id,
-                    .key = set_prop.key,
-                }) catch {
-                    try db.add_device_property(device_id, .{
-                        .key = set_prop.key,
-                        .value = set_prop.value,
-                        .description = set_prop.description,
-                    });
-                };
+                });
             },
             .add_enum => |add_enum| {
                 const struct_id = try db.get_struct_ref(add_enum.parent);
