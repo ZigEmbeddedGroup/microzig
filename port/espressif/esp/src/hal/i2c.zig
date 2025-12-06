@@ -207,6 +207,7 @@ pub const I2C = enum(u1) {
             .RX_FIFO_RST = 1,
             // Esp hal sets these here
             .NONFIFO_EN = 0,
+            .FIFO_PRT_EN = 1,
             // Esp hal sets these, but why?
             .RXFIFO_WM_THRHD = 1,
             .TXFIFO_WM_THRHD = 31,
@@ -216,13 +217,6 @@ pub const I2C = enum(u1) {
         self.get_regs().FIFO_CONF.modify(.{
             .TX_FIFO_RST = 0,
             .RX_FIFO_RST = 0,
-        });
-
-        // Make sure the FIFO operates in FIFO mode
-        self.get_regs().FIFO_CONF.modify(.{
-            .NONFIFO_EN = 0,
-            // Handle data larger than FIFO size
-            .FIFO_PRT_EN = 1,
         });
 
         self.get_regs().INT_CLR.modify(.{
