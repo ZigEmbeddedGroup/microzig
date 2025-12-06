@@ -444,6 +444,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                 .name = interrupt.name,
                 .idx = interrupt.number,
             });
+
+            if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
+                try db.add_device_property(device_id, .{
+                    .key = "cpu.fpuPresent",
+                    .value = "true",
+                });
+            }
         }
 
         for (core.peripherals) |peripheral| {

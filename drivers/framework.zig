@@ -44,6 +44,7 @@ pub const led = struct {
 
 pub const sensor = struct {
     pub const AS5600 = @import("sensor/AS5600.zig").AS5600;
+    pub const HTS221 = @import("sensor/HTS221.zig").HTS221;
     pub const DS18B20 = @import("sensor/DS18B20.zig").DS18B20;
     pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
     pub const MLX90640 = @import("sensor/MLX90640.zig").MLX90640;
@@ -224,7 +225,6 @@ test {
     _ = sensor.MPU_6050;
     _ = sensor.TLV493D;
     _ = sensor.TMP117;
-    _ = sensor.DS18B20;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;

@@ -1,5 +1,3 @@
-// const std = @import("std");
-
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
 

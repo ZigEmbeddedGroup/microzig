@@ -38,6 +38,7 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
     .{ .InterruptEnum = Interrupt, .HandlerFn = InterruptHandler },
 });
+const VectorTable = [vector_table_size()]InterruptHandler;
 
 pub const interrupt = struct {
     pub inline fn globally_enabled() bool {
@@ -69,7 +70,12 @@ pub const interrupt = struct {
     pub inline fn enable(irq: Interrupt) void {
         comptime {
             const irq_name = @tagName(irq);
-            if (@field(microzig.options.interrupts, irq_name) == null) {
+            const app_has = @field(microzig.options.interrupts, irq_name) != null;
+            const hal_has = if (microzig.config.has_hal and @hasDecl(microzig.hal, "default_interrupts"))
+                @field(microzig.hal.default_interrupts, irq_name) != null
+            else
+                false;
+            if (!app_has and !hal_has) {
                 @compileError(
                     irq_name ++ " interrupt handler should be defined.\n" ++
                         "Add to your main file:\n" ++
@@ -327,14 +333,15 @@ fn vector_table_size() usize {
     return last_interrupt_idx + 1 - vector_table_offset;
 }
 
-pub fn generate_vector_table() [vector_table_size()]InterruptHandler {
+pub fn generate_vector_table() VectorTable {
     @setEvalBranchQuota(100_000);
+    var tmp: VectorTable = @splat(microzig.options.interrupts.Exception orelse unhandled);
 
     const type_info = @typeInfo(Interrupt);
     const interrupts_list = type_info.@"enum".fields;
 
-    var temp: [vector_table_size()]InterruptHandler = @splat(microzig.options.interrupts.Exception orelse unhandled);
-    for (&temp, vector_table_offset..) |_, idx| {
+    // Apply interrupts
+    for (&tmp, vector_table_offset..) |_, idx| {
         // Find name of the interrupt by its number.
         var name: ?[:0]const u8 = null;
         for (interrupts_list) |decl| {
@@ -345,13 +352,33 @@ pub fn generate_vector_table() [vector_table_size()]InterruptHandler {
         }
 
         if (name) |n| {
-            if (@field(microzig.options.interrupts, n)) |h| {
-                temp[idx - vector_table_offset] = h;
-            }
+            const maybe_handler = @field(microzig.options.interrupts, n);
+            const maybe_default = get_hal_default_handler(n);
+
+            tmp[idx - vector_table_offset] = blk: {
+                if (maybe_handler) |handler| {
+                    if (!microzig.options.overwrite_hal_interrupts and maybe_default != null)
+                        @compileError(std.fmt.comptimePrint(
+                            \\Interrupt {s} is used internally by the HAL; overriding it may cause malfunction.
+                            \\If you are sure of what you are doing, set "overwrite_hal_interrupts" to true in: "microzig_options".
+                            \\
+                        , .{n}));
+                    break :blk handler;
+                } else break :blk maybe_default orelse unhandled;
+            };
         }
     }
 
-    return temp;
+    return tmp;
+}
+
+fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler {
+    if (microzig.config.has_hal) {
+        if (@hasDecl(microzig.hal, "default_interrupts")) {
+            return @field(microzig.hal.default_interrupts, handler_name);
+        }
+    }
+    return null;
 }
 
 const vector_table = generate_vector_table();
