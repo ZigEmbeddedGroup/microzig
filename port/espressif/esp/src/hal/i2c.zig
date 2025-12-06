@@ -111,9 +111,9 @@ const OperationType = enum(u1) {
 };
 
 pub const instance = struct {
-    pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub fn num(n: u1) I2C {
-        return @as(I2C, @enumFromInt(n));
+        if (n != 0) @compileError("Only I2C0 is present");
+        return .{ .regs = I2C0 };
     }
 };
 
@@ -124,15 +124,20 @@ const I2C_FIFO_SIZE: usize = 32;
 const I2C_CHUNK_SIZE: usize = I2C_FIFO_SIZE - 1;
 
 /// I2C Master peripheral driver
-pub const I2C = enum(u1) {
-    _,
+pub const I2C = struct {
+    regs: *volatile I2cRegs,
+    frequency: u32 = 100_000,
 
-    inline fn get_regs(i2c: I2C) *volatile I2cRegs {
-        _ = i2c;
-        return I2C0;
+    inline fn get_regs(self: I2C) *volatile I2cRegs {
+        return self.regs;
     }
 
-    pub fn apply(self: I2C, frequency: u32) ConfigError!void {
+    pub fn apply(self: *I2C, frequency: u32) ConfigError!void {
+        self.frequency = frequency;
+        try self.init();
+    }
+
+    pub fn init(self: I2C) ConfigError!void {
         const regs = self.get_regs();
 
         // Enable I2C peripheral clock and take it out of reset
@@ -163,7 +168,7 @@ pub const I2C = enum(u1) {
 
         // Configure frequency
         // TODO: Take timeout as extra arg and handle saturation?
-        try self.set_frequency(SOURCE_CLK_FREQ, frequency);
+        try self.set_frequency(SOURCE_CLK_FREQ, self.frequency);
 
         // Propagate configuration changes
         self.update_config();
@@ -297,18 +302,17 @@ pub const I2C = enum(u1) {
         });
     }
 
-    fn reset_fsm(self: I2C) void {
+    fn reset_fsm(self: I2C) !void {
         // Even though C2 and C3 have a FSM reset bit, esp-idf does not
         // define SOC_I2C_SUPPORT_HW_FSM_RST for them, so include them in the fallback impl.
         microzig.hal.system.peripheral_reset(.{ .i2c_ext0 = true });
 
-        // FIXME: store the configuration and apply the correct frequency
-        self.apply(400_000) catch {};
+        try self.init();
     }
 
     fn check_errors(self: I2C) !void {
         // Reset the peripheral in case of error
-        errdefer self.reset_fsm();
+        errdefer self.reset_fsm() catch {};
 
         const interrupts = self.get_regs().INT_RAW.read();
         if (interrupts.TIME_OUT_INT_RAW == 1) {
