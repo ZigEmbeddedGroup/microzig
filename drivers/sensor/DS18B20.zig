@@ -17,11 +17,11 @@ pub const DS18B20 = struct {
     const T_RECOVER = 1;
 
     // ROM commands
-    // const CMD_SEARCH_ROM = 0xF0;
+    // const CMD_SEARCH_ROM = 0xF0; // not implemented
     const CMD_READ_ROM = 0x33;
     const CMD_MATCH_ROM = 0x55;
     const CMD_SKIP_ROM = 0xCC;
-    // const CMD_ALARM_SEARCH = 0xEC;
+    // const CMD_ALARM_SEARCH = 0xEC; // not implemented
 
     // function commands
     const CMD_CONVERT_T = 0x44;
@@ -45,6 +45,15 @@ pub const DS18B20 = struct {
                 .QuarterDegree10 => 0.25,
                 .EightDegree11 => 0.125,
                 .SixteenthDegree12 => 0.0625,
+            };
+        }
+
+        fn fromInt(value: u2) Resolution {
+            return switch (value) {
+                0 => .HalfDegree9,
+                1 => .QuarterDegree10,
+                2 => .EightDegree11,
+                3 => .SixteenthDegree12,
             };
         }
     };
@@ -106,20 +115,34 @@ pub const DS18B20 = struct {
         return .{ .value = rom_code };
     }
 
-    pub fn set_resolution(self: *const Self, args: struct { resolution: Resolution, target: ?RomCode = null }) !void {
+    pub fn write_config(self: *const Self, args: struct { alarms: ?Alarms = null, resolution: ?Resolution = null, target: ?RomCode = null }) !void {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
-        try self.write_byte(CMD_READ_SCRATCHPAD);
 
-        _ = try self.read_byte(); // Temperature LSB
-        _ = try self.read_byte(); // Temperature MSB
-        const th = try self.read_byte();
-        const tl = try self.read_byte();
-        const old_config = try self.read_byte();
+        if (args.alarms == null and args.resolution == null) return;
 
-        const res_bits: u8 = @as(u8, @intFromEnum(args.resolution));
-        const config_cleared = old_config & ~@as(u8, 0b01100000);
-        const new_config = config_cleared | (res_bits << 5);
+        const result = blk: {
+            if (args.alarms == null or args.resolution == null) {
+                try self.write_byte(CMD_READ_SCRATCHPAD);
+
+                _ = try self.read_byte(); // Temperature LSB
+                _ = try self.read_byte(); // Temperature MSB
+                const th_read = try self.read_byte();
+                const tl_read = try self.read_byte();
+                const config_read = try self.read_byte();
+
+                break :blk .{
+                    if (args.alarms) |alarms| alarms.th else th_read,
+                    if (args.alarms) |alarms| alarms.tl else tl_read,
+                    if (args.resolution) |_| @as(u8, 0x7F) else config_read,
+                };
+            } else {
+                break :blk .{ args.alarms.?.th, args.alarms.?.tl, @as(u8, 0x7F) };
+            }
+        };
+        const th, const tl, const config = result;
+
+        const new_config: u8 = if (args.resolution) |res| (@as(u8, @intFromEnum(res)) << 5) else config;
 
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
@@ -130,29 +153,7 @@ pub const DS18B20 = struct {
         try self.write_byte(new_config);
     }
 
-    pub fn read_resolution(self: *const Self, args: struct { target: ?RomCode = null }) !Resolution {
-        if (try self.reset() == false) return Error.DeviceNotPresent;
-
-        try self.select_target(args.target);
-        try self.write_byte(CMD_READ_SCRATCHPAD);
-
-        _ = try self.read_byte(); // temp LSB
-        _ = try self.read_byte(); // temp MSB
-        _ = try self.read_byte(); // TH register
-        _ = try self.read_byte(); // TL register
-        const config = try self.read_byte();
-
-        const resolution_bits: u2 = @intCast((config >> 5) & 0x03);
-
-        return switch (resolution_bits) {
-            0 => .HalfDegree9,
-            1 => .QuarterDegree10,
-            2 => .EightDegree11,
-            3 => .SixteenthDegree12,
-        };
-    }
-
-    pub fn read_alarms(self: *const Self, args: struct { target: ?RomCode = null }) !Alarms {
+    pub fn read_config(self: *const Self, args: struct { target: ?RomCode = null }) !struct { alarms: Alarms, resolution: Resolution } {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
         try self.select_target(args.target);
@@ -162,28 +163,14 @@ pub const DS18B20 = struct {
         _ = try self.read_byte(); // temp MSB
         const th = try self.read_byte(); // TH register
         const tl = try self.read_byte(); // TL register
-
-        return .{ .th = th, .tl = tl };
-    }
-
-    pub fn write_alarms(self: *const Self, args: struct { target: ?RomCode = null, alarms: Alarms }) !void {
-        if (!(try self.reset())) return error.DeviceNotFound;
-        try self.select_target(args.target);
-        try self.write_byte(CMD_READ_SCRATCHPAD);
-
-        _ = try self.read_byte(); // temp LSB
-        _ = try self.read_byte(); // temp MSB
-        _ = try self.read_byte(); // old th
-        _ = try self.read_byte(); // old tl
         const config = try self.read_byte();
 
-        if (!(try self.reset())) return error.DeviceNotFound;
-        try self.select_target(args.target);
-        try self.write_byte(CMD_WRITE_SCRATCHPAD);
+        const resolution_bits: u2 = @intCast((config >> 5) & 0x03);
 
-        try self.write_byte(args.alarms.th);
-        try self.write_byte(args.alarms.tl);
-        try self.write_byte(config);
+        return .{
+            .alarms = .{ .th = th, .tl = tl },
+            .resolution = Resolution.fromInt(resolution_bits),
+        };
     }
 
     pub fn save_config_to_eeprom(self: *const DS18B20, args: struct { target: ?RomCode = null }) !void {
@@ -237,17 +224,20 @@ pub const DS18B20 = struct {
         const lsb = try self.read_byte();
         const msb = try self.read_byte();
 
-        const resolution = args.resolution orelse try self.read_resolution(.{ .target = args.target });
-        return convert_temperature(lsb, msb, resolution);
+        const resolution = args.resolution orelse (try self.read_config(.{ .target = args.target })).resolution;
+        return convert_temperature_to_celsius(lsb, msb, resolution);
     }
 
-    fn convert_temperature(lsb: u8, msb: u8, resolution: Resolution) f32 {
+    fn convert_temperature_to_celsius(lsb: u8, msb: u8, resolution: Resolution) f32 {
         var raw_temp: i16 = @bitCast(@as(u16, msb) << 8 | lsb);
         raw_temp = raw_temp >> (3 - @intFromEnum(resolution));
 
         return @as(f32, @floatFromInt(raw_temp)) * resolution.factor();
     }
 
+    /// Computes the CRC8 of the given data using the polynomial x^8 + x^5 + x^4 + 1
+    /// which is represented by the byte 0x8C.
+    /// This is used to verify the integrity of the ROM code.
     fn crc8(data: []const u8) u8 {
         var crc: u8 = 0;
         for (data) |byte| {
@@ -339,26 +329,26 @@ test "crc_is_valid_2" {
 }
 
 test "convert_temperature_half_degree_9" {
-    const temp = DS18B20.convert_temperature(0xA2, 0x00, .HalfDegree9);
+    const temp = DS18B20.convert_temperature_to_celsius(0xA2, 0x00, .HalfDegree9);
     try std.testing.expectEqual(10.0, temp);
 }
 
 test "convert_temperature_quarter_degree_10_negative" {
-    const temp = DS18B20.convert_temperature(0x90, 0xFC, .QuarterDegree10);
+    const temp = DS18B20.convert_temperature_to_celsius(0x90, 0xFC, .QuarterDegree10);
     try std.testing.expectEqual(-55.0, temp);
 }
 
 test "convert_temperature_eight_degree_11" {
-    const temp = DS18B20.convert_temperature(0xA2, 0x00, .EightDegree11);
+    const temp = DS18B20.convert_temperature_to_celsius(0xA2, 0x00, .EightDegree11);
     try std.testing.expectEqual(10.125, temp);
 }
 
 test "convert_temperature_sixteenth_degree_12" {
-    const temp = DS18B20.convert_temperature(0x91, 0x01, .SixteenthDegree12);
+    const temp = DS18B20.convert_temperature_to_celsius(0x91, 0x01, .SixteenthDegree12);
     try std.testing.expectEqual(25.0625, temp);
 }
 
 test "convert_temperature_sixteenth_degree_12_negative" {
-    const temp = DS18B20.convert_temperature(0x6F, 0xFE, .SixteenthDegree12);
+    const temp = DS18B20.convert_temperature_to_celsius(0x6F, 0xFE, .SixteenthDegree12);
     try std.testing.expectEqual(-25.0625, temp);
 }
