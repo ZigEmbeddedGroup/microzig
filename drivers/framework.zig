@@ -224,6 +224,7 @@ test {
     _ = sensor.MPU_6050;
     _ = sensor.TLV493D;
     _ = sensor.TMP117;
+    _ = sensor.DS18B20;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;
