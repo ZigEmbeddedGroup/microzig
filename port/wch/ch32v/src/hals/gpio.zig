@@ -45,6 +45,11 @@ pub const Pull = enum {
     down,
 };
 
+pub const AlternateFunctionMode = enum {
+    push_pull,
+    open_drain,
+};
+
 // NOTE: With this current setup, every time we want to do anythting we go through a switch
 //       Do we want this?
 // NOTE: How about to use port_config_mask, _value as previous apply function?
@@ -119,6 +124,20 @@ pub const Pin = packed struct(u8) {
             GPIOD => .D,
             else => unreachable,
         });
+    }
+
+    /// Configure pin for alternate function use (e.g., USART, I2C, SPI)
+    /// Combines enable_clock + set_output_mode for convenience
+    pub inline fn configure_alternate_function(
+        gpio: Pin,
+        mode: AlternateFunctionMode,
+        speed: Speed,
+    ) void {
+        gpio.enable_clock();
+        switch (mode) {
+            .push_pull => gpio.set_output_mode(.alternate_function_push_pull, speed),
+            .open_drain => gpio.set_output_mode(.alternate_function_open_drain, speed),
+        }
     }
 
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
