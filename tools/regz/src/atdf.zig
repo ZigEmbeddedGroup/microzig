@@ -121,11 +121,21 @@ fn load_param(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
         "caption",
     });
 
+    const property_name_map: std.StaticStringMap([]const u8) = .initComptime(.{
+        .{ "__MPU_PRESENT", "mpu_present" },
+        .{ "__FPU_PRESENT", "fpu_present" },
+        .{ "__NVIC_PRIO_BITS", "nvic_prio_bits" },
+    });
+
     const name = node.get_attribute("name") orelse return error.MissingParamName;
     const value = node.get_attribute("value") orelse return error.MissingParamName;
     const desc = node.get_attribute("caption");
 
-    try db.add_device_property(device_id, .{ .key = name, .value = value, .description = desc });
+    try db.add_device_property(device_id, .{
+        .key = property_name_map.get(name) orelse name,
+        .value = value,
+        .description = desc,
+    });
 }
 
 fn load_interrupts(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {

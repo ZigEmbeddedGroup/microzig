@@ -54,10 +54,10 @@ pub fn load(db: *Database, device_id: EntityId) !void {
         try db.create_register(nvic, .{ .name = "ICPR", .offset = 0x180, .size = 32, .description = "Interrupt Clear Pending Register" }),
     };
 
-    // TODO: generate IP if any of the above fail, like nvicPrioBits is missing
+    // TODO: generate IP if any of the above fail, like nvic_prio_bits is missing
 
     // interrupt priority registers
-    if (device.properties.get("cpu.nvicPrioBits")) |bits| if (try std.fmt.parseInt(u32, bits, 10) > 0) {
+    if (device.properties.get("nvic_prio_bits")) |bits| if (try std.fmt.parseInt(u32, bits, 10) > 0) {
         const ip_addr_offset = 0x300;
 
         var i: u32 = 0;
@@ -91,7 +91,7 @@ pub fn load(db: *Database, device_id: EntityId) !void {
 
         const nvic_prio_bits = try std.fmt.parseInt(
             u32,
-            device.properties.get("cpu.nvicPrioBits") orelse return error.MissingNvicPrioBits,
+            device.properties.get("nvic_prio_bits") orelse return error.MissingNvicPrioBits,
             10,
         );
         if (nvic_prio_bits == 0) continue;
