@@ -297,9 +297,18 @@ pub const I2C = enum(u1) {
         });
     }
 
+    fn reset_fsm(self: I2C) void {
+        // Even though C2 and C3 have a FSM reset bit, esp-idf does not
+        // define SOC_I2C_SUPPORT_HW_FSM_RST for them, so include them in the fallback impl.
+        microzig.hal.system.peripheral_reset(.{ .i2c_ext0 = true });
+
+        // FIXME: store the configuration and apply the correct frequency
+        self.apply(400_000) catch {};
+    }
+
     fn check_errors(self: I2C) !void {
         // Reset the peripheral in case of error
-        errdefer self.reset();
+        errdefer self.reset_fsm();
 
         const interrupts = self.get_regs().INT_RAW.read();
         if (interrupts.TIME_OUT_INT_RAW == 1) {
