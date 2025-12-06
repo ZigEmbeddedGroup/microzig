@@ -83,8 +83,12 @@ pub fn get_time_since_boot() time.Absolute {
 }
 
 /// Sleep for the specified number of milliseconds.
+/// Uses the interrupt-driven tick counter for accurate timing regardless of interrupt latency.
 pub fn sleep_ms(time_ms: u32) void {
-    sleep_us(@as(u64, time_ms) * 1000);
+    const deadline = get_time_since_boot().add_duration(time.Duration.from_ms(time_ms));
+    while (deadline.is_reached_by(get_time_since_boot()) == false) {
+        asm volatile ("" ::: .{ .memory = true });
+    }
 }
 
 /// Sleep for the specified number of microseconds.
@@ -98,62 +102,36 @@ pub fn sleep_us(time_us: u64) void {
     }
 }
 
-/// Busy-wait for the specified number of microseconds using the RISC-V cycle counter.
+/// Busy-wait for the specified number of microseconds.
 ///
-/// This does not depend on SysTick granularity and provides sub-millisecond resolution.
-/// It blocks the CPU and may be affected by interrupt latency.
+/// For sub-millisecond delays (< 800us), uses SysTick CNT directly for accuracy
+/// immune to interrupt latency. For longer delays, breaks down into ms + us.
 pub fn delay_us(us: u32) void {
+    if (us == 0) return;
+
+    // For delays >= 800us, split into ms + us to avoid SysTick wrap issues, since we setup Systick to fire every 1ms, which resets the count
+    if (us >= 800) {
+        const ms = us / 1000;
+        const remainder = us % 1000;
+        if (ms > 0) sleep_ms(ms);
+        if (remainder > 0) delay_us(remainder);
+        return;
+    }
+
+    // Use SysTick CNT for sub-millisecond delays (immune to interrupt latency)
     const freq: u32 = if (microzig.config.has_board and @hasDecl(board, "cpu_frequency"))
         board.cpu_frequency
     else
         microzig.cpu.cpu_frequency;
 
-    // Guard against very low frequencies
-    if (freq < 1_000_000 or us == 0) return;
+    // SysTick counter runs at HCLK (configured via init)
+    // counts_per_ms = freq / 1000, so ticks_per_us = freq / 1_000_000
+    const ticks_per_us: u32 = freq / 1_000_000;
+    const ticks: u32 = us * ticks_per_us;
 
-    const cycles_per_us: u32 = freq / 1_000_000;
-
-    // Ensure the cycle counter is running (clear mcountinhibit.CY if present)
-    if (@hasField(cpu.csr, "mcountinhibit")) {
-        const ci = cpu.csr.mcountinhibit.read();
-        if ((ci & 0x1) != 0) cpu.csr.mcountinhibit.write(ci & ~@as(u32, 1));
-    }
-
-    // Probe whether the cycle counter advances at all; if not, fall back.
-    const probe0: u32 = cpu.csr.cycle.read();
-    asm volatile ("" ::: .{ .memory = true });
-    const probe1: u32 = cpu.csr.cycle.read();
-    // TODO: Determine if this works on ANY ch32v chips. It does not seem to on CH32V203
-    if (probe0 == probe1) {
-        // Fallback: use a dedicated tight loop. We keep a volatile asm barrier in the loop body to
-        // prevent the compiler from removing or merging iterations. In practice this still
-        // generates a tight (addi+bnez) loop on QingKe cores.
-        //
-        // Effective cost ≈ 3 cycles/iter (2 instructions + branch penalty).
-        // If hardware observation shows a ~4/3 slowdown, consider either:
-        //  - switching the loop body to an explicit `nop` and using 4 cycles/iter,
-        //  - or adding a one-time boot calibration when mcycle is available.
-        const cycles_per_iter: u32 = 3;
-        const total_cycles: u32 = us * cycles_per_us;
-        const iters: u32 = (total_cycles + cycles_per_iter - 1) / cycles_per_iter; // ceil
-        fallback_delay_iters(iters);
-        return;
-    }
-
-    const start: u32 = probe0;
-    const wait_cycles: u32 = us * cycles_per_us;
-    while (@as(u32, cpu.csr.cycle.read() - start) < wait_cycles) {
-        asm volatile ("" ::: .{ .memory = true });
-    }
-}
-
-// A dedicated function for the fallback loop to keep the body stable across optimization levels
-fn fallback_delay_iters(iter: u32) callconv(.c) void {
-    var i = iter;
-    if (i == 0) return;
-    while (i != 0) : (i -= 1) {
-        // Don't optimize away. Should be 2 instructions, addi + bne, with a cycle lost on branch
-        // prediction.
+    // Read start value and wait using wrapping arithmetic
+    const start: u32 = PFIC.STK_CNTL.raw;
+    while (@as(u32, PFIC.STK_CNTL.raw -% start) < ticks) {
         asm volatile ("" ::: .{ .memory = true });
     }
 }
