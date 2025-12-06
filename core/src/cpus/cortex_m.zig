@@ -663,7 +663,7 @@ pub const atomic = struct {
 /// Enables the FPU.
 ///
 /// NOTE: This function is automatically called on cpu startup if the cpu has
-/// an fpu and hard float is enabled. HAL's also call this in the startup of
+/// an fpu and hard float is enabled. HALs also call this in the startup of
 /// other cores.
 pub inline fn enable_fpu() void {
     switch (cortex_m) {
@@ -683,7 +683,12 @@ pub inline fn enable_fpu() void {
         \\str r2, [r0]
         \\dsb
         \\isb
-    );
+        ::: .{
+            .r0 = true,
+            .r1 = true,
+            .r2 = true,
+            .memory = true,
+        });
 }
 
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.

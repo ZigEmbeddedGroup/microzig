@@ -130,7 +130,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 /// startup.
 pub inline fn enable_dcp() void {
     if (!(compatibility.chip == .RP2350 and compatibility.arch == .arm)) {
-        @compileError("Enable DCP is only available on RP2350 arm");
+        @compileError("DCP is only available on RP2350 arm");
     }
 
     // enable the DCP for the current core
