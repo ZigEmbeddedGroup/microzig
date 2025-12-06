@@ -1,6 +1,20 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
+/// Driver for the DS18B20 1-Wire temperature sensor.
+///
+/// Supports single drop and multi drop configurations.
+/// For multi drop, the ROM code must be used to address individual devices.
+/// If no target is provided, the command is sent to all devices on the bus.
+/// For a single drop configuration, the target can be omitted because
+/// the only device present will be addressed automatically.
+///
+/// Supports configuration of alarms and resolution.
+/// Temperature is returned in Celsius.
+/// Supports reading power supply mode (parasite or external).
+/// Supports saving and recalling configuration to/from EEPROM.
+/// Requires a digital I/O interface and a clock device for timing.
+/// Based on the DS18B20 datasheet (https://www.maximintegrated.com/en/products/analog/sensors-and-sensor-interface/DS18B20.html).
 pub const DS18B20 = struct {
     const Self = @This();
 
@@ -115,6 +129,15 @@ pub const DS18B20 = struct {
         return .{ .value = rom_code };
     }
 
+    /// Writes the configuration to the device.
+    /// If alarms or resolution are null, the current value is preserved.
+    /// An error is returned if the device is not present.
+    /// If target is null, the command is sent to all devices on the bus.
+    /// The configuration can be saved to EEPROM using save_config_to_eeprom()
+    /// and recalled using recall_config_from_eeprom().
+    /// The alarms consist of two bytes: TH and TL registers. They can be used
+    /// to trigger an alarm when the temperature exceeds the set limits or to
+    /// store user data if the alarm functionality is not used.
     pub fn write_config(self: *const Self, args: struct { alarms: ?Alarms = null, resolution: ?Resolution = null, target: ?RomCode = null }) !void {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
@@ -153,6 +176,10 @@ pub const DS18B20 = struct {
         try self.write_byte(new_config);
     }
 
+    /// Reads the configuration from the device.
+    /// An error is returned if the device is not present.
+    /// If target is null, the command is sent to all devices on the bus.
+    /// Returns the alarms (TH and TL registers) and resolution.
     pub fn read_config(self: *const Self, args: struct { target: ?RomCode = null }) !struct { alarms: Alarms, resolution: Resolution } {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
@@ -173,6 +200,9 @@ pub const DS18B20 = struct {
         };
     }
 
+    /// Saves the current configuration to EEPROM.
+    /// An error is returned if the device is not present.
+    /// If target is null, the command is sent to all devices on the bus.
     pub fn save_config_to_eeprom(self: *const DS18B20, args: struct { target: ?RomCode = null }) !void {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
@@ -182,12 +212,18 @@ pub const DS18B20 = struct {
         self.clock_dev.sleep_ms(10);
     }
 
+    /// Recalls the configuration from EEPROM.
+    /// An error is returned if the device is not present.
+    /// If target is null, the command is sent to all devices on the bus.
     pub fn recall_config_from_eeprom(self: *const DS18B20, args: struct { target: ?RomCode = null }) !void {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
         try self.write_byte(CMD_REACLL_SCRATCHPAD);
     }
 
+    /// Reads the power supply mode of the device.
+    /// An error is returned if the device is not present.
+    /// If target is null, the command is sent to all devices on the bus.
     pub fn read_power_supply(self: *const DS18B20, args: struct { target: ?RomCode = null }) !PowerSupply {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
