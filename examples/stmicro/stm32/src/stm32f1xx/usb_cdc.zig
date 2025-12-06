@@ -411,12 +411,16 @@ fn CDC_read(buf: []u8, timeout: ?Duration) ![]const u8 {
 }
 
 pub fn main() !void {
-    try rcc.apply_clock(.{
+    _ = try rcc.apply(.{
         .PLLSource = .RCC_PLLSOURCE_HSE,
         .PLLMUL = .RCC_PLL_MUL9,
-        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
-        .APB1Prescaler = .RCC_HCLK_DIV2,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
         .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+        .flags = .{
+            .HSEOscillator = true,
+            .USBUsed_ForRCC = true,
+        },
     });
 
     rcc.enable_clock(.GPIOA);
