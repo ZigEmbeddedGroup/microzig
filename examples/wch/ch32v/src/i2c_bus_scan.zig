@@ -45,7 +45,6 @@ pub fn main() !void {
 
         var rx_data: [1]u8 = undefined;
         _ = instance.read_blocking(a, &rx_data, null) catch |e| {
-            // _ = instance.read_blocking(a, &rx_data, mdf.time.Duration.from_ms(10)) catch |e| {
             // Expected errors for non-present devices
             if (e != i2c.Error.NoAcknowledge and e != i2c.Error.Timeout) {
                 std.log.warn("Unexpected error at 0x{X:0>2}: {}", .{ addr, e });
