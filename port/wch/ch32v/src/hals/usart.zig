@@ -111,8 +111,18 @@ pub const USART = enum(u2) {
     }
 
     /// Apply configuration to the USART peripheral
-    pub fn apply(usart: USART, comptime config: Config) void {
+    pub fn apply(comptime usart: USART, comptime config: Config) void {
         const regs = usart.get_regs();
+
+        // Enable peripheral clock
+        // TODO: Cleanup
+        hal.clocks.enable_peripheral_clock(switch (@intFromEnum(usart)) {
+            0 => .USART1,
+            1 => .USART2,
+            2 => .USART3,
+            // TODO: Add support for other USARTS/UARTS
+            else => @compileError("USART1,2,3 only supported at the moment"),
+        });
 
         // Configure stop bits
         const stop_bits_val: u2 = switch (config.stop_bits) {
