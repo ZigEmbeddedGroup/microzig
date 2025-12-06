@@ -43,12 +43,38 @@ pub const ConfigError = error{
     UnsupportedBaudRate,
 };
 
+/// Pin remapping configuration for USART peripherals
+///
+/// USART1 has 4 configurations (2 bits: PCFR2.UART1_RM1 + PCFR1.USART1_RM):
+///   .default (00): CK=PA8,  TX=PA9,  RX=PA10, CTS=PA11, RTS=PA12
+///   .remap1  (01): CK=PA8,  TX=PB6,  RX=PB7,  CTS=PA11, RTS=PA12
+///   .remap2  (10): CK=PA10, TX=PB15, RX=PA8,  CTS=PA5,  RTS=PA9
+///   .remap3  (11): CK=PA5,  TX=PA6,  RX=PA7,  CTS=PC4,  RTS=PC5
+///
+/// USART2 has 2 configurations (1 bit: PCFR1.USART2_RM):
+///   .default (0): CK=PA4, TX=PA2, RX=PA3, CTS=PA0, RTS=PA1
+///   .remap1  (1): CK=PD7, TX=PD5, RX=PD6, CTS=PD3, RTS=PD4
+///
+/// USART3 has 4 configurations (2 bits: PCFR1.USART3_RM):
+///   .default (00): CK=PB12, TX=PB10, RX=PB11, CTS=PB13, RTS=PB14
+///   .remap1  (01): CK=PC12, TX=PC10, RX=PC11, CTS=PB13, RTS=PB14 (partial)
+///   .remap3  (11): CK=PD10, TX=PD8,  RX=PD9,  CTS=PD11, RTS=PD12 (full)
+///
+/// See CH32V Reference Manual AFIO_PCFR1/PCFR2 section for details
+pub const Remap = enum(u2) {
+    default = 0b00,
+    remap1 = 0b01,
+    remap2 = 0b10,
+    remap3 = 0b11,
+};
+
 pub const Config = struct {
     baud_rate: u32 = 115200,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
     parity: Parity = .none,
     flow_control: FlowControl = .none,
+    remap: Remap = .default,
 };
 
 pub const TransmitError = error{
@@ -115,14 +141,37 @@ pub const USART = enum(u2) {
         const regs = usart.get_regs();
 
         // Enable peripheral clock
-        // TODO: Cleanup
         hal.clocks.enable_peripheral_clock(switch (@intFromEnum(usart)) {
             0 => .USART1,
             1 => .USART2,
             2 => .USART3,
-            // TODO: Add support for other USARTS/UARTS
+            // TODO: Add support for other USARTs/UARTs
             else => @compileError("USART1,2,3 only supported at the moment"),
         });
+
+        // Configure AFIO remap
+        hal.clocks.enable_afio_clock();
+        const AFIO = microzig.chip.peripherals.AFIO;
+        const remap_bits = @intFromEnum(config.remap);
+
+        switch (@intFromEnum(usart)) {
+            0 => {
+                // USART1: 2 bits split across PCFR1 and PCFR2
+                // Bit 0 (LSB) goes to PCFR1.USART1_RM (bit 2)
+                AFIO.PCFR1.modify(.{ .USART1_RM = @as(u1, @truncate(remap_bits & 0b01)) });
+                // Bit 1 (MSB) goes to PCFR2.UART1_RM1 (bit 26)
+                AFIO.PCFR2.modify(.{ .UART1_RM1 = @as(u1, @truncate((remap_bits >> 1) & 0b01)) });
+            },
+            1 => {
+                // USART2: 1 bit in PCFR1
+                AFIO.PCFR1.modify(.{ .USART2_RM = @as(u1, @truncate(remap_bits & 0b01)) });
+            },
+            2 => {
+                // USART3: 2 bits in PCFR1
+                AFIO.PCFR1.modify(.{ .USART3_RM = @as(u2, @truncate(remap_bits & 0b11)) });
+            },
+            else => unreachable,
+        }
 
         // Configure stop bits
         const stop_bits_val: u2 = switch (config.stop_bits) {

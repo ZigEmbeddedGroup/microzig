@@ -24,10 +24,26 @@ pub const Error = drivers.I2C_Device.Error || error{
     Overrun,
 };
 
+/// Pin remapping configuration for I2C peripherals
+///
+/// I2C1 has 2 configurations (1 bit: PCFR1.I2C1_RM):
+///   .default (0): SCL=PB6,  SDA=PB7
+///   .remap1  (1): SCL=PB8,  SDA=PB9
+///
+/// I2C2 has only 1 configuration (no remap available):
+///   .default: SCL=PB10, SDA=PB11
+///
+/// See CH32V Reference Manual AFIO_PCFR1 section for details
+pub const Remap = enum(u1) {
+    default = 0,
+    remap1 = 1,
+};
+
 pub const Config = struct {
     repeated_start: bool = true,
     baud_rate: u32 = 100_000,
     duty_cycle: DutyCycle = .duty_2,
+    remap: Remap = .default,
 };
 
 pub const DutyCycle = enum {
@@ -75,6 +91,15 @@ pub const I2C = enum(u1) {
             0 => .I2C1,
             1 => .I2C2,
         });
+
+        // Configure AFIO remap
+        hal.clocks.enable_afio_clock();
+        const AFIO = microzig.chip.peripherals.AFIO;
+        switch (@intFromEnum(i2c)) {
+            0 => AFIO.PCFR1.modify(.{ .I2C1_RM = @intFromEnum(config.remap) }),
+            // I2C2 does not have remap support on CH32V20x
+            1 => {},
+        }
 
         // Get peripheral clock frequency
         const rcc_clocks = hal.clocks.get_freqs();
