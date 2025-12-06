@@ -6,11 +6,11 @@ pub const time = @import("time.zig");
 
 /// Default interrupt handlers provided by the HAL
 pub const default_interrupts: microzig.cpu.InterruptOptions = .{
-    .SysTick = time.systick_handler,
+    .TIM2 = time.tim2_handler,
 };
 
 /// Initialize HAL subsystems used by default
 pub fn init() void {
-    // Configure SysTick timing driver
+    // Configure TIM2 timing driver
     time.init();
 }
