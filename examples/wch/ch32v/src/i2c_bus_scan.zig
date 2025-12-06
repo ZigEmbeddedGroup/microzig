@@ -20,16 +20,11 @@ pub fn main() !void {
     // Board brings up clocks and time
     microzig.board.init();
 
-    // Enable peripheral clocks for USART2 and GPIOA
-    RCC.APB2PCENR.modify(.{
-        .IOPAEN = 1, // Enable GPIOA clock
-        .AFIOEN = 1, // Enable AFIO clock
-    });
-    RCC.APB1PCENR.modify(.{
-        .USART2EN = 1, // Enable USART2 clock
-    });
+    // Enable uart pin clock
+    usart_tx_pin.enable_clock();
 
     // Ensure USART2 is NOT remapped (default PA2/PA3, not PD5/PD6)
+    // TODO: apply should know which pin to use and whether it's the default maybe?
     AFIO.PCFR1.modify(.{ .USART2_RM = 0 });
 
     // Configure PA2 as alternate function push-pull for USART2 TX
@@ -44,22 +39,18 @@ pub fn main() !void {
     const scl_pin = hal.gpio.Pin.init(1, 6); // GPIOB pin 6
     const sda_pin = hal.gpio.Pin.init(1, 7); // GPIOB pin 7
 
-    // Enable peripheral clocks
-    RCC.APB2PCENR.modify(.{
-        .IOPBEN = 1, // Enable GPIOB clock (AFIOEN already enabled)
-    });
-    RCC.APB1PCENR.modify(.{
-        .I2C1EN = 1, // Enable I2C1 clock
-    });
-
-    // Ensure I2C1 is NOT remapped (default PB6/PB7)
-    AFIO.PCFR1.modify(.{ .I2C1_RM = 0 });
-
-    // Configure GPIO pins for I2C (alternate function, open drain, 50MHz)
+    // Enable GPIO clocks and configure pins
+    scl_pin.enable_clock();
+    sda_pin.enable_clock();
     scl_pin.set_output_mode(.alternate_function_open_drain, .max_50MHz);
     sda_pin.set_output_mode(.alternate_function_open_drain, .max_50MHz);
 
-    // Initialize I2C at 100kHz
+    // Ensure I2C1 is NOT remapped (default PB6/PB7)
+    // TODO: This should eventually be handled by the I2C HAL
+    hal.clocks.enable_afio_clock();
+    AFIO.PCFR1.modify(.{ .I2C1_RM = 0 });
+
+    // Initialize I2C at 100kHz (peripheral clock enabled automatically)
     const instance = i2c.instance.I2C1;
     instance.apply(.{ .baud_rate = 100_000 });
 

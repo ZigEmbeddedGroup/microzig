@@ -1,9 +1,85 @@
 const microzig = @import("microzig");
 
+const RCC = microzig.chip.peripherals.RCC;
+const EXTEND = microzig.chip.peripherals.EXTEND;
+
+const gpioBlock = enum {
+    A,
+    B,
+    C,
+    D,
+};
+
+pub fn enable_gpio_clock(block: gpioBlock) void {
+    // TODO: How do we know if we need to set the AFIOEN?
+    switch (block) {
+        .A => RCC.APB2PCENR.modify(.{
+            .IOPAEN = 1,
+            .AFIOEN = 1,
+        }),
+        .B => RCC.APB2PCENR.modify(.{
+            .IOPBEN = 1,
+            .AFIOEN = 1,
+        }),
+        .C => RCC.APB2PCENR.modify(.{
+            .IOPCEN = 1,
+            .AFIOEN = 1,
+        }),
+        .D => RCC.APB2PCENR.modify(.{
+            .IOPDEN = 1,
+            .AFIOEN = 1,
+        }),
+    }
+}
+
+const peripheral = enum {
+    // APB2 peripherals
+    USART1,
+    SPI1,
+    ADC1,
+    ADC2,
+    TIM1,
+
+    // APB1 peripherals
+    USART2,
+    USART3,
+    I2C1,
+    I2C2,
+    SPI2,
+    TIM2,
+    TIM3,
+    TIM4,
+};
+
+pub fn enable_peripheral_clock(p: peripheral) void {
+    switch (p) {
+        // APB2 peripherals (high-speed bus)
+        .USART1 => RCC.APB2PCENR.modify(.{ .USART1EN = 1 }),
+        .SPI1 => RCC.APB2PCENR.modify(.{ .SPI1EN = 1 }),
+        .ADC1 => RCC.APB2PCENR.modify(.{ .ADC1EN = 1 }),
+        .ADC2 => RCC.APB2PCENR.modify(.{ .ADC2EN = 1 }),
+        .TIM1 => RCC.APB2PCENR.modify(.{ .TIM1EN = 1 }),
+
+        // APB1 peripherals (low-speed bus)
+        .USART2 => RCC.APB1PCENR.modify(.{ .USART2EN = 1 }),
+        .USART3 => RCC.APB1PCENR.modify(.{ .USART3EN = 1 }),
+        .I2C1 => RCC.APB1PCENR.modify(.{ .I2C1EN = 1 }),
+        .I2C2 => RCC.APB1PCENR.modify(.{ .I2C2EN = 1 }),
+        .SPI2 => RCC.APB1PCENR.modify(.{ .SPI2EN = 1 }),
+        .TIM2 => RCC.APB1PCENR.modify(.{ .TIM2EN = 1 }),
+        .TIM3 => RCC.APB1PCENR.modify(.{ .TIM3EN = 1 }),
+        .TIM4 => RCC.APB1PCENR.modify(.{ .TIM4EN = 1 }),
+    }
+}
+
+/// Enable AFIO (Alternate Function I/O) clock
+/// Required for pin remapping and external interrupt configuration
+pub fn enable_afio_clock() void {
+    RCC.APB2PCENR.modify(.{ .AFIOEN = 1 });
+}
+
 /// Initialize system clock to 48 MHz using HSI
 pub fn init_48mhz_hsi() void {
-    const RCC = microzig.chip.peripherals.RCC;
-    const EXTEND = microzig.chip.peripherals.EXTEND;
     // Enable PLL HSI prescaler (HSIPRE bit)
     EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 1 });
 
@@ -52,9 +128,6 @@ const adc_prescaler_table = [4]u8{ 2, 4, 6, 8 };
 /// Get the current clock frequencies by reading RCC registers
 /// Based on WCH's RCC_GetClocksFreq() implementation
 pub fn get_freqs() ClockSpeeds {
-    const RCC = microzig.chip.peripherals.RCC;
-    const EXTEND = microzig.chip.peripherals.EXTEND;
-
     var sysclk: u32 = 0;
 
     // Determine system clock source from SWS (System Clock Switch Status)

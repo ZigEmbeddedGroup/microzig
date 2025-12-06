@@ -67,8 +67,14 @@ pub const I2C = enum(u1) {
     }
 
     /// Initializes the I2C HW block per the Config provided
-    pub fn apply(i2c: I2C, comptime config: Config) void {
+    pub fn apply(comptime i2c: I2C, comptime config: Config) void {
         const regs = i2c.get_regs();
+
+        // Enable peripheral clock
+        hal.clocks.enable_peripheral_clock(switch (@intFromEnum(i2c)) {
+            0 => .I2C1,
+            1 => .I2C2,
+        });
 
         // Get peripheral clock frequency
         const rcc_clocks = hal.clocks.get_freqs();

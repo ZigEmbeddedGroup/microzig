@@ -1,5 +1,6 @@
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
+const clocks = microzig.hal.clocks;
 
 const GPIOA = peripherals.GPIOA;
 const GPIOB = peripherals.GPIOB;
@@ -107,6 +108,17 @@ pub const Pin = packed struct(u8) {
         const m_mode = @as(u32, @intFromEnum(mode));
         const config: u32 = s_speed + (m_mode << 2);
         gpio.write_pin_config(config);
+    }
+
+    pub inline fn enable_clock(gpio: Pin) void {
+        // TODO: Cleanup!
+        clocks.enable_gpio_clock(switch (gpio.get_port()) {
+            GPIOA => .A,
+            GPIOB => .B,
+            GPIOC => .C,
+            GPIOD => .D,
+            else => unreachable,
+        });
     }
 
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
