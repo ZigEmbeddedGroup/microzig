@@ -479,9 +479,4 @@ pub const csr = struct {
     pub const cpmpocr = Csr(0xBC3, u32);
     pub const cmcr = Csr(0xBD0, u32);
     pub const cinfor = Csr(0xFC0, u32);
-
-    // Cycle counters
-    pub const cycle = riscv32_common.csr.cycle;
-    pub const cycleh = riscv32_common.csr.cycleh;
-    pub const mcountinhibit = riscv32_common.csr.mcountinhibit;
 };

@@ -6,8 +6,8 @@ pub const clocks = @import("clocks.zig");
 pub const time = @import("time.zig");
 
 pub const default_interrupts: microzig.cpu.InterruptOptions = .{
-    // Default SysTick handler provided by the HAL
-    .SysTick = time.systick_handler,
+    // Default TIM2 handler provided by the HAL for 1ms timekeeping
+    .TIM2 = time.tim2_handler,
 };
 
 pub fn init() void {

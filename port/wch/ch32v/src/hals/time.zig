@@ -6,72 +6,99 @@ const time = microzig.drivers.time;
 
 const peripherals = microzig.chip.peripherals;
 const PFIC = peripherals.PFIC;
+const RCC = peripherals.RCC;
+const TIM2 = peripherals.TIM2;
 
 /// Global tick counter in microseconds.
-/// Incremented by the SysTick interrupt handler.
+/// Incremented by the TIM2 interrupt handler.
 var ticks_us: u64 = 0;
 
-/// Interval between SysTick interrupts in microseconds.
+/// Interval between TIM2 interrupts in microseconds.
 /// Configured during init().
 var tick_interval_us: u64 = 1000; // Default 1ms
 
-/// Initialize the time system with SysTick.
+/// Initialize SysTick as a free-running counter for delays.
 ///
-/// This configures SysTick to trigger interrupts at regular intervals and maintains
-/// a microsecond counter.
+/// This configures SysTick to run continuously without interrupts or auto-reload.
+/// CNTH:CNTL together form a 64-bit counter that increments at HCLK rate.
 /// NOTE: This must be called AFTER configuring the system clock to the final frequency.
-pub fn init() void {
-    // Reset configuration
-    PFIC.STK_CTLR.raw = 0;
+fn init_delay_counter() void {
+    // Configure SysTick for free-running mode (no interrupts, no auto-reload)
+    PFIC.STK_CTLR.modify(.{
+        // Turn on the system counter STK
+        .STE = 1,
+        // Disable counter interrupt
+        .STIE = 0,
+        // HCLK for time base (i.e. count 8x faster)
+        .STCLK = 1,
+        // Free-running (no auto-reload)
+        .STRE = 0,
+    });
 
-    // Reset the count register
+    // Reset the count registers
     PFIC.STK_CNTL.raw = 0;
+    PFIC.STK_CNTH.raw = 0;
+}
 
-    // Configure SysTick to trigger every 1ms
-    // Compute tick interval using board frequency if available, else CPU default
+/// Initialize TIM2 to fire interrupts every 1ms for timekeeping.
+///
+/// This configures TIM2 to generate periodic interrupts that maintain the ticks_us counter.
+/// NOTE: This must be called AFTER configuring the system clock to the final frequency.
+fn init_tick_timer() void {
     const freq: u32 = if (microzig.config.has_board and @hasDecl(board, "cpu_frequency"))
         board.cpu_frequency
     else
         microzig.cpu.cpu_frequency;
-    const counts_per_ms = freq / 1000;
-    tick_interval_us = 1000;
 
-    // Set the compare register
-    PFIC.STK_CMPLR.raw = counts_per_ms - 1;
+    // Enable TIM2 clock (bit 0 of APB1PCENR)
+    RCC.APB1PCENR.raw |= 1 << 0;
 
-    // Configure SysTick
-    PFIC.STK_CTLR.modify(.{
-        // Turn on the system counter STK
-        .STE = 1,
-        // Enable counter interrupt
-        .STIE = 1,
-        // HCLK for time base
-        .STCLK = 1,
-        // Re-counting from 0 after counting up to the comparison value
-        .STRE = 1,
-    });
+    // Set prescaler and auto-reload for 1ms ticks
+    // For 48MHz: PSC = 47 (divide by 48), ARR = 999 (count to 1000)
+    // = 48MHz / 48 / 1000 = 1kHz = 1ms
+    const prescaler: u16 = @intCast((freq / 1_000_000) - 1); // Divide to 1MHz
+    TIM2.PSC.modify(.{ .PSC = prescaler });
+    TIM2.ATRLR.modify(.{ .ARR = 999 }); // Count 1000 cycles = 1ms at 1MHz
 
-    // Clear the trigger state
-    PFIC.STK_SR.modify(.{ .CNTIF = 0 });
+    // Enable update interrupt
+    TIM2.DMAINTENR.modify(.{ .UIE = 1 });
 
-    // Enable SysTick interrupt
-    cpu.interrupt.enable(.SysTick);
+    // Enable the counter
+    TIM2.CTLR1.modify(.{ .CEN = 1 });
+
+    // Enable TIM2 interrupt in NVIC
+    cpu.interrupt.enable(.TIM2);
 }
 
-/// SysTick interrupt handler.
+/// Initialize the time system with TIM2 and SysTick.
+///
+/// - TIM2: Configured to fire interrupts every 1ms, maintaining a microsecond counter
+/// - SysTick: Configured as a free-running 64-bit counter for precise delays (no interrupts)
+/// NOTE: This must be called AFTER configuring the system clock to the final frequency.
+pub fn init() void {
+    tick_interval_us = 1000; // 1ms intervals
+
+    // Initialize SysTick as free-running delay counter (no interrupts)
+    init_delay_counter();
+
+    // Initialize TIM2 for periodic 1ms interrupts
+    init_tick_timer();
+}
+
+/// TIM2 interrupt handler.
 ///
 /// This should be registered in the chip default_interrupts
 /// ```zig
 /// pub const default_interrupts: microzig.cpu.InterruptOptions = .{
-///    .SysTick = time.systick_handler,
+///    .TIM2 = time.tim2_handler,
 /// };
 /// ```
-pub fn systick_handler() callconv(cpu.riscv_calling_convention) void {
+pub fn tim2_handler() callconv(cpu.riscv_calling_convention) void {
     // Increment the tick counter
     ticks_us +%= tick_interval_us;
 
-    // Clear the trigger state for the next interrupt
-    PFIC.STK_SR.modify(.{ .CNTIF = 0 });
+    // Clear the update interrupt flag
+    TIM2.INTFR.modify(.{ .UIF = 0 });
 }
 
 /// Get the current time since boot.
@@ -102,36 +129,38 @@ pub fn sleep_us(time_us: u64) void {
     }
 }
 
-/// Busy-wait for the specified number of microseconds.
+/// Busy-wait for the specified number of microseconds using SysTick.
 ///
-/// For sub-millisecond delays (< 800us), uses SysTick CNT directly for accuracy
-/// immune to interrupt latency. For longer delays, breaks down into ms + us.
+/// Uses SysTick as a free-running 64-bit counter. This provides:
+/// - No interrupt conflicts (SysTick runs with no interrupts, TIM2 handles timing)
+/// - 64-bit range (practically unlimited delays)
+/// - Immune to interrupt latency (counter runs continuously)
+/// - Direct hardware access, no wrapping concerns
 pub fn delay_us(us: u32) void {
     if (us == 0) return;
 
-    // For delays >= 800us, split into ms + us to avoid SysTick wrap issues, since we setup Systick to fire every 1ms, which resets the count
-    if (us >= 800) {
-        const ms = us / 1000;
-        const remainder = us % 1000;
-        if (ms > 0) sleep_ms(ms);
-        if (remainder > 0) delay_us(remainder);
-        return;
-    }
-
-    // Use SysTick CNT for sub-millisecond delays (immune to interrupt latency)
     const freq: u32 = if (microzig.config.has_board and @hasDecl(board, "cpu_frequency"))
         board.cpu_frequency
     else
         microzig.cpu.cpu_frequency;
 
-    // SysTick counter runs at HCLK (configured via init)
-    // counts_per_ms = freq / 1000, so ticks_per_us = freq / 1_000_000
+    // SysTick counter runs at HCLK
+    // Calculate ticks needed for the delay
     const ticks_per_us: u32 = freq / 1_000_000;
-    const ticks: u32 = us * ticks_per_us;
+    const ticks: u64 = @as(u64, us) * @as(u64, ticks_per_us);
 
-    // Read start value and wait using wrapping arithmetic
-    const start: u32 = PFIC.STK_CNTL.raw;
-    while (@as(u32, PFIC.STK_CNTL.raw -% start) < ticks) {
+    // Read 64-bit counter (CNTH:CNTL)
+    const start_low: u32 = PFIC.STK_CNTL.raw;
+    const start_high: u32 = PFIC.STK_CNTH.raw;
+    const start: u64 = (@as(u64, start_high) << 32) | @as(u64, start_low);
+
+    // Wait until enough ticks have elapsed
+    while (true) {
+        const current_low: u32 = PFIC.STK_CNTL.raw;
+        const current_high: u32 = PFIC.STK_CNTH.raw;
+        const current: u64 = (@as(u64, current_high) << 32) | @as(u64, current_low);
+
+        if (current - start >= ticks) break;
         asm volatile ("" ::: .{ .memory = true });
     }
 }
