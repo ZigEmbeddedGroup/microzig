@@ -30,7 +30,7 @@ pub const UsbConfig = struct {
 /// of system specific functions to Usb(). Those functions
 /// are used by the abstract USB impl of microzig.
 pub fn Usb(comptime config: UsbConfig, config_descriptor: anytype, drivers: anytype) type {
-    return usb.Usb(F(config), config_descriptor, drivers);
+    return usb.DeviceController(F(config), config_descriptor, drivers);
 }
 
 pub const DeviceConfiguration = usb.DeviceConfiguration;
@@ -132,7 +132,7 @@ pub fn F(comptime config: UsbConfig) type {
         var endpoints: [config.max_endpoints_count][2]HardwareEndpoint = undefined;
         var data_buffer: []u8 = rp2xxx_buffers.data_buffer;
 
-        pub fn usb_init_device(_: *const usb.DeviceConfiguration) void {
+        pub fn usb_init_device() void {
             if (chip == .RP2350) {
                 peripherals.USB.MAIN_CTRL.modify(.{
                     .PHY_ISO = 0,
@@ -403,10 +403,9 @@ pub fn F(comptime config: UsbConfig) type {
         }
 
         /// Iterator over endpoint buffers events
-        pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
+        pub fn get_EPBIter() usb.EPBIter {
             return .{
                 .bufbits = peripherals.USB.BUFF_STATUS.raw,
-                .device_config = dc,
                 .next = next,
             };
         }

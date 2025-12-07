@@ -11,23 +11,20 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const Drivers = struct { usb.hid.HidClassDriver(
+const HidDriver = usb.hid.HidClassDriver(
     .{ .max_packet_size = 64, .boot_protocol = true, .endpoint_interval = 0 },
     usb.descriptor.hid.ReportDescriptorKeyboard,
-) };
+);
 
 const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
     .{ .self_powered = true },
     100,
-    @typeInfo(Drivers).@"struct".fields[0].type.Descriptor.create(1, .{ .name = 4 }, .{ .out = .ep1, .in = .ep1 }),
+    HidDriver.Descriptor.create(1, .{ .name = 4 }, .{ .out = .ep1, .in = .ep1 }),
 );
 
-const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, Drivers);
-
-// This is our device configuration
-pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
-    &.{
+const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
+    .device_descriptor = .{
         .bcd_usb = .from(0x0200),
         .device_triple = .{
             .class = .Unspecified,
@@ -43,14 +40,15 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .serial_s = 3,
         .num_configurations = 1,
     },
-    .English,
-    &.{
+    .lang_descriptor = .English,
+    .string_descriptors = &.{
         .from_str("Raspberry Pi"),
         .from_str("Pico Test Device"),
         .from_str("someserial"),
         .from_str("Boot Keyboard"),
     },
-);
+    .Drivers = struct { hid: HidDriver },
+});
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -75,10 +73,7 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device(&DEVICE_CONFIGURATION);
-
-    while (!usb_dev.is_configured())
-        usb_dev.task(false);
+    usb_dev.init_device();
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
@@ -88,10 +83,14 @@ pub fn main() !void {
             false, // debug output over UART [Y/n]
         );
 
-        new = time.get_time_since_boot().to_us();
-        if (new - old > 500000) {
-            old = new;
-            led.toggle();
+        if (usb_dev.drivers()) |drivers| {
+            _ = drivers; // TODO
+
+            new = time.get_time_since_boot().to_us();
+            if (new - old > 500000) {
+                old = new;
+                led.toggle();
+            }
         }
     }
 }

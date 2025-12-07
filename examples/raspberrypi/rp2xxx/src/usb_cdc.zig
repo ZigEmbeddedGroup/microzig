@@ -11,20 +11,17 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const Drivers = struct { usb.cdc.CdcClassDriver(.{ .max_packet_size = 64 }) };
+const UsbSerial = usb.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
 
 const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
     .{ .self_powered = true },
     100,
-    @typeInfo(Drivers).@"struct".fields[0].type.Descriptor.create(1, .{ .name = 4 }, .{ .notifi = .ep1, .data_out = .ep2, .data_in = .ep2 }),
+    UsbSerial.Descriptor.create(1, .{ .name = 4 }, .{ .notifi = .ep1, .data_out = .ep2, .data_in = .ep2 }),
 );
 
-const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, Drivers);
-
-// This is our device configuration
-pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
-    &.{
+const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
+    .device_descriptor = .{
         .bcd_usb = .from(0x0200),
         .device_triple = .{
             .class = .Miscellaneous,
@@ -40,14 +37,15 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .serial_s = 3,
         .num_configurations = 1,
     },
-    .English,
-    &.{
+    .lang_descriptor = .English,
+    .string_descriptors = &.{
         .from_str("Raspberry Pi"),
         .from_str("Pico Test Device"),
         .from_str("someserial"),
         .from_str("Board CDC"),
     },
-);
+    .Drivers = struct { serial: UsbSerial },
+});
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -72,10 +70,7 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device(&DEVICE_CONFIGURATION);
-
-    while (!usb_dev.is_configured())
-        usb_dev.task(false);
+    usb_dev.init_device();
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
@@ -87,20 +82,22 @@ pub fn main() !void {
             false, // debug output over UART [Y/n]
         );
 
-        new = time.get_time_since_boot().to_us();
-        if (new - old > 500000) {
-            old = new;
-            led.toggle();
-            i += 1;
-            std.log.info("cdc test: {}\r\n", .{i});
+        if (usb_dev.drivers()) |drivers| {
+            new = time.get_time_since_boot().to_us();
+            if (new - old > 500000) {
+                old = new;
+                led.toggle();
+                i += 1;
+                std.log.info("cdc test: {}\r\n", .{i});
 
-            usb_cdc_write("This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
-        }
+                usb_cdc_write(&drivers.serial, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
+            }
 
-        // read and print host command if present
-        const message = usb_cdc_read();
-        if (message.len > 0) {
-            usb_cdc_write("Your message to me was: {s}\r\n", .{message});
+            // read and print host command if present
+            const message = usb_cdc_read(&drivers.serial);
+            if (message.len > 0) {
+                usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
+            }
         }
     }
 }
@@ -109,16 +106,16 @@ var usb_tx_buff: [1024]u8 = undefined;
 
 // Transfer data to host
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
-pub fn usb_cdc_write(comptime fmt: []const u8, args: anytype) void {
+pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype) void {
     const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
     var write_buff = text;
     while (write_buff.len > 0) {
-        write_buff = usb_dev.driver_data.?[0].write(write_buff);
+        write_buff = serial.write(write_buff);
         usb_dev.task(false);
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
-    _ = usb_dev.driver_data.?[0].write_flush();
+    _ = serial.write_flush();
     usb_dev.task(false);
 }
 
@@ -126,12 +123,14 @@ var usb_rx_buff: [1024]u8 = undefined;
 
 // Receive data from host
 // NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
-pub fn usb_cdc_read() []const u8 {
+pub fn usb_cdc_read(
+    serial: *UsbSerial,
+) []const u8 {
     var total_read: usize = 0;
     var read_buff: []u8 = usb_rx_buff[0..];
 
     while (true) {
-        const len = usb_dev.driver_data.?[0].read(read_buff);
+        const len = serial.read(read_buff);
         read_buff = read_buff[len..];
         total_read += len;
         if (len == 0) break;
