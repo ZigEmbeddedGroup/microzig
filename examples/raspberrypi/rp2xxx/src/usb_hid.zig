@@ -8,6 +8,8 @@ const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
 const usb = rp2xxx.usb;
 
+const descriptor = microzig.core.usb.descriptor;
+
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -18,9 +20,9 @@ const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
 const usb_config_descriptor =
     usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-    usb.templates.hid_in_out_descriptor(0, 0, 0, usb.hid.ReportDescriptorGenericInOut.len, .out(.ep1), .in(.ep1), usb_packet_size, 0);
+    usb.templates.hid_in_out_descriptor(0, 4, 1, usb.hid.Keyboard.len, .out(.ep1), .in(.ep1), usb_packet_size, 0);
 
-var driver_hid = usb.hid.HidClassDriver{ .report_descriptor = &usb.hid.ReportDescriptorGenericInOut };
+var driver_hid = usb.hid.HidClassDriver{ .report_descriptor = &usb.hid.Keyboard };
 var drivers = [_]usb.types.UsbClassDriver{driver_hid.driver()};
 
 // This is our device configuration
@@ -33,11 +35,9 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
             .protocol = 0,
         },
         .max_packet_size0 = 64,
-        .vendor = .from(0xCafe),
-        .product = .from(2),
+        .vendor = .from(0x2E8A),
+        .product = .from(0x000A),
         .bcd_device = .from(0x0100),
-        // Those are indices to the descriptor strings
-        // Make sure to provide enough string descriptors!
         .manufacturer_s = 1,
         .product_s = 2,
         .serial_s = 3,
@@ -48,7 +48,8 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
     &.{
         .from_str("Raspberry Pi"),
         .from_str("Pico Test Device"),
-        .from_str("cafebabe"),
+        .from_str("someserial"),
+        .from_str("Boot Keyboard"),
     },
     &drivers,
 );
