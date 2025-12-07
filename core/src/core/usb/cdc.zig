@@ -175,9 +175,7 @@ pub fn CdcClassDriver(options: Options) type {
             };
         }
 
-        fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-
+        pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) bool {
             if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| {
                 switch (request) {
                     .SetLineCoding => {
@@ -219,9 +217,7 @@ pub fn CdcClassDriver(options: Options) type {
             return true;
         }
 
-        fn transfer(ptr: *anyopaque, ep: types.Endpoint, data: []u8) void {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-
+        pub fn transfer(self: *@This(), ep: types.Endpoint, data: []u8) void {
             if (ep == types.Endpoint.out(self.ep_out)) {
                 self.rx.write(data) catch {};
                 self.prep_out_transaction();
@@ -236,14 +232,6 @@ pub fn CdcClassDriver(options: Options) type {
                     }
                 }
             }
-        }
-
-        pub fn driver(self: *@This()) types.UsbClassDriver {
-            return .{
-                .ptr = self,
-                .fn_class_control = class_control,
-                .fn_transfer = transfer,
-            };
         }
     };
 }

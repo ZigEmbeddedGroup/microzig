@@ -43,7 +43,7 @@ pub const ack: []const u8 = "";
 /// The functions will be accessible to the user through the `callbacks` field.
 pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type {
     return struct {
-        const num_drivers = @typeInfo(Drivers).@"struct".fields.len;
+        const driver_fields = @typeInfo(Drivers).@"struct".fields;
 
         /// The usb configuration set
         var usb_config: ?*const DeviceConfiguration = null;
@@ -59,7 +59,7 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
         // Last setup packet request
         var setup_packet: types.SetupPacket = undefined;
         // Class driver associated with last setup request if any
-        var driver: ?types.UsbClassDriver = null;
+        var driver: ?std.meta.FieldEnum(Drivers) = null;
 
         pub var driver_data: ?Drivers = null;
 
@@ -114,6 +114,12 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
                 .In => f.usb_start_tx(ep.num, data),
                 .Out => f.usb_start_rx(ep.num, max_packet_size),
             }
+        }
+
+        fn driver_class_control(drv: std.meta.FieldEnum(Drivers), stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+            return switch (drv) {
+                inline else => |d| @field(driver_data.?, @tagName(d)).class_control(stage, setup),
+            };
         }
 
         fn get_setup_packet() types.SetupPacket {
@@ -221,9 +227,10 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
                 fn process_set_config(_: u16) !void {
                     // TODO: we support just one config for now so ignore config index
                     driver_data = @as(Drivers, undefined);
-                    inline for (0..num_drivers) |i| {
-                        const desc = config_descriptor[i + 1];
-                        driver_data.?[i] = .init(&desc, device());
+                    inline for (driver_fields, 1..) |fld_drv, desc_num| {
+                        const desc = config_descriptor[desc_num];
+                        @field(driver_data.?, fld_drv.name) = .init(&desc, device());
+
                         inline for (@typeInfo(@TypeOf(desc)).@"struct".fields) |fld| {
                             if (comptime fld.type == descriptor.Endpoint)
                                 f.endpoint_open(&@field(desc, fld.name));
@@ -249,9 +256,8 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
                 switch (setup.request_type.recipient) {
                     .Device => try DeviceRequestProcessor.process_setup_request(&setup),
                     .Interface => switch (@as(u8, @truncate(setup.index))) {
-                        inline else => |itf_num| {
-                            const drv_num = 0;
-                            const cfg = config_descriptor[drv_num + 1];
+                        inline else => |itf_num| inline for (driver_fields, 1..) |fld_drv, desc_num| {
+                            const cfg = config_descriptor[desc_num];
                             comptime var fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
 
                             const itf_count = if (fields[0].type != descriptor.InterfaceAssociation)
@@ -264,8 +270,9 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
                             const itf_start = @field(cfg, fields[0].name).interface_number;
 
                             if (comptime itf_num >= itf_start and itf_num < itf_start + itf_count) {
-                                driver = driver_data.?[drv_num].driver();
-                                if (!driver_data.?[drv_num].driver().class_control(.Setup, &setup)) {
+                                const drv = @field(std.meta.FieldEnum(Drivers), fld_drv.name);
+                                driver = drv;
+                                if (driver_class_control(drv, .Setup, &setup)) {
                                     // TODO
                                 }
                             }
@@ -310,7 +317,7 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
                                     f.usb_start_rx(.ep0, 0);
 
                                     if (driver) |drv| {
-                                        _ = drv.class_control(.Ack, &setup_packet);
+                                        _ = driver_class_control(drv, .Ack, &setup_packet);
                                     }
                                 }
                             } else {
@@ -322,19 +329,18 @@ pub fn Usb(comptime f: anytype, config_descriptor: anytype, Drivers: type) type 
                                 f.usb_start_rx(.ep0, 0);
 
                                 if (driver) |drv| {
-                                    _ = drv.class_control(.Ack, &setup_packet);
+                                    _ = driver_class_control(drv, .Ack, &setup_packet);
                                 }
                             }
                         },
-                        inline else => |ep_num| {
-                            const drv_num = 0;
-                            const cfg = config_descriptor[drv_num + 1];
+                        inline else => |ep_num| inline for (driver_fields, 1..) |fld_drv, desc_num| {
+                            const cfg = config_descriptor[desc_num];
                             const fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
                             inline for (fields) |fld| {
                                 const desc = @field(cfg, fld.name);
                                 if (comptime fld.type == descriptor.Endpoint and desc.endpoint.num == ep_num) {
                                     if (ep.dir == desc.endpoint.dir)
-                                        driver_data.?[drv_num].driver().transfer(ep, epb.buffer);
+                                        @field(driver_data.?, fld_drv.name).transfer(ep, epb.buffer);
                                 }
                             }
                         },

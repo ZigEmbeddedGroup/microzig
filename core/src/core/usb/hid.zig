@@ -57,20 +57,18 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
         };
 
         device: types.UsbDevice,
-        ep_in: u8,
-        ep_out: u8,
+        ep_in: types.Endpoint.Num,
+        ep_out: types.Endpoint.Num,
 
         pub fn init(desc: *const Descriptor, device: types.UsbDevice) @This() {
             return .{
                 .device = device,
-                .ep_in = @bitCast(desc.ep_in.endpoint),
-                .ep_out = @bitCast(desc.ep_out.endpoint),
+                .ep_in = desc.ep_in.endpoint.num,
+                .ep_out = desc.ep_out.endpoint.num,
             };
         }
 
-        fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-
+        pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) bool {
             switch (setup.request_type.type) {
                 .Standard => {
                     if (stage == .Setup) {
@@ -139,14 +137,6 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             return true;
         }
 
-        fn transfer(_: *anyopaque, _: types.Endpoint, _: []u8) void {}
-
-        pub fn driver(self: *@This()) types.UsbClassDriver {
-            return .{
-                .ptr = self,
-                .fn_class_control = class_control,
-                .fn_transfer = transfer,
-            };
-        }
+        pub fn transfer(_: *@This(), _: types.Endpoint, _: []u8) void {}
     };
 }

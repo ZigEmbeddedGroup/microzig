@@ -177,18 +177,3 @@ pub const UsbDevice = struct {
         return self.fn_endpoint_transfer(ep_addr, data);
     }
 };
-
-/// USB Class driver interface
-pub const UsbClassDriver = struct {
-    ptr: *anyopaque,
-    fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
-    fn_transfer: *const fn (ptr: *anyopaque, ep: Endpoint, data: []u8) void,
-
-    pub fn class_control(self: *const @This(), stage: ControlStage, setup: *const SetupPacket) bool {
-        return self.fn_class_control(self.ptr, stage, setup);
-    }
-
-    pub fn transfer(self: *const @This(), ep: Endpoint, data: []u8) void {
-        return self.fn_transfer(self.ptr, ep, data);
-    }
-};
