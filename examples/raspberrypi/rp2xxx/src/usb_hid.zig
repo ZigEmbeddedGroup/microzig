@@ -2,10 +2,8 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
-const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const clocks = rp2xxx.clocks;
 
 const usb = microzig.core.usb;
 
@@ -13,19 +11,19 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor);
-
-const usb_packet_size = 64;
+const Drivers = struct { usb.hid.HidClassDriver(
+    .{ .max_packet_size = 64, .boot_protocol = true, .endpoint_interval = 0 },
+    usb.descriptor.hid.ReportDescriptorKeyboard,
+) };
 
 const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
     .{ .self_powered = true },
     100,
-    usb.hid.Descriptor.create(1, .{ .name = 4 }, true, usb.descriptor.hid.ReportDescriptorKeyboard.len, .ep1, .ep1, usb_packet_size, 0),
+    @typeInfo(Drivers).@"struct".fields[0].type.Descriptor.create(1, .{ .name = 4 }, .{ .out = .ep1, .in = .ep1 }),
 );
 
-var driver_hid = usb.hid.HidClassDriver(void){ .report_descriptor = &usb.descriptor.hid.ReportDescriptorKeyboard };
-var drivers = [_]usb.types.UsbClassDriver{driver_hid.driver()};
+const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, Drivers);
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
@@ -52,7 +50,6 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .from_str("someserial"),
         .from_str("Boot Keyboard"),
     },
-    &drivers,
 );
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -67,7 +64,6 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .clock_config = rp2xxx.clock_config,
@@ -80,13 +76,17 @@ pub fn main() !void {
 
     // Then initialize the USB device using the configuration defined above
     usb_dev.init_device(&DEVICE_CONFIGURATION);
+
+    while (!usb_dev.is_configured())
+        usb_dev.task(false);
+
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
         usb_dev.task(
             false, // debug output over UART [Y/n]
-        ) catch unreachable;
+        );
 
         new = time.get_time_since_boot().to_us();
         if (new - old > 500000) {

@@ -29,8 +29,8 @@ pub const UsbConfig = struct {
 /// We create a concrete implementaion by passing a handful
 /// of system specific functions to Usb(). Those functions
 /// are used by the abstract USB impl of microzig.
-pub fn Usb(comptime config: UsbConfig, config_descriptor: anytype) type {
-    return usb.Usb(F(config), config_descriptor);
+pub fn Usb(comptime config: UsbConfig, config_descriptor: anytype, drivers: anytype) type {
+    return usb.Usb(F(config), config_descriptor, drivers);
 }
 
 pub const DeviceConfiguration = usb.DeviceConfiguration;
@@ -196,8 +196,8 @@ pub fn F(comptime config: UsbConfig) type {
             });
 
             @memset(std.mem.asBytes(&endpoints), 0);
-            endpoint_open(.in(.ep0), 64, types.TransferType.Control);
-            endpoint_open(.out(.ep0), 64, types.TransferType.Control);
+            endpoint_open(&.{ .endpoint = .in(.ep0), .max_packet_size = .from(64), .attributes = .{ .transfer_type = .Control, .usage = .data }, .interval = 0 });
+            endpoint_open(&.{ .endpoint = .out(.ep0), .max_packet_size = .from(64), .attributes = .{ .transfer_type = .Control, .usage = .data }, .interval = 0 });
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
@@ -355,24 +355,15 @@ pub fn F(comptime config: UsbConfig) type {
             return &endpoints[@intFromEnum(ep.num)][@intFromEnum(ep.dir)];
         }
 
-        pub fn endpoint_open(ep: types.Endpoint, max_packet_size: u11, transfer_type: types.TransferType) void {
+        pub fn endpoint_open(desc: *const usb.descriptor.Endpoint) void {
+            assert(@intFromEnum(desc.endpoint.num) <= cfg_max_endpoints_count);
+
+            const ep = desc.endpoint;
             const ep_hard = hardware_endpoint_get_by_address(ep);
 
-            endpoint_init(ep, max_packet_size, transfer_type);
-
-            if (ep.num != .ep0) {
-                endpoint_alloc(ep_hard) catch {};
-                endpoint_enable(ep_hard);
-            }
-        }
-
-        fn endpoint_init(ep: types.Endpoint, max_packet_size: u11, transfer_type: types.TransferType) void {
-            assert(@intFromEnum(ep.num) <= cfg_max_endpoints_count);
-
-            var ep_hard = hardware_endpoint_get_by_address(ep);
             ep_hard.ep_addr = ep;
-            ep_hard.max_packet_size = max_packet_size;
-            ep_hard.transfer_type = transfer_type;
+            ep_hard.max_packet_size = @intCast(desc.max_packet_size.into());
+            ep_hard.transfer_type = desc.attributes.transfer_type;
             ep_hard.next_pid_1 = false;
             ep_hard.awaiting_rx = false;
 
@@ -382,6 +373,9 @@ pub fn F(comptime config: UsbConfig) type {
             if (ep.num == .ep0) {
                 // ep0 has fixed data buffer
                 ep_hard.data_buffer = rp2xxx_buffers.ep0_buffer0;
+            } else {
+                endpoint_alloc(ep_hard) catch {};
+                endpoint_enable(ep_hard);
             }
         }
 

@@ -166,29 +166,14 @@ pub const DriverErrors = error{
 const descriptor = @import("descriptor.zig");
 
 pub const UsbDevice = struct {
-    fn_ready: *const fn () bool,
     fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
-    fn_control_ack: *const fn (setup: *const SetupPacket) void,
-    fn_endpoint_open: *const fn (ep_desc: *const descriptor.Endpoint) void,
     fn_endpoint_transfer: *const fn (ep_addr: Endpoint, data: []const u8) void,
 
-    pub fn ready(self: *@This()) bool {
-        return self.fn_ready();
-    }
-
-    pub fn control_transfer(self: *@This(), setup: *const SetupPacket, data: []const u8) void {
+    pub fn control_transfer(self: *const @This(), setup: *const SetupPacket, data: []const u8) void {
         return self.fn_control_transfer(setup, data);
     }
 
-    pub fn control_ack(self: *@This(), setup: *const SetupPacket) void {
-        return self.fn_control_ack(setup);
-    }
-
-    pub fn endpoint_open(self: *@This(), ep_desc: *const descriptor.Endpoint) void {
-        return self.fn_endpoint_open(ep_desc);
-    }
-
-    pub fn endpoint_transfer(self: *@This(), ep_addr: Endpoint, data: []const u8) void {
+    pub fn endpoint_transfer(self: *const @This(), ep_addr: Endpoint, data: []const u8) void {
         return self.fn_endpoint_transfer(ep_addr, data);
     }
 };
@@ -196,18 +181,8 @@ pub const UsbDevice = struct {
 /// USB Class driver interface
 pub const UsbClassDriver = struct {
     ptr: *anyopaque,
-    fn_init: *const fn (ptr: *anyopaque, device: UsbDevice) void,
-    fn_open: *const fn (ptr: *anyopaque, cfg: *const anyopaque) anyerror!void,
     fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
     fn_transfer: *const fn (ptr: *anyopaque, ep: Endpoint, data: []u8) void,
-
-    pub fn init(self: *const @This(), device: UsbDevice) void {
-        return self.fn_init(self.ptr, device);
-    }
-
-    pub fn open(self: *const @This(), cfg: *const anyopaque) !void {
-        return self.fn_open(self.ptr, cfg);
-    }
 
     pub fn class_control(self: *const @This(), stage: ControlStage, setup: *const SetupPacket) bool {
         return self.fn_class_control(self.ptr, stage, setup);

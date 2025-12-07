@@ -2,30 +2,25 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
-const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const usb = rp2xxx.usb;
+
+const usb = microzig.core.usb;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
 
-const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor);
+const Drivers = struct { usb.cdc.CdcClassDriver(.{ .max_packet_size = 64 }) };
 
 const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
     .{ .self_powered = true },
     100,
-    usb.cdc.Descriptor.create(0, .{ .name = 4 }, .{ .notifi = .ep1, .data = .ep2 }),
+    @typeInfo(Drivers).@"struct".fields[0].type.Descriptor.create(1, .{ .name = 4 }, .{ .notifi = .ep1, .data_out = .ep2, .data_in = .ep2 }),
 );
 
-// usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
-// usb.templates.cdc_descriptor(0, 4, .in(.ep1), 8, .out(.ep2), .in(.ep2), 64);
-
-var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
-var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
+const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, Drivers);
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
@@ -45,7 +40,6 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .serial_s = 3,
         .num_configurations = 1,
     },
-    usb_config_descriptor,
     .English,
     &.{
         .from_str("Raspberry Pi"),
@@ -53,7 +47,6 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .from_str("someserial"),
         .from_str("Board CDC"),
     },
-    &drivers,
 );
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -68,22 +61,22 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
+    uart_tx_pin.set_function(.uart);
+    uart.apply(.{
+        .clock_config = rp2xxx.clock_config,
+    });
+    rp2xxx.uart.init_logger(uart);
+
     led.set_function(.sio);
     led.set_direction(.out);
     led.put(1);
 
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
-
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-
-    rp2xxx.uart.init_logger(uart);
-
     // Then initialize the USB device using the configuration defined above
     usb_dev.init_device(&DEVICE_CONFIGURATION);
+
+    while (!usb_dev.is_configured())
+        usb_dev.task(false);
+
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
@@ -92,7 +85,7 @@ pub fn main() !void {
         // You can now poll for USB events
         usb_dev.task(
             false, // debug output over UART [Y/n]
-        ) catch unreachable;
+        );
 
         new = time.get_time_since_boot().to_us();
         if (new - old > 500000) {
@@ -121,12 +114,12 @@ pub fn usb_cdc_write(comptime fmt: []const u8, args: anytype) void {
 
     var write_buff = text;
     while (write_buff.len > 0) {
-        write_buff = driver_cdc.write(write_buff);
-        usb_dev.task(false) catch unreachable;
+        write_buff = usb_dev.driver_data.?[0].write(write_buff);
+        usb_dev.task(false);
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
-    _ = driver_cdc.write_flush();
-    usb_dev.task(false) catch unreachable;
+    _ = usb_dev.driver_data.?[0].write_flush();
+    usb_dev.task(false);
 }
 
 var usb_rx_buff: [1024]u8 = undefined;
@@ -138,7 +131,7 @@ pub fn usb_cdc_read() []const u8 {
     var read_buff: []u8 = usb_rx_buff[0..];
 
     while (true) {
-        const len = driver_cdc.read(read_buff);
+        const len = usb_dev.driver_data.?[0].read(read_buff);
         read_buff = read_buff[len..];
         total_read += len;
         if (len == 0) break;

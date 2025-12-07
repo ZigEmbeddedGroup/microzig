@@ -1,107 +1,71 @@
 const std = @import("std");
+const usb = @import("../usb.zig");
+const descriptor = usb.descriptor;
+const types = usb.types;
 
-const descriptor = @import("descriptor.zig");
-const types = @import("types.zig");
-
-pub const Descriptor = extern struct {
-    interface: descriptor.Interface,
-    hid: descriptor.hid.Hid,
-    ep_out: descriptor.Endpoint,
-    ep_in: descriptor.Endpoint,
-
-    pub fn create(
-        interface_number: u8,
-        string_ids: anytype,
-        boot_protocol: bool,
-        report_desc_len: u16,
-        endpoint_out_address: types.Endpoint.Num,
-        endpoint_in_address: types.Endpoint.Num,
-        endpoint_size: u16,
-        endpoint_interval: u8,
-    ) @This() {
-        return .{
-            .interface = .{
-                .interface_number = interface_number,
-                .alternate_setting = 0,
-                .num_endpoints = 2,
-                .interface_class = 3,
-                .interface_subclass = @intFromBool(boot_protocol),
-                .interface_protocol = @intFromBool(boot_protocol),
-                .interface_s = string_ids.name,
-            },
-            .hid = .{
-                .bcd_hid = .from(0x0111),
-                .country_code = .NotSupported,
-                .num_descriptors = 1,
-                .report_length = .from(report_desc_len),
-            },
-            .ep_out = .{
-                .endpoint = .out(endpoint_out_address),
-                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
-                .max_packet_size = .from(endpoint_size),
-                .interval = endpoint_interval,
-            },
-            .ep_in = .{
-                .endpoint = .in(endpoint_in_address),
-                .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
-                .max_packet_size = .from(endpoint_size),
-                .interval = endpoint_interval,
-            },
-        };
-    }
+pub const Options = struct {
+    max_packet_size: u16,
+    boot_protocol: bool,
+    endpoint_interval: u8,
 };
 
-pub fn HidClassDriver(Report: type) type {
+pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
     return struct {
-        pub const ReportDescriptor = blk: {
-            const Type = std.meta.Type;
+        pub const Descriptor = extern struct {
+            interface: descriptor.Interface,
+            hid: descriptor.hid.Hid,
+            ep_out: descriptor.Endpoint,
+            ep_in: descriptor.Endpoint,
 
-            var fields: []Type.StructField = &.{
-                .{
-                    .name = "",
-                    .type = void,
-                    .default_value_ptr = null,
-                    .is_comptime = false,
-                    .alignment = 1,
-                },
-            };
-
-            for (@typeInfo(Report).@"struct".fields) |fld| {
-                fields = fields ++ switch (fld.type) {
-                    else => @compileError("Type " ++ @typeName(fld.type) ++ " not supported in HID report."),
+            pub fn create(
+                first_interface: u8,
+                string_ids: anytype,
+                endpoints: anytype,
+            ) @This() {
+                return .{
+                    .interface = .{
+                        .interface_number = first_interface,
+                        .alternate_setting = 0,
+                        .num_endpoints = 2,
+                        .interface_class = 3,
+                        .interface_subclass = @intFromBool(options.boot_protocol),
+                        .interface_protocol = @intFromBool(options.boot_protocol),
+                        .interface_s = string_ids.name,
+                    },
+                    .hid = hid_descriptor,
+                    .ep_out = .{
+                        .endpoint = .out(endpoints.out),
+                        .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                        .max_packet_size = .from(options.max_packet_size),
+                        .interval = options.endpoint_interval,
+                    },
+                    .ep_in = .{
+                        .endpoint = .in(endpoints.in),
+                        .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                        .max_packet_size = .from(options.max_packet_size),
+                        .interval = options.endpoint_interval,
+                    },
                 };
             }
-
-            break :blk @Type(.{ .@"struct" = .{
-                .decls = &.{},
-                .fields = fields,
-                .is_tuple = false,
-                .layout = .@"extern",
-            } });
         };
 
-        device: ?types.UsbDevice = null,
-        ep_in: u8 = 0,
-        ep_out: u8 = 0,
-        hid_descriptor: []const u8 = &.{},
-        report_descriptor: []const u8,
+        const hid_descriptor: descriptor.hid.Hid = .{
+            .bcd_hid = .from(0x0111),
+            .country_code = .NotSupported,
+            .num_descriptors = 1,
+            .report_length = .from(@sizeOf(@TypeOf(report_descriptor))),
+        };
 
-        fn init(ptr: *anyopaque, device: types.UsbDevice) void {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-            self.device = device;
-        }
+        device: types.UsbDevice,
+        ep_in: u8,
+        ep_out: u8,
 
-        fn open(ptr: *anyopaque, cfg_any: *const anyopaque) !void {
-            var self: *@This() = @ptrCast(@alignCast(ptr));
-            const cfg: *const Descriptor = @ptrCast(cfg_any);
-
-            self.hid_descriptor = @ptrCast(&cfg.hid);
-
-            self.ep_in = @bitCast(cfg.ep_in.endpoint);
-            self.ep_out = @bitCast(cfg.ep_out.endpoint);
-
-            self.device.?.endpoint_open(&cfg.ep_in);
-            self.device.?.endpoint_open(&cfg.ep_out);
+        pub fn init(desc: *const Descriptor, device: types.UsbDevice) @This() {
+            return .{
+                .device = device,
+                .ep_in = @bitCast(desc.ep_in.endpoint),
+                .ep_out = @bitCast(desc.ep_out.endpoint),
+            };
         }
 
         fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
@@ -114,9 +78,9 @@ pub fn HidClassDriver(Report: type) type {
                         const request_code = std.meta.intToEnum(types.SetupRequest, setup.request) catch return false;
 
                         if (request_code == .GetDescriptor and hid_desc_type == .Hid) {
-                            self.device.?.control_transfer(setup, self.hid_descriptor);
+                            self.device.control_transfer(setup, @ptrCast(&hid_descriptor));
                         } else if (request_code == .GetDescriptor and hid_desc_type == .Report) {
-                            self.device.?.control_transfer(setup, self.report_descriptor);
+                            self.device.control_transfer(setup, @ptrCast(&report_descriptor));
                         } else {
                             return false;
                         }
@@ -134,7 +98,7 @@ pub fn HidClassDriver(Report: type) type {
                                 // should be implemented eventually.
                                 //
                                 // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                                self.device.?.control_ack(setup);
+                                self.device.control_transfer(setup, usb.ack);
                             }
                         },
                         .SetProtocol => {
@@ -149,7 +113,7 @@ pub fn HidClassDriver(Report: type) type {
                                 // our device might not work in a limited BIOS environment.
                                 //
                                 // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                                self.device.?.control_ack(setup);
+                                self.device.control_transfer(setup, usb.ack);
                             }
                         },
                         .SetReport => {
@@ -159,7 +123,7 @@ pub fn HidClassDriver(Report: type) type {
                                 // application-specific way, so notify the application code of the event.
                                 //
                                 // https://github.com/ZigEmbeddedGroup/microzig/issues/454
-                                self.device.?.control_ack(setup);
+                                self.device.control_transfer(setup, usb.ack);
                             }
                         },
                         else => {
@@ -180,8 +144,6 @@ pub fn HidClassDriver(Report: type) type {
         pub fn driver(self: *@This()) types.UsbClassDriver {
             return .{
                 .ptr = self,
-                .fn_init = init,
-                .fn_open = open,
                 .fn_class_control = class_control,
                 .fn_transfer = transfer,
             };
