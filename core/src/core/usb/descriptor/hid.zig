@@ -3,7 +3,6 @@ const assert = std.debug.assert;
 
 const descriptor = @import("../descriptor.zig");
 const types = @import("../types.zig");
-const utils = @import("../utils.zig");
 
 pub const RequestType = enum(u8) {
     GetReport = 0x01,

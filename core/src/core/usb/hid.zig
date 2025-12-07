@@ -2,10 +2,6 @@ const std = @import("std");
 
 const descriptor = @import("descriptor.zig");
 const types = @import("types.zig");
-const utils = @import("utils.zig");
-
-const DescType = types.DescType;
-const bos = utils.BosConfig;
 
 pub const Descriptor = extern struct {
     interface: descriptor.Interface,
@@ -95,36 +91,17 @@ pub fn HidClassDriver(Report: type) type {
             self.device = device;
         }
 
-        fn open(ptr: *anyopaque, cfg: []const u8) !usize {
+        fn open(ptr: *anyopaque, cfg_any: *const anyopaque) !void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
-            var curr_cfg = cfg;
+            const cfg: *const Descriptor = @ptrCast(cfg_any);
 
-            if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
-                if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return types.DriverErrors.UnsupportedInterfaceClassType;
-            } else {
-                return types.DriverErrors.ExpectedInterfaceDescriptor;
-            }
+            self.hid_descriptor = @ptrCast(&cfg.hid);
 
-            curr_cfg = bos.get_desc_next(curr_cfg);
-            if (bos.try_get_desc_as(descriptor.hid.Hid, curr_cfg)) |_| {
-                self.hid_descriptor = curr_cfg[0..bos.get_desc_len(curr_cfg)];
-                curr_cfg = bos.get_desc_next(curr_cfg);
-            } else {
-                return types.DriverErrors.UnexpectedDescriptor;
-            }
+            self.ep_in = @bitCast(cfg.ep_in.endpoint);
+            self.ep_out = @bitCast(cfg.ep_out.endpoint);
 
-            for (0..2) |_| {
-                if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
-                    switch (desc_ep.endpoint.dir) {
-                        .In => self.ep_in = @bitCast(desc_ep.endpoint),
-                        .Out => self.ep_out = @bitCast(desc_ep.endpoint),
-                    }
-                    self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
-                    curr_cfg = bos.get_desc_next(curr_cfg);
-                }
-            }
-
-            return cfg.len - curr_cfg.len;
+            self.device.?.endpoint_open(&cfg.ep_in);
+            self.device.?.endpoint_open(&cfg.ep_out);
         }
 
         fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {

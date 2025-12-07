@@ -152,7 +152,7 @@ pub const U16Le = extern struct {
     }
 
     pub fn into(this: @This()) u16 {
-        return std.mem.readInt(U16Le, &this.value, .little);
+        return std.mem.readInt(u16, &this.value, .little);
     }
 };
 
@@ -163,11 +163,13 @@ pub const DriverErrors = error{
     UnexpectedDescriptor,
 };
 
+const descriptor = @import("descriptor.zig");
+
 pub const UsbDevice = struct {
     fn_ready: *const fn () bool,
     fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
     fn_control_ack: *const fn (setup: *const SetupPacket) void,
-    fn_endpoint_open: *const fn (ep_desc: []const u8) void,
+    fn_endpoint_open: *const fn (ep_desc: *const descriptor.Endpoint) void,
     fn_endpoint_transfer: *const fn (ep_addr: Endpoint, data: []const u8) void,
 
     pub fn ready(self: *@This()) bool {
@@ -182,7 +184,7 @@ pub const UsbDevice = struct {
         return self.fn_control_ack(setup);
     }
 
-    pub fn endpoint_open(self: *@This(), ep_desc: []const u8) void {
+    pub fn endpoint_open(self: *@This(), ep_desc: *const descriptor.Endpoint) void {
         return self.fn_endpoint_open(ep_desc);
     }
 
@@ -195,7 +197,7 @@ pub const UsbDevice = struct {
 pub const UsbClassDriver = struct {
     ptr: *anyopaque,
     fn_init: *const fn (ptr: *anyopaque, device: UsbDevice) void,
-    fn_open: *const fn (ptr: *anyopaque, cfg: []const u8) anyerror!usize,
+    fn_open: *const fn (ptr: *anyopaque, cfg: *const anyopaque) anyerror!void,
     fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
     fn_transfer: *const fn (ptr: *anyopaque, ep: Endpoint, data: []u8) void,
 
@@ -203,8 +205,7 @@ pub const UsbClassDriver = struct {
         return self.fn_init(self.ptr, device);
     }
 
-    /// Driver open (set config) operation. Must return length of consumed driver config data.
-    pub fn open(self: *const @This(), cfg: []const u8) !usize {
+    pub fn open(self: *const @This(), cfg: *const anyopaque) !void {
         return self.fn_open(self.ptr, cfg);
     }
 

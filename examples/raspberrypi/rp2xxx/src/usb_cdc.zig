@@ -12,7 +12,7 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-const usb_dev = rp2xxx.usb.Usb(.{});
+const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor);
 
 const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
@@ -45,7 +45,7 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .serial_s = 3,
         .num_configurations = 1,
     },
-    @ptrCast(&usb_config_descriptor),
+    usb_config_descriptor,
     .English,
     &.{
         .from_str("Raspberry Pi"),

@@ -29,8 +29,8 @@ pub const UsbConfig = struct {
 /// We create a concrete implementaion by passing a handful
 /// of system specific functions to Usb(). Those functions
 /// are used by the abstract USB impl of microzig.
-pub fn Usb(comptime config: UsbConfig) type {
-    return usb.Usb(F(config));
+pub fn Usb(comptime config: UsbConfig, config_descriptor: anytype) type {
+    return usb.Usb(F(config), config_descriptor);
 }
 
 pub const DeviceConfiguration = usb.DeviceConfiguration;

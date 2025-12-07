@@ -20,8 +20,6 @@ pub const descriptor = @import("usb/descriptor.zig");
 pub const hid = @import("usb/hid.zig");
 pub const types = @import("usb/types.zig");
 
-pub const utils = @import("usb/utils.zig");
-
 const EpNum = types.Endpoint.Num;
 
 const ack: []const u8 = "";
@@ -43,7 +41,7 @@ const ack: []const u8 = "";
 /// * `get_EPBIter(*const DeviceConfiguration) EPBIter` - Return an endpoint buffer iterator. Each call to next returns an unhandeled endpoint buffer with data. How next is implemented depends on the system.
 /// The functions must be grouped under the same name space and passed to the fuction at compile time.
 /// The functions will be accessible to the user through the `callbacks` field.
-pub fn Usb(comptime f: anytype) type {
+pub fn Usb(comptime f: anytype, config_descriptor: anytype) type {
     return struct {
         const DrvId = enum(u8) { invalid = 0xFF, _ };
 
@@ -118,12 +116,8 @@ pub fn Usb(comptime f: anytype) type {
             f.usb_start_tx(.ep0, ack);
         }
 
-        fn device_endpoint_open(ep_desc: []const u8) void {
-            const ep: types.Endpoint = @bitCast(utils.BosConfig.get_data_u8(ep_desc, 2));
-            const ep_transfer_type = utils.BosConfig.get_data_u8(ep_desc, 3);
-            const ep_max_packet_size = @as(u11, @intCast(utils.BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
-
-            f.endpoint_open(ep, ep_max_packet_size, std.meta.intToEnum(types.TransferType, ep_transfer_type) catch .Bulk);
+        fn device_endpoint_open(ep: *const descriptor.Endpoint) void {
+            f.endpoint_open(ep.endpoint, @intCast(ep.max_packet_size.into()), ep.attributes.transfer_type);
         }
 
         fn device_endpoint_transfer(ep: types.Endpoint, data: []const u8) void {
@@ -225,7 +219,7 @@ pub fn Usb(comptime f: anytype) type {
                         .Configuration => {
                             if (debug_mode) log.info("        Config", .{});
 
-                            CmdEndpoint.send_cmd_response(usb_config.?.config_descriptor, setup.length);
+                            CmdEndpoint.send_cmd_response(@ptrCast(&config_descriptor), setup.length);
                         },
                         .String => {
                             if (debug_mode) log.info("        String", .{});
@@ -253,53 +247,35 @@ pub fn Usb(comptime f: anytype) type {
 
                 fn process_set_config(_: u16) !void {
                     // TODO: we support just one config for now so ignore config index
-                    const bos_cfg = usb_config.?.config_descriptor;
+                    assert(@TypeOf(config_descriptor[0]) == descriptor.Configuration);
+                    const fields_top = @typeInfo(@TypeOf(config_descriptor)).@"struct".fields;
 
-                    var curr_bos_cfg = bos_cfg;
-                    var curr_drv_idx: u8 = 0;
+                    inline for (0..fields_top.len - 1) |curr_drv_idx| {
+                        const cfg = config_descriptor[curr_drv_idx + 1];
+                        comptime var fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
 
-                    if (utils.BosConfig.try_get_desc_as(descriptor.Configuration, curr_bos_cfg)) |_| {
-                        curr_bos_cfg = utils.BosConfig.get_desc_next(curr_bos_cfg);
-                    } else {
-                        // TODO - error
-                        return;
-                    }
+                        const assoc_itf_count = if (fields[0].type != descriptor.InterfaceAssociation)
+                            1
+                        else blk: {
+                            defer fields = fields[1..];
+                            break :blk @field(cfg, fields[0].name).interface_count;
+                        };
 
-                    while (curr_bos_cfg.len > 0) : (curr_drv_idx += 1) {
-                        var assoc_itf_count: u8 = 1;
-                        // New class starts optionally from InterfaceAssociation followed by mandatory Interface
-                        if (utils.BosConfig.try_get_desc_as(descriptor.InterfaceAssociation, curr_bos_cfg)) |desc_assoc_itf| {
-                            assoc_itf_count = desc_assoc_itf.interface_count;
-                            curr_bos_cfg = utils.BosConfig.get_desc_next(curr_bos_cfg);
-                        }
-
-                        if (utils.BosConfig.get_desc_type(curr_bos_cfg) != .Interface) {
-                            // TODO - error
-                            return;
-                        }
-                        const desc_itf = utils.BosConfig.get_desc_as(descriptor.Interface, curr_bos_cfg);
+                        const desc_itf: descriptor.Interface = @field(cfg, fields[0].name);
 
                         var drv = usb_config.?.drivers[curr_drv_idx];
-                        const drv_cfg_len = try drv.open(curr_bos_cfg);
+                        try drv.open(&cfg);
 
                         for (0..assoc_itf_count) |itf_offset| {
                             const itf_num = desc_itf.interface_number + itf_offset;
                             itf_to_drv[itf_num] = @enumFromInt(curr_drv_idx);
                         }
 
-                        bind_endpoints_to_driver(curr_bos_cfg[0..drv_cfg_len], curr_drv_idx);
-                        curr_bos_cfg = curr_bos_cfg[drv_cfg_len..];
-                    }
-                }
-
-                fn bind_endpoints_to_driver(drv_bos_cfg: []const u8, drv_idx: u8) void {
-                    var curr_bos_cfg = drv_bos_cfg;
-                    while (curr_bos_cfg.len > 0) : ({
-                        curr_bos_cfg = utils.BosConfig.get_desc_next(curr_bos_cfg);
-                    }) {
-                        if (utils.BosConfig.try_get_desc_as(descriptor.Endpoint, curr_bos_cfg)) |desc_ep| {
-                            ep_to_drv[@intFromEnum(desc_ep.endpoint.num)][@intFromEnum(desc_ep.endpoint.dir)] = @enumFromInt(drv_idx);
-                        }
+                        inline for (fields[1..]) |fld|
+                            if (fld.type == descriptor.Endpoint) {
+                                const desc_ep: descriptor.Endpoint = @field(cfg, fld.name);
+                                ep_to_drv[@intFromEnum(desc_ep.endpoint.num)][@intFromEnum(desc_ep.endpoint.dir)] = @enumFromInt(curr_drv_idx);
+                            };
                     }
                 }
             };
@@ -427,13 +403,11 @@ pub fn Usb(comptime f: anytype) type {
 pub const DeviceConfiguration = struct {
     device_descriptor: *const descriptor.Device,
     device_qualifier_descriptor: *const descriptor.Device.Qualifier,
-    config_descriptor: []const u8,
     descriptor_strings: []const []const u8,
     drivers: []const types.UsbClassDriver,
 
     pub fn from(
         comptime device_descriptor: *const descriptor.Device,
-        config_descriptor: []const u8,
         lang_descriptor: descriptor.Language,
         comptime descriptor_strings: []const descriptor.String,
         drivers: []types.UsbClassDriver,
@@ -446,7 +420,6 @@ pub const DeviceConfiguration = struct {
         return .{
             .device_descriptor = device_descriptor,
             .device_qualifier_descriptor = comptime &device_descriptor.qualifier(),
-            .config_descriptor = config_descriptor,
             .descriptor_strings = strings,
             .drivers = drivers,
         };

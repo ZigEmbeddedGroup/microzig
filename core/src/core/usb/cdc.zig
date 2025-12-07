@@ -3,7 +3,6 @@ const descriptor = @import("descriptor.zig");
 const types = @import("types.zig");
 
 const utilities = @import("../../utilities.zig");
-const bos = @import("utils.zig").BosConfig;
 
 pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
@@ -172,49 +171,16 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             };
         }
 
-        fn open(ptr: *anyopaque, cfg: []const u8) !usize {
+        fn open(ptr: *anyopaque, cfg_any: *const anyopaque) !usize {
             var self: *@This() = @ptrCast(@alignCast(ptr));
-            var curr_cfg = cfg;
+            const cfg: *const Descriptor = @ptrCast(cfg_any);
 
-            // const desc: Descriptor = std.mem.bytesAsValue(Descriptor, cfg);
-            // _ = desc;
+            self.ep_notif = cfg.ep_notifi.endpoint.num;
+            self.ep_in = cfg.ep_in.endpoint.num;
+            self.ep_out = cfg.ep_out.endpoint.num;
 
-            if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
-                if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Cdc)) return types.DriverErrors.UnsupportedInterfaceClassType;
-                if (desc_itf.interface_subclass != @intFromEnum(descriptor.cdc.SubType.AbstractControlModel)) return types.DriverErrors.UnsupportedInterfaceSubClassType;
-            } else {
-                return types.DriverErrors.ExpectedInterfaceDescriptor;
-            }
-
-            curr_cfg = bos.get_desc_next(curr_cfg);
-
-            while (curr_cfg.len > 0 and bos.get_desc_type(curr_cfg) == .CsInterface) {
-                curr_cfg = bos.get_desc_next(curr_cfg);
-            }
-
-            if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
-                std.debug.assert(desc_ep.endpoint.dir == .In);
-                self.ep_notif = desc_ep.endpoint.num;
-                curr_cfg = bos.get_desc_next(curr_cfg);
-            }
-
-            if (bos.try_get_desc_as(descriptor.Interface, curr_cfg)) |desc_itf| {
-                if (desc_itf.interface_class == @intFromEnum(types.ClassCode.CdcData)) {
-                    curr_cfg = bos.get_desc_next(curr_cfg);
-                    for (0..2) |_| {
-                        if (bos.try_get_desc_as(descriptor.Endpoint, curr_cfg)) |desc_ep| {
-                            switch (desc_ep.endpoint.dir) {
-                                .In => self.ep_in = desc_ep.endpoint.num,
-                                .Out => self.ep_out = desc_ep.endpoint.num,
-                            }
-                            self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
-                            curr_cfg = bos.get_desc_next(curr_cfg);
-                        }
-                    }
-                }
-            }
-
-            return cfg.len - curr_cfg.len;
+            self.device.?.endpoint_open(cfg.ep_in.endpoint);
+            self.device.?.endpoint_open(cfg.ep_out.endpoint);
         }
 
         fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
