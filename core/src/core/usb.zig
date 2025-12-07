@@ -20,9 +20,7 @@ pub const descriptor = @import("usb/descriptor.zig");
 pub const hid = @import("usb/hid.zig");
 pub const types = @import("usb/types.zig");
 
-pub const vendor = @import("usb/vendor.zig");
 pub const utils = @import("usb/utils.zig");
-pub const templates = @import("usb/templates.zig");
 
 const EpNum = types.Endpoint.Num;
 
@@ -499,7 +497,3 @@ pub const EPBIter = struct {
     /// Get the next available input buffer
     next: *const fn (self: *@This()) ?EPB,
 };
-
-test "tests" {
-    _ = hid;
-}

@@ -6,9 +6,8 @@ const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
-const usb = rp2xxx.usb;
 
-const descriptor = microzig.core.usb.descriptor;
+const usb = microzig.core.usb;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -17,12 +16,15 @@ const uart_tx_pin = gpio.num(0);
 const usb_dev = rp2xxx.usb.Usb(.{});
 
 const usb_packet_size = 64;
-const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
-const usb_config_descriptor =
-    usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-    usb.templates.hid_in_out_descriptor(0, 4, 1, usb.hid.Keyboard.len, .out(.ep1), .in(.ep1), usb_packet_size, 0);
 
-var driver_hid = usb.hid.HidClassDriver{ .report_descriptor = &usb.hid.Keyboard };
+const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
+    0,
+    .{ .self_powered = true },
+    100,
+    usb.hid.Descriptor.create(1, .{ .name = 4 }, true, usb.descriptor.hid.ReportDescriptorKeyboard.len, .ep1, .ep1, usb_packet_size, 0),
+);
+
+var driver_hid = usb.hid.HidClassDriver(void){ .report_descriptor = &usb.descriptor.hid.ReportDescriptorKeyboard };
 var drivers = [_]usb.types.UsbClassDriver{driver_hid.driver()};
 
 // This is our device configuration
@@ -43,7 +45,7 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .from(
         .serial_s = 3,
         .num_configurations = 1,
     },
-    usb_config_descriptor,
+    @ptrCast(&usb_config_descriptor),
     .English,
     &.{
         .from_str("Raspberry Pi"),

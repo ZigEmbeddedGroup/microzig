@@ -3,9 +3,11 @@ const types = @import("types.zig");
 const assert = std.debug.assert;
 
 pub const cdc = @import("descriptor/cdc.zig");
+pub const hid = @import("descriptor/hid.zig");
 
 test "descriptor tests" {
     _ = cdc;
+    _ = hid;
 }
 
 pub const Type = enum(u8) {
@@ -163,7 +165,7 @@ pub const Configuration = extern struct {
         for (@typeInfo(Payload).@"struct".fields) |fld| {
             switch (fld.type) {
                 Interface => num_interfaces += 1,
-                InterfaceAssociation, Endpoint, cdc.Header, cdc.CallManagement, cdc.AbstractControlModel, cdc.Union => {},
+                InterfaceAssociation, Endpoint, cdc.Header, cdc.CallManagement, cdc.AbstractControlModel, cdc.Union, hid.Hid => {},
                 else => @compileLog(fld),
             }
         }
