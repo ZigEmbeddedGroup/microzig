@@ -191,6 +191,9 @@ pub const Udp = struct {
 
     const header_len = @sizeOf(Ethernet) + @sizeOf(Ip) + @sizeOf(UdpHeader);
 
+    /// Buffer for the udp payload. Preserving space for the udp header at the
+    /// start of the net.tx_buffer. If this is used for the payload then there
+    /// is no need for memcpy in send.
     pub fn tx_buffer(self: *Self) []u8 {
         return self.net.tx_buffer[header_len..];
     }
