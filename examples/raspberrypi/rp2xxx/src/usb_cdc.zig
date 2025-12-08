@@ -20,7 +20,7 @@ const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     UsbSerial.Descriptor.create(1, .{ .name = 4 }, .{ .notifi = .ep1, .data_out = .ep2, .data_in = .ep2 }),
 );
 
-const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
+var usb_dev: rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
     .device_descriptor = .{
         .bcd_usb = .from(0x0200),
         .device_triple = .{
@@ -45,7 +45,7 @@ const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
         .from_str("Board CDC"),
     },
     .Drivers = struct { serial: UsbSerial },
-});
+}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});

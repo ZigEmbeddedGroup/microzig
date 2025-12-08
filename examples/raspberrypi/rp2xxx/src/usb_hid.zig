@@ -23,7 +23,7 @@ const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     HidDriver.Descriptor.create(1, .{ .name = 4 }, .{ .out = .ep1, .in = .ep1 }),
 );
 
-const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
+var usb_dev: rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
     .device_descriptor = .{
         .bcd_usb = .from(0x0200),
         .device_triple = .{
@@ -48,7 +48,7 @@ const usb_dev = rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
         .from_str("Boot Keyboard"),
     },
     .Drivers = struct { hid: HidDriver },
-});
+}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});

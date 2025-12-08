@@ -20,6 +20,14 @@ pub const types = @import("usb/types.zig");
 
 pub const ack: []const u8 = "";
 
+pub const DeviceInterface = struct {
+    fn_endpoint_transfer: *const fn (ep_addr: types.Endpoint, data: []const u8) void,
+
+    pub fn endpoint_transfer(this: @This(), ep_addr: types.Endpoint, data: []const u8) void {
+        return this.fn_endpoint_transfer(ep_addr, data);
+    }
+};
+
 pub const Config = struct {
     device_descriptor: descriptor.Device,
     lang_descriptor: descriptor.Language,
@@ -55,42 +63,45 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
         const driver_fields = @typeInfo(config.Drivers).@"struct".fields;
         const DriverEnum = std.meta.FieldEnum(config.Drivers);
 
+        pub const init: @This() = .{
+            .new_address = null,
+            .cfg_num = 0,
+            .tx_slice = "",
+            .setup_packet = undefined,
+            .driver = null,
+            .driver_data = null,
+        };
+
         // When the host gives us a new address, we can't just slap it into
         // registers right away, because we have to do an acknowledgement step using
         // our _old_ address.
-        var new_address: ?u8 = null;
+        new_address: ?u8,
         // 0 - no config set
-        var cfg_num: u16 = 0;
+        cfg_num: u16,
         // descriptor info waiting to be sent
-        var tx_slice: []const u8 = "";
+        tx_slice: []const u8,
         // Last setup packet request
-        var setup_packet: types.SetupPacket = undefined;
+        setup_packet: types.SetupPacket,
         // Class driver associated with last setup request if any
-        var driver: ?DriverEnum = null;
-
-        pub var driver_data: ?config.Drivers = null;
+        driver: ?DriverEnum,
+        // Driver state
+        driver_data: ?config.Drivers,
 
         pub const max_packet_size = if (f.high_speed) 512 else 64;
 
         /// Command response utility function that can split long data in multiple packets
-        fn send_cmd_response(data: []const u8, expected_max_length: u16) void {
-            tx_slice = data[0..@min(data.len, expected_max_length)];
-            f.usb_start_tx(.ep0, data[0..@min(max_packet_size, tx_slice.len)]);
+        fn send_cmd_response(this: *@This(), data: []const u8, expected_max_length: u16) void {
+            this.tx_slice = data[0..@min(data.len, expected_max_length)];
+            f.usb_start_tx(.ep0, data[0..@min(max_packet_size, this.tx_slice.len)]);
         }
 
-        /// Initialize the usb device using the given configuration
-        ///
-        /// This function will return an error if the clock hasn't been initialized.
-        pub fn init_device() void {
+        pub fn init_device(this: *@This()) void {
+            _ = this;
             f.usb_init_device();
         }
 
-        pub fn drivers() ?*config.Drivers {
-            return if (driver_data) |*ret| ret else null;
-        }
-
-        fn device_control_transfer(setup: *const types.SetupPacket, data: []const u8) void {
-            send_cmd_response(data, setup.length);
+        pub fn drivers(this: *@This()) ?*config.Drivers {
+            return if (this.driver_data) |*ret| ret else null;
         }
 
         fn device_endpoint_transfer(ep: types.Endpoint, data: []const u8) void {
@@ -100,22 +111,24 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
             }
         }
 
-        fn driver_class_control(drv: DriverEnum, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
-            return switch (drv) {
-                inline else => |d| @field(driver_data.?, @tagName(d)).class_control(stage, setup),
+        fn driver_class_control(this: *@This(), driver: DriverEnum, stage: types.ControlStage, setup: *const types.SetupPacket) void {
+            return switch (driver) {
+                inline else => |d| {
+                    const drv = &@field(this.driver_data.?, @tagName(d));
+                    if (drv.class_control(stage, setup)) |response|
+                        this.send_cmd_response(response, setup.length);
+                },
             };
         }
 
-        fn get_setup_packet() types.SetupPacket {
+        fn get_setup_packet(this: *@This()) types.SetupPacket {
             const setup = f.get_setup_packet();
-            setup_packet = setup;
-            driver = null;
+            this.setup_packet = setup;
+            this.driver = null;
             return setup;
         }
 
-        fn configuration_reset() void {}
-
-        fn process_setup_request(setup: *const types.SetupPacket, debug: bool) !void {
+        fn process_setup_request(this: *@This(), setup: *const types.SetupPacket, debug: bool) !void {
             switch (setup.request_type.type) {
                 .Class => {
                     //const itfIndex = setup.index & 0x00ff;
@@ -124,17 +137,17 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                 .Standard => {
                     switch (std.meta.intToEnum(types.SetupRequest, setup.request) catch return) {
                         .SetAddress => {
-                            new_address = @as(u8, @intCast(setup.value & 0xff));
+                            this.new_address = @as(u8, @intCast(setup.value & 0xff));
                             f.usb_start_tx(.ep0, ack);
-                            if (debug) log.info("    SetAddress: {}", .{new_address.?});
+                            if (debug) log.info("    SetAddress: {}", .{this.new_address.?});
                         },
                         .SetConfiguration => {
                             if (debug) log.info("    SetConfiguration", .{});
-                            if (cfg_num != setup.value) {
-                                cfg_num = setup.value;
+                            if (this.cfg_num != setup.value) {
+                                this.cfg_num = setup.value;
 
-                                if (cfg_num > 0) {
-                                    try process_set_config(cfg_num - 1);
+                                if (this.cfg_num > 0) {
+                                    try this.process_set_config(this.cfg_num - 1);
                                     // TODO: call mount callback if any
                                 } else {
                                     // TODO: call umount callback if any
@@ -145,7 +158,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                         .GetDescriptor => {
                             const descriptor_type = std.meta.intToEnum(descriptor.Type, setup.value >> 8) catch null;
                             if (descriptor_type) |dt| {
-                                try process_get_descriptor(setup, dt, debug);
+                                try this.process_get_descriptor(setup, dt, debug);
                             }
                         },
                         .SetFeature => {
@@ -163,17 +176,17 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
             }
         }
 
-        fn process_get_descriptor(setup: *const types.SetupPacket, descriptor_type: descriptor.Type, debug: bool) !void {
+        fn process_get_descriptor(this: *@This(), setup: *const types.SetupPacket, descriptor_type: descriptor.Type, debug: bool) !void {
             switch (descriptor_type) {
                 .Device => {
                     if (debug) log.info("        Device", .{});
 
-                    send_cmd_response(@ptrCast(&config.device_descriptor), setup.length);
+                    this.send_cmd_response(@ptrCast(&config.device_descriptor), setup.length);
                 },
                 .Configuration => {
                     if (debug) log.info("        Config", .{});
 
-                    send_cmd_response(@ptrCast(&config_descriptor), setup.length);
+                    this.send_cmd_response(@ptrCast(&config_descriptor), setup.length);
                 },
                 .String => {
                     if (debug) log.info("        String", .{});
@@ -181,7 +194,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                     // `value`.
                     const i: usize = @intCast(setup.value & 0xff);
                     const strings = comptime config.fuse_strings();
-                    send_cmd_response(strings[i], setup.length);
+                    this.send_cmd_response(strings[i], setup.length);
                 },
                 .Interface => {
                     if (debug) log.info("        Interface", .{});
@@ -194,19 +207,18 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                     // We will just copy parts of the DeviceDescriptor because
                     // the DeviceQualifierDescriptor can be seen as a subset.
                     const qualifier = comptime &config.device_descriptor.qualifier();
-                    send_cmd_response(@ptrCast(qualifier), setup.length);
+                    this.send_cmd_response(@ptrCast(qualifier), setup.length);
                 },
                 else => {},
             }
         }
 
-        fn process_set_config(_: u16) !void {
+        fn process_set_config(this: *@This(), _: u16) !void {
             // TODO: we support just one config for now so ignore config index
-            driver_data = @as(config.Drivers, undefined);
+            this.driver_data = @as(config.Drivers, undefined);
             inline for (driver_fields, 1..) |fld_drv, cfg_desc_num| {
                 const cfg = config_descriptor[cfg_desc_num];
-                @field(driver_data.?, fld_drv.name) = .init(&cfg, .{
-                    .fn_control_transfer = device_control_transfer,
+                @field(this.driver_data.?, fld_drv.name) = .init(&cfg, .{
                     .fn_endpoint_transfer = device_endpoint_transfer,
                 });
 
@@ -221,7 +233,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
         /// initializing the device.
         ///
         /// This function will return an error if the device hasn't been initialized.
-        pub fn task(debug: bool) void {
+        pub fn task(this: *@This(), debug: bool) void {
             // Check which interrupt flags are set.
             const ints = f.get_interrupts();
 
@@ -229,7 +241,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
             if (ints.SetupReq) {
                 if (debug) log.info("setup req", .{});
 
-                const setup = get_setup_packet();
+                const setup = this.get_setup_packet();
 
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
                 // to an IN on EP0 needs to use PID DATA1, and this line will ensure
@@ -238,7 +250,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                 f.reset_ep0();
 
                 switch (setup.request_type.recipient) {
-                    .Device => try process_setup_request(&setup, debug),
+                    .Device => try this.process_setup_request(&setup, debug),
                     .Interface => switch (@as(u8, @truncate(setup.index))) {
                         inline else => |itf_num| inline for (driver_fields, 1..) |fld_drv, cfg_desc_num| {
                             const cfg = config_descriptor[cfg_desc_num];
@@ -255,10 +267,8 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
 
                             if (comptime itf_num >= itf_start and itf_num < itf_start + itf_count) {
                                 const drv = @field(DriverEnum, fld_drv.name);
-                                driver = drv;
-                                if (driver_class_control(drv, .Setup, &setup)) {
-                                    // TODO
-                                }
+                                this.driver = drv;
+                                this.driver_class_control(drv, .Setup, &setup);
                             }
                         },
                     },
@@ -285,24 +295,23 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
 
                             // We use this opportunity to finish the delayed
                             // SetAddress request, if there is one:
-                            if (new_address) |addr| {
+                            if (this.new_address) |addr| {
                                 // Change our address:
                                 f.set_address(@intCast(addr));
-                                new_address = null;
+                                this.new_address = null;
                             }
 
-                            if (epb.buffer.len > 0 and tx_slice.len > 0) {
-                                tx_slice = tx_slice[epb.buffer.len..];
+                            if (epb.buffer.len > 0 and this.tx_slice.len > 0) {
+                                this.tx_slice = this.tx_slice[epb.buffer.len..];
 
-                                const next_data_chunk = tx_slice[0..@min(64, tx_slice.len)];
+                                const next_data_chunk = this.tx_slice[0..@min(64, this.tx_slice.len)];
                                 if (next_data_chunk.len > 0) {
                                     f.usb_start_tx(.ep0, next_data_chunk);
                                 } else {
                                     f.usb_start_rx(.ep0, 0);
 
-                                    if (driver) |drv| {
-                                        _ = driver_class_control(drv, .Ack, &setup_packet);
-                                    }
+                                    if (this.driver) |drv|
+                                        this.driver_class_control(drv, .Ack, &this.setup_packet);
                                 }
                             } else {
                                 // Otherwise, we've just finished sending
@@ -312,8 +321,8 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                                 // up:
                                 f.usb_start_rx(.ep0, 0);
 
-                                if (driver) |drv| {
-                                    _ = driver_class_control(drv, .Ack, &setup_packet);
+                                if (this.driver) |drv| {
+                                    this.driver_class_control(drv, .Ack, &this.setup_packet);
                                 }
                             }
                         },
@@ -324,7 +333,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                                 const desc = @field(cfg, fld.name);
                                 if (comptime fld.type == descriptor.Endpoint and desc.endpoint.num == ep_num) {
                                     if (ep.dir == desc.endpoint.dir)
-                                        @field(driver_data.?, fld_drv.name).transfer(ep, epb.buffer);
+                                        @field(this.driver_data.?, fld_drv.name).transfer(ep, epb.buffer);
                                 }
                             }
                         },
@@ -342,9 +351,7 @@ pub fn DeviceController(comptime f: anytype, config_descriptor: anytype, config:
                 f.bus_reset();
 
                 // Reset our state.
-                new_address = null;
-                cfg_num = 0;
-                tx_slice = "";
+                this.* = .init;
             }
         }
     };

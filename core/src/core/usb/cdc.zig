@@ -107,11 +107,11 @@ pub fn CdcClassDriver(options: Options) type {
             }
         };
 
-        device: types.UsbDevice,
+        device: usb.DeviceInterface,
         ep_notif: types.Endpoint.Num,
         ep_in: types.Endpoint.Num,
         ep_out: types.Endpoint.Num,
-        line_coding: LineCoding,
+        line_coding: LineCoding align(4),
 
         rx: FIFO = .empty,
         tx: FIFO = .empty,
@@ -160,7 +160,7 @@ pub fn CdcClassDriver(options: Options) type {
             }
         }
 
-        pub fn init(desc: *const Descriptor, device: types.UsbDevice) @This() {
+        pub fn init(desc: *const Descriptor, device: usb.DeviceInterface) @This() {
             return .{
                 .device = device,
                 .ep_notif = desc.ep_notifi.endpoint.num,
@@ -175,46 +175,22 @@ pub fn CdcClassDriver(options: Options) type {
             };
         }
 
-        pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+        pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) ?[]const u8 {
             if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| {
-                switch (request) {
-                    .SetLineCoding => {
-                        switch (stage) {
-                            .Setup => {
-                                // HACK, we should handle data phase somehow to read sent line_coding
-                                self.device.control_transfer(setup, usb.ack);
-                            },
-                            else => {},
-                        }
-                    },
-                    .GetLineCoding => {
-                        if (stage == .Setup) {
-                            self.device.control_transfer(setup, std.mem.asBytes(&self.line_coding));
-                        }
-                    },
+                if (stage == .Setup) switch (request) {
+                    .SetLineCoding => return usb.ack, // HACK, we should handle data phase somehow to read sent line_coding
+                    .GetLineCoding => return std.mem.asBytes(&self.line_coding),
                     .SetControlLineState => {
-                        switch (stage) {
-                            .Setup => {
-                                self.device.control_transfer(setup, usb.ack);
-                                // const DTR_BIT = 1;
-                                // self.is_ready = (setup.value & DTR_BIT) != 0;
-                                // self.line_state = @intCast(setup.value & 0xFF);
-                            },
-                            else => {},
-                        }
+                        // const DTR_BIT = 1;
+                        // self.is_ready = (setup.value & DTR_BIT) != 0;
+                        // self.line_state = @intCast(setup.value & 0xFF);
+                        return usb.ack;
                     },
-                    .SendBreak => {
-                        switch (stage) {
-                            .Setup => {
-                                self.device.control_transfer(setup, usb.ack);
-                            },
-                            else => {},
-                        }
-                    },
-                }
+                    .SendBreak => return usb.ack,
+                };
             } else |_| {}
 
-            return true;
+            return null;
         }
 
         pub fn transfer(self: *@This(), ep: types.Endpoint, data: []u8) void {

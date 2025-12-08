@@ -155,25 +155,3 @@ pub const U16Le = extern struct {
         return std.mem.readInt(u16, &this.value, .little);
     }
 };
-
-pub const DriverErrors = error{
-    ExpectedInterfaceDescriptor,
-    UnsupportedInterfaceClassType,
-    UnsupportedInterfaceSubClassType,
-    UnexpectedDescriptor,
-};
-
-const descriptor = @import("descriptor.zig");
-
-pub const UsbDevice = struct {
-    fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
-    fn_endpoint_transfer: *const fn (ep_addr: Endpoint, data: []const u8) void,
-
-    pub fn control_transfer(self: *const @This(), setup: *const SetupPacket, data: []const u8) void {
-        return self.fn_control_transfer(setup, data);
-    }
-
-    pub fn endpoint_transfer(self: *const @This(), ep_addr: Endpoint, data: []const u8) void {
-        return self.fn_endpoint_transfer(ep_addr, data);
-    }
-};
