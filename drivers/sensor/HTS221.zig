@@ -23,13 +23,18 @@ pub const HTS221 = struct {
         WHO_AM_I = 0x0F,
         AV_CONF = 0x10,
         CTRL_REG1 = 0x20,
+        H_OUT = 0x28,
         T_OUT = 0x2A,
         STATUS_REG = 0x27,
 
         // Calibration register
+        H0_RH_X2 = 0x30,
+        H1_RH_X2 = 0x31,
         T0_DEGC_X8 = 0x32,
         T1_DEGC_X8 = 0x33,
         T01_DEGC_MSB_x8 = 0x35,
+        H0_T0_OUT = 0x36,
+        H1_T0_OUT = 0x3A,
         T0_OUT = 0x3C,
         T1_OUT = 0x3E,
 
@@ -101,6 +106,8 @@ pub const HTS221 = struct {
     // Needs to be initialized with calibration value.
     t_slop: f32 = 0.0,
     t_b0: f32 = 0.0,
+    h_slop: f32 = 0.0,
+    h_b0: f32 = 0.0,
 
     // internal read buffer
     read_buffer: [2]u8 = .{ 0, 0 },
@@ -143,6 +150,23 @@ pub const HTS221 = struct {
         self.t_b0 = t0_deg - T0 * self.t_slop;
     }
 
+    fn init_humidity_calibration(self: *@This()) InterfaceError!void {
+        const h0_rh_x2 = try self.read_one_byte(RegsAddr.H0_RH_X2);
+        const h0_rh = @as(f32, @floatFromInt(h0_rh_x2)) / 2.0;
+
+        const h1_rh_x2 = try self.read_one_byte(RegsAddr.H1_RH_X2);
+        const h1_rh = @as(f32, @floatFromInt(h1_rh_x2)) / 2.0;
+
+        const h0_raw = try self.read_two_byte(RegsAddr.H0_T0_OUT);
+        const H0 = @as(f32, @floatFromInt(@as(i16, @bitCast(h0_raw))));
+
+        const h1_raw = try self.read_two_byte(RegsAddr.H1_T0_OUT);
+        const H1 = @as(f32, @floatFromInt(@as(i16, @bitCast(h1_raw))));
+
+        self.h_slop = ((h1_rh - h0_rh) / (H1 - H0));
+        self.h_b0 = h0_rh - H0 * self.h_slop;
+    }
+
     fn setup_output_rate(self: *@This(), rate: ODR) InterfaceError!void {
         var reg = try self.read_register(CTRL_REG1, RegsAddr.CTRL_REG1);
         reg.ODR = rate;
@@ -170,6 +194,7 @@ pub const HTS221 = struct {
 
     pub fn configure(self: *@This(), config: Config) InterfaceError!void {
         try self.init_temp_calibration();
+        try self.init_humidity_calibration();
         try self.setup_output_rate(config.outputDataRate);
         try self.setup_average(config.temperatureAverageSample, config.humidityAverageSample);
     }
@@ -179,10 +204,21 @@ pub const HTS221 = struct {
         return status.T_DA == 1;
     }
 
+    pub fn humidity_ready(self: *@This()) InterfaceError!bool {
+        const status = try self.read_register(STATUS_REG, RegsAddr.STATUS_REG);
+        return status.H_DA == 1;
+    }
+
     pub fn read_temperature(self: *@This()) InterfaceError!f32 {
         const raw_t = try self.read_two_byte(RegsAddr.T_OUT);
         const inter = @as(f32, @floatFromInt(@as(i16, @bitCast(raw_t))));
         return self.t_b0 + inter * self.t_slop;
+    }
+
+    pub fn read_humidity(self: *@This()) InterfaceError!f32 {
+        const raw_h = try self.read_two_byte(RegsAddr.H_OUT);
+        const inter = @as(f32, @floatFromInt(@as(i16, @bitCast(raw_h))));
+        return self.h_b0 + inter * self.h_slop;
     }
 
     pub fn init(dev: *mdf_base.I2C_Device) @This() {
