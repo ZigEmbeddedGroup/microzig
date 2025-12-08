@@ -3,14 +3,6 @@ const builtin = @import("builtin");
 const mmio = microzig.mmio;
 const shared = @import("shared_types.zig");
 
-pub const CPU_Options = struct {
-    /// If true, the Cortex-M interrupts will be initialized with a more verbose variant
-    /// of the interrupt handlers which print the interrupt name.
-    ///
-    /// NOTE: This option is enabled in debug builds by default.
-    verbose_unhandled_irq: bool = (builtin.mode == .Debug),
-};
-
 pub const scb_base_offset = 0x0d00;
 
 pub const SystemControlBlock = extern struct {
