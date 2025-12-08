@@ -2,6 +2,8 @@ const microzig = @import("microzig");
 const emus_type = @import("./enums.zig");
 
 const RCC = microzig.chip.peripherals.RCC;
+const PWR = microzig.chip.peripherals.PWR;
+const pins = microzig.hal.pins;
 
 pub const Clock = struct {
     sys_clk: u32 = 4_000_000,
@@ -35,4 +37,32 @@ pub fn enable_uart(comptime index: emus_type.UARTType) void {
         .UART4 => RCC.APB1ENR1.modify(.{ .UART4EN = 1 }),
         .UART5 => RCC.APB1ENR1.modify(.{ .UART5EN = 1 }),
     }
+}
+
+pub fn enable_rtc_lcd() void {
+    RCC.APB1ENR1.modify(.{
+        .PWREN = 1,
+    });
+    PWR.CR1.modify(.{
+        .DBP = 1,
+    });
+
+    RCC.BDCR.modify(.{
+        .LSEON = 1,
+    });
+
+    while (RCC.BDCR.read().LSERDY != 1) {
+        asm volatile ("" ::: .{ .memory = true });
+    }
+
+    RCC.BDCR.modify(.{
+        .RTCSEL = .LSE,
+        .RTCEN = 1,
+        .LSCOEN = 1,
+        .LSCOSEL = .LSE,
+    });
+
+    RCC.APB1ENR1.modify(.{
+        .LCDEN = 1,
+    });
 }

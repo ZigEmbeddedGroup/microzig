@@ -15,12 +15,12 @@ pub const microzig_options: microzig.Options = .{
     .logFn = microzig.hal.uart.log,
 };
 
-pub noinline fn init() void {
+pub fn init() void {
     microzig.board.init();
     microzig.board.init_log();
 }
 
-pub noinline fn main() !void {
+pub fn main() !void {
     _ = (stm32.pins.GlobalConfiguration{
         .GPIOB = .{
             // I2C

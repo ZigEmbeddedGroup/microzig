@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) void {
         // .{ .target = stm32.boards.stm3240geval, .name = "stm3240geval", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery", .file = "src/blinky.zig" },
         .{ .target = stm32.boards.stm32f3discovery, .name = "STM32F303_HTS221", .file = "src/stm32f303/hts221.zig" },
+        .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_Lcd", .file = "src/stm32l476/lcd.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_blink", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1xx_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_adc", .file = "src/stm32f1xx/adc.zig" },
