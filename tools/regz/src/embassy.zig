@@ -447,7 +447,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
             if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
                 try db.add_device_property(device_id, .{
-                    .key = "fpu_present",
+                    .key = "cpu.fpuPresent",
                     .value = "true",
                 });
             }
