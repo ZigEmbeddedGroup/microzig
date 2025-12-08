@@ -66846,3 +66846,105 @@ pub fn get_mcu_tree(comptime mcu_name: []const u8) type {
     }
     return @field(@This(), mcu_name);
 }
+
+test "STM32F102 RCC calculations" {
+    const base_file = STM32F102_STM32F102_rcc_v1_0;
+    const base_tree = try STM32F103C8.get_clocks(.{});
+    const config_tree = try STM32F103C8.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
+        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+        .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
+    });
+
+    try std.testing.expectError(error.Underflow, STM32F103C8.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .AHBCLKDivider = .RCC_SYSCLK_DIV512,
+        .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
+    }));
+
+    //base tree testing
+    try std.testing.expectEqual(base_tree.clock.SysCLKOutput, @as(f32, 8_000_000));
+    try std.testing.expectEqual(base_tree.clock.USBoutput, @as(f32, 0));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+
+    //config tree testing
+    try std.testing.expectEqual(config_tree.clock.SysCLKOutput, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.PLLMUL, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.USBoutput, @as(f32, 48_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 36_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Output, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut1, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut2, @as(f32, 72_000_000));
+
+    try std.testing.expectEqual(base_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
+}
+
+test "STM32F303 RCC calculations" {
+    const base_file = STM32F3_STM32F303_rcc_v1_0;
+    const base_tree = try STM32F303VC.get_clocks(.{});
+    const config_tree = try STM32F303VC.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
+        .PRESCALERUSB = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+        .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
+    });
+
+    try std.testing.expectError(error.Underflow, STM32F303VC.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .AHBCLKDivider = .RCC_SYSCLK_DIV512,
+        .PRESCALERUSB = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+        .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
+    }));
+
+    //base tree testing
+    try std.testing.expectEqual(base_tree.clock.SysCLKOutput, @as(f32, 8_000_000));
+    try std.testing.expectEqual(base_tree.clock.USBoutput, @as(f32, 0));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+
+    //config tree testing
+    try std.testing.expectEqual(config_tree.clock.SysCLKOutput, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.PLLMUL, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.USBoutput, @as(f32, 48_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 36_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Output, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut1, @as(f32, 72_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut2, @as(f32, 72_000_000));
+
+    try std.testing.expectEqual(base_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
+}
+
+test "STM32L47 RCC calculations" {
+    const base_file = STM32L4_STM32L4_rcc_v1_0;
+    const base_tree = try STM32L476VG.get_clocks(.{});
+    const config_tree = try STM32L476VG.get_clocks(.{
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+    });
+
+    _ = try comptime STM32L476VG.get_clocks(.{
+        .PLLSource = .RCC_PLLSOURCE_MSI,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+    });
+
+    try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB1Output, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.TimPrescalerAPB1, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB2Prescaler, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.TimPrescalerAPB2, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_MSI);
+
+    try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 64_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 64_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescalerAPB1, @as(f32, 64_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Prescaler, @as(f32, 64_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescalerAPB2, @as(f32, 64_000_000));
+}

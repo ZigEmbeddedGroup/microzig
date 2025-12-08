@@ -359,8 +359,8 @@ fn check_type(comptime T: type) ?bool {
     }
 }
 
-pub fn check_ref(comptime T: type, val: T, to_check: T, op: Opration) bool {
-    _ = check_type(T);
+pub fn check_ref(comptime T: type, val: T, to_check: T, comptime op: Opration) bool {
+    _ = comptime check_type(T);
 
     // If both side is null, we consider the comparison true.
     if (val == null and to_check == null) return true;
@@ -378,15 +378,15 @@ pub fn check_ref(comptime T: type, val: T, to_check: T, op: Opration) bool {
     };
 }
 
-pub fn math_op(comptime T: type, val: T, val2: T, op: MathOpration, owner: []const u8, op1_s: []const u8, op2_s: []const u8) !f32 {
-    const t = check_type(T) orelse @compileError("math_op used on invalid type:" ++ @typeName(T));
-    const op1 = val orelse try comptime_fail_or_error(error.NullValue,
+pub fn math_op(comptime T: type, val: T, val2: T, comptime op: MathOpration, comptime owner: []const u8, comptime op1_s: []const u8, comptime op2_s: []const u8) !f32 {
+    const t = comptime check_type(T) orelse @compileError("math_op used on invalid type:" ++ @typeName(T));
+    const op1 = val orelse return comptime_fail_or_error(error.NullValue,
         \\Error trying to evaluate the expression {s}{s}{s} on reference: {s}
         \\the value of {0s} is null.
         \\
         \\
     , .{ op1_s, @tagName(op), op2_s, owner });
-    const op2 = val2 orelse try comptime_fail_or_error(error.NullValue,
+    const op2 = val2 orelse return comptime_fail_or_error(error.NullValue,
         \\Error trying to evaluate the expression {s}({d}){s}{s}() on reference: {s}
         \\the value of val2 is null.
         \\
@@ -400,7 +400,7 @@ pub fn math_op(comptime T: type, val: T, val2: T, op: MathOpration, owner: []con
         .@"+" => {
             const ret = @addWithOverflow(n1, n2);
             if (ret.@"1" == 1) {
-                try comptime_fail_or_error(error.Overflow,
+                return comptime_fail_or_error(error.Overflow,
                     \\Error trying to evaluate the expression {s}({d}){s}{s}({d}) on reference: {s}
                     \\Overflow.
                     \\
@@ -412,7 +412,7 @@ pub fn math_op(comptime T: type, val: T, val2: T, op: MathOpration, owner: []con
         .@"-" => {
             const ret = @subWithOverflow(n1, n2);
             if (ret.@"1" == 1) {
-                try comptime_fail_or_error(error.Overflow,
+                return comptime_fail_or_error(error.Overflow,
                     \\Error trying to evaluate the expression {s}({d}){s}{s}({d}) on reference: {s}
                     \\Underflow.
                     \\
@@ -424,7 +424,7 @@ pub fn math_op(comptime T: type, val: T, val2: T, op: MathOpration, owner: []con
         .@"*" => {
             const ret = @mulWithOverflow(n1, n2);
             if (ret.@"1" == 1) {
-                try comptime_fail_or_error(error.Overflow,
+                return comptime_fail_or_error(error.Overflow,
                     \\Error trying to evaluate the expression {s}({d}){s}{s}({d}) on reference: {s}
                     \\Overflow.
                     \\
@@ -435,7 +435,7 @@ pub fn math_op(comptime T: type, val: T, val2: T, op: MathOpration, owner: []con
         },
         .@"/" => {
             if (op2 == 0) {
-                try comptime_fail_or_error(error.Divzero,
+                return comptime_fail_or_error(error.Divzero,
                     \\Error trying to evaluate the expression {s}({d}){s}{s}({d}) on reference: {s}
                     \\Div by zero.
                     \\
