@@ -5,7 +5,7 @@ pub const microzig = @import("microzig");
 pub const hal = microzig.hal;
 pub const rcc = hal.rcc;
 pub const pins = hal.pins;
-const UART_LOG = microzig.hal.uart.Uart(.UART1);
+const UART_LOG = microzig.hal.uart.Uart(.USART1);
 
 pub const pin_map = .{
     // circle of LEDs, connected to GPIOE bits 8..15
@@ -49,8 +49,8 @@ pub fn init_log() void {
             .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
         },
     }).apply();
-    uart_log = try microzig.hal.uart.Uart(.UART1).init(.{ .baud_rate = 115200 });
+    uart_log = try microzig.hal.uart.Uart(.USART1).init(.{ .baud_rate = 115200 });
     if (uart_log) |*logger| {
-        microzig.hal.uart.init_logger(logger);
+        microzig.hal.uart.init_logger(.USART1, logger);
     }
 }

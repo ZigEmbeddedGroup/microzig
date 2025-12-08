@@ -1,8 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const emus_type = @import("enums_type.zig");
+const enums = @import("./enums.zig");
 
-const I2CType = emus_type.I2CType;
+const I2CType = enums.I2CType;
 const I2C_t = microzig.chip.types.peripherals.i2c_v2.I2C;
 const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
