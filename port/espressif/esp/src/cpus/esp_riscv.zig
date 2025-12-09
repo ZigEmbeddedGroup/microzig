@@ -340,25 +340,6 @@ pub const TrapFrame = extern struct {
     a5: usize,
     a6: usize,
     a7: usize,
-    s0: usize,
-    s1: usize,
-    s2: usize,
-    s3: usize,
-    s4: usize,
-    s5: usize,
-    s6: usize,
-    s7: usize,
-    s8: usize,
-    s9: usize,
-    s10: usize,
-    s11: usize,
-    gp: usize,
-    tp: usize,
-    sp: usize,
-    pc: usize,
-    mstatus: usize,
-    mcause: usize,
-    mtval: usize,
 };
 
 fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
@@ -376,8 +357,7 @@ fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
             );
         }
 
-        @export(&_update_priority, .{ .name = "_update_priority" });
-        @export(&_restore_priority, .{ .name = "_restore_priority" });
+        @export(&_handle_interrupt, .{ .name = "_handle_interrupt" });
     }
 
     const interrupts_jump_asm = comptime blk: {
@@ -398,162 +378,162 @@ fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
         \\
     ++ interrupts_jump_asm ++
         \\exception:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _exception_handler
         \\    j trap_common
         \\interrupt1:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt1_handler
         \\    j trap_common
         \\interrupt2:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt2_handler
         \\    j trap_common
         \\interrupt3:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt3_handler
         \\    j trap_common
         \\interrupt4:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt4_handler
         \\    j trap_common
         \\interrupt5:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt5_handler
         \\    j trap_common
         \\interrupt6:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt6_handler
         \\    j trap_common
         \\interrupt7:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt7_handler
         \\    j trap_common
         \\interrupt8:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt8_handler
         \\    j trap_common
         \\interrupt9:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt9_handler
         \\    j trap_common
         \\interrupt10:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt10_handler
         \\    j trap_common
         \\interrupt11:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt11_handler
         \\    j trap_common
         \\interrupt12:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt12_handler
         \\    j trap_common
         \\interrupt13:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt13_handler
         \\    j trap_common
         \\interrupt14:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt14_handler
         \\    j trap_common
         \\interrupt15:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt15_handler
         \\    j trap_common
         \\interrupt16:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt16_handler
         \\    j trap_common
         \\interrupt17:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt17_handler
         \\    j trap_common
         \\interrupt18:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt18_handler
         \\    j trap_common
         \\interrupt19:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt19_handler
         \\    j trap_common
         \\interrupt20:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt20_handler
         \\    j trap_common
         \\interrupt21:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt21_handler
         \\    j trap_common
         \\interrupt22:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt22_handler
         \\    j trap_common
         \\interrupt23:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt23_handler
         \\    j trap_common
         \\interrupt24:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt24_handler
         \\    j trap_common
         \\interrupt25:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt25_handler
         \\    j trap_common
         \\interrupt26:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt26_handler
         \\    j trap_common
         \\interrupt27:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt27_handler
         \\    j trap_common
         \\interrupt28:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt28_handler
         \\    j trap_common
         \\interrupt29:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt29_handler
         \\    j trap_common
         \\interrupt30:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt30_handler
         \\    j trap_common
         \\interrupt31:
-        \\    addi sp, sp, -35*4
+        \\    addi sp, sp, -16*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt31_handler
         \\    j trap_common
@@ -573,47 +553,10 @@ fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
         \\    sw a5, 13*4(sp)
         \\    sw a6, 14*4(sp)
         \\    sw a7, 15*4(sp)
-        \\    sw s0, 16*4(sp)
-        \\    sw s1, 17*4(sp)
-        \\    sw s2, 18*4(sp)
-        \\    sw s3, 19*4(sp)
-        \\    sw s4, 20*4(sp)
-        \\    sw s5, 21*4(sp)
-        \\    sw s6, 22*4(sp)
-        \\    sw s7, 23*4(sp)
-        \\    sw s8, 24*4(sp)
-        \\    sw s9, 25*4(sp)
-        \\    sw s10, 26*4(sp)
-        \\    sw s11, 27*4(sp)
-        \\    sw gp, 28*4(sp)
-        \\    sw tp, 29*4(sp)
-        \\    addi t1, sp, 35*4  # what sp was on entry to trap
-        \\    sw t1, 30*4(sp)
-        \\    csrrs t1, mepc, x0
-        \\    sw t1, 31*4(sp)
-        \\    csrrs t1, mstatus, x0
-        \\    sw t1, 32*4(sp)
-        \\    csrrs t1, mcause, x0
-        \\    sw t1, 33*4(sp)
-        \\    csrrs t1, mtval, x0
-        \\    sw t1, 34*4(sp)
-        \\
-        \\    mv s0, ra       # Save address of handler function
-        \\
-        \\    jal ra, _update_priority
-        \\    mv s1, a0       # Save the return of _update_priority
         \\
         \\    mv a0, sp       # Pass a pointer to TrapFrame to the handler function
-        \\    jalr ra, s0     # Call the handler function
-        \\
-        \\    mv a0, s1       # Pass stored priority to _restore_priority
-        \\    jal ra, _restore_priority
-        \\
-        \\    lw t1, 31*4(sp)
-        \\    csrrw x0, mepc, t1
-        \\
-        \\    lw t1, 32*4(sp)
-        \\    csrrw x0, mstatus, t1
+        \\    mv a1, ra       # Save address of handler function
+        \\    jal ra, _handle_interrupt
         \\
         \\    lw ra, 0*4(sp)
         \\    lw t0, 1*4(sp)
@@ -631,21 +574,8 @@ fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
         \\    lw a5, 13*4(sp)
         \\    lw a6, 14*4(sp)
         \\    lw a7, 15*4(sp)
-        \\    lw s0, 16*4(sp)
-        \\    lw s1, 17*4(sp)
-        \\    lw s2, 18*4(sp)
-        \\    lw s3, 19*4(sp)
-        \\    lw s4, 20*4(sp)
-        \\    lw s5, 21*4(sp)
-        \\    lw s6, 22*4(sp)
-        \\    lw s7, 23*4(sp)
-        \\    lw s8, 24*4(sp)
-        \\    lw s9, 25*4(sp)
-        \\    lw s10, 26*4(sp)
-        \\    lw s11, 27*4(sp)
-        \\    lw gp, 28*4(sp)
-        \\    lw tp, 29*4(sp)
-        \\    lw sp, 30*4(sp) # This removes the frame we allocated from the stack
+        \\
+        \\    addi sp, sp, 16*4 # This removes the frame we allocated from the stack
         \\
         \\    mret
     );
@@ -658,17 +588,22 @@ fn unhandled(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
         std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
     } else {
         const exception: Exception = @enumFromInt(mcause.code);
-        std.log.err("exception {s} occurred!", .{@tagName(exception)});
+        std.log.err("unhandled exception {s} occurred at {x}!", .{@tagName(exception), csr.mepc.read_raw()});
+
+        switch (exception) {
+            .InstructionFault => std.log.err("faulting address: {x}", .{csr.mtval.read_raw()}),
+            .LoadFault => std.log.err("faulting address: {x}", .{csr.mtval.read_raw()}),
+            else => {},
+        }
     }
 
     @panic("unhandled trap");
 }
 
-fn _update_priority() linksection(".ram_text") callconv(.c) u32 {
-    const mcause = csr.mcause.read();
-
+fn _handle_interrupt(trap_frame: *TrapFrame, handler: InterruptHandler) linksection(".ram_text") callconv(.c) void {
     const prev_priority = interrupt.get_priority_threshold();
 
+    const mcause = csr.mcause.read();
     if (mcause.is_interrupt != 0) {
         // this is an interrupt (can also be exception in which case we don't enable interrupts).
 
@@ -682,12 +617,10 @@ fn _update_priority() linksection(".ram_text") callconv(.c) u32 {
         }
     }
 
-    return @intFromEnum(prev_priority);
-}
+    handler(trap_frame);
 
-fn _restore_priority(priority_raw: u32) linksection(".ram_text") callconv(.c) void {
     interrupt.disable_interrupts();
-    interrupt.set_priority_threshold(@enumFromInt(priority_raw));
+    interrupt.set_priority_threshold(prev_priority);
 }
 
 pub const csr = struct {

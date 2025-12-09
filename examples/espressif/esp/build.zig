@@ -24,17 +24,18 @@ pub fn build(b: *std.Build) void {
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "systimer", .file = "src/systimer.zig" },
         .{ .name = "ws2812_blinky", .file = "src/ws2812_blinky.zig" },
+        .{ .name = "scheduler", .file = "src/scheduler.zig" },
     };
 
     const targeted_examples: []const TargetedExample = &.{
-        .{
-            .target = .esp32_c3,
-            .example = .{
-                .name = "wifi",
-                .file = "src/wifi.zig",
-                .features = .{ .lwip = true },
-            },
-        },
+        // .{
+        //     .target = .esp32_c3,
+        //     .example = .{
+        //         .name = "wifi",
+        //         .file = "src/wifi.zig",
+        //         .features = .{ .lwip = true },
+        //     },
+        // },
     };
 
     for (examples) |example| {

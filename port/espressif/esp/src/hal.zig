@@ -3,6 +3,7 @@ const microzig = @import("microzig");
 
 pub const esp_image = @import("esp_image");
 
+pub const Scheduler = @import("hal/Scheduler.zig");
 pub const cache = @import("hal/cache.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
@@ -10,7 +11,7 @@ pub const drivers = @import("hal/drivers.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const efuse = @import("hal/efuse.zig");
 pub const i2c = @import("hal/i2c.zig");
-pub const radio = @import("hal/radio.zig");
+// pub const radio = @import("hal/radio.zig");
 pub const ledc = @import("hal/ledc.zig");
 pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
@@ -34,7 +35,7 @@ pub const HAL_Options = struct {
         secure_version: u32 = 0,
         version: []const u8 = "0.0.0",
     } = .{},
-    radio: ?radio.Options = null,
+    // radio: ?radio.Options = null,
 };
 
 /// Clock config applied by the default `init()` function of the hal.

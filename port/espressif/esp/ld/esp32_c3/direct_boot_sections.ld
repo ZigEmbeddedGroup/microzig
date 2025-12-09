@@ -68,6 +68,13 @@ SECTIONS
     microzig_bss_end = .;
   } > DRAM
 
+  .heap (NOLOAD) :
+  {
+      microzig_heap_start = .;
+      . = ORIGIN(DRAM) + LENGTH(DRAM);
+      microzig_heap_end   = .;
+  } > DRAM
+
   microzig_data_load_start = ORIGIN(DROM) + _irom_size + _drom_size;
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
 }

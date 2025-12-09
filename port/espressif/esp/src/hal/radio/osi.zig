@@ -92,18 +92,18 @@ pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
 
     log.debug("malloc {}", .{len});
 
-    const buf = allocator.rawAlloc(@sizeOf(usize) + len, .@"4", @returnAddress()) orelse {
+    const buf = allocator.rawAlloc(8 + len, .@"8", @returnAddress()) orelse {
         log.warn("failed to allocate memory: {}", .{len});
         return null;
     };
 
     const alloc_len: *usize = @ptrCast(@alignCast(buf));
     alloc_len.* = len;
-    return @ptrFromInt(@intFromPtr(buf) + @sizeOf(usize));
+    return @ptrFromInt(@intFromPtr(buf) + 8);
 }
 
 pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
-    const total_size: usize = number * size;
+    const total_size: usize = number * size - 8;
     if (malloc(total_size)) |ptr| {
         @memset(@as([*]u8, @ptrCast(ptr))[0..total_size], 0);
         return ptr;
