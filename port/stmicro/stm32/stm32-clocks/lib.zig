@@ -66898,7 +66898,7 @@ test "STM32F102 RCC calculations" {
 test "STM32F303 RCC calculations" {
     const base_file = STM32F3_STM32F303_rcc_v1_0;
     const base_tree = try STM32F303VC.get_clocks(.{});
-    const config_tree = comptime try STM32F303VC.get_clocks(.{
+    const config_tree = try STM32F303VC.get_clocks(.{
         .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
         .PLLMUL = .RCC_PLL_MUL9,
         .PLLSource = .RCC_PLLSOURCE_HSE,
