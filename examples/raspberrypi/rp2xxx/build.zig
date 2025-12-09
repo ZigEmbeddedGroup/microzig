@@ -86,11 +86,13 @@ pub fn build(b: *std.Build) void {
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
+        const lwip = std.mem.eql(u8, example.name, "cyw43");
         available_examples.append(.{
             .target = raspberrypi.pico,
             .name = b.fmt("pico_{s}", .{example.name}),
             .file = example.file,
             .imports = example.imports,
+            .lwip = lwip,
         }) catch @panic("out of memory");
 
         available_examples.append(.{
@@ -98,6 +100,7 @@ pub fn build(b: *std.Build) void {
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
             .imports = example.imports,
+            .lwip = lwip,
         }) catch @panic("out of memory");
 
         if (example.works_with_riscv) {
@@ -106,6 +109,7 @@ pub fn build(b: *std.Build) void {
                 .name = b.fmt("pico2_riscv_{s}", .{example.name}),
                 .file = example.file,
                 .imports = example.imports,
+                .lwip = lwip,
             }) catch @panic("out of memory");
         }
     }
@@ -129,6 +133,27 @@ pub fn build(b: *std.Build) void {
             .imports = example.imports,
         });
 
+        if (example.lwip) {
+            const resolved_zig_target = b.resolveTargetQuery(firmware.target.zig_target);
+            const foundation_dep = b.dependency("foundationlibc", .{
+                .target = resolved_zig_target,
+                .optimize = optimize,
+            });
+            const lwip_dep = b.dependency("lwip", .{
+                .optimize = optimize,
+                .target = resolved_zig_target,
+            });
+            const lwip_mod = lwip_dep.module("lwip");
+            lwip_mod.linkLibrary(foundation_dep.artifact("foundation"));
+            lwip_mod.addIncludePath(b.path("lwip/include/"));
+
+            firmware.app_mod.addIncludePath(foundation_dep.path("include"));
+            for (lwip_mod.include_dirs.items) |dir| {
+                firmware.app_mod.include_dirs.append(b.allocator, dir) catch @panic("out of memory");
+            }
+            firmware.app_mod.addImport("lwip", lwip_mod);
+        }
+
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.
         //
@@ -145,6 +170,7 @@ const Example = struct {
     name: []const u8,
     file: []const u8,
     imports: []const std.Build.Module.Import = &.{},
+    lwip: bool = false,
 };
 
 const ChipAgnosticExample = struct {
