@@ -8,6 +8,8 @@ const peripherals = microzig.chip.peripherals;
 const PFIC = peripherals.PFIC;
 const RCC = peripherals.RCC;
 const TIM2 = peripherals.TIM2;
+// Combine low and high Systick Count registers
+const STK_CNT: *volatile microzig.mmio.Mmio(u64) = @ptrCast(@alignCast(&(PFIC.STK_CNTL)));
 
 /// Global tick counter in microseconds.
 /// Incremented by the TIM2 interrupt handler.
@@ -36,8 +38,7 @@ fn init_delay_counter() void {
     });
 
     // Reset the count registers
-    PFIC.STK_CNTL.raw = 0;
-    PFIC.STK_CNTH.raw = 0;
+    STK_CNT.raw = 0;
 }
 
 /// Initialize TIM2 to fire interrupts every 1ms for timekeeping.
@@ -150,15 +151,17 @@ pub fn delay_us(us: u32) void {
     const ticks: u64 = @as(u64, us) * @as(u64, ticks_per_us);
 
     // Read 64-bit counter (CNTH:CNTL)
-    const start_low: u32 = PFIC.STK_CNTL.raw;
-    const start_high: u32 = PFIC.STK_CNTH.raw;
-    const start: u64 = (@as(u64, start_high) << 32) | @as(u64, start_low);
+    // const start_low: u32 = PFIC.STK_CNTL.raw;
+    // const start_high: u32 = PFIC.STK_CNTH.raw;
+    // const start: u64 = (@as(u64, start_high) << 32) | @as(u64, start_low);
+    const start = STK_CNT.raw;
 
     // Wait until enough ticks have elapsed
     while (true) {
-        const current_low: u32 = PFIC.STK_CNTL.raw;
-        const current_high: u32 = PFIC.STK_CNTH.raw;
-        const current: u64 = (@as(u64, current_high) << 32) | @as(u64, current_low);
+        // const current_low: u32 = PFIC.STK_CNTL.raw;
+        // const current_high: u32 = PFIC.STK_CNTH.raw;
+        // const current: u64 = (@as(u64, current_high) << 32) | @as(u64, current_low);
+        const current = STK_CNT.raw;
 
         if (current - start >= ticks) break;
         asm volatile ("" ::: .{ .memory = true });
