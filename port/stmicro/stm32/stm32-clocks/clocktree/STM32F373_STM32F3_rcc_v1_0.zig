@@ -536,6 +536,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLLSource: f32 = 0,
             VCO2output: f32 = 0,
             PLLMUL: f32 = 0,
+            HSI_CEC: f32 = 0,
+            HSI_PLL: f32 = 0,
+            HSE_PLL: f32 = 0,
+            HSE_RTC: f32 = 0,
+            PLLCLK_MCO: f32 = 0,
+            PLLCLK: f32 = 0,
+            Tim2CLK: f32 = 0,
+            I2C2CLK: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -644,6 +652,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var APB1Freq_ValueLimit: Limit = .{};
             var APB2Freq_ValueLimit: Limit = .{};
             var VCOOutput2Freq_ValueLimit: Limit = .{};
+            var PLLCLKFreq_ValueLimit: Limit = .{};
             //Ref Values
 
             const HSI_VALUEValue: ?f32 = blk: {
@@ -742,7 +751,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    SysSourceHSI = true;
+                    break :blk .RCC_SYSCLKSOURCE_HSI;
+                };
             };
             const RCC_MCOSourceValue: ?RCC_MCOSourceList = blk: {
                 const conf_item = config.RCC_MCOSource;
@@ -895,7 +907,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_HSE_PREDIV_DIV1;
+                break :blk conf_item orelse {
+                    HSEDiv1 = true;
+                    break :blk .RCC_HSE_PREDIV_DIV1;
+                };
             };
             const PRESCALERUSBValue: ?PRESCALERUSBList = blk: {
                 const conf_item = config.PRESCALERUSB;
@@ -1027,7 +1042,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .SYSTICK_CLKSOURCE_HCLK;
+                break :blk conf_item orelse {
+                    HCLKDiv1 = true;
+                    break :blk .SYSTICK_CLKSOURCE_HCLK;
+                };
             };
             const CortexFreq_ValueValue: ?f32 = blk: {
                 break :blk 1e6;
@@ -1134,7 +1152,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2C1CLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    I2C1SourceHSI = true;
+                    break :blk .RCC_I2C1CLKSOURCE_HSI;
+                };
             };
             const I2C1Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1148,7 +1169,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2C2CLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    I2C2SourceHSI = true;
+                    break :blk .RCC_I2C2CLKSOURCE_HSI;
+                };
             };
             const I2C2Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1262,6 +1286,31 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
 
                 break :blk conf_item orelse .RCC_PLL_MUL2;
+            };
+            const HSICECFreq_ValueValue: ?f32 = blk: {
+                break :blk 3.2786e4;
+            };
+            const HSIPLLFreq_ValueValue: ?f32 = blk: {
+                break :blk 4e6;
+            };
+            const HSEPLLFreq_ValueValue: ?f32 = blk: {
+                break :blk 8e6;
+            };
+            const RTCHSEDivFreq_ValueValue: ?f32 = blk: {
+                break :blk 2.5e5;
+            };
+            const PLLMCOFreq_ValueValue: ?f32 = blk: {
+                break :blk 4e6;
+            };
+            const PLLCLKFreq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
+                    PLLCLKFreq_ValueLimit = .{
+                        .min = 1.6e7,
+                        .max = 7.2e7,
+                    };
+                    break :blk null;
+                }
+                break :blk 8e6;
             };
             const VDD_VALUEValue: ?f32 = blk: {
                 if (!check_MCU("STM32F3x8")) {
@@ -1974,6 +2023,42 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 .parents = &.{},
             };
 
+            var HSI_CEC = ClockNode{
+                .name = "HSI_CEC",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSI_PLL = ClockNode{
+                .name = "HSI_PLL",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSE_PLL = ClockNode{
+                .name = "HSE_PLL",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSE_RTC = ClockNode{
+                .name = "HSE_RTC",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK_MCO = ClockNode{
+                .name = "PLLCLK_MCO",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK = ClockNode{
+                .name = "PLLCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
             const HSIRC_clk_value = HSI_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
                 \\Clock is active but the reference value {s} is null
@@ -2577,59 +2662,90 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLLMUL.value = PLLMUL_clk_value.get();
             PLLMUL.parents = &.{&VCO2output};
 
-            out.HSIRC = try HSIRC.get_output();
-            out.FLITFCLKoutput = try FLITFCLKoutput.get_output();
+            std.mem.doNotOptimizeAway(HSICECFreq_ValueValue);
+            HSI_CEC.nodetype = .output;
+            HSI_CEC.parents = &.{&HSICECDiv};
+
+            std.mem.doNotOptimizeAway(HSIPLLFreq_ValueValue);
+            HSI_PLL.nodetype = .output;
+            HSI_PLL.parents = &.{&HSIRCDiv};
+
+            std.mem.doNotOptimizeAway(HSEPLLFreq_ValueValue);
+            HSE_PLL.nodetype = .output;
+            HSE_PLL.parents = &.{&HSEPLLsourceDevisor};
+
+            std.mem.doNotOptimizeAway(RTCHSEDivFreq_ValueValue);
+            HSE_RTC.nodetype = .output;
+            HSE_RTC.parents = &.{&HSERTCDevisor};
+
+            std.mem.doNotOptimizeAway(PLLMCOFreq_ValueValue);
+            PLLCLK_MCO.nodetype = .output;
+            PLLCLK_MCO.parents = &.{&MCOMultDivisor};
+
+            std.mem.doNotOptimizeAway(PLLCLKFreq_ValueValue);
+            PLLCLK.limit = PLLCLKFreq_ValueLimit;
+            PLLCLK.nodetype = .output;
+            PLLCLK.parents = &.{&PLLMUL};
+
+            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
+            out.HCLKOutput = try HCLKOutput.get_output();
+            out.TimSysOutput = try TimSysOutput.get_output();
+            out.TimSysPresc = try TimSysPresc.get_output();
+            out.TimPrescOut1 = try TimPrescOut1.get_output();
+            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.USART2Output = try USART2Output.get_output();
+            out.USART2Mult = try USART2Mult.get_output();
+            out.USART3Output = try USART3Output.get_output();
+            out.USART3Mult = try USART3Mult.get_output();
+            out.APB1Prescaler = try APB1Prescaler.get_output();
+            out.TimPrescOut2 = try TimPrescOut2.get_output();
+            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.USART1Output = try USART1Output.get_output();
+            out.USART1Mult = try USART1Mult.get_output();
+            out.ADCoutput = try ADCoutput.get_output();
+            out.ADCPresc = try ADCPresc.get_output();
+            out.APB2Prescaler = try APB2Prescaler.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.AHBPrescaler = try AHBPrescaler.get_output();
+            out.MCOoutput = try MCOoutput.get_output();
+            out.MCOMult = try MCOMult.get_output();
+            out.I2C1Output = try I2C1Output.get_output();
+            out.I2C1Mult = try I2C1Mult.get_output();
+            out.I2C2Output = try I2C2Output.get_output();
+            out.I2C2Mult = try I2C2Mult.get_output();
+            out.SDADCoutput = try SDADCoutput.get_output();
+            out.SDADCPresc = try SDADCPresc.get_output();
+            out.PWROutput = try PWROutput.get_output();
+            out.SysCLKOutput = try SysCLKOutput.get_output();
+            out.SysClkSource = try SysClkSource.get_output();
+            out.MCOMultDivisor = try MCOMultDivisor.get_output();
+            out.USBoutput = try USBoutput.get_output();
+            out.PRESCALERUSB = try PRESCALERUSB.get_output();
+            out.PLLMUL = try PLLMUL.get_output();
+            out.VCO2output = try VCO2output.get_output();
+            out.PLLSource = try PLLSource.get_output();
             out.HSIRCDiv = try HSIRCDiv.get_output();
+            out.CECOutput = try CECOutput.get_output();
+            out.CECMult = try CECMult.get_output();
             out.HSICECDiv = try HSICECDiv.get_output();
+            out.FLITFCLKoutput = try FLITFCLKoutput.get_output();
+            out.HSIRC = try HSIRC.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
             out.LSIRC = try LSIRC.get_output();
             out.LSEOSC = try LSEOSC.get_output();
-            out.CECMult = try CECMult.get_output();
-            out.CECOutput = try CECOutput.get_output();
-            out.HSEOSC = try HSEOSC.get_output();
-            out.HSEPLLsourceDevisor = try HSEPLLsourceDevisor.get_output();
-            out.PRESCALERUSB = try PRESCALERUSB.get_output();
-            out.USBoutput = try USBoutput.get_output();
-            out.SysClkSource = try SysClkSource.get_output();
-            out.SysCLKOutput = try SysCLKOutput.get_output();
-            out.SDADCPresc = try SDADCPresc.get_output();
-            out.SDADCoutput = try SDADCoutput.get_output();
-            out.PWROutput = try PWROutput.get_output();
             out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
-            out.MCOMultDivisor = try MCOMultDivisor.get_output();
-            out.MCOMult = try MCOMult.get_output();
-            out.MCOoutput = try MCOoutput.get_output();
-            out.AHBPrescaler = try AHBPrescaler.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.HCLKOutput = try HCLKOutput.get_output();
-            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
-            out.TimSysPresc = try TimSysPresc.get_output();
-            out.TimSysOutput = try TimSysOutput.get_output();
-            out.APB1Prescaler = try APB1Prescaler.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
-            out.TimPrescOut1 = try TimPrescOut1.get_output();
-            out.APB2Prescaler = try APB2Prescaler.get_output();
-            out.ADCPresc = try ADCPresc.get_output();
-            out.ADCoutput = try ADCoutput.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
-            out.TimPrescOut2 = try TimPrescOut2.get_output();
-            out.I2C1Mult = try I2C1Mult.get_output();
-            out.I2C1Output = try I2C1Output.get_output();
-            out.I2C2Mult = try I2C2Mult.get_output();
-            out.I2C2Output = try I2C2Output.get_output();
-            out.USART1Mult = try USART1Mult.get_output();
-            out.USART1Output = try USART1Output.get_output();
-            out.USART2Mult = try USART2Mult.get_output();
-            out.USART2Output = try USART2Output.get_output();
-            out.USART3Mult = try USART3Mult.get_output();
-            out.USART3Output = try USART3Output.get_output();
-            out.PLLSource = try PLLSource.get_output();
-            out.VCO2output = try VCO2output.get_output();
-            out.PLLMUL = try PLLMUL.get_output();
+            out.HSEPLLsourceDevisor = try HSEPLLsourceDevisor.get_output();
+            out.HSEOSC = try HSEOSC.get_output();
+            out.HSI_CEC = try HSI_CEC.get_extra_output();
+            out.HSI_PLL = try HSI_PLL.get_extra_output();
+            out.HSE_PLL = try HSE_PLL.get_extra_output();
+            out.HSE_RTC = try HSE_RTC.get_extra_output();
+            out.PLLCLK_MCO = try PLLCLK_MCO.get_extra_output();
+            out.PLLCLK = try PLLCLK.get_extra_output();
             ref_out.HSIRCDiv = HSIRCDivValue;
             ref_out.HSICECDiv = HSICECDivValue;
             ref_out.LSE_VALUE = LSE_VALUEValue;

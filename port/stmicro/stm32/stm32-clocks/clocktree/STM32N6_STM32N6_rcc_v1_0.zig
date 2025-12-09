@@ -2325,6 +2325,15 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCClkSource: f32 = 0,
             RTCOutput: f32 = 0,
             IWDGOutput: f32 = 0,
+            MSI: f32 = 0,
+            VCOInput: f32 = 0,
+            VCO2Input: f32 = 0,
+            VCO3Input: f32 = 0,
+            VCO4Input: f32 = 0,
+            VCO1Output: f32 = 0,
+            VCO2Output: f32 = 0,
+            VCO3Output: f32 = 0,
+            VCO4Output: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -2963,6 +2972,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var FOUTPOSTDIV3Freq_ValueLimit: Limit = .{};
             var FOUTPOSTDIV4Freq_ValueLimit: Limit = .{};
             var RTCFreq_ValueLimit: Limit = .{};
+            var VCOInput1Freq_ValueLimit: Limit = .{};
+            var VCOInput2Freq_ValueLimit: Limit = .{};
+            var VCOInput3Freq_ValueLimit: Limit = .{};
+            var VCOInput4Freq_ValueLimit: Limit = .{};
+            var VCO1OutputFreq_ValueLimit: Limit = .{};
+            var VCO2OutputFreq_ValueLimit: Limit = .{};
+            var VCO3OutputFreq_ValueLimit: Limit = .{};
+            var VCO4OutputFreq_ValueLimit: Limit = .{};
             //Ref Values
 
             const HSI_VALUEValue: ?f32 = blk: {
@@ -2979,7 +2996,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_HSI_DIV1;
+                break :blk conf_item orelse {
+                    HSIDiv1 = true;
+                    break :blk .RCC_HSI_DIV1;
+                };
             };
             const HSIDiv_VALUEValue: ?f32 = blk: {
                 break :blk 6.4e7;
@@ -3167,7 +3187,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC1_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC1DivValue: ?f32 = blk: {
                 const config_val = config.IC1Div;
@@ -3223,7 +3246,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC2_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC2DivValue: ?f32 = blk: {
                 const config_val = config.IC2Div;
@@ -3279,7 +3305,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC3_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC3DivValue: ?f32 = blk: {
                 const config_val = config.IC3Div;
@@ -3335,7 +3364,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC4_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC4DivValue: ?f32 = blk: {
                 const config_val = config.IC4Div;
@@ -3391,7 +3423,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC5_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC5DivValue: ?f32 = blk: {
                 const config_val = config.IC5Div;
@@ -3447,7 +3482,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC6_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC6DivValue: ?f32 = blk: {
                 const config_val = config.IC6Div;
@@ -3503,7 +3541,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL2;
+                break :blk conf_item orelse {
+                    IC7_PLL2 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL2;
+                };
             };
             const IC7DivValue: ?f32 = blk: {
                 const config_val = config.IC7Div;
@@ -3559,7 +3600,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL2;
+                break :blk conf_item orelse {
+                    IC8_PLL2 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL2;
+                };
             };
             const IC8DivValue: ?f32 = blk: {
                 const config_val = config.IC8Div;
@@ -3615,7 +3659,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL2;
+                break :blk conf_item orelse {
+                    IC9_PLL2 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL2;
+                };
             };
             const IC9DivValue: ?f32 = blk: {
                 const config_val = config.IC9Div;
@@ -3671,7 +3718,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL2;
+                break :blk conf_item orelse {
+                    IC10_PLL2 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL2;
+                };
             };
             const IC10DivValue: ?f32 = blk: {
                 const config_val = config.IC10Div;
@@ -3727,7 +3777,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL1;
+                break :blk conf_item orelse {
+                    IC11_PLL1 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL1;
+                };
             };
             const IC11DivValue: ?f32 = blk: {
                 const config_val = config.IC11Div;
@@ -3783,7 +3836,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL3;
+                break :blk conf_item orelse {
+                    IC12_PLL3 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL3;
+                };
             };
             const IC12DivValue: ?f32 = blk: {
                 const config_val = config.IC12Div;
@@ -3839,7 +3895,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL3;
+                break :blk conf_item orelse {
+                    IC13_PLL3 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL3;
+                };
             };
             const IC13DivValue: ?f32 = blk: {
                 const config_val = config.IC13Div;
@@ -3895,7 +3954,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL3;
+                break :blk conf_item orelse {
+                    IC14_PLL3 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL3;
+                };
             };
             const IC14DivValue: ?f32 = blk: {
                 const config_val = config.IC14Div;
@@ -3951,7 +4013,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL3;
+                break :blk conf_item orelse {
+                    IC15_PLL3 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL3;
+                };
             };
             const IC15DivValue: ?f32 = blk: {
                 const config_val = config.IC15Div;
@@ -4007,7 +4072,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL4;
+                break :blk conf_item orelse {
+                    IC16_PLL4 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL4;
+                };
             };
             const IC16DivValue: ?f32 = blk: {
                 const config_val = config.IC16Div;
@@ -4063,7 +4131,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL4;
+                break :blk conf_item orelse {
+                    IC17_PLL4 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL4;
+                };
             };
             const IC17DivValue: ?f32 = blk: {
                 const config_val = config.IC17Div;
@@ -4119,7 +4190,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL4;
+                break :blk conf_item orelse {
+                    IC18_PLL4 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL4;
+                };
             };
             const IC18DivValue: ?f32 = blk: {
                 const config_val = config.IC18Div;
@@ -4175,7 +4249,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL4;
+                break :blk conf_item orelse {
+                    IC19_PLL4 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL4;
+                };
             };
             const IC19DivValue: ?f32 = blk: {
                 const config_val = config.IC19Div;
@@ -4231,7 +4308,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ICCLKSOURCE_PLL4;
+                break :blk conf_item orelse {
+                    IC20_PLL4 = true;
+                    break :blk .RCC_ICCLKSOURCE_PLL4;
+                };
             };
             const IC20DivValue: ?f32 = blk: {
                 const config_val = config.IC20Div;
@@ -4291,7 +4371,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_MCO1SOURCE_HSI;
+                break :blk conf_item orelse {
+                    MCO1SOURCE_HSI = true;
+                    break :blk .RCC_MCO1SOURCE_HSI;
+                };
             };
             const RCC_MCODiv1Value: ?RCC_MCODiv1List = blk: {
                 const conf_item = config.RCC_MCODiv1;
@@ -4336,7 +4419,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_MCO2SOURCE_HSI;
+                break :blk conf_item orelse {
+                    MCO2SOURCE_HSI = true;
+                    break :blk .RCC_MCO2SOURCE_HSI;
+                };
             };
             const RCC_MCODiv2Value: ?RCC_MCODiv2List = blk: {
                 const conf_item = config.RCC_MCODiv2;
@@ -5264,7 +5350,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_USBPHY1REFCLKSOURCE_OTGPHY1;
+                break :blk conf_item orelse {
+                    OTGHS1CLKSOURCE_PHY = true;
+                    break :blk .RCC_USBPHY1REFCLKSOURCE_OTGPHY1;
+                };
             };
             const OTGHS1Freq_ValueValue: ?f32 = blk: {
                 OTGHS1Freq_ValueLimit = .{
@@ -5282,7 +5371,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_USBPHY2REFCLKSOURCE_OTGPHY2;
+                break :blk conf_item orelse {
+                    OTGHS2CLKSOURCE_PHY = true;
+                    break :blk .RCC_USBPHY2REFCLKSOURCE_OTGPHY2;
+                };
             };
             const OTGHS2Freq_ValueValue: ?f32 = blk: {
                 OTGHS2Freq_ValueLimit = .{
@@ -5318,7 +5410,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_USBOTGHS1CLKSOURCE_HSE_DIV2;
+                break :blk conf_item orelse {
+                    OTGPHY1CLKSOURCE_HSE_OSC = true;
+                    break :blk .RCC_USBOTGHS1CLKSOURCE_HSE_DIV2;
+                };
             };
             const OTGPHY1Freq_ValueValue: ?OTGPHY1Freq_ValueList = blk: {
                 const conf_item = config.OTGPHY1Freq_Value;
@@ -5336,7 +5431,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_USBOTGHS2CLKSOURCE_HSE_DIV2;
+                break :blk conf_item orelse {
+                    OTGPHY2CLKSOURCE_HSE_OSC = true;
+                    break :blk .RCC_USBOTGHS2CLKSOURCE_HSE_DIV2;
+                };
             };
             const OTGPHY2Freq_ValueValue: ?OTGPHY2Freq_ValueList = blk: {
                 const conf_item = config.OTGPHY2Freq_Value;
@@ -5433,7 +5531,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    SYSBCLKSOURCE_HSI = true;
+                    break :blk .RCC_SYSCLKSOURCE_HSI;
+                };
             };
             const SYSCCLKSourceValue: ?SYSCCLKSourceList = blk: {
                 if (SYSBCLKSOURCE_HSI) {
@@ -5598,6 +5699,71 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 };
                 break :blk null;
             };
+            const CpuClockFreq_ValueValue: ?f32 = blk: {
+                if (scale0) {
+                    CpuClockFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+                    break :blk null;
+                }
+                CpuClockFreq_ValueLimit = .{
+                    .min = null,
+                    .max = 6e8,
+                };
+                break :blk null;
+            };
+            const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
+                if (((check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 600000000, .@"<")) or (check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 600000000, .@"=")))) {
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .PWR_REGULATOR_VOLTAGE_SCALE0 => scale0 = true,
+                            .PWR_REGULATOR_VOLTAGE_SCALE1 => scale1 = true,
+                        }
+                    }
+
+                    break :blk conf_item orelse {
+                        scale1 = true;
+                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    };
+                } else if (((check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 800000000, .@"<")) or (check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 800000000, .@"="))) and (check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 600000000, .@">"))) {
+                    scale0 = true;
+                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE0;
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWR_Regulator_Voltage_Scale", "((CpuClockFreq_Value < 800000000)|(CpuClockFreq_Value = 800000000)) & (CpuClockFreq_Value > 600000000)", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE0", i });
+                        }
+                    }
+                    break :blk item;
+                } else if ((check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 800000000, .@">"))) {
+                    scale0 = true;
+                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE0;
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWR_Regulator_Voltage_Scale", "(CpuClockFreq_Value > 800000000)", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE0", i });
+                        }
+                    }
+                    break :blk item;
+                }
+                break :blk null;
+            };
             const SYSCCLKFreq_VALUEValue: ?f32 = blk: {
                 if (scale0) {
                     SYSCCLKFreq_VALUELimit = .{
@@ -5637,7 +5803,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_CPUCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    CPUCLKSOURCE_HSI = true;
+                    break :blk .RCC_CPUCLKSOURCE_HSI;
+                };
             };
             const TPIUPrescalerValue: ?TPIUPrescalerList = blk: {
                 const item: TPIUPrescalerList = .@"8";
@@ -5652,20 +5821,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             const CortexFreq_ValueValue: ?f32 = blk: {
                 break :blk 9.6e7;
-            };
-            const CpuClockFreq_ValueValue: ?f32 = blk: {
-                if (scale0) {
-                    CpuClockFreq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-                    break :blk null;
-                }
-                CpuClockFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 6e8,
-                };
-                break :blk null;
             };
             const AXIClockFreq_ValueValue: ?f32 = blk: {
                 AXIClockFreq_ValueLimit = .{
@@ -5773,7 +5928,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL1SOURCE_HSI = true;
+                    break :blk .RCC_PLLSOURCE_HSI;
+                };
             };
             const FREFDIV1Value: ?f32 = blk: {
                 const config_val = config.FREFDIV1;
@@ -5822,7 +5980,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL2SOURCE_HSI = true;
+                    break :blk .RCC_PLLSOURCE_HSI;
+                };
             };
             const FREFDIV2Value: ?f32 = blk: {
                 const config_val = config.FREFDIV2;
@@ -5871,7 +6032,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL3SOURCE_HSI = true;
+                    break :blk .RCC_PLLSOURCE_HSI;
+                };
             };
             const FREFDIV3Value: ?f32 = blk: {
                 const config_val = config.FREFDIV3;
@@ -5920,7 +6084,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL4SOURCE_HSI = true;
+                    break :blk .RCC_PLLSOURCE_HSI;
+                };
             };
             const FREFDIV4Value: ?f32 = blk: {
                 const config_val = config.FREFDIV4;
@@ -6989,7 +7156,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_RTCCLKSOURCE_LSI;
+                break :blk conf_item orelse {
+                    RTCCLKSOURCE_LSI = true;
+                    break :blk .RCC_RTCCLKSOURCE_LSI;
+                };
             };
             const RTCFreq_ValueValue: ?f32 = blk: {
                 RTCFreq_ValueLimit = .{
@@ -7000,6 +7170,65 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             const WatchDogFreq_ValueValue: ?f32 = blk: {
                 break :blk 3.2e4;
+            };
+            const MSI_VALUEValue: ?f32 = blk: {
+                break :blk 1.6e7;
+            };
+            const VCOInput1Freq_ValueValue: ?f32 = blk: {
+                VCOInput1Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 1.2e9,
+                };
+                break :blk null;
+            };
+            const VCOInput2Freq_ValueValue: ?f32 = blk: {
+                VCOInput2Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 1.2e9,
+                };
+                break :blk null;
+            };
+            const VCOInput3Freq_ValueValue: ?f32 = blk: {
+                VCOInput3Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 1.2e9,
+                };
+                break :blk null;
+            };
+            const VCOInput4Freq_ValueValue: ?f32 = blk: {
+                VCOInput4Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 1.2e9,
+                };
+                break :blk null;
+            };
+            const VCO1OutputFreq_ValueValue: ?f32 = blk: {
+                VCO1OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCO2OutputFreq_ValueValue: ?f32 = blk: {
+                VCO2OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCO3OutputFreq_ValueValue: ?f32 = blk: {
+                VCO3OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCO4OutputFreq_ValueValue: ?f32 = blk: {
+                VCO4OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
             };
             const HSICalibrationValueValue: ?f32 = blk: {
                 const config_val = config.extra.HSICalibrationValue;
@@ -7130,54 +7359,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
                 break :blk config_val orelse 3.3;
-            };
-            const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
-                if (((check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 600000000, .@"<")) or (check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 600000000, .@"=")))) {
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .PWR_REGULATOR_VOLTAGE_SCALE0 => scale0 = true,
-                            .PWR_REGULATOR_VOLTAGE_SCALE1 => scale1 = true,
-                        }
-                    }
-
-                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE1;
-                } else if (((check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 800000000, .@"<")) or (check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 800000000, .@"="))) and (check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 600000000, .@">"))) {
-                    scale0 = true;
-                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE0;
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWR_Regulator_Voltage_Scale", "((CpuClockFreq_Value < 800000000)|(CpuClockFreq_Value = 800000000)) & (CpuClockFreq_Value > 600000000)", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE0", i });
-                        }
-                    }
-                    break :blk item;
-                } else if ((check_ref(@TypeOf(CpuClockFreq_ValueValue), CpuClockFreq_ValueValue, 800000000, .@">"))) {
-                    scale0 = true;
-                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE0;
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWR_Regulator_Voltage_Scale", "(CpuClockFreq_Value > 800000000)", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE0", i });
-                        }
-                    }
-                    break :blk item;
-                }
-                break :blk null;
             };
             const HSE_TimoutValue: ?f32 = blk: {
                 const config_val = config.extra.HSE_Timout;
@@ -9309,6 +9490,60 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
             var IWDGOutput = ClockNode{
                 .name = "IWDGOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var MSI = ClockNode{
+                .name = "MSI",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOInput = ClockNode{
+                .name = "VCOInput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO2Input = ClockNode{
+                .name = "VCO2Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO3Input = ClockNode{
+                .name = "VCO3Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO4Input = ClockNode{
+                .name = "VCO4Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO1Output = ClockNode{
+                .name = "VCO1Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO2Output = ClockNode{
+                .name = "VCO2Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO3Output = ClockNode{
+                .name = "VCO3Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO4Output = ClockNode{
+                .name = "VCO4Output",
                 .nodetype = .off,
                 .parents = &.{},
             };
@@ -12833,242 +13068,295 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 IWDGOutput.parents = &.{&LSIRC};
             }
 
+            std.mem.doNotOptimizeAway(MSI_VALUEValue);
+            MSI.nodetype = .output;
+            MSI.parents = &.{&MSIRC};
+
+            std.mem.doNotOptimizeAway(VCOInput1Freq_ValueValue);
+            VCOInput.limit = VCOInput1Freq_ValueLimit;
+            VCOInput.nodetype = .output;
+            VCOInput.parents = &.{&FREFDIV1};
+
+            std.mem.doNotOptimizeAway(VCOInput2Freq_ValueValue);
+            VCO2Input.limit = VCOInput2Freq_ValueLimit;
+            VCO2Input.nodetype = .output;
+            VCO2Input.parents = &.{&FREFDIV2};
+
+            std.mem.doNotOptimizeAway(VCOInput3Freq_ValueValue);
+            VCO3Input.limit = VCOInput3Freq_ValueLimit;
+            VCO3Input.nodetype = .output;
+            VCO3Input.parents = &.{&FREFDIV3};
+
+            std.mem.doNotOptimizeAway(VCOInput4Freq_ValueValue);
+            VCO4Input.limit = VCOInput4Freq_ValueLimit;
+            VCO4Input.nodetype = .output;
+            VCO4Input.parents = &.{&FREFDIV4};
+
+            std.mem.doNotOptimizeAway(VCO1OutputFreq_ValueValue);
+            VCO1Output.limit = VCO1OutputFreq_ValueLimit;
+            VCO1Output.nodetype = .output;
+            VCO1Output.parents = &.{&FBDIV1};
+
+            std.mem.doNotOptimizeAway(VCO2OutputFreq_ValueValue);
+            VCO2Output.limit = VCO2OutputFreq_ValueLimit;
+            VCO2Output.nodetype = .output;
+            VCO2Output.parents = &.{&FBDIV2};
+
+            std.mem.doNotOptimizeAway(VCO3OutputFreq_ValueValue);
+            VCO3Output.limit = VCO3OutputFreq_ValueLimit;
+            VCO3Output.nodetype = .output;
+            VCO3Output.parents = &.{&FBDIV3};
+
+            std.mem.doNotOptimizeAway(VCO4OutputFreq_ValueValue);
+            VCO4Output.limit = VCO4OutputFreq_ValueLimit;
+            VCO4Output.nodetype = .output;
+            VCO4Output.parents = &.{&FBDIV4};
+
+            out.LPTIM2output = try LPTIM2output.get_output();
+            out.LPTIM2Mult = try LPTIM2Mult.get_output();
+            out.LPTIM3output = try LPTIM3output.get_output();
+            out.LPTIM3Mult = try LPTIM3Mult.get_output();
+            out.LPTIM4output = try LPTIM4output.get_output();
+            out.LPTIM4Mult = try LPTIM4Mult.get_output();
+            out.LPTIM5output = try LPTIM5output.get_output();
+            out.LPTIM5Mult = try LPTIM5Mult.get_output();
+            out.SPI6output = try SPI6output.get_output();
+            out.SPI6Mult = try SPI6Mult.get_output();
+            out.LPUART1output = try LPUART1output.get_output();
+            out.LPUART1Mult = try LPUART1Mult.get_output();
+            out.APB4Output = try APB4Output.get_output();
+            out.APB4DIV = try APB4DIV.get_output();
+            out.I2C1output = try I2C1output.get_output();
+            out.I2C1Mult = try I2C1Mult.get_output();
+            out.I2C2output = try I2C2output.get_output();
+            out.I2C2Mult = try I2C2Mult.get_output();
+            out.I2C3output = try I2C3output.get_output();
+            out.I2C3Mult = try I2C3Mult.get_output();
+            out.I2C4output = try I2C4output.get_output();
+            out.I2C4Mult = try I2C4Mult.get_output();
+            out.I3C1output = try I3C1output.get_output();
+            out.I3C1Mult = try I3C1Mult.get_output();
+            out.I3C2output = try I3C2output.get_output();
+            out.I3C2Mult = try I3C2Mult.get_output();
+            out.LPTIM1output = try LPTIM1output.get_output();
+            out.LPTIM1Mult = try LPTIM1Mult.get_output();
+            out.FDCANoutput = try FDCANoutput.get_output();
+            out.FDCANMult = try FDCANMult.get_output();
+            out.SPDIFRX1output = try SPDIFRX1output.get_output();
+            out.SPDIFRX1Mult = try SPDIFRX1Mult.get_output();
+            out.USART2output = try USART2output.get_output();
+            out.USART2Mult = try USART2Mult.get_output();
+            out.USART3output = try USART3output.get_output();
+            out.USART3Mult = try USART3Mult.get_output();
+            out.UART4output = try UART4output.get_output();
+            out.UART4Mult = try UART4Mult.get_output();
+            out.UART5output = try UART5output.get_output();
+            out.UART5Mult = try UART5Mult.get_output();
+            out.UART7output = try UART7output.get_output();
+            out.UART7Mult = try UART7Mult.get_output();
+            out.UART8output = try UART8output.get_output();
+            out.UART8Mult = try UART8Mult.get_output();
+            out.SPI2output = try SPI2output.get_output();
+            out.SPI2Mult = try SPI2Mult.get_output();
+            out.SPI3output = try SPI3output.get_output();
+            out.SPI3Mult = try SPI3Mult.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.APB1DIV = try APB1DIV.get_output();
+            out.SAI1output = try SAI1output.get_output();
+            out.SAI1Mult = try SAI1Mult.get_output();
+            out.SAI2output = try SAI2output.get_output();
+            out.SAI2Mult = try SAI2Mult.get_output();
+            out.USART1output = try USART1output.get_output();
+            out.USART1Mult = try USART1Mult.get_output();
+            out.USART6output = try USART6output.get_output();
+            out.USART6Mult = try USART6Mult.get_output();
+            out.UART9output = try UART9output.get_output();
+            out.UART9Mult = try UART9Mult.get_output();
+            out.USART10output = try USART10output.get_output();
+            out.USART10Mult = try USART10Mult.get_output();
+            out.SPI1output = try SPI1output.get_output();
+            out.SPI1Mult = try SPI1Mult.get_output();
+            out.SPI4output = try SPI4output.get_output();
+            out.SPI4Mult = try SPI4Mult.get_output();
+            out.SPI5output = try SPI5output.get_output();
+            out.SPI5Mult = try SPI5Mult.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.APB2DIV = try APB2DIV.get_output();
+            out.LTDCoutput = try LTDCoutput.get_output();
+            out.LTDCMult = try LTDCMult.get_output();
+            out.DCMIPPoutput = try DCMIPPoutput.get_output();
+            out.DCMIPPMult = try DCMIPPMult.get_output();
+            out.APB5Output = try APB5Output.get_output();
+            out.APB5DIV = try APB5DIV.get_output();
+            out.ADCoutput = try ADCoutput.get_output();
+            out.ADCDIV = try ADCDIV.get_output();
+            out.ADCMult = try ADCMult.get_output();
+            out.ADFoutput = try ADFoutput.get_output();
+            out.ADFMult = try ADFMult.get_output();
+            out.MDFoutput = try MDFoutput.get_output();
+            out.MDF1Mult = try MDF1Mult.get_output();
+            out.PSSIoutput = try PSSIoutput.get_output();
+            out.PSSIMult = try PSSIMult.get_output();
+            out.FMCoutput = try FMCoutput.get_output();
+            out.FMCMult = try FMCMult.get_output();
+            out.XSPI1output = try XSPI1output.get_output();
+            out.XSPI1Mult = try XSPI1Mult.get_output();
+            out.XSPI2output = try XSPI2output.get_output();
+            out.XSPI2Mult = try XSPI2Mult.get_output();
+            out.XSPI3output = try XSPI3output.get_output();
+            out.XSPI3Mult = try XSPI3Mult.get_output();
+            out.SDMMC1output = try SDMMC1output.get_output();
+            out.SDMMC1Mult = try SDMMC1Mult.get_output();
+            out.SDMMC2output = try SDMMC2output.get_output();
+            out.SDMMC2Mult = try SDMMC2Mult.get_output();
+            out.ETH1output = try ETH1output.get_output();
+            out.ETH1Mult = try ETH1Mult.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.HPREDiv = try HPREDiv.get_output();
+            out.SYSBCLKOutput = try SYSBCLKOutput.get_output();
+            out.MCO2Pin = try MCO2Pin.get_output();
+            out.MCO2Div = try MCO2Div.get_output();
+            out.MCO2Mult = try MCO2Mult.get_output();
+            out.SYSBClkSource = try SYSBClkSource.get_output();
+            out.CortexSysOutput = try CortexSysOutput.get_output();
+            out.TPIUOutput = try TPIUOutput.get_output();
+            out.TPIUPrescaler = try TPIUPrescaler.get_output();
+            out.CpuClockOutput = try CpuClockOutput.get_output();
+            out.SYSAClkSource = try SYSAClkSource.get_output();
+            out.IC1Output = try IC1Output.get_output();
+            out.IC1Div = try IC1Div.get_output();
+            out.FOUTPOSTDIV3 = try FOUTPOSTDIV3.get_output();
+            out.POSTDIV2_3 = try POSTDIV2_3.get_output();
+            out.POSTDIV1_3 = try POSTDIV1_3.get_output();
+            out.FBDIV3 = try FBDIV3.get_output();
+            out.FREFDIV3 = try FREFDIV3.get_output();
+            out.PLL3Source = try PLL3Source.get_output();
+            out.FOUTPOSTDIV4 = try FOUTPOSTDIV4.get_output();
+            out.POSTDIV2_4 = try POSTDIV2_4.get_output();
+            out.POSTDIV1_4 = try POSTDIV1_4.get_output();
+            out.FBDIV4 = try FBDIV4.get_output();
+            out.FREFDIV4 = try FREFDIV4.get_output();
+            out.PLL4Source = try PLL4Source.get_output();
+            out.FOUTPOSTDIV1 = try FOUTPOSTDIV1.get_output();
+            out.POSTDIV2_1 = try POSTDIV2_1.get_output();
+            out.POSTDIV1_1 = try POSTDIV1_1.get_output();
+            out.FBDIV1 = try FBDIV1.get_output();
+            out.FREFDIV1 = try FREFDIV1.get_output();
+            out.PLL1Source = try PLL1Source.get_output();
+            out.FOUTPOSTDIV2 = try FOUTPOSTDIV2.get_output();
+            out.POSTDIV2_2 = try POSTDIV2_2.get_output();
+            out.POSTDIV1_2 = try POSTDIV1_2.get_output();
+            out.FBDIV2 = try FBDIV2.get_output();
+            out.FREFDIV2 = try FREFDIV2.get_output();
+            out.PLL2Source = try PLL2Source.get_output();
             out.HSIRC = try HSIRC.get_output();
-            out.HSIDiv = try HSIDiv.get_output();
             out.HSIDivOutput = try HSIDivOutput.get_output();
-            out.HSIDiv4 = try HSIDiv4.get_output();
+            out.HSIDiv = try HSIDiv.get_output();
             out.UCPDOutput = try UCPDOutput.get_output();
+            out.HSIDiv4 = try HSIDiv4.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
+            out.HSERTCDevisor = try HSERTCDevisor.get_output();
             out.HSEOSC = try HSEOSC.get_output();
+            out.OTGHS1output = try OTGHS1output.get_output();
+            out.OTGHS1Mult = try OTGHS1Mult.get_output();
+            out.OTGPHY1output = try OTGPHY1output.get_output();
+            out.OTGPHY1Mult = try OTGPHY1Mult.get_output();
+            out.OTGHS2output = try OTGHS2output.get_output();
+            out.OTGHS2Mult = try OTGHS2Mult.get_output();
+            out.OTGPHY2output = try OTGPHY2output.get_output();
+            out.OTGPHY2Mult = try OTGPHY2Mult.get_output();
             out.HSEOSCDIV = try HSEOSCDIV.get_output();
             out.HSEDIV = try HSEDIV.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
             out.LSIRC = try LSIRC.get_output();
             out.LSEOSC = try LSEOSC.get_output();
             out.MSIRC = try MSIRC.get_output();
             out.I2S_CKIN = try I2S_CKIN.get_output();
             out.IC1 = try IC1.get_output();
-            out.IC1Div = try IC1Div.get_output();
-            out.IC1Output = try IC1Output.get_output();
-            out.IC2 = try IC2.get_output();
-            out.IC2Div = try IC2Div.get_output();
             out.IC2Output = try IC2Output.get_output();
-            out.IC3 = try IC3.get_output();
-            out.IC3Div = try IC3Div.get_output();
+            out.IC2Div = try IC2Div.get_output();
+            out.IC2 = try IC2.get_output();
             out.IC3Output = try IC3Output.get_output();
-            out.IC4 = try IC4.get_output();
-            out.IC4Div = try IC4Div.get_output();
+            out.IC3Div = try IC3Div.get_output();
+            out.IC3 = try IC3.get_output();
             out.IC4Output = try IC4Output.get_output();
-            out.IC5 = try IC5.get_output();
-            out.IC5Div = try IC5Div.get_output();
-            out.IC5Output = try IC5Output.get_output();
-            out.IC6 = try IC6.get_output();
-            out.IC6Div = try IC6Div.get_output();
-            out.IC6Output = try IC6Output.get_output();
-            out.IC7 = try IC7.get_output();
-            out.IC7Div = try IC7Div.get_output();
-            out.IC7Output = try IC7Output.get_output();
-            out.IC8 = try IC8.get_output();
-            out.IC8Div = try IC8Div.get_output();
-            out.IC8Output = try IC8Output.get_output();
-            out.IC9 = try IC9.get_output();
-            out.IC9Div = try IC9Div.get_output();
-            out.IC9Output = try IC9Output.get_output();
-            out.IC10 = try IC10.get_output();
-            out.IC10Div = try IC10Div.get_output();
-            out.IC10Output = try IC10Output.get_output();
-            out.IC11 = try IC11.get_output();
-            out.IC11Div = try IC11Div.get_output();
-            out.IC11Output = try IC11Output.get_output();
-            out.IC12 = try IC12.get_output();
-            out.IC12Div = try IC12Div.get_output();
-            out.IC12Output = try IC12Output.get_output();
-            out.IC13 = try IC13.get_output();
-            out.IC13Div = try IC13Div.get_output();
-            out.IC13Output = try IC13Output.get_output();
-            out.IC14 = try IC14.get_output();
-            out.IC14Div = try IC14Div.get_output();
-            out.IC14Output = try IC14Output.get_output();
-            out.IC15 = try IC15.get_output();
-            out.IC15Div = try IC15Div.get_output();
-            out.IC15Output = try IC15Output.get_output();
-            out.IC16 = try IC16.get_output();
-            out.IC16Div = try IC16Div.get_output();
-            out.IC16Output = try IC16Output.get_output();
-            out.IC17 = try IC17.get_output();
-            out.IC17Div = try IC17Div.get_output();
-            out.IC17Output = try IC17Output.get_output();
-            out.IC18 = try IC18.get_output();
-            out.IC18Div = try IC18Div.get_output();
-            out.IC18Output = try IC18Output.get_output();
-            out.IC19 = try IC19.get_output();
-            out.IC19Div = try IC19Div.get_output();
-            out.IC19Output = try IC19Output.get_output();
-            out.IC20 = try IC20.get_output();
-            out.IC20Div = try IC20Div.get_output();
-            out.IC20Output = try IC20Output.get_output();
-            out.MCOMult = try MCOMult.get_output();
-            out.MCODiv = try MCODiv.get_output();
-            out.MCOPin = try MCOPin.get_output();
-            out.MCO2Mult = try MCO2Mult.get_output();
-            out.MCO2Div = try MCO2Div.get_output();
-            out.MCO2Pin = try MCO2Pin.get_output();
-            out.CKPERSource = try CKPERSource.get_output();
+            out.IC4Div = try IC4Div.get_output();
+            out.IC4 = try IC4.get_output();
             out.CKPERoutput = try CKPERoutput.get_output();
-            out.ADCMult = try ADCMult.get_output();
-            out.ADCDIV = try ADCDIV.get_output();
-            out.ADCoutput = try ADCoutput.get_output();
-            out.ADFMult = try ADFMult.get_output();
-            out.ADFoutput = try ADFoutput.get_output();
-            out.MDF1Mult = try MDF1Mult.get_output();
-            out.MDFoutput = try MDFoutput.get_output();
-            out.PSSIMult = try PSSIMult.get_output();
-            out.PSSIoutput = try PSSIoutput.get_output();
-            out.FDCANMult = try FDCANMult.get_output();
-            out.FDCANoutput = try FDCANoutput.get_output();
-            out.I2C1Mult = try I2C1Mult.get_output();
-            out.I2C1output = try I2C1output.get_output();
-            out.I2C2Mult = try I2C2Mult.get_output();
-            out.I2C2output = try I2C2output.get_output();
-            out.I2C3Mult = try I2C3Mult.get_output();
-            out.I2C3output = try I2C3output.get_output();
-            out.I2C4Mult = try I2C4Mult.get_output();
-            out.I2C4output = try I2C4output.get_output();
-            out.I3C1Mult = try I3C1Mult.get_output();
-            out.I3C1output = try I3C1output.get_output();
-            out.I3C2Mult = try I3C2Mult.get_output();
-            out.I3C2output = try I3C2output.get_output();
-            out.LPTIM1Mult = try LPTIM1Mult.get_output();
-            out.LPTIM1output = try LPTIM1output.get_output();
-            out.LPTIM3Mult = try LPTIM3Mult.get_output();
-            out.LPTIM3output = try LPTIM3output.get_output();
-            out.LPTIM2Mult = try LPTIM2Mult.get_output();
-            out.LPTIM2output = try LPTIM2output.get_output();
-            out.LPTIM4Mult = try LPTIM4Mult.get_output();
-            out.LPTIM4output = try LPTIM4output.get_output();
-            out.LPTIM5Mult = try LPTIM5Mult.get_output();
-            out.LPTIM5output = try LPTIM5output.get_output();
-            out.LTDCMult = try LTDCMult.get_output();
-            out.LTDCoutput = try LTDCoutput.get_output();
-            out.DCMIPPMult = try DCMIPPMult.get_output();
-            out.DCMIPPoutput = try DCMIPPoutput.get_output();
-            out.FMCMult = try FMCMult.get_output();
-            out.FMCoutput = try FMCoutput.get_output();
-            out.SAI1Mult = try SAI1Mult.get_output();
-            out.SAI1output = try SAI1output.get_output();
-            out.SAI2Mult = try SAI2Mult.get_output();
-            out.SAI2output = try SAI2output.get_output();
-            out.USART1Mult = try USART1Mult.get_output();
-            out.USART1output = try USART1output.get_output();
-            out.USART2Mult = try USART2Mult.get_output();
-            out.USART2output = try USART2output.get_output();
-            out.USART3Mult = try USART3Mult.get_output();
-            out.USART3output = try USART3output.get_output();
-            out.UART4Mult = try UART4Mult.get_output();
-            out.UART4output = try UART4output.get_output();
-            out.UART5Mult = try UART5Mult.get_output();
-            out.UART5output = try UART5output.get_output();
-            out.USART6Mult = try USART6Mult.get_output();
-            out.USART6output = try USART6output.get_output();
-            out.UART7Mult = try UART7Mult.get_output();
-            out.UART7output = try UART7output.get_output();
-            out.UART8Mult = try UART8Mult.get_output();
-            out.UART8output = try UART8output.get_output();
-            out.UART9Mult = try UART9Mult.get_output();
-            out.UART9output = try UART9output.get_output();
-            out.LPUART1Mult = try LPUART1Mult.get_output();
-            out.LPUART1output = try LPUART1output.get_output();
-            out.USART10Mult = try USART10Mult.get_output();
-            out.USART10output = try USART10output.get_output();
-            out.SPI1Mult = try SPI1Mult.get_output();
-            out.SPI1output = try SPI1output.get_output();
-            out.SPI2Mult = try SPI2Mult.get_output();
-            out.SPI2output = try SPI2output.get_output();
-            out.SPI3Mult = try SPI3Mult.get_output();
-            out.SPI3output = try SPI3output.get_output();
-            out.SPI4Mult = try SPI4Mult.get_output();
-            out.SPI4output = try SPI4output.get_output();
-            out.SPI5Mult = try SPI5Mult.get_output();
-            out.SPI5output = try SPI5output.get_output();
-            out.SPI6Mult = try SPI6Mult.get_output();
-            out.SPI6output = try SPI6output.get_output();
-            out.XSPI1Mult = try XSPI1Mult.get_output();
-            out.XSPI1output = try XSPI1output.get_output();
-            out.XSPI2Mult = try XSPI2Mult.get_output();
-            out.XSPI2output = try XSPI2output.get_output();
-            out.OTGHS1Mult = try OTGHS1Mult.get_output();
-            out.OTGHS1output = try OTGHS1output.get_output();
-            out.OTGHS2Mult = try OTGHS2Mult.get_output();
-            out.OTGHS2output = try OTGHS2output.get_output();
-            out.XSPI3Mult = try XSPI3Mult.get_output();
-            out.XSPI3output = try XSPI3output.get_output();
-            out.OTGPHY1Mult = try OTGPHY1Mult.get_output();
-            out.OTGPHY1output = try OTGPHY1output.get_output();
-            out.OTGPHY2Mult = try OTGPHY2Mult.get_output();
-            out.OTGPHY2output = try OTGPHY2output.get_output();
-            out.SDMMC1Mult = try SDMMC1Mult.get_output();
-            out.SDMMC1output = try SDMMC1output.get_output();
-            out.SDMMC2Mult = try SDMMC2Mult.get_output();
-            out.SDMMC2output = try SDMMC2output.get_output();
-            out.ETH1Mult = try ETH1Mult.get_output();
-            out.ETH1output = try ETH1output.get_output();
-            out.SPDIFRX1Mult = try SPDIFRX1Mult.get_output();
-            out.SPDIFRX1output = try SPDIFRX1output.get_output();
-            out.SYSBClkSource = try SYSBClkSource.get_output();
-            out.SYSCClkSource = try SYSCClkSource.get_output();
-            out.SYSDClkSource = try SYSDClkSource.get_output();
-            out.SYSBCLKOutput = try SYSBCLKOutput.get_output();
+            out.CKPERSource = try CKPERSource.get_output();
+            out.MCOPin = try MCOPin.get_output();
+            out.MCODiv = try MCODiv.get_output();
+            out.MCOMult = try MCOMult.get_output();
+            out.IC5Output = try IC5Output.get_output();
+            out.IC5Div = try IC5Div.get_output();
+            out.IC5 = try IC5.get_output();
             out.SYSCCLKOutput = try SYSCCLKOutput.get_output();
+            out.SYSCClkSource = try SYSCClkSource.get_output();
+            out.IC6Output = try IC6Output.get_output();
+            out.IC6Div = try IC6Div.get_output();
+            out.IC6 = try IC6.get_output();
+            out.IC7Output = try IC7Output.get_output();
+            out.IC7Div = try IC7Div.get_output();
+            out.IC7 = try IC7.get_output();
+            out.IC8Output = try IC8Output.get_output();
+            out.IC8Div = try IC8Div.get_output();
+            out.IC8 = try IC8.get_output();
+            out.IC9Output = try IC9Output.get_output();
+            out.IC9Div = try IC9Div.get_output();
+            out.IC9 = try IC9.get_output();
+            out.IC10Output = try IC10Output.get_output();
+            out.IC10Div = try IC10Div.get_output();
+            out.IC10 = try IC10.get_output();
             out.SYSDCLKOutput = try SYSDCLKOutput.get_output();
-            out.SYSAClkSource = try SYSAClkSource.get_output();
-            out.TPIUPrescaler = try TPIUPrescaler.get_output();
-            out.TPIUOutput = try TPIUOutput.get_output();
+            out.SYSDClkSource = try SYSDClkSource.get_output();
+            out.IC11Output = try IC11Output.get_output();
+            out.IC11Div = try IC11Div.get_output();
+            out.IC11 = try IC11.get_output();
+            out.IC12Output = try IC12Output.get_output();
+            out.IC12Div = try IC12Div.get_output();
+            out.IC12 = try IC12.get_output();
+            out.IC13Output = try IC13Output.get_output();
+            out.IC13Div = try IC13Div.get_output();
+            out.IC13 = try IC13.get_output();
+            out.IC14Output = try IC14Output.get_output();
+            out.IC14Div = try IC14Div.get_output();
+            out.IC14 = try IC14.get_output();
+            out.IC15Output = try IC15Output.get_output();
+            out.IC15Div = try IC15Div.get_output();
+            out.IC15 = try IC15.get_output();
+            out.IC16Output = try IC16Output.get_output();
+            out.IC16Div = try IC16Div.get_output();
+            out.IC16 = try IC16.get_output();
+            out.IC17Output = try IC17Output.get_output();
+            out.IC17Div = try IC17Div.get_output();
+            out.IC17 = try IC17.get_output();
+            out.IC18Output = try IC18Output.get_output();
+            out.IC18Div = try IC18Div.get_output();
+            out.IC18 = try IC18.get_output();
+            out.IC19Output = try IC19Output.get_output();
+            out.IC19Div = try IC19Div.get_output();
+            out.IC19 = try IC19.get_output();
+            out.IC20Output = try IC20Output.get_output();
+            out.IC20Div = try IC20Div.get_output();
+            out.IC20 = try IC20.get_output();
             out.CortexPrescaler = try CortexPrescaler.get_output();
-            out.CortexSysOutput = try CortexSysOutput.get_output();
-            out.CpuClockOutput = try CpuClockOutput.get_output();
             out.AXIClockOutput = try AXIClockOutput.get_output();
-            out.HPREDiv = try HPREDiv.get_output();
-            out.APB4DIV = try APB4DIV.get_output();
-            out.APB4Output = try APB4Output.get_output();
-            out.APB5DIV = try APB5DIV.get_output();
-            out.APB5Output = try APB5Output.get_output();
-            out.TIMGDIV = try TIMGDIV.get_output();
             out.TIMGOutput = try TIMGOutput.get_output();
-            out.APB1DIV = try APB1DIV.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.APB2DIV = try APB2DIV.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.PLL1Source = try PLL1Source.get_output();
-            out.FREFDIV1 = try FREFDIV1.get_output();
-            out.PLL2Source = try PLL2Source.get_output();
-            out.FREFDIV2 = try FREFDIV2.get_output();
-            out.PLL3Source = try PLL3Source.get_output();
-            out.FREFDIV3 = try FREFDIV3.get_output();
-            out.PLL4Source = try PLL4Source.get_output();
-            out.FREFDIV4 = try FREFDIV4.get_output();
-            out.FBDIV1 = try FBDIV1.get_output();
+            out.TIMGDIV = try TIMGDIV.get_output();
             out.PLL1FRACV = try PLL1FRACV.get_output();
-            out.POSTDIV1_1 = try POSTDIV1_1.get_output();
-            out.POSTDIV2_1 = try POSTDIV2_1.get_output();
-            out.FOUTPOSTDIV1 = try FOUTPOSTDIV1.get_output();
-            out.FBDIV2 = try FBDIV2.get_output();
             out.PLL2FRACV = try PLL2FRACV.get_output();
-            out.POSTDIV1_2 = try POSTDIV1_2.get_output();
-            out.POSTDIV2_2 = try POSTDIV2_2.get_output();
-            out.FOUTPOSTDIV2 = try FOUTPOSTDIV2.get_output();
-            out.FBDIV3 = try FBDIV3.get_output();
             out.PLL3FRACV = try PLL3FRACV.get_output();
-            out.POSTDIV1_3 = try POSTDIV1_3.get_output();
-            out.POSTDIV2_3 = try POSTDIV2_3.get_output();
-            out.FOUTPOSTDIV3 = try FOUTPOSTDIV3.get_output();
-            out.FBDIV4 = try FBDIV4.get_output();
             out.PLL4FRACV = try PLL4FRACV.get_output();
-            out.POSTDIV1_4 = try POSTDIV1_4.get_output();
-            out.POSTDIV2_4 = try POSTDIV2_4.get_output();
-            out.FOUTPOSTDIV4 = try FOUTPOSTDIV4.get_output();
-            out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
+            out.MSI = try MSI.get_extra_output();
+            out.VCOInput = try VCOInput.get_extra_output();
+            out.VCO2Input = try VCO2Input.get_extra_output();
+            out.VCO3Input = try VCO3Input.get_extra_output();
+            out.VCO4Input = try VCO4Input.get_extra_output();
+            out.VCO1Output = try VCO1Output.get_extra_output();
+            out.VCO2Output = try VCO2Output.get_extra_output();
+            out.VCO3Output = try VCO3Output.get_extra_output();
+            out.VCO4Output = try VCO4Output.get_extra_output();
             ref_out.HSIDiv = HSIDivValue;
             ref_out.HSIDiv4 = HSIDiv4Value;
             ref_out.HSE_VALUE = HSE_VALUEValue;

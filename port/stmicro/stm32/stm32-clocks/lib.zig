@@ -66859,11 +66859,22 @@ test "STM32F102 RCC calculations" {
         .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
     });
 
+    //USB OVerflow error
+    try std.testing.expectError(error.Overflow, STM32F103C8.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .AHBCLKDivider = .RCC_SYSCLK_DIV512,
+        .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
+    }));
+
+    //APB1 underflow error
     try std.testing.expectError(error.Underflow, STM32F103C8.get_clocks(.{
         .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
         .PLLMUL = .RCC_PLL_MUL9,
         .PLLSource = .RCC_PLLSOURCE_HSE,
         .AHBCLKDivider = .RCC_SYSCLK_DIV512,
+        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
         .flags = .{ .HSEOscillator = true, .USBUsed_ForRCC = true },
     }));
 
@@ -66887,7 +66898,7 @@ test "STM32F102 RCC calculations" {
 test "STM32F303 RCC calculations" {
     const base_file = STM32F3_STM32F303_rcc_v1_0;
     const base_tree = try STM32F303VC.get_clocks(.{});
-    const config_tree = try STM32F303VC.get_clocks(.{
+    const config_tree = comptime try STM32F303VC.get_clocks(.{
         .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
         .PLLMUL = .RCC_PLL_MUL9,
         .PLLSource = .RCC_PLLSOURCE_HSE,
@@ -66930,10 +66941,10 @@ test "STM32L47 RCC calculations" {
         .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
     });
 
-    _ = try comptime STM32L476VG.get_clocks(.{
+    try std.testing.expectError(error.Underflow, STM32L476VG.get_clocks(.{
         .PLLSource = .RCC_PLLSOURCE_MSI,
         .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-    });
+    }));
 
     try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 4_000_000));
     try std.testing.expectEqual(base_tree.clock.APB1Output, @as(f32, 4_000_000));

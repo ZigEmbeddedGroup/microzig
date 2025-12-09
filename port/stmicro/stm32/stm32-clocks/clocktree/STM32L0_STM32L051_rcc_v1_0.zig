@@ -595,6 +595,13 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLLMUL: f32 = 0,
             PLLDIV: f32 = 0,
             DIV2USB: f32 = 0,
+            HSI: f32 = 0,
+            MSI: f32 = 0,
+            HSE_RTC: f32 = 0,
+            VCOOutput: f32 = 0,
+            PLLCLK: f32 = 0,
+            @"48CLK": f32 = 0,
+            TIMCLK: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -727,6 +734,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var @"48USBFreq_ValueLimit": Limit = .{};
             var @"48RNGFreq_ValueLimit": Limit = .{};
             var VCOInputFreq_ValueLimit: Limit = .{};
+            var RTCHSEDivFreq_ValueLimit: Limit = .{};
+            var VCOOutputFreq_ValueLimit: Limit = .{};
+            var PLLCLKFreq_ValueLimit: Limit = .{};
             //Ref Values
 
             const HSI16_VALUEValue: ?f32 = blk: {
@@ -761,6 +771,22 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
 
                 break :blk conf_item orelse .@"1";
+            };
+            const SYSCLKSourceValue: ?SYSCLKSourceList = blk: {
+                const conf_item = config.SYSCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SYSCLKSOURCE_MSI => SysSourceMSI = true,
+                        .RCC_SYSCLKSOURCE_HSI => SysSourceHSI = true,
+                        .RCC_SYSCLKSOURCE_HSE => HSEscale = true,
+                        .RCC_SYSCLKSOURCE_PLLCLK => PLLscale = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SysSourceMSI = true;
+                    break :blk .RCC_SYSCLKSOURCE_MSI;
+                };
             };
             const HCLKFreq_ValueValue: ?f32 = blk: {
                 HCLKFreq_ValueLimit = .{
@@ -806,7 +832,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    break :blk conf_item orelse {
+                        scale11 = true;
+                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    };
                 } else if ((((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 4200000, .@">"))))) {
                     const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
                     if (conf_item) |item| {
@@ -826,7 +855,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    break :blk conf_item orelse {
+                        scale1 = true;
+                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    };
                 }
                 const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
                 if (conf_item) |item| {
@@ -837,7 +869,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE1;
+                break :blk conf_item orelse {
+                    scale1 = true;
+                    break :blk .PWR_REGULATOR_VOLTAGE_SCALE1;
+                };
             };
             const HSE_VALUEValue: ?f32 = blk: {
                 if ((((PLLscale) or config.flags.CSSEnabled)) and config.flags.HSEByPass) {
@@ -1197,7 +1232,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse null;
+                    break :blk conf_item orelse .RCC_RTCCLKSOURCE_HSE_DIV2;
                 }
                 const conf_item = config.RTCClockSelection;
                 if (conf_item) |item| {
@@ -1267,19 +1302,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
                 break :blk conf_item orelse .RCC_RTCCLKSOURCE_HSE_DIV2;
             };
-            const SYSCLKSourceValue: ?SYSCLKSourceList = blk: {
-                const conf_item = config.SYSCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SYSCLKSOURCE_MSI => SysSourceMSI = true,
-                        .RCC_SYSCLKSOURCE_HSI => SysSourceHSI = true,
-                        .RCC_SYSCLKSOURCE_HSE => HSEscale = true,
-                        .RCC_SYSCLKSOURCE_PLLCLK => PLLscale = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_MSI;
-            };
             const HSI48MClockSelectionValue: ?HSI48MClockSelectionList = blk: {
                 const conf_item = config.HSI48MClockSelection;
                 if (conf_item) |item| {
@@ -1335,7 +1357,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLK_DIV1;
+                break :blk conf_item orelse {
+                    AHBCLKDivider1 = true;
+                    break :blk .RCC_SYSCLK_DIV1;
+                };
             };
             const SYSCLKFreq_VALUEValue: ?f32 = blk: {
                 if ((config.flags.RTCUsed_ForRCC or config.flags.LCDUsed_ForRCC) and (config.flags.RTCUsed_ForRCC > 32000000)) {
@@ -1367,7 +1392,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .SYSTICK_CLKSOURCE_HCLK;
+                break :blk conf_item orelse {
+                    HCLKDiv1 = true;
+                    break :blk .SYSTICK_CLKSOURCE_HCLK;
+                };
             };
             const TimerFreq_ValueValue: ?f32 = blk: {
                 break :blk 2.097e6;
@@ -1424,7 +1452,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_HCLK_DIV1;
+                break :blk conf_item orelse {
+                    APB2CLKDivider1 = true;
+                    break :blk .RCC_HCLK_DIV1;
+                };
             };
             const APB2Freq_ValueValue: ?f32 = blk: {
                 APB2Freq_ValueLimit = .{
@@ -1666,6 +1697,76 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             const DIV2USBValue: ?f32 = blk: {
                 break :blk 2;
+            };
+            const HSI_VALUEValue: ?f32 = blk: {
+                break :blk 1.6e7;
+            };
+            const MSI_VALUEValue: ?f32 = blk: {
+                break :blk 2.097e6;
+            };
+            const RTCHSEDivFreq_ValueValue: ?f32 = blk: {
+                if (check_MCU("STM32L0x0_Value_Line")) {
+                    break :blk 4e6;
+                }
+                RTCHSEDivFreq_ValueLimit = .{
+                    .min = 0e0,
+                    .max = 1e6,
+                };
+                break :blk null;
+            };
+            const VCOOutputFreq_ValueValue: ?f32 = blk: {
+                if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE1, .@"=")))) {
+                    VCOOutputFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 9.6e7,
+                    };
+                    break :blk null;
+                } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE2, .@"=")))) {
+                    VCOOutputFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 4.8e7,
+                    };
+                    break :blk null;
+                } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE3, .@"=")))) {
+                    VCOOutputFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 2.4e7,
+                    };
+                    break :blk null;
+                }
+                break :blk 4.8e7;
+            };
+            const PLLCLKFreq_ValueValue: ?f32 = blk: {
+                if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE1, .@"=")))) {
+                    PLLCLKFreq_ValueLimit = .{
+                        .min = 2e6,
+                        .max = 3.2e7,
+                    };
+                    break :blk null;
+                } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE2, .@"=")))) {
+                    PLLCLKFreq_ValueLimit = .{
+                        .min = 2e6,
+                        .max = 1.6e7,
+                    };
+                    break :blk null;
+                } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE3, .@"=")))) {
+                    PLLCLKFreq_ValueLimit = .{
+                        .min = 2e6,
+                        .max = 4e6,
+                    };
+                    break :blk null;
+                }
+                PLLCLKFreq_ValueLimit = .{
+                    .min = 2e6,
+                    .max = null,
+                };
+                break :blk null;
+            };
+            const @"48CLKFreq_ValueValue": ?f32 = blk: {
+                if (((check_ref(@TypeOf(HSI48MClockSelectionValue), HSI48MClockSelectionValue, .RCC_USBCLKSOURCE_PLL, .@"=")) and config.flags.USBUsed_ForRCC)) {
+                    break :blk 4.8e7;
+                }
+                break :blk 2.4e7;
             };
             const VDD_VALUEValue: ?f32 = blk: {
                 if ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@">"))) {
@@ -1917,7 +2018,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_CRS_SYNC_DIV1;
+                break :blk conf_item orelse {
+                    RccCrsSyncDiv1 = true;
+                    break :blk .RCC_CRS_SYNC_DIV1;
+                };
             };
             const SourceValue: ?SourceList = blk: {
                 if (!config.flags.CRSActivatedSourceGPIO and !config.flags.CRSActivatedSourceLSE and !config.flags.CRSActivatedSourceUSB) {
@@ -1981,7 +2085,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .automatic;
+                break :blk conf_item orelse {
+                    AutomaticRelaod = true;
+                    break :blk .automatic;
+                };
             };
             const ReloadValueValue: ?f32 = blk: {
                 if (!config.flags.CRSActivatedSourceGPIO and !config.flags.CRSActivatedSourceLSE and !config.flags.CRSActivatedSourceUSB) {
@@ -2961,6 +3068,42 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 .nodetype = .off,
                 .parents = &.{},
             };
+
+            var HSI = ClockNode{
+                .name = "HSI",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var MSI = ClockNode{
+                .name = "MSI",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSE_RTC = ClockNode{
+                .name = "HSE_RTC",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOOutput = ClockNode{
+                .name = "VCOOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK = ClockNode{
+                .name = "PLLCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var @"48CLK" = ClockNode{
+                .name = "48CLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
             if ((check_MCU("LQFP32") or check_MCU("UFQFPN32") or check_MCU("WLCSP36")) and !((check_MCU("STM32L0x1") or check_MCU("STM32L0x0_Value_Line")) and (check_MCU("DIE425") or check_MCU("DIE457")))) {
                 const HSIRC_clk_value = HSI16_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                     \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -3764,58 +3907,91 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
             }
 
+            std.mem.doNotOptimizeAway(HSI_VALUEValue);
+            HSI.nodetype = .output;
+            HSI.parents = &.{&HSIRCDiv};
+
+            std.mem.doNotOptimizeAway(MSI_VALUEValue);
+            MSI.nodetype = .output;
+            MSI.parents = &.{&MSIRC};
+
+            std.mem.doNotOptimizeAway(RTCHSEDivFreq_ValueValue);
+            HSE_RTC.limit = RTCHSEDivFreq_ValueLimit;
+            HSE_RTC.nodetype = .output;
+            HSE_RTC.parents = &.{&HSERTCDevisor};
+
+            std.mem.doNotOptimizeAway(VCOOutputFreq_ValueValue);
+            VCOOutput.limit = VCOOutputFreq_ValueLimit;
+            VCOOutput.nodetype = .output;
+            VCOOutput.parents = &.{&PLLMUL};
+
+            std.mem.doNotOptimizeAway(PLLCLKFreq_ValueValue);
+            PLLCLK.limit = PLLCLKFreq_ValueLimit;
+            PLLCLK.nodetype = .output;
+            PLLCLK.parents = &.{&PLLDIV};
+
+            std.mem.doNotOptimizeAway(@"48CLKFreq_ValueValue");
+            @"48CLK".nodetype = .output;
+            @"48CLK".parents = &.{&DIV2USB};
+
+            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
+            out.HCLKOutput = try HCLKOutput.get_output();
+            out.TIMOutput = try TIMOutput.get_output();
+            out.TIMPrescaler = try TIMPrescaler.get_output();
+            out.TimPrescOut = try TimPrescOut.get_output();
+            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.LPTIMOutput = try LPTIMOutput.get_output();
+            out.LPTIMMult = try LPTIMMult.get_output();
+            out.LPUARTOutput = try LPUARTOutput.get_output();
+            out.LPUARTMult = try LPUARTMult.get_output();
+            out.USART2Output = try USART2Output.get_output();
+            out.USART2Mult = try USART2Mult.get_output();
+            out.I2C1Output = try I2C1Output.get_output();
+            out.I2C1Mult = try I2C1Mult.get_output();
+            out.I2C3Output = try I2C3Output.get_output();
+            out.I2C3Mult = try I2C3Mult.get_output();
+            out.APB1Prescaler = try APB1Prescaler.get_output();
+            out.PeriphPrescOutput = try PeriphPrescOutput.get_output();
+            out.PeriphPrescaler = try PeriphPrescaler.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.USART1Output = try USART1Output.get_output();
+            out.USART1Mult = try USART1Mult.get_output();
+            out.APB2Prescaler = try APB2Prescaler.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.AHBPrescaler = try AHBPrescaler.get_output();
+            out.MCOPin = try MCOPin.get_output();
+            out.MCODiv = try MCODiv.get_output();
+            out.MCOMult = try MCOMult.get_output();
+            out.SysCLKOutput = try SysCLKOutput.get_output();
+            out.SysClkSource = try SysClkSource.get_output();
+            out.PLLDIV = try PLLDIV.get_output();
+            out.@"48USBOutput" = try @"48USBOutput".get_output();
+            out.@"48RNGOutput" = try @"48RNGOutput".get_output();
+            out.HSI48MUL = try HSI48MUL.get_output();
+            out.DIV2USB = try DIV2USB.get_output();
+            out.PLLMUL = try PLLMUL.get_output();
+            out.VCOIIuput = try VCOIIuput.get_output();
+            out.PLLSource = try PLLSource.get_output();
+            out.ADCOutput = try ADCOutput.get_output();
+            out.HSIRCDiv = try HSIRCDiv.get_output();
             out.HSIRC = try HSIRC.get_output();
             out.MSIRC = try MSIRC.get_output();
             out.HSI48RC = try HSI48RC.get_output();
-            out.HSIRCDiv = try HSIRCDiv.get_output();
-            out.HSEOSC = try HSEOSC.get_output();
-            out.LSIRC = try LSIRC.get_output();
-            out.LSEOSC = try LSEOSC.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
             out.RTCOutput = try RTCOutput.get_output();
             out.LCDOutput = try LCDOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
             out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.SysClkSource = try SysClkSource.get_output();
-            out.PLLSource = try PLLSource.get_output();
-            out.AHBPrescaler = try AHBPrescaler.get_output();
-            out.SysCLKOutput = try SysCLKOutput.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.HCLKOutput = try HCLKOutput.get_output();
-            out.TIMPrescaler = try TIMPrescaler.get_output();
-            out.TIMOutput = try TIMOutput.get_output();
-            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
-            out.APB1Prescaler = try APB1Prescaler.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
-            out.TimPrescOut = try TimPrescOut.get_output();
-            out.APB2Prescaler = try APB2Prescaler.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.PeriphPrescaler = try PeriphPrescaler.get_output();
-            out.PeriphPrescOutput = try PeriphPrescOutput.get_output();
-            out.LPTIMMult = try LPTIMMult.get_output();
-            out.LPTIMOutput = try LPTIMOutput.get_output();
-            out.LPUARTMult = try LPUARTMult.get_output();
-            out.LPUARTOutput = try LPUARTOutput.get_output();
-            out.USART2Mult = try USART2Mult.get_output();
-            out.USART2Output = try USART2Output.get_output();
-            out.USART1Mult = try USART1Mult.get_output();
-            out.USART1Output = try USART1Output.get_output();
-            out.I2C1Mult = try I2C1Mult.get_output();
-            out.I2C1Output = try I2C1Output.get_output();
-            out.I2C3Mult = try I2C3Mult.get_output();
-            out.I2C3Output = try I2C3Output.get_output();
-            out.MCOMult = try MCOMult.get_output();
-            out.MCODiv = try MCODiv.get_output();
-            out.MCOPin = try MCOPin.get_output();
-            out.HSI48MUL = try HSI48MUL.get_output();
-            out.@"48USBOutput" = try @"48USBOutput".get_output();
-            out.@"48RNGOutput" = try @"48RNGOutput".get_output();
-            out.ADCOutput = try ADCOutput.get_output();
-            out.VCOIIuput = try VCOIIuput.get_output();
-            out.PLLMUL = try PLLMUL.get_output();
-            out.PLLDIV = try PLLDIV.get_output();
-            out.DIV2USB = try DIV2USB.get_output();
+            out.HSEOSC = try HSEOSC.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
+            out.LSIRC = try LSIRC.get_output();
+            out.LSEOSC = try LSEOSC.get_output();
+            out.HSI = try HSI.get_extra_output();
+            out.MSI = try MSI.get_extra_output();
+            out.HSE_RTC = try HSE_RTC.get_extra_output();
+            out.VCOOutput = try VCOOutput.get_extra_output();
+            out.PLLCLK = try PLLCLK.get_extra_output();
+            out.@"48CLK" = try @"48CLK".get_extra_output();
             ref_out.MSIClockRange = MSIClockRangeValue;
             ref_out.HSIRCDiv = HSIRCDivValue;
             ref_out.HSE_VALUE = HSE_VALUEValue;

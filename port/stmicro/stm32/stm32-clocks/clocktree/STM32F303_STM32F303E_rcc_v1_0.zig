@@ -803,6 +803,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLLDiv: f32 = 0,
             VCO2output: f32 = 0,
             PLLMUL: f32 = 0,
+            HSI_PLL: f32 = 0,
+            HSE_RTC: f32 = 0,
+            PLLCLK_MCO: f32 = 0,
+            PLLCLK: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -939,6 +943,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var APB1Freq_ValueLimit: Limit = .{};
             var APB2Freq_ValueLimit: Limit = .{};
             var VCOOutput2Freq_ValueLimit: Limit = .{};
+            var PLLCLKFreq_ValueLimit: Limit = .{};
             //Ref Values
 
             const HSI_VALUEValue: ?f32 = blk: {
@@ -1100,6 +1105,94 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 };
                 break :blk null;
             };
+            const TIM2SelectionValue: ?TIM2SelectionList = blk: {
+                const conf_item = config.TIM2Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM2CLK_HCLK => {},
+                        .RCC_TIM2CLK_PLLCLK => TIM2SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM2CLK_HCLK;
+            };
+            const TIM34SelectionValue: ?TIM34SelectionList = blk: {
+                const conf_item = config.TIM34Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM34CLK_HCLK => {},
+                        .RCC_TIM34CLK_PLLCLK => TIM34SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM34CLK_HCLK;
+            };
+            const TIM1SelectionValue: ?TIM1SelectionList = blk: {
+                const conf_item = config.TIM1Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM1CLK_HCLK => {},
+                        .RCC_TIM1CLK_PLLCLK => TIM1SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM1CLK_HCLK;
+            };
+            const TIM8SelectionValue: ?TIM8SelectionList = blk: {
+                const conf_item = config.TIM8Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM8CLK_HCLK => {},
+                        .RCC_TIM8CLK_PLLCLK => TIM8SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM8CLK_HCLK;
+            };
+            const TIM15SelectionValue: ?TIM15SelectionList = blk: {
+                const conf_item = config.TIM15Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM15CLK_HCLK => {},
+                        .RCC_TIM15CLK_PLLCLK => TIM15SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM15CLK_HCLK;
+            };
+            const TIM16SelectionValue: ?TIM16SelectionList = blk: {
+                const conf_item = config.TIM16Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM16CLK_HCLK => {},
+                        .RCC_TIM16CLK_PLLCLK => TIM16SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM16CLK_HCLK;
+            };
+            const TIM17SelectionValue: ?TIM17SelectionList = blk: {
+                const conf_item = config.TIM17Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM17CLK_HCLK => {},
+                        .RCC_TIM17CLK_PLLCLK => TIM17SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM17CLK_HCLK;
+            };
+            const TIM20SelectionValue: ?TIM20SelectionList = blk: {
+                const conf_item = config.TIM20Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIM20CLK_HCLK => {},
+                        .RCC_TIM20CLK_PLLCLK => TIM20SourcePLL = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIM20CLK_HCLK;
+            };
             const SYSCLKSourceValue: ?SYSCLKSourceList = blk: {
                 if ((TIM2SourcePLL and check_MCU("TIM2")) or (TIM34SourcePLL and (check_MCU("TIM3") or check_MCU("TIM4"))) or (TIM1SourcePLL and check_MCU("TIM1")) or (TIM8SourcePLL and check_MCU("TIM8")) or (TIM15SourcePLL and check_MCU("TIM15")) or (TIM16SourcePLL and check_MCU("TIM16")) or (TIM17SourcePLL and check_MCU("TIM17")) or (TIM20SourcePLL and check_MCU("TIM20"))) {
                     SysSourcePLL = true;
@@ -1128,7 +1221,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    SysSourceHSI = true;
+                    break :blk .RCC_SYSCLKSOURCE_HSI;
+                };
             };
             const TIM1Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1282,7 +1378,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLK_DIV1;
+                break :blk conf_item orelse {
+                    AHBCLKDivider1 = true;
+                    break :blk .RCC_SYSCLK_DIV1;
+                };
             };
             const HCLKFreq_ValueValue: ?f32 = blk: {
                 HCLKFreq_ValueLimit = .{
@@ -1306,7 +1405,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .SYSTICK_CLKSOURCE_HCLK;
+                break :blk conf_item orelse {
+                    HCLKDiv1 = true;
+                    break :blk .SYSTICK_CLKSOURCE_HCLK;
+                };
             };
             const CortexFreq_ValueValue: ?f32 = blk: {
                 break :blk 1e6;
@@ -1377,7 +1479,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_HCLK_DIV1;
+                break :blk conf_item orelse {
+                    APB1DIV1 = true;
+                    break :blk .RCC_HCLK_DIV1;
+                };
             };
             const APB1Freq_ValueValue: ?f32 = blk: {
                 if (config.flags.USBUsed_ForRCC and ((TIM2SourcePLL and check_MCU("TIM2")) or (TIM34SourcePLL and (check_MCU("TIM3") or check_MCU("TIM4")))) and ((try math_op(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 2, .@"/", "APB1Freq_Value", "SYSCLKFreq_VALUE", "2")) < 10000000)) {
@@ -1450,7 +1555,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_HCLK_DIV1;
+                break :blk conf_item orelse {
+                    APB2DIV1 = true;
+                    break :blk .RCC_HCLK_DIV1;
+                };
             };
             const APB2Freq_ValueValue: ?f32 = blk: {
                 if (((TIM20SourcePLL and check_MCU("TIM20")) or (TIM1SourcePLL and check_MCU("TIM1")) or (TIM8SourcePLL and check_MCU("TIM8")) or (TIM15SourcePLL and check_MCU("TIM15")) or (TIM16SourcePLL and check_MCU("TIM16")) or (TIM17SourcePLL and check_MCU("TIM17")))) {
@@ -1482,108 +1590,20 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             const TIMMULValue: ?f32 = blk: {
                 break :blk 2;
             };
-            const TIM2SelectionValue: ?TIM2SelectionList = blk: {
-                const conf_item = config.TIM2Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM2CLK_HCLK => {},
-                        .RCC_TIM2CLK_PLLCLK => TIM2SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM2CLK_HCLK;
-            };
             const TIM2Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
-            };
-            const TIM34SelectionValue: ?TIM34SelectionList = blk: {
-                const conf_item = config.TIM34Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM34CLK_HCLK => {},
-                        .RCC_TIM34CLK_PLLCLK => TIM34SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM34CLK_HCLK;
             };
             const TIM3Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
             };
-            const TIM1SelectionValue: ?TIM1SelectionList = blk: {
-                const conf_item = config.TIM1Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM1CLK_HCLK => {},
-                        .RCC_TIM1CLK_PLLCLK => TIM1SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM1CLK_HCLK;
-            };
-            const TIM8SelectionValue: ?TIM8SelectionList = blk: {
-                const conf_item = config.TIM8Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM8CLK_HCLK => {},
-                        .RCC_TIM8CLK_PLLCLK => TIM8SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM8CLK_HCLK;
-            };
-            const TIM15SelectionValue: ?TIM15SelectionList = blk: {
-                const conf_item = config.TIM15Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM15CLK_HCLK => {},
-                        .RCC_TIM15CLK_PLLCLK => TIM15SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM15CLK_HCLK;
-            };
             const TIM15Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
-            };
-            const TIM16SelectionValue: ?TIM16SelectionList = blk: {
-                const conf_item = config.TIM16Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM16CLK_HCLK => {},
-                        .RCC_TIM16CLK_PLLCLK => TIM16SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM16CLK_HCLK;
             };
             const TIM16Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
             };
-            const TIM17SelectionValue: ?TIM17SelectionList = blk: {
-                const conf_item = config.TIM17Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM17CLK_HCLK => {},
-                        .RCC_TIM17CLK_PLLCLK => TIM17SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM17CLK_HCLK;
-            };
             const TIM17Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
-            };
-            const TIM20SelectionValue: ?TIM20SelectionList = blk: {
-                const conf_item = config.TIM20Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIM20CLK_HCLK => {},
-                        .RCC_TIM20CLK_PLLCLK => TIM20SourcePLL = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIM20CLK_HCLK;
             };
             const TIM20Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1597,7 +1617,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2C1CLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    I2C1SourceHSI = true;
+                    break :blk .RCC_I2C1CLKSOURCE_HSI;
+                };
             };
             const I2C1Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1611,7 +1634,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2C2CLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    I2C2SourceHSI = true;
+                    break :blk .RCC_I2C2CLKSOURCE_HSI;
+                };
             };
             const I2C2Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1625,7 +1651,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2C3CLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    I2C3SourceHSI = true;
+                    break :blk .RCC_I2C3CLKSOURCE_HSI;
+                };
             };
             const I2C3Freq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1642,7 +1671,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2SCLKSOURCE_SYSCLK;
+                break :blk conf_item orelse {
+                    I2SSourceIsSys = true;
+                    break :blk .RCC_I2SCLKSOURCE_SYSCLK;
+                };
             };
             const I2SClocksFreq_ValueValue: ?f32 = blk: {
                 break :blk 8e6;
@@ -1820,6 +1852,25 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
 
                 break :blk conf_item orelse .RCC_PLL_MUL2;
+            };
+            const HSIPLLFreq_ValueValue: ?f32 = blk: {
+                break :blk 4e6;
+            };
+            const RTCHSEDivFreq_ValueValue: ?f32 = blk: {
+                break :blk 2.5e5;
+            };
+            const PLLMCOFreq_ValueValue: ?f32 = blk: {
+                break :blk 4e6;
+            };
+            const PLLCLKFreq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
+                    PLLCLKFreq_ValueLimit = .{
+                        .min = 1.6e7,
+                        .max = 7.2e7,
+                    };
+                    break :blk null;
+                }
+                break :blk 8e6;
             };
             const VDD_VALUEValue: ?f32 = blk: {
                 const config_val = config.extra.VDD_VALUE;
@@ -2819,6 +2870,30 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
             var PLLMUL = ClockNode{
                 .name = "PLLMUL",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSI_PLL = ClockNode{
+                .name = "HSI_PLL",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSE_RTC = ClockNode{
+                .name = "HSE_RTC",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK_MCO = ClockNode{
+                .name = "PLLCLK_MCO",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK = ClockNode{
+                .name = "PLLCLK",
                 .nodetype = .off,
                 .parents = &.{},
             };
@@ -3878,82 +3953,103 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLLMUL.value = PLLMUL_clk_value.get();
             PLLMUL.parents = &.{&VCO2output};
 
-            out.HSIRC = try HSIRC.get_output();
-            out.FLITFCLKoutput = try FLITFCLKoutput.get_output();
+            std.mem.doNotOptimizeAway(HSIPLLFreq_ValueValue);
+            HSI_PLL.nodetype = .output;
+            HSI_PLL.parents = &.{&HSIRCDiv};
+
+            std.mem.doNotOptimizeAway(RTCHSEDivFreq_ValueValue);
+            HSE_RTC.nodetype = .output;
+            HSE_RTC.parents = &.{&HSERTCDevisor};
+
+            std.mem.doNotOptimizeAway(PLLMCOFreq_ValueValue);
+            PLLCLK_MCO.nodetype = .output;
+            PLLCLK_MCO.parents = &.{&MCOMultDivisor};
+
+            std.mem.doNotOptimizeAway(PLLCLKFreq_ValueValue);
+            PLLCLK.limit = PLLCLKFreq_ValueLimit;
+            PLLCLK.nodetype = .output;
+            PLLCLK.parents = &.{&PLLMUL};
+
+            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
+            out.HCLKOutput = try HCLKOutput.get_output();
+            out.CortexSysOutput = try CortexSysOutput.get_output();
+            out.CortexPrescaler = try CortexPrescaler.get_output();
+            out.TIM2out = try TIM2out.get_output();
+            out.TIMMUX2 = try TIMMUX2.get_output();
+            out.TIM3out = try TIM3out.get_output();
+            out.TIMMUX3 = try TIMMUX3.get_output();
+            out.TimPrescOut1 = try TimPrescOut1.get_output();
+            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.USART2Output = try USART2Output.get_output();
+            out.USART2Mult = try USART2Mult.get_output();
+            out.USART3Output = try USART3Output.get_output();
+            out.USART3Mult = try USART3Mult.get_output();
+            out.UART4Output = try UART4Output.get_output();
+            out.UART4Mult = try UART4Mult.get_output();
+            out.UART5Output = try UART5Output.get_output();
+            out.UART5Mult = try UART5Mult.get_output();
+            out.APB1Prescaler = try APB1Prescaler.get_output();
+            out.TIM1out = try TIM1out.get_output();
+            out.TIMMUX1 = try TIMMUX1.get_output();
+            out.TIM8out = try TIM8out.get_output();
+            out.TIMMUX8 = try TIMMUX8.get_output();
+            out.TIM15out = try TIM15out.get_output();
+            out.TIMMUX15 = try TIMMUX15.get_output();
+            out.TIM16out = try TIM16out.get_output();
+            out.TIMMUX16 = try TIMMUX16.get_output();
+            out.TIM17out = try TIM17out.get_output();
+            out.TIMMUX17 = try TIMMUX17.get_output();
+            out.TIM20out = try TIM20out.get_output();
+            out.TIMMUX20 = try TIMMUX20.get_output();
+            out.TimPrescOut2 = try TimPrescOut2.get_output();
+            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.USART1Output = try USART1Output.get_output();
+            out.USART1Mult = try USART1Mult.get_output();
+            out.APB2Prescaler = try APB2Prescaler.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.AHBPrescaler = try AHBPrescaler.get_output();
+            out.MCOoutput = try MCOoutput.get_output();
+            out.MCODivisor = try MCODivisor.get_output();
+            out.MCOMult = try MCOMult.get_output();
+            out.I2C1Output = try I2C1Output.get_output();
+            out.I2C1Mult = try I2C1Mult.get_output();
+            out.I2C2Output = try I2C2Output.get_output();
+            out.I2C2Mult = try I2C2Mult.get_output();
+            out.I2C3Output = try I2C3Output.get_output();
+            out.I2C3Mult = try I2C3Mult.get_output();
+            out.I2SClocksOutput = try I2SClocksOutput.get_output();
+            out.I2SSrc = try I2SSrc.get_output();
+            out.SysCLKOutput = try SysCLKOutput.get_output();
+            out.SysClkSource = try SysClkSource.get_output();
+            out.MCOMultDivisor = try MCOMultDivisor.get_output();
+            out.USBoutput = try USBoutput.get_output();
+            out.PRESCALERUSB = try PRESCALERUSB.get_output();
+            out.ADC34output = try ADC34output.get_output();
+            out.ADC34PRES = try ADC34PRES.get_output();
+            out.ADC12output = try ADC12output.get_output();
+            out.ADC12PRES = try ADC12PRES.get_output();
+            out.TIMMUL = try TIMMUL.get_output();
+            out.PLLMUL = try PLLMUL.get_output();
+            out.VCO2output = try VCO2output.get_output();
+            out.PLLDiv = try PLLDiv.get_output();
+            out.PLLSource = try PLLSource.get_output();
             out.HSIRCDiv = try HSIRCDiv.get_output();
+            out.FLITFCLKoutput = try FLITFCLKoutput.get_output();
+            out.HSIRC = try HSIRC.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
             out.LSIRC = try LSIRC.get_output();
             out.LSEOSC = try LSEOSC.get_output();
-            out.HSEOSC = try HSEOSC.get_output();
-            out.PRESCALERUSB = try PRESCALERUSB.get_output();
-            out.USBoutput = try USBoutput.get_output();
-            out.SysClkSource = try SysClkSource.get_output();
-            out.SysCLKOutput = try SysCLKOutput.get_output();
             out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
-            out.MCOMultDivisor = try MCOMultDivisor.get_output();
-            out.MCOMult = try MCOMult.get_output();
-            out.MCODivisor = try MCODivisor.get_output();
-            out.MCOoutput = try MCOoutput.get_output();
-            out.AHBPrescaler = try AHBPrescaler.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.HCLKOutput = try HCLKOutput.get_output();
-            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
-            out.CortexPrescaler = try CortexPrescaler.get_output();
-            out.CortexSysOutput = try CortexSysOutput.get_output();
-            out.ADC12PRES = try ADC12PRES.get_output();
-            out.ADC12output = try ADC12output.get_output();
-            out.ADC34PRES = try ADC34PRES.get_output();
-            out.ADC34output = try ADC34output.get_output();
-            out.APB1Prescaler = try APB1Prescaler.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
-            out.TimPrescOut1 = try TimPrescOut1.get_output();
-            out.APB2Prescaler = try APB2Prescaler.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
-            out.TimPrescOut2 = try TimPrescOut2.get_output();
-            out.TIMMUL = try TIMMUL.get_output();
-            out.TIMMUX2 = try TIMMUX2.get_output();
-            out.TIM2out = try TIM2out.get_output();
-            out.TIMMUX3 = try TIMMUX3.get_output();
-            out.TIM3out = try TIM3out.get_output();
-            out.TIMMUX1 = try TIMMUX1.get_output();
-            out.TIM1out = try TIM1out.get_output();
-            out.TIMMUX8 = try TIMMUX8.get_output();
-            out.TIM8out = try TIM8out.get_output();
-            out.TIMMUX15 = try TIMMUX15.get_output();
-            out.TIM15out = try TIM15out.get_output();
-            out.TIMMUX16 = try TIMMUX16.get_output();
-            out.TIM16out = try TIM16out.get_output();
-            out.TIMMUX17 = try TIMMUX17.get_output();
-            out.TIM17out = try TIM17out.get_output();
-            out.TIMMUX20 = try TIMMUX20.get_output();
-            out.TIM20out = try TIM20out.get_output();
-            out.I2C1Mult = try I2C1Mult.get_output();
-            out.I2C1Output = try I2C1Output.get_output();
-            out.I2C2Mult = try I2C2Mult.get_output();
-            out.I2C2Output = try I2C2Output.get_output();
-            out.I2C3Mult = try I2C3Mult.get_output();
-            out.I2C3Output = try I2C3Output.get_output();
+            out.HSEOSC = try HSEOSC.get_output();
             out.I2S_CKIN = try I2S_CKIN.get_output();
-            out.I2SSrc = try I2SSrc.get_output();
-            out.I2SClocksOutput = try I2SClocksOutput.get_output();
-            out.USART1Mult = try USART1Mult.get_output();
-            out.USART1Output = try USART1Output.get_output();
-            out.USART2Mult = try USART2Mult.get_output();
-            out.USART2Output = try USART2Output.get_output();
-            out.USART3Mult = try USART3Mult.get_output();
-            out.USART3Output = try USART3Output.get_output();
-            out.UART4Mult = try UART4Mult.get_output();
-            out.UART4Output = try UART4Output.get_output();
-            out.UART5Mult = try UART5Mult.get_output();
-            out.UART5Output = try UART5Output.get_output();
-            out.PLLSource = try PLLSource.get_output();
-            out.PLLDiv = try PLLDiv.get_output();
-            out.VCO2output = try VCO2output.get_output();
-            out.PLLMUL = try PLLMUL.get_output();
+            out.HSI_PLL = try HSI_PLL.get_extra_output();
+            out.HSE_RTC = try HSE_RTC.get_extra_output();
+            out.PLLCLK_MCO = try PLLCLK_MCO.get_extra_output();
+            out.PLLCLK = try PLLCLK.get_extra_output();
             ref_out.HSIRCDiv = HSIRCDivValue;
             ref_out.LSE_VALUE = LSE_VALUEValue;
             ref_out.HSE_VALUE = HSE_VALUEValue;

@@ -4169,6 +4169,24 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCClkSource: f32 = 0,
             RTCOutput: f32 = 0,
             IWDGOutput: f32 = 0,
+            MSI: f32 = 0,
+            VCOInput: f32 = 0,
+            VCO2Input: f32 = 0,
+            VCO3Input: f32 = 0,
+            VCO4Input: f32 = 0,
+            VCO1Output: f32 = 0,
+            VCO2Output: f32 = 0,
+            VCO3Output: f32 = 0,
+            VCO4Output: f32 = 0,
+            MCUDIVCLK: f32 = 0,
+            VCO5Input: f32 = 0,
+            VCO5Output: f32 = 0,
+            VCO6Input: f32 = 0,
+            VCO6Output: f32 = 0,
+            VCO7Input: f32 = 0,
+            VCO7Output: f32 = 0,
+            VCO8Input: f32 = 0,
+            VCO8Output: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -5250,6 +5268,23 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var FOUTPOSTDIV7Freq_ValueLimit: Limit = .{};
             var FOUTPOSTDIV8Freq_ValueLimit: Limit = .{};
             var RTCFreq_ValueLimit: Limit = .{};
+            var VCOInput1Freq_ValueLimit: Limit = .{};
+            var VCOInput2Freq_ValueLimit: Limit = .{};
+            var VCOInput3Freq_ValueLimit: Limit = .{};
+            var VCOInput4Freq_ValueLimit: Limit = .{};
+            var VCO1OutputFreq_ValueLimit: Limit = .{};
+            var VCO2OutputFreq_ValueLimit: Limit = .{};
+            var VCO3OutputFreq_ValueLimit: Limit = .{};
+            var VCO4OutputFreq_ValueLimit: Limit = .{};
+            var MCUDIVCLKFreq_ValueLimit: Limit = .{};
+            var VCOInput5Freq_ValueLimit: Limit = .{};
+            var VCO5OutputFreq_ValueLimit: Limit = .{};
+            var VCOInput6Freq_ValueLimit: Limit = .{};
+            var VCO6OutputFreq_ValueLimit: Limit = .{};
+            var VCOInput7Freq_ValueLimit: Limit = .{};
+            var VCO7OutputFreq_ValueLimit: Limit = .{};
+            var VCOInput8Freq_ValueLimit: Limit = .{};
+            var VCO8OutputFreq_ValueLimit: Limit = .{};
             //Ref Values
 
             const HSI_VALUEValue: ?f32 = blk: {
@@ -5460,7 +5495,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR0_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR0PredivValue: ?XBAR0PredivList = blk: {
                 const conf_item = config.XBAR0Prediv;
@@ -5537,7 +5575,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR1_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR1PredivValue: ?XBAR1PredivList = blk: {
                 const conf_item = config.XBAR1Prediv;
@@ -5614,7 +5655,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR2_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR2PredivValue: ?XBAR2PredivList = blk: {
                 const conf_item = config.XBAR2Prediv;
@@ -5691,7 +5735,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR3_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR3PredivValue: ?XBAR3PredivList = blk: {
                 const conf_item = config.XBAR3Prediv;
@@ -5768,7 +5815,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR4_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR4PredivValue: ?XBAR4PredivList = blk: {
                 const conf_item = config.XBAR4Prediv;
@@ -5845,7 +5895,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR5_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR5PredivValue: ?XBAR5PredivList = blk: {
                 const conf_item = config.XBAR5Prediv;
@@ -5922,7 +5975,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR6_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR6PredivValue: ?XBAR6PredivList = blk: {
                 const conf_item = config.XBAR6Prediv;
@@ -5994,7 +6050,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_LSI;
+                break :blk conf_item orelse {
+                    XBAR7_LSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_LSI;
+                };
             };
             const XBAR7PredivValue: ?XBAR7PredivList = blk: {
                 const conf_item = config.XBAR7Prediv;
@@ -6067,7 +6126,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR8_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR8PredivValue: ?XBAR8PredivList = blk: {
                 const conf_item = config.XBAR8Prediv;
@@ -6140,7 +6202,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR9_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR9PredivValue: ?XBAR9PredivList = blk: {
                 const conf_item = config.XBAR9Prediv;
@@ -6214,7 +6279,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR10_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR10PredivValue: ?XBAR10PredivList = blk: {
                 const conf_item = config.XBAR10Prediv;
@@ -6285,7 +6353,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR11_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR11PredivValue: ?XBAR11PredivList = blk: {
                 const conf_item = config.XBAR11Prediv;
@@ -6357,7 +6428,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR12_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR12PredivValue: ?XBAR12PredivList = blk: {
                 const conf_item = config.XBAR12Prediv;
@@ -6429,7 +6503,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR13_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR13PredivValue: ?XBAR13PredivList = blk: {
                 const conf_item = config.XBAR13Prediv;
@@ -6501,7 +6578,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR14_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR14PredivValue: ?XBAR14PredivList = blk: {
                 const conf_item = config.XBAR14Prediv;
@@ -6573,7 +6653,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR15_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR15PredivValue: ?XBAR15PredivList = blk: {
                 const conf_item = config.XBAR15Prediv;
@@ -6647,7 +6730,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR16_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR16PredivValue: ?XBAR16PredivList = blk: {
                 const conf_item = config.XBAR16Prediv;
@@ -6721,7 +6807,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR17_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR17PredivValue: ?XBAR17PredivList = blk: {
                 const conf_item = config.XBAR17Prediv;
@@ -6795,7 +6884,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR18_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR18PredivValue: ?XBAR18PredivList = blk: {
                 const conf_item = config.XBAR18Prediv;
@@ -6868,7 +6960,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR19_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR19PredivValue: ?XBAR19PredivList = blk: {
                 const conf_item = config.XBAR19Prediv;
@@ -6941,7 +7036,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR20_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR20PredivValue: ?XBAR20PredivList = blk: {
                 const conf_item = config.XBAR20Prediv;
@@ -7014,7 +7112,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR21_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR21PredivValue: ?XBAR21PredivList = blk: {
                 const conf_item = config.XBAR21Prediv;
@@ -7087,7 +7188,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR22_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR22PredivValue: ?XBAR22PredivList = blk: {
                 const conf_item = config.XBAR22Prediv;
@@ -7162,7 +7266,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR23_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR23PredivValue: ?XBAR23PredivList = blk: {
                 const conf_item = config.XBAR23Prediv;
@@ -7237,7 +7344,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR24_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR24PredivValue: ?XBAR24PredivList = blk: {
                 const conf_item = config.XBAR24Prediv;
@@ -7312,7 +7422,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR25_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR25PredivValue: ?XBAR25PredivList = blk: {
                 const conf_item = config.XBAR25Prediv;
@@ -7383,7 +7496,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR26_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR26PredivValue: ?XBAR26PredivList = blk: {
                 const conf_item = config.XBAR26Prediv;
@@ -7453,7 +7569,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR27_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR27PredivValue: ?XBAR27PredivList = blk: {
                 const conf_item = config.XBAR27Prediv;
@@ -7524,7 +7643,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR28_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR28PredivValue: ?XBAR28PredivList = blk: {
                 const conf_item = config.XBAR28Prediv;
@@ -7594,7 +7716,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR29_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR29PredivValue: ?XBAR29PredivList = blk: {
                 const conf_item = config.XBAR29Prediv;
@@ -7665,7 +7790,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR30_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR30PredivValue: ?XBAR30PredivList = blk: {
                 const conf_item = config.XBAR30Prediv;
@@ -7736,7 +7864,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR31_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR31PredivValue: ?XBAR31PredivList = blk: {
                 const conf_item = config.XBAR31Prediv;
@@ -7807,7 +7938,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR32_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR32PredivValue: ?XBAR32PredivList = blk: {
                 const conf_item = config.XBAR32Prediv;
@@ -7879,7 +8013,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR33_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR33PredivValue: ?XBAR33PredivList = blk: {
                 const conf_item = config.XBAR33Prediv;
@@ -7950,7 +8087,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR34_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR34PredivValue: ?XBAR34PredivList = blk: {
                 const conf_item = config.XBAR34Prediv;
@@ -8035,7 +8175,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR35_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR35PredivValue: ?XBAR35PredivList = blk: {
                 const conf_item = config.XBAR35Prediv;
@@ -8107,7 +8250,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_MSI;
+                break :blk conf_item orelse {
+                    XBAR36_MSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_MSI;
+                };
             };
             const XBAR36PredivValue: ?XBAR36PredivList = blk: {
                 const conf_item = config.XBAR36Prediv;
@@ -8181,7 +8327,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR37_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR37PredivValue: ?XBAR37PredivList = blk: {
                 const conf_item = config.XBAR37Prediv;
@@ -8253,7 +8402,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR38_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR38PredivValue: ?XBAR38PredivList = blk: {
                 const conf_item = config.XBAR38Prediv;
@@ -8326,7 +8478,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR39_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR39PredivValue: ?XBAR39PredivList = blk: {
                 const conf_item = config.XBAR39Prediv;
@@ -8398,7 +8553,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_LSI;
+                break :blk conf_item orelse {
+                    XBAR40_LSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_LSI;
+                };
             };
             const XBAR40PredivValue: ?XBAR40PredivList = blk: {
                 const conf_item = config.XBAR40Prediv;
@@ -8470,7 +8628,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_LSI;
+                break :blk conf_item orelse {
+                    XBAR41_LSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_LSI;
+                };
             };
             const XBAR41PredivValue: ?XBAR41PredivList = blk: {
                 const conf_item = config.XBAR41Prediv;
@@ -8543,7 +8704,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR42_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR42PredivValue: ?XBAR42PredivList = blk: {
                 const conf_item = config.XBAR42Prediv;
@@ -8613,7 +8777,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR43_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR43PredivValue: ?XBAR43PredivList = blk: {
                 const conf_item = config.XBAR43Prediv;
@@ -8683,7 +8850,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR44_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR44PredivValue: ?XBAR44PredivList = blk: {
                 const conf_item = config.XBAR44Prediv;
@@ -8753,7 +8923,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR45_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR45PredivValue: ?XBAR45PredivList = blk: {
                 const conf_item = config.XBAR45Prediv;
@@ -8826,7 +8999,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR46_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR46PredivValue: ?XBAR46PredivList = blk: {
                 const conf_item = config.XBAR46Prediv;
@@ -8896,7 +9072,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR47_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR47PredivValue: ?XBAR47PredivList = blk: {
                 const conf_item = config.XBAR47Prediv;
@@ -8966,7 +9145,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR48_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR48PredivValue: ?XBAR48PredivList = blk: {
                 const conf_item = config.XBAR48Prediv;
@@ -9036,7 +9218,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR49_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR49PredivValue: ?XBAR49PredivList = blk: {
                 const conf_item = config.XBAR49Prediv;
@@ -9106,7 +9291,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR50_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR50PredivValue: ?XBAR50PredivList = blk: {
                 const conf_item = config.XBAR50Prediv;
@@ -9177,7 +9365,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR51_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR51PredivValue: ?XBAR51PredivList = blk: {
                 const conf_item = config.XBAR51Prediv;
@@ -9248,7 +9439,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR52_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR52PredivValue: ?XBAR52PredivList = blk: {
                 const conf_item = config.XBAR52Prediv;
@@ -9319,7 +9513,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR53_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR53PredivValue: ?XBAR53PredivList = blk: {
                 const conf_item = config.XBAR53Prediv;
@@ -9389,7 +9586,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR54_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR54PredivValue: ?XBAR54PredivList = blk: {
                 const conf_item = config.XBAR54Prediv;
@@ -9459,7 +9659,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR55_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR55PredivValue: ?XBAR55PredivList = blk: {
                 const conf_item = config.XBAR55Prediv;
@@ -9532,7 +9735,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR56_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR56PredivValue: ?XBAR56PredivList = blk: {
                 const conf_item = config.XBAR56Prediv;
@@ -9603,7 +9809,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR57_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR57PredivValue: ?XBAR57PredivList = blk: {
                 const conf_item = config.XBAR57Prediv;
@@ -9674,7 +9883,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSE;
+                break :blk conf_item orelse {
+                    XBAR58_HSE = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSE;
+                };
             };
             const XBAR58PredivValue: ?XBAR58PredivList = blk: {
                 const conf_item = config.XBAR58Prediv;
@@ -9744,7 +9956,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR59_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR59PredivValue: ?XBAR59PredivList = blk: {
                 const conf_item = config.XBAR59Prediv;
@@ -9814,7 +10029,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_PLL8;
+                break :blk conf_item orelse {
+                    XBAR60_PLL8 = true;
+                    break :blk .RCC_XBAR_CLKSRC_PLL8;
+                };
             };
             const XBAR60PredivValue: ?XBAR60PredivList = blk: {
                 const conf_item = config.XBAR60Prediv;
@@ -9891,7 +10109,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR61_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR61PredivValue: ?XBAR61PredivList = blk: {
                 const conf_item = config.XBAR61Prediv;
@@ -9968,7 +10189,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR62_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR62PredivValue: ?XBAR62PredivList = blk: {
                 const conf_item = config.XBAR62Prediv;
@@ -10041,7 +10265,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_XBAR_CLKSRC_HSI;
+                break :blk conf_item orelse {
+                    XBAR63_HSI = true;
+                    break :blk .RCC_XBAR_CLKSRC_HSI;
+                };
             };
             const XBAR63PredivValue: ?XBAR63PredivList = blk: {
                 const conf_item = config.XBAR63Prediv;
@@ -10346,7 +10573,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_MCO1_FLEX61;
+                break :blk conf_item orelse {
+                    MCO1_FLEX61 = true;
+                    break :blk .MUX_MCO1_FLEX61;
+                };
             };
             const MCO1PinFreq_ValueValue: ?f32 = blk: {
                 break :blk 9.6e7;
@@ -10360,7 +10590,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_MCO2_FLEX62;
+                break :blk conf_item orelse {
+                    MCO2_FLEX62 = true;
+                    break :blk .MUX_MCO2_FLEX62;
+                };
             };
             const MCO2PinFreq_ValueValue: ?f32 = blk: {
                 break :blk 9.6e7;
@@ -10375,7 +10608,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_D3PER_MSI;
+                break :blk conf_item orelse {
+                    D3PERCLKSource_MSI = true;
+                    break :blk .MUX_D3PER_MSI;
+                };
             };
             const D3PERFreq_ValueValue: ?f32 = blk: {
                 D3PERFreq_ValueLimit = .{
@@ -10394,7 +10630,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_DTS_MSI;
+                break :blk conf_item orelse {
+                    DTSCLKSource_MSI = true;
+                    break :blk .MUX_DTS_MSI;
+                };
             };
             const DTSFreq_ValueValue: ?f32 = blk: {
                 DTSFreq_ValueLimit = .{
@@ -10412,7 +10651,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_DSIPHY_FLEX28;
+                break :blk conf_item orelse {
+                    DSIPHY_FLEX28 = true;
+                    break :blk .MUX_DSIPHY_FLEX28;
+                };
             };
             const DSIPHYFreq_ValueValue: ?f32 = blk: {
                 DSIPHYFreq_ValueLimit = .{
@@ -10430,7 +10672,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_DSIBLANE_DSIPHY;
+                break :blk conf_item orelse {
+                    DSIBLANE_DSIPHY = true;
+                    break :blk .MUX_DSIBLANE_DSIPHY;
+                };
             };
             const DSIBLANEFreq_ValueValue: ?f32 = blk: {
                 DSIBLANEFreq_ValueLimit = .{
@@ -10448,7 +10693,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_USB2PHY1_FLEX57;
+                break :blk conf_item orelse {
+                    USB2PHY1_FLEX57 = true;
+                    break :blk .MUX_USB2PHY1_FLEX57;
+                };
             };
             const USB2PHY1Freq_ValueValue: ?f32 = blk: {
                 USB2PHY1Freq_ValueLimit = .{
@@ -10466,7 +10714,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_USB2PHY2_FLEX58;
+                break :blk conf_item orelse {
+                    USB2PHY2_FLEX58 = true;
+                    break :blk .MUX_USB2PHY2_FLEX58;
+                };
             };
             const USB2PHY2Freq_ValueValue: ?f32 = blk: {
                 USB2PHY2Freq_ValueLimit = .{
@@ -10484,7 +10735,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_USB3PCIEPHY_FLEX34;
+                break :blk conf_item orelse {
+                    USB3PCIEPHY_FLEX34 = true;
+                    break :blk .MUX_USB3PCIEPHY_FLEX34;
+                };
             };
             const USB3PCIPHYFreq_ValueValue: ?f32 = blk: {
                 USB3PCIPHYFreq_ValueLimit = .{
@@ -10502,7 +10756,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_MCUSSOURCE_FLEX0;
+                break :blk conf_item orelse {
+                    MCUCLKSOURCE_FLEX0 = true;
+                    break :blk .RCC_MCUSSOURCE_FLEX0;
+                };
             };
             const MCUCLKFreq_VALUEValue: ?f32 = blk: {
                 MCUCLKFreq_VALUELimit = .{
@@ -10604,7 +10861,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_APB1_DIV1;
+                break :blk conf_item orelse {
+                    APB1DIV_1 = true;
+                    break :blk .RCC_APB1_DIV1;
+                };
             };
             const RCC_TIM_G1_PRescaler_SelectionValue: ?RCC_TIM_G1_PRescaler_SelectionList = blk: {
                 const conf_item = config.extra.RCC_TIM_G1_PRescaler_Selection;
@@ -10666,7 +10926,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_APB2_DIV1;
+                break :blk conf_item orelse {
+                    APB2DIV_1 = true;
+                    break :blk .RCC_APB2_DIV1;
+                };
             };
             const RCC_TIM_G2_PRescaler_SelectionValue: ?RCC_TIM_G2_PRescaler_SelectionList = blk: {
                 const conf_item = config.extra.RCC_TIM_G2_PRescaler_Selection;
@@ -10718,7 +10981,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_ADC12_FLEX46;
+                break :blk conf_item orelse {
+                    ADC12_FLEX46 = true;
+                    break :blk .MUX_ADC12_FLEX46;
+                };
             };
             const ADC12Freq_ValueValue: ?f32 = blk: {
                 ADC12Freq_ValueLimit = .{
@@ -10737,7 +11003,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_ADC3_FLEX47;
+                break :blk conf_item orelse {
+                    ADC3_FLEX47 = true;
+                    break :blk .MUX_ADC3_FLEX47;
+                };
             };
             const ADC3Freq_ValueValue: ?f32 = blk: {
                 ADC3Freq_ValueLimit = .{
@@ -10755,7 +11024,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .MUX_LVDSPHY_FLEX32;
+                break :blk conf_item orelse {
+                    LVDSPHY_FLEX32 = true;
+                    break :blk .MUX_LVDSPHY_FLEX32;
+                };
             };
             const LVDSFreq_ValueValue: ?f32 = blk: {
                 break :blk 9.6e7;
@@ -10770,7 +11042,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL1SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL1SOURCE_HSI = true;
+                    break :blk .RCC_PLL1SOURCE_HSI;
+                };
             };
             const FREFDIV1Value: ?f32 = blk: {
                 const config_val = config.FREFDIV1;
@@ -10818,7 +11093,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL2SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL2SOURCE_HSI = true;
+                    break :blk .RCC_PLL2SOURCE_HSI;
+                };
             };
             const FREFDIV2Value: ?f32 = blk: {
                 const config_val = config.FREFDIV2;
@@ -10866,7 +11144,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL3SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL3SOURCE_HSI = true;
+                    break :blk .RCC_PLL3SOURCE_HSI;
+                };
             };
             const FREFDIV3Value: ?f32 = blk: {
                 const config_val = config.FREFDIV3;
@@ -10914,7 +11195,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL4SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL4SOURCE_HSI = true;
+                    break :blk .RCC_PLL4SOURCE_HSI;
+                };
             };
             const FREFDIV4Value: ?f32 = blk: {
                 const config_val = config.FREFDIV4;
@@ -11786,7 +12070,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL5SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL5SOURCE_HSI = true;
+                    break :blk .RCC_PLL5SOURCE_HSI;
+                };
             };
             const FREFDIV5Value: ?f32 = blk: {
                 const config_val = config.FREFDIV5;
@@ -12065,7 +12352,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL6SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL6SOURCE_HSI = true;
+                    break :blk .RCC_PLL6SOURCE_HSI;
+                };
             };
             const FREFDIV6Value: ?f32 = blk: {
                 const config_val = config.FREFDIV6;
@@ -12344,7 +12634,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL7SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL7SOURCE_HSI = true;
+                    break :blk .RCC_PLL7SOURCE_HSI;
+                };
             };
             const FREFDIV7Value: ?f32 = blk: {
                 const config_val = config.FREFDIV7;
@@ -12623,7 +12916,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLL8SOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLL8SOURCE_HSI = true;
+                    break :blk .RCC_PLL8SOURCE_HSI;
+                };
             };
             const FREFDIV8Value: ?f32 = blk: {
                 const config_val = config.FREFDIV8;
@@ -12892,6 +13188,45 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 };
                 break :blk null;
             };
+            const RTCCLockSelectionValue: ?RTCCLockSelectionList = blk: {
+                if (!check_MCU("autonomous")) {
+                    const conf_item = config.RTCCLockSelection;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .RCC_RTCCLKSOURCE_HSE_DIV => RTCCLKSOURCE_HSE_DIV = true,
+                            .RCC_RTCCLKSOURCE_LSE => RTCCLKSOURCE_LSE = true,
+                            .RCC_RTCCLKSOURCE_LSI => RTCCLKSOURCE_LSI = true,
+                        }
+                    }
+
+                    break :blk conf_item orelse {
+                        RTCCLKSOURCE_LSI = true;
+                        break :blk .RCC_RTCCLKSOURCE_LSI;
+                    };
+                }
+                const conf_item = config.RTCCLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_RTCCLKSOURCE_LSE => RTCCLKSOURCE_LSE = true,
+                        .RCC_RTCCLKSOURCE_LSI => RTCCLKSOURCE_LSI = true,
+                        else => {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Option not available in this condition: {any}.
+                                \\note: available options:
+                                \\ - RCC_RTCCLKSOURCE_LSE
+                                \\ - RCC_RTCCLKSOURCE_LSI
+                            , .{ "RTCCLockSelection", "Else", "No Extra Log", item });
+                        },
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    RTCCLKSOURCE_LSI = true;
+                    break :blk .RCC_RTCCLKSOURCE_LSI;
+                };
+            };
             const RCC_RTC_Clock_Source_FROM_HSEValue: ?f32 = blk: {
                 if (config.flags.RTC_Used and RTCCLKSOURCE_HSE_DIV) {
                     const config_val = config.RCC_RTC_Clock_Source_FROM_HSE;
@@ -12999,39 +13334,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
                 break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
             };
-            const RTCCLockSelectionValue: ?RTCCLockSelectionList = blk: {
-                if (!check_MCU("autonomous")) {
-                    const conf_item = config.RTCCLockSelection;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .RCC_RTCCLKSOURCE_HSE_DIV => RTCCLKSOURCE_HSE_DIV = true,
-                            .RCC_RTCCLKSOURCE_LSE => RTCCLKSOURCE_LSE = true,
-                            .RCC_RTCCLKSOURCE_LSI => RTCCLKSOURCE_LSI = true,
-                        }
-                    }
-
-                    break :blk conf_item orelse .RCC_RTCCLKSOURCE_LSI;
-                }
-                const conf_item = config.RTCCLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_RTCCLKSOURCE_LSE => RTCCLKSOURCE_LSE = true,
-                        .RCC_RTCCLKSOURCE_LSI => RTCCLKSOURCE_LSI = true,
-                        else => {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Option not available in this condition: {any}.
-                                \\note: available options:
-                                \\ - RCC_RTCCLKSOURCE_LSE
-                                \\ - RCC_RTCCLKSOURCE_LSI
-                            , .{ "RTCCLockSelection", "Else", "No Extra Log", item });
-                        },
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_RTCCLKSOURCE_LSI;
-            };
             const RTCFreq_ValueValue: ?f32 = blk: {
                 RTCFreq_ValueLimit = .{
                     .min = null,
@@ -13041,6 +13343,177 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             const WatchDogFreq_ValueValue: ?f32 = blk: {
                 break :blk 3.2e4;
+            };
+            const MSI_VALUEValue: ?f32 = blk: {
+                break :blk 1.6e7;
+            };
+            const VCOInput1Freq_ValueValue: ?f32 = blk: {
+                VCOInput1Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCOInput2Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL2MODEValue), PLL2MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput2Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput2Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCOInput3Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL3MODEValue), PLL3MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput3Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput3Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCOInput4Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL4MODEValue), PLL4MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput4Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput4Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCO1OutputFreq_ValueValue: ?f32 = blk: {
+                VCO1OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCO2OutputFreq_ValueValue: ?f32 = blk: {
+                VCO2OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCO3OutputFreq_ValueValue: ?f32 = blk: {
+                VCO3OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCO4OutputFreq_ValueValue: ?f32 = blk: {
+                VCO4OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const MCUDIVCLKFreq_ValueValue: ?f32 = blk: {
+                MCUDIVCLKFreq_ValueLimit = .{
+                    .min = null,
+                    .max = 2e8,
+                };
+                break :blk null;
+            };
+            const VCOInput5Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL5MODEValue), PLL5MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput5Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput5Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCO5OutputFreq_ValueValue: ?f32 = blk: {
+                VCO5OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCOInput6Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL6MODEValue), PLL6MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput6Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput6Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCO6OutputFreq_ValueValue: ?f32 = blk: {
+                VCO6OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCOInput7Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL7MODEValue), PLL7MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput7Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput7Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCO7OutputFreq_ValueValue: ?f32 = blk: {
+                VCO7OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
+            };
+            const VCOInput8Freq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL8MODEValue), PLL8MODEValue, .RCC_PLL_FRACTIONAL, .@"=")) {
+                    VCOInput8Freq_ValueLimit = .{
+                        .min = 1e7,
+                        .max = 6.4e7,
+                    };
+                    break :blk null;
+                }
+                VCOInput8Freq_ValueLimit = .{
+                    .min = 5e6,
+                    .max = 6.4e7,
+                };
+                break :blk null;
+            };
+            const VCO8OutputFreq_ValueValue: ?f32 = blk: {
+                VCO8OutputFreq_ValueLimit = .{
+                    .min = 8e8,
+                    .max = 3.2e9,
+                };
+                break :blk null;
             };
             const VDD_VALUEValue: ?f32 = blk: {
                 const config_val = config.extra.VDD_VALUE;
@@ -16620,6 +17093,114 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
             var IWDGOutput = ClockNode{
                 .name = "IWDGOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var MSI = ClockNode{
+                .name = "MSI",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOInput = ClockNode{
+                .name = "VCOInput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO2Input = ClockNode{
+                .name = "VCO2Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO3Input = ClockNode{
+                .name = "VCO3Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO4Input = ClockNode{
+                .name = "VCO4Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO1Output = ClockNode{
+                .name = "VCO1Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO2Output = ClockNode{
+                .name = "VCO2Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO3Output = ClockNode{
+                .name = "VCO3Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO4Output = ClockNode{
+                .name = "VCO4Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var MCUDIVCLK = ClockNode{
+                .name = "MCUDIVCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO5Input = ClockNode{
+                .name = "VCO5Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO5Output = ClockNode{
+                .name = "VCO5Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO6Input = ClockNode{
+                .name = "VCO6Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO6Output = ClockNode{
+                .name = "VCO6Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO7Input = ClockNode{
+                .name = "VCO7Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO7Output = ClockNode{
+                .name = "VCO7Output",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO8Input = ClockNode{
+                .name = "VCO8Input",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCO8Output = ClockNode{
+                .name = "VCO8Output",
                 .nodetype = .off,
                 .parents = &.{},
             };
@@ -22504,383 +23085,490 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 IWDGOutput.parents = &.{&LSIRC};
             }
 
+            std.mem.doNotOptimizeAway(MSI_VALUEValue);
+            MSI.nodetype = .output;
+            MSI.parents = &.{&MSIRC};
+
+            std.mem.doNotOptimizeAway(VCOInput1Freq_ValueValue);
+            VCOInput.limit = VCOInput1Freq_ValueLimit;
+            VCOInput.nodetype = .output;
+            VCOInput.parents = &.{&FREFDIV1};
+
+            std.mem.doNotOptimizeAway(VCOInput2Freq_ValueValue);
+            VCO2Input.limit = VCOInput2Freq_ValueLimit;
+            VCO2Input.nodetype = .output;
+            VCO2Input.parents = &.{&FREFDIV2};
+
+            std.mem.doNotOptimizeAway(VCOInput3Freq_ValueValue);
+            VCO3Input.limit = VCOInput3Freq_ValueLimit;
+            VCO3Input.nodetype = .output;
+            VCO3Input.parents = &.{&FREFDIV3};
+
+            std.mem.doNotOptimizeAway(VCOInput4Freq_ValueValue);
+            VCO4Input.limit = VCOInput4Freq_ValueLimit;
+            VCO4Input.nodetype = .output;
+            VCO4Input.parents = &.{&FREFDIV4};
+
+            std.mem.doNotOptimizeAway(VCO1OutputFreq_ValueValue);
+            VCO1Output.limit = VCO1OutputFreq_ValueLimit;
+            VCO1Output.nodetype = .output;
+            VCO1Output.parents = &.{&FBDIV1};
+
+            std.mem.doNotOptimizeAway(VCO2OutputFreq_ValueValue);
+            VCO2Output.limit = VCO2OutputFreq_ValueLimit;
+            VCO2Output.nodetype = .output;
+            VCO2Output.parents = &.{&FBDIV2};
+
+            std.mem.doNotOptimizeAway(VCO3OutputFreq_ValueValue);
+            VCO3Output.limit = VCO3OutputFreq_ValueLimit;
+            VCO3Output.nodetype = .output;
+            VCO3Output.parents = &.{&FBDIV3};
+
+            std.mem.doNotOptimizeAway(VCO4OutputFreq_ValueValue);
+            VCO4Output.limit = VCO4OutputFreq_ValueLimit;
+            VCO4Output.nodetype = .output;
+            VCO4Output.parents = &.{&FBDIV4};
+
+            std.mem.doNotOptimizeAway(MCUDIVCLKFreq_ValueValue);
+            MCUDIVCLK.limit = MCUDIVCLKFreq_ValueLimit;
+            MCUDIVCLK.nodetype = .output;
+            MCUDIVCLK.parents = &.{&MCUDIV};
+
+            std.mem.doNotOptimizeAway(VCOInput5Freq_ValueValue);
+            VCO5Input.limit = VCOInput5Freq_ValueLimit;
+            VCO5Input.nodetype = .output;
+            VCO5Input.parents = &.{&FREFDIV5};
+
+            std.mem.doNotOptimizeAway(VCO5OutputFreq_ValueValue);
+            VCO5Output.limit = VCO5OutputFreq_ValueLimit;
+            VCO5Output.nodetype = .output;
+            VCO5Output.parents = &.{&FBDIV5};
+
+            std.mem.doNotOptimizeAway(VCOInput6Freq_ValueValue);
+            VCO6Input.limit = VCOInput6Freq_ValueLimit;
+            VCO6Input.nodetype = .output;
+            VCO6Input.parents = &.{&FREFDIV6};
+
+            std.mem.doNotOptimizeAway(VCO6OutputFreq_ValueValue);
+            VCO6Output.limit = VCO6OutputFreq_ValueLimit;
+            VCO6Output.nodetype = .output;
+            VCO6Output.parents = &.{&FBDIV6};
+
+            std.mem.doNotOptimizeAway(VCOInput7Freq_ValueValue);
+            VCO7Input.limit = VCOInput7Freq_ValueLimit;
+            VCO7Input.nodetype = .output;
+            VCO7Input.parents = &.{&FREFDIV7};
+
+            std.mem.doNotOptimizeAway(VCO7OutputFreq_ValueValue);
+            VCO7Output.limit = VCO7OutputFreq_ValueLimit;
+            VCO7Output.nodetype = .output;
+            VCO7Output.parents = &.{&FBDIV7};
+
+            std.mem.doNotOptimizeAway(VCOInput8Freq_ValueValue);
+            VCO8Input.limit = VCOInput8Freq_ValueLimit;
+            VCO8Input.nodetype = .output;
+            VCO8Input.parents = &.{&FREFDIV8};
+
+            std.mem.doNotOptimizeAway(VCO8OutputFreq_ValueValue);
+            VCO8Output.limit = VCO8OutputFreq_ValueLimit;
+            VCO8Output.nodetype = .output;
+            VCO8Output.parents = &.{&FBDIV8};
+
+            out.McuClockOutput = try McuClockOutput.get_output();
+            out.APB3Output = try APB3Output.get_output();
+            out.APB3DIV = try APB3DIV.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.Tim1Output = try Tim1Output.get_output();
+            out.Tim1Mul = try Tim1Mul.get_output();
+            out.APB1DIV = try APB1DIV.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.Tim2Output = try Tim2Output.get_output();
+            out.Tim2Mul = try Tim2Mul.get_output();
+            out.APB2DIV = try APB2DIV.get_output();
+            out.APB4Output = try APB4Output.get_output();
+            out.APB4DIV = try APB4DIV.get_output();
+            out.APBDBGOutput = try APBDBGOutput.get_output();
+            out.APBDBGDIV = try APBDBGDIV.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.MCUDIV = try MCUDIV.get_output();
+            out.SysCLKOutput = try SysCLKOutput.get_output();
+            out.SysClkSource = try SysClkSource.get_output();
+            out.DTSOutput = try DTSOutput.get_output();
+            out.DTS = try DTS.get_output();
+            out.MCO1Pin = try MCO1Pin.get_output();
+            out.MCO1Mult = try MCO1Mult.get_output();
+            out.OBS0Output = try OBS0Output.get_output();
+            out.OBS0 = try OBS0.get_output();
+            out.CKEXTSEL0 = try CKEXTSEL0.get_output();
+            out.MCO2Pin = try MCO2Pin.get_output();
+            out.MCO2Mult = try MCO2Mult.get_output();
+            out.OBS1Output = try OBS1Output.get_output();
+            out.OBS1 = try OBS1.get_output();
+            out.CKEXTSEL1 = try CKEXTSEL1.get_output();
+            out.PLL3Div2 = try PLL3Div2.get_output();
+            out.FOUTPOSTDIV3 = try FOUTPOSTDIV3.get_output();
+            out.POSTDIV2_3 = try POSTDIV2_3.get_output();
+            out.POSTDIV1_3 = try POSTDIV1_3.get_output();
+            out.FBDIV3 = try FBDIV3.get_output();
+            out.FREFDIV3 = try FREFDIV3.get_output();
+            out.CKINTSEL0 = try CKINTSEL0.get_output();
+            out.PLL3Source = try PLL3Source.get_output();
+            out.ADC12output = try ADC12output.get_output();
+            out.ADC12Mult = try ADC12Mult.get_output();
+            out.XBAR0Output = try XBAR0Output.get_output();
+            out.XBAR0Findiv = try XBAR0Findiv.get_output();
+            out.XBAR0Prediv = try XBAR0Prediv.get_output();
+            out.XBAR0 = try XBAR0.get_output();
+            out.FOUTPOSTDIV4 = try FOUTPOSTDIV4.get_output();
+            out.POSTDIV2_4 = try POSTDIV2_4.get_output();
+            out.POSTDIV1_4 = try POSTDIV1_4.get_output();
+            out.FBDIV4 = try FBDIV4.get_output();
+            out.FREFDIV4 = try FREFDIV4.get_output();
+            out.PLL4Source = try PLL4Source.get_output();
+            out.PLL1Div42 = try PLL1Div42.get_output();
+            out.FOUTPOSTDIV1 = try FOUTPOSTDIV1.get_output();
+            out.POSTDIV2_1 = try POSTDIV2_1.get_output();
+            out.POSTDIV1_1 = try POSTDIV1_1.get_output();
+            out.FBDIV1 = try FBDIV1.get_output();
+            out.FREFDIV1 = try FREFDIV1.get_output();
+            out.PLL1Source = try PLL1Source.get_output();
+            out.PLL2Div4 = try PLL2Div4.get_output();
+            out.FOUTPOSTDIV2 = try FOUTPOSTDIV2.get_output();
+            out.POSTDIV2_2 = try POSTDIV2_2.get_output();
+            out.POSTDIV1_2 = try POSTDIV1_2.get_output();
+            out.FBDIV2 = try FBDIV2.get_output();
+            out.FREFDIV2 = try FREFDIV2.get_output();
+            out.PLL2Source = try PLL2Source.get_output();
+            out.FOUTPOSTDIV8 = try FOUTPOSTDIV8.get_output();
+            out.POSTDIV2_8 = try POSTDIV2_8.get_output();
+            out.POSTDIV1_8 = try POSTDIV1_8.get_output();
+            out.FBDIV8 = try FBDIV8.get_output();
+            out.FREFDIV8 = try FREFDIV8.get_output();
+            out.PLL8Source = try PLL8Source.get_output();
+            out.FOUTPOSTDIV5 = try FOUTPOSTDIV5.get_output();
+            out.POSTDIV2_5 = try POSTDIV2_5.get_output();
+            out.POSTDIV1_5 = try POSTDIV1_5.get_output();
+            out.FBDIV5 = try FBDIV5.get_output();
+            out.FREFDIV5 = try FREFDIV5.get_output();
+            out.PLL5Source = try PLL5Source.get_output();
+            out.FOUTPOSTDIV6 = try FOUTPOSTDIV6.get_output();
+            out.POSTDIV2_6 = try POSTDIV2_6.get_output();
+            out.POSTDIV1_6 = try POSTDIV1_6.get_output();
+            out.FBDIV6 = try FBDIV6.get_output();
+            out.FREFDIV6 = try FREFDIV6.get_output();
+            out.PLL6Source = try PLL6Source.get_output();
+            out.FOUTPOSTDIV7 = try FOUTPOSTDIV7.get_output();
+            out.POSTDIV2_7 = try POSTDIV2_7.get_output();
+            out.POSTDIV1_7 = try POSTDIV1_7.get_output();
+            out.FBDIV7 = try FBDIV7.get_output();
+            out.FREFDIV7 = try FREFDIV7.get_output();
+            out.PLL7Source = try PLL7Source.get_output();
+            out.XBAR1Output = try XBAR1Output.get_output();
+            out.XBAR1Findiv = try XBAR1Findiv.get_output();
+            out.XBAR1Prediv = try XBAR1Prediv.get_output();
+            out.XBAR1 = try XBAR1.get_output();
+            out.XBAR2Output = try XBAR2Output.get_output();
+            out.XBAR2Findiv = try XBAR2Findiv.get_output();
+            out.XBAR2Prediv = try XBAR2Prediv.get_output();
+            out.XBAR2 = try XBAR2.get_output();
+            out.XBAR3Output = try XBAR3Output.get_output();
+            out.XBAR3Findiv = try XBAR3Findiv.get_output();
+            out.XBAR3Prediv = try XBAR3Prediv.get_output();
+            out.XBAR3 = try XBAR3.get_output();
+            out.XBAR4Output = try XBAR4Output.get_output();
+            out.XBAR4Findiv = try XBAR4Findiv.get_output();
+            out.XBAR4Prediv = try XBAR4Prediv.get_output();
+            out.XBAR4 = try XBAR4.get_output();
+            out.XBAR5Output = try XBAR5Output.get_output();
+            out.XBAR5Findiv = try XBAR5Findiv.get_output();
+            out.XBAR5Prediv = try XBAR5Prediv.get_output();
+            out.XBAR5 = try XBAR5.get_output();
+            out.XBAR6Output = try XBAR6Output.get_output();
+            out.XBAR6Findiv = try XBAR6Findiv.get_output();
+            out.XBAR6Prediv = try XBAR6Prediv.get_output();
+            out.XBAR6 = try XBAR6.get_output();
+            out.XBAR7Output = try XBAR7Output.get_output();
+            out.XBAR7Findiv = try XBAR7Findiv.get_output();
+            out.XBAR7Prediv = try XBAR7Prediv.get_output();
+            out.XBAR7 = try XBAR7.get_output();
+            out.XBAR8Output = try XBAR8Output.get_output();
+            out.XBAR8Findiv = try XBAR8Findiv.get_output();
+            out.XBAR8Prediv = try XBAR8Prediv.get_output();
+            out.XBAR8 = try XBAR8.get_output();
+            out.XBAR9Output = try XBAR9Output.get_output();
+            out.XBAR9Findiv = try XBAR9Findiv.get_output();
+            out.XBAR9Prediv = try XBAR9Prediv.get_output();
+            out.XBAR9 = try XBAR9.get_output();
+            out.XBAR10Output = try XBAR10Output.get_output();
+            out.XBAR10Findiv = try XBAR10Findiv.get_output();
+            out.XBAR10Prediv = try XBAR10Prediv.get_output();
+            out.XBAR10 = try XBAR10.get_output();
+            out.XBAR11Output = try XBAR11Output.get_output();
+            out.XBAR11Findiv = try XBAR11Findiv.get_output();
+            out.XBAR11Prediv = try XBAR11Prediv.get_output();
+            out.XBAR11 = try XBAR11.get_output();
+            out.XBAR12Output = try XBAR12Output.get_output();
+            out.XBAR12Findiv = try XBAR12Findiv.get_output();
+            out.XBAR12Prediv = try XBAR12Prediv.get_output();
+            out.XBAR12 = try XBAR12.get_output();
+            out.XBAR13Output = try XBAR13Output.get_output();
+            out.XBAR13Findiv = try XBAR13Findiv.get_output();
+            out.XBAR13Prediv = try XBAR13Prediv.get_output();
+            out.XBAR13 = try XBAR13.get_output();
+            out.XBAR14Output = try XBAR14Output.get_output();
+            out.XBAR14Findiv = try XBAR14Findiv.get_output();
+            out.XBAR14Prediv = try XBAR14Prediv.get_output();
+            out.XBAR14 = try XBAR14.get_output();
+            out.XBAR15Output = try XBAR15Output.get_output();
+            out.XBAR15Findiv = try XBAR15Findiv.get_output();
+            out.XBAR15Prediv = try XBAR15Prediv.get_output();
+            out.XBAR15 = try XBAR15.get_output();
+            out.XBAR16Output = try XBAR16Output.get_output();
+            out.XBAR16Findiv = try XBAR16Findiv.get_output();
+            out.XBAR16Prediv = try XBAR16Prediv.get_output();
+            out.XBAR16 = try XBAR16.get_output();
+            out.XBAR17Output = try XBAR17Output.get_output();
+            out.XBAR17Findiv = try XBAR17Findiv.get_output();
+            out.XBAR17Prediv = try XBAR17Prediv.get_output();
+            out.XBAR17 = try XBAR17.get_output();
+            out.XBAR18Output = try XBAR18Output.get_output();
+            out.XBAR18Findiv = try XBAR18Findiv.get_output();
+            out.XBAR18Prediv = try XBAR18Prediv.get_output();
+            out.XBAR18 = try XBAR18.get_output();
+            out.XBAR19Output = try XBAR19Output.get_output();
+            out.XBAR19Findiv = try XBAR19Findiv.get_output();
+            out.XBAR19Prediv = try XBAR19Prediv.get_output();
+            out.XBAR19 = try XBAR19.get_output();
+            out.XBAR20Output = try XBAR20Output.get_output();
+            out.XBAR20Findiv = try XBAR20Findiv.get_output();
+            out.XBAR20Prediv = try XBAR20Prediv.get_output();
+            out.XBAR20 = try XBAR20.get_output();
+            out.XBAR21Output = try XBAR21Output.get_output();
+            out.XBAR21Findiv = try XBAR21Findiv.get_output();
+            out.XBAR21Prediv = try XBAR21Prediv.get_output();
+            out.XBAR21 = try XBAR21.get_output();
+            out.XBAR22Output = try XBAR22Output.get_output();
+            out.XBAR22Findiv = try XBAR22Findiv.get_output();
+            out.XBAR22Prediv = try XBAR22Prediv.get_output();
+            out.XBAR22 = try XBAR22.get_output();
+            out.XBAR23Output = try XBAR23Output.get_output();
+            out.XBAR23Findiv = try XBAR23Findiv.get_output();
+            out.XBAR23Prediv = try XBAR23Prediv.get_output();
+            out.XBAR23 = try XBAR23.get_output();
+            out.XBAR24Output = try XBAR24Output.get_output();
+            out.XBAR24Findiv = try XBAR24Findiv.get_output();
+            out.XBAR24Prediv = try XBAR24Prediv.get_output();
+            out.XBAR24 = try XBAR24.get_output();
+            out.XBAR25Output = try XBAR25Output.get_output();
+            out.XBAR25Findiv = try XBAR25Findiv.get_output();
+            out.XBAR25Prediv = try XBAR25Prediv.get_output();
+            out.XBAR25 = try XBAR25.get_output();
+            out.XBAR26Output = try XBAR26Output.get_output();
+            out.XBAR26Findiv = try XBAR26Findiv.get_output();
+            out.XBAR26Prediv = try XBAR26Prediv.get_output();
+            out.XBAR26 = try XBAR26.get_output();
+            out.XBAR27Output = try XBAR27Output.get_output();
+            out.XBAR27Findiv = try XBAR27Findiv.get_output();
+            out.XBAR27Prediv = try XBAR27Prediv.get_output();
+            out.XBAR27 = try XBAR27.get_output();
+            out.XBAR28Output = try XBAR28Output.get_output();
+            out.XBAR28Findiv = try XBAR28Findiv.get_output();
+            out.XBAR28Prediv = try XBAR28Prediv.get_output();
+            out.XBAR28 = try XBAR28.get_output();
+            out.XBAR29Output = try XBAR29Output.get_output();
+            out.XBAR29Findiv = try XBAR29Findiv.get_output();
+            out.XBAR29Prediv = try XBAR29Prediv.get_output();
+            out.XBAR29 = try XBAR29.get_output();
+            out.XBAR30Output = try XBAR30Output.get_output();
+            out.XBAR30Findiv = try XBAR30Findiv.get_output();
+            out.XBAR30Prediv = try XBAR30Prediv.get_output();
+            out.XBAR30 = try XBAR30.get_output();
+            out.XBAR31Output = try XBAR31Output.get_output();
+            out.XBAR31Findiv = try XBAR31Findiv.get_output();
+            out.XBAR31Prediv = try XBAR31Prediv.get_output();
+            out.XBAR31 = try XBAR31.get_output();
+            out.XBAR32Output = try XBAR32Output.get_output();
+            out.XBAR32Findiv = try XBAR32Findiv.get_output();
+            out.XBAR32Prediv = try XBAR32Prediv.get_output();
+            out.XBAR32 = try XBAR32.get_output();
+            out.XBAR33Output = try XBAR33Output.get_output();
+            out.XBAR33Findiv = try XBAR33Findiv.get_output();
+            out.XBAR33Prediv = try XBAR33Prediv.get_output();
+            out.XBAR33 = try XBAR33.get_output();
+            out.XBAR34Output = try XBAR34Output.get_output();
+            out.XBAR34Findiv = try XBAR34Findiv.get_output();
+            out.XBAR34Prediv = try XBAR34Prediv.get_output();
+            out.XBAR34 = try XBAR34.get_output();
+            out.XBAR35Output = try XBAR35Output.get_output();
+            out.XBAR35Findiv = try XBAR35Findiv.get_output();
+            out.XBAR35Prediv = try XBAR35Prediv.get_output();
+            out.XBAR35 = try XBAR35.get_output();
+            out.XBAR36Output = try XBAR36Output.get_output();
+            out.XBAR36Findiv = try XBAR36Findiv.get_output();
+            out.XBAR36Prediv = try XBAR36Prediv.get_output();
+            out.XBAR36 = try XBAR36.get_output();
+            out.XBAR37Output = try XBAR37Output.get_output();
+            out.XBAR37Findiv = try XBAR37Findiv.get_output();
+            out.XBAR37Prediv = try XBAR37Prediv.get_output();
+            out.XBAR37 = try XBAR37.get_output();
+            out.XBAR38Output = try XBAR38Output.get_output();
+            out.XBAR38Findiv = try XBAR38Findiv.get_output();
+            out.XBAR38Prediv = try XBAR38Prediv.get_output();
+            out.XBAR38 = try XBAR38.get_output();
+            out.XBAR39Output = try XBAR39Output.get_output();
+            out.XBAR39Findiv = try XBAR39Findiv.get_output();
+            out.XBAR39Prediv = try XBAR39Prediv.get_output();
+            out.XBAR39 = try XBAR39.get_output();
+            out.XBAR40Output = try XBAR40Output.get_output();
+            out.XBAR40Findiv = try XBAR40Findiv.get_output();
+            out.XBAR40Prediv = try XBAR40Prediv.get_output();
+            out.XBAR40 = try XBAR40.get_output();
+            out.XBAR41Output = try XBAR41Output.get_output();
+            out.XBAR41Findiv = try XBAR41Findiv.get_output();
+            out.XBAR41Prediv = try XBAR41Prediv.get_output();
+            out.XBAR41 = try XBAR41.get_output();
+            out.XBAR42Output = try XBAR42Output.get_output();
+            out.XBAR42Findiv = try XBAR42Findiv.get_output();
+            out.XBAR42Prediv = try XBAR42Prediv.get_output();
+            out.XBAR42 = try XBAR42.get_output();
+            out.XBAR43Output = try XBAR43Output.get_output();
+            out.XBAR43Findiv = try XBAR43Findiv.get_output();
+            out.XBAR43Prediv = try XBAR43Prediv.get_output();
+            out.XBAR43 = try XBAR43.get_output();
+            out.XBAR44Output = try XBAR44Output.get_output();
+            out.XBAR44Findiv = try XBAR44Findiv.get_output();
+            out.XBAR44Prediv = try XBAR44Prediv.get_output();
+            out.XBAR44 = try XBAR44.get_output();
+            out.XBAR45Output = try XBAR45Output.get_output();
+            out.XBAR45Findiv = try XBAR45Findiv.get_output();
+            out.XBAR45Prediv = try XBAR45Prediv.get_output();
+            out.XBAR45 = try XBAR45.get_output();
+            out.ADC3output = try ADC3output.get_output();
+            out.ADC3Mult = try ADC3Mult.get_output();
+            out.XBAR46Output = try XBAR46Output.get_output();
+            out.XBAR46Findiv = try XBAR46Findiv.get_output();
+            out.XBAR46Prediv = try XBAR46Prediv.get_output();
+            out.XBAR46 = try XBAR46.get_output();
+            out.XBAR47Output = try XBAR47Output.get_output();
+            out.XBAR47Findiv = try XBAR47Findiv.get_output();
+            out.XBAR47Prediv = try XBAR47Prediv.get_output();
+            out.XBAR47 = try XBAR47.get_output();
+            out.XBAR48Output = try XBAR48Output.get_output();
+            out.XBAR48Findiv = try XBAR48Findiv.get_output();
+            out.XBAR48Prediv = try XBAR48Prediv.get_output();
+            out.XBAR48 = try XBAR48.get_output();
+            out.XBAR49Output = try XBAR49Output.get_output();
+            out.XBAR49Findiv = try XBAR49Findiv.get_output();
+            out.XBAR49Prediv = try XBAR49Prediv.get_output();
+            out.XBAR49 = try XBAR49.get_output();
+            out.XBAR50Output = try XBAR50Output.get_output();
+            out.XBAR50Findiv = try XBAR50Findiv.get_output();
+            out.XBAR50Prediv = try XBAR50Prediv.get_output();
+            out.XBAR50 = try XBAR50.get_output();
+            out.XBAR51Output = try XBAR51Output.get_output();
+            out.XBAR51Findiv = try XBAR51Findiv.get_output();
+            out.XBAR51Prediv = try XBAR51Prediv.get_output();
+            out.XBAR51 = try XBAR51.get_output();
+            out.XBAR52Output = try XBAR52Output.get_output();
+            out.XBAR52Findiv = try XBAR52Findiv.get_output();
+            out.XBAR52Prediv = try XBAR52Prediv.get_output();
+            out.XBAR52 = try XBAR52.get_output();
+            out.XBAR53Output = try XBAR53Output.get_output();
+            out.XBAR53Findiv = try XBAR53Findiv.get_output();
+            out.XBAR53Prediv = try XBAR53Prediv.get_output();
+            out.XBAR53 = try XBAR53.get_output();
+            out.XBAR54Output = try XBAR54Output.get_output();
+            out.XBAR54Findiv = try XBAR54Findiv.get_output();
+            out.XBAR54Prediv = try XBAR54Prediv.get_output();
+            out.XBAR54 = try XBAR54.get_output();
+            out.XBAR55Output = try XBAR55Output.get_output();
+            out.XBAR55Findiv = try XBAR55Findiv.get_output();
+            out.XBAR55Prediv = try XBAR55Prediv.get_output();
+            out.XBAR55 = try XBAR55.get_output();
+            out.XBAR56Output = try XBAR56Output.get_output();
+            out.XBAR56Findiv = try XBAR56Findiv.get_output();
+            out.XBAR56Prediv = try XBAR56Prediv.get_output();
+            out.XBAR56 = try XBAR56.get_output();
+            out.XBAR57Output = try XBAR57Output.get_output();
+            out.XBAR57Findiv = try XBAR57Findiv.get_output();
+            out.XBAR57Prediv = try XBAR57Prediv.get_output();
+            out.XBAR57 = try XBAR57.get_output();
+            out.XBAR58Output = try XBAR58Output.get_output();
+            out.XBAR58Findiv = try XBAR58Findiv.get_output();
+            out.XBAR58Prediv = try XBAR58Prediv.get_output();
+            out.XBAR58 = try XBAR58.get_output();
+            out.XBAR59Output = try XBAR59Output.get_output();
+            out.XBAR59Findiv = try XBAR59Findiv.get_output();
+            out.XBAR59Prediv = try XBAR59Prediv.get_output();
+            out.XBAR59 = try XBAR59.get_output();
+            out.XBAR60Output = try XBAR60Output.get_output();
+            out.XBAR60Findiv = try XBAR60Findiv.get_output();
+            out.XBAR60Prediv = try XBAR60Prediv.get_output();
+            out.XBAR60 = try XBAR60.get_output();
+            out.XBAR61Output = try XBAR61Output.get_output();
+            out.XBAR61Findiv = try XBAR61Findiv.get_output();
+            out.XBAR61Prediv = try XBAR61Prediv.get_output();
+            out.XBAR61 = try XBAR61.get_output();
+            out.XBAR62Output = try XBAR62Output.get_output();
+            out.XBAR62Findiv = try XBAR62Findiv.get_output();
+            out.XBAR62Prediv = try XBAR62Prediv.get_output();
+            out.XBAR62 = try XBAR62.get_output();
+            out.XBAR63Output = try XBAR63Output.get_output();
+            out.XBAR63Findiv = try XBAR63Findiv.get_output();
+            out.XBAR63Prediv = try XBAR63Prediv.get_output();
+            out.XBAR63 = try XBAR63.get_output();
             out.HSIRC = try HSIRC.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
+            out.HSERTCDevisor = try HSERTCDevisor.get_output();
+            out.DSIBLANEOutput = try DSIBLANEOutput.get_output();
+            out.DSIBLANE = try DSIBLANE.get_output();
+            out.DSIPHYOutput = try DSIPHYOutput.get_output();
+            out.DSIPHY = try DSIPHY.get_output();
+            out.USB2PHY1Output = try USB2PHY1Output.get_output();
+            out.USB2PHY1 = try USB2PHY1.get_output();
+            out.USB2PHY2Output = try USB2PHY2Output.get_output();
+            out.USB2PHY2 = try USB2PHY2.get_output();
+            out.LVDSoutput = try LVDSoutput.get_output();
+            out.LVDSMult = try LVDSMult.get_output();
             out.HSEOSC = try HSEOSC.get_output();
+            out.USB3PCIPHYOutput = try USB3PCIPHYOutput.get_output();
+            out.USB3PCIPHY = try USB3PCIPHY.get_output();
             out.HSEDIV2 = try HSEDIV2.get_output();
             out.SPDIF = try SPDIF.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
+            out.D3PEROutput = try D3PEROutput.get_output();
+            out.D3PER = try D3PER.get_output();
             out.LSIRC = try LSIRC.get_output();
             out.LSEOSC = try LSEOSC.get_output();
             out.MSIRC = try MSIRC.get_output();
             out.I2S_CKIN = try I2S_CKIN.get_output();
-            out.XBAR0 = try XBAR0.get_output();
-            out.XBAR0Prediv = try XBAR0Prediv.get_output();
-            out.XBAR0Findiv = try XBAR0Findiv.get_output();
-            out.XBAR0Output = try XBAR0Output.get_output();
-            out.XBAR1 = try XBAR1.get_output();
-            out.XBAR1Prediv = try XBAR1Prediv.get_output();
-            out.XBAR1Findiv = try XBAR1Findiv.get_output();
-            out.XBAR1Output = try XBAR1Output.get_output();
-            out.XBAR2 = try XBAR2.get_output();
-            out.XBAR2Prediv = try XBAR2Prediv.get_output();
-            out.XBAR2Findiv = try XBAR2Findiv.get_output();
-            out.XBAR2Output = try XBAR2Output.get_output();
-            out.XBAR3 = try XBAR3.get_output();
-            out.XBAR3Prediv = try XBAR3Prediv.get_output();
-            out.XBAR3Findiv = try XBAR3Findiv.get_output();
-            out.XBAR3Output = try XBAR3Output.get_output();
-            out.XBAR4 = try XBAR4.get_output();
-            out.XBAR4Prediv = try XBAR4Prediv.get_output();
-            out.XBAR4Findiv = try XBAR4Findiv.get_output();
-            out.XBAR4Output = try XBAR4Output.get_output();
-            out.XBAR5 = try XBAR5.get_output();
-            out.XBAR5Prediv = try XBAR5Prediv.get_output();
-            out.XBAR5Findiv = try XBAR5Findiv.get_output();
-            out.XBAR5Output = try XBAR5Output.get_output();
-            out.XBAR6 = try XBAR6.get_output();
-            out.XBAR6Prediv = try XBAR6Prediv.get_output();
-            out.XBAR6Findiv = try XBAR6Findiv.get_output();
-            out.XBAR6Output = try XBAR6Output.get_output();
-            out.XBAR7 = try XBAR7.get_output();
-            out.XBAR7Prediv = try XBAR7Prediv.get_output();
-            out.XBAR7Findiv = try XBAR7Findiv.get_output();
-            out.XBAR7Output = try XBAR7Output.get_output();
-            out.XBAR8 = try XBAR8.get_output();
-            out.XBAR8Prediv = try XBAR8Prediv.get_output();
-            out.XBAR8Findiv = try XBAR8Findiv.get_output();
-            out.XBAR8Output = try XBAR8Output.get_output();
-            out.XBAR9 = try XBAR9.get_output();
-            out.XBAR9Prediv = try XBAR9Prediv.get_output();
-            out.XBAR9Findiv = try XBAR9Findiv.get_output();
-            out.XBAR9Output = try XBAR9Output.get_output();
-            out.XBAR10 = try XBAR10.get_output();
-            out.XBAR10Prediv = try XBAR10Prediv.get_output();
-            out.XBAR10Findiv = try XBAR10Findiv.get_output();
-            out.XBAR10Output = try XBAR10Output.get_output();
-            out.XBAR11 = try XBAR11.get_output();
-            out.XBAR11Prediv = try XBAR11Prediv.get_output();
-            out.XBAR11Findiv = try XBAR11Findiv.get_output();
-            out.XBAR11Output = try XBAR11Output.get_output();
-            out.XBAR12 = try XBAR12.get_output();
-            out.XBAR12Prediv = try XBAR12Prediv.get_output();
-            out.XBAR12Findiv = try XBAR12Findiv.get_output();
-            out.XBAR12Output = try XBAR12Output.get_output();
-            out.XBAR13 = try XBAR13.get_output();
-            out.XBAR13Prediv = try XBAR13Prediv.get_output();
-            out.XBAR13Findiv = try XBAR13Findiv.get_output();
-            out.XBAR13Output = try XBAR13Output.get_output();
-            out.XBAR14 = try XBAR14.get_output();
-            out.XBAR14Prediv = try XBAR14Prediv.get_output();
-            out.XBAR14Findiv = try XBAR14Findiv.get_output();
-            out.XBAR14Output = try XBAR14Output.get_output();
-            out.XBAR15 = try XBAR15.get_output();
-            out.XBAR15Prediv = try XBAR15Prediv.get_output();
-            out.XBAR15Findiv = try XBAR15Findiv.get_output();
-            out.XBAR15Output = try XBAR15Output.get_output();
-            out.XBAR16 = try XBAR16.get_output();
-            out.XBAR16Prediv = try XBAR16Prediv.get_output();
-            out.XBAR16Findiv = try XBAR16Findiv.get_output();
-            out.XBAR16Output = try XBAR16Output.get_output();
-            out.XBAR17 = try XBAR17.get_output();
-            out.XBAR17Prediv = try XBAR17Prediv.get_output();
-            out.XBAR17Findiv = try XBAR17Findiv.get_output();
-            out.XBAR17Output = try XBAR17Output.get_output();
-            out.XBAR18 = try XBAR18.get_output();
-            out.XBAR18Prediv = try XBAR18Prediv.get_output();
-            out.XBAR18Findiv = try XBAR18Findiv.get_output();
-            out.XBAR18Output = try XBAR18Output.get_output();
-            out.XBAR19 = try XBAR19.get_output();
-            out.XBAR19Prediv = try XBAR19Prediv.get_output();
-            out.XBAR19Findiv = try XBAR19Findiv.get_output();
-            out.XBAR19Output = try XBAR19Output.get_output();
-            out.XBAR20 = try XBAR20.get_output();
-            out.XBAR20Prediv = try XBAR20Prediv.get_output();
-            out.XBAR20Findiv = try XBAR20Findiv.get_output();
-            out.XBAR20Output = try XBAR20Output.get_output();
-            out.XBAR21 = try XBAR21.get_output();
-            out.XBAR21Prediv = try XBAR21Prediv.get_output();
-            out.XBAR21Findiv = try XBAR21Findiv.get_output();
-            out.XBAR21Output = try XBAR21Output.get_output();
-            out.XBAR22 = try XBAR22.get_output();
-            out.XBAR22Prediv = try XBAR22Prediv.get_output();
-            out.XBAR22Findiv = try XBAR22Findiv.get_output();
-            out.XBAR22Output = try XBAR22Output.get_output();
-            out.XBAR23 = try XBAR23.get_output();
-            out.XBAR23Prediv = try XBAR23Prediv.get_output();
-            out.XBAR23Findiv = try XBAR23Findiv.get_output();
-            out.XBAR23Output = try XBAR23Output.get_output();
-            out.XBAR24 = try XBAR24.get_output();
-            out.XBAR24Prediv = try XBAR24Prediv.get_output();
-            out.XBAR24Findiv = try XBAR24Findiv.get_output();
-            out.XBAR24Output = try XBAR24Output.get_output();
-            out.XBAR25 = try XBAR25.get_output();
-            out.XBAR25Prediv = try XBAR25Prediv.get_output();
-            out.XBAR25Findiv = try XBAR25Findiv.get_output();
-            out.XBAR25Output = try XBAR25Output.get_output();
-            out.XBAR26 = try XBAR26.get_output();
-            out.XBAR26Prediv = try XBAR26Prediv.get_output();
-            out.XBAR26Findiv = try XBAR26Findiv.get_output();
-            out.XBAR26Output = try XBAR26Output.get_output();
-            out.XBAR27 = try XBAR27.get_output();
-            out.XBAR27Prediv = try XBAR27Prediv.get_output();
-            out.XBAR27Findiv = try XBAR27Findiv.get_output();
-            out.XBAR27Output = try XBAR27Output.get_output();
-            out.XBAR28 = try XBAR28.get_output();
-            out.XBAR28Prediv = try XBAR28Prediv.get_output();
-            out.XBAR28Findiv = try XBAR28Findiv.get_output();
-            out.XBAR28Output = try XBAR28Output.get_output();
-            out.XBAR29 = try XBAR29.get_output();
-            out.XBAR29Prediv = try XBAR29Prediv.get_output();
-            out.XBAR29Findiv = try XBAR29Findiv.get_output();
-            out.XBAR29Output = try XBAR29Output.get_output();
-            out.XBAR30 = try XBAR30.get_output();
-            out.XBAR30Prediv = try XBAR30Prediv.get_output();
-            out.XBAR30Findiv = try XBAR30Findiv.get_output();
-            out.XBAR30Output = try XBAR30Output.get_output();
-            out.XBAR31 = try XBAR31.get_output();
-            out.XBAR31Prediv = try XBAR31Prediv.get_output();
-            out.XBAR31Findiv = try XBAR31Findiv.get_output();
-            out.XBAR31Output = try XBAR31Output.get_output();
-            out.XBAR32 = try XBAR32.get_output();
-            out.XBAR32Prediv = try XBAR32Prediv.get_output();
-            out.XBAR32Findiv = try XBAR32Findiv.get_output();
-            out.XBAR32Output = try XBAR32Output.get_output();
-            out.XBAR33 = try XBAR33.get_output();
-            out.XBAR33Prediv = try XBAR33Prediv.get_output();
-            out.XBAR33Findiv = try XBAR33Findiv.get_output();
-            out.XBAR33Output = try XBAR33Output.get_output();
-            out.XBAR34 = try XBAR34.get_output();
-            out.XBAR34Prediv = try XBAR34Prediv.get_output();
-            out.XBAR34Findiv = try XBAR34Findiv.get_output();
-            out.XBAR34Output = try XBAR34Output.get_output();
-            out.XBAR35 = try XBAR35.get_output();
-            out.XBAR35Prediv = try XBAR35Prediv.get_output();
-            out.XBAR35Findiv = try XBAR35Findiv.get_output();
-            out.XBAR35Output = try XBAR35Output.get_output();
-            out.XBAR36 = try XBAR36.get_output();
-            out.XBAR36Prediv = try XBAR36Prediv.get_output();
-            out.XBAR36Findiv = try XBAR36Findiv.get_output();
-            out.XBAR36Output = try XBAR36Output.get_output();
-            out.XBAR37 = try XBAR37.get_output();
-            out.XBAR37Prediv = try XBAR37Prediv.get_output();
-            out.XBAR37Findiv = try XBAR37Findiv.get_output();
-            out.XBAR37Output = try XBAR37Output.get_output();
-            out.XBAR38 = try XBAR38.get_output();
-            out.XBAR38Prediv = try XBAR38Prediv.get_output();
-            out.XBAR38Findiv = try XBAR38Findiv.get_output();
-            out.XBAR38Output = try XBAR38Output.get_output();
-            out.XBAR39 = try XBAR39.get_output();
-            out.XBAR39Prediv = try XBAR39Prediv.get_output();
-            out.XBAR39Findiv = try XBAR39Findiv.get_output();
-            out.XBAR39Output = try XBAR39Output.get_output();
-            out.XBAR40 = try XBAR40.get_output();
-            out.XBAR40Prediv = try XBAR40Prediv.get_output();
-            out.XBAR40Findiv = try XBAR40Findiv.get_output();
-            out.XBAR40Output = try XBAR40Output.get_output();
-            out.XBAR41 = try XBAR41.get_output();
-            out.XBAR41Prediv = try XBAR41Prediv.get_output();
-            out.XBAR41Findiv = try XBAR41Findiv.get_output();
-            out.XBAR41Output = try XBAR41Output.get_output();
-            out.XBAR42 = try XBAR42.get_output();
-            out.XBAR42Prediv = try XBAR42Prediv.get_output();
-            out.XBAR42Findiv = try XBAR42Findiv.get_output();
-            out.XBAR42Output = try XBAR42Output.get_output();
-            out.XBAR43 = try XBAR43.get_output();
-            out.XBAR43Prediv = try XBAR43Prediv.get_output();
-            out.XBAR43Findiv = try XBAR43Findiv.get_output();
-            out.XBAR43Output = try XBAR43Output.get_output();
-            out.XBAR44 = try XBAR44.get_output();
-            out.XBAR44Prediv = try XBAR44Prediv.get_output();
-            out.XBAR44Findiv = try XBAR44Findiv.get_output();
-            out.XBAR44Output = try XBAR44Output.get_output();
-            out.XBAR45 = try XBAR45.get_output();
-            out.XBAR45Prediv = try XBAR45Prediv.get_output();
-            out.XBAR45Findiv = try XBAR45Findiv.get_output();
-            out.XBAR45Output = try XBAR45Output.get_output();
-            out.XBAR46 = try XBAR46.get_output();
-            out.XBAR46Prediv = try XBAR46Prediv.get_output();
-            out.XBAR46Findiv = try XBAR46Findiv.get_output();
-            out.XBAR46Output = try XBAR46Output.get_output();
-            out.XBAR47 = try XBAR47.get_output();
-            out.XBAR47Prediv = try XBAR47Prediv.get_output();
-            out.XBAR47Findiv = try XBAR47Findiv.get_output();
-            out.XBAR47Output = try XBAR47Output.get_output();
-            out.XBAR48 = try XBAR48.get_output();
-            out.XBAR48Prediv = try XBAR48Prediv.get_output();
-            out.XBAR48Findiv = try XBAR48Findiv.get_output();
-            out.XBAR48Output = try XBAR48Output.get_output();
-            out.XBAR49 = try XBAR49.get_output();
-            out.XBAR49Prediv = try XBAR49Prediv.get_output();
-            out.XBAR49Findiv = try XBAR49Findiv.get_output();
-            out.XBAR49Output = try XBAR49Output.get_output();
-            out.XBAR50 = try XBAR50.get_output();
-            out.XBAR50Prediv = try XBAR50Prediv.get_output();
-            out.XBAR50Findiv = try XBAR50Findiv.get_output();
-            out.XBAR50Output = try XBAR50Output.get_output();
-            out.XBAR51 = try XBAR51.get_output();
-            out.XBAR51Prediv = try XBAR51Prediv.get_output();
-            out.XBAR51Findiv = try XBAR51Findiv.get_output();
-            out.XBAR51Output = try XBAR51Output.get_output();
-            out.XBAR52 = try XBAR52.get_output();
-            out.XBAR52Prediv = try XBAR52Prediv.get_output();
-            out.XBAR52Findiv = try XBAR52Findiv.get_output();
-            out.XBAR52Output = try XBAR52Output.get_output();
-            out.XBAR53 = try XBAR53.get_output();
-            out.XBAR53Prediv = try XBAR53Prediv.get_output();
-            out.XBAR53Findiv = try XBAR53Findiv.get_output();
-            out.XBAR53Output = try XBAR53Output.get_output();
-            out.XBAR54 = try XBAR54.get_output();
-            out.XBAR54Prediv = try XBAR54Prediv.get_output();
-            out.XBAR54Findiv = try XBAR54Findiv.get_output();
-            out.XBAR54Output = try XBAR54Output.get_output();
-            out.XBAR55 = try XBAR55.get_output();
-            out.XBAR55Prediv = try XBAR55Prediv.get_output();
-            out.XBAR55Findiv = try XBAR55Findiv.get_output();
-            out.XBAR55Output = try XBAR55Output.get_output();
-            out.XBAR56 = try XBAR56.get_output();
-            out.XBAR56Prediv = try XBAR56Prediv.get_output();
-            out.XBAR56Findiv = try XBAR56Findiv.get_output();
-            out.XBAR56Output = try XBAR56Output.get_output();
-            out.XBAR57 = try XBAR57.get_output();
-            out.XBAR57Prediv = try XBAR57Prediv.get_output();
-            out.XBAR57Findiv = try XBAR57Findiv.get_output();
-            out.XBAR57Output = try XBAR57Output.get_output();
-            out.XBAR58 = try XBAR58.get_output();
-            out.XBAR58Prediv = try XBAR58Prediv.get_output();
-            out.XBAR58Findiv = try XBAR58Findiv.get_output();
-            out.XBAR58Output = try XBAR58Output.get_output();
-            out.XBAR59 = try XBAR59.get_output();
-            out.XBAR59Prediv = try XBAR59Prediv.get_output();
-            out.XBAR59Findiv = try XBAR59Findiv.get_output();
-            out.XBAR59Output = try XBAR59Output.get_output();
-            out.XBAR60 = try XBAR60.get_output();
-            out.XBAR60Prediv = try XBAR60Prediv.get_output();
-            out.XBAR60Findiv = try XBAR60Findiv.get_output();
-            out.XBAR60Output = try XBAR60Output.get_output();
-            out.XBAR61 = try XBAR61.get_output();
-            out.XBAR61Prediv = try XBAR61Prediv.get_output();
-            out.XBAR61Findiv = try XBAR61Findiv.get_output();
-            out.XBAR61Output = try XBAR61Output.get_output();
-            out.XBAR62 = try XBAR62.get_output();
-            out.XBAR62Prediv = try XBAR62Prediv.get_output();
-            out.XBAR62Findiv = try XBAR62Findiv.get_output();
-            out.XBAR62Output = try XBAR62Output.get_output();
-            out.XBAR63 = try XBAR63.get_output();
-            out.XBAR63Prediv = try XBAR63Prediv.get_output();
-            out.XBAR63Findiv = try XBAR63Findiv.get_output();
-            out.XBAR63Output = try XBAR63Output.get_output();
-            out.CKINTSEL0 = try CKINTSEL0.get_output();
-            out.CKEXTSEL0 = try CKEXTSEL0.get_output();
             out.CKINTSEL1 = try CKINTSEL1.get_output();
-            out.CKEXTSEL1 = try CKEXTSEL1.get_output();
-            out.OBS0 = try OBS0.get_output();
-            out.OBS0Output = try OBS0Output.get_output();
-            out.OBS1 = try OBS1.get_output();
-            out.OBS1Output = try OBS1Output.get_output();
-            out.MCO1Mult = try MCO1Mult.get_output();
-            out.MCO1Pin = try MCO1Pin.get_output();
-            out.MCO2Mult = try MCO2Mult.get_output();
-            out.MCO2Pin = try MCO2Pin.get_output();
-            out.D3PER = try D3PER.get_output();
-            out.D3PEROutput = try D3PEROutput.get_output();
-            out.DTS = try DTS.get_output();
-            out.DTSOutput = try DTSOutput.get_output();
-            out.DSIPHY = try DSIPHY.get_output();
-            out.DSIPHYOutput = try DSIPHYOutput.get_output();
-            out.DSIBLANE = try DSIBLANE.get_output();
-            out.DSIBLANEOutput = try DSIBLANEOutput.get_output();
-            out.USB2PHY1 = try USB2PHY1.get_output();
-            out.USB2PHY1Output = try USB2PHY1Output.get_output();
-            out.USB2PHY2 = try USB2PHY2.get_output();
-            out.USB2PHY2Output = try USB2PHY2Output.get_output();
-            out.USB3PCIPHY = try USB3PCIPHY.get_output();
-            out.USB3PCIPHYOutput = try USB3PCIPHYOutput.get_output();
-            out.SysClkSource = try SysClkSource.get_output();
-            out.SysCLKOutput = try SysCLKOutput.get_output();
-            out.MCUDIV = try MCUDIV.get_output();
-            out.McuClockOutput = try McuClockOutput.get_output();
-            out.APB3DIV = try APB3DIV.get_output();
-            out.APB3Output = try APB3Output.get_output();
-            out.APB4DIV = try APB4DIV.get_output();
-            out.APB4Output = try APB4Output.get_output();
-            out.APBDBGDIV = try APBDBGDIV.get_output();
-            out.APBDBGOutput = try APBDBGOutput.get_output();
-            out.APB1DIV = try APB1DIV.get_output();
-            out.Tim1Mul = try Tim1Mul.get_output();
-            out.Tim1Output = try Tim1Output.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.APB2DIV = try APB2DIV.get_output();
-            out.Tim2Mul = try Tim2Mul.get_output();
-            out.Tim2Output = try Tim2Output.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.ADC12Mult = try ADC12Mult.get_output();
-            out.ADC12output = try ADC12output.get_output();
-            out.ADC3Mult = try ADC3Mult.get_output();
-            out.ADC3output = try ADC3output.get_output();
-            out.LVDSMult = try LVDSMult.get_output();
-            out.LVDSoutput = try LVDSoutput.get_output();
-            out.PLL1Source = try PLL1Source.get_output();
-            out.FREFDIV1 = try FREFDIV1.get_output();
-            out.PLL2Source = try PLL2Source.get_output();
-            out.FREFDIV2 = try FREFDIV2.get_output();
-            out.PLL3Source = try PLL3Source.get_output();
-            out.FREFDIV3 = try FREFDIV3.get_output();
-            out.PLL4Source = try PLL4Source.get_output();
-            out.FREFDIV4 = try FREFDIV4.get_output();
-            out.FBDIV1 = try FBDIV1.get_output();
-            out.POSTDIV1_1 = try POSTDIV1_1.get_output();
-            out.POSTDIV2_1 = try POSTDIV2_1.get_output();
-            out.FOUTPOSTDIV1 = try FOUTPOSTDIV1.get_output();
-            out.PLL1Div42 = try PLL1Div42.get_output();
-            out.FBDIV2 = try FBDIV2.get_output();
             out.PLL2FRACV = try PLL2FRACV.get_output();
-            out.POSTDIV1_2 = try POSTDIV1_2.get_output();
-            out.POSTDIV2_2 = try POSTDIV2_2.get_output();
-            out.FOUTPOSTDIV2 = try FOUTPOSTDIV2.get_output();
-            out.PLL2Div4 = try PLL2Div4.get_output();
-            out.FBDIV3 = try FBDIV3.get_output();
             out.PLL3FRACV = try PLL3FRACV.get_output();
-            out.POSTDIV1_3 = try POSTDIV1_3.get_output();
-            out.POSTDIV2_3 = try POSTDIV2_3.get_output();
-            out.FOUTPOSTDIV3 = try FOUTPOSTDIV3.get_output();
-            out.PLL3Div2 = try PLL3Div2.get_output();
-            out.FBDIV4 = try FBDIV4.get_output();
             out.PLL4FRACV = try PLL4FRACV.get_output();
-            out.POSTDIV1_4 = try POSTDIV1_4.get_output();
-            out.POSTDIV2_4 = try POSTDIV2_4.get_output();
-            out.FOUTPOSTDIV4 = try FOUTPOSTDIV4.get_output();
-            out.PLL5Source = try PLL5Source.get_output();
-            out.FREFDIV5 = try FREFDIV5.get_output();
-            out.FBDIV5 = try FBDIV5.get_output();
             out.PLL5FRACV = try PLL5FRACV.get_output();
-            out.POSTDIV1_5 = try POSTDIV1_5.get_output();
-            out.POSTDIV2_5 = try POSTDIV2_5.get_output();
-            out.FOUTPOSTDIV5 = try FOUTPOSTDIV5.get_output();
-            out.PLL6Source = try PLL6Source.get_output();
-            out.FREFDIV6 = try FREFDIV6.get_output();
-            out.FBDIV6 = try FBDIV6.get_output();
             out.PLL6FRACV = try PLL6FRACV.get_output();
-            out.POSTDIV1_6 = try POSTDIV1_6.get_output();
-            out.POSTDIV2_6 = try POSTDIV2_6.get_output();
-            out.FOUTPOSTDIV6 = try FOUTPOSTDIV6.get_output();
-            out.PLL7Source = try PLL7Source.get_output();
-            out.FREFDIV7 = try FREFDIV7.get_output();
-            out.FBDIV7 = try FBDIV7.get_output();
             out.PLL7FRACV = try PLL7FRACV.get_output();
-            out.POSTDIV1_7 = try POSTDIV1_7.get_output();
-            out.POSTDIV2_7 = try POSTDIV2_7.get_output();
-            out.FOUTPOSTDIV7 = try FOUTPOSTDIV7.get_output();
-            out.PLL8Source = try PLL8Source.get_output();
-            out.FREFDIV8 = try FREFDIV8.get_output();
-            out.FBDIV8 = try FBDIV8.get_output();
             out.PLL8FRACV = try PLL8FRACV.get_output();
-            out.POSTDIV1_8 = try POSTDIV1_8.get_output();
-            out.POSTDIV2_8 = try POSTDIV2_8.get_output();
-            out.FOUTPOSTDIV8 = try FOUTPOSTDIV8.get_output();
-            out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
+            out.MSI = try MSI.get_extra_output();
+            out.VCOInput = try VCOInput.get_extra_output();
+            out.VCO2Input = try VCO2Input.get_extra_output();
+            out.VCO3Input = try VCO3Input.get_extra_output();
+            out.VCO4Input = try VCO4Input.get_extra_output();
+            out.VCO1Output = try VCO1Output.get_extra_output();
+            out.VCO2Output = try VCO2Output.get_extra_output();
+            out.VCO3Output = try VCO3Output.get_extra_output();
+            out.VCO4Output = try VCO4Output.get_extra_output();
+            out.MCUDIVCLK = try MCUDIVCLK.get_extra_output();
+            out.VCO5Input = try VCO5Input.get_extra_output();
+            out.VCO5Output = try VCO5Output.get_extra_output();
+            out.VCO6Input = try VCO6Input.get_extra_output();
+            out.VCO6Output = try VCO6Output.get_extra_output();
+            out.VCO7Input = try VCO7Input.get_extra_output();
+            out.VCO7Output = try VCO7Output.get_extra_output();
+            out.VCO8Input = try VCO8Input.get_extra_output();
+            out.VCO8Output = try VCO8Output.get_extra_output();
             ref_out.HSE_VALUE = HSE_VALUEValue;
             ref_out.HSE_Div2 = HSE_Div2Value;
             ref_out.SPDIFFreq_Value = SPDIFFreq_ValueValue;

@@ -514,14 +514,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCUsed_ForRCC: bool = false,
             SDIOUsed_ForRCC: bool = false,
             SPDIFRXUsed_ForRCC: bool = false,
-            IWDGUsed_ForRCC: bool = false,
-            CECUsed_ForRCC: bool = false,
-            FMPI2C1Used_ForRCC: bool = false,
             SAI1Used_ForRCC: bool = false,
             SAI2Used_ForRCC: bool = false,
             I2S2Used_ForRCC: bool = false,
             I2S3Used_ForRCC: bool = false,
             I2S1Used_ForRCC: bool = false,
+            IWDGUsed_ForRCC: bool = false,
+            CECUsed_ForRCC: bool = false,
+            FMPI2C1Used_ForRCC: bool = false,
         };
         //optional extra configurations
         pub const ExtraConfig = struct {
@@ -653,6 +653,20 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLLI2SQ: f32 = 0,
             PLLI2SQDiv: f32 = 0,
             PLLI2SR: f32 = 0,
+            VCOInput: f32 = 0,
+            VCOOutput: f32 = 0,
+            PLLCLK: f32 = 0,
+            PLLQCLK: f32 = 0,
+            PLLRCLK: f32 = 0,
+            VCOSAIInput: f32 = 0,
+            VCOSAIOutput: f32 = 0,
+            PLLSAIPCLK: f32 = 0,
+            PLLSAIQCLK: f32 = 0,
+            VCOI2SInput: f32 = 0,
+            VCOI2SOutput: f32 = 0,
+            PLLI2SPCLK: f32 = 0,
+            PLLI2SRCLK: f32 = 0,
+            PLLI2SQCLK: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -712,6 +726,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PWREXT_OverDrive: ?PWREXT_OverDriveList = null, //from RCC Advanced Config
             HSE_Timout: ?f32 = null, //from RCC Advanced Config
             LSE_Timout: ?f32 = null, //from RCC Advanced Config
+            PLLUsed: ?f32 = null, //from extra RCC references
             ExtClockEnable: ?ExtClockEnableList = null, //from extra RCC references
             EnableHSERTCDevisor: ?EnableHSERTCDevisorList = null, //from extra RCC references
             RTCEnable: ?RTCEnableList = null, //from extra RCC references
@@ -734,7 +749,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             LSEUsed: ?f32 = null, //from extra RCC references
             HSIUsed: ?f32 = null, //from extra RCC references
             LSIUsed: ?f32 = null, //from extra RCC references
-            PLLUsed: ?f32 = null, //from extra RCC references
         };
 
         pub const Tree_Output = struct {
@@ -795,6 +809,20 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var APB2Freq_ValueLimit: Limit = .{};
             var PLLSAIoutputFreq_ValueLimit: Limit = .{};
             var PLLI2SoutputFreq_ValueLimit: Limit = .{};
+            var VCOInputFreq_ValueLimit: Limit = .{};
+            var VCOOutputFreq_ValueLimit: Limit = .{};
+            var PLLCLKFreq_ValueLimit: Limit = .{};
+            var PLLQCLKFreq_ValueLimit: Limit = .{};
+            var PLLRCLKFreq_ValueLimit: Limit = .{};
+            var VCOSAIInputFreq_ValueLimit: Limit = .{};
+            var VCOSAIOutputFreq_ValueLimit: Limit = .{};
+            var PLLSAIPCLKFreq_ValueLimit: Limit = .{};
+            var PLLSAIQCLKFreq_ValueLimit: Limit = .{};
+            var VCOI2SInputFreq_ValueLimit: Limit = .{};
+            var VCOI2SOutputFreq_ValueLimit: Limit = .{};
+            var PLLI2SPCLKFreq_ValueLimit: Limit = .{};
+            var PLLI2SRCLKFreq_ValueLimit: Limit = .{};
+            var PLLI2SQCLKFreq_ValueLimit: Limit = .{};
             //Ref Values
 
             const HSI_VALUEValue: ?f32 = blk: {
@@ -946,7 +974,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    SysSourceIsHSI = true;
+                    break :blk .RCC_SYSCLKSOURCE_HSI;
+                };
             };
             const SYSCLKFreq_VALUEValue: ?f32 = blk: {
                 SYSCLKFreq_VALUELimit = .{
@@ -1146,7 +1177,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse null;
+                    break :blk conf_item orelse .RCC_RTCCLKSOURCE_HSE_DIV2;
                 }
                 const conf_item = config.RCC_RTC_Clock_Source;
                 if (conf_item) |item| {
@@ -1222,7 +1253,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_CLK48CLKSOURCE_PLLQ;
+                break :blk conf_item orelse {
+                    USBSourceisPLLQ = true;
+                    break :blk .RCC_CLK48CLKSOURCE_PLLQ;
+                };
             };
             const USBFreq_ValueValue: ?f32 = blk: {
                 if (config.flags.USB_OTG_FSUsed_ForRCC or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC) {
@@ -1243,7 +1277,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SPDIFRXCLKSOURCE_PLLR;
+                break :blk conf_item orelse {
+                    SPDIFSourceisPLLR = true;
+                    break :blk .RCC_SPDIFRXCLKSOURCE_PLLR;
+                };
             };
             const SPDIFRXFreq_ValueValue: ?f32 = blk: {
                 SPDIFRXFreq_ValueLimit = .{
@@ -1261,7 +1298,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SDIOCLKSOURCE_CLK48;
+                break :blk conf_item orelse {
+                    SDIOSourceIsClock48 = true;
+                    break :blk .RCC_SDIOCLKSOURCE_CLK48;
+                };
             };
             const SDIOFreq_ValueValue: ?f32 = blk: {
                 SDIOFreq_ValueLimit = .{
@@ -1281,7 +1321,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SAI1CLKSOURCE_PLLSAI;
+                break :blk conf_item orelse {
+                    SAIASourceIsPLLSAI = true;
+                    break :blk .RCC_SAI1CLKSOURCE_PLLSAI;
+                };
             };
             const SAIAFreq_ValueValue: ?f32 = blk: {
                 break :blk 1.6e7;
@@ -1297,7 +1340,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SAI2CLKSOURCE_PLLSAI;
+                break :blk conf_item orelse {
+                    SAIBSourceIsPLLSAI = true;
+                    break :blk .RCC_SAI2CLKSOURCE_PLLSAI;
+                };
             };
             const SAIBFreq_ValueValue: ?f32 = blk: {
                 break :blk 1.6e7;
@@ -1313,7 +1359,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2SAPB1CLKSOURCE_PLLI2S;
+                break :blk conf_item orelse {
+                    I2S1SourceIsPLLI2SR = true;
+                    break :blk .RCC_I2SAPB1CLKSOURCE_PLLI2S;
+                };
             };
             const I2S1Freq_ValueValue: ?f32 = blk: {
                 I2S1Freq_ValueLimit = .{
@@ -1333,7 +1382,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_I2SAPB2CLKSOURCE_PLLI2S;
+                break :blk conf_item orelse {
+                    I2S2SourceIsPLLI2SR = true;
+                    break :blk .RCC_I2SAPB2CLKSOURCE_PLLI2S;
+                };
             };
             const I2S2Freq_ValueValue: ?f32 = blk: {
                 I2S2Freq_ValueLimit = .{
@@ -1463,7 +1515,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .SYSTICK_CLKSOURCE_HCLK;
+                break :blk conf_item orelse {
+                    HCLKDiv1 = true;
+                    break :blk .SYSTICK_CLKSOURCE_HCLK;
+                };
             };
             const CortexFreq_ValueValue: ?f32 = blk: {
                 break :blk 2e6;
@@ -1991,6 +2046,152 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
                 break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const PLLUsedValue: ?f32 = blk: {
+                if (((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_PLLCLK, .@"=")) and config.flags.MCO1Config) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLCLK, .@"=")) and config.flags.MCO2Config)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const VCOInputFreq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") or (SysSourceIsPLLclk or SysSourceIsPLLR) or ((config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC) and USBSourceisPLLQ) or (USBSourceisPLLQ and SDIOSourceIsClock48 and config.flags.SDIOUsed_ForRCC) or ((config.flags.SAI1Used_ForRCC) and SAIASourceIsPLLR) or ((config.flags.SAI2Used_ForRCC) and SAIBSourceIsPLLR) or (((config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or config.flags.I2S1Used_ForRCC) and (I2S1SourceIsPllR or I2S2SourceIsPllR)) or (config.flags.SPDIFRXUsed_ForRCC and SPDIFSourceisPLLR)) {
+                    VCOInputFreq_ValueLimit = .{
+                        .min = 9.5e5,
+                        .max = 2.1e6,
+                    };
+                    break :blk null;
+                }
+                break :blk 1e6;
+            };
+            const VCOOutputFreq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") or (SysSourceIsPLLclk or SysSourceIsPLLR) or ((config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC) and USBSourceisPLLQ) or (USBSourceisPLLQ and SDIOSourceIsClock48 and config.flags.SDIOUsed_ForRCC) or ((config.flags.SAI1Used_ForRCC) and SAIASourceIsPLLR) or ((config.flags.SAI2Used_ForRCC) and SAIBSourceIsPLLR) or (((config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or config.flags.I2S1Used_ForRCC) and (I2S1SourceIsPllR or I2S2SourceIsPllR)) or (config.flags.SPDIFRXUsed_ForRCC and SPDIFSourceisPLLR)) {
+                    VCOOutputFreq_ValueLimit = .{
+                        .min = 1e8,
+                        .max = 4.32e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.92e8;
+            };
+            const PLLCLKFreq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") or SysSourceIsPLLclk) {
+                    PLLCLKFreq_ValueLimit = .{
+                        .min = 2.4e7,
+                        .max = 1.8e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
+            };
+            const PLLQCLKFreq_ValueValue: ?f32 = blk: {
+                if (((config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC or (SDIOSourceIsClock48 and config.flags.SDIOUsed_ForRCC)) and USBSourceisPLLQ)) {
+                    PLLQCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 7.5e7,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
+            };
+            const PLLRCLKFreq_ValueValue: ?f32 = blk: {
+                if (SysSourceIsPLLR or ((config.flags.SAI1Used_ForRCC) and SAIASourceIsPLLR) or ((config.flags.SAI2Used_ForRCC) and SAIBSourceIsPLLR) or (((config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or config.flags.I2S1Used_ForRCC) and (I2S1SourceIsPllR or I2S2SourceIsPllR)) or (config.flags.SPDIFRXUsed_ForRCC and SPDIFSourceisPLLR)) {
+                    PLLRCLKFreq_ValueLimit = .{
+                        .min = 2.4e7,
+                        .max = 1.8e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
+            };
+            const VCOSAIInputFreq_ValueValue: ?f32 = blk: {
+                if ((USBSourceisPLLSAIP and (config.flags.USB_OTG_FSUsed_ForRCC or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or (SDIOSourceIsClock48 and config.flags.SDIOUsed_ForRCC))) or (SAIASourceIsPLLSAI and config.flags.SAI1Used_ForRCC) or (SAIBSourceIsPLLSAI and config.flags.SAI2Used_ForRCC)) {
+                    VCOSAIInputFreq_ValueLimit = .{
+                        .min = 9.5e5,
+                        .max = 2.1e6,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.92e8;
+            };
+            const VCOSAIOutputFreq_ValueValue: ?f32 = blk: {
+                if ((USBSourceisPLLSAIP and (config.flags.USB_OTG_FSUsed_ForRCC or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or (SDIOSourceIsClock48 and config.flags.SDIOUsed_ForRCC))) or (SAIASourceIsPLLSAI and config.flags.SAI1Used_ForRCC) or (SAIBSourceIsPLLSAI and config.flags.SAI2Used_ForRCC)) {
+                    VCOSAIOutputFreq_ValueLimit = .{
+                        .min = 1e8,
+                        .max = 4.32e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.92e8;
+            };
+            const PLLSAIPCLKFreq_ValueValue: ?f32 = blk: {
+                if ((USBSourceisPLLSAIP and (config.flags.USB_OTG_FSUsed_ForRCC or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or (SDIOSourceIsClock48 and config.flags.SDIOUsed_ForRCC)))) {
+                    PLLSAIPCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.92e8;
+            };
+            const PLLSAIQCLKFreq_ValueValue: ?f32 = blk: {
+                if ((SAIASourceIsPLLSAI and config.flags.SAI1Used_ForRCC) or (SAIBSourceIsPLLSAI and config.flags.SAI2Used_ForRCC)) {
+                    PLLSAIQCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.92e8;
+            };
+            const VCOI2SInputFreq_ValueValue: ?f32 = blk: {
+                if ((config.flags.MCO2Config and MCOSourceIsPLLI2SP) or (SPDIFSourceisPLLI2SP and config.flags.SPDIFRXUsed_ForRCC) or (I2S1SourceIsPLLI2SR and (config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC)) or (I2S2SourceIsPLLI2SR and config.flags.I2S1Used_ForRCC) or (SAIASourceIsPLLI2SQ and config.flags.SAI1Used_ForRCC) or (SAIBSourceIsPLLI2SQ and config.flags.SAI2Used_ForRCC)) {
+                    VCOI2SInputFreq_ValueLimit = .{
+                        .min = 9.5e5,
+                        .max = 2.1e6,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.92e8;
+            };
+            const VCOI2SOutputFreq_ValueValue: ?f32 = blk: {
+                if ((config.flags.MCO2Config and MCOSourceIsPLLI2SP) or (SPDIFSourceisPLLI2SP and config.flags.SPDIFRXUsed_ForRCC) or (I2S1SourceIsPLLI2SR and (config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC)) or (I2S2SourceIsPLLI2SR and config.flags.I2S1Used_ForRCC) or (SAIASourceIsPLLI2SQ and config.flags.SAI1Used_ForRCC) or (SAIBSourceIsPLLI2SQ and config.flags.SAI2Used_ForRCC)) {
+                    VCOI2SOutputFreq_ValueLimit = .{
+                        .min = 1e8,
+                        .max = 4.32e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
+            };
+            const PLLI2SPCLKFreq_ValueValue: ?f32 = blk: {
+                if ((config.flags.MCO2Config and MCOSourceIsPLLI2SP) or SPDIFSourceisPLLI2SP and config.flags.SPDIFRXUsed_ForRCC) {
+                    PLLI2SPCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
+            };
+            const PLLI2SRCLKFreq_ValueValue: ?f32 = blk: {
+                if ((I2S1SourceIsPLLI2SR and (config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC)) or (I2S2SourceIsPLLI2SR and config.flags.I2S1Used_ForRCC)) {
+                    PLLI2SRCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
+            };
+            const PLLI2SQCLKFreq_ValueValue: ?f32 = blk: {
+                if ((SAIASourceIsPLLI2SQ and config.flags.SAI1Used_ForRCC) or (SAIBSourceIsPLLI2SQ and config.flags.SAI2Used_ForRCC)) {
+                    PLLI2SQCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 9.6e7;
             };
             const PWREXT_OverDriveValue: ?PWREXT_OverDriveList = blk: {
                 if ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 168000000, .@">"))) {
@@ -2640,12 +2841,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 const item: EnableLSEList = .false;
                 break :blk item;
             };
-            const PLLUsedValue: ?f32 = blk: {
-                if (((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_PLLCLK, .@"=")) and config.flags.MCO1Config) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLCLK, .@"=")) and config.flags.MCO2Config)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
             const HSEUsedValue: ?f32 = blk: {
                 if (((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11"))) or (config.flags.RTCUsed_ForRCC and !((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) or (check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")))) or ((check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSE, .@"=")) and (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") or SysSourceIsPLLR or SysSourceIsPLLclk or ((SAIASourceIsPLLR or SAIASourceIsPLLI2SQ or SAIASourceIsPLLSAI) and config.flags.SAI1Used_ForRCC) or ((SAIBSourceIsPLLR or SAIBSourceIsPLLI2SQ or SAIBSourceIsPllSRC or SAIBSourceIsPLLSAI) and config.flags.SAI2Used_ForRCC) or ((I2S1SourceIsPllR or I2S1SourceIsPLLI2SR or I2S1SourceIsPllsrc) and (config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC)) or ((I2S2SourceIsPllR or I2S2SourceIsPLLI2SR or I2S2SourceIsPllsrc) and config.flags.I2S1Used_ForRCC))) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSE, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_HSE, .@"=")) and (config.flags.MCO1Config)) or (((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_HSE, .@"=")) or (MCOSourceIsPLLI2SP and (check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSE, .@"=")))) and (config.flags.MCO2Config))) {
                     break :blk 1;
@@ -3087,6 +3282,90 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
             var PLLI2SR = ClockNode{
                 .name = "PLLI2SR",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOInput = ClockNode{
+                .name = "VCOInput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOOutput = ClockNode{
+                .name = "VCOOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK = ClockNode{
+                .name = "PLLCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLQCLK = ClockNode{
+                .name = "PLLQCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLRCLK = ClockNode{
+                .name = "PLLRCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOSAIInput = ClockNode{
+                .name = "VCOSAIInput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOSAIOutput = ClockNode{
+                .name = "VCOSAIOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLSAIPCLK = ClockNode{
+                .name = "PLLSAIPCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLSAIQCLK = ClockNode{
+                .name = "PLLSAIQCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOI2SInput = ClockNode{
+                .name = "VCOI2SInput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOI2SOutput = ClockNode{
+                .name = "VCOI2SOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLI2SPCLK = ClockNode{
+                .name = "PLLI2SPCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLI2SRCLK = ClockNode{
+                .name = "PLLI2SRCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLI2SQCLK = ClockNode{
+                .name = "PLLI2SQCLK",
                 .nodetype = .off,
                 .parents = &.{},
             };
@@ -3991,76 +4270,160 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 PLLI2SR.parents = &.{&PLLI2SN};
             }
 
+            std.mem.doNotOptimizeAway(VCOInputFreq_ValueValue);
+            VCOInput.limit = VCOInputFreq_ValueLimit;
+            VCOInput.nodetype = .output;
+            VCOInput.parents = &.{&PLLM};
+
+            std.mem.doNotOptimizeAway(VCOOutputFreq_ValueValue);
+            VCOOutput.limit = VCOOutputFreq_ValueLimit;
+            VCOOutput.nodetype = .output;
+            VCOOutput.parents = &.{&PLLN};
+
+            std.mem.doNotOptimizeAway(PLLCLKFreq_ValueValue);
+            PLLCLK.limit = PLLCLKFreq_ValueLimit;
+            PLLCLK.nodetype = .output;
+            PLLCLK.parents = &.{&PLLP};
+
+            std.mem.doNotOptimizeAway(PLLQCLKFreq_ValueValue);
+            PLLQCLK.limit = PLLQCLKFreq_ValueLimit;
+            PLLQCLK.nodetype = .output;
+            PLLQCLK.parents = &.{&PLLQ};
+
+            std.mem.doNotOptimizeAway(PLLRCLKFreq_ValueValue);
+            PLLRCLK.limit = PLLRCLKFreq_ValueLimit;
+            PLLRCLK.nodetype = .output;
+            PLLRCLK.parents = &.{&PLLR};
+
+            std.mem.doNotOptimizeAway(VCOSAIInputFreq_ValueValue);
+            VCOSAIInput.limit = VCOSAIInputFreq_ValueLimit;
+            VCOSAIInput.nodetype = .output;
+            VCOSAIInput.parents = &.{&PLLSAIM};
+
+            std.mem.doNotOptimizeAway(VCOSAIOutputFreq_ValueValue);
+            VCOSAIOutput.limit = VCOSAIOutputFreq_ValueLimit;
+            VCOSAIOutput.nodetype = .output;
+            VCOSAIOutput.parents = &.{&PLLSAIN};
+
+            std.mem.doNotOptimizeAway(PLLSAIPCLKFreq_ValueValue);
+            PLLSAIPCLK.limit = PLLSAIPCLKFreq_ValueLimit;
+            PLLSAIPCLK.nodetype = .output;
+            PLLSAIPCLK.parents = &.{&PLLSAIP};
+
+            std.mem.doNotOptimizeAway(PLLSAIQCLKFreq_ValueValue);
+            PLLSAIQCLK.limit = PLLSAIQCLKFreq_ValueLimit;
+            PLLSAIQCLK.nodetype = .output;
+            PLLSAIQCLK.parents = &.{&PLLSAIQ};
+
+            std.mem.doNotOptimizeAway(VCOI2SInputFreq_ValueValue);
+            VCOI2SInput.limit = VCOI2SInputFreq_ValueLimit;
+            VCOI2SInput.nodetype = .output;
+            VCOI2SInput.parents = &.{&PLLI2SM};
+
+            std.mem.doNotOptimizeAway(VCOI2SOutputFreq_ValueValue);
+            VCOI2SOutput.limit = VCOI2SOutputFreq_ValueLimit;
+            VCOI2SOutput.nodetype = .output;
+            VCOI2SOutput.parents = &.{&PLLI2SN};
+
+            std.mem.doNotOptimizeAway(PLLI2SPCLKFreq_ValueValue);
+            PLLI2SPCLK.limit = PLLI2SPCLKFreq_ValueLimit;
+            PLLI2SPCLK.nodetype = .output;
+            PLLI2SPCLK.parents = &.{&PLLI2SP};
+
+            std.mem.doNotOptimizeAway(PLLI2SRCLKFreq_ValueValue);
+            PLLI2SRCLK.limit = PLLI2SRCLKFreq_ValueLimit;
+            PLLI2SRCLK.nodetype = .output;
+            PLLI2SRCLK.parents = &.{&PLLI2SR};
+
+            std.mem.doNotOptimizeAway(PLLI2SQCLKFreq_ValueValue);
+            PLLI2SQCLK.limit = PLLI2SQCLKFreq_ValueLimit;
+            PLLI2SQCLK.nodetype = .output;
+            PLLI2SQCLK.parents = &.{&PLLI2SQ};
+
+            out.CortexSysOutput = try CortexSysOutput.get_output();
+            out.CortexPrescaler = try CortexPrescaler.get_output();
+            out.HCLKOutput = try HCLKOutput.get_output();
+            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.TimPrescOut1 = try TimPrescOut1.get_output();
+            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
+            out.FMPI2C1output = try FMPI2C1output.get_output();
+            out.FMPI2C1Mult = try FMPI2C1Mult.get_output();
+            out.APB1Prescaler = try APB1Prescaler.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.TimPrescOut2 = try TimPrescOut2.get_output();
+            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
+            out.APB2Prescaler = try APB2Prescaler.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.AHBPrescaler = try AHBPrescaler.get_output();
+            out.PWRCLKoutput = try PWRCLKoutput.get_output();
+            out.SDIOoutput = try SDIOoutput.get_output();
+            out.SDIOMult = try SDIOMult.get_output();
+            out.SysCLKOutput = try SysCLKOutput.get_output();
+            out.MCO2Pin = try MCO2Pin.get_output();
+            out.MCO2Div = try MCO2Div.get_output();
+            out.MCO2Mult = try MCO2Mult.get_output();
+            out.SysClkSource = try SysClkSource.get_output();
+            out.USBoutput = try USBoutput.get_output();
+            out.USBMult = try USBMult.get_output();
+            out.PLLQ = try PLLQ.get_output();
+            out.MCO1Pin = try MCO1Pin.get_output();
+            out.MCO1Div = try MCO1Div.get_output();
+            out.MCO1Mult = try MCO1Mult.get_output();
+            out.PLLP = try PLLP.get_output();
+            out.SAIAoutput = try SAIAoutput.get_output();
+            out.SAIAMult = try SAIAMult.get_output();
+            out.SAIBoutput = try SAIBoutput.get_output();
+            out.SAIBMult = try SAIBMult.get_output();
+            out.I2S1output = try I2S1output.get_output();
+            out.I2S1Mult = try I2S1Mult.get_output();
+            out.I2S2output = try I2S2output.get_output();
+            out.I2S2Mult = try I2S2Mult.get_output();
+            out.SPDIFoutput = try SPDIFoutput.get_output();
+            out.SPDIFMult = try SPDIFMult.get_output();
+            out.PLLR = try PLLR.get_output();
+            out.PLLN = try PLLN.get_output();
+            out.PLLM = try PLLM.get_output();
+            out.PLLSAIQDiv = try PLLSAIQDiv.get_output();
+            out.PLLSAIQ = try PLLSAIQ.get_output();
+            out.PLLSAIoutput = try PLLSAIoutput.get_output();
+            out.PLLSAIP = try PLLSAIP.get_output();
+            out.PLLSAIN = try PLLSAIN.get_output();
+            out.PLLSAIM = try PLLSAIM.get_output();
+            out.PLLI2Soutput = try PLLI2Soutput.get_output();
+            out.PLLI2SP = try PLLI2SP.get_output();
+            out.PLLI2SQDiv = try PLLI2SQDiv.get_output();
+            out.PLLI2SQ = try PLLI2SQ.get_output();
+            out.PLLI2SR = try PLLI2SR.get_output();
+            out.PLLI2SN = try PLLI2SN.get_output();
+            out.PLLI2SM = try PLLI2SM.get_output();
+            out.PLLSource = try PLLSource.get_output();
+            out.CECOutput = try CECOutput.get_output();
+            out.CECMult = try CECMult.get_output();
+            out.HSIDivCEC = try HSIDivCEC.get_output();
             out.HSIRC = try HSIRC.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
+            out.HSERTCDevisor = try HSERTCDevisor.get_output();
             out.HSEOSC = try HSEOSC.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
             out.LSIRC = try LSIRC.get_output();
             out.LSEOSC = try LSEOSC.get_output();
             out.I2S_CKIN = try I2S_CKIN.get_output();
-            out.SysClkSource = try SysClkSource.get_output();
-            out.SysCLKOutput = try SysCLKOutput.get_output();
-            out.PLLSource = try PLLSource.get_output();
-            out.PLLM = try PLLM.get_output();
-            out.PLLSAIM = try PLLSAIM.get_output();
-            out.PLLI2SM = try PLLI2SM.get_output();
-            out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
-            out.HSIDivCEC = try HSIDivCEC.get_output();
-            out.CECMult = try CECMult.get_output();
-            out.CECOutput = try CECOutput.get_output();
-            out.FMPI2C1Mult = try FMPI2C1Mult.get_output();
-            out.FMPI2C1output = try FMPI2C1output.get_output();
-            out.USBMult = try USBMult.get_output();
-            out.USBoutput = try USBoutput.get_output();
-            out.SPDIFMult = try SPDIFMult.get_output();
-            out.SPDIFoutput = try SPDIFoutput.get_output();
-            out.SDIOMult = try SDIOMult.get_output();
-            out.SDIOoutput = try SDIOoutput.get_output();
-            out.SAIAMult = try SAIAMult.get_output();
-            out.SAIAoutput = try SAIAoutput.get_output();
-            out.SAIBMult = try SAIBMult.get_output();
-            out.SAIBoutput = try SAIBoutput.get_output();
-            out.I2S1Mult = try I2S1Mult.get_output();
-            out.I2S1output = try I2S1output.get_output();
-            out.I2S2Mult = try I2S2Mult.get_output();
-            out.I2S2output = try I2S2output.get_output();
-            out.MCO1Mult = try MCO1Mult.get_output();
-            out.MCO1Div = try MCO1Div.get_output();
-            out.MCO1Pin = try MCO1Pin.get_output();
-            out.MCO2Mult = try MCO2Mult.get_output();
-            out.MCO2Div = try MCO2Div.get_output();
-            out.MCO2Pin = try MCO2Pin.get_output();
-            out.AHBPrescaler = try AHBPrescaler.get_output();
-            out.PWRCLKoutput = try PWRCLKoutput.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.HCLKOutput = try HCLKOutput.get_output();
-            out.CortexPrescaler = try CortexPrescaler.get_output();
-            out.CortexSysOutput = try CortexSysOutput.get_output();
-            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
-            out.APB1Prescaler = try APB1Prescaler.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
-            out.TimPrescOut1 = try TimPrescOut1.get_output();
-            out.APB2Prescaler = try APB2Prescaler.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
-            out.TimPrescOut2 = try TimPrescOut2.get_output();
-            out.PLLN = try PLLN.get_output();
-            out.PLLP = try PLLP.get_output();
-            out.PLLQ = try PLLQ.get_output();
-            out.PLLR = try PLLR.get_output();
-            out.PLLSAIN = try PLLSAIN.get_output();
-            out.PLLSAIP = try PLLSAIP.get_output();
-            out.PLLSAIoutput = try PLLSAIoutput.get_output();
-            out.PLLSAIQ = try PLLSAIQ.get_output();
-            out.PLLSAIQDiv = try PLLSAIQDiv.get_output();
-            out.PLLI2SN = try PLLI2SN.get_output();
-            out.PLLI2SP = try PLLI2SP.get_output();
-            out.PLLI2Soutput = try PLLI2Soutput.get_output();
-            out.PLLI2SQ = try PLLI2SQ.get_output();
-            out.PLLI2SQDiv = try PLLI2SQDiv.get_output();
-            out.PLLI2SR = try PLLI2SR.get_output();
+            out.VCOInput = try VCOInput.get_extra_output();
+            out.VCOOutput = try VCOOutput.get_extra_output();
+            out.PLLCLK = try PLLCLK.get_extra_output();
+            out.PLLQCLK = try PLLQCLK.get_extra_output();
+            out.PLLRCLK = try PLLRCLK.get_extra_output();
+            out.VCOSAIInput = try VCOSAIInput.get_extra_output();
+            out.VCOSAIOutput = try VCOSAIOutput.get_extra_output();
+            out.PLLSAIPCLK = try PLLSAIPCLK.get_extra_output();
+            out.PLLSAIQCLK = try PLLSAIQCLK.get_extra_output();
+            out.VCOI2SInput = try VCOI2SInput.get_extra_output();
+            out.VCOI2SOutput = try VCOI2SOutput.get_extra_output();
+            out.PLLI2SPCLK = try PLLI2SPCLK.get_extra_output();
+            out.PLLI2SRCLK = try PLLI2SRCLK.get_extra_output();
+            out.PLLI2SQCLK = try PLLI2SQCLK.get_extra_output();
             ref_out.HSE_VALUE = HSE_VALUEValue;
             ref_out.LSE_VALUE = LSE_VALUEValue;
             ref_out.EXTERNAL_CLOCK_VALUE = EXTERNAL_CLOCK_VALUEValue;
@@ -4115,6 +4478,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.PWREXT_OverDrive = PWREXT_OverDriveValue;
             ref_out.HSE_Timout = HSE_TimoutValue;
             ref_out.LSE_Timout = LSE_TimoutValue;
+            ref_out.PLLUsed = PLLUsedValue;
             ref_out.ExtClockEnable = ExtClockEnableValue;
             ref_out.EnableHSERTCDevisor = EnableHSERTCDevisorValue;
             ref_out.RTCEnable = RTCEnableValue;
@@ -4137,7 +4501,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.LSEUsed = LSEUsedValue;
             ref_out.HSIUsed = HSIUsedValue;
             ref_out.LSIUsed = LSIUsedValue;
-            ref_out.PLLUsed = PLLUsedValue;
             return Tree_Output{
                 .clock = out,
                 .config = ref_out,

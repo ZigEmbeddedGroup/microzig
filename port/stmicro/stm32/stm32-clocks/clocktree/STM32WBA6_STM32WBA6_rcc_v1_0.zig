@@ -807,6 +807,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             SPI1Used_ForRCC: bool = false,
             SPI3Used_ForRCC: bool = false,
             SPI2Used_ForRCC: bool = false,
+            PLLRUsed: bool = false,
             RF_Used: bool = false,
             LPTIM2_UsedUsed_ForRCC: bool = false,
             RNG_Used: bool = false,
@@ -976,6 +977,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLL1Q: f32 = 0,
             PLLQoutput: f32 = 0,
             PLL1R: f32 = 0,
+            VCOInput: f32 = 0,
+            VCOOutput: f32 = 0,
+            PLLCLK: f32 = 0,
+            HSESYS: f32 = 0,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -1078,9 +1083,8 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             SPI2Enable: ?SPI2EnableList = null, //from extra RCC references
             PLL1PUsed: ?f32 = null, //from extra RCC references
             PLL1QUsed: ?f32 = null, //from extra RCC references
-            LSEUsed: ?f32 = null, //from extra RCC references
-            VCOInputFreq_Value: ?f32 = null, //from extra RCC references
             PLLUsed: ?f32 = null, //from extra RCC references
+            LSEUsed: ?f32 = null, //from extra RCC references
             EnableCSSLSE: ?EnableCSSLSEList = null, //from RCC Advanced Config
             SAI1CLockSelectionVirtual: ?SAI1CLockSelectionVirtualList = null, //from extra RCC references
             PLL1RUsed: ?f32 = null, //from extra RCC references
@@ -1210,6 +1214,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var SPI2Freq_ValueLimit: Limit = .{};
             var PLLPoutputFreq_ValueLimit: Limit = .{};
             var PLLQoutputFreq_ValueLimit: Limit = .{};
+            var VCOInputFreq_ValueLimit: Limit = .{};
+            var VCOOutputFreq_ValueLimit: Limit = .{};
+            var PLLRCLKFreq_ValueLimit: Limit = .{};
+            var HSESYSFreq_VALUELimit: Limit = .{};
             //Ref Values
 
             const HSI_VALUEValue: ?f32 = blk: {
@@ -1313,7 +1321,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_LSI_DIV1;
+                break :blk conf_item orelse {
+                    LSI_DIV1 = true;
+                    break :blk .RCC_LSI_DIV1;
+                };
             };
             const LSISource1Value: ?LSISource1List = blk: {
                 const conf_item = config.LSISource1;
@@ -1422,6 +1433,64 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
                 break :blk conf_item orelse .RCC_RADIOSTCLKSOURCE_HSE_DIV1000;
             };
+            const HCLKFreq_ValueValue: ?f32 = blk: {
+                HCLKFreq_ValueLimit = .{
+                    .min = null,
+                    .max = 1e8,
+                };
+                break :blk null;
+            };
+            const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
+                if (((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"="))) and config.flags.RF_Used and check_MCU("RST_HSE")) {
+                    scale1 = true;
+                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWR_Regulator_Voltage_Scale", "((HCLKFreq_Value < 16000000) | (HCLKFreq_Value=16000000)) & RF_Used & RST_HSE", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"=")))) {
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .PWR_REGULATOR_VOLTAGE_SCALE2 => scale2 = true,
+                            .PWR_REGULATOR_VOLTAGE_SCALE1 => scale1 = true,
+                        }
+                    }
+
+                    break :blk conf_item orelse {
+                        scale2 = true;
+                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE2;
+                    };
+                } else if ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@">"))) {
+                    scale1 = true;
+                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWR_Regulator_Voltage_Scale", "(HCLKFreq_Value > 16000000)", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
+                        }
+                    }
+                    break :blk item;
+                }
+                break :blk null;
+            };
             const RSTFreq_ValueValue: ?f32 = blk: {
                 if (scale1) {
                     RSTFreq_ValueLimit = .{
@@ -1464,7 +1533,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    SysSourceHSI = true;
+                    break :blk .RCC_SYSCLKSOURCE_HSI;
+                };
             };
             const SYSCLKFreq_VALUEValue: ?f32 = blk: {
                 SYSCLKFreq_VALUELimit = .{
@@ -1482,7 +1554,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
+                break :blk conf_item orelse {
+                    PLLSourceHSI = true;
+                    break :blk .RCC_PLLSOURCE_HSI;
+                };
             };
             const PLLMValue: ?f32 = blk: {
                 const config_val = config.PLLM;
@@ -1533,7 +1608,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_RTCCLKSOURCE_LSI;
+                break :blk conf_item orelse {
+                    RTCSourceLSI = true;
+                    break :blk .RCC_RTCCLKSOURCE_LSI;
+                };
             };
             const RTCFreq_ValueValue: ?f32 = blk: {
                 RTCFreq_ValueLimit = .{
@@ -1556,7 +1634,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_USART2CLKSOURCE_PCLK1;
+                break :blk conf_item orelse {
+                    USART2SourcePCLK1 = true;
+                    break :blk .RCC_USART2CLKSOURCE_PCLK1;
+                };
             };
             const USART2Freq_ValueValue: ?f32 = blk: {
                 if (scale1) {
@@ -1585,7 +1666,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_USART3CLKSOURCE_PCLK1;
+                break :blk conf_item orelse {
+                    USART3SourcePCLK1 = true;
+                    break :blk .RCC_USART3CLKSOURCE_PCLK1;
+                };
             };
             const USART3Freq_ValueValue: ?f32 = blk: {
                 if (scale1) {
@@ -1875,7 +1959,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_ASCLKSOURCE_PLL1P;
+                break :blk conf_item orelse {
+                    ASPLL1P = true;
+                    break :blk .RCC_ASCLKSOURCE_PLL1P;
+                };
             };
             const ASFreq_ValueValue: ?f32 = blk: {
                 if (scale1) {
@@ -2060,7 +2147,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse .RCC_RNGCLKSOURCE_HSI;
+                    break :blk conf_item orelse {
+                        RNGCLKSOURCE_HSI = true;
+                        break :blk .RCC_RNGCLKSOURCE_HSI;
+                    };
                 } else if ((config.flags.LSEOscillatorRTC or config.flags.LSEByPassRTC) and scale2) {
                     const conf_item = config.RNGCLockSelection;
                     if (conf_item) |item| {
@@ -2080,7 +2170,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse .RCC_RNGCLKSOURCE_HSI;
+                    break :blk conf_item orelse {
+                        RNGCLKSOURCE_HSI = true;
+                        break :blk .RCC_RNGCLKSOURCE_HSI;
+                    };
                 } else if (!(config.flags.LSEOscillatorRTC or config.flags.LSEByPassRTC) and scale2) {
                     const conf_item = config.RNGCLockSelection;
                     if (conf_item) |item| {
@@ -2102,7 +2195,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse .RCC_RNGCLKSOURCE_HSI;
+                    break :blk conf_item orelse {
+                        RNGCLKSOURCE_HSI = true;
+                        break :blk .RCC_RNGCLKSOURCE_HSI;
+                    };
                 }
                 const conf_item = config.RNGCLockSelection;
                 if (conf_item) |item| {
@@ -2114,7 +2210,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_RNGCLKSOURCE_HSI;
+                break :blk conf_item orelse {
+                    RNGCLKSOURCE_HSI = true;
+                    break :blk .RCC_RNGCLKSOURCE_HSI;
+                };
             };
             const RNGFreq_ValueValue: ?f32 = blk: {
                 if (scale1) {
@@ -2321,7 +2420,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_LSCOSOURCE_LSI;
+                break :blk conf_item orelse {
+                    LSCOSSourceLSI = true;
+                    break :blk .RCC_LSCOSOURCE_LSI;
+                };
             };
             const LSCOPinFreq_ValueValue: ?f32 = blk: {
                 break :blk 4e6;
@@ -2387,14 +2489,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLK_DIV1;
-            };
-            const HCLKFreq_ValueValue: ?f32 = blk: {
-                HCLKFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1e8,
+                break :blk conf_item orelse {
+                    AHBCLKDivider1 = true;
+                    break :blk .RCC_SYSCLK_DIV1;
                 };
-                break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
                 AHBFreq_ValueLimit = .{
@@ -2438,7 +2536,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse .RCC_SYSTICKCLKSOURCE_HCLK_DIV8;
+                    break :blk conf_item orelse {
+                        CLKSOURCE_HCLK_1_8 = true;
+                        break :blk .RCC_SYSTICKCLKSOURCE_HCLK_DIV8;
+                    };
                 }
                 const conf_item = config.CortexCLockSelection;
                 if (conf_item) |item| {
@@ -2450,7 +2551,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSTICKCLKSOURCE_HCLK_DIV8;
+                break :blk conf_item orelse {
+                    CLKSOURCE_HCLK_1_8 = true;
+                    break :blk .RCC_SYSTICKCLKSOURCE_HCLK_DIV8;
+                };
             };
             const CortexFreq_ValueValue: ?f32 = blk: {
                 if (scale1) {
@@ -2794,6 +2898,49 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
                 break :blk conf_item orelse .@"2";
             };
+            const SAI1CLockSelectionVirtualValue: ?SAI1CLockSelectionVirtualList = blk: {
+                if (scale2) {
+                    const conf_item = config.SAI1CLockSelectionVirtual;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .RCC_SAI1CLKSOURCE_PIN => SAI1SourceEXT = true,
+                            .RCC_SAI1CLKSOURCE_HSI => SAI1SourceHSI = true,
+                            .RCC_SAI1CLKSOURCE_SYSCLK => {},
+                            else => {
+                                return comptime_fail_or_error(error.InvalidConfig,
+                                    \\
+                                    \\Error on {s} | expr: {s} diagnostic: {s} 
+                                    \\Option not available in this condition: {any}.
+                                    \\note: available options:
+                                    \\ - RCC_SAI1CLKSOURCE_PIN
+                                    \\ - RCC_SAI1CLKSOURCE_HSI
+                                    \\ - RCC_SAI1CLKSOURCE_SYSCLK
+                                , .{ "SAI1CLockSelectionVirtual", "scale2", "PLL is not allowed in range 2", item });
+                            },
+                        }
+                    }
+
+                    break :blk conf_item orelse {
+                        SAI1SourceHSI = true;
+                        break :blk .RCC_SAI1CLKSOURCE_HSI;
+                    };
+                }
+                const conf_item = config.SAI1CLockSelectionVirtual;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SAI1CLKSOURCE_PLL1P => SAI1SourcePLL1P = true,
+                        .RCC_SAI1CLKSOURCE_PIN => SAI1SourceEXT = true,
+                        .RCC_SAI1CLKSOURCE_HSI => SAI1SourceHSI = true,
+                        .RCC_SAI1CLKSOURCE_PLL1Q => sai1_pll1q = true,
+                        .RCC_SAI1CLKSOURCE_SYSCLK => {},
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SAI1SourceHSI = true;
+                    break :blk .RCC_SAI1CLKSOURCE_HSI;
+                };
+            };
             const PLL1PUsedValue: ?f32 = blk: {
                 if (SAI1SourcePLL1P and config.flags.SAI1_Used or config.flags.MCOConfig and mco1_pll1p or config.flags.ADC4_Used and adc_pll1p or config.flags.USB_OTG_HS_Used and (usb_pll1 or usb_pll1_div2)) {
                     break :blk 1;
@@ -2909,6 +3056,61 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
                 break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const PLL1RUsedValue: ?f32 = blk: {
+                if (((SysSourcePLL) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_PLL1RCLK, .@"=")) and ((check_MCU("Semaphore_input_Channel1TIM17") and config.flags.TIM17_Used and check_MCU("SEM2RCC_MCO_REQUIRED_TIM17")) or (check_MCU("Semaphore_input_Channel1TIM16") and config.flags.TIM16_Used and check_MCU("SEM2RCC_MCO_REQUIRED_TIM16")) or config.flags.MCOConfig)))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLLUsedValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLL1PUsedValue), PLL1PUsedValue, 1, .@"=") or check_ref(@TypeOf(PLL1QUsedValue), PLL1QUsedValue, 1, .@"=") or check_ref(@TypeOf(PLL1RUsedValue), PLL1RUsedValue, 1, .@"=")) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const VCOInputFreq_ValueValue: ?f32 = blk: {
+                if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"="))) {
+                    VCOInputFreq_ValueLimit = .{
+                        .min = 4e6,
+                        .max = 1.6e7,
+                    };
+                    break :blk null;
+                }
+                break :blk 4e6;
+            };
+            const VCOOutputFreq_ValueValue: ?f32 = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
+                    VCOOutputFreq_ValueLimit = .{
+                        .min = 1.28e8,
+                        .max = 5.44e8,
+                    };
+                    break :blk null;
+                }
+                break :blk 3.2e7;
+            };
+            const PLLRCLKFreq_ValueValue: ?f32 = blk: {
+                if (config.flags.PLLRUsed and scale1) {
+                    PLLRCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 1e8,
+                    };
+                    break :blk null;
+                } else if (config.flags.PLLRUsed and scale2) {
+                    PLLRCLKFreq_ValueLimit = .{
+                        .min = null,
+                        .max = 1.6e7,
+                    };
+                    break :blk null;
+                }
+                break :blk 1.6e7;
+            };
+            const HSESYSFreq_VALUEValue: ?f32 = blk: {
+                HSESYSFreq_VALUELimit = .{
+                    .min = null,
+                    .max = 1e8,
+                };
+                break :blk null;
             };
             const VDD_VALUEValue: ?f32 = blk: {
                 const config_val = config.extra.VDD_VALUE;
@@ -3117,54 +3319,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
                 break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
             };
-            const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
-                if (((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"="))) and config.flags.RF_Used and check_MCU("RST_HSE")) {
-                    scale1 = true;
-                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWR_Regulator_Voltage_Scale", "((HCLKFreq_Value < 16000000) | (HCLKFreq_Value=16000000)) & RF_Used & RST_HSE", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@"=")))) {
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .PWR_REGULATOR_VOLTAGE_SCALE2 => scale2 = true,
-                            .PWR_REGULATOR_VOLTAGE_SCALE1 => scale1 = true,
-                        }
-                    }
-
-                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE2;
-                } else if ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 16000000, .@">"))) {
-                    scale1 = true;
-                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWR_Regulator_Voltage_Scale", "(HCLKFreq_Value > 16000000)", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
-                        }
-                    }
-                    break :blk item;
-                }
-                break :blk null;
-            };
             const HSE_TimoutValue: ?f32 = blk: {
                 const config_val = config.extra.HSE_Timout;
                 if (config_val) |val| {
@@ -3284,7 +3438,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_LSETRIMMING_R;
+                break :blk conf_item orelse {
+                    LSE_R = true;
+                    break :blk .RCC_LSETRIMMING_R;
+                };
             };
             const LSEUsedValue: ?f32 = blk: {
                 if (check_MCU("RNGCLKSOURCE_LSE") and config.flags.RNG_Used or check_MCU("RST_LSE") and config.flags.RF_Used or CLKSOURCE_LSE or (LSCOSSourceLSE and config.flags.LSCOConfig) or (check_MCU("Semaphore_input_Channel1TIM16") and config.flags.TIM16_Used and check_MCU("SEM2RCC_LSE_REQUIRED1_TIM16")) or (check_MCU("SEM2RCC_LSE_REQUIRED_TIM2") and check_MCU("Semaphore_TIM2_L4_ETR_REMAPTIM2") and check_MCU("TIM2")) or (check_MCU("Semaphore_input_Channel1_directTIM15") and check_MCU("TIM15") and check_MCU("SEM2RCC_LSE_REQUIRED1_TIM15")) or (USART1SourceLSE and config.flags.USART1Used_ForRCC) or (USART2SourceLSE and config.flags.USART2Used_ForRCC) or (LPUART1SourceLSE and config.flags.LPUARTUsed_ForRCC) or (LPTIM1SOURCELSE and config.flags.LPTIM1Used_ForRCC) or (LPTIM2SOURCELSE and config.flags.LPTIM2_UsedUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_LSE, .@"=")) and ((check_MCU("Semaphore_input_Channel1TIM17") and config.flags.TIM17_Used and check_MCU("SEM2RCC_MCO_REQUIRED_TIM17")) or (check_MCU("Semaphore_input_Channel1TIM16") and config.flags.TIM16_Used and check_MCU("SEM2RCC_MCO_REQUIRED_TIM16")) or config.flags.MCOConfig)) or (RTCSourceLSE and config.flags.RTCUsed_ForRCC)) {
@@ -3316,75 +3473,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     , .{ "LSE_Drive_Capability", "Else", "No Extra Log" });
                 }
                 break :blk null;
-            };
-            const PLL1RUsedValue: ?f32 = blk: {
-                if (((SysSourcePLL) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_PLL1RCLK, .@"=")) and ((check_MCU("Semaphore_input_Channel1TIM17") and config.flags.TIM17_Used and check_MCU("SEM2RCC_MCO_REQUIRED_TIM17")) or (check_MCU("Semaphore_input_Channel1TIM16") and config.flags.TIM16_Used and check_MCU("SEM2RCC_MCO_REQUIRED_TIM16")) or config.flags.MCOConfig)))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLLUsedValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLL1PUsedValue), PLL1PUsedValue, 1, .@"=") or check_ref(@TypeOf(PLL1QUsedValue), PLL1QUsedValue, 1, .@"=") or check_ref(@TypeOf(PLL1RUsedValue), PLL1RUsedValue, 1, .@"=")) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const VCOInputFreq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"="))) {
-                    const config_val = config.VCOInputFreq_Value;
-                    if (config_val) |val| {
-                        if (val < 4e6) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Underflow Value - min: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "VCOInputFreq_Value",
-                                "(PLLUsed=1) ",
-                                " PLLUsed=1",
-                                4e6,
-                                val,
-                            });
-                        }
-                        if (val > 1.6e7) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Overflow Value - max: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "VCOInputFreq_Value",
-                                "(PLLUsed=1) ",
-                                " PLLUsed=1",
-                                1.6e7,
-                                val,
-                            });
-                        }
-                    }
-                    break :blk config_val orelse 4000000;
-                }
-                if (config.VCOInputFreq_Value) |val| {
-                    if (val != 4e6) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Expected Fixed Value: {e} found: {e}
-                            \\note: some values are fixed depending on the clock configuration.
-                            \\
-                            \\
-                        , .{
-                            "VCOInputFreq_Value",
-                            "Else",
-                            "No Extra Log",
-                            4e6,
-                            val,
-                        });
-                    }
-                }
-                break :blk 4e6;
             };
             const PLL1_VCI_RangeValue: ?PLL1_VCI_RangeList = blk: {
                 if (((check_ref(@TypeOf(VCOInputFreq_ValueValue), VCOInputFreq_ValueValue, 4000000, .@">") or (check_ref(@TypeOf(VCOInputFreq_ValueValue), VCOInputFreq_ValueValue, 4000000, .@"="))) and (check_ref(@TypeOf(VCOInputFreq_ValueValue), VCOInputFreq_ValueValue, 8000000, .@"<"))) and check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
@@ -3669,43 +3757,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
                 break :blk item;
-            };
-            const SAI1CLockSelectionVirtualValue: ?SAI1CLockSelectionVirtualList = blk: {
-                if (scale2) {
-                    const conf_item = config.SAI1CLockSelectionVirtual;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .RCC_SAI1CLKSOURCE_PIN => SAI1SourceEXT = true,
-                            .RCC_SAI1CLKSOURCE_HSI => SAI1SourceHSI = true,
-                            .RCC_SAI1CLKSOURCE_SYSCLK => {},
-                            else => {
-                                return comptime_fail_or_error(error.InvalidConfig,
-                                    \\
-                                    \\Error on {s} | expr: {s} diagnostic: {s} 
-                                    \\Option not available in this condition: {any}.
-                                    \\note: available options:
-                                    \\ - RCC_SAI1CLKSOURCE_PIN
-                                    \\ - RCC_SAI1CLKSOURCE_HSI
-                                    \\ - RCC_SAI1CLKSOURCE_SYSCLK
-                                , .{ "SAI1CLockSelectionVirtual", "scale2", "PLL is not allowed in range 2", item });
-                            },
-                        }
-                    }
-
-                    break :blk conf_item orelse .RCC_SAI1CLKSOURCE_HSI;
-                }
-                const conf_item = config.SAI1CLockSelectionVirtual;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SAI1CLKSOURCE_PLL1P => SAI1SourcePLL1P = true,
-                        .RCC_SAI1CLKSOURCE_PIN => SAI1SourceEXT = true,
-                        .RCC_SAI1CLKSOURCE_HSI => SAI1SourceHSI = true,
-                        .RCC_SAI1CLKSOURCE_PLL1Q => sai1_pll1q = true,
-                        .RCC_SAI1CLKSOURCE_SYSCLK => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SAI1CLKSOURCE_HSI;
             };
 
             var HSIRC = ClockNode{
@@ -4274,6 +4325,30 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
             var PLL1R = ClockNode{
                 .name = "PLL1R",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOInput = ClockNode{
+                .name = "VCOInput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var VCOOutput = ClockNode{
+                .name = "VCOOutput",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var PLLCLK = ClockNode{
+                .name = "PLLCLK",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+
+            var HSESYS = ClockNode{
+                .name = "HSESYS",
                 .nodetype = .off,
                 .parents = &.{},
             };
@@ -5557,101 +5632,125 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLL1R.value = PLL1R_clk_value;
             PLL1R.parents = &.{&PLLN};
 
+            std.mem.doNotOptimizeAway(VCOInputFreq_ValueValue);
+            VCOInput.limit = VCOInputFreq_ValueLimit;
+            VCOInput.nodetype = .output;
+            VCOInput.parents = &.{&PLLM};
+
+            std.mem.doNotOptimizeAway(VCOOutputFreq_ValueValue);
+            VCOOutput.limit = VCOOutputFreq_ValueLimit;
+            VCOOutput.nodetype = .output;
+            VCOOutput.parents = &.{&PLLN};
+
+            std.mem.doNotOptimizeAway(PLLRCLKFreq_ValueValue);
+            PLLCLK.limit = PLLRCLKFreq_ValueLimit;
+            PLLCLK.nodetype = .output;
+            PLLCLK.parents = &.{&PLL1R};
+
+            std.mem.doNotOptimizeAway(HSESYSFreq_VALUEValue);
+            HSESYS.limit = HSESYSFreq_VALUELimit;
+            HSESYS.nodetype = .output;
+            HSESYS.parents = &.{&HseDiv};
+
+            out.CortexSysOutput = try CortexSysOutput.get_output();
+            out.CortexCLockSelection = try CortexCLockSelection.get_output();
+            out.CortexPrescaler = try CortexPrescaler.get_output();
+            out.HCLKOutput = try HCLKOutput.get_output();
+            out.HCLK4Output = try HCLK4Output.get_output();
+            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
+            out.SPI2output = try SPI2output.get_output();
+            out.SPI2Mult = try SPI2Mult.get_output();
+            out.APB1Output = try APB1Output.get_output();
+            out.TimPrescOut1 = try TimPrescOut1.get_output();
+            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
+            out.USART2output = try USART2output.get_output();
+            out.USART2Mult = try USART2Mult.get_output();
+            out.USART3output = try USART3output.get_output();
+            out.USART3Mult = try USART3Mult.get_output();
+            out.LPTIM2output = try LPTIM2output.get_output();
+            out.LPTIM2Mult = try LPTIM2Mult.get_output();
+            out.I2C1output = try I2C1output.get_output();
+            out.I2C1Mult = try I2C1Mult.get_output();
+            out.I2C2output = try I2C2output.get_output();
+            out.I2C2Mult = try I2C2Mult.get_output();
+            out.I2C4output = try I2C4output.get_output();
+            out.I2C4Mult = try I2C4Mult.get_output();
+            out.APB1Prescaler = try APB1Prescaler.get_output();
+            out.APB2Output = try APB2Output.get_output();
+            out.TimPrescOut2 = try TimPrescOut2.get_output();
+            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
+            out.USART1output = try USART1output.get_output();
+            out.USART1Mult = try USART1Mult.get_output();
+            out.SPI1output = try SPI1output.get_output();
+            out.SPI1Mult = try SPI1Mult.get_output();
+            out.APB2Prescaler = try APB2Prescaler.get_output();
+            out.APB7Output = try APB7Output.get_output();
+            out.APB7Prescaler = try APB7Prescaler.get_output();
+            out.AHBOutput = try AHBOutput.get_output();
+            out.AHBPrescaler = try AHBPrescaler.get_output();
+            out.LPUART1output = try LPUART1output.get_output();
+            out.LPUART1Mult = try LPUART1Mult.get_output();
+            out.I2C3output = try I2C3output.get_output();
+            out.I2C3Mult = try I2C3Mult.get_output();
+            out.ADCoutput = try ADCoutput.get_output();
+            out.ADCMult = try ADCMult.get_output();
+            out.MCOPin = try MCOPin.get_output();
+            out.MCODiv = try MCODiv.get_output();
+            out.MCOMult = try MCOMult.get_output();
+            out.SysCLKOutput = try SysCLKOutput.get_output();
+            out.SysClkSource = try SysClkSource.get_output();
+            out.PLLQoutput = try PLLQoutput.get_output();
+            out.PLL1Q = try PLL1Q.get_output();
+            out.PLLPoutput = try PLLPoutput.get_output();
+            out.OTG_HS_PHYoutput = try OTG_HS_PHYoutput.get_output();
+            out.OTGPHYMult = try OTGPHYMult.get_output();
+            out.pllpDivToOTGPHY = try pllpDivToOTGPHY.get_output();
+            out.PLL1P = try PLL1P.get_output();
+            out.PLL1R = try PLL1R.get_output();
+            out.PLLN = try PLLN.get_output();
+            out.PLLM = try PLLM.get_output();
+            out.PLLSource = try PLLSource.get_output();
+            out.LPTIM1output = try LPTIM1output.get_output();
+            out.LPTIM1Mult = try LPTIM1Mult.get_output();
+            out.SAI1output = try SAI1output.get_output();
+            out.SAI1Mult = try SAI1Mult.get_output();
+            out.HSIDIV4Prescaler = try HSIDIV4Prescaler.get_output();
             out.HSIRC = try HSIRC.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
+            out.HSERTCDevisor = try HSERTCDevisor.get_output();
+            out.RSTOutput = try RSTOutput.get_output();
+            out.RSTClkSource = try RSTClkSource.get_output();
+            out.HSERSTDevisor = try HSERSTDevisor.get_output();
+            out.HSEDivToOTGPHY = try HSEDivToOTGPHY.get_output();
             out.HSEOSC = try HSEOSC.get_output();
             out.HseDiv = try HseDiv.get_output();
+            out.IWDGOutput = try IWDGOutput.get_output();
+            out.LSCOOutput = try LSCOOutput.get_output();
+            out.LSCOMult = try LSCOMult.get_output();
+            out.LSIOut = try LSIOut.get_output();
             out.LSIRC = try LSIRC.get_output();
             out.LSI2RC = try LSI2RC.get_output();
             out.LSIDIV = try LSIDIV.get_output();
-            out.LSIOut = try LSIOut.get_output();
             out.LSEOSC = try LSEOSC.get_output();
             out.SAI1_EXT = try SAI1_EXT.get_output();
-            out.HSERSTDevisor = try HSERSTDevisor.get_output();
-            out.RSTClkSource = try RSTClkSource.get_output();
-            out.RSTOutput = try RSTOutput.get_output();
             out.RSTRFOutput = try RSTRFOutput.get_output();
-            out.SysClkSource = try SysClkSource.get_output();
-            out.SysCLKOutput = try SysCLKOutput.get_output();
-            out.PLLSource = try PLLSource.get_output();
-            out.PLLM = try PLLM.get_output();
-            out.HSERTCDevisor = try HSERTCDevisor.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.IWDGOutput = try IWDGOutput.get_output();
-            out.USART2Mult = try USART2Mult.get_output();
-            out.USART2output = try USART2output.get_output();
-            out.USART3Mult = try USART3Mult.get_output();
-            out.USART3output = try USART3output.get_output();
-            out.USART1Mult = try USART1Mult.get_output();
-            out.USART1output = try USART1output.get_output();
-            out.LPUART1Mult = try LPUART1Mult.get_output();
-            out.LPUART1output = try LPUART1output.get_output();
-            out.LPTIM1Mult = try LPTIM1Mult.get_output();
-            out.LPTIM1output = try LPTIM1output.get_output();
-            out.LPTIM2Mult = try LPTIM2Mult.get_output();
-            out.LPTIM2output = try LPTIM2output.get_output();
-            out.ADCMult = try ADCMult.get_output();
-            out.ADCoutput = try ADCoutput.get_output();
-            out.ASMult = try ASMult.get_output();
             out.ASoutput = try ASoutput.get_output();
-            out.I2C1Mult = try I2C1Mult.get_output();
-            out.I2C1output = try I2C1output.get_output();
-            out.I2C3Mult = try I2C3Mult.get_output();
-            out.I2C3output = try I2C3output.get_output();
-            out.I2C2Mult = try I2C2Mult.get_output();
-            out.I2C2output = try I2C2output.get_output();
-            out.I2C4Mult = try I2C4Mult.get_output();
-            out.I2C4output = try I2C4output.get_output();
-            out.SAI1Mult = try SAI1Mult.get_output();
-            out.SAI1output = try SAI1output.get_output();
-            out.pllqDivToRNG = try pllqDivToRNG.get_output();
-            out.RNGMult = try RNGMult.get_output();
+            out.ASMult = try ASMult.get_output();
             out.RNGoutput = try RNGoutput.get_output();
-            out.HSEDivToOTGPHY = try HSEDivToOTGPHY.get_output();
-            out.pllpDivToOTGPHY = try pllpDivToOTGPHY.get_output();
-            out.OTGPHYMult = try OTGPHYMult.get_output();
-            out.OTG_HS_PHYoutput = try OTG_HS_PHYoutput.get_output();
+            out.RNGMult = try RNGMult.get_output();
+            out.pllqDivToRNG = try pllqDivToRNG.get_output();
             out.OTGPHYRC60 = try OTGPHYRC60.get_output();
-            out.MCOMult = try MCOMult.get_output();
-            out.MCODiv = try MCODiv.get_output();
-            out.MCOPin = try MCOPin.get_output();
-            out.LSCOMult = try LSCOMult.get_output();
-            out.LSCOOutput = try LSCOOutput.get_output();
-            out.AHB5Prescaler = try AHB5Prescaler.get_output();
             out.AHB5Output = try AHB5Output.get_output();
+            out.AHB5Prescaler = try AHB5Prescaler.get_output();
             out.SAESOutput = try SAESOutput.get_output();
-            out.AHBPrescaler = try AHBPrescaler.get_output();
-            out.AHBOutput = try AHBOutput.get_output();
-            out.HCLKOutput = try HCLKOutput.get_output();
-            out.HCLK4Output = try HCLK4Output.get_output();
-            out.CortexPrescaler = try CortexPrescaler.get_output();
-            out.HSIDIV4Prescaler = try HSIDIV4Prescaler.get_output();
-            out.CortexCLockSelection = try CortexCLockSelection.get_output();
-            out.CortexSysOutput = try CortexSysOutput.get_output();
-            out.FCLKCortexOutput = try FCLKCortexOutput.get_output();
-            out.APB1Prescaler = try APB1Prescaler.get_output();
-            out.APB1Output = try APB1Output.get_output();
-            out.TimPrescalerAPB1 = try TimPrescalerAPB1.get_output();
-            out.TimPrescOut1 = try TimPrescOut1.get_output();
-            out.APB2Prescaler = try APB2Prescaler.get_output();
-            out.APB2Output = try APB2Output.get_output();
-            out.APB7Prescaler = try APB7Prescaler.get_output();
-            out.APB7Output = try APB7Output.get_output();
-            out.TimPrescalerAPB2 = try TimPrescalerAPB2.get_output();
-            out.TimPrescOut2 = try TimPrescOut2.get_output();
-            out.SPI1Mult = try SPI1Mult.get_output();
-            out.SPI1output = try SPI1output.get_output();
-            out.SPI3Mult = try SPI3Mult.get_output();
             out.SPI3output = try SPI3output.get_output();
-            out.SPI2Mult = try SPI2Mult.get_output();
-            out.SPI2output = try SPI2output.get_output();
-            out.PLLN = try PLLN.get_output();
+            out.SPI3Mult = try SPI3Mult.get_output();
             out.PLLFRACN = try PLLFRACN.get_output();
-            out.PLL1P = try PLL1P.get_output();
-            out.PLLPoutput = try PLLPoutput.get_output();
-            out.PLL1Q = try PLL1Q.get_output();
-            out.PLLQoutput = try PLLQoutput.get_output();
-            out.PLL1R = try PLL1R.get_output();
+            out.VCOInput = try VCOInput.get_extra_output();
+            out.VCOOutput = try VCOOutput.get_extra_output();
+            out.PLLCLK = try PLLCLK.get_extra_output();
+            out.HSESYS = try HSESYS.get_extra_output();
             ref_out.HSE_VALUE = HSE_VALUEValue;
             ref_out.HseDiv = HseDivValue;
             ref_out.LSI1_VALUE = LSI1_VALUEValue;
@@ -5749,9 +5848,8 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.SPI2Enable = SPI2EnableValue;
             ref_out.PLL1PUsed = PLL1PUsedValue;
             ref_out.PLL1QUsed = PLL1QUsedValue;
-            ref_out.LSEUsed = LSEUsedValue;
-            ref_out.VCOInputFreq_Value = VCOInputFreq_ValueValue;
             ref_out.PLLUsed = PLLUsedValue;
+            ref_out.LSEUsed = LSEUsedValue;
             ref_out.EnableCSSLSE = EnableCSSLSEValue;
             ref_out.SAI1CLockSelectionVirtual = SAI1CLockSelectionVirtualValue;
             ref_out.PLL1RUsed = PLL1RUsedValue;

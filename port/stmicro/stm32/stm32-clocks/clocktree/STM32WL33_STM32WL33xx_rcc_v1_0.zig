@@ -586,7 +586,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_LSCOSOURCE_HSI;
+                break :blk conf_item orelse {
+                    RCCLSCOSOURCEHSI = true;
+                    break :blk .RCC_LSCOSOURCE_HSI;
+                };
             };
             const ROOTClkSourceValue: ?ROOTClkSourceList = blk: {
                 const conf_item = config.ROOTClkSource;
@@ -597,7 +600,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_RC64MPLL;
+                break :blk conf_item orelse {
+                    SysSourceRC64 = true;
+                    break :blk .RCC_SYSCLKSOURCE_RC64MPLL;
+                };
             };
             const SysCLKFreq_VALUEValue: ?f32 = blk: {
                 SysCLKFreq_VALUELimit = .{
@@ -621,7 +627,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .CLK16MHzDiv4;
+                break :blk conf_item orelse {
+                    SysSourceHSI = true;
+                    break :blk .CLK16MHzDiv4;
+                };
             };
             const ClkROOTDIVFreq_VALUEValue: ?f32 = blk: {
                 ClkROOTDIVFreq_VALUELimit = .{
@@ -645,7 +654,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SMPSCLK_DIV2;
+                break :blk conf_item orelse {
+                    RCCSMPSCLKDIV2 = true;
+                    break :blk .RCC_SMPSCLK_DIV2;
+                };
             };
             const CLK_SPMS_KRM_DIVValue: ?CLK_SPMS_KRM_DIVList = blk: {
                 const conf_item = config.CLK_SPMS_KRM_DIV;
@@ -674,7 +686,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .SMPSDIVCLK;
+                break :blk conf_item orelse {
+                    SMPSDIVCLK = true;
+                    break :blk .SMPSDIVCLK;
+                };
             };
             const ClkSMPSFreq_VALUEValue: ?f32 = blk: {
                 ClkSMPSFreq_VALUELimit = .{
@@ -692,7 +707,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_LPUART1_CLKSOURCE_16M;
+                break :blk conf_item orelse {
+                    LPUART1CLKSOURCE16M = true;
+                    break :blk .RCC_LPUART1_CLKSOURCE_16M;
+                };
             };
             const LPUARTFreq_VALUEValue: ?f32 = blk: {
                 LPUARTFreq_VALUELimit = .{
@@ -710,7 +728,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_LSCOSOURCE_LSI;
+                break :blk conf_item orelse {
+                    LSCOSSourceLSI = true;
+                    break :blk .RCC_LSCOSOURCE_LSI;
+                };
             };
             const LSCOPinFreq_ValueValue: ?f32 = blk: {
                 break :blk 4e6;
@@ -759,7 +780,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .ROOTCLK64Prescaler;
+                break :blk conf_item orelse {
+                    SYSCLKPrescaler64 = true;
+                    break :blk .ROOTCLK64Prescaler;
+                };
             };
             const CLKSYSFreq_VALUEValue: ?f32 = blk: {
                 if (config.flags.MR_BLE_Used and check_MCU("RFCLK16M")) {
@@ -797,7 +821,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_SPI3I2S_CLKSOURCE_CLK_RC64MPLL;
+                break :blk conf_item orelse {
+                    RCC_SPI3I2S_CLKSOURCE_64M = true;
+                    break :blk .RCC_SPI3I2S_CLKSOURCE_CLK_RC64MPLL;
+                };
             };
             const CLKSPI3I2SFreq_VALUEValue: ?f32 = blk: {
                 CLKSPI3I2SFreq_VALUELimit = .{
@@ -819,7 +846,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_RTC_WDG_SUBG_LPAWUR_LCD_LCSC_CLKSOURCE_LSI;
+                break :blk conf_item orelse {
+                    RTCSourceLSI = true;
+                    break :blk .RCC_RTC_WDG_SUBG_LPAWUR_LCD_LCSC_CLKSOURCE_LSI;
+                };
             };
             const RTCFreq_ValueValue: ?f32 = blk: {
                 RTCFreq_ValueLimit = .{
@@ -841,7 +871,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                 }
 
-                break :blk conf_item orelse .RCC_MCO1SOURCE_SYSCLK;
+                break :blk conf_item orelse {
+                    MCOSourceSYSCLK = true;
+                    break :blk .RCC_MCO1SOURCE_SYSCLK;
+                };
             };
             const RCC_MCODivValue: ?RCC_MCODivList = blk: {
                 const conf_item = config.RCC_MCODiv;
@@ -2076,42 +2109,42 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 MCOPin.parents = &.{&MCODiv};
             }
 
+            out.MCOPin = try MCOPin.get_output();
+            out.MCODiv = try MCODiv.get_output();
+            out.MCOMult = try MCOMult.get_output();
+            out.ClkSMPSOutput = try ClkSMPSOutput.get_output();
+            out.ClkKRM = try ClkKRM.get_output();
+            out.ClkSMPSDIV = try ClkSMPSDIV.get_output();
+            out.ClkSMPSDiv4 = try ClkSMPSDiv4.get_output();
+            out.ClkSMPSDiv2 = try ClkSMPSDiv2.get_output();
+            out.ClkLPUARTOutput = try ClkLPUARTOutput.get_output();
+            out.LPUARTMult = try LPUARTMult.get_output();
+            out.CLKSPI3I2SOutput = try CLKSPI3I2SOutput.get_output();
+            out.CLKSPI3I2SMult = try CLKSPI3I2SMult.get_output();
+            out.RTCOutput = try RTCOutput.get_output();
+            out.RTCClkSource = try RTCClkSource.get_output();
+            out.CLKROOTCDevisorON512 = try CLKROOTCDevisorON512.get_output();
+            out.ClkROOTDIVOutput = try ClkROOTDIVOutput.get_output();
+            out.CLKROOTDIVSource = try CLKROOTDIVSource.get_output();
+            out.CLK_ROOT_DIV3 = try CLK_ROOT_DIV3.get_output();
+            out.CLK_ROOT_DIV4 = try CLK_ROOT_DIV4.get_output();
+            out.Div2 = try Div2.get_output();
+            out.CLKSYSOutput = try CLKSYSOutput.get_output();
+            out.CLKSYSMult = try CLKSYSMult.get_output();
+            out.ROOTCLK48Prescaler = try ROOTCLK48Prescaler.get_output();
+            out.ROOTCLK64Prescaler = try ROOTCLK64Prescaler.get_output();
+            out.TimerOutput = try TimerOutput.get_output();
+            out.CLK_SPMS_KRM_DIV = try CLK_SPMS_KRM_DIV.get_output();
+            out.ROOTCLKOutput = try ROOTCLKOutput.get_output();
+            out.ROOTClkSource = try ROOTClkSource.get_output();
+            out.RC64MPLL = try RC64MPLL.get_output();
             out.HSIRC = try HSIRC.get_output();
             out.PLL64RC = try PLL64RC.get_output();
             out.HSEOSC = try HSEOSC.get_output();
+            out.LSCOOutput = try LSCOOutput.get_output();
+            out.LSCOMult = try LSCOMult.get_output();
             out.LSEOSC = try LSEOSC.get_output();
             out.LSIRC = try LSIRC.get_output();
-            out.RC64MPLL = try RC64MPLL.get_output();
-            out.ROOTClkSource = try ROOTClkSource.get_output();
-            out.ROOTCLKOutput = try ROOTCLKOutput.get_output();
-            out.TimerOutput = try TimerOutput.get_output();
-            out.CLK_ROOT_DIV3 = try CLK_ROOT_DIV3.get_output();
-            out.CLK_ROOT_DIV4 = try CLK_ROOT_DIV4.get_output();
-            out.CLKROOTDIVSource = try CLKROOTDIVSource.get_output();
-            out.ClkROOTDIVOutput = try ClkROOTDIVOutput.get_output();
-            out.ClkSMPSDiv4 = try ClkSMPSDiv4.get_output();
-            out.ClkSMPSDiv2 = try ClkSMPSDiv2.get_output();
-            out.ClkSMPSDIV = try ClkSMPSDIV.get_output();
-            out.CLK_SPMS_KRM_DIV = try CLK_SPMS_KRM_DIV.get_output();
-            out.ClkKRM = try ClkKRM.get_output();
-            out.ClkSMPSOutput = try ClkSMPSOutput.get_output();
-            out.LPUARTMult = try LPUARTMult.get_output();
-            out.ClkLPUARTOutput = try ClkLPUARTOutput.get_output();
-            out.LSCOMult = try LSCOMult.get_output();
-            out.LSCOOutput = try LSCOOutput.get_output();
-            out.Div2 = try Div2.get_output();
-            out.ROOTCLK48Prescaler = try ROOTCLK48Prescaler.get_output();
-            out.ROOTCLK64Prescaler = try ROOTCLK64Prescaler.get_output();
-            out.CLKSYSMult = try CLKSYSMult.get_output();
-            out.CLKSYSOutput = try CLKSYSOutput.get_output();
-            out.CLKSPI3I2SMult = try CLKSPI3I2SMult.get_output();
-            out.CLKSPI3I2SOutput = try CLKSPI3I2SOutput.get_output();
-            out.CLKROOTCDevisorON512 = try CLKROOTCDevisorON512.get_output();
-            out.RTCClkSource = try RTCClkSource.get_output();
-            out.RTCOutput = try RTCOutput.get_output();
-            out.MCOMult = try MCOMult.get_output();
-            out.MCODiv = try MCODiv.get_output();
-            out.MCOPin = try MCOPin.get_output();
             ref_out.HSE_VALUE = HSE_VALUEValue;
             ref_out.LSE_VALUE = LSE_VALUEValue;
             ref_out.RC64MPLLSource = RC64MPLLSourceValue;
