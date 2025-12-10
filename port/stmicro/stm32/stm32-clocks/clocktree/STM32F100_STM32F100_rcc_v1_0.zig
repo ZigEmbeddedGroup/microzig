@@ -591,6 +591,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.4e7,
                 };
+
                 break :blk null;
             };
             const RCC_RTC_Clock_Source_FROM_HSEValue: ?f32 = blk: {
@@ -614,6 +615,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e4;
@@ -642,6 +644,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.4e7,
                 };
+
                 break :blk null;
             };
             const AHBCLKDividerValue: ?AHBCLKDividerList = blk: {
@@ -667,6 +670,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.4e7,
                 };
+
                 break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
@@ -714,6 +718,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.4e7,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -744,6 +749,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.4e7,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -794,6 +800,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e6,
                         .max = 2.4e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -831,6 +838,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.6e7,
                         .max = 2.4e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 8e6;

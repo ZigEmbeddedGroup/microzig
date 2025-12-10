@@ -1401,6 +1401,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const PLLSourceValue: ?PLLSourceList = blk: {
@@ -1464,6 +1465,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 0e0,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e4;
@@ -1482,6 +1484,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 0e0,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e4;
@@ -1580,6 +1583,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const I2C2CLockSelectionValue: ?I2C2CLockSelectionList = blk: {
@@ -1674,6 +1678,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 1.4e6,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const RCC_MCO1SourceValue: ?RCC_MCO1SourceList = blk: {
@@ -1742,6 +1747,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const APB3Freq_ValueValue: ?f32 = blk: {
@@ -1749,6 +1755,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const AHB2CLKDividerValue: ?AHB2CLKDividerList = blk: {
@@ -1779,6 +1786,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const HCLK2Freq_ValueValue: ?f32 = blk: {
@@ -1786,6 +1794,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const Cortex2_DivValue: ?Cortex2_DivList = blk: {
@@ -1804,6 +1813,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const AHBCLKDividerValue: ?AHBCLKDividerList = blk: {
@@ -1837,6 +1847,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const HCLKFreq_ValueValue: ?f32 = blk: {
@@ -1845,12 +1856,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.42e7,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 }
                 HCLKFreq_ValueLimit = .{
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
@@ -1898,6 +1911,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -1928,6 +1942,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 4.8e7,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -2021,6 +2036,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 6.2e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4.571429e6;
@@ -2047,6 +2063,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 1.6e7;
@@ -2079,6 +2096,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 4e6,
                         .max = 1.6e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2164,12 +2182,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 9.6e7,
                         .max = 3.44e8,
                     };
+
                     break :blk null;
                 } else if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") and scale2) {
                     VCOOutputFreq_ValueLimit = .{
                         .min = 9.6e7,
                         .max = 1.28e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e7;
@@ -2180,6 +2200,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.2e7,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 1.6e7;
@@ -2769,7 +2790,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         });
                     }
                 }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i));
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else null;
             };
             const FsyncValue: ?f32 = blk: {
                 if (!check_MCU("CRSActivatedSourceGPIO") and !check_MCU("CRSActivatedSourceLSE") and !check_MCU("CRSActivatedSourceUSB")) {
@@ -2818,7 +2839,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                             });
                         }
                     }
-                    break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+                    break :blk if (config_val) |i| i else 1;
                 } else if (check_MCU("CRSActivatedSourceLSE") and RccCrsSyncDiv1) {
                     const val: ?f32 = LSE_VALUEValue;
                     break :blk val;

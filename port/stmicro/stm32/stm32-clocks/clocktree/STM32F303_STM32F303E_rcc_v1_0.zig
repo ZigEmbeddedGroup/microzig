@@ -1103,6 +1103,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 4.788e7,
                     .max = 4.812e7,
                 };
+
                 break :blk null;
             };
             const TIM2SelectionValue: ?TIM2SelectionList = blk: {
@@ -1297,6 +1298,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e4;
@@ -1324,19 +1326,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .RCC_MCO1SOURCE_HSE => {},
                         .RCC_MCO1SOURCE_LSI => {},
                         .RCC_MCO1SOURCE_LSE => {},
-                        else => {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Option not available in this condition: {any}.
-                                \\note: available options:
-                                \\ - RCC_MCO1SOURCE_SYSCLK
-                                \\ - RCC_MCO1SOURCE_HSI
-                                \\ - RCC_MCO1SOURCE_HSE
-                                \\ - RCC_MCO1SOURCE_LSI
-                                \\ - RCC_MCO1SOURCE_LSE
-                            , .{ "RCC_MCOSource", "Else", "No Extra Log", item });
-                        },
+                        .MCOMultDivisor => {},
                     }
                 }
 
@@ -1388,6 +1378,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
@@ -1490,6 +1481,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e7,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (config.flags.USBUsed_ForRCC and ((TIM2SourcePLL and check_MCU("TIM2")) or (TIM34SourcePLL and (check_MCU("TIM3") or check_MCU("TIM4")))) and ((try math_op(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 2, .@"/", "APB1Freq_Value", "SYSCLKFreq_VALUE", "2")) > 10000000)) {
                     const min: ?f32 = try math_op(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 2, .@"/", "APB1Freq_Value", "SYSCLKFreq_VALUE", "2");
@@ -1516,6 +1508,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e7,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (config.flags.RTCUsed_ForRCC and !config.flags.USBUsed_ForRCC and !((TIM2SourcePLL and check_MCU("TIM2")) or (TIM34SourcePLL and (check_MCU("TIM3") or check_MCU("TIM4"))))) {
                     const min: ?f32 = RTCFreq_ValueValue;
@@ -1532,6 +1525,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 3.6e7,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -1576,6 +1570,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -1825,6 +1820,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e6,
                         .max = 2.4e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -1868,6 +1864,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.6e7,
                         .max = 7.2e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 8e6;

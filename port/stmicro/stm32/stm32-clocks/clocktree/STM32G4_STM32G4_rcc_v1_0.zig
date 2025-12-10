@@ -1367,6 +1367,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1.7e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -1439,6 +1440,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 0e0,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e4;
@@ -1457,6 +1459,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 0e0,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e4;
@@ -1466,6 +1469,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const USART1CLockSelectionValue: ?USART1CLockSelectionList = blk: {
@@ -1691,6 +1695,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 1.4e5,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const ADC345CLockSelectionValue: ?ADC345CLockSelectionList = blk: {
@@ -1712,6 +1717,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const CK48CLockSelectionValue: ?CK48CLockSelectionList = blk: {
@@ -1902,6 +1908,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const HCLKFreq_ValueValue: ?f32 = blk: {
@@ -1909,6 +1916,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
@@ -1916,6 +1924,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const Cortex_DivValue: ?Cortex_DivList = blk: {
@@ -1937,6 +1946,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const FCLKCortexFreq_ValueValue: ?f32 = blk: {
@@ -1944,6 +1954,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const APB1CLKDividerValue: ?APB1CLKDividerList = blk: {
@@ -1965,6 +1976,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -1978,6 +1990,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const APB2CLKDividerValue: ?APB2CLKDividerList = blk: {
@@ -1999,6 +2012,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -2012,6 +2026,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.7e8,
                 };
+
                 break :blk null;
             };
             const PLLNValue: ?f32 = blk: {
@@ -2095,6 +2110,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 2.0645e6,
                         .max = 1.7e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2118,6 +2134,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 8e6,
                         .max = 1.7e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2147,6 +2164,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 2.66e6,
                         .max = 1.6e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2157,6 +2175,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 9.6e7,
                         .max = 3.44e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2167,6 +2186,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 8e6,
                         .max = 1.7e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2573,7 +2593,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         });
                     }
                 }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i));
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else null;
             };
             const LSEFsyncValue: ?f32 = blk: {
                 if (config.flags.CRSActivatedSourceLSE and RccCrsSyncDiv1) {

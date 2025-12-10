@@ -1565,7 +1565,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var SPI1Freq_ValueLimit: Limit = .{};
             var SPI3Freq_ValueLimit: Limit = .{};
             var SPI2Freq_ValueLimit: Limit = .{};
+            var PLLFRACNLimit: Limit = .{};
             var PLLQoutputFreq_ValueLimit: Limit = .{};
+            var PLL2FRACNLimit: Limit = .{};
             var PLL2PoutputFreq_ValueLimit: Limit = .{};
             var PLL2QoutputFreq_ValueLimit: Limit = .{};
             var PLL2RoutputFreq_ValueLimit: Limit = .{};
@@ -1790,6 +1792,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const PLLSourceValue: ?PLLSourceList = blk: {
@@ -1986,6 +1989,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 5e7,
                 };
+
                 break :blk null;
             };
             const WatchDogFreq_ValueValue: ?f32 = blk: {
@@ -2017,10 +2021,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse {
-                        scale3 = true;
-                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE3;
-                    };
+                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE3;
                 } else if (((check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 150000000, .@"<")) or (check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 150000000, .@"="))) and (check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 100000000, .@">"))) {
                     const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
                     if (conf_item) |item| {
@@ -2032,10 +2033,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse {
-                        scale2 = true;
-                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE2;
-                    };
+                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE2;
                 } else if (((check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 200000000, .@"<")) or (check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 200000000, .@"="))) and (check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 150000000, .@">"))) {
                     const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
                     if (conf_item) |item| {
@@ -2047,10 +2045,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse {
-                        scale1 = true;
-                        break :blk .PWR_REGULATOR_VOLTAGE_SCALE1;
-                    };
+                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE1;
                 } else if (((check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 250000000, .@"<")) or (check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 250000000, .@"="))) and (check_ref(@TypeOf(SYSCLKFreq_VALUEValue), SYSCLKFreq_VALUEValue, 200000000, .@">"))) {
                     const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
                     if (conf_item) |item| {
@@ -2090,24 +2085,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     USART1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     USART1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     USART1Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2132,24 +2131,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     USART2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     USART2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     USART2Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2174,24 +2177,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     USART3Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     USART3Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     USART3Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2216,24 +2223,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     LPUART1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     LPUART1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     LPUART1Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2258,24 +2269,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     LPTIM1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     LPTIM1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     LPTIM1Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2300,24 +2315,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     LPTIM2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     LPTIM2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     LPTIM2Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2342,24 +2361,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     DACFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     DACFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     DACFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2385,48 +2408,56 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2 and config.flags.DAC1_Used and !config.flags.ADC1_Used and !config.flags.ADC2_Used) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3 and config.flags.DAC1_Used and !config.flags.ADC1_Used and !config.flags.ADC2_Used) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0 and config.flags.DAC1_Used and !config.flags.ADC1_Used and !config.flags.ADC2_Used) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 } else if (scale1) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     ADCFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2451,6 +2482,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 5e7,
                 };
+
                 break :blk null;
             };
             const FDCANClockSelectionValue: ?FDCANClockSelectionList = blk: {
@@ -2474,24 +2506,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     FDCANFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     FDCANFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     FDCANFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2515,24 +2551,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     I2C1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     I2C1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     I2C1Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2556,24 +2596,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     I2C2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     I2C2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     I2C2Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2596,24 +2640,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     I3C2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     I3C2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     I3C2Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2636,24 +2684,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     I3C1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     I3C1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     I3C1Freq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2680,24 +2732,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     RNGFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     RNGFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     RNGFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -2825,6 +2881,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const AHBCLKDividerValue: ?AHBCLKDividerList = blk: {
@@ -2853,6 +2910,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const HCLKFreq_ValueValue: ?f32 = blk: {
@@ -2860,6 +2918,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
@@ -2867,6 +2926,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const Cortex_DivValue: ?Cortex_DivList = blk: {
@@ -2903,6 +2963,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const FCLKCortexFreq_ValueValue: ?f32 = blk: {
@@ -2910,6 +2971,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const APB1CLKDividerValue: ?APB1CLKDividerList = blk: {
@@ -2931,6 +2993,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const RCC_TIM_PRescaler_SelectionValue: ?RCC_TIM_PRescaler_SelectionList = blk: {
@@ -2965,6 +3028,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const APB2CLKDividerValue: ?APB2CLKDividerList = blk: {
@@ -2986,6 +3050,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const APB3CLKDividerValue: ?APB3CLKDividerList = blk: {
@@ -3007,6 +3072,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -3030,6 +3096,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 2.5e8,
                 };
+
                 break :blk null;
             };
             const hsidivToUCPDValue: ?f32 = blk: {
@@ -3060,24 +3127,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     SPI1Freq_ValueLimit = .{
                         .min = null,
                         .max = 7.5e7,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     SPI1Freq_ValueLimit = .{
                         .min = null,
                         .max = 5e7,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     SPI1Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.25e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -3104,24 +3175,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     SPI3Freq_ValueLimit = .{
                         .min = null,
                         .max = 7.5e7,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     SPI3Freq_ValueLimit = .{
                         .min = null,
                         .max = 5e7,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     SPI3Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.25e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -3148,24 +3223,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale2) {
                     SPI2Freq_ValueLimit = .{
                         .min = null,
                         .max = 7.5e7,
                     };
+
                     break :blk null;
                 } else if (scale3) {
                     SPI2Freq_ValueLimit = .{
                         .min = null,
                         .max = 5e7,
                     };
+
                     break :blk null;
                 } else if (scale0) {
                     SPI2Freq_ValueLimit = .{
                         .min = null,
                         .max = 1.25e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -3208,38 +3287,11 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             const PLLFRACNValue: ?f32 = blk: {
                 const config_val = config.PLLFRACN;
-                if (config_val) |val| {
-                    if (val < 0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLFRACN",
-                            "Else",
-                            "No Extra Log",
-                            0,
-                            val,
-                        });
-                    }
-                    if (val > 8191) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLFRACN",
-                            "Else",
-                            "No Extra Log",
-                            8191,
-                            val,
-                        });
-                    }
-                }
+                PLLFRACNLimit = .{
+                    .min = 0,
+                    .max = 8191,
+                };
+
                 break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
             };
             const PLL1PValue: ?PLL1PList = blk: {
@@ -3363,24 +3415,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2 and check_ref(@TypeOf(PLL1QUsedValue), PLL1QUsedValue, 1, .@"=")) {
                     PLLQoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3 and check_ref(@TypeOf(PLL1QUsedValue), PLL1QUsedValue, 1, .@"=")) {
                     PLLQoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0 and check_ref(@TypeOf(PLL1QUsedValue), PLL1QUsedValue, 1, .@"=")) {
                     PLLQoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 1.6e7;
@@ -3459,38 +3515,11 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             const PLL2FRACNValue: ?f32 = blk: {
                 const config_val = config.PLL2FRACN;
-                if (config_val) |val| {
-                    if (val < 0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLL2FRACN",
-                            "Else",
-                            "No Extra Log",
-                            0,
-                            val,
-                        });
-                    }
-                    if (val > 8191) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLL2FRACN",
-                            "Else",
-                            "No Extra Log",
-                            8191,
-                            val,
-                        });
-                    }
-                }
+                PLL2FRACNLimit = .{
+                    .min = 0,
+                    .max = 8191,
+                };
+
                 break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
             };
             const PLL2PValue: ?f32 = blk: {
@@ -3541,24 +3570,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2 and check_ref(@TypeOf(PLL2PUsedValue), PLL2PUsedValue, 1, .@"=")) {
                     PLL2PoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3 and check_ref(@TypeOf(PLL2PUsedValue), PLL2PUsedValue, 1, .@"=")) {
                     PLL2PoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0 and check_ref(@TypeOf(PLL2PUsedValue), PLL2PUsedValue, 1, .@"=")) {
                     PLL2PoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4.571429e6;
@@ -3611,24 +3644,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2 and check_ref(@TypeOf(PLL2QUsedValue), PLL2QUsedValue, 1, .@"=")) {
                     PLL2QoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3 and check_ref(@TypeOf(PLL2QUsedValue), PLL2QUsedValue, 1, .@"=")) {
                     PLL2QoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0 and check_ref(@TypeOf(PLL2QUsedValue), PLL2QUsedValue, 1, .@"=")) {
                     PLL2QoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 1.6e7;
@@ -3681,24 +3718,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2e8,
                     };
+
                     break :blk null;
                 } else if (scale2 and check_ref(@TypeOf(PLL2RUsedValue), PLL2RUsedValue, 1, .@"=")) {
                     PLL2RoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1.5e8,
                     };
+
                     break :blk null;
                 } else if (scale3 and check_ref(@TypeOf(PLL2RUsedValue), PLL2RUsedValue, 1, .@"=")) {
                     PLL2RoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 1e8,
                     };
+
                     break :blk null;
                 } else if (scale0 and check_ref(@TypeOf(PLL2RUsedValue), PLL2RUsedValue, 1, .@"=")) {
                     PLL2RoutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 1.6e7;
@@ -3724,6 +3765,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e6,
                         .max = 1.6e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -3740,6 +3782,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e6,
                         .max = 1.6e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -3767,12 +3810,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.5e8,
                         .max = 4.2e8,
                     };
+
                     break :blk null;
                 } else if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
                     VCOOutputFreq_ValueLimit = .{
                         .min = 1.28e8,
                         .max = 5.6e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e7;
@@ -3783,6 +3828,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 2.5e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 4.571429e6;
@@ -3810,12 +3856,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.5e8,
                         .max = 4.2e8,
                     };
+
                     break :blk null;
                 } else if (check_ref(@TypeOf(PLL2UsedValue), PLL2UsedValue, 1, .@"=")) {
                     VCOPLL2OutputFreq_ValueLimit = .{
                         .min = 1.28e8,
                         .max = 5.6e8,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.2e7;
@@ -4288,7 +4336,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         });
                     }
                 }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i));
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else null;
             };
             const FsyncValue: ?f32 = blk: {
                 if (!config.flags.CRSActivatedSourceGPIO and !config.flags.CRSActivatedSourceLSE and !config.flags.CRSActivatedSourceUSB) {
@@ -4337,7 +4385,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                             });
                         }
                     }
-                    break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+                    break :blk if (config_val) |i| i else 1;
                 } else if (config.flags.CRSActivatedSourceLSE and RccCrsSyncDiv1) {
                     const val: ?f32 = LSE_VALUEValue;
                     break :blk val;
@@ -6663,6 +6711,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 "No Extra Log",
                 "PLLFRACN",
             });
+            PLLFRACN.limit = PLLFRACNLimit;
             PLLFRACN.nodetype = .source;
             PLLFRACN.value = PLLFRACN_clk_value;
 
@@ -6778,6 +6827,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 "No Extra Log",
                 "PLL2FRACN",
             });
+            PLL2FRACN.limit = PLL2FRACNLimit;
             PLL2FRACN.nodetype = .source;
             PLL2FRACN.value = PLL2FRACN_clk_value;
             if (check_ref(@TypeOf(LPTIM1EnableValue), LPTIM1EnableValue, .true, .@"=") or

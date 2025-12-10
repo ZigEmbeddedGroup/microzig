@@ -66933,6 +66933,65 @@ test "STM32F303 RCC calculations" {
     try std.testing.expectEqual(base_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
 }
 
+test "STM32F411 RCC calculations" {
+    const base_file = @"STM32F411_STM32F411-rcc_v1_0";
+    const base_tree = try STM32F411CE.get_clocks(.{});
+    const config_tree = try STM32F411CE.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
+    });
+
+    //APB1 max clock is 48Mhz
+    try std.testing.expectError(error.Overflow, STM32F411CE.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+    }));
+
+    //Invalid USB clock source from PLL
+    try std.testing.expectError(error.InvalidConfig, STM32F411CE.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+        .PLLM = 16,
+        .PLLN = 192,
+        .PLLQ = 4,
+        .PLLP = .RCC_PLLP_DIV2,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
+        .flags = .{
+            .USB_OTG_FSUsed_ForRCC = true,
+        },
+    }));
+
+    //shuold not fail
+    _ = comptime try STM32F411CE.get_clocks(.{
+        .HSE_VALUE = 16_000_000, //Default HSE is 25Mhz
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .PLLM = 16,
+        .PLLN = 192,
+        .PLLQ = 4,
+        .PLLP = .RCC_PLLP_DIV2,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
+        .flags = .{
+            .HSEOscillator = true,
+            .USB_OTG_FSUsed_ForRCC = true,
+        },
+    });
+
+    try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB1Output, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.TimPrescOut, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB2Output, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.PeriphPrescOutput, @as(f32, 16_000_000)); //TIM2 and others
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+
+    try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 96_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 48_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut, @as(f32, 96_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Output, @as(f32, 96_000_000));
+    try std.testing.expectEqual(config_tree.clock.PeriphPrescOutput, @as(f32, 96_000_000)); //TIM2 and others
+}
+
 test "STM32L47 RCC calculations" {
     const base_file = STM32L4_STM32L4_rcc_v1_0;
     const base_tree = try STM32L476VG.get_clocks(.{});
@@ -66958,4 +67017,55 @@ test "STM32L47 RCC calculations" {
     try std.testing.expectEqual(config_tree.clock.TimPrescalerAPB1, @as(f32, 64_000_000));
     try std.testing.expectEqual(config_tree.clock.APB2Prescaler, @as(f32, 64_000_000));
     try std.testing.expectEqual(config_tree.clock.TimPrescalerAPB2, @as(f32, 64_000_000));
+}
+
+test "STM32H723 RCC calculations" {
+    const base_file = STM32H723_STM32H723_rcc_v1_0;
+    const base_tree = try STM32H723VG.get_clocks(.{});
+
+    const config_tree = try STM32H723VG.get_clocks(.{
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+        .DIVM1 = 4,
+        .DIVN1 = 34,
+        .DIVP1 = 1,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .HPRE = .RCC_HCLK_DIV2,
+        .D1PPRE = .RCC_APB3_DIV2,
+        .D2PPRE1 = .RCC_APB1_DIV2,
+        .D2PPRE2 = .RCC_APB2_DIV2,
+        .D3PPRE = .RCC_APB4_DIV2,
+        .USBCLockSelection = .RCC_USBCLKSOURCE_HSI48,
+        .flags = .{ .USB_OTG_FSUsed_ForRCC = true },
+    });
+
+    //if USB use PLL, HSE must to be the source
+    try std.testing.expectError(error.InvalidConfig, STM32H723VG.get_clocks(.{
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+        .DIVM1 = 4,
+        .DIVN1 = 34,
+        .DIVP1 = 1,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .HPRE = .RCC_HCLK_DIV2,
+        .D1PPRE = .RCC_APB3_DIV2,
+        .D2PPRE1 = .RCC_APB1_DIV2,
+        .D2PPRE2 = .RCC_APB2_DIV2,
+        .D3PPRE = .RCC_APB4_DIV2,
+        .USBCLockSelection = .RCC_USBCLKSOURCE_PLL,
+        .flags = .{ .USB_OTG_FSUsed_ForRCC = true },
+    }));
+
+    try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 64_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB1Output, @as(f32, 64_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB2Output, @as(f32, 64_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB3Output, @as(f32, 64_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB4Output, @as(f32, 64_000_000));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+
+    try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 272_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 136_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Output, @as(f32, 136_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB3Output, @as(f32, 136_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB4Output, @as(f32, 136_000_000));
+    try std.testing.expectEqual(config_tree.clock.Tim1Output, @as(f32, 272_000_000));
+    try std.testing.expectEqual(config_tree.clock.Tim2Output, @as(f32, 272_000_000));
 }

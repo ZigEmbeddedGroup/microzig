@@ -1134,6 +1134,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 4.788e7,
                     .max = 4.812e7,
                 };
+
                 break :blk null;
             };
             const HRTIMSelectionValue: ?HRTIMSelectionList = blk: {
@@ -1240,6 +1241,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const RCC_RTC_Clock_Source_FROM_HSEValue: ?f32 = blk: {
@@ -1263,6 +1265,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e4;
@@ -1312,20 +1315,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                             .RCC_MCO1SOURCE_PLLCLK_DIV2 => {},
                             .RCC_MCO1SOURCE_LSI => {},
                             .RCC_MCO1SOURCE_LSE => {},
-                            else => {
-                                return comptime_fail_or_error(error.InvalidConfig,
-                                    \\
-                                    \\Error on {s} | expr: {s} diagnostic: {s} 
-                                    \\Option not available in this condition: {any}.
-                                    \\note: available options:
-                                    \\ - RCC_MCO1SOURCE_SYSCLK
-                                    \\ - RCC_MCO1SOURCE_HSI
-                                    \\ - RCC_MCO1SOURCE_HSE
-                                    \\ - RCC_MCO1SOURCE_PLLCLK_DIV2
-                                    \\ - RCC_MCO1SOURCE_LSI
-                                    \\ - RCC_MCO1SOURCE_LSE
-                                , .{ "RCC_MCOSource", "DIE439|DIE438", "No Extra Log", item });
-                            },
+                            .MCOMultDivisor => {},
                         }
                     }
 
@@ -1340,20 +1330,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .RCC_MCO1SOURCE_PLLCLK_DIV2 => {},
                         .RCC_MCO1SOURCE_LSI => {},
                         .RCC_MCO1SOURCE_LSE => {},
-                        else => {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Option not available in this condition: {any}.
-                                \\note: available options:
-                                \\ - RCC_MCO1SOURCE_SYSCLK
-                                \\ - RCC_MCO1SOURCE_HSI
-                                \\ - RCC_MCO1SOURCE_HSE
-                                \\ - RCC_MCO1SOURCE_PLLCLK_DIV2
-                                \\ - RCC_MCO1SOURCE_LSI
-                                \\ - RCC_MCO1SOURCE_LSE
-                            , .{ "RCC_MCOSource", "Else", "No Extra Log", item });
-                        },
+                        .MCOMultDivisor => {},
                     }
                 }
 
@@ -1422,6 +1399,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const AHBFreq_ValueValue: ?f32 = blk: {
@@ -1594,6 +1572,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e7,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (config.flags.RTCUsed_ForRCC and !config.flags.USBUsed_ForRCC) {
                     const min: ?f32 = RTCFreq_ValueValue;
@@ -1610,6 +1589,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 3.6e7,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -1660,6 +1640,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -1787,7 +1768,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse null;
+                    break :blk conf_item orelse .RCC_USART1CLKSOURCE_PCLK2;
                 }
                 const conf_item = config.Usart1ClockSelection;
                 if (conf_item) |item| {
@@ -1942,6 +1923,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e6,
                         .max = 2.4e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -1988,6 +1970,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.6e7,
                         .max = 7.2e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 8e6;

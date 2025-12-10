@@ -525,6 +525,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 3.2e7,
                 };
+
                 break :blk null;
             };
             const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
@@ -565,7 +566,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
 
                     break :blk conf_item orelse {
-                        scale11 = true;
+                        scale1 = true;
                         break :blk .PWR_REGULATOR_VOLTAGE_SCALE1;
                     };
                 } else if ((((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 4200000, .@">")))) and check_MCU("STM32L162")) {
@@ -884,34 +885,27 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     const conf_item = config.RTCClockSelection;
                     if (conf_item) |item| {
                         switch (item) {
+                            .HSERTCDevisor => {},
                             else => {
                                 return comptime_fail_or_error(error.InvalidConfig,
                                     \\
                                     \\Error on {s} | expr: {s} diagnostic: {s} 
                                     \\Option not available in this condition: {any}.
                                     \\note: available options:
+                                    \\ - HSERTCDevisor
                                 , .{ "RTCClockSelection", "(Semaphore_input_Channel1TIM11 & TIM11 & SEM2RCC_HSE_REQUIRED_TIM11)", "RTC Mux should have HSE as input when TIM11 remap is used", item });
                             },
                         }
                     }
 
-                    break :blk conf_item orelse .RCC_RTCCLKSOURCE_HSE_DIV2;
+                    break :blk conf_item orelse null;
                 }
                 const conf_item = config.RTCClockSelection;
                 if (conf_item) |item| {
                     switch (item) {
                         .RCC_RTCCLKSOURCE_LSE => {},
                         .RCC_RTCCLKSOURCE_LSI => {},
-                        else => {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Option not available in this condition: {any}.
-                                \\note: available options:
-                                \\ - RCC_RTCCLKSOURCE_LSE
-                                \\ - RCC_RTCCLKSOURCE_LSI
-                            , .{ "RTCClockSelection", "Else", "No Extra Log", item });
-                        },
+                        .HSERTCDevisor => {},
                     }
                 }
 
@@ -931,6 +925,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 0e0,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.7e4;
@@ -949,6 +944,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 0e0,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 3.7e4;
@@ -972,6 +968,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 3.2e7,
                 };
+
                 break :blk null;
             };
             const PWRFreq_ValueValue: ?f32 = blk: {
@@ -1051,12 +1048,14 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e7,
                         .max = 3.2e7,
                     };
+
                     break :blk null;
                 }
                 APB1Freq_ValueLimit = .{
                     .min = null,
                     .max = 3.2e7,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -1087,6 +1086,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 3.2e7,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -1171,6 +1171,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 2e6,
                         .max = 2.4e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 1.6e7;
@@ -1213,6 +1214,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 4.788e7,
                     .max = 4.812e7,
                 };
+
                 break :blk null;
             };
             const MSI_VALUEValue: ?f32 = blk: {
@@ -1223,6 +1225,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 0e0,
                     .max = 1e6,
                 };
+
                 break :blk null;
             };
             const VCOOutputFreq_ValueValue: ?f32 = blk: {
@@ -1231,18 +1234,21 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 9.6e7,
                     };
+
                     break :blk null;
                 } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE2, .@"=")))) {
                     VCOOutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE3, .@"=")))) {
                     VCOOutputFreq_ValueLimit = .{
                         .min = null,
                         .max = 2.4e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4.8e7;
@@ -1253,24 +1259,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 2e6,
                         .max = 3.2e7,
                     };
+
                     break :blk null;
                 } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE2, .@"=")))) {
                     PLLCLKFreq_ValueLimit = .{
                         .min = 2e6,
                         .max = 1.6e7,
                     };
+
                     break :blk null;
                 } else if ((check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) and ((check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE3, .@"=")))) {
                     PLLCLKFreq_ValueLimit = .{
                         .min = 2e6,
                         .max = 4e6,
                     };
+
                     break :blk null;
                 }
                 PLLCLKFreq_ValueLimit = .{
                     .min = 2e6,
                     .max = null,
                 };
+
                 break :blk null;
             };
             const VDD_VALUEValue: ?f32 = blk: {

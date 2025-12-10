@@ -606,18 +606,21 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (check_MCU("STM32F102")) {
                     SYSCLKFreq_VALUELimit = .{
                         .min = null,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 }
                 SYSCLKFreq_VALUELimit = .{
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const I2S2Freq_ValueValue: ?f32 = blk: {
@@ -647,6 +650,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 1e6,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e4;
@@ -675,6 +679,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 5e7,
                 };
+
                 break :blk null;
             };
             const AHBCLKDividerValue: ?AHBCLKDividerList = blk: {
@@ -701,18 +706,21 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (check_MCU("STM32F102")) {
                     HCLKFreq_ValueLimit = .{
                         .min = null,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 }
                 HCLKFreq_ValueLimit = .{
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const HCLKDiv2Value: ?f32 = blk: {
@@ -770,18 +778,21 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e7,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (check_MCU("STM32F101") or check_MCU("STM32F103")) {
                     APB1Freq_ValueLimit = .{
                         .min = null,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 }
                 APB1Freq_ValueLimit = .{
                     .min = null,
                     .max = 2.4e7,
                 };
+
                 break :blk null;
             };
             const APB1TimCLKDividerValue: ?f32 = blk: {
@@ -813,18 +824,21 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = null,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (check_MCU("STM32F102")) {
                     APB2Freq_ValueLimit = .{
                         .min = null,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 }
                 APB2Freq_ValueLimit = .{
                     .min = null,
                     .max = 7.2e7,
                 };
+
                 break :blk null;
             };
             const APB2TimCLKDividerValue: ?f32 = blk: {
@@ -854,6 +868,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 1.4e7,
                 };
+
                 break :blk null;
             };
             const USBPrescalerValue: ?USBPrescalerList = blk: {
@@ -872,6 +887,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 4.788e7,
                     .max = 4.812e7,
                 };
+
                 break :blk null;
             };
             const PLLSourceValue: ?PLLSourceList = blk: {
@@ -914,6 +930,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1e6,
                         .max = 2.5e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 4e6;
@@ -951,18 +968,21 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.6e7,
                         .max = 4.8e7,
                     };
+
                     break :blk null;
                 } else if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") and check_MCU("STM32F101")) {
                     PLLCLKFreq_ValueLimit = .{
                         .min = 1.6e7,
                         .max = 3.6e7,
                     };
+
                     break :blk null;
                 } else if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") and check_MCU("STM32F103")) {
                     PLLCLKFreq_ValueLimit = .{
                         .min = null,
                         .max = 7.2e7,
                     };
+
                     break :blk null;
                 }
                 break :blk 8e6;

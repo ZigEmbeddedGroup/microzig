@@ -656,6 +656,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const CLK_16MHz_Div2Value: ?f32 = blk: {
@@ -703,6 +704,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const LPUARTClockSelectionValue: ?LPUARTClockSelectionList = blk: {
@@ -724,6 +726,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 3.2e7,
                 };
+
                 break :blk null;
             };
             const LSCOSource1Value: ?LSCOSource1List = blk: {
@@ -785,6 +788,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const SYSCLK32DividerValue: ?SYSCLK32DividerList = blk: {
@@ -838,24 +842,28 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         .min = 1.6e7,
                         .max = 6.4e7,
                     };
+
                     break :blk null;
                 } else if (config.flags.RADIO_Used and RFCLK32M) {
                     CLKSYSFreq_VALUELimit = .{
                         .min = 3.2e7,
                         .max = 6.4e7,
                     };
+
                     break :blk null;
                 } else if (config.flags.ADC_Used) {
                     CLKSYSFreq_VALUELimit = .{
                         .min = 8e6,
                         .max = 6.4e7,
                     };
+
                     break :blk null;
                 }
                 CLKSYSFreq_VALUELimit = .{
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const CLKI2S3MultSourceValue: ?CLKI2S3MultSourceList = blk: {
@@ -878,7 +886,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                         }
                     }
 
-                    break :blk conf_item orelse null;
+                    break :blk conf_item orelse {
+                        RCC_SPI3I2S_CLKSOURCE_64M = true;
+                        break :blk .RCC_SPI3I2S_CLKSOURCE_64M;
+                    };
                 }
                 const conf_item = config.CLKI2S3MultSource;
                 if (conf_item) |item| {
@@ -899,6 +910,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const CLKI2S2Freq_VALUEValue: ?f32 = blk: {
@@ -906,6 +918,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = null,
                     .max = 6.4e7,
                 };
+
                 break :blk null;
             };
             const CLKI2S2MultSourceValue: ?CLKI2S2MultSourceList = blk: {
@@ -945,6 +958,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     .min = 0e0,
                     .max = 1e6,
                 };
+
                 break :blk null;
             };
             const RCC_MCO1SourceValue: ?RCC_MCO1SourceList = blk: {
