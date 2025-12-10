@@ -111,9 +111,9 @@ const OperationType = enum(u1) {
 };
 
 pub const instance = struct {
-    pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub fn num(n: u1) I2C {
-        return @as(I2C, @enumFromInt(n));
+        if (n != 0) @compileError("Only I2C0 is present");
+        return .{ .regs = I2C0 };
     }
 };
 
@@ -124,15 +124,20 @@ const I2C_FIFO_SIZE: usize = 32;
 const I2C_CHUNK_SIZE: usize = I2C_FIFO_SIZE - 1;
 
 /// I2C Master peripheral driver
-pub const I2C = enum(u1) {
-    _,
+pub const I2C = struct {
+    regs: *volatile I2cRegs,
+    frequency: u32 = 100_000,
 
-    inline fn get_regs(i2c: I2C) *volatile I2cRegs {
-        _ = i2c;
-        return I2C0;
+    inline fn get_regs(self: I2C) *volatile I2cRegs {
+        return self.regs;
     }
 
-    pub fn apply(self: I2C, frequency: u32) ConfigError!void {
+    pub fn apply(self: *I2C, frequency: u32) ConfigError!void {
+        self.frequency = frequency;
+        try self.init();
+    }
+
+    pub fn init(self: I2C) ConfigError!void {
         const regs = self.get_regs();
 
         // Enable I2C peripheral clock and take it out of reset
@@ -163,7 +168,7 @@ pub const I2C = enum(u1) {
 
         // Configure frequency
         // TODO: Take timeout as extra arg and handle saturation?
-        try self.set_frequency(SOURCE_CLK_FREQ, frequency);
+        try self.set_frequency(SOURCE_CLK_FREQ, self.frequency);
 
         // Propagate configuration changes
         self.update_config();
@@ -207,6 +212,7 @@ pub const I2C = enum(u1) {
             .RX_FIFO_RST = 1,
             // Esp hal sets these here
             .NONFIFO_EN = 0,
+            .FIFO_PRT_EN = 1,
             // Esp hal sets these, but why?
             .RXFIFO_WM_THRHD = 1,
             .TXFIFO_WM_THRHD = 31,
@@ -216,12 +222,6 @@ pub const I2C = enum(u1) {
         self.get_regs().FIFO_CONF.modify(.{
             .TX_FIFO_RST = 0,
             .RX_FIFO_RST = 0,
-        });
-
-        // Make sure the FIFO operates in FIFO mode
-        self.get_regs().FIFO_CONF.modify(.{
-            .NONFIFO_EN = 0,
-            .FIFO_PRT_EN = 0,
         });
 
         self.get_regs().INT_CLR.modify(.{
@@ -302,9 +302,17 @@ pub const I2C = enum(u1) {
         });
     }
 
+    fn reset_fsm(self: I2C) !void {
+        // Even though C2 and C3 have a FSM reset bit, esp-idf does not
+        // define SOC_I2C_SUPPORT_HW_FSM_RST for them, so include them in the fallback impl.
+        microzig.hal.system.peripheral_reset(.{ .i2c_ext0 = true });
+
+        try self.init();
+    }
+
     fn check_errors(self: I2C) !void {
         // Reset the peripheral in case of error
-        errdefer self.reset();
+        errdefer self.reset_fsm() catch {};
 
         const interrupts = self.get_regs().INT_RAW.read();
         if (interrupts.TIME_OUT_INT_RAW == 1) {
@@ -428,43 +436,12 @@ pub const I2C = enum(u1) {
         const write_len: u8 = @truncate(if (start) bytes.len + 1 else bytes.len);
 
         if (write_len > 0) {
-            if (write_len < 2) {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len),
-                } });
-            } else if (start) {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len - 1),
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-            } else {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len - 2),
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-            }
+            try self.add_cmd(cmd_start_idx, .{ .write = .{
+                .ack_exp = .ack,
+                .ack_check_en = true,
+                .length = @bitCast(write_len),
+            } });
         }
-
-        self.update_config();
 
         // Load address and R/W bit
         if (start)
@@ -630,10 +607,12 @@ pub const I2C = enum(u1) {
         while (remaining != 0) {
             const max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
                 remaining
-            else if (remaining > I2C_CHUNK_SIZE + 2)
+            else if (is_first_chunk)
+                // Reserve space for start byte
                 I2C_CHUNK_SIZE
             else
-                I2C_CHUNK_SIZE - 2;
+                // Fully use the FIFO
+                I2C_CHUNK_SIZE + 1;
 
             const buffer_remaining = max_chunk_size - buffer_level;
             if (buffer_remaining == 0) {
