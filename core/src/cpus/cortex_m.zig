@@ -737,23 +737,13 @@ pub const startup_logic = struct {
                 : .{ .memory = true, .r0 = true, .r1 = true });
         }
 
-        if (fpu_present and microzig.options.cpu.enable_fpu) {
+        if (microzig.options.cpu.enable_fpu and has_fpu) {
             enable_fpu();
-        } else if (!fpu_present and microzig.options.cpu.enable_fpu) {
+        } else if (microzig.options.cpu.enable_fpu and !has_fpu) {
             @compileError(
-                \\FPU enable requested though the chip doesn't appear to have an
-                \\FPU. If your chip does have an FPU please add the `fpu_present`
-                \\equal to `true` property to your chip file, either manually or via
-                \\patches. If you want to use patches, you can use something like
-                \\this:
-                \\```
-                \\.{ .set_device_property = .{
-                \\    .device_name = "CHIP_NAME",
-                \\    .key = "fpu_present",
-                \\    .value = "true"
-                \\} },
-                \\```
-            );
+                \\FPU enable requested though the chip doesn't appear to have an FPU.
+                \\
+            ++ fpu_error_helper_message);
         }
 
         if (@hasField(types.peripherals.SystemControlBlock, "SHCSR")) {
@@ -1044,17 +1034,43 @@ const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
 const fpu_base = scs_base + 0x0F34;
 
-// TODO: will have to standardize this with regz code generation
-const mpu_present = @hasDecl(microzig.chip, "properties") and
-    @hasDecl(microzig.chip.properties, "mpu_present") and
-    is_property_true(microzig.chip.properties.mpu_present);
-const fpu_present = @hasDecl(microzig.chip, "properties") and
-    @hasDecl(microzig.chip.properties, "fpu_present") and
-    is_property_true(microzig.chip.properties.fpu_present);
+const has_mpu = microzig.chip.properties.has_mpu orelse
+    @compileError(
+        \\It is uncertain if this chip has an MPU or not.
+        \\
+    ++ mpu_error_helper_message);
 
-fn is_property_true(value: []const u8) bool {
-    return std.mem.eql(u8, value, "true") or std.mem.eql(u8, value, "1");
-}
+const has_fpu = microzig.chip.properties.has_fpu orelse
+    @compileError(
+        \\It is uncertain if this chip has an FPU or not.
+        \\
+    ++ fpu_error_helper_message);
+
+const mpu_error_helper_message =
+    \\If you are certain the chip does have an MPU, please set `cpu.mpuPresent`
+    \\(or `__MPU_PRESENT`) to `true` (or `1`) in your chip file, either manually
+    \\or via patches. If you want to use patches, you can use something like this:
+    \\```
+    \\.{ .set_device_property = .{
+    \\    .device_name = "CHIP_NAME",
+    \\    .key = "cpu.mpuPresent",
+    \\    .value = "true"
+    \\} },
+    \\```
+;
+
+const fpu_error_helper_message =
+    \\If you are certain your chip does have an FPU, please set `cpu.fpuPresent`
+    \\(or `__FPU_PRESENT`) to `true` (or `1`) in your chip file, either manually
+    \\or via patches. If you want to use patches, you can use something like this:
+    \\```
+    \\.{ .set_device_property = .{
+    \\    .device_name = "CHIP_NAME",
+    \\    .key = "cpu.fpuPresent",
+    \\    .value = "true"
+    \\} },
+    \\```
+;
 
 const core = blk: {
     break :blk switch (cortex_m) {
@@ -1078,10 +1094,13 @@ pub const peripherals = struct {
     pub const scb: *volatile types.peripherals.SystemControlBlock = @ptrFromInt(scb_base);
 
     /// Floating Point Unit (FPU).
-    pub const fpu: *volatile types.peripherals.FloatingPointUnit = if (fpu_present)
+    pub const fpu: *volatile types.peripherals.FloatingPointUnit = if (has_fpu)
         @ptrFromInt(fpu_base)
     else
-        @compileError("this CPU does not have an FPU");
+        @compileError(
+            \\This chip doesn't appear to have an FPU.
+            \\
+        ++ fpu_error_helper_message);
 
     /// Nested Vector Interrupt Controller (NVIC).
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
@@ -1090,10 +1109,13 @@ pub const peripherals = struct {
     pub const systick: *volatile types.peripherals.SysTick = @ptrFromInt(systick_base);
 
     /// Memory Protection Unit (MPU).
-    pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
+    pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (has_mpu)
         @ptrFromInt(mpu_base)
     else
-        @compileError("this CPU does not have an MPU");
+        @compileError(
+            \\This chip doesn't appear to have an MPU.
+            \\
+        ++ mpu_error_helper_message);
 
     pub const dbg: (if (@hasDecl(core, "DebugRegisters"))
         *volatile core.DebugRegisters
@@ -1120,7 +1142,10 @@ pub const types = struct {
         pub const FloatingPointUnit = if (@hasDecl(core, "FloatingPointUnit"))
             core.FloatingPointUnit
         else
-            @compileError("this CPU does not have an FPU definition");
+            @compileError(
+                \\This chip doesn't appear to have an FPU.
+                \\
+            ++ fpu_error_helper_message);
 
         /// Nested Vector Interrupt Controller (NVIC).
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
@@ -1186,6 +1211,9 @@ pub const types = struct {
         pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
             core.MemoryProtectionUnit
         else
-            @compileError("this CPU does not have an MPU definition");
+            @compileError(
+                \\This chip doesn't appear to have an MPU.
+                \\
+            ++ mpu_error_helper_message);
     };
 };

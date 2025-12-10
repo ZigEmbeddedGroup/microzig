@@ -94,12 +94,6 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     // peripherals
     // vendorExtensions
 
-    const property_name_map: std.StaticStringMap([]const u8) = .initComptime(.{
-        .{ "mpuPresent", "mpu_present" },
-        .{ "fpuPresent", "fpu_present" },
-        .{ "nvicPrioBits", "nvic_prio_bits" },
-    });
-
     var cpu_it = root.iterate(&.{}, &.{"cpu"});
     if (cpu_it.next()) |cpu| {
         const required_properties: []const []const u8 = &.{
@@ -131,7 +125,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
                 return error.MissingRequiredProperty;
             };
 
-            const property_name = property_name_map.get(property) orelse try std.mem.join(
+            const property_name = try std.mem.join(
                 arena.allocator(),
                 ".",
                 &.{ "cpu", property },
@@ -144,11 +138,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
         for (optional_properties) |property| {
             if (cpu.get_value(property)) |value| {
-                const property_name = property_name_map.get(property) orelse try std.mem.join(
-                    arena.allocator(),
-                    ".",
-                    &.{ "cpu", property },
-                );
+                const property_name = try std.mem.join(arena.allocator(), ".", &.{ "cpu", property });
                 try db.add_device_property(device_id, .{
                     .key = property_name,
                     .value = value,
