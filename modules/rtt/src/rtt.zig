@@ -529,9 +529,9 @@ pub fn RTT(comptime config: Config) type {
         ) = undefined;
 
         comptime {
-            if (config.linker_section) |section| @export(&control_block, .{
+            @export(&control_block, .{
                 .name = "RttControlBlock",
-                .section = section,
+                .section = config.linker_section orelse ".data",
             });
         }
 
