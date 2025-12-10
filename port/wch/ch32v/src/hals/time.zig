@@ -8,8 +8,30 @@ const peripherals = microzig.chip.peripherals;
 const PFIC = peripherals.PFIC;
 const RCC = peripherals.RCC;
 const TIM2 = peripherals.TIM2;
-// Combine low and high Systick Count registers
-const STK_CNT: *volatile microzig.mmio.Mmio(u64) = @ptrCast(@alignCast(&(PFIC.STK_CNTL)));
+
+/// Safely read the 64-bit SysTick counter (CNTH:CNTL).
+///
+/// This implements the standard double-read pattern to avoid race conditions:
+/// 1. Read high register
+/// 2. Read low register
+/// 3. Read high register again
+/// 4. If both high reads match, the value is consistent
+/// 5. Otherwise, the low register rolled over between reads - retry
+///
+/// This ensures we never get a value where low has rolled over but we read the old high value.
+inline fn read_stk_cnt() u64 {
+    while (true) {
+        const high1: u32 = PFIC.STK_CNTH.raw;
+        const low: u32 = PFIC.STK_CNTL.raw;
+        const high2: u32 = PFIC.STK_CNTH.raw;
+
+        // If high didn't change, we have a consistent reading
+        if (high1 == high2) {
+            return (@as(u64, high1) << 32) | @as(u64, low);
+        }
+        // Otherwise low rolled over between reads, try again
+    }
+}
 
 /// Global tick counter in microseconds.
 /// Incremented by the TIM2 interrupt handler.
@@ -38,7 +60,8 @@ fn init_delay_counter() void {
     });
 
     // Reset the count registers
-    STK_CNT.raw = 0;
+    PFIC.STK_CNTL.raw = 0;
+    PFIC.STK_CNTH.raw = 0;
 }
 
 /// Initialize TIM2 to fire interrupts every 1ms for timekeeping.
@@ -150,18 +173,12 @@ pub fn delay_us(us: u32) void {
     const ticks_per_us: u32 = freq / 1_000_000;
     const ticks: u64 = @as(u64, us) * @as(u64, ticks_per_us);
 
-    // Read 64-bit counter (CNTH:CNTL)
-    // const start_low: u32 = PFIC.STK_CNTL.raw;
-    // const start_high: u32 = PFIC.STK_CNTH.raw;
-    // const start: u64 = (@as(u64, start_high) << 32) | @as(u64, start_low);
-    const start = STK_CNT.raw;
+    // Read 64-bit counter using safe double-read pattern
+    const start = read_stk_cnt();
 
     // Wait until enough ticks have elapsed
     while (true) {
-        // const current_low: u32 = PFIC.STK_CNTL.raw;
-        // const current_high: u32 = PFIC.STK_CNTH.raw;
-        // const current: u64 = (@as(u64, current_high) << 32) | @as(u64, current_low);
-        const current = STK_CNT.raw;
+        const current = read_stk_cnt();
 
         if (current - start >= ticks) break;
         asm volatile ("" ::: .{ .memory = true });
