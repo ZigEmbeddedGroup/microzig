@@ -51,17 +51,17 @@ pub const DS18B20 = struct {
     pub const Alarms = struct { th: u8, tl: u8 };
 
     pub const Resolution = enum(u2) {
-        HalfDegree9 = 0, // 9-bit  (0.5°C)   - 93.75ms max conversion
-        QuarterDegree10 = 1, // 10-bit (0.25°C)  - 187.5ms max conversion
-        EightDegree11 = 2, // 11-bit (0.125°C) - 375ms max conversion
-        SixteenthDegree12 = 3, // 12-bit (0.0625°C)- 750ms max conversion (Default)
+        half_degree_9 = 0, // 9-bit  (0.5°C)   - 93.75ms max conversion
+        quarter_degree_10 = 1, // 10-bit (0.25°C)  - 187.5ms max conversion
+        eighth_degree_11 = 2, // 11-bit (0.125°C) - 375ms max conversion
+        sixteenth_degree_12 = 3, // 12-bit (0.0625°C)- 750ms max conversion (Default)
 
         fn factor(self: Resolution) f32 {
             return switch (self) {
-                .HalfDegree9 => 0.5,
-                .QuarterDegree10 => 0.25,
-                .EightDegree11 => 0.125,
-                .SixteenthDegree12 => 0.0625,
+                .half_degree_9 => 0.5,
+                .quarter_degree_10 => 0.25,
+                .eighth_degree_11 => 0.125,
+                .sixteenth_degree_12 => 0.0625,
             };
         }
 
@@ -367,26 +367,26 @@ test "crc_is_valid_2" {
 }
 
 test "convert_temperature_half_degree_9" {
-    const temp = DS18B20.convert_temperature_to_celsius(0xA2, 0x00, .HalfDegree9);
+    const temp = DS18B20.convert_temperature_to_celsius(0xA2, 0x00, .half_degree_9);
     try std.testing.expectEqual(10.0, temp);
 }
 
 test "convert_temperature_quarter_degree_10_negative" {
-    const temp = DS18B20.convert_temperature_to_celsius(0x90, 0xFC, .QuarterDegree10);
+    const temp = DS18B20.convert_temperature_to_celsius(0x90, 0xFC, .quarter_degree_10);
     try std.testing.expectEqual(-55.0, temp);
 }
 
 test "convert_temperature_eight_degree_11" {
-    const temp = DS18B20.convert_temperature_to_celsius(0xA2, 0x00, .EightDegree11);
+    const temp = DS18B20.convert_temperature_to_celsius(0xA2, 0x00, .eighth_degree_11);
     try std.testing.expectEqual(10.125, temp);
 }
 
 test "convert_temperature_sixteenth_degree_12" {
-    const temp = DS18B20.convert_temperature_to_celsius(0x91, 0x01, .SixteenthDegree12);
+    const temp = DS18B20.convert_temperature_to_celsius(0x91, 0x01, .sixteenth_degree_12);
     try std.testing.expectEqual(25.0625, temp);
 }
 
 test "convert_temperature_sixteenth_degree_12_negative" {
-    const temp = DS18B20.convert_temperature_to_celsius(0x6F, 0xFE, .SixteenthDegree12);
+    const temp = DS18B20.convert_temperature_to_celsius(0x6F, 0xFE, .sixteenth_degree_12);
     try std.testing.expectEqual(-25.0625, temp);
 }
