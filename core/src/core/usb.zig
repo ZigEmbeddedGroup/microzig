@@ -22,57 +22,57 @@ pub const ack: []const u8 = "";
 
 pub const DeviceInterface = struct {
     pub const VTable = struct {
-        start_tx: *const fn (this: *const DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
-        start_rx: *const fn (this: *const DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
-        endpoint_reset_rx: *const fn (this: *const DeviceInterface, ep_addr: types.Endpoint) void,
-        get_interrupts: *const fn (this: *const DeviceInterface) InterruptStatus,
-        get_setup_packet: *const fn (this: *const DeviceInterface) types.SetupPacket,
-        bus_reset: *const fn (this: *const DeviceInterface) void,
-        set_address: *const fn (this: *const DeviceInterface, addr: u7) void,
-        reset_ep0: *const fn (this: *const DeviceInterface) void,
-        endpoint_open: *const fn (this: *const DeviceInterface, desc: *const descriptor.Endpoint) void,
-        get_EPBIter: *const fn (this: *const DeviceInterface) EPBIter,
+        start_tx: *const fn (this: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
+        start_rx: *const fn (this: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
+        endpoint_reset_rx: *const fn (this: *DeviceInterface, ep_addr: types.Endpoint) void,
+        get_interrupts: *const fn (this: *DeviceInterface) InterruptStatus,
+        get_setup_packet: *const fn (this: *DeviceInterface) types.SetupPacket,
+        bus_reset: *const fn (this: *DeviceInterface) void,
+        set_address: *const fn (this: *DeviceInterface, addr: u7) void,
+        reset_ep0: *const fn (this: *DeviceInterface) void,
+        endpoint_open: *const fn (this: *DeviceInterface, desc: *const descriptor.Endpoint) void,
+        get_EPBIter: *const fn (this: *DeviceInterface) EPBIter,
     };
 
     vtable: *const VTable,
 
-    pub fn start_tx(this: *const @This(), ep_num: types.Endpoint.Num, buffer: []const u8) void {
+    pub fn start_tx(this: *@This(), ep_num: types.Endpoint.Num, buffer: []const u8) void {
         return this.vtable.start_tx(this, ep_num, buffer);
     }
 
-    pub fn start_rx(this: *const @This(), ep_num: types.Endpoint.Num, len: usize) void {
+    pub fn start_rx(this: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
         return this.vtable.start_rx(this, ep_num, len);
     }
 
-    pub fn endpoint_reset_rx(this: *const @This(), ep_addr: types.Endpoint) void {
+    pub fn endpoint_reset_rx(this: *@This(), ep_addr: types.Endpoint) void {
         return this.vtable.endpoint_reset_rx(this, ep_addr);
     }
 
-    pub fn get_interrupts(this: *const @This()) InterruptStatus {
+    pub fn get_interrupts(this: *@This()) InterruptStatus {
         return this.vtable.get_interrupts(this);
     }
 
-    pub fn get_setup_packet(this: *const @This()) types.SetupPacket {
+    pub fn get_setup_packet(this: *@This()) types.SetupPacket {
         return this.vtable.get_setup_packet(this);
     }
 
-    pub fn bus_reset(this: *const @This()) void {
+    pub fn bus_reset(this: *@This()) void {
         return this.vtable.bus_reset(this);
     }
 
-    pub fn set_address(this: *const @This(), addr: u7) void {
+    pub fn set_address(this: *@This(), addr: u7) void {
         return this.vtable.set_address(this, addr);
     }
 
-    pub fn reset_ep0(this: *const @This()) void {
+    pub fn reset_ep0(this: *@This()) void {
         return this.vtable.reset_ep0(this);
     }
 
-    pub fn endpoint_open(this: *const @This(), desc: *const descriptor.Endpoint) void {
+    pub fn endpoint_open(this: *@This(), desc: *const descriptor.Endpoint) void {
         return this.vtable.endpoint_open(this, desc);
     }
 
-    pub fn get_EPBIter(this: *const @This()) EPBIter {
+    pub fn get_EPBIter(this: *@This()) EPBIter {
         return this.vtable.get_EPBIter(this);
     }
 };
@@ -127,7 +127,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
         // Driver state
         driver_data: ?config.Drivers,
         // Hardware
-        device_itf: *const DeviceInterface,
+        device_itf: *DeviceInterface,
 
         /// Command response utility function that can split long data in multiple packets
         fn send_cmd_response(this: *@This(), data: []const u8, expected_max_length: u16) void {
@@ -136,7 +136,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
             this.device_itf.start_tx(.ep0, data[0..len]);
         }
 
-        pub fn init(device_itf: *const DeviceInterface) @This() {
+        pub fn init(device_itf: *DeviceInterface) @This() {
             return .{
                 .new_address = null,
                 .cfg_num = 0,
@@ -436,5 +436,5 @@ pub const EPBIter = struct {
     /// next call.
     last_bit: ?u32 = null,
     /// Get the next available input buffer
-    next: *const fn (itf: *const DeviceInterface, self: *@This()) ?EPB,
+    next: *const fn (itf: *DeviceInterface, self: *@This()) ?EPB,
 };

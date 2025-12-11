@@ -107,7 +107,7 @@ pub fn CdcClassDriver(options: Options) type {
             }
         };
 
-        device: *const usb.DeviceInterface,
+        device: *usb.DeviceInterface,
         ep_notif: types.Endpoint.Num,
         ep_in: types.Endpoint.Num,
         ep_out: types.Endpoint.Num,
@@ -160,7 +160,7 @@ pub fn CdcClassDriver(options: Options) type {
             }
         }
 
-        pub fn init(desc: *const Descriptor, device: *const usb.DeviceInterface) @This() {
+        pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
             return .{
                 .device = device,
                 .ep_notif = desc.ep_notifi.endpoint.num,

@@ -23,7 +23,7 @@ const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     HidDriver.Descriptor.create(1, .{ .name = 4 }, .{ .out = .ep1, .in = .ep1 }),
 );
 
-const usb_dev = rp2xxx.usb.Device(.{});
+var usb_dev: rp2xxx.usb.Device(.{}) = undefined;
 
 var usb_ctrl: usb.DeviceController(usb_config_descriptor, usb.Config{
     .device_descriptor = .{
@@ -75,7 +75,7 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init();
+    usb_dev = .init();
     usb_ctrl = .init(&usb_dev.interface);
 
     var old: u64 = time.get_time_since_boot().to_us();
