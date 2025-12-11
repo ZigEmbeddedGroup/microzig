@@ -488,14 +488,6 @@ pub const I2C = struct {
         }
     }
 
-    fn stop_operation(self: I2C) !void {
-        var cmd_idx: usize = 0;
-        try self.add_cmd(&cmd_idx, Command.stop);
-
-        self.start_transmission();
-        try self.wait_for_completion(mdf.time.Deadline.init_absolute(null));
-    }
-
     /// Read data from an I2C slave
     pub fn read_blocking(self: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) !void {
         return self.readv_blocking(addr, &.{dst}, timeout);
