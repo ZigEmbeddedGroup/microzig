@@ -21,14 +21,14 @@ pub const DS18B20 = struct {
     pin: mdf.base.Digital_IO,
     clock_dev: mdf.base.Clock_Device,
 
-    // timing constants
-    const T_RESET = 480;
-    const T_PRESENCE_WAIT = 70;
-    const T_SLOT = 70;
-    const T_WRITE_1 = 10;
-    const T_WRITE_0 = 60;
-    const T_READ_SAMPLE = 10;
-    const T_RECOVER = 1;
+    // timing constants in microseconds
+    const T_RESET_US = 480;
+    const T_PRESENCE_WAIT_US = 70;
+    const T_SLOT_US = 70;
+    const T_WRITE_1_US = 10;
+    const T_WRITE_0_US = 60;
+    const T_READ_SAMPLE_US = 10;
+    const T_RECOVER_US = 1;
 
     // ROM commands
     // const CMD_SEARCH_ROM = 0xF0; // not implemented
@@ -38,7 +38,7 @@ pub const DS18B20 = struct {
     // const CMD_ALARM_SEARCH = 0xEC; // not implemented
 
     // function commands
-    const CMD_CONVERT_T = 0x44;
+    const CMD_CONVERT_T_US = 0x44;
     const CMD_WRITE_SCRATCHPAD = 0x4E;
     const CMD_READ_SCRATCHPAD = 0xBE;
     const CMD_COPY_SCRATCHPAD = 0x48;
@@ -96,14 +96,14 @@ pub const DS18B20 = struct {
     pub fn reset(self: *const Self) !bool {
         try self.pin.set_direction(.output);
         try self.pin.write(.low);
-        self.clock_dev.sleep_us(T_RESET);
+        self.clock_dev.sleep_us(T_RESET_US);
 
         try self.pin.set_direction(.input);
-        self.clock_dev.sleep_us(T_PRESENCE_WAIT);
+        self.clock_dev.sleep_us(T_PRESENCE_WAIT_US);
 
         const presence = try self.pin.read();
 
-        self.clock_dev.sleep_us(T_RESET - T_PRESENCE_WAIT);
+        self.clock_dev.sleep_us(T_RESET_US - T_PRESENCE_WAIT_US);
 
         return (presence == .low);
     }
@@ -241,7 +241,7 @@ pub const DS18B20 = struct {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
         try self.select_target(args.target);
-        try self.write_byte(CMD_CONVERT_T);
+        try self.write_byte(CMD_CONVERT_T_US);
     }
 
     /// Reads the temperature from the sensor.
@@ -302,19 +302,19 @@ pub const DS18B20 = struct {
     }
 
     fn write_bit(self: *const DS18B20, bit: u1) !void {
-        self.clock_dev.sleep_us(T_RECOVER);
+        self.clock_dev.sleep_us(T_RECOVER_US);
 
         try self.pin.set_direction(.output);
         try self.pin.write(.low);
 
         if (bit == 1) {
-            self.clock_dev.sleep_us(T_WRITE_1);
+            self.clock_dev.sleep_us(T_WRITE_1_US);
             try self.pin.set_direction(.input);
-            self.clock_dev.sleep_us(T_SLOT - T_WRITE_1);
+            self.clock_dev.sleep_us(T_SLOT_US - T_WRITE_1_US);
         } else {
-            self.clock_dev.sleep_us(T_WRITE_0);
+            self.clock_dev.sleep_us(T_WRITE_0_US);
             try self.pin.set_direction(.input);
-            self.clock_dev.sleep_us(T_SLOT - T_WRITE_0);
+            self.clock_dev.sleep_us(T_SLOT_US - T_WRITE_0_US);
         }
     }
 
@@ -327,17 +327,17 @@ pub const DS18B20 = struct {
     }
 
     fn read_bit(self: *const DS18B20) !u1 {
-        self.clock_dev.sleep_us(T_RECOVER);
+        self.clock_dev.sleep_us(T_RECOVER_US);
 
         try self.pin.set_direction(.output);
         try self.pin.write(.low);
         self.clock_dev.sleep_us(1);
         try self.pin.set_direction(.input);
 
-        self.clock_dev.sleep_us(T_READ_SAMPLE - 1);
+        self.clock_dev.sleep_us(T_READ_SAMPLE_US - 1);
         const bit = try self.pin.read();
 
-        self.clock_dev.sleep_us(T_SLOT - T_READ_SAMPLE - 1);
+        self.clock_dev.sleep_us(T_SLOT_US - T_READ_SAMPLE_US - 1);
         return bit.value();
     }
 
