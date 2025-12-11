@@ -125,7 +125,11 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
                 return error.MissingRequiredProperty;
             };
 
-            const property_name = try std.mem.join(arena.allocator(), ".", &.{ "cpu", property });
+            const property_name = try std.mem.join(
+                arena.allocator(),
+                ".",
+                &.{ "cpu", property },
+            );
             try db.add_device_property(device_id, .{
                 .key = property_name,
                 .value = value,

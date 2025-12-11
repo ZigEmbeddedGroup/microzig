@@ -10,7 +10,7 @@ const peripherals = microzig.chip.peripherals;
 const I2C_Device = esp.drivers.I2C_Device;
 const sleep_ms = esp.time.sleep_ms;
 
-const i2c0 = i2c.instance.num(0);
+var i2c0 = i2c.instance.num(0);
 
 const usb_serial_jtag = esp.usb_serial_jtag;
 

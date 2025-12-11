@@ -5,7 +5,7 @@ const FLASH = microzig.chip.peripherals.FLASH;
 const PREDIV = microzig.chip.types.peripherals.rcc_f3v1.PREDIV;
 const PLLMUL = microzig.chip.types.peripherals.rcc_f3v1.PLLMUL;
 const ICSW = microzig.chip.types.peripherals.rcc_f3v1.ICSW;
-const emus_type = @import("enums_type.zig");
+const enums = @import("./enums.zig");
 
 pub const ClockName = enum {
     HSE,
@@ -71,6 +71,29 @@ pub fn enable_pll(comptime source: ClockName, div: PREDIV, mul: PLLMUL) RccError
     current_clock.pllout = expectedPllOut;
 }
 
+pub fn enable_gpio_port(used_gpios_port: u8) void {
+    RCC.AHBENR.modify(.{
+        .GPIOAEN = @as(u1, @truncate(0b1 & used_gpios_port)),
+        .GPIOBEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 1))),
+        .GPIOCEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 2))),
+        .GPIODEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 3))),
+        .GPIOEEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 4))),
+        .GPIOFEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 5))),
+        .GPIOGEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 6))),
+        .GPIOHEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 7))),
+    });
+}
+
+pub fn enable_uart(index: enums.UARTType) void {
+    switch (index) {
+        .USART1 => RCC.APB2ENR.modify(.{ .USART1EN = 1 }),
+        .USART2 => RCC.APB1ENR.modify(.{ .USART2EN = 1 }),
+        .USART3 => RCC.APB1ENR.modify(.{ .USART3EN = 1 }),
+        .UART4 => RCC.APB1ENR.modify(.{ .UART4EN = 1 }),
+        .UART5 => RCC.APB1ENR.modify(.{ .UART5EN = 1 }),
+    }
+}
+
 pub fn enable_hse(speed: u32) void {
     RCC.CR.modify(.{ .HSEON = 1, .HSEBYP = 1 });
 
@@ -99,7 +122,7 @@ pub fn select_pll_for_sysclk() RccErrorConfig!void {
     current_clock.usart1_clk = current_clock.pllout;
 }
 
-pub fn enable_i2c(comptime i2cindex: emus_type.I2CType, clock: ICSW) void {
+pub fn enable_i2c(comptime i2cindex: enums.I2CType, clock: ICSW) void {
     RCC.APB1ENR.modify(switch (i2cindex) {
         .I2C1 => .{ .I2C1EN = 1 },
         .I2C2 => .{ .I2C2EN = 1 },

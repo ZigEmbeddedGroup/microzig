@@ -3,8 +3,6 @@ const mmio = microzig.mmio;
 
 const shared = @import("shared_types.zig");
 
-pub const CPU_Options = shared.options.Ram_Vector_Options;
-
 pub const scb_base_offset = 0x0d00;
 
 pub const SystemControlBlock = extern struct {
