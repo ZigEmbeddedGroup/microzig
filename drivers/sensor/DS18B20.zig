@@ -66,12 +66,7 @@ pub const DS18B20 = struct {
         }
 
         fn fromInt(value: u2) Resolution {
-            return switch (value) {
-                0 => .HalfDegree9,
-                1 => .QuarterDegree10,
-                2 => .EightDegree11,
-                3 => .SixteenthDegree12,
-            };
+            return @enumFromInt(value);
         }
     };
 
