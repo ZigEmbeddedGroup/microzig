@@ -14,6 +14,7 @@ const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
 const usb_ll = stm32.usb.usb_ll;
+const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
@@ -152,28 +153,14 @@ const NecPkg = packed struct(u32) {
 };
 //==========IR NEC ==========
 
-//TODO port helpers from RPxxxx USB HAL
-fn calc_descriptor_size(comptime string: []const u8) comptime_int {
-    return (string.len * 2) + 2;
-}
-fn string_to_descriptor(comptime string: []const u8) [calc_descriptor_size(string)]u8 {
-    var buf: [calc_descriptor_size(string)]u8 = undefined;
-    buf[0] = buf.len;
-    buf[1] = 0x03;
-    for (0..string.len) |index| {
-        buf[(((index) * 2)) + 2] = string[index];
-        buf[(((index) * 2) + 1) + 2] = 0;
-    }
-    return buf;
-}
-
-const prod_id = string_to_descriptor("Zig Keyboard");
-const manu_id = string_to_descriptor("RecursiveError");
+const lang_id: descriptor.String = .from_lang(.English);
+const prod_id: descriptor.String = .from_str("Zig Keyboard");
+const manu_id: descriptor.String = .from_str("RecursiveError");
 fn get_string(index: usize) []const u8 {
     return switch (index) {
-        0 => &[_]u8{ 0x04, 0x03, 0x04, 0x09 },
-        1 => &manu_id,
-        2 => &prod_id,
+        0 => &lang_id.data,
+        1 => &manu_id.data,
+        2 => &prod_id.data,
         else => &[_]u8{},
     };
 }
