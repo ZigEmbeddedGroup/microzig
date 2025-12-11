@@ -26,10 +26,10 @@ pub fn main() !void {
     var ds18b20_gpio = rp2xxx.drivers.GPIO_Device.init(pins.ds18b20);
     const clock_device = rp2xxx.drivers.clock_device();
 
-    const ds18b20 = try DS18B20.init( ds18b20_gpio.digital_io(), clock_device);
+    const ds18b20 = try DS18B20.init(ds18b20_gpio.digital_io(), clock_device);
 
     // set desired resolution
-    try ds18b20.write_config(.{.resolution = .SixteenthDegree12});
+    try ds18b20.write_config(.{ .resolution = .SixteenthDegree12 });
 
     // read rom code of connected sensor (assuming only one sensor is connected)
     // the tom code can be used to address individual devices in a multi drop environment
