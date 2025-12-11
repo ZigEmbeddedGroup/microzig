@@ -82,9 +82,7 @@ pub fn main() !void {
     var i: u32 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.poll(
-            false, // debug output over UART [Y/n]
-        );
+        usb_dev.poll();
 
         if (usb_dev.controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
@@ -116,11 +114,11 @@ pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = serial.write(write_buff);
-        usb_dev.poll(false);
+        usb_dev.poll();
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
     _ = serial.write_flush();
-    usb_dev.poll(false);
+    usb_dev.poll();
 }
 
 var usb_rx_buff: [1024]u8 = undefined;

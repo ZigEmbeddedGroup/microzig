@@ -122,27 +122,94 @@ pub fn Polled(
         const vtable: usb.DeviceInterface.VTable = .{
             .start_tx = start_tx,
             .start_rx = start_rx,
-            .endpoint_reset_rx = endpoint_reset_rx,
-            .get_interrupts = get_interrupts,
-            .get_setup_packet = get_setup_packet,
-            .bus_reset = bus_reset,
             .set_address = set_address,
-            .reset_ep0 = reset_ep0,
             .endpoint_open = endpoint_open,
-            .get_EPBIter = get_EPBIter,
         };
-
-        pub const cfg_max_endpoints_count: u8 = device_config.max_endpoints_count;
-        pub const cfg_max_interfaces_count: u8 = device_config.max_interfaces_count;
-        pub const high_speed = false;
 
         endpoints: [device_config.max_endpoints_count][2]HardwareEndpoint,
         data_buffer: []u8,
         controller: usb.DeviceController(config_descriptor, controller_config),
         interface: usb.DeviceInterface,
 
-        pub fn poll(this: *@This(), debug: bool) void {
-            this.controller.task(debug);
+        pub fn poll(this: *@This()) void {
+            // Check which interrupt flags are set.
+            const ints = get_interrupts();
+
+            // Setup request received?
+            if (ints.SetupReq) {
+                // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
+                // to an IN on EP0 needs to use PID DATA1, and this line will ensure
+                // that.
+                var ep = this.hardware_endpoint_get_by_address(.in(.ep0));
+                ep.next_pid_1 = true;
+
+                const setup = get_setup_packet();
+                this.controller.on_setup_req(&setup);
+            }
+
+            // Events on one or more buffers? (In practice, always one.)
+            if (ints.BuffStatus) {
+                const bufbits_init = peripherals.USB.BUFF_STATUS.raw;
+                var bufbits = bufbits_init;
+
+                while (true) {
+                    // Who's still outstanding? Find their bit index by counting how
+                    // many LSBs are zero.
+                    const lowbit_index = std.math.cast(u5, @ctz(bufbits)) orelse break;
+                    // Remove their bit from our set.
+                    bufbits ^= @as(u32, @intCast(1)) << lowbit_index;
+
+                    // Here we exploit knowledge of the ordering of buffer control
+                    // registers in the peripheral. Each endpoint has a pair of
+                    // registers, so we can determine the endpoint number by:
+                    const epnum = @as(u4, @intCast(lowbit_index >> 1));
+                    // Of the pair, the IN endpoint comes first, followed by OUT, so
+                    // we can get the direction by:
+                    const dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out;
+
+                    const ep: types.Endpoint = .{ .num = @enumFromInt(epnum), .dir = dir };
+                    // Process the buffer-done event.
+
+                    // Process the buffer-done event.
+                    //
+                    // Scan the device table to figure out which endpoint struct
+                    // corresponds to this address. We could use a smarter
+                    // method here, but in practice, the number of endpoints is
+                    // small so a linear scan doesn't kill us.
+
+                    const ep_hard = this.hardware_endpoint_get_by_address(ep);
+
+                    // We should only get here if we've been notified that
+                    // the buffer is ours again. This is indicated by the hw
+                    // _clearing_ the AVAILABLE bit.
+                    //
+                    // This ensures that we can return a shared reference to
+                    // the databuffer contents without races.
+                    // TODO: if ((bc & (1 << 10)) == 1) return EPBError.NotAvailable;
+
+                    // Cool. Checks out.
+
+                    // Get the actual length of the data, which may be less
+                    // than the buffer size.
+                    const len = ep_hard.buffer_control.?.read().LENGTH_0;
+
+                    this.controller.on_buffer(ep, ep_hard.data_buffer[0..len]);
+
+                    if (ep.dir == .Out)
+                        ep_hard.awaiting_rx = false;
+                }
+
+                peripherals.USB.BUFF_STATUS.write_raw(bufbits_init);
+            } // <-- END of buf status handling
+
+            // Has the host signaled a bus reset?
+            if (ints.BusReset) {
+                // Acknowledge by writing the write-one-to-clear status bit.
+                peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
+                peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = 0 });
+
+                this.controller.on_bus_reset();
+            }
         }
 
         pub fn init(this: *@This()) void {
@@ -157,12 +224,12 @@ pub fn Polled(
             peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
             peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
 
-            for (1..cfg_max_endpoints_count) |i| {
+            for (1..device_config.max_endpoints_count) |i| {
                 rp2xxx_endpoints.get_ep_ctrl(@enumFromInt(i), .In).?.write_raw(0);
                 rp2xxx_endpoints.get_ep_ctrl(@enumFromInt(i), .Out).?.write_raw(0);
             }
 
-            for (0..cfg_max_endpoints_count) |i| {
+            for (0..device_config.max_endpoints_count) |i| {
                 rp2xxx_endpoints.get_buf_ctrl(@enumFromInt(i), .In).?.write_raw(0);
                 rp2xxx_endpoints.get_buf_ctrl(@enumFromInt(i), .Out).?.write_raw(0);
             }
@@ -230,7 +297,7 @@ pub fn Polled(
         /// The contents of `buffer` will be _copied_ into USB SRAM, so you can
         /// reuse `buffer` immediately after this returns. No need to wait for the
         /// packet to be sent.
-        pub fn start_tx(
+        fn start_tx(
             itf: *usb.DeviceInterface,
             ep_num: EpNum,
             buffer: []const u8,
@@ -281,7 +348,7 @@ pub fn Polled(
             ep.next_pid_1 = !ep.next_pid_1;
         }
 
-        pub fn start_rx(itf: *usb.DeviceInterface, ep_num: EpNum, len: usize) void {
+        fn start_rx(itf: *usb.DeviceInterface, ep_num: EpNum, len: usize) void {
             const this: *@This() = @fieldParentPtr("interface", itf);
 
             // It is technically possible to support longer buffers but this demo
@@ -310,20 +377,8 @@ pub fn Polled(
             ep.awaiting_rx = true;
         }
 
-        pub fn endpoint_reset_rx(itf: *usb.DeviceInterface, ep_addr: types.Endpoint) void {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-
-            const ep = this.hardware_endpoint_get_by_address(ep_addr);
-            ep.awaiting_rx = false;
-        }
-
         /// Check which interrupt flags are set
-        pub fn get_interrupts(
-            itf: *usb.DeviceInterface,
-        ) usb.InterruptStatus {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-            _ = this;
-
+        fn get_interrupts() usb.InterruptStatus {
             const ints = peripherals.USB.INTS.read();
 
             return .{
@@ -342,12 +397,7 @@ pub fn Polled(
         ///
         /// One can assume that this function is only called if the
         /// setup request falg is set.
-        pub fn get_setup_packet(
-            itf: *usb.DeviceInterface,
-        ) usb.types.SetupPacket {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-            _ = this;
-
+        fn get_setup_packet() usb.types.SetupPacket {
             // Clear the status flag (write-one-to-clear)
             peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
@@ -369,40 +419,21 @@ pub fn Polled(
             return std.mem.bytesToValue(usb.types.SetupPacket, &setup_packet);
         }
 
-        /// Called on a bus reset interrupt
-        pub fn bus_reset(
-            itf: *usb.DeviceInterface,
-        ) void {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-            _ = this;
-
-            // Acknowledge by writing the write-one-to-clear status bit.
-            peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
-            peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = 0 });
-        }
-
-        pub fn set_address(itf: *usb.DeviceInterface, addr: u7) void {
+        fn set_address(itf: *usb.DeviceInterface, addr: u7) void {
             const this: *@This() = @fieldParentPtr("interface", itf);
             _ = this;
 
             peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = addr });
         }
 
-        pub fn reset_ep0(itf: *usb.DeviceInterface) void {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-
-            var ep = this.hardware_endpoint_get_by_address(.in(.ep0));
-            ep.next_pid_1 = true;
-        }
-
         fn hardware_endpoint_get_by_address(this: *@This(), ep: types.Endpoint) *HardwareEndpoint {
             return &this.endpoints[@intFromEnum(ep.num)][@intFromEnum(ep.dir)];
         }
 
-        pub fn endpoint_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
+        fn endpoint_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
             const this: *@This() = @fieldParentPtr("interface", itf);
 
-            assert(@intFromEnum(desc.endpoint.num) <= cfg_max_endpoints_count);
+            assert(@intFromEnum(desc.endpoint.num) <= device_config.max_endpoints_count);
 
             const ep = desc.endpoint;
             const ep_hard = this.hardware_endpoint_get_by_address(ep);
@@ -446,78 +477,6 @@ pub fn Polled(
                 .ENDPOINT_TYPE = @as(EndpointType, @enumFromInt(@intFromEnum(ep.transfer_type))),
                 .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep.data_buffer),
             });
-        }
-
-        /// Iterator over endpoint buffers events
-        pub fn get_EPBIter(itf: *usb.DeviceInterface) usb.EPBIter {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-            _ = this;
-
-            return .{
-                .bufbits = peripherals.USB.BUFF_STATUS.raw,
-                .next = next,
-            };
-        }
-
-        pub fn next(itf: *usb.DeviceInterface, self: *usb.EPBIter) ?usb.EPB {
-            const this: *@This() = @fieldParentPtr("interface", itf);
-
-            if (self.last_bit) |lb| {
-                // Acknowledge the last handled buffer
-                peripherals.USB.BUFF_STATUS.write_raw(lb);
-                self.last_bit = null;
-            }
-            // All input buffers handled?
-            if (self.bufbits == 0) return null;
-
-            // Who's still outstanding? Find their bit index by counting how
-            // many LSBs are zero.
-            var lowbit_index: u5 = 0;
-            while ((self.bufbits >> lowbit_index) & 0x01 == 0) : (lowbit_index += 1) {}
-            // Remove their bit from our set.
-            const lowbit = @as(u32, @intCast(1)) << lowbit_index;
-            self.last_bit = lowbit;
-            self.bufbits ^= lowbit;
-
-            // Here we exploit knowledge of the ordering of buffer control
-            // registers in the peripheral. Each endpoint has a pair of
-            // registers, so we can determine the endpoint number by:
-            const epnum = @as(u8, @intCast(lowbit_index >> 1));
-            // Of the pair, the IN endpoint comes first, followed by OUT, so
-            // we can get the direction by:
-            const dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out;
-
-            const ep: types.Endpoint = .{ .num = @enumFromInt(epnum), .dir = dir };
-            // Process the buffer-done event.
-
-            // Process the buffer-done event.
-            //
-            // Scan the device table to figure out which endpoint struct
-            // corresponds to this address. We could use a smarter
-            // method here, but in practice, the number of endpoints is
-            // small so a linear scan doesn't kill us.
-
-            const ep_hard = this.hardware_endpoint_get_by_address(ep);
-
-            // We should only get here if we've been notified that
-            // the buffer is ours again. This is indicated by the hw
-            // _clearing_ the AVAILABLE bit.
-            //
-            // This ensures that we can return a shared reference to
-            // the databuffer contents without races.
-            // TODO: if ((bc & (1 << 10)) == 1) return EPBError.NotAvailable;
-
-            // Cool. Checks out.
-
-            // Get the actual length of the data, which may be less
-            // than the buffer size.
-            const len = ep_hard.buffer_control.?.read().LENGTH_0;
-
-            // Copy the data from SRAM
-            return usb.EPB{
-                .endpoint_address = ep,
-                .buffer = ep_hard.data_buffer[0..len],
-            };
         }
     };
 }

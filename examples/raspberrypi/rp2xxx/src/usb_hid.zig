@@ -83,9 +83,7 @@ pub fn main() !void {
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.poll(
-            false, // debug output over UART [Y/n]
-        );
+        usb_dev.poll();
 
         if (usb_dev.controller.drivers()) |drivers| {
             _ = drivers; // TODO
