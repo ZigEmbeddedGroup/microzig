@@ -51,25 +51,101 @@ pub const DeviceInterface = struct {
 };
 
 pub const Config = struct {
+    pub const Configuration = struct {
+        num: u8,
+        configuration_s: u8,
+        attributes: descriptor.Configuration.Attributes,
+        max_current_ma: u9,
+        Drivers: type,
+    };
+
     device_descriptor: descriptor.Device,
     string_descriptors: []const descriptor.String,
-    Drivers: type,
     debug: bool = false,
+    /// Currently only a single configuration is supported.
+    configurations: []const Configuration,
 };
 
 /// USB device controller
 ///
 /// This code handles usb enumeration and configuration and routes packets to drivers.
-///
-/// # Arguments
-///
-/// * `config_descriptor` - result of `microzig.core.usb.descriptor.Configuration.create`
-/// * `config` - rest of descriptors and some options
-///
-pub fn DeviceController(config_descriptor: anytype, config: Config) type {
+pub fn DeviceController(config: Config) type {
+    std.debug.assert(config.configurations.len == 1);
+
     return struct {
-        const driver_fields = @typeInfo(config.Drivers).@"struct".fields;
-        const DriverEnum = std.meta.FieldEnum(config.Drivers);
+        const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
+        const DriverEnum = std.meta.FieldEnum(config0.Drivers);
+        const config0 = config.configurations[0];
+        const config_descriptor = blk: {
+            var num_interfaces = 0;
+            var num_strings = 4;
+            var num_ep_in = 1;
+            var num_ep_out = 1;
+
+            var size = @sizeOf(descriptor.Configuration);
+            var fields: [driver_fields.len + 1]std.builtin.Type.StructField = undefined;
+
+            for (driver_fields, 1..) |drv, i| {
+                const payload = drv.type.Descriptor.create(num_interfaces, num_strings, num_ep_in, num_ep_out);
+                const Payload = @TypeOf(payload);
+                size += @sizeOf(Payload);
+
+                fields[i] = .{
+                    .name = drv.name,
+                    .type = Payload,
+                    .default_value_ptr = &payload,
+                    .is_comptime = false,
+                    .alignment = 1,
+                };
+
+                for (@typeInfo(Payload).@"struct".fields) |fld| {
+                    const desc = @field(payload, fld.name);
+                    switch (fld.type) {
+                        descriptor.Interface => {
+                            num_interfaces += 1;
+                            if (desc.interface_s != 0)
+                                num_strings += 1;
+                        },
+                        descriptor.Endpoint => switch (desc.endpoint.dir) {
+                            .In => num_ep_in += 1,
+                            .Out => num_ep_out += 1,
+                        },
+                        descriptor.InterfaceAssociation,
+                        descriptor.cdc.Header,
+                        descriptor.cdc.CallManagement,
+                        descriptor.cdc.AbstractControlModel,
+                        descriptor.cdc.Union,
+                        descriptor.hid.Hid,
+                        => {},
+                        else => @compileLog(fld),
+                    }
+                }
+            }
+
+            const desc_cfg: descriptor.Configuration = .{
+                .total_length = .from(size),
+                .num_interfaces = num_interfaces,
+                .configuration_value = config0.num,
+                .configuration_s = config0.configuration_s,
+                .attributes = config0.attributes,
+                .max_current = .from_ma(config0.max_current_ma),
+            };
+
+            fields[0] = .{
+                .name = "__configuration_descriptor",
+                .type = descriptor.Configuration,
+                .default_value_ptr = &desc_cfg,
+                .is_comptime = false,
+                .alignment = 1,
+            };
+
+            break :blk @Type(.{ .@"struct" = .{
+                .decls = &.{},
+                .fields = &fields,
+                .is_tuple = false,
+                .layout = .auto,
+            } }){};
+        };
 
         /// When the host sets the device address, the acknowledgement
         /// step must use the _old_ address.
@@ -83,7 +159,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
         /// Class driver associated with last setup request if any
         driver_last: ?DriverEnum,
         /// Driver state
-        driver_data: ?config.Drivers,
+        driver_data: ?config0.Drivers,
         /// Device implementation
         device_itf: *DeviceInterface,
 
@@ -101,7 +177,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
 
         /// Returns a pointer to the drivers
         /// or null in case host has not yet configured the device.
-        pub fn drivers(this: *@This()) ?*config.Drivers {
+        pub fn drivers(this: *@This()) ?*config0.Drivers {
             return if (this.driver_data) |*ret| ret else null;
         }
 
@@ -115,8 +191,8 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
             switch (setup.request_type.recipient) {
                 .Device => try this.process_setup_request(setup),
                 .Interface => switch (@as(u8, @truncate(setup.index))) {
-                    inline else => |itf_num| inline for (driver_fields, 1..) |fld_drv, cfg_desc_num| {
-                        const cfg = config_descriptor[cfg_desc_num];
+                    inline else => |itf_num| inline for (driver_fields) |fld_drv| {
+                        const cfg = @field(config_descriptor, fld_drv.name);
                         comptime var fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
 
                         const itf_count = if (fields[0].type != descriptor.InterfaceAssociation)
@@ -185,8 +261,8 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
                             this.driver_class_control(drv, .Ack, &this.setup_packet);
                     }
                 },
-                inline else => |ep_num| inline for (driver_fields, 1..) |fld_drv, cfg_desc_num| {
-                    const cfg = config_descriptor[cfg_desc_num];
+                inline else => |ep_num| inline for (driver_fields) |fld_drv| {
+                    const cfg = @field(config_descriptor, fld_drv.name);
                     const fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
                     inline for (fields) |fld| {
                         const desc = @field(cfg, fld.name);
@@ -318,9 +394,9 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
 
         fn process_set_config(this: *@This(), _: u16) !void {
             // TODO: we support just one config for now so ignore config index
-            this.driver_data = @as(config.Drivers, undefined);
-            inline for (driver_fields, 1..) |fld_drv, cfg_desc_num| {
-                const cfg = config_descriptor[cfg_desc_num];
+            this.driver_data = @as(config0.Drivers, undefined);
+            inline for (driver_fields) |fld_drv| {
+                const cfg = @field(config_descriptor, fld_drv.name);
                 @field(this.driver_data.?, fld_drv.name) = .init(&cfg, this.device_itf);
 
                 inline for (@typeInfo(@TypeOf(cfg)).@"struct".fields) |fld| {

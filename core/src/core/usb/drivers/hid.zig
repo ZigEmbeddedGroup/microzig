@@ -19,8 +19,9 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
 
             pub fn create(
                 first_interface: u8,
-                string_ids: anytype,
-                endpoints: anytype,
+                first_string: u8,
+                first_endpoint_in: u4,
+                first_endpoint_out: u4,
             ) @This() {
                 return .{
                     .interface = .{
@@ -30,17 +31,17 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                         .interface_class = 3,
                         .interface_subclass = @intFromBool(options.boot_protocol),
                         .interface_protocol = @intFromBool(options.boot_protocol),
-                        .interface_s = string_ids.name,
+                        .interface_s = first_string,
                     },
                     .hid = hid_descriptor,
                     .ep_out = .{
-                        .endpoint = .out(endpoints.out),
+                        .endpoint = .in(@enumFromInt(first_endpoint_out)),
                         .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,
                     },
                     .ep_in = .{
-                        .endpoint = .in(endpoints.in),
+                        .endpoint = .in(@enumFromInt(first_endpoint_in)),
                         .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,

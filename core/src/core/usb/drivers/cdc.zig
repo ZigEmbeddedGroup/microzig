@@ -46,7 +46,12 @@ pub fn CdcClassDriver(options: Options) type {
             ep_out: descriptor.Endpoint,
             ep_in: descriptor.Endpoint,
 
-            pub fn create(first_interface: u8, string_ids: anytype, endpoints: anytype) @This() {
+            pub fn create(
+                first_interface: u8,
+                first_string: u8,
+                first_endpoint_in: u4,
+                first_endpoint_out: u4,
+            ) @This() {
                 const endpoint_notifi_size = 8;
                 return .{
                     .itf_assoc = .{
@@ -64,7 +69,7 @@ pub fn CdcClassDriver(options: Options) type {
                         .interface_class = 2,
                         .interface_subclass = 2,
                         .interface_protocol = 0,
-                        .interface_s = string_ids.name,
+                        .interface_s = first_string,
                     },
                     .cdc_header = .{ .bcd_cdc = .from(0x0120) },
                     .cdc_call_mgmt = .{
@@ -77,7 +82,7 @@ pub fn CdcClassDriver(options: Options) type {
                         .slave_interface_0 = first_interface + 1,
                     },
                     .ep_notifi = .{
-                        .endpoint = .in(endpoints.notifi),
+                        .endpoint = .in(@enumFromInt(first_endpoint_in)),
                         .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
                         .max_packet_size = .from(endpoint_notifi_size),
                         .interval = 16,
@@ -92,13 +97,13 @@ pub fn CdcClassDriver(options: Options) type {
                         .interface_s = 0,
                     },
                     .ep_out = .{
-                        .endpoint = .out(endpoints.data_out),
+                        .endpoint = .out(@enumFromInt(first_endpoint_out)),
                         .attributes = .{ .transfer_type = .Bulk, .usage = .data },
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = 0,
                     },
                     .ep_in = .{
-                        .endpoint = .in(endpoints.data_in),
+                        .endpoint = .in(@enumFromInt(first_endpoint_in + 1)),
                         .attributes = .{ .transfer_type = .Bulk, .usage = .data },
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = 0,

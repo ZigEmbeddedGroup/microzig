@@ -109,7 +109,6 @@ const rp2xxx_endpoints = struct {
 /// A set of functions required by the abstract USB impl to
 /// create a concrete one.
 pub fn Polled(
-    config_descriptor: anytype,
     controller_config: usb.Config,
     device_config: Config,
 ) type {
@@ -128,7 +127,7 @@ pub fn Polled(
 
         endpoints: [device_config.max_endpoints_count][2]HardwareEndpoint,
         data_buffer: []u8,
-        controller: usb.DeviceController(config_descriptor, controller_config),
+        controller: usb.DeviceController(controller_config),
         interface: usb.DeviceInterface,
 
         pub fn poll(this: *@This()) void {
@@ -204,7 +203,7 @@ pub fn Polled(
             } // <-- END of buf status handling
 
             // Has the host signaled a bus reset?
-            if (ints.BUFF_STATUS != 0) {
+            if (ints.BUS_RESET != 0) {
                 // Acknowledge by writing the write-one-to-clear status bit.
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = 0 });

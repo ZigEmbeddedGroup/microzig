@@ -13,15 +13,7 @@ const uart_tx_pin = gpio.num(0);
 
 const UsbSerial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
 
-const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
-    0,
-    .{ .self_powered = true },
-    100,
-    UsbSerial.Descriptor.create(1, .{ .name = 4 }, .{ .notifi = .ep1, .data_out = .ep2, .data_in = .ep2 }),
-);
-
 var usb_dev: rp2xxx.usb.Polled(
-    usb_config_descriptor,
     usb.Config{
         .device_descriptor = .{
             .bcd_usb = .from(0x0200),
@@ -46,7 +38,13 @@ var usb_dev: rp2xxx.usb.Polled(
             .from_str("someserial"),
             .from_str("Board CDC"),
         },
-        .Drivers = struct { serial: UsbSerial },
+        .configurations = &.{.{
+            .num = 1,
+            .configuration_s = 0,
+            .attributes = .{ .self_powered = true },
+            .max_current_ma = 100,
+            .Drivers = struct { serial: UsbSerial },
+        }},
     },
     .{},
 ) = undefined;
