@@ -23,7 +23,9 @@ const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     HidDriver.Descriptor.create(1, .{ .name = 4 }, .{ .out = .ep1, .in = .ep1 }),
 );
 
-var usb_dev: rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
+const usb_dev = rp2xxx.usb.Device(.{});
+
+var usb_ctrl: usb.DeviceController(usb_config_descriptor, usb.Config{
     .device_descriptor = .{
         .bcd_usb = .from(0x0200),
         .device_triple = .{
@@ -48,7 +50,7 @@ var usb_dev: rp2xxx.usb.Usb(.{}, usb_config_descriptor, usb.Config{
         .from_str("Boot Keyboard"),
     },
     .Drivers = struct { hid: HidDriver },
-}) = .init;
+}) = undefined;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -73,17 +75,18 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init_device();
+    usb_dev.init();
+    usb_ctrl = .init(&usb_dev.interface);
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.task(
+        usb_ctrl.task(
             false, // debug output over UART [Y/n]
         );
 
-        if (usb_dev.drivers()) |drivers| {
+        if (usb_ctrl.drivers()) |drivers| {
             _ = drivers; // TODO
 
             new = time.get_time_since_boot().to_us();

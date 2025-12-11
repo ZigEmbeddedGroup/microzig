@@ -107,7 +107,7 @@ pub fn CdcClassDriver(options: Options) type {
             }
         };
 
-        device: usb.DeviceInterface,
+        device: *const usb.DeviceInterface,
         ep_notif: types.Endpoint.Num,
         ep_in: types.Endpoint.Num,
         ep_out: types.Endpoint.Num,
@@ -149,18 +149,18 @@ pub fn CdcClassDriver(options: Options) type {
                 return 0;
             }
             const len = self.tx.read(&self.epin_buf);
-            self.device.endpoint_transfer(.in(self.ep_in), self.epin_buf[0..len]);
+            self.device.start_tx(self.ep_in, self.epin_buf[0..len]);
             return len;
         }
 
         fn prep_out_transaction(self: *@This()) void {
             if (self.rx.get_writable_len() >= options.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
-                self.device.endpoint_transfer(.out(self.ep_out), &.{});
+                self.device.start_rx(self.ep_out, options.max_packet_size);
             }
         }
 
-        pub fn init(desc: *const Descriptor, device: usb.DeviceInterface) @This() {
+        pub fn init(desc: *const Descriptor, device: *const usb.DeviceInterface) @This() {
             return .{
                 .device = device,
                 .ep_notif = desc.ep_notifi.endpoint.num,
@@ -204,7 +204,7 @@ pub fn CdcClassDriver(options: Options) type {
                     // If there is no data left, a empty packet should be sent if
                     // data len is multiple of EP Packet size and not zero
                     if (self.tx.get_readable_len() == 0 and data.len > 0 and data.len == options.max_packet_size) {
-                        self.device.endpoint_transfer(.in(self.ep_in), &.{});
+                        self.device.start_tx(self.ep_in, &.{});
                     }
                 }
             }
