@@ -76,8 +76,8 @@ pub const DS18B20 = struct {
     };
 
     pub const PowerSupply = enum {
-        Parasite,
-        External,
+        parasite,
+        external,
     };
 
     pub const RomCode = struct {
@@ -85,8 +85,8 @@ pub const DS18B20 = struct {
     };
 
     pub const Error = error{
-        DeviceNotPresent,
-        RomCrcMismatch,
+        device_not_present,
+        rom_crc_mismatch,
     };
 
     pub fn init(pin: mdf.base.Digital_IO, clock_dev: mdf.base.Clock_Device) !Self {
@@ -115,7 +115,7 @@ pub const DS18B20 = struct {
     /// Returns an error if no device is present.
     /// Must only be used if only one device is present on the bus (single drop)
     pub fn read_single_rom_code(self: *const Self) !RomCode {
-        if (try self.reset() == false) return Error.DeviceNotPresent;
+        if (try self.reset() == false) return Error.device_not_present;
 
         try self.write_command(.read_rom);
 
@@ -126,7 +126,7 @@ pub const DS18B20 = struct {
         }
 
         if (crc8(&rom_code) != 0) {
-            return Error.RomCrcMismatch;
+            return Error.rom_crc_mismatch;
         }
 
         return .{ .value = rom_code };
@@ -184,7 +184,7 @@ pub const DS18B20 = struct {
     /// If target is null, the command is sent to all devices on the bus.
     /// Returns the alarms (TH and TL registers) and resolution.
     pub fn read_config(self: *const Self, args: struct { target: ?RomCode = null }) !struct { alarms: Alarms, resolution: Resolution } {
-        if (try self.reset() == false) return Error.DeviceNotPresent;
+        if (try self.reset() == false) return Error.device_not_present;
 
         try self.select_target(args.target);
         try self.write_command(.read_scratchpad);
@@ -233,7 +233,7 @@ pub const DS18B20 = struct {
         try self.write_command(.read_power_supply);
 
         const supply = try self.read_bit();
-        return if (supply == 1) .External else .Parasite;
+        return if (supply == 1) .external else .parasite;
     }
 
     /// Initiates a temperature conversion.
@@ -241,7 +241,7 @@ pub const DS18B20 = struct {
     /// Depending on the resolution, the conversion may take up to 750ms.
     /// An error is returned if the device is not present.
     pub fn initiate_temperature_conversion(self: *const Self, args: struct { target: ?RomCode = null }) !void {
-        if (try self.reset() == false) return Error.DeviceNotPresent;
+        if (try self.reset() == false) return Error.device_not_present;
 
         try self.select_target(args.target);
         try self.write_command(.convert_t);
@@ -255,7 +255,7 @@ pub const DS18B20 = struct {
     /// Returns temperature in Celsius.
     /// An error is returned if the device is not present.
     pub fn read_temperature(self: *const Self, args: struct { target: ?RomCode = null, resolution: ?Resolution = null }) !f32 {
-        if (try self.reset() == false) return Error.DeviceNotPresent;
+        if (try self.reset() == false) return Error.device_not_present;
 
         try self.select_target(args.target);
         try self.write_command(.read_scratchpad);
