@@ -51,7 +51,12 @@ pub noinline fn main() !void {
         if (try hts221.temperature_ready()) {
             const temp = try hts221.read_temperature();
 
-            std.log.info("Reading temp sensor {}°C", .{temp});
+            std.log.info("Reading temperature {d:.2}°C", .{temp});
+        }
+        if (try hts221.humidity_ready()) {
+            const humidity = try hts221.read_humidity();
+
+            std.log.info("Reading relative humidity {d:.2}%", .{humidity});
         }
     }
 }
