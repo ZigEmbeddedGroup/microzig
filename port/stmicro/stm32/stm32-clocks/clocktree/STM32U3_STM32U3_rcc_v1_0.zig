@@ -1171,6 +1171,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             return mcu_data.get(to_check) != null;
         }
         pub fn get_clocks(config: Config) anyerror!Tree_Output {
+            if (@inComptime()) @setEvalBranchQuota(10000);
             var out = Clock_Output{};
             var ref_out = Config_Output{};
             ref_out.flags = config.flags;

@@ -72,7 +72,6 @@ pub const ClockNode = struct {
 
     pub fn get_output(self: Self) !f32 {
         if (self.nodetype == .off) return 0;
-        if (@inComptime()) @setEvalBranchQuota(10000);
         return self.get_value();
     }
     /// Extra output are additional nodes created arbitrarily based on orphan signals.

@@ -1222,6 +1222,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
         };
         //optional extra configurations
         pub const ExtraConfig = struct {
+            LSEState: ?LSEStateList = null,
             EnableCSSLSE: ?EnableCSSLSEList = null,
             VDD_VALUE: ?f32 = null,
             FLatency: ?FLatencyList = null,
@@ -1623,7 +1624,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             FullHSI48Used: ?f32 = null, //from extra RCC references
             MSIKUsed: ?f32 = null, //from extra RCC references
             MSISUsed: ?f32 = null, //from extra RCC references
-            LSEState: ?LSEStateList = null, //from extra RCC references
+            LSEState: ?LSEStateList = null, //from RCC Advanced Config
             LSEUsed: ?f32 = null, //from extra RCC references
             EnableCSSLSE: ?EnableCSSLSEList = null, //from RCC Advanced Config
             PLL1RUsed: ?f32 = null, //from extra RCC references
@@ -1639,6 +1640,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             return mcu_data.get(to_check) != null;
         }
         pub fn get_clocks(config: Config) anyerror!Tree_Output {
+            if (@inComptime()) @setEvalBranchQuota(10000);
             var out = Clock_Output{};
             var ref_out = Config_Output{};
             ref_out.flags = config.flags;
@@ -6464,7 +6466,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             const LSEStateValue: ?LSEStateList = blk: {
                 if (config.flags.LSEByPassRTC) {
                     const item: LSEStateList = .RCC_LSE_BYPASS_RTC_ONLY;
-                    const conf_item = config.LSEState;
+                    const conf_item = config.extra.LSEState;
                     if (conf_item) |i| {
                         if (item != i) {
                             return comptime_fail_or_error(error.InvalidConfig,
@@ -6480,7 +6482,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     break :blk item;
                 } else if (config.flags.LSEOscillatorRTC) {
                     const item: LSEStateList = .RCC_LSE_ON_RTC_ONLY;
-                    const conf_item = config.LSEState;
+                    const conf_item = config.extra.LSEState;
                     if (conf_item) |i| {
                         if (item != i) {
                             return comptime_fail_or_error(error.InvalidConfig,
@@ -6496,7 +6498,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     break :blk item;
                 } else if (config.flags.LSEByPass) {
                     const item: LSEStateList = .RCC_LSE_BYPASS;
-                    const conf_item = config.LSEState;
+                    const conf_item = config.extra.LSEState;
                     if (conf_item) |i| {
                         if (item != i) {
                             return comptime_fail_or_error(error.InvalidConfig,
@@ -6512,7 +6514,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     break :blk item;
                 } else if (config.flags.LSEOscillator) {
                     const item: LSEStateList = .RCC_LSE_ON;
-                    const conf_item = config.LSEState;
+                    const conf_item = config.extra.LSEState;
                     if (conf_item) |i| {
                         if (item != i) {
                             return comptime_fail_or_error(error.InvalidConfig,
@@ -6527,7 +6529,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     }
                     break :blk item;
                 }
-                const conf_item = config.LSEState;
+                const conf_item = config.extra.LSEState;
                 if (conf_item) |item| {
                     switch (item) {
                         .RCC_LSE_OFF => {},

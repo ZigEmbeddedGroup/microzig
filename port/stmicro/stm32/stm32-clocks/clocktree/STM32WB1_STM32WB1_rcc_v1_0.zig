@@ -727,6 +727,8 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
         };
         //optional extra configurations
         pub const ExtraConfig = struct {
+            MSIOscState: ?MSIOscStateList = null,
+            HSIOscState: ?HSIOscStateList = null,
             EnableCSSLSE: ?EnableCSSLSEList = null,
             VDD_VALUE: ?f32 = null,
             INSTRUCTION_CACHE_ENABLE: ?INSTRUCTION_CACHE_ENABLEList = null,
@@ -736,8 +738,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             HSICalibrationValue: ?u32 = null,
             MSICalibrationValue: ?u32 = null,
             MSIAutoCalibration: ?MSIAutoCalibrationList = null,
-            MSIOscState: ?MSIOscStateList = null,
-            HSIOscState: ?HSIOscStateList = null,
             HSE_Timout: ?u32 = null,
             LSE_Timout: ?u32 = null,
             LSE_Drive_Capability: ?LSE_Drive_CapabilityList = null,
@@ -964,6 +964,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             return mcu_data.get(to_check) != null;
         }
         pub fn get_clocks(config: Config) anyerror!Tree_Output {
+            if (@inComptime()) @setEvalBranchQuota(10000);
             var out = Clock_Output{};
             var ref_out = Config_Output{};
             ref_out.flags = config.flags;

@@ -67069,3 +67069,42 @@ test "STM32H723 RCC calculations" {
     try std.testing.expectEqual(config_tree.clock.Tim1Output, @as(f32, 272_000_000));
     try std.testing.expectEqual(config_tree.clock.Tim2Output, @as(f32, 272_000_000));
 }
+
+test "STM32U575 RCC calculations" {
+    const base_file = STM32U5_STM32U5_rcc_v1_0;
+    const base_tree = try STM32U575VG.get_clocks(.{});
+    const config_tree = comptime try STM32U575VG.get_clocks(.{
+        .PLLSource = .RCC_PLLSOURCE_HSI,
+        .PLLM = 1,
+        .PLLN = 20,
+        .PLL1R = .@"2",
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1CLKDivider = .RCC_HCLK_DIV4,
+        .APB3CLKDivider = .RCC_HCLK_DIV2,
+        .MSIKClockRange = .RCC_MSIKRANGE_0,
+        .CK48CLockSelection = .RCC_CLK48CLKSOURCE_MSIK,
+        .LPUART1CLockSelection = .RCC_LPUART1CLKSOURCE_PCLK3,
+
+        // NOTE: It's necessary to set .Scale 1 manually because the automatic assignment needs the sys clock value,
+        // and currently the generator creates all references and then generates clocks,
+        // which causes sysclk to be NULL at assignment time, resulting in scale3,
+        // which lowers the AHB limit from 160 MHz to 55 MHz.
+        // A fix for this is already in progress
+        .extra = .{ .PWR_Regulator_Voltage_Scale = .PWR_REGULATOR_VOLTAGE_SCALE1 },
+        .flags = .{ .USB_OTG_FSUsed_ForRCC = true, .LPUARTUsed_ForRCC = true },
+    });
+
+    try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB1Output, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB2Output, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB3Output, @as(f32, 4_000_000));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_MSI);
+
+    try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 160_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 40_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut1, @as(f32, 80_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Output, @as(f32, 160_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB3Output, @as(f32, 80_000_000));
+    try std.testing.expectEqual(config_tree.clock.LPUART1output, @as(f32, 80_000_000));
+    try std.testing.expectEqual(config_tree.clock.CK48output, @as(f32, 48_000_000));
+}
