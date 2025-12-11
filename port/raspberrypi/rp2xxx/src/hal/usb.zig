@@ -18,7 +18,7 @@ const EpNum = usb.types.Endpoint.Num;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
-pub const UsbConfig = struct {
+pub const Config = struct {
     // Comptime defined supported max endpoints number, can be reduced to save RAM space
     max_endpoints_count: u8 = RP2XXX_MAX_ENDPOINTS_COUNT,
     max_interfaces_count: u8 = 16,
@@ -108,9 +108,13 @@ const rp2xxx_endpoints = struct {
 
 /// A set of functions required by the abstract USB impl to
 /// create a concrete one.
-pub fn Device(comptime config: UsbConfig) type {
+pub fn Polled(
+    config_descriptor: anytype,
+    controller_config: usb.Config,
+    device_config: Config,
+) type {
     comptime {
-        if (config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
+        if (device_config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
             @compileError("RP2XXX USB endpoints number can't be grater than RP2XXX_MAX_ENDPOINTS_COUNT");
     }
 
@@ -128,15 +132,20 @@ pub fn Device(comptime config: UsbConfig) type {
             .get_EPBIter = get_EPBIter,
         };
 
-        pub const cfg_max_endpoints_count: u8 = config.max_endpoints_count;
-        pub const cfg_max_interfaces_count: u8 = config.max_interfaces_count;
+        pub const cfg_max_endpoints_count: u8 = device_config.max_endpoints_count;
+        pub const cfg_max_interfaces_count: u8 = device_config.max_interfaces_count;
         pub const high_speed = false;
 
-        endpoints: [config.max_endpoints_count][2]HardwareEndpoint,
+        endpoints: [device_config.max_endpoints_count][2]HardwareEndpoint,
         data_buffer: []u8,
+        controller: usb.DeviceController(config_descriptor, controller_config),
         interface: usb.DeviceInterface,
 
-        pub fn init() @This() {
+        pub fn poll(this: *@This(), debug: bool) void {
+            this.controller.task(debug);
+        }
+
+        pub fn init(this: *@This()) void {
             if (chip == .RP2350) {
                 peripherals.USB.MAIN_CTRL.modify(.{
                     .PHY_ISO = 0,
@@ -199,10 +208,11 @@ pub fn Device(comptime config: UsbConfig) type {
                 .SETUP_REQ = 1,
             });
 
-            var this: @This() = .{
+            this.* = .{
                 .endpoints = undefined,
                 .data_buffer = rp2xxx_buffers.data_buffer,
                 .interface = .{ .vtable = &vtable },
+                .controller = .init(&this.interface),
             };
 
             @memset(std.mem.asBytes(&this.endpoints), 0);
@@ -212,8 +222,6 @@ pub fn Device(comptime config: UsbConfig) type {
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
-
-            return this;
         }
 
         /// Configures a given endpoint to send data (device-to-host, IN) when the host
