@@ -144,7 +144,7 @@ pub fn Polled(
                 ep.next_pid_1 = true;
 
                 const setup = get_setup_packet();
-                this.controller.on_setup_req(&setup);
+                this.controller.on_setup_req(&this.interface, &setup);
             }
 
             // Events on one or more buffers? (In practice, always one.)
@@ -193,7 +193,7 @@ pub fn Polled(
                     // than the buffer size.
                     const len = ep_hard.buffer_control.?.read().LENGTH_0;
 
-                    this.controller.on_buffer(ep, ep_hard.data_buffer[0..len]);
+                    this.controller.on_buffer(&this.interface, ep, ep_hard.data_buffer[0..len]);
 
                     if (ep.dir == .Out)
                         ep_hard.awaiting_rx = false;
@@ -212,7 +212,7 @@ pub fn Polled(
             }
         }
 
-        pub fn init(this: *@This()) void {
+        pub fn init() @This() {
             if (chip == .RP2350) {
                 peripherals.USB.MAIN_CTRL.modify(.{
                     .PHY_ISO = 0,
@@ -275,11 +275,11 @@ pub fn Polled(
                 .SETUP_REQ = 1,
             });
 
-            this.* = .{
+            var this: @This() = .{
                 .endpoints = undefined,
                 .data_buffer = rp2xxx_buffers.data_buffer,
                 .interface = .{ .vtable = &vtable },
-                .controller = .init(&this.interface),
+                .controller = .init,
             };
 
             @memset(std.mem.asBytes(&this.endpoints), 0);
@@ -289,6 +289,8 @@ pub fn Polled(
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
+
+            return this;
         }
 
         /// Configures a given endpoint to send data (device-to-host, IN) when the host

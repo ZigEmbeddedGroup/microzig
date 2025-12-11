@@ -77,7 +77,7 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev.init();
+    usb_dev = .init();
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
