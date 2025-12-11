@@ -30,20 +30,23 @@ pub const DS18B20 = struct {
     const T_READ_SAMPLE_US = 10;
     const T_RECOVER_US = 1;
 
-    // ROM commands
-    // const CMD_SEARCH_ROM = 0xF0; // not implemented
-    const CMD_READ_ROM = 0x33;
-    const CMD_MATCH_ROM = 0x55;
-    const CMD_SKIP_ROM = 0xCC;
-    // const CMD_ALARM_SEARCH = 0xEC; // not implemented
+    const Command = enum(u8) {
 
-    // function commands
-    const CMD_CONVERT_T_US = 0x44;
-    const CMD_WRITE_SCRATCHPAD = 0x4E;
-    const CMD_READ_SCRATCHPAD = 0xBE;
-    const CMD_COPY_SCRATCHPAD = 0x48;
-    const CMD_REACLL_SCRATCHPAD = 0xB8;
-    const CMD_READ_POWER_SUPPLY = 0xB4;
+        // ROM commands
+        // search_rom = 0xF0, // not implemented
+        // alarm_search = 0xEC, // not implemented
+        read_rom = 0x33,
+        match_rom = 0x55,
+        skip_rom = 0xCC,
+
+        // function commands
+        convert_t = 0x44,
+        write_scratchpad = 0x4E,
+        read_scratchpad = 0xBE,
+        copy_scratchpad = 0x48,
+        reacll_scratchpad = 0xB8,
+        read_power_supply = 0xB4,
+    };
 
     pub const Alarms = struct { th: u8, tl: u8 };
 
@@ -114,7 +117,7 @@ pub const DS18B20 = struct {
     pub fn read_single_rom_code(self: *const Self) !RomCode {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
-        try self.write_byte(CMD_READ_ROM);
+        try self.write_command(.read_rom);
 
         var rom_code: [8]u8 = undefined;
 
@@ -146,7 +149,7 @@ pub const DS18B20 = struct {
 
         const result = blk: {
             if (args.alarms == null or args.resolution == null) {
-                try self.write_byte(CMD_READ_SCRATCHPAD);
+                try self.write_command(.read_scratchpad);
 
                 _ = try self.read_byte(); // Temperature LSB
                 _ = try self.read_byte(); // Temperature MSB
@@ -169,7 +172,7 @@ pub const DS18B20 = struct {
 
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
-        try self.write_byte(CMD_WRITE_SCRATCHPAD);
+        try self.write_command(.write_scratchpad);
 
         try self.write_byte(th);
         try self.write_byte(tl);
@@ -184,7 +187,7 @@ pub const DS18B20 = struct {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
         try self.select_target(args.target);
-        try self.write_byte(CMD_READ_SCRATCHPAD);
+        try self.write_command(.read_scratchpad);
 
         _ = try self.read_byte(); // temp LSB
         _ = try self.read_byte(); // temp MSB
@@ -206,7 +209,7 @@ pub const DS18B20 = struct {
     pub fn save_config_to_eeprom(self: *const DS18B20, args: struct { target: ?RomCode = null }) !void {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
-        try self.write_byte(CMD_COPY_SCRATCHPAD);
+        try self.write_command(.copy_scratchpad);
 
         // The DS18B20 needs 10ms to write to EEPROM.
         self.clock_dev.sleep_ms(10);
@@ -218,7 +221,7 @@ pub const DS18B20 = struct {
     pub fn recall_config_from_eeprom(self: *const DS18B20, args: struct { target: ?RomCode = null }) !void {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
-        try self.write_byte(CMD_REACLL_SCRATCHPAD);
+        try self.write_command(.reacll_scratchpad);
     }
 
     /// Reads the power supply mode of the device.
@@ -227,7 +230,7 @@ pub const DS18B20 = struct {
     pub fn read_power_supply(self: *const DS18B20, args: struct { target: ?RomCode = null }) !PowerSupply {
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
-        try self.write_byte(CMD_READ_POWER_SUPPLY);
+        try self.write_command(.read_power_supply);
 
         const supply = try self.read_bit();
         return if (supply == 1) .External else .Parasite;
@@ -241,7 +244,7 @@ pub const DS18B20 = struct {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
         try self.select_target(args.target);
-        try self.write_byte(CMD_CONVERT_T_US);
+        try self.write_command(.convert_t);
     }
 
     /// Reads the temperature from the sensor.
@@ -255,7 +258,7 @@ pub const DS18B20 = struct {
         if (try self.reset() == false) return Error.DeviceNotPresent;
 
         try self.select_target(args.target);
-        try self.write_byte(CMD_READ_SCRATCHPAD);
+        try self.write_command(.read_scratchpad);
 
         const lsb = try self.read_byte();
         const msb = try self.read_byte();
@@ -292,12 +295,12 @@ pub const DS18B20 = struct {
 
     fn select_target(self: *const Self, target: ?RomCode) !void {
         if (target) |rom| {
-            try self.write_byte(CMD_MATCH_ROM);
+            try self.write_command(.match_rom);
             for (rom.value) |b| {
                 try self.write_byte(b);
             }
         } else {
-            try self.write_byte(CMD_SKIP_ROM);
+            try self.write_command(.skip_rom);
         }
     }
 
@@ -316,6 +319,10 @@ pub const DS18B20 = struct {
             try self.pin.set_direction(.input);
             self.clock_dev.sleep_us(T_SLOT_US - T_WRITE_0_US);
         }
+    }
+
+    pub fn write_command(self: *const DS18B20, command: Command) !void {
+        try self.write_byte(@intFromEnum(command));
     }
 
     pub fn write_byte(self: *const DS18B20, data: u8) !void {
