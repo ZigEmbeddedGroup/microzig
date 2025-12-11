@@ -11,7 +11,7 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const UsbSerial = usb.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
+const UsbSerial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
 
 const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create(
     0,
@@ -39,8 +39,8 @@ var usb_dev: rp2xxx.usb.Polled(
             .serial_s = 3,
             .num_configurations = 1,
         },
-        .lang_descriptor = .English,
         .string_descriptors = &.{
+            .from_lang(.English),
             .from_str("Raspberry Pi"),
             .from_str("Pico Test Device"),
             .from_str("someserial"),

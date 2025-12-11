@@ -1,5 +1,5 @@
 const std = @import("std");
-const usb = @import("../usb.zig");
+const usb = @import("../../usb.zig");
 const descriptor = usb.descriptor;
 const types = usb.types;
 
@@ -72,8 +72,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             _ = this;
             if (stage == .Setup) switch (setup.request_type.type) {
                 .Standard => {
-                    const hid_desc_type = std.meta.intToEnum(descriptor.hid.Hid.Type, (setup.value >> 8) & 0xff) catch return null;
-                    const request_code = std.meta.intToEnum(types.SetupRequest, setup.request) catch return null;
+                    const hid_desc_type = std.meta.intToEnum(descriptor.hid.Hid.Type, (setup.value >> 8) & 0xff) catch return usb.nak;
+                    const request_code = std.meta.intToEnum(types.SetupRequest, setup.request) catch return usb.nak;
 
                     if (request_code == .GetDescriptor and hid_desc_type == .Hid)
                         return @as([]const u8, @ptrCast(&hid_descriptor))
@@ -81,7 +81,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                         return @as([]const u8, @ptrCast(&report_descriptor));
                 },
                 .Class => {
-                    const hid_request_type = std.meta.intToEnum(descriptor.hid.RequestType, setup.request) catch return null;
+                    const hid_request_type = std.meta.intToEnum(descriptor.hid.RequestType, setup.request) catch return usb.nak;
                     switch (hid_request_type) {
                         .SetIdle => {
                             // TODO: The host is attempting to limit bandwidth by requesting that
@@ -119,7 +119,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                 },
                 else => {},
             };
-            return null;
+            return usb.nak;
         }
 
         pub fn transfer(this: *@This(), ep: types.Endpoint, data: []u8) void {

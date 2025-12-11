@@ -181,30 +181,29 @@ pub const Configuration = extern struct {
     }
 };
 
+/// Utf-16 encoded string descriptor
 pub const String = struct {
+    pub const Language = enum(u16) {
+        English = 0x0409,
+        _,
+    };
+
     data: []const u8,
+
+    pub fn from_lang(lang: Language) @This() {
+        const ret: *const extern struct {
+            length: u8 = @sizeOf(@This()),
+            descriptor_type: Type = .String,
+            lang: types.U16Le,
+        } = comptime &.{ .lang = .from(@intFromEnum(lang)) };
+        return .{ .data = @ptrCast(ret) };
+    }
 
     pub fn from_str(comptime string: []const u8) @This() {
         @setEvalBranchQuota(10000);
         const encoded: []const u8 = std.mem.sliceAsBytes(std.unicode.utf8ToUtf16LeStringLiteral(string));
         return .{ .data = &[2]u8{ encoded.len + 2, @intFromEnum(Type.String) } ++ encoded };
     }
-};
-
-/// String descriptor 0.
-pub const Language = extern struct {
-    comptime {
-        assert(@alignOf(@This()) == 1);
-        assert(@sizeOf(@This()) == 4);
-    }
-
-    length: u8 = @sizeOf(@This()),
-    /// Type of this descriptor, must be `String`.
-    descriptor_type: Type = .String,
-    /// See definitions below for possible values.
-    lang: types.U16Le,
-
-    pub const English: @This() = .{ .lang = .from(0x0409) };
 };
 
 /// Describes an endpoint within an interface

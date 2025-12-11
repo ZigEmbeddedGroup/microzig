@@ -1,9 +1,9 @@
 const std = @import("std");
-const usb = @import("../usb.zig");
+const usb = @import("../../usb.zig");
 const descriptor = usb.descriptor;
 const types = usb.types;
 
-const utilities = @import("../../utilities.zig");
+const utilities = @import("../../../utilities.zig");
 
 pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
@@ -190,7 +190,7 @@ pub fn CdcClassDriver(options: Options) type {
                 };
             } else |_| {}
 
-            return null;
+            return usb.nak;
         }
 
         pub fn transfer(self: *@This(), ep: types.Endpoint, data: []u8) void {

@@ -1,103 +1,90 @@
-//! Abstract USB device implementation
-//!
-//! This can be used to setup a USB device.
-//!
-//! ## Usage
-//!
-//! 1. Define the functions (`pub const F = struct { ... }`) required by `Usb()` (see below)
-//! 2. Call `pub const device = Usb(F)`
-//! 3. Define the device configuration (DeviceConfiguration)
-//! 4. Initialize the device in main by calling `usb.init_device(device_conf)`
-//! 5. Call `usb.task()` within the main loop
-
 const std = @import("std");
 const log = std.log.scoped(.usb);
 
-pub const cdc = @import("usb/cdc.zig");
 pub const descriptor = @import("usb/descriptor.zig");
-pub const hid = @import("usb/hid.zig");
+pub const drivers = struct {
+    pub const cdc = @import("usb/drivers/cdc.zig");
+    pub const hid = @import("usb/drivers/hid.zig");
+};
 pub const types = @import("usb/types.zig");
 
 pub const ack: []const u8 = "";
+pub const nak: ?[]const u8 = null;
 
+/// USB Device interface
+/// Any device implementation used with DeviceController must implement those functions
 pub const DeviceInterface = struct {
     pub const VTable = struct {
         start_tx: *const fn (this: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
         start_rx: *const fn (this: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
-        set_address: *const fn (this: *DeviceInterface, addr: u7) void,
         endpoint_open: *const fn (this: *DeviceInterface, desc: *const descriptor.Endpoint) void,
+        set_address: *const fn (this: *DeviceInterface, addr: u7) void,
     };
 
     vtable: *const VTable,
 
+    /// Called by drivers to send a packet.
+    /// Submitting an empty slice signals an ACK.
+    /// If you intend to send ACK, please use the constant `usb.ack`.
     pub fn start_tx(this: *@This(), ep_num: types.Endpoint.Num, buffer: []const u8) void {
         return this.vtable.start_tx(this, ep_num, buffer);
     }
 
+    /// Called by drivers to report readiness to receive up to `len` bytes.
+    /// Must be called exactly once before each packet.
     pub fn start_rx(this: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
         return this.vtable.start_rx(this, ep_num, len);
     }
 
-    pub fn set_address(this: *@This(), addr: u7) void {
-        return this.vtable.set_address(this, addr);
-    }
-
+    /// Opens an endpoint according to the descriptor. Note that if the endpoint
+    /// direction is IN this may call the controller's `on_buffer` function,
+    /// so driver initialization must be done before this function is called
+    /// on IN endpoint descriptors.
     pub fn endpoint_open(this: *@This(), desc: *const descriptor.Endpoint) void {
         return this.vtable.endpoint_open(this, desc);
+    }
+
+    /// Immediately sets the device address.
+    pub fn set_address(this: *@This(), addr: u7) void {
+        return this.vtable.set_address(this, addr);
     }
 };
 
 pub const Config = struct {
     device_descriptor: descriptor.Device,
-    lang_descriptor: descriptor.Language,
     string_descriptors: []const descriptor.String,
     Drivers: type,
     debug: bool = false,
-
-    fn fuse_strings(comptime this: *const @This()) []const []const u8 {
-        comptime var ret: []const []const u8 = &.{@ptrCast(&this.lang_descriptor)};
-        inline for (this.string_descriptors) |str|
-            ret = ret ++ .{str.data};
-        return ret;
-    }
 };
 
-/// Create a USB device controller
+/// USB device controller
+///
+/// This code handles usb enumeration and configuration and routes packets to drivers.
 ///
 /// # Arguments
 ///
-/// This is a abstract USB device implementation that requires a handful of functions
-/// to work correctly:
+/// * `config_descriptor` - result of `microzig.core.usb.descriptor.Configuration.create`
+/// * `config` - rest of descriptors and some options
 ///
-/// * `usb_init_device(*DeviceConfiguration) - Initialize the USB device controller (e.g. enable interrupts, etc.)
-/// * `usb_start_tx(*EndpointConfiguration, []const u8)` - Transmit the given bytes over the specified endpoint
-/// * `usb_start_rx(*usb.EndpointConfiguration, n: usize)` - Receive n bytes over the specified endpoint
-/// * `get_interrupts() InterruptStatus` - Return which interrupts haven't been handled yet
-/// * `get_setup_packet() SetupPacket` - Return the USB setup packet received (called if SetupReq received). Make sure to clear the status flag yourself!
-/// * `bus_reset() void` - Called on a bus reset interrupt
-/// * `set_address(addr: u7) void` - Set the given address
-/// * `get_EPBIter(*const DeviceConfiguration) EPBIter` - Return an endpoint buffer iterator. Each call to next returns an unhandeled endpoint buffer with data. How next is implemented depends on the system.
-/// The functions must be grouped under the same name space and passed to the fuction at compile time.
 pub fn DeviceController(config_descriptor: anytype, config: Config) type {
     return struct {
         const driver_fields = @typeInfo(config.Drivers).@"struct".fields;
         const DriverEnum = std.meta.FieldEnum(config.Drivers);
 
-        // When the host gives us a new address, we can't just slap it into
-        // registers right away, because we have to do an acknowledgement step using
-        // our _old_ address.
+        /// When the host sets the device address, the acknowledgement
+        /// step must use the _old_ address.
         new_address: ?u8,
-        // 0 - no config set
+        /// 0 - no config set
         cfg_num: u16,
-        // descriptor info waiting to be sent
+        /// Ep0 data waiting to be sent
         tx_slice: []const u8,
-        // Last setup packet request
+        /// Last setup packet request
         setup_packet: types.SetupPacket,
-        // Class driver associated with last setup request if any
-        driver: ?DriverEnum,
-        // Driver state
+        /// Class driver associated with last setup request if any
+        driver_last: ?DriverEnum,
+        /// Driver state
         driver_data: ?config.Drivers,
-        // Hardware
+        /// Device implementation
         device_itf: *DeviceInterface,
 
         pub fn init(device_itf: *DeviceInterface) @This() {
@@ -106,21 +93,24 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
                 .cfg_num = 0,
                 .tx_slice = "",
                 .setup_packet = undefined,
-                .driver = null,
+                .driver_last = null,
                 .driver_data = null,
                 .device_itf = device_itf,
             };
         }
 
+        /// Returns a pointer to the drivers
+        /// or null in case host has not yet configured the device.
         pub fn drivers(this: *@This()) ?*config.Drivers {
             return if (this.driver_data) |*ret| ret else null;
         }
 
+        /// Called by the device implementation when a setup request has been received.
         pub fn on_setup_req(this: *@This(), setup: *const types.SetupPacket) void {
             if (config.debug) log.info("setup req", .{});
 
             this.setup_packet = setup.*;
-            this.driver = null;
+            this.driver_last = null;
 
             switch (setup.request_type.recipient) {
                 .Device => try this.process_setup_request(setup),
@@ -140,7 +130,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
 
                         if (comptime itf_num >= itf_start and itf_num < itf_start + itf_count) {
                             const drv = @field(DriverEnum, fld_drv.name);
-                            this.driver = drv;
+                            this.driver_last = drv;
                             this.driver_class_control(drv, .Setup, setup);
                         }
                     },
@@ -150,6 +140,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
             }
         }
 
+        /// Called by the device implementation when a packet has been received.
         pub fn on_buffer(this: *@This(), ep: types.Endpoint, buffer: []u8) void {
             if (config.debug) log.info("buff status", .{});
 
@@ -179,7 +170,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
                         } else {
                             this.device_itf.start_rx(.ep0, 0);
 
-                            if (this.driver) |drv|
+                            if (this.driver_last) |drv|
                                 this.driver_class_control(drv, .Ack, &this.setup_packet);
                         }
                     } else {
@@ -190,9 +181,8 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
                         // up:
                         this.device_itf.start_rx(.ep0, 0);
 
-                        if (this.driver) |drv| {
+                        if (this.driver_last) |drv|
                             this.driver_class_control(drv, .Ack, &this.setup_packet);
-                        }
                     }
                 },
                 inline else => |ep_num| inline for (driver_fields, 1..) |fld_drv, cfg_desc_num| {
@@ -209,6 +199,7 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
             }
         }
 
+        /// Called by the device implementation on bus reset.
         pub fn on_bus_reset(this: *@This()) void {
             if (config.debug) log.info("bus reset", .{});
 
@@ -300,8 +291,13 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
                     // String descriptor index is in bottom 8 bits of
                     // `value`.
                     const i: usize = @intCast(setup.value & 0xff);
-                    const strings = comptime config.fuse_strings();
-                    this.send_cmd_response(strings[i], setup.length);
+                    if (i >= config.string_descriptors.len)
+                        log.warn("host requested invalid string descriptor {}", .{i})
+                    else
+                        this.send_cmd_response(
+                            config.string_descriptors[i].data,
+                            setup.length,
+                        );
                 },
                 .Interface => {
                     if (config.debug) log.info("        Interface", .{});
@@ -335,20 +331,3 @@ pub fn DeviceController(config_descriptor: anytype, config: Config) type {
         }
     };
 }
-
-/// USB interrupt status
-///
-/// __Note__: Available interrupts may change from device to device.
-pub const InterruptStatus = struct {
-    ///  Host: raised every time the host sends a SOF (Start of Frame)
-    BuffStatus: bool = false,
-    BusReset: bool = false,
-    ///  Set when the device connection state changes
-    DevConnDis: bool = false,
-    ///  Set when the device suspend state changes
-    DevSuspend: bool = false,
-    ///  Set when the device receives a resume from the host
-    DevResumeFromHost: bool = false,
-    /// Setup Request
-    SetupReq: bool = false,
-};

@@ -133,10 +133,11 @@ pub fn Polled(
 
         pub fn poll(this: *@This()) void {
             // Check which interrupt flags are set.
-            const ints = get_interrupts();
+
+            const ints = peripherals.USB.INTS.read();
 
             // Setup request received?
-            if (ints.SetupReq) {
+            if (ints.SETUP_REQ != 0) {
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
                 // to an IN on EP0 needs to use PID DATA1, and this line will ensure
                 // that.
@@ -148,7 +149,7 @@ pub fn Polled(
             }
 
             // Events on one or more buffers? (In practice, always one.)
-            if (ints.BuffStatus) {
+            if (ints.BUFF_STATUS != 0) {
                 const bufbits_init = peripherals.USB.BUFF_STATUS.raw;
                 var bufbits = bufbits_init;
 
@@ -203,7 +204,7 @@ pub fn Polled(
             } // <-- END of buf status handling
 
             // Has the host signaled a bus reset?
-            if (ints.BusReset) {
+            if (ints.BUFF_STATUS != 0) {
                 // Acknowledge by writing the write-one-to-clear status bit.
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = 0 });
@@ -375,20 +376,6 @@ pub fn Polled(
             // Flip the DATA0/1 PID for the next receive
             ep.next_pid_1 = !ep.next_pid_1;
             ep.awaiting_rx = true;
-        }
-
-        /// Check which interrupt flags are set
-        fn get_interrupts() usb.InterruptStatus {
-            const ints = peripherals.USB.INTS.read();
-
-            return .{
-                .BuffStatus = if (ints.BUFF_STATUS == 1) true else false,
-                .BusReset = if (ints.BUS_RESET == 1) true else false,
-                .DevConnDis = if (ints.DEV_CONN_DIS == 1) true else false,
-                .DevSuspend = if (ints.DEV_SUSPEND == 1) true else false,
-                .DevResumeFromHost = if (ints.DEV_RESUME_FROM_HOST == 1) true else false,
-                .SetupReq = if (ints.SETUP_REQ == 1) true else false,
-            };
         }
 
         /// Returns a received USB setup packet

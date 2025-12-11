@@ -11,7 +11,7 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const HidDriver = usb.hid.HidClassDriver(
+const HidDriver = usb.drivers.hid.HidClassDriver(
     .{ .max_packet_size = 64, .boot_protocol = true, .endpoint_interval = 0 },
     usb.descriptor.hid.ReportDescriptorKeyboard,
 );
@@ -42,8 +42,8 @@ var usb_dev: rp2xxx.usb.Polled(
             .serial_s = 3,
             .num_configurations = 1,
         },
-        .lang_descriptor = .English,
         .string_descriptors = &.{
+            .from_lang(.English),
             .from_str("Raspberry Pi"),
             .from_str("Pico Test Device"),
             .from_str("someserial"),
