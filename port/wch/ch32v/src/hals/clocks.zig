@@ -78,45 +78,158 @@ pub fn enable_afio_clock() void {
     RCC.APB2PCENR.modify(.{ .AFIOEN = 1 });
 }
 
-/// Initialize system clock to 48 MHz using HSI
-pub fn init_48mhz_hsi() void {
-    // Enable PLL HSI prescaler (HSIPRE bit)
-    EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 1 });
+// ============================================================================
+// Clock Configuration System
+// ============================================================================
 
-    // Configure clock prescalers
-    RCC.CFGR0.modify(.{
-        .HPRE = 0, // AHB prescaler = 1 (no division)
-        .PPRE2 = 0, // APB2 prescaler = 1 (no division)
-        .PPRE1 = 4, // APB1 prescaler = 2 (divide by 2)
-        .PLLSRC = 0, // PLL source = HSI/2
-        .PLLXTPRE = 0, // HSE divider for PLL = no division
-        .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
-    });
+pub const ClockSource = enum {
+    /// High Speed Internal oscillator (8 MHz RC oscillator)
+    hsi,
+    /// High Speed External oscillator (crystal/oscillator)
+    hse,
+};
 
-    // Enable PLL
-    RCC.CTLR.modify(.{ .PLLON = 1 });
+/// Clock configuration for a board
+pub const Config = struct {
+    /// Clock source to use (HSI or HSE)
+    source: ClockSource,
+    /// Target CPU frequency in Hz
+    target_frequency: u32,
+    /// HSE crystal/oscillator frequency (required if source == .hse)
+    hse_frequency: ?u32 = null,
+};
 
-    // Wait for PLL to lock
-    while (RCC.CTLR.read().PLLRDY == 0) {}
-
-    // Select PLL as system clock
-    RCC.CFGR0.modify(.{ .SW = 2 }); // SW = 2 means PLL
-
-    // Wait for PLL to be used as system clock (SWS should be 2)
-    while (RCC.CFGR0.read().SWS != 2) {}
+/// Initialize system clocks based on configuration
+pub fn init(config: Config) void {
+    switch (config.source) {
+        .hsi => init_from_hsi(config.target_frequency),
+        .hse => {
+            const hse_freq = config.hse_frequency orelse @panic("hse_frequency must be specified when using HSE clock source");
+            init_from_hse(hse_freq, config.target_frequency);
+        },
+    }
 }
 
-const ClockSpeeds = struct {
+/// Initialize clocks from HSI to reach target frequency
+fn init_from_hsi(target_freq: u32) void {
+    const hsi_freq = get_hsi_value();
+
+    // Calculate PLL configuration
+    // The HSIPRE bit controls whether HSI is divided before PLL
+    // PLLMUL bits control the PLL multiplier factor
+
+    if (hsi_freq == 8_000_000) {
+        if (target_freq == 48_000_000) {
+            // 48 MHz from 8 MHz HSI: HSI -> PLL (6x multiplier) -> 48 MHz
+            // HSIPRE = 1 means HSI not divided before PLL
+            EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 1 });
+
+            // Configure clock prescalers
+            RCC.CFGR0.modify(.{
+                .HPRE = 0, // AHB prescaler = 1 (no division)
+                .PPRE2 = 0, // APB2 prescaler = 1 (no division)
+                .PPRE1 = 4, // APB1 prescaler = 2 (divide by 2)
+                .PLLSRC = 0, // PLL source = HSI
+                .PLLXTPRE = 0, // HSE divider for PLL = no division (unused for HSI)
+                .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
+            });
+
+            // Enable PLL
+            RCC.CTLR.modify(.{ .PLLON = 1 });
+
+            // Wait for PLL to lock
+            while (RCC.CTLR.read().PLLRDY == 0) {}
+
+            // Select PLL as system clock
+            RCC.CFGR0.modify(.{ .SW = 2 }); // SW = 2 means PLL
+
+            // Wait for PLL to be used as system clock (SWS should be 2)
+            while (RCC.CFGR0.read().SWS != 2) {}
+        } else if (target_freq == 24_000_000) {
+            // 24 MHz from 8 MHz HSI: HSI/2 -> PLL (6x multiplier) -> 24 MHz
+            // Or use chip-specific PLL configuration for CH32V003
+            // HSIPRE = 0 means HSI divided by 2 before PLL
+            EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 0 });
+
+            // Configure clock prescalers
+            RCC.CFGR0.modify(.{
+                .HPRE = 0, // AHB prescaler = 1 (no division)
+                .PPRE2 = 0, // APB2 prescaler = 1 (no division)
+                .PPRE1 = 0, // APB1 prescaler = 1 (no division)
+                .PLLSRC = 0, // PLL source = HSI
+                .PLLXTPRE = 0, // HSE divider (unused)
+                .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
+            });
+
+            // Enable PLL
+            RCC.CTLR.modify(.{ .PLLON = 1 });
+
+            // Wait for PLL to lock
+            while (RCC.CTLR.read().PLLRDY == 0) {}
+
+            // Select PLL as system clock
+            RCC.CFGR0.modify(.{ .SW = 2 });
+            while (RCC.CFGR0.read().SWS != 2) {}
+        } else {
+            // TODO: Support other target frequencies by calculating PLL multiplier
+            @panic("Unsupported target frequency for HSI");
+        }
+    } else {
+        @panic("Unsupported HSI frequency");
+    }
+}
+
+/// Initialize clocks from HSE to reach target frequency
+fn init_from_hse(hse_freq: u32, target_freq: u32) void {
+    // Enable HSE
+    RCC.CTLR.modify(.{ .HSEON = 1 });
+
+    // Wait for HSE to be ready
+    while (RCC.CTLR.read().HSERDY == 0) {}
+
+    // If target matches HSE exactly, use HSE directly
+    if (target_freq == hse_freq) {
+        RCC.CFGR0.modify(.{ .SW = 1 }); // SW = 1 means HSE
+        while (RCC.CFGR0.read().SWS != 1) {}
+        return;
+    }
+
+    // Calculate PLL multiplier needed
+    // For now, support common case: 8 MHz HSE -> 48 MHz (6x multiplier)
+    if (target_freq == 48_000_000 and hse_freq == 8_000_000) {
+        RCC.CFGR0.modify(.{
+            .HPRE = 0, // AHB prescaler = 1
+            .PPRE2 = 0, // APB2 prescaler = 1
+            .PPRE1 = 4, // APB1 prescaler = 2
+            .PLLSRC = 1, // PLL source = HSE
+            .PLLXTPRE = 0, // HSE not divided before PLL
+            .PLLMUL = 4, // PLL multiplier = 6
+        });
+
+        // Enable PLL
+        RCC.CTLR.modify(.{ .PLLON = 1 });
+        while (RCC.CTLR.read().PLLRDY == 0) {}
+
+        // Select PLL as system clock
+        RCC.CFGR0.modify(.{ .SW = 2 });
+        while (RCC.CFGR0.read().SWS != 2) {}
+    } else {
+        // TODO: Support other frequencies
+        @panic("Unsupported target frequency for HSE");
+    }
+}
+
+// ============================================================================
+// Clock Speed Query Functions
+// ============================================================================
+
+pub const ClockSpeeds = struct {
     sysclk: u32,
     hclk: u32,
     pclk1: u32,
     pclk2: u32,
     adcclk: u32,
 };
-
-// Clock constants
-const HSI_VALUE: u32 = 8_000_000; // 8 MHz internal oscillator
-const HSE_VALUE: u32 = 8_000_000; // 8 MHz external oscillator (board-dependent)
 
 // Prescaler lookup table for AHB/APB buses
 // Index into this table with the HPRE/PPRE bits, result is the shift amount
@@ -125,10 +238,31 @@ const prescaler_table = [16]u8{ 0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9 }
 // ADC prescaler lookup table (divisor values)
 const adc_prescaler_table = [4]u8{ 2, 4, 6, 8 };
 
+/// Get HSI oscillator frequency from chip HAL
+fn get_hsi_value() u32 {
+    return microzig.hal.hsi_frequency;
+}
+
+/// Get HSE oscillator frequency from board configuration
+fn get_hse_value() u32 {
+    // Try to get from board's clock config
+    if (@hasDecl(microzig.board, "clock_config")) {
+        if (microzig.board.clock_config.hse_frequency) |freq| {
+            return freq;
+        }
+    }
+    // Default fallback (though this shouldn't be used if board uses HSE)
+    return 8_000_000;
+}
+
 /// Get the current clock frequencies by reading RCC registers
 /// Based on WCH's RCC_GetClocksFreq() implementation
 pub fn get_freqs() ClockSpeeds {
     var sysclk: u32 = 0;
+
+    // Get actual oscillator frequencies from chip/board config
+    const HSI_VALUE = get_hsi_value();
+    const HSE_VALUE = get_hse_value();
 
     // Determine system clock source from SWS (System Clock Switch Status)
     const sws = RCC.CFGR0.read().SWS;
