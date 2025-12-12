@@ -10,7 +10,7 @@ const gpio = stm32.gpio;
 const time = stm32.time;
 const Duration = microzig.drivers.time.Duration;
 const usb_ll = stm32.usb.usb_ll;
-const usb_utils = stm32.usb.usb_utils;
+const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
@@ -40,10 +40,10 @@ const DeviceDescriptor = [18]u8{
     0x01, // bNumConfigurations
 };
 
-const langID = [_]u8{ 0x04, 0x03, 0x09, 0x04 };
-const prod_id = usb_utils.string_to_descriptor("STM32 HID example");
-const manu_id = usb_utils.string_to_descriptor("MicroZig");
-const serial_id = usb_utils.string_to_descriptor("12345");
+const lang_id: descriptor.String = .from_lang(.English);
+const prod_id: descriptor.String = .from_str("STM32 HID example");
+const manu_id: descriptor.String = .from_str("MicroZig");
+const serial_id: descriptor.String = .from_str("12345");
 
 const ConfigurationDescriptor = [34]u8{
     // Configuration Descriptor (9 bytes)
@@ -143,10 +143,10 @@ var config: bool = false;
 
 fn get_string(index: usize) []const u8 {
     return switch (index) {
-        0 => &langID,
-        1 => &manu_id,
-        2 => &prod_id,
-        3 => &serial_id,
+        0 => lang_id.data,
+        1 => manu_id.data,
+        2 => prod_id.data,
+        3 => serial_id.data,
         else => &[_]u8{},
     };
 }
