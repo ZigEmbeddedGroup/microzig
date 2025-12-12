@@ -75,13 +75,18 @@ pub const DS18B20 = struct {
         external,
     };
 
+    pub const Error = error{
+        device_not_present,
+        rom_crc_mismatch,
+    };
+
     pub const RomCode = struct {
         value: [8]u8,
     };
 
-    pub const Error = error{
-        device_not_present,
-        rom_crc_mismatch,
+    pub const Config = struct {
+        alarms: Alarms,
+        resolution: Resolution,
     };
 
     pub fn init(pin: mdf.base.Digital_IO, clock_dev: mdf.base.Clock_Device) !Self {
@@ -182,7 +187,7 @@ pub const DS18B20 = struct {
     /// An error is returned if the device is not present.
     /// If target is null, the command is sent to all devices on the bus.
     /// Returns the alarms (TH and TL registers) and resolution.
-    pub fn read_config(self: *const Self, args: struct { target: ?RomCode = null }) !struct { alarms: Alarms, resolution: Resolution } {
+    pub fn read_config(self: *const Self, args: struct { target: ?RomCode = null }) !Config {
         if (try self.reset() == false) return Error.device_not_present;
 
         try self.select_target(args.target);
@@ -194,7 +199,7 @@ pub const DS18B20 = struct {
         const tl = try self.read_byte(); // TL register
         const config = try self.read_byte();
 
-        const resolution_bits: u2 = @intCast((config >> 5) & 0x03);
+        const resolution_bits: u2 = @truncate(config >> 5);
 
         return .{
             .alarms = .{ .th = th, .tl = tl },
