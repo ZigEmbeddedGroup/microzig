@@ -90,6 +90,10 @@ pub const DS18B20 = struct {
     }
 
     /// Resets the bus and checks for device presence.
+    /// A reset is required to initialize the communication with the device
+    /// (see the datasheet for details about the communication protocol).
+    /// If any device is present on the bus, it will signal the master its presence
+    /// (i.e. pull the line low) as a response to the reset pulse.
     /// Returns true if a device is present, false otherwise.
     pub fn reset(self: *const Self) !bool {
         try self.pin.set_direction(.output);
@@ -99,11 +103,11 @@ pub const DS18B20 = struct {
         try self.pin.set_direction(.input);
         self.clock_dev.sleep_us(T_PRESENCE_WAIT_US);
 
-        const presence = try self.pin.read();
+        const device_is_present = try self.pin.read();
 
         self.clock_dev.sleep_us(T_RESET_US - T_PRESENCE_WAIT_US);
 
-        return (presence == .low);
+        return (device_is_present == .low);
     }
 
     /// Reads the ROM code of a single device on the bus.
