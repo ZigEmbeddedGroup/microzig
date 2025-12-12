@@ -32,7 +32,7 @@ pub fn main() !void {
     try ds18b20.write_config(.{ .resolution = .sixteenth_degree_12 });
 
     // read rom code of connected sensor (assuming only one sensor is connected)
-    // the tom code can be used to address individual devices in a multi drop environment
+    // the rom code can be used to address individual devices in a multi drop environment
     // const rom_code = try ds18b20.read_single_rom_code();
 
     while (true) {
