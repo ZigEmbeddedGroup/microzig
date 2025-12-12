@@ -198,7 +198,7 @@ pub const DS18B20 = struct {
 
         return .{
             .alarms = .{ .th = th, .tl = tl },
-            .resolution = Resolution.fromInt(resolution_bits),
+            .resolution = .fromInt(resolution_bits),
         };
     }
 
