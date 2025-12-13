@@ -273,7 +273,7 @@ fn get_hsi_value() u32 {
 /// Get HSE oscillator frequency from board configuration
 fn get_hse_value() u32 {
     // Try to get from board's clock config
-    if (@hasDecl(microzig.board, "clock_config")) {
+    if (microzig.config.has_board and @hasDecl(microzig.board, "clock_config")) {
         if (microzig.board.clock_config.hse_frequency) |freq| {
             return freq;
         }
@@ -369,4 +369,39 @@ pub fn get_freqs() ClockSpeeds {
         .pclk2 = pclk2,
         .adcclk = adcclk,
     };
+}
+
+// ============================================================================
+// Convenience Functions for HAL Modules
+// ============================================================================
+
+/// Get the system clock frequency (SYSCLK/HCLK).
+///
+/// **This is the recommended way for HAL modules to get the CPU frequency.**
+///
+/// Uses the board's configured frequency if available (compile-time constant, zero cost),
+/// otherwise queries the hardware (runtime cost).
+pub fn get_sysclk() u32 {
+    // Prefer the compile-time constant from board config for efficiency
+    if (microzig.config.has_board and @hasDecl(microzig.board, "cpu_frequency")) {
+        return microzig.board.cpu_frequency;
+    }
+    // Fall back to querying the hardware
+    return get_freqs().sysclk;
+}
+
+/// Get the APB1 peripheral clock frequency (PCLK1).
+pub fn get_pclk1() u32 {
+    return get_freqs().pclk1;
+}
+
+/// Get the APB2 peripheral clock frequency (PCLK2).
+pub fn get_pclk2() u32 {
+    return get_freqs().pclk2;
+}
+
+/// Get the AHB clock frequency (HCLK).
+/// This is typically the same as SYSCLK unless the AHB prescaler is configured.
+pub fn get_hclk() u32 {
+    return get_freqs().hclk;
 }

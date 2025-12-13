@@ -69,10 +69,7 @@ fn init_delay_counter() void {
 /// This configures TIM2 to generate periodic interrupts that maintain the ticks_us counter.
 /// NOTE: This must be called AFTER configuring the system clock to the final frequency.
 fn init_tick_timer() void {
-    const freq: u32 = if (microzig.config.has_board and @hasDecl(board, "cpu_frequency"))
-        board.cpu_frequency
-    else
-        microzig.cpu.cpu_frequency;
+    const freq: u32 = microzig.hal.clocks.get_sysclk();
 
     // Enable TIM2 clock (bit 0 of APB1PCENR)
     RCC.APB1PCENR.raw |= 1 << 0;
@@ -163,10 +160,7 @@ pub fn sleep_us(time_us: u64) void {
 pub fn delay_us(us: u32) void {
     if (us == 0) return;
 
-    const freq: u32 = if (microzig.config.has_board and @hasDecl(board, "cpu_frequency"))
-        board.cpu_frequency
-    else
-        microzig.cpu.cpu_frequency;
+    const freq: u32 = microzig.hal.clocks.get_sysclk();
 
     // SysTick counter runs at HCLK
     // Calculate ticks needed for the delay
