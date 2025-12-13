@@ -99,87 +99,115 @@ pub const Config = struct {
     hse_frequency: ?u32 = null,
 };
 
+/// Validate clock configuration at compile time
+fn validate_config(comptime config: Config) void {
+    if (config.source == .hse and config.hse_frequency == null) {
+        @compileError("hse_frequency must be specified when using HSE clock source");
+    }
+
+    // Validate supported target frequencies for HSI
+    if (config.source == .hsi) {
+        const supported_hsi_freqs = [_]u32{ 24_000_000, 48_000_000 };
+        var supported = false;
+        for (supported_hsi_freqs) |freq| {
+            if (config.target_frequency == freq) {
+                supported = true;
+                break;
+            }
+        }
+        if (!supported) {
+            @compileError("Unsupported target_frequency for HSI. Supported: 24 MHz, 48 MHz");
+        }
+    }
+
+    // Validate supported target frequencies for HSE
+    if (config.source == .hse) {
+        const hse_freq = config.hse_frequency.?;
+        if (config.target_frequency != hse_freq and config.target_frequency != 48_000_000) {
+            @compileError("Unsupported target_frequency for HSE. Supported: HSE frequency directly, or 48 MHz with PLL");
+        }
+    }
+}
+
 /// Initialize system clocks based on configuration
-pub fn init(config: Config) void {
+/// Config is validated at compile time
+pub fn init(comptime config: Config) void {
+    comptime validate_config(config);
+
     switch (config.source) {
         .hsi => init_from_hsi(config.target_frequency),
-        .hse => {
-            const hse_freq = config.hse_frequency orelse @panic("hse_frequency must be specified when using HSE clock source");
-            init_from_hse(hse_freq, config.target_frequency);
-        },
+        .hse => init_from_hse(config.hse_frequency.?, config.target_frequency),
     }
 }
 
 /// Initialize clocks from HSI to reach target frequency
+/// Assumes target_freq has been validated at compile time
 fn init_from_hsi(target_freq: u32) void {
-    const hsi_freq = get_hsi_value();
-
     // Calculate PLL configuration
     // The HSIPRE bit controls whether HSI is divided before PLL
     // PLLMUL bits control the PLL multiplier factor
 
-    if (hsi_freq == 8_000_000) {
-        if (target_freq == 48_000_000) {
-            // 48 MHz from 8 MHz HSI: HSI -> PLL (6x multiplier) -> 48 MHz
-            // HSIPRE = 1 means HSI not divided before PLL
-            EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 1 });
+    // TODO: Make this more flexible.
+    if (target_freq == 48_000_000) {
+        // 48 MHz from 8 MHz HSI: HSI -> PLL (6x multiplier) -> 48 MHz
+        // HSIPRE = 1 means HSI not divided before PLL
+        EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 1 });
 
-            // Configure clock prescalers
-            RCC.CFGR0.modify(.{
-                .HPRE = 0, // AHB prescaler = 1 (no division)
-                .PPRE2 = 0, // APB2 prescaler = 1 (no division)
-                .PPRE1 = 4, // APB1 prescaler = 2 (divide by 2)
-                .PLLSRC = 0, // PLL source = HSI
-                .PLLXTPRE = 0, // HSE divider for PLL = no division (unused for HSI)
-                .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
-            });
+        // Configure clock prescalers
+        RCC.CFGR0.modify(.{
+            .HPRE = 0, // AHB prescaler = 1 (no division)
+            .PPRE2 = 0, // APB2 prescaler = 1 (no division)
+            // TODO: Why is this 4, not 2? Check
+            .PPRE1 = 4, // APB1 prescaler = 2 (divide by 2)
+            .PLLSRC = 0, // PLL source = HSI
+            .PLLXTPRE = 0, // HSE divider for PLL = no division (unused for HSI)
+            .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
+        });
 
-            // Enable PLL
-            RCC.CTLR.modify(.{ .PLLON = 1 });
+        // Enable PLL
+        RCC.CTLR.modify(.{ .PLLON = 1 });
 
-            // Wait for PLL to lock
-            while (RCC.CTLR.read().PLLRDY == 0) {}
+        // Wait for PLL to lock
+        while (RCC.CTLR.read().PLLRDY == 0) {}
 
-            // Select PLL as system clock
-            RCC.CFGR0.modify(.{ .SW = 2 }); // SW = 2 means PLL
+        // Select PLL as system clock
+        RCC.CFGR0.modify(.{ .SW = 2 }); // SW = 2 means PLL
 
-            // Wait for PLL to be used as system clock (SWS should be 2)
-            while (RCC.CFGR0.read().SWS != 2) {}
-        } else if (target_freq == 24_000_000) {
-            // 24 MHz from 8 MHz HSI: HSI/2 -> PLL (6x multiplier) -> 24 MHz
-            // Or use chip-specific PLL configuration for CH32V003
-            // HSIPRE = 0 means HSI divided by 2 before PLL
-            EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 0 });
+        // Wait for PLL to be used as system clock (SWS should be 2)
+        while (RCC.CFGR0.read().SWS != 2) {}
+    } else if (target_freq == 24_000_000) {
+        // 24 MHz from 8 MHz HSI: HSI/2 -> PLL (6x multiplier) -> 24 MHz
+        // HSIPRE = 0 means HSI divided by 2 before PLL
+        EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 0 });
 
-            // Configure clock prescalers
-            RCC.CFGR0.modify(.{
-                .HPRE = 0, // AHB prescaler = 1 (no division)
-                .PPRE2 = 0, // APB2 prescaler = 1 (no division)
-                .PPRE1 = 0, // APB1 prescaler = 1 (no division)
-                .PLLSRC = 0, // PLL source = HSI
-                .PLLXTPRE = 0, // HSE divider (unused)
-                .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
-            });
+        // Configure clock prescalers
+        RCC.CFGR0.modify(.{
+            .HPRE = 0, // AHB prescaler = 1 (no division)
+            .PPRE2 = 0, // APB2 prescaler = 1 (no division)
+            .PPRE1 = 0, // APB1 prescaler = 1 (no division)
+            .PLLSRC = 0, // PLL source = HSI
+            .PLLXTPRE = 0, // HSE divider (unused)
+            .PLLMUL = 4, // PLL multiplier = 6 (value 4 = 6x)
+        });
 
-            // Enable PLL
-            RCC.CTLR.modify(.{ .PLLON = 1 });
+        // Enable PLL
+        RCC.CTLR.modify(.{ .PLLON = 1 });
 
-            // Wait for PLL to lock
-            while (RCC.CTLR.read().PLLRDY == 0) {}
+        // Wait for PLL to lock
+        while (RCC.CTLR.read().PLLRDY == 0) {}
 
-            // Select PLL as system clock
-            RCC.CFGR0.modify(.{ .SW = 2 });
-            while (RCC.CFGR0.read().SWS != 2) {}
-        } else {
-            // TODO: Support other target frequencies by calculating PLL multiplier
-            @panic("Unsupported target frequency for HSI");
-        }
+        // Select PLL as system clock
+        RCC.CFGR0.modify(.{ .SW = 2 });
+
+        // Wait for PLL to be used as system clock (SWS should be 2)
+        while (RCC.CFGR0.read().SWS != 2) {}
     } else {
-        @panic("Unsupported HSI frequency");
+        unreachable; // Should be caught by compile-time validation
     }
 }
 
 /// Initialize clocks from HSE to reach target frequency
+/// Assumes hse_freq and target_freq have been validated at compile time
 fn init_from_hse(hse_freq: u32, target_freq: u32) void {
     // Enable HSE
     RCC.CTLR.modify(.{ .HSEON = 1 });
@@ -194,9 +222,9 @@ fn init_from_hse(hse_freq: u32, target_freq: u32) void {
         return;
     }
 
-    // Calculate PLL multiplier needed
-    // For now, support common case: 8 MHz HSE -> 48 MHz (6x multiplier)
-    if (target_freq == 48_000_000 and hse_freq == 8_000_000) {
+    // Use PLL to reach 48 MHz from HSE
+    // Common case: 8 MHz HSE -> 48 MHz (6x multiplier)
+    if (target_freq == 48_000_000) {
         RCC.CFGR0.modify(.{
             .HPRE = 0, // AHB prescaler = 1
             .PPRE2 = 0, // APB2 prescaler = 1
@@ -214,8 +242,7 @@ fn init_from_hse(hse_freq: u32, target_freq: u32) void {
         RCC.CFGR0.modify(.{ .SW = 2 });
         while (RCC.CFGR0.read().SWS != 2) {}
     } else {
-        // TODO: Support other frequencies
-        @panic("Unsupported target frequency for HSE");
+        unreachable; // Should be caught by compile-time validation
     }
 }
 
