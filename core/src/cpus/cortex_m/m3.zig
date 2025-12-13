@@ -66,11 +66,11 @@ pub const SystemControlBlock = extern struct {
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
         /// MemManage Fault Register.
-        MMFSR: u8,
+        MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
-        BFSR: u8,
+        BFSR: shared.scb.BFSR,
         /// Usage Fault Status Register.
-        UFSR: u16,
+        UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
     HFSR: mmio.Mmio(shared.scb.HFSR),
