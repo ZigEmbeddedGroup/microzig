@@ -22,10 +22,6 @@ pub fn main() !void {
             break :res .{ pins, all_leds };
         } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32F3DISCOVERY")) {
             const pins = (stm32.pins.GlobalConfiguration{
-                .GPIOC = .{
-                    .PIN4 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
-                    .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
-                },
                 .GPIOE = .{
                     .PIN8 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
                     .PIN9 = .{ .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
@@ -38,14 +34,14 @@ pub fn main() !void {
                 },
             }).apply();
             const all_leds = .{
-                pins.PIN8,
-                pins.PIN9,
-                pins.PIN10,
-                pins.PIN11,
-                pins.PIN12,
-                pins.PIN13,
-                pins.PIN14,
-                pins.PIN15,
+                pins.PE8,
+                pins.PE9,
+                pins.PE10,
+                pins.PE11,
+                pins.PE12,
+                pins.PE13,
+                pins.PE14,
+                pins.PE15,
             };
 
             break :res .{ pins, all_leds };
