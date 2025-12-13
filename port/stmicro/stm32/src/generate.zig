@@ -254,7 +254,7 @@ fn generate_chips_file(
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
                 \\        .hal = .{
-                \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
+                \\            .root_source_file = b.path("src/hals/STM32F103.zig"),
                 \\        },
                 \\
             );

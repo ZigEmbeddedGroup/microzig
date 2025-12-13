@@ -5,19 +5,19 @@ const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
 const periferals = microzig.chip.peripherals;
 
 const TIM_GP16 = microzig.chip.types.peripherals.timer_v1.TIM_GP16;
-pub const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
-pub const URS = microzig.chip.types.peripherals.timer_v1.URS;
-pub const CMS = microzig.chip.types.peripherals.timer_v1.CMS;
-pub const CCDS = microzig.chip.types.peripherals.timer_v1.CCDS;
-pub const TI1S = microzig.chip.types.peripherals.timer_v1.TI1S;
-pub const CKD = microzig.chip.types.peripherals.timer_v1.CKD;
-pub const FilterValue = microzig.chip.types.peripherals.timer_v1.FilterValue;
-pub const CCMR_Input_CCS = microzig.chip.types.peripherals.timer_v1.CCMR_Input_CCS;
-pub const ETP = microzig.chip.types.peripherals.timer_v1.ETP;
-pub const ETPS = microzig.chip.types.peripherals.timer_v1.ETPS;
-pub const MSM = microzig.chip.types.peripherals.timer_v1.MSM;
-pub const MMS = microzig.chip.types.peripherals.timer_v1.MMS;
-pub const OCM = microzig.chip.types.peripherals.timer_v1.OCM; //OCM stands for Output Compare Mode
+const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
+const URS = microzig.chip.types.peripherals.timer_v1.URS;
+const CMS = microzig.chip.types.peripherals.timer_v1.CMS;
+const CCDS = microzig.chip.types.peripherals.timer_v1.CCDS;
+const TI1S = microzig.chip.types.peripherals.timer_v1.TI1S;
+const CKD = microzig.chip.types.peripherals.timer_v1.CKD;
+const FilterValue = microzig.chip.types.peripherals.timer_v1.FilterValue;
+const CCMR_Input_CCS = microzig.chip.types.peripherals.timer_v1.CCMR_Input_CCS;
+const ETP = microzig.chip.types.peripherals.timer_v1.ETP;
+const ETPS = microzig.chip.types.peripherals.timer_v1.ETPS;
+const MSM = microzig.chip.types.peripherals.timer_v1.MSM;
+const MMS = microzig.chip.types.peripherals.timer_v1.MMS;
+const OCM = microzig.chip.types.peripherals.timer_v1.OCM; //OCM stands for Output Compare Mode
 
 pub const Instances = create_peripheral_enum("TIM", "TIM_GP16");
 

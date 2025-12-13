@@ -16,14 +16,15 @@ pub fn build(b: *std.Build) void {
     const available_examples = [_]Example{
         .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
-        // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f429zit6u, .name = "stm32f429zit6u", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm32f4discovery, .name = "stm32f4discovery", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm3240geval, .name = "stm3240geval", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery", .file = "src/blinky.zig" },
-        .{ .target = stm32.boards.stm32f3discovery, .name = "STM32F303_HTS221", .file = "src/stm32f303/hts221.zig" },
+        .{ .target = stm32.boards.stm32f3discovery, .name = "STM32F303_HTS221", .file = "src/hts221.zig" },
         .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_Lcd", .file = "src/stm32l476/lcd.zig" },
+        .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_Blinky", .file = "src/blinky.zig" },
+        .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_HTS211", .file = "src/hts221.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_blink", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1xx_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_adc", .file = "src/stm32f1xx/adc.zig" },

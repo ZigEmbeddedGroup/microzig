@@ -4,4 +4,13 @@ pub const lcd = @import("./STM32L47X/lcd.zig");
 pub const uart = @import("./STM32L47X/uart.zig");
 pub const pins = @import("./STM32L47X/pins.zig");
 pub const rcc = @import("./STM32L47X/rcc.zig");
+pub const i2c = @import("./STM32L47X/i2c.zig");
 pub const enums = @import("STM32L47X/enums.zig");
+
+pub fn get_sys_clk() u32 {
+    return rcc.current_clock.h_clk;
+}
+
+pub fn get_systick_clk() u32 {
+    return rcc.current_clock.h_clk / 8;
+}

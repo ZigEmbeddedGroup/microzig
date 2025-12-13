@@ -4,29 +4,20 @@ pub const microzig = @import("microzig");
 
 pub const hal = microzig.hal;
 pub const rcc = hal.rcc;
-pub const pins = hal.pins;
 const UART_LOG = microzig.hal.uart.Uart(.USART1);
 
-pub const pin_map = .{
-    // circle of LEDs, connected to GPIOE bits 8..15
-
-    // NW blue
-    .LD4 = "PE8",
-    // N red
-    .LD3 = "PE9",
-    // NE orange
-    .LD5 = "PE10",
-    // E green
-    .LD7 = "PE11",
-    // SE blue
-    .LD9 = "PE12",
-    // S red
-    .LD10 = "PE13",
-    // SW orange
-    .LD8 = "PE14",
-    // W green
-    .LD6 = "PE15",
-};
+pub const leds_config = (hal.pins.GlobalConfiguration{
+    .GPIOE = .{
+        .PIN8 = .{ .name = "LD4", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN9 = .{ .name = "LD3", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN10 = .{ .name = "LD5", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN11 = .{ .name = "LD7", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN12 = .{ .name = "LD9", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN13 = .{ .name = "LD10", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN14 = .{ .name = "LD8", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+        .PIN15 = .{ .name = "LD6", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+    },
+});
 
 pub fn init() void {
     rcc.enable_hse(8_000_000);
@@ -42,7 +33,7 @@ var uart_log: ?UART_LOG = null;
 
 // Init should come first or the baud_rate would be too fast for the default HSI.
 pub fn init_log() void {
-    _ = (pins.GlobalConfiguration{
+    _ = (hal.pins.GlobalConfiguration{
         .GPIOC = .{
             .PIN4 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
             .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
@@ -52,4 +43,20 @@ pub fn init_log() void {
     if (uart_log) |*logger| {
         microzig.hal.uart.init_logger(.USART1, logger);
     }
+}
+
+pub fn i2c1() hal.i2c.I2C_Device {
+    _ = (hal.pins.GlobalConfiguration{
+        .GPIOB = .{
+            // I2C
+            .PIN6 = .{ .mode = .{ .alternate_function = .{
+                .afr = .AF4,
+            } } },
+            .PIN7 = .{ .mode = .{ .alternate_function = .{
+                .afr = .AF4,
+            } } },
+        },
+    }).apply();
+
+    return hal.i2c.I2C_Device.init(.I2C1);
 }
