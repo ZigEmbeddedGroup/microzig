@@ -39,6 +39,8 @@ pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
 
+pub const tinyusb_exports = @import("hal/tusb/tusb_exports.zig");
+
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test and compatibility.chip == .RP2350) {
