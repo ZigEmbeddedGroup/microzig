@@ -15,10 +15,10 @@ pub const nak: ?[]const u8 = null;
 /// Any device implementation used with DeviceController must implement those functions
 pub const DeviceInterface = struct {
     pub const VTable = struct {
-        start_tx: *const fn (this: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
-        start_rx: *const fn (this: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
-        endpoint_open: *const fn (this: *DeviceInterface, desc: *const descriptor.Endpoint) void,
-        set_address: *const fn (this: *DeviceInterface, addr: u7) void,
+        start_tx: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
+        start_rx: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
+        endpoint_open: *const fn (self: *DeviceInterface, desc: *const descriptor.Endpoint) void,
+        set_address: *const fn (self: *DeviceInterface, addr: u7) void,
     };
 
     vtable: *const VTable,
@@ -26,27 +26,27 @@ pub const DeviceInterface = struct {
     /// Called by drivers to send a packet.
     /// Submitting an empty slice signals an ACK.
     /// If you intend to send ACK, please use the constant `usb.ack`.
-    pub fn start_tx(this: *@This(), ep_num: types.Endpoint.Num, buffer: []const u8) void {
-        return this.vtable.start_tx(this, ep_num, buffer);
+    pub fn start_tx(self: *@This(), ep_num: types.Endpoint.Num, buffer: []const u8) void {
+        return self.vtable.start_tx(self, ep_num, buffer);
     }
 
     /// Called by drivers to report readiness to receive up to `len` bytes.
     /// Must be called exactly once before each packet.
-    pub fn start_rx(this: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
-        return this.vtable.start_rx(this, ep_num, len);
+    pub fn start_rx(self: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
+        return self.vtable.start_rx(self, ep_num, len);
     }
 
     /// Opens an endpoint according to the descriptor. Note that if the endpoint
     /// direction is IN this may call the controller's `on_buffer` function,
     /// so driver initialization must be done before this function is called
     /// on IN endpoint descriptors.
-    pub fn endpoint_open(this: *@This(), desc: *const descriptor.Endpoint) void {
-        return this.vtable.endpoint_open(this, desc);
+    pub fn endpoint_open(self: *@This(), desc: *const descriptor.Endpoint) void {
+        return self.vtable.endpoint_open(self, desc);
     }
 
     /// Immediately sets the device address.
-    pub fn set_address(this: *@This(), addr: u7) void {
-        return this.vtable.set_address(this, addr);
+    pub fn set_address(self: *@This(), addr: u7) void {
+        return self.vtable.set_address(self, addr);
     }
 };
 
@@ -173,19 +173,19 @@ pub fn DeviceController(config: Config) type {
 
         /// Returns a pointer to the drivers
         /// or null in case host has not yet configured the device.
-        pub fn drivers(this: *@This()) ?*config0.Drivers {
-            return if (this.driver_data) |*ret| ret else null;
+        pub fn drivers(self: *@This()) ?*config0.Drivers {
+            return if (self.driver_data) |*ret| ret else null;
         }
 
         /// Called by the device implementation when a setup request has been received.
-        pub fn on_setup_req(this: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) void {
+        pub fn on_setup_req(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) void {
             if (config.debug) log.info("setup req", .{});
 
-            this.setup_packet = setup.*;
-            this.driver_last = null;
+            self.setup_packet = setup.*;
+            self.driver_last = null;
 
             switch (setup.request_type.recipient) {
-                .Device => try this.process_setup_request(device_itf, setup),
+                .Device => try self.process_setup_request(device_itf, setup),
                 .Interface => switch (@as(u8, @truncate(setup.index))) {
                     inline else => |itf_num| inline for (driver_fields) |fld_drv| {
                         const cfg = @field(config_descriptor, fld_drv.name);
@@ -202,8 +202,8 @@ pub fn DeviceController(config: Config) type {
 
                         if (comptime itf_num >= itf_start and itf_num < itf_start + itf_count) {
                             const drv = @field(DriverEnum, fld_drv.name);
-                            this.driver_last = drv;
-                            this.driver_class_control(device_itf, drv, .Setup, setup);
+                            self.driver_last = drv;
+                            self.driver_class_control(device_itf, drv, .Setup, setup);
                         }
                     },
                 },
@@ -213,7 +213,7 @@ pub fn DeviceController(config: Config) type {
         }
 
         /// Called by the device implementation when a packet has been received.
-        pub fn on_buffer(this: *@This(), device_itf: *DeviceInterface, ep: types.Endpoint, buffer: []u8) void {
+        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, ep: types.Endpoint, buffer: []u8) void {
             if (config.debug) log.info("buff status", .{});
 
             if (config.debug) log.info("    data: {any}", .{buffer});
@@ -227,23 +227,23 @@ pub fn DeviceController(config: Config) type {
 
                     // We use this opportunity to finish the delayed
                     // SetAddress request, if there is one:
-                    if (this.new_address) |addr| {
+                    if (self.new_address) |addr| {
                         // Change our address:
                         device_itf.set_address(@intCast(addr));
-                        this.new_address = null;
+                        self.new_address = null;
                     }
 
-                    if (buffer.len > 0 and this.tx_slice.len > 0) {
-                        this.tx_slice = this.tx_slice[buffer.len..];
+                    if (buffer.len > 0 and self.tx_slice.len > 0) {
+                        self.tx_slice = self.tx_slice[buffer.len..];
 
-                        const next_data_chunk = this.tx_slice[0..@min(64, this.tx_slice.len)];
+                        const next_data_chunk = self.tx_slice[0..@min(64, self.tx_slice.len)];
                         if (next_data_chunk.len > 0) {
                             device_itf.start_tx(.ep0, next_data_chunk);
                         } else {
                             device_itf.start_rx(.ep0, 0);
 
-                            if (this.driver_last) |drv|
-                                this.driver_class_control(device_itf, drv, .Ack, &this.setup_packet);
+                            if (self.driver_last) |drv|
+                                self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                         }
                     } else {
                         // Otherwise, we've just finished sending
@@ -253,8 +253,8 @@ pub fn DeviceController(config: Config) type {
                         // up:
                         device_itf.start_rx(.ep0, 0);
 
-                        if (this.driver_last) |drv|
-                            this.driver_class_control(device_itf, drv, .Ack, &this.setup_packet);
+                        if (self.driver_last) |drv|
+                            self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                     }
                 },
                 inline else => |ep_num| inline for (driver_fields) |fld_drv| {
@@ -264,7 +264,7 @@ pub fn DeviceController(config: Config) type {
                         const desc = @field(cfg, fld.name);
                         if (comptime fld.type == descriptor.Endpoint and desc.endpoint.num == ep_num) {
                             if (ep.dir == desc.endpoint.dir)
-                                @field(this.driver_data.?, fld_drv.name).transfer(ep, buffer);
+                                @field(self.driver_data.?, fld_drv.name).transfer(ep, buffer);
                         }
                     }
                 },
@@ -272,33 +272,33 @@ pub fn DeviceController(config: Config) type {
         }
 
         /// Called by the device implementation on bus reset.
-        pub fn on_bus_reset(this: *@This()) void {
+        pub fn on_bus_reset(self: *@This()) void {
             if (config.debug) log.info("bus reset", .{});
 
             // Reset our state.
-            this.* = .init;
+            self.* = .init;
         }
 
         // Utility functions
 
         /// Command response utility function that can split long data in multiple packets
-        fn send_cmd_response(this: *@This(), device_itf: *DeviceInterface, data: []const u8, expected_max_length: u16) void {
-            this.tx_slice = data[0..@min(data.len, expected_max_length)];
-            const len = @min(config.device_descriptor.max_packet_size0, this.tx_slice.len);
+        fn send_cmd_response(self: *@This(), device_itf: *DeviceInterface, data: []const u8, expected_max_length: u16) void {
+            self.tx_slice = data[0..@min(data.len, expected_max_length)];
+            const len = @min(config.device_descriptor.max_packet_size0, self.tx_slice.len);
             device_itf.start_tx(.ep0, data[0..len]);
         }
 
-        fn driver_class_control(this: *@This(), device_itf: *DeviceInterface, driver: DriverEnum, stage: types.ControlStage, setup: *const types.SetupPacket) void {
+        fn driver_class_control(self: *@This(), device_itf: *DeviceInterface, driver: DriverEnum, stage: types.ControlStage, setup: *const types.SetupPacket) void {
             return switch (driver) {
                 inline else => |d| {
-                    const drv = &@field(this.driver_data.?, @tagName(d));
+                    const drv = &@field(self.driver_data.?, @tagName(d));
                     if (drv.class_control(stage, setup)) |response|
-                        this.send_cmd_response(device_itf, response, setup.length);
+                        self.send_cmd_response(device_itf, response, setup.length);
                 },
             };
         }
 
-        fn process_setup_request(this: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) !void {
+        fn process_setup_request(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) !void {
             switch (setup.request_type.type) {
                 .Class => {
                     //const itfIndex = setup.index & 0x00ff;
@@ -307,17 +307,17 @@ pub fn DeviceController(config: Config) type {
                 .Standard => {
                     switch (std.meta.intToEnum(types.SetupRequest, setup.request) catch return) {
                         .SetAddress => {
-                            this.new_address = @as(u8, @intCast(setup.value & 0xff));
+                            self.new_address = @as(u8, @intCast(setup.value & 0xff));
                             device_itf.start_tx(.ep0, ack);
-                            if (config.debug) log.info("    SetAddress: {}", .{this.new_address.?});
+                            if (config.debug) log.info("    SetAddress: {}", .{self.new_address.?});
                         },
                         .SetConfiguration => {
                             if (config.debug) log.info("    SetConfiguration", .{});
-                            if (this.cfg_num != setup.value) {
-                                this.cfg_num = setup.value;
+                            if (self.cfg_num != setup.value) {
+                                self.cfg_num = setup.value;
 
-                                if (this.cfg_num > 0) {
-                                    try this.process_set_config(device_itf, this.cfg_num - 1);
+                                if (self.cfg_num > 0) {
+                                    try self.process_set_config(device_itf, self.cfg_num - 1);
                                     // TODO: call mount callback if any
                                 } else {
                                     // TODO: call umount callback if any
@@ -328,7 +328,7 @@ pub fn DeviceController(config: Config) type {
                         .GetDescriptor => {
                             const descriptor_type = std.meta.intToEnum(descriptor.Type, setup.value >> 8) catch null;
                             if (descriptor_type) |dt| {
-                                try this.process_get_descriptor(device_itf, setup, dt);
+                                try self.process_get_descriptor(device_itf, setup, dt);
                             }
                         },
                         .SetFeature => {
@@ -346,17 +346,17 @@ pub fn DeviceController(config: Config) type {
             }
         }
 
-        fn process_get_descriptor(this: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket, descriptor_type: descriptor.Type) !void {
+        fn process_get_descriptor(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket, descriptor_type: descriptor.Type) !void {
             switch (descriptor_type) {
                 .Device => {
                     if (config.debug) log.info("        Device", .{});
 
-                    this.send_cmd_response(device_itf, @ptrCast(&config.device_descriptor), setup.length);
+                    self.send_cmd_response(device_itf, @ptrCast(&config.device_descriptor), setup.length);
                 },
                 .Configuration => {
                     if (config.debug) log.info("        Config", .{});
 
-                    this.send_cmd_response(device_itf, @ptrCast(&config_descriptor), setup.length);
+                    self.send_cmd_response(device_itf, @ptrCast(&config_descriptor), setup.length);
                 },
                 .String => {
                     if (config.debug) log.info("        String", .{});
@@ -366,7 +366,7 @@ pub fn DeviceController(config: Config) type {
                     if (i >= config.string_descriptors.len)
                         log.warn("host requested invalid string descriptor {}", .{i})
                     else
-                        this.send_cmd_response(
+                        self.send_cmd_response(
                             device_itf,
                             config.string_descriptors[i].data,
                             setup.length,
@@ -383,18 +383,18 @@ pub fn DeviceController(config: Config) type {
                     // We will just copy parts of the DeviceDescriptor because
                     // the DeviceQualifierDescriptor can be seen as a subset.
                     const qualifier = comptime &config.device_descriptor.qualifier();
-                    this.send_cmd_response(device_itf, @ptrCast(qualifier), setup.length);
+                    self.send_cmd_response(device_itf, @ptrCast(qualifier), setup.length);
                 },
                 else => {},
             }
         }
 
-        fn process_set_config(this: *@This(), device_itf: *DeviceInterface, _: u16) !void {
+        fn process_set_config(self: *@This(), device_itf: *DeviceInterface, _: u16) !void {
             // TODO: we support just one config for now so ignore config index
-            this.driver_data = @as(config0.Drivers, undefined);
+            self.driver_data = @as(config0.Drivers, undefined);
             inline for (driver_fields) |fld_drv| {
                 const cfg = @field(config_descriptor, fld_drv.name);
-                @field(this.driver_data.?, fld_drv.name) = .init(&cfg, device_itf);
+                @field(self.driver_data.?, fld_drv.name) = .init(&cfg, device_itf);
 
                 inline for (@typeInfo(@TypeOf(cfg)).@"struct".fields) |fld| {
                     if (comptime fld.type == descriptor.Endpoint)

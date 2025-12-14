@@ -69,8 +69,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             };
         }
 
-        pub fn class_control(this: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) ?[]const u8 {
-            _ = this;
+        pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) ?[]const u8 {
+            _ = self;
             if (stage == .Setup) switch (setup.request_type.type) {
                 .Standard => {
                     const hid_desc_type = std.meta.intToEnum(descriptor.hid.Hid.Type, (setup.value >> 8) & 0xff) catch return usb.nak;
@@ -123,8 +123,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             return usb.nak;
         }
 
-        pub fn transfer(this: *@This(), ep: types.Endpoint, data: []u8) void {
-            _ = this;
+        pub fn transfer(self: *@This(), ep: types.Endpoint, data: []u8) void {
+            _ = self;
             _ = ep;
             _ = data;
         }

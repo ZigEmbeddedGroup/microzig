@@ -147,12 +147,12 @@ pub const U16Le = extern struct {
     value: [2]u8,
 
     pub fn from(val: u16) @This() {
-        var this: @This() = undefined;
-        std.mem.writeInt(u16, &this.value, val, .little);
-        return this;
+        var self: @This() = undefined;
+        std.mem.writeInt(u16, &self.value, val, .little);
+        return self;
     }
 
-    pub fn into(this: @This()) u16 {
-        return std.mem.readInt(u16, &this.value, .little);
+    pub fn into(self: @This()) u16 {
+        return std.mem.readInt(u16, &self.value, .little);
     }
 };

@@ -97,12 +97,12 @@ pub const Device = extern struct {
     /// Number of configurations supported by this device.
     num_configurations: u8,
 
-    pub fn qualifier(this: @This()) Qualifier {
+    pub fn qualifier(self: @This()) Qualifier {
         return .{
-            .bcd_usb = this.bcd_usb,
-            .device_triple = this.device_triple,
-            .max_packet_size0 = this.max_packet_size0,
-            .num_configurations = this.num_configurations,
+            .bcd_usb = self.bcd_usb,
+            .device_triple = self.device_triple,
+            .max_packet_size0 = self.max_packet_size0,
+            .num_configurations = self.num_configurations,
         };
     }
 };
