@@ -73,9 +73,9 @@ pub fn DeviceController(config: Config) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
+        const config0 = config.configurations[0];
         const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
-        const config0 = config.configurations[0];
         const config_descriptor = blk: {
             var num_interfaces = 0;
             var num_strings = 4;
@@ -212,7 +212,7 @@ pub fn DeviceController(config: Config) type {
             }
         }
 
-        /// Called by the device implementation when a packet has been received.
+        /// Called by the device implementation when a packet has been sent or received.
         pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, ep: types.Endpoint, buffer: []u8) void {
             if (config.debug) log.info("buff status", .{});
 
