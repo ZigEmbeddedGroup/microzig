@@ -90,15 +90,18 @@ pub const ReceiveError = error{
 };
 
 pub const instance = struct {
-    pub const USART1: USART = @enumFromInt(0);
-    pub const USART2: USART = @enumFromInt(1);
-    pub const USART3: USART = @enumFromInt(2);
+    pub const USART1: USART = .USART1;
+    pub const USART2: USART = .USART2;
+    pub const USART3: USART = .USART3;
     pub fn num(n: u2) USART {
         return @enumFromInt(n);
     }
 };
 
 pub const USART = enum(u2) {
+    USART1 = 0,
+    USART2 = 1,
+    USART3 = 2,
     _,
 
     pub const USART_With_Timeout = struct {
@@ -141,10 +144,10 @@ pub const USART = enum(u2) {
         const regs = usart.get_regs();
 
         // Enable peripheral clock
-        hal.clocks.enable_peripheral_clock(switch (@intFromEnum(usart)) {
-            0 => .USART1,
-            1 => .USART2,
-            2 => .USART3,
+        hal.clocks.enable_peripheral_clock(switch (usart) {
+            .USART1 => .USART1,
+            .USART2 => .USART2,
+            .USART3 => .USART3,
             // TODO: Add support for other USARTs/UARTs
             else => @compileError("USART1,2,3 only supported at the moment"),
         });
@@ -154,21 +157,21 @@ pub const USART = enum(u2) {
         const AFIO = microzig.chip.peripherals.AFIO;
         const remap_bits = @intFromEnum(config.remap);
 
-        switch (@intFromEnum(usart)) {
-            0 => {
+        switch (usart) {
+            .USART1 => {
                 // USART1: 2 bits split across PCFR1 and PCFR2
                 // Bit 0 (LSB) goes to PCFR1.USART1_RM (bit 2)
-                AFIO.PCFR1.modify(.{ .USART1_RM = @as(u1, @truncate(remap_bits & 0b01)) });
+                AFIO.PCFR1.modify(.{ .USART1_RM = @as(u1, @truncate(remap_bits)) });
                 // Bit 1 (MSB) goes to PCFR2.UART1_RM1 (bit 26)
-                AFIO.PCFR2.modify(.{ .UART1_RM1 = @as(u1, @truncate((remap_bits >> 1) & 0b01)) });
+                AFIO.PCFR2.modify(.{ .UART1_RM1 = @as(u1, @truncate(remap_bits >> 1)) });
             },
-            1 => {
+            .USART2 => {
                 // USART2: 1 bit in PCFR1
-                AFIO.PCFR1.modify(.{ .USART2_RM = @as(u1, @truncate(remap_bits & 0b01)) });
+                AFIO.PCFR1.modify(.{ .USART2_RM = @as(u1, @truncate(remap_bits)) });
             },
-            2 => {
+            .USART3 => {
                 // USART3: 2 bits in PCFR1
-                AFIO.PCFR1.modify(.{ .USART3_RM = @as(u2, @truncate(remap_bits & 0b11)) });
+                AFIO.PCFR1.modify(.{ .USART3_RM = @as(u2, @truncate(remap_bits)) });
             },
             else => unreachable,
         }
@@ -325,7 +328,7 @@ pub const USART = enum(u2) {
         }
     }
 
-    /// Wraps write_blocking() for use as a GenericWriter
+    /// Wrap write_blocking() for use as a GenericWriter
     fn generic_writer_fn(usart: USART_With_Timeout, buffer: []const u8) TransmitError!usize {
         try usart.instance.write_blocking(buffer, usart.deadline);
         return buffer.len;
