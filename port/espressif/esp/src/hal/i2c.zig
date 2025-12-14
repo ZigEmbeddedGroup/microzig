@@ -547,11 +547,7 @@ pub const I2C = struct {
 
         try self.setup_read(addr, buffer, start, will_continue, &cmd_idx);
 
-        if (stop) {
-            try self.add_cmd(&cmd_idx, Command.stop);
-        } else {
-            try self.add_cmd(&cmd_idx, Command.end);
-        }
+        try self.add_cmd(&cmd_idx, if (stop) Command.stop else Command.end);
 
         self.start_transmission();
 
@@ -655,11 +651,7 @@ pub const I2C = struct {
 
         try self.setup_write(addr, bytes, start, &cmd_idx);
 
-        if (stop) {
-            try self.add_cmd(&cmd_idx, Command.stop);
-        } else {
-            try self.add_cmd(&cmd_idx, Command.end);
-        }
+        try self.add_cmd(&cmd_idx, if (stop) Command.stop else Command.end);
 
         self.start_transmission();
 
