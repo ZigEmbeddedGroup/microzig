@@ -107,7 +107,7 @@ fn validate_config(comptime config: Config) void {
 
     // Validate supported target frequencies for HSI
     if (config.source == .hsi) {
-        const supported_hsi_freqs = [_]u32{ 24_000_000, 48_000_000 };
+        const supported_hsi_freqs = [_]u32{ 8_000_000, 24_000_000, 48_000_000 };
         var supported = false;
         for (supported_hsi_freqs) |freq| {
             if (config.target_frequency == freq) {
@@ -116,7 +116,7 @@ fn validate_config(comptime config: Config) void {
             }
         }
         if (!supported) {
-            @compileError("Unsupported target_frequency for HSI. Supported: 24 MHz, 48 MHz");
+            @compileError("Unsupported target_frequency for HSI. Supported: 8 MHz (direct), 24 MHz, 48 MHz");
         }
     }
 
@@ -148,7 +148,20 @@ fn init_from_hsi(target_freq: u32) void {
     // PLLMUL bits control the PLL multiplier factor
 
     // TODO: Make this more flexible.
-    if (target_freq == 48_000_000) {
+    if (target_freq == 8_000_000) {
+        // Use HSI directly at 8 MHz without PLL
+        // HSI is already enabled by default after reset
+        // Just ensure we're using HSI as system clock (should already be the case)
+        RCC.CFGR0.modify(.{ .SW = 0 }); // SW = 0 means HSI
+        while (RCC.CFGR0.read().SWS != 0) {}
+
+        // Configure bus prescalers (no division)
+        RCC.CFGR0.modify(.{
+            .HPRE = 0, // AHB prescaler = 1
+            .PPRE2 = 0, // APB2 prescaler = 1
+            .PPRE1 = 0, // APB1 prescaler = 1
+        });
+    } else if (target_freq == 48_000_000) {
         // 48 MHz from 8 MHz HSI: HSI -> PLL (6x multiplier) -> 48 MHz
         // HSIPRE = 1 means HSI not divided before PLL
         EXTEND.EXTEND_CTR.modify(.{ .HSIPRE = 1 });
