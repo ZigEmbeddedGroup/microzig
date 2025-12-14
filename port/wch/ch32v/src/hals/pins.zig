@@ -224,6 +224,7 @@ pub const GlobalConfiguration = struct {
                 const used_gpios = comptime input_gpios | output_gpios;
 
                 if (used_gpios != 0) {
+                    // Figure out IO port enable bit from name
                     const offset = @as(u3, @intFromEnum(@field(Port, port_field.name))) + 2;
                     RCC.APB2PCENR.raw |= @as(u32, 1 << offset);
                 }
@@ -242,7 +243,7 @@ pub const GlobalConfiguration = struct {
                     }
                 }
 
-                // Set upll-up and pull-down.
+                // Set pull-up and pull-down.
                 if (input_gpios != 0) {
                     inline for (@typeInfo(Port.Configuration).@"struct".fields) |field|
                         if (@field(port_config, field.name)) |pin_config| {
