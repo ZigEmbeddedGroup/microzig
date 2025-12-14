@@ -296,12 +296,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                 const register_name = item.object.get("name").?.string;
                 const description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
                 const byte_offset = item.object.get("byte_offset").?.integer;
+                const item_bit_size = if (item.object.get("bit_size")) |v| v.integer else 32;
 
                 const register_id = try db.create_register(group_id, .{
                     .name = register_name,
                     .description = description,
                     .offset_bytes = @intCast(byte_offset),
-                    .size_bits = 32,
+                    .size_bits = @intCast(item_bit_size),
                     .count = if (item.object.get("array")) |array| blk: {
                         if (array.object.get("len")) |count| {
                             // ensure stride is always 4 for now, assuming that
