@@ -541,6 +541,7 @@ pub const I2C = struct {
         self.reset_fifo();
         self.reset_command_list();
 
+        // See TRM sections 28.5.5.1 and 28.5.8.1 to understand the command structure
         var cmd_idx: usize = 0;
         if (start)
             try self.add_cmd(&cmd_idx, Command.start);
@@ -644,8 +645,8 @@ pub const I2C = struct {
         self.reset_fifo();
         self.reset_command_list();
 
+        // See TRM sections 28.5.1.1 and 28.5.4.1 to understand the command structure
         var cmd_idx: usize = 0;
-
         if (start)
             try self.add_cmd(&cmd_idx, Command.start);
 
