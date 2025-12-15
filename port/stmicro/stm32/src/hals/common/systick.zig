@@ -80,6 +80,6 @@ pub fn get_time_since_boot() u64 {
     return us;
 }
 
-pub fn SYSTICK_handler() callconv(.c) void {
+pub fn SysTick_handler() callconv(.c) void {
     _ = microzig.cpu.atomic.add(u32, &period, 1);
 }

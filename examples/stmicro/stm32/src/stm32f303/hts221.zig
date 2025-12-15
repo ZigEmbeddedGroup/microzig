@@ -7,7 +7,7 @@ const HTS221 = microzig.drivers.sensor.HTS221;
 pub const microzig_options: microzig.Options = .{
     .logFn = microzig.hal.uart.log,
     .interrupts = .{
-        .SysTick = .{ .c = systick.SYSTICK_handler },
+        .SysTick = .{ .c = systick.SysTick_handler },
     },
 };
 
