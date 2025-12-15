@@ -53,8 +53,6 @@ pub const Runner = struct {
         try self.wifi.join(ssid, pwd);
     }
 
-    // should not be used after join
-    // read_packet can get packet of 1536 bytes while using buffer of 512 bytes
     fn show_clm_ver(self: *Self) !void {
         var data: [128]u8 = @splat(0);
         const n = try self.wifi.get_var("clmver", &data);
