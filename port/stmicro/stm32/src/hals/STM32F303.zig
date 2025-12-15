@@ -17,6 +17,8 @@ pub const rcc = @import("STM32F303/rcc.zig");
 pub const i2c = @import("STM32F303/i2c.zig");
 pub const pins = @import("STM32F303/pins.zig");
 pub const enums = @import("STM32F303/enums.zig");
+pub const systick_timer = @import("./common/systick_timer.zig");
+pub const systick = @import("./common/systick.zig");
 
 pub fn parse_pin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
@@ -34,4 +36,12 @@ pub fn parse_pin(comptime spec: []const u8) type {
         const gpio_port = @field(microzig.peripherals, "GPIO" ++ gpio_port_name);
         const suffix = std.fmt.comptimePrint("{d}", .{pin_number});
     };
+}
+
+pub fn get_sys_clk() u32 {
+    return rcc.current_clock.sys_clk;
+}
+
+pub fn get_systick_clk() u32 {
+    return rcc.current_clock.sys_clk / 8;
 }
