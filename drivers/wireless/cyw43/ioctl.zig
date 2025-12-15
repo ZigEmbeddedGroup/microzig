@@ -18,9 +18,9 @@ const testing = std.testing;
 const log = std.log.scoped(.ioctl);
 
 // Time to wait for ioctl response (msec)
-pub const response_wait = 30;
+pub const response_wait = response_poll_interval * 8;
 // Polling interval for ioctl responses
-pub const response_pool_interval = 10;
+pub const response_poll_interval = 10;
 
 // SDPCM (Serial Data Packet Communication Module) header
 // SDIO/SPI Bus Layer (SDPCM) header
@@ -144,7 +144,7 @@ pub const Response = struct {
     }
 
     pub fn cdc(self: Self) CdcHeader {
-        assert(self.sdp.chan != .data or self.sdp.chan == .event);
+        assert(self.sdp.chan == .control);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(CdcHeader)].*);
     }
 
@@ -195,7 +195,7 @@ pub fn request(
     // name length with sentinel
     const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0);
     // length of name and data rounded to 4 bytes
-    const payload_len: u16 = @intCast(((name_len + data.len + 3) >> 2) * 4);
+    const payload_len: u16 = @intCast(((name_len + (if (data.len < 4) 4 else data.len) + 3) >> 2) * 4);
     const header_len: u16 = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
     const txlen: u16 = header_len + payload_len;
 
@@ -228,7 +228,7 @@ pub fn request(
     return buf[0..txlen];
 }
 
-pub const TxMsg = extern struct {
+pub const TxHeader = extern struct {
     const Self = @This();
 
     sdp: SdpHeader = mem.zeroes(SdpHeader),
@@ -236,7 +236,7 @@ pub const TxMsg = extern struct {
     bdc: BdcHeader = mem.zeroes(BdcHeader),
 
     pub fn init(data_len: u16, tx_sequence: u8) Self {
-        const txlen = @sizeOf(TxMsg) + data_len;
+        const txlen = @sizeOf(TxHeader) + data_len;
         var self: Self = .{};
         self.sdp = .{
             .len = txlen,
@@ -250,10 +250,10 @@ pub const TxMsg = extern struct {
     }
 };
 
-pub const tx_header_len = @sizeOf(TxMsg);
+pub const tx_header_len = @sizeOf(TxHeader);
 
 pub fn tx_header(data_len: u16, tx_sequence: u8) [tx_header_len]u8 {
-    return @bitCast(TxMsg.init(data_len, tx_sequence));
+    return @bitCast(TxHeader.init(data_len, tx_sequence));
 }
 
 comptime {
@@ -261,7 +261,7 @@ comptime {
     assert(@sizeOf(BdcHeader) == 4);
     assert(@sizeOf(CdcHeader) == 16);
     assert(@sizeOf(EventPacket) == 72);
-    assert(@sizeOf(TxMsg) == 18);
+    assert(@sizeOf(TxHeader) == 18);
 }
 
 test "request" {
@@ -656,4 +656,13 @@ test bytes_to_words {
         try testing.expectEqualSlices(u32, &.{ 0xddccbbaa, 0x2211ffee }, words);
         try testing.expectEqual(0x554433, padding.?);
     }
+}
+
+test "small data is padded in request to 4 bytes" {
+    var buf: [1024]u8 = undefined;
+
+    const b1 = request(&buf, .set_var, "ampdu_ba_wsize", &.{ 0x08, 0, 0, 0 }, 1, 2);
+    const b2 = request(buf[512..], .set_var, "ampdu_ba_wsize", &.{0x08}, 1, 2);
+
+    try testing.expectEqualSlices(u8, b1, b2);
 }

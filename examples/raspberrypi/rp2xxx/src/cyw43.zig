@@ -21,9 +21,6 @@ pub const microzig_options = microzig.Options{
 };
 
 var wifi_driver: drivers.WiFi = .{};
-//var rx_buffer: [1536]u8 align(4) = undefined; // 1500 (payload 1472 + ip 20 + udp 8) + 14 ethernet + 22 bus (12 sdp + 2 padding + 4 bdc + 4 padding)
-//var tx_buffer: [1472]u8 align(4) = undefined; // 1472 payload + ip 20 + udp 8  = 1500
-
 var wifi_buffer: drivers.WiFi.Chip.Buffer = undefined;
 
 const Net = @import("lwip.zig");

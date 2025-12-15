@@ -10,14 +10,16 @@ const log = std.log.scoped(.cyw43_runner);
 pub const Runner = struct {
     const Self = @This();
 
-    pub const Buffer = [770]u32;
+    // tx: 1500 MTU + 14 ethernet header + 18 bus header = 1532 bytes + 4 ioctl cmd = 1536 bytes
+    // rx: 22 bus (18 + 4 padding) + 14 ethernet header + 1500 MTU = 1536 bytes + 4 bytes status
+    // aligned to 4 bytes for dma = 1536 / 4 + 1 = 385 u32 words
+    pub const Buffer = [(1536 / 4) + 1]u32;
+    buffer: *Buffer = undefined,
 
     bus: Bus = undefined,
     wifi: WiFi = undefined,
     led_pin: ?u2 = null,
     mac: [6]u8 = @splat(0),
-
-    buffer: *Buffer = undefined,
 
     pub fn init(
         self: *Self,
@@ -31,8 +33,7 @@ pub const Runner = struct {
 
         self.wifi = .{
             .bus = &self.bus,
-            .tx_words = buffer[0..385],
-            .rx_words = buffer[385..],
+            .buffer = buffer,
         };
         try self.wifi.init();
 
@@ -46,7 +47,7 @@ pub const Runner = struct {
     pub fn tx_buffer(self: *Self) []u8 {
         // first word is reserved for bus command
         // then 18 bytes are bus header
-        return mem.sliceAsBytes(self.wifi.tx_words[1..])[18..];
+        return mem.sliceAsBytes(self.wifi.buffer[1..])[18..];
     }
 
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
