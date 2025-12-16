@@ -50,6 +50,14 @@ pub const AF = enum(u4) {
     AF5,
     AF6,
     AF7,
+    AF8,
+    AF9,
+    AF10,
+    AF11,
+    AF12,
+    AF13,
+    AF14,
+    AF15,
 };
 
 pub const AlternateFunction = struct {

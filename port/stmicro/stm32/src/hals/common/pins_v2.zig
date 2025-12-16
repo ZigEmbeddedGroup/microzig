@@ -105,7 +105,8 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
                             .alignment = undefined,
                         };
 
-                        pin_field.name = pin_config.name orelse field.name;
+                        const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
+                        pin_field.name = pin_config.name orelse default_name;
                         pin_field.type = GPIO(pin_config.mode orelse .{ .input = .{.floating} });
                         pin_field.alignment = @alignOf(field.type);
 
@@ -201,11 +202,13 @@ pub const GlobalConfiguration = struct {
                         const port = @intFromEnum(@field(Port, port_field.name));
                         var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
                         pin.set_mode(pin_config.mode.?);
+                        const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
+
                         switch (pin_config.mode orelse .input) {
-                            .input => @field(ret, pin_config.name orelse field.name) = InputGPIO{ .pin = pin },
-                            .output => @field(ret, pin_config.name orelse field.name) = OutputGPIO{ .pin = pin },
-                            .analog => @field(ret, pin_config.name orelse field.name) = Analog{},
-                            .alternate_function => @field(ret, pin_config.name orelse field.name) = AlternateFunction{},
+                            .input => @field(ret, pin_config.name orelse default_name) = InputGPIO{ .pin = pin },
+                            .output => @field(ret, pin_config.name orelse default_name) = OutputGPIO{ .pin = pin },
+                            .analog => @field(ret, pin_config.name orelse default_name) = Analog{},
+                            .alternate_function => @field(ret, pin_config.name orelse default_name) = AlternateFunction{},
                         }
                     }
                 }
