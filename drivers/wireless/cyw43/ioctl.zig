@@ -195,7 +195,7 @@ pub fn request(
     // name length with sentinel
     const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0);
     // length of name and data rounded to 4 bytes
-    const payload_len: u16 = @intCast(((name_len + (if (data.len < 4) 4 else data.len) + 3) >> 2) * 4);
+    const payload_len: u16 = @intCast(((name_len + (if (data.len > 0 and data.len < 4) 4 else data.len) + 3) >> 2) * 4);
     const header_len: u16 = @sizeOf(SdpHeader) + @sizeOf(CdcHeader);
     const txlen: u16 = header_len + payload_len;
 
@@ -661,8 +661,8 @@ test bytes_to_words {
 test "small data is padded in request to 4 bytes" {
     var buf: [1024]u8 = undefined;
 
-    const b1 = request(&buf, .set_var, "ampdu_ba_wsize", &.{ 0x08, 0, 0, 0 }, 1, 2);
-    const b2 = request(buf[512..], .set_var, "ampdu_ba_wsize", &.{0x08}, 1, 2);
+    const r1 = request(&buf, .set_var, "ampdu_ba_wsize", &.{ 0x08, 0, 0, 0 }, 1, 2);
+    const r2 = request(buf[512..], .set_var, "ampdu_ba_wsize", &.{0x08}, 1, 2);
 
-    try testing.expectEqualSlices(u8, b1, b2);
+    try testing.expectEqualSlices(u8, r1, r2);
 }
