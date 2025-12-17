@@ -69,6 +69,17 @@ pub fn build(b: *std.Build) !void {
     });
     generate_exe.root_module.addImport("regz", regz);
 
+    const clocktree_test = b.addTest(.{
+        .name = "ClockTree Test",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("stm32-clocks/lib.zig"),
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+        }),
+    });
+
+    const clocktree_test_run = b.addRunArtifact(clocktree_test);
+
     const generate_run = b.addRunArtifact(generate_exe);
     generate_run.max_stdio_size = std.math.maxInt(usize);
     generate_run.addFileArg(stm32_data_generated.path("."));
@@ -77,4 +88,7 @@ pub fn build(b: *std.Build) !void {
     generate_step.dependOn(&generate_run.step);
 
     _ = b.step("test", "Run platform agnostic unit tests");
+
+    const clocktree_step = b.step("test_clocktree", "Run clocktree unit tests");
+    clocktree_step.dependOn(&clocktree_test_run.step);
 }

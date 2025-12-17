@@ -70,6 +70,14 @@ pub const ClockNode = struct {
         }
     }
 
+    pub fn get_as_ref(self: Self) ?f32 {
+        const ret = self.get();
+        return switch (ret) {
+            .Ok => |ok| ok,
+            else => 0,
+        };
+    }
+
     pub fn get_output(self: Self) !f32 {
         if (self.nodetype == .off) return 0;
         return self.get_value();
@@ -469,4 +477,9 @@ pub fn math_op(comptime T: type, val: T, val2: T, comptime op: MathOpration, com
             return ret;
         },
     };
+}
+
+pub fn round(value: ?f32) ?f32 {
+    const val = value orelse return null;
+    return @round(val);
 }

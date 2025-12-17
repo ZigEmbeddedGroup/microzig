@@ -11,6 +11,7 @@ const comptime_fail_or_error = clock.comptime_fail_or_error;
 const math_op = clock.math_op;
 const check_ref = clock.check_ref;
 const Limit = clock.Limit;
+const round = clock.round;
 
 pub const RCC_RTC_Clock_SourceList = enum {
     HSERTCDevisor,
@@ -565,7 +566,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
         pub const Config_Output = struct {
             flags: Flags = .{},
+            HSI_VALUE: ?f32 = null, //from RCC Clock Config
             HSE_VALUE: ?f32 = null, //from RCC Clock Config
+            LSI_VALUE: ?f32 = null, //from RCC Clock Config
             LSE_VALUE: ?f32 = null, //from RCC Clock Config
             RCC_RTC_Clock_Source: ?RCC_RTC_Clock_SourceList = null, //from RCC Clock Config
             RCC_RTC_Clock_Source_FROM_HSE: ?RCC_RTC_Clock_Source_FROM_HSEList = null, //from RCC Clock Config
@@ -660,1936 +663,15 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var SAISourceIsPllSAIB: bool = false;
             var HCLKDiv1: bool = false;
             var TimPrescalerEnabled: bool = false;
-            var RTCFreq_ValueLimit: Limit = .{};
-            var SYSCLKFreq_VALUELimit: Limit = .{};
-            var HCLKFreq_ValueLimit: Limit = .{};
-            var AHBFreq_ValueLimit: Limit = .{};
-            var APB1Freq_ValueLimit: Limit = .{};
-            var APB2Freq_ValueLimit: Limit = .{};
-            var @"48MHZClocksFreq_ValueLimit": Limit = .{};
-            var I2SClocksFreq_ValueLimit: Limit = .{};
-            var MCO1PinFreq_ValueLimit: Limit = .{};
-            var MCO2PinFreq_ValueLimit: Limit = .{};
-            var RTCHSEDivFreq_ValueLimit: Limit = .{};
-            var VCOInputFreq_ValueLimit: Limit = .{};
-            var VCOOutputFreq_ValueLimit: Limit = .{};
-            var PLLQCLKFreq_ValueLimit: Limit = .{};
-            var PLLCLKFreq_ValueLimit: Limit = .{};
-            var VcooutputI2SLimit: Limit = .{};
-            var VcooutputI2SQLimit: Limit = .{};
-            var VCOI2SOutputFreq_ValueLimit: Limit = .{};
-            var VCOSAIOutputFreq_ValueLimit: Limit = .{};
-            var VCOSAIOutputFreq_ValueRLimit: Limit = .{};
-            var VCOSAIOutputFreq_ValueQLimit: Limit = .{};
-            //Ref Values
 
-            const HSI_VALUEValue: ?f32 = blk: {
-                break :blk 1.6e7;
-            };
-            const HSE_VALUEValue: ?f32 = blk: {
-                if (config.flags.HSEByPass) {
-                    const config_val = config.HSE_VALUE;
-                    if (config_val) |val| {
-                        if (val < 1e6) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Underflow Value - min: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "HSE_VALUE",
-                                "HSEByPass",
-                                "HSEByPass",
-                                1e6,
-                                val,
-                            });
-                        }
-                        if (val > 5e7) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Overflow Value - max: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "HSE_VALUE",
-                                "HSEByPass",
-                                "HSEByPass",
-                                5e7,
-                                val,
-                            });
-                        }
-                    }
-                    break :blk config_val orelse 25000000;
-                }
-                const config_val = config.HSE_VALUE;
-                if (config_val) |val| {
-                    if (val < 4e6) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            4e6,
-                            val,
-                        });
-                    }
-                    if (val > 2.6e7) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            2.6e7,
-                            val,
-                        });
-                    }
-                }
-                break :blk config_val orelse 25000000;
-            };
-            const LSI_VALUEValue: ?f32 = blk: {
-                break :blk 3.2e4;
-            };
-            const LSE_VALUEValue: ?f32 = blk: {
-                if (config.flags.LSEOscillator) {
-                    if (config.LSE_VALUE) |val| {
-                        if (val != 3.2768e4) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed Value: {e} found: {e}
-                                \\note: some values are fixed depending on the clock configuration.
-                                \\
-                                \\
-                            , .{
-                                "LSE_VALUE",
-                                "LSEOscillator",
-                                "LSE In crystal Mode",
-                                3.2768e4,
-                                val,
-                            });
-                        }
-                    }
-                    break :blk 3.2768e4;
-                }
-                const config_val = config.LSE_VALUE;
-                if (config_val) |val| {
-                    if (val < 0e0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            0e0,
-                            val,
-                        });
-                    }
-                    if (val > 1e6) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            1e6,
-                            val,
-                        });
-                    }
-                }
-                break :blk config_val orelse 32768;
-            };
-            const RCC_RTC_Clock_SourceValue: ?RCC_RTC_Clock_SourceList = blk: {
-                if (((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
-                    const conf_item = config.RCC_RTC_Clock_Source;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .HSERTCDevisor => {},
-                            else => {
-                                return comptime_fail_or_error(error.InvalidConfig,
-                                    \\
-                                    \\Error on {s} | expr: {s} diagnostic: {s} 
-                                    \\Option not available in this condition: {any}.
-                                    \\note: available options:
-                                    \\ - HSERTCDevisor
-                                , .{ "RCC_RTC_Clock_Source", "((HSEByPass|HSEOscillator)&(SEM2RCC_HSE_REQUIRED_TIM11 & TIM11 & Semaphore_input_Channel1TIM11))", "RTC Mux should have HSE as input when TIM11 remap is used", item });
-                            },
-                        }
-                    }
+            //Clock node bases
 
-                    break :blk conf_item orelse null;
-                }
-                const conf_item = config.RCC_RTC_Clock_Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_RTCCLKSOURCE_LSE => {},
-                        .RCC_RTCCLKSOURCE_LSI => {},
-                        .HSERTCDevisor => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_RTCCLKSOURCE_LSI;
-            };
-            const RTCFreq_ValueValue: ?f32 = blk: {
-                if ((!(check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) and !(check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")))) {
-                    RTCFreq_ValueLimit = .{
-                        .min = 0e0,
-                        .max = 1e6,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 3.2e4;
-            };
-            const WatchDogFreq_ValueValue: ?f32 = blk: {
-                break :blk 3.2e4;
-            };
-            const RCC_RTC_Clock_Source_FROM_HSEValue: ?RCC_RTC_Clock_Source_FROM_HSEList = blk: {
-                const conf_item = config.RCC_RTC_Clock_Source_FROM_HSE;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_RTCCLKSOURCE_HSE_DIV2 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV3 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV4 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV5 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV6 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV7 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV8 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV9 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV10 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV11 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV12 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV13 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV14 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV15 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV16 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV17 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV18 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV19 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV20 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV21 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV22 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV23 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV24 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV25 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV26 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV27 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV28 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV29 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV30 => {},
-                        .RCC_RTCCLKSOURCE_HSE_DIV31 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_RTCCLKSOURCE_HSE_DIV2;
-            };
-            const SYSCLKSourceValue: ?SYSCLKSourceList = blk: {
-                const conf_item = config.SYSCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SYSCLKSOURCE_HSI => {},
-                        .RCC_SYSCLKSOURCE_HSE => {},
-                        .RCC_SYSCLKSOURCE_PLLCLK => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
-            };
-            const PLLSourceValue: ?PLLSourceList = blk: {
-                const conf_item = config.PLLSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_PLLSOURCE_HSI => {},
-                        .RCC_PLLSOURCE_HSE => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
-            };
-            const PLLMValue: ?f32 = blk: {
-                const config_val = config.PLLM;
-                if (config_val) |val| {
-                    if (val < 2) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLM",
-                            "Else",
-                            "No Extra Log",
-                            2,
-                            val,
-                        });
-                    }
-                    if (val > 63) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLM",
-                            "Else",
-                            "No Extra Log",
-                            63,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
-            };
-            const AHBCLKDividerValue: ?AHBCLKDividerList = blk: {
-                const conf_item = config.AHBCLKDivider;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SYSCLK_DIV1 => {},
-                        .RCC_SYSCLK_DIV2 => {},
-                        .RCC_SYSCLK_DIV4 => {},
-                        .RCC_SYSCLK_DIV8 => {},
-                        .RCC_SYSCLK_DIV16 => {},
-                        .RCC_SYSCLK_DIV64 => {},
-                        .RCC_SYSCLK_DIV128 => {},
-                        .RCC_SYSCLK_DIV256 => {},
-                        .RCC_SYSCLK_DIV512 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SYSCLK_DIV1;
-            };
-            const SYSCLKFreq_VALUEValue: ?f32 = blk: {
-                SYSCLKFreq_VALUELimit = .{
-                    .min = null,
-                    .max = 1.8e8,
-                };
-
-                break :blk null;
-            };
-            const EthernetFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.6e7;
-            };
-            const HCLKFreq_ValueValue: ?f32 = blk: {
-                if (config.flags.USB_OTG_HSUsed_ForRCC) {
-                    HCLKFreq_ValueLimit = .{
-                        .min = 3e7,
-                        .max = 1.8e8,
-                    };
-
-                    break :blk null;
-                } else if (config.flags.ETHUsed_ForRCC) {
-                    HCLKFreq_ValueLimit = .{
-                        .min = 2.5e7,
-                        .max = 1.8e8,
-                    };
-
-                    break :blk null;
-                } else if (config.flags.USB_OTG_FSUsed_ForRCC) {
-                    HCLKFreq_ValueLimit = .{
-                        .min = 1.42e7,
-                        .max = 1.8e8,
-                    };
-
-                    break :blk null;
-                }
-                HCLKFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.8e8,
-                };
-
-                break :blk null;
-            };
-            const AHBFreq_ValueValue: ?f32 = blk: {
-                AHBFreq_ValueLimit = .{
-                    .min = 0e0,
-                    .max = null,
-                };
-
-                break :blk null;
-            };
-            const Cortex_DivValue: ?Cortex_DivList = blk: {
-                const conf_item = config.Cortex_Div;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .SYSTICK_CLKSOURCE_HCLK => HCLKDiv1 = true,
-                        .SYSTICK_CLKSOURCE_HCLK_DIV8 => {},
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    HCLKDiv1 = true;
-                    break :blk .SYSTICK_CLKSOURCE_HCLK;
-                };
-            };
-            const CortexFreq_ValueValue: ?f32 = blk: {
-                break :blk 2e6;
-            };
-            const FCLKCortexFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.6e7;
-            };
-            const APB1CLKDividerValue: ?APB1CLKDividerList = blk: {
-                const conf_item = config.APB1CLKDivider;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_HCLK_DIV1 => {},
-                        .RCC_HCLK_DIV2 => {},
-                        .RCC_HCLK_DIV4 => {},
-                        .RCC_HCLK_DIV8 => {},
-                        .RCC_HCLK_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_HCLK_DIV1;
-            };
-            const APB1Freq_ValueValue: ?f32 = blk: {
-                if (config.flags.RTCUsed_ForRCC) {
-                    const min: ?f32 = try math_op(@TypeOf(RTCFreq_ValueValue), RTCFreq_ValueValue, 4, .@"*", "APB1Freq_Value", "RTCFreq_Value", "4");
-                    const max: ?f32 = @min(45000000, std.math.floatMax(f32));
-                    APB1Freq_ValueLimit = .{
-                        .min = min,
-                        .max = max,
-                        .min_expr = "=RTCFreq_Value*4",
-                        .max_expr = "null",
-                    };
-                    break :blk null;
-                }
-                APB1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 4.5e7,
-                };
-
-                break :blk null;
-            };
-            const RCC_TIM_PRescaler_SelectionValue: ?RCC_TIM_PRescaler_SelectionList = blk: {
-                const conf_item = config.extra.RCC_TIM_PRescaler_Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIMPRES_ACTIVATED => TimPrescalerEnabled = true,
-                        .RCC_TIMPRES_DESACTIVATED => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIMPRES_DESACTIVATED;
-            };
-            const APB1TimCLKDividerValue: ?f32 = blk: {
-                if (((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"=")))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV2, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV4, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                }
-                break :blk 2;
-            };
-            const APB1TimFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.6e7;
-            };
-            const APB2CLKDividerValue: ?APB2CLKDividerList = blk: {
-                const conf_item = config.APB2CLKDivider;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_HCLK_DIV1 => {},
-                        .RCC_HCLK_DIV2 => {},
-                        .RCC_HCLK_DIV4 => {},
-                        .RCC_HCLK_DIV8 => {},
-                        .RCC_HCLK_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_HCLK_DIV1;
-            };
-            const APB2Freq_ValueValue: ?f32 = blk: {
-                APB2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 9e7,
-                };
-
-                break :blk null;
-            };
-            const APB2TimCLKDividerValue: ?f32 = blk: {
-                if (((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"=")))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV2, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV4, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                }
-                break :blk 2;
-            };
-            const APB2TimFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.6e7;
-            };
-            const @"48MHZClocksFreq_ValueValue": ?f32 = blk: {
-                if (config.flags.USB_OTG_FSUsed_ForRCC or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC) {
-                    @"48MHZClocksFreq_ValueLimit" = .{
-                        .min = 4.788e7,
-                        .max = 4.812e7,
-                    };
-
-                    break :blk null;
-                }
-                @"48MHZClocksFreq_ValueLimit" = .{
-                    .min = null,
-                    .max = 4.8e7,
-                };
-
-                break :blk null;
-            };
-            const I2SClockSourceValue: ?I2SClockSourceList = blk: {
-                const conf_item = config.I2SClockSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .I2S_CLOCK_EXTERNAL => {},
-                        .I2S_CLOCK_PLL => I2SSourceIsPll = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    I2SSourceIsPll = true;
-                    break :blk .I2S_CLOCK_PLL;
-                };
-            };
-            const EXTERNAL_CLOCK_VALUEValue: ?f32 = blk: {
-                break :blk 1.2288e7;
-            };
-            const I2SClocksFreq_ValueValue: ?f32 = blk: {
-                I2SClocksFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.92e8,
-                };
-
-                break :blk null;
-            };
-            const PLLI2SDivQValue: ?f32 = blk: {
-                const config_val = config.PLLI2SDivQ;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SDivQ",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 32) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SDivQ",
-                            "Else",
-                            "No Extra Log",
-                            32,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const SAIClockSource_BlockAValue: ?SAIClockSource_BlockAList = blk: {
-                const conf_item = config.SAIClockSource_BlockA;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .SAI_CLKSOURCE_PLLI2S => SAISourceIsPllI2SA = true,
-                        .SAI_CLKSOURCE_EXT => {},
-                        .SAI_CLKSOURCE_PLLSAI => SAISourceIsPllSAIA = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SAISourceIsPllSAIA = true;
-                    break :blk .SAI_CLKSOURCE_PLLSAI;
-                };
-            };
-            const SAI_AClocksFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.225e7;
-            };
-            const PLLSAIDivRValue: ?PLLSAIDivRList = blk: {
-                const conf_item = config.PLLSAIDivR;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_PLLSAIDIVR_2 => {},
-                        .RCC_PLLSAIDIVR_4 => {},
-                        .RCC_PLLSAIDIVR_8 => {},
-                        .RCC_PLLSAIDIVR_16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_PLLSAIDIVR_2;
-            };
-            const LCDTFTFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.225e7;
-            };
-            const PLLSAIDivQValue: ?f32 = blk: {
-                const config_val = config.PLLSAIDivQ;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIDivQ",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 32) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIDivQ",
-                            "Else",
-                            "No Extra Log",
-                            32,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const SAIClockSource_BlockBValue: ?SAIClockSource_BlockBList = blk: {
-                const conf_item = config.SAIClockSource_BlockB;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .SAI_CLKSOURCE_PLLI2S => SAISourceIsPllI2SB = true,
-                        .SAI_CLKSOURCE_EXT => {},
-                        .SAI_CLKSOURCE_PLLSAI => SAISourceIsPllSAIB = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SAISourceIsPllSAIB = true;
-                    break :blk .SAI_CLKSOURCE_PLLSAI;
-                };
-            };
-            const SAI_BClocksFreq_ValueValue: ?f32 = blk: {
-                break :blk 1.225e7;
-            };
-            const RCC_MCO1SourceValue: ?RCC_MCO1SourceList = blk: {
-                const conf_item = config.RCC_MCO1Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCO1SOURCE_HSI => {},
-                        .RCC_MCO1SOURCE_LSE => {},
-                        .RCC_MCO1SOURCE_HSE => {},
-                        .RCC_MCO1SOURCE_PLLCLK => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCO1SOURCE_HSI;
-            };
-            const RCC_MCODiv1Value: ?RCC_MCODiv1List = blk: {
-                const conf_item = config.RCC_MCODiv1;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCODIV_1 => {},
-                        .RCC_MCODIV_2 => {},
-                        .RCC_MCODIV_3 => {},
-                        .RCC_MCODIV_4 => {},
-                        .RCC_MCODIV_5 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCODIV_1;
-            };
-            const MCO1PinFreq_ValueValue: ?f32 = blk: {
-                MCO1PinFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1e8,
-                };
-
-                break :blk null;
-            };
-            const RCC_MCO2SourceValue: ?RCC_MCO2SourceList = blk: {
-                const conf_item = config.RCC_MCO2Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCO2SOURCE_SYSCLK => {},
-                        .RCC_MCO2SOURCE_PLLI2SCLK => {},
-                        .RCC_MCO2SOURCE_HSE => {},
-                        .RCC_MCO2SOURCE_PLLCLK => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCO2SOURCE_SYSCLK;
-            };
-            const RCC_MCODiv2Value: ?RCC_MCODiv2List = blk: {
-                const conf_item = config.RCC_MCODiv2;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCODIV_1 => {},
-                        .RCC_MCODIV_2 => {},
-                        .RCC_MCODIV_3 => {},
-                        .RCC_MCODIV_4 => {},
-                        .RCC_MCODIV_5 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCODIV_1;
-            };
-            const MCO2PinFreq_ValueValue: ?f32 = blk: {
-                MCO2PinFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1e8,
-                };
-
-                break :blk null;
-            };
-            const PLLSAINValue: ?f32 = blk: {
-                const config_val = config.PLLSAIN;
-                if (config_val) |val| {
-                    if (val < 50) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIN",
-                            "Else",
-                            "No Extra Log",
-                            50,
-                            val,
-                        });
-                    }
-                    if (val > 432) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIN",
-                            "Else",
-                            "No Extra Log",
-                            432,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 49;
-            };
-            const PLLSAIRValue: ?f32 = blk: {
-                const config_val = config.PLLSAIR;
-                if (config_val) |val| {
-                    if (val < 2) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIR",
-                            "Else",
-                            "No Extra Log",
-                            2,
-                            val,
-                        });
-                    }
-                    if (val > 7) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIR",
-                            "Else",
-                            "No Extra Log",
-                            7,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const PLLSAIQValue: ?f32 = blk: {
-                const config_val = config.PLLSAIQ;
-                if (config_val) |val| {
-                    if (val < 2) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIQ",
-                            "Else",
-                            "No Extra Log",
-                            2,
-                            val,
-                        });
-                    }
-                    if (val > 15) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLSAIQ",
-                            "Else",
-                            "No Extra Log",
-                            15,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 4;
-            };
-            const PLLNValue: ?f32 = blk: {
-                const config_val = config.PLLN;
-                if (config_val) |val| {
-                    if (val < 50) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLN",
-                            "Else",
-                            "No Extra Log",
-                            50,
-                            val,
-                        });
-                    }
-                    if (val > 432) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLN",
-                            "Else",
-                            "No Extra Log",
-                            432,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 192;
-            };
-            const PLLPValue: ?PLLPList = blk: {
-                const conf_item = config.PLLP;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_PLLP_DIV2 => {},
-                        .RCC_PLLP_DIV4 => {},
-                        .RCC_PLLP_DIV6 => {},
-                        .RCC_PLLP_DIV8 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_PLLP_DIV2;
-            };
-            const PLLQValue: ?f32 = blk: {
-                const config_val = config.PLLQ;
-                if (config_val) |val| {
-                    if (val < 2) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLQ",
-                            "Else",
-                            "No Extra Log",
-                            2,
-                            val,
-                        });
-                    }
-                    if (val > 15) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLQ",
-                            "Else",
-                            "No Extra Log",
-                            15,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 4;
-            };
-            const PLLI2SNValue: ?f32 = blk: {
-                const config_val = config.PLLI2SN;
-                if (config_val) |val| {
-                    if (val < 50) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SN",
-                            "Else",
-                            "No Extra Log",
-                            50,
-                            val,
-                        });
-                    }
-                    if (val > 432) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SN",
-                            "Else",
-                            "No Extra Log",
-                            432,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 192;
-            };
-            const PLLI2SRValue: ?f32 = blk: {
-                const config_val = config.PLLI2SR;
-                if (config_val) |val| {
-                    if (val < 2) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SR",
-                            "Else",
-                            "No Extra Log",
-                            2,
-                            val,
-                        });
-                    }
-                    if (val > 7) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SR",
-                            "Else",
-                            "No Extra Log",
-                            7,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const PLLI2SQValue: ?f32 = blk: {
-                const config_val = config.PLLI2SQ;
-                if (config_val) |val| {
-                    if (val < 2) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SQ",
-                            "Else",
-                            "No Extra Log",
-                            2,
-                            val,
-                        });
-                    }
-                    if (val > 15) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "PLLI2SQ",
-                            "Else",
-                            "No Extra Log",
-                            15,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const RTCHSEDivFreq_ValueValue: ?f32 = blk: {
-                RTCHSEDivFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1e6,
-                };
-
-                break :blk null;
-            };
-            const PLLUsedValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_PLLCLK, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_PLLCLK, .@"=")) and config.flags.MCO1Config) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLCLK, .@"=")) and config.flags.MCO2Config) or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC or config.flags.SDIOUsed_ForRCC or config.flags.RNGUsed_ForRCC) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const VCOInputFreq_ValueValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") or ((I2SSourceIsPll and config.flags.I2SUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLI2SCLK, .@"=")) and config.flags.MCO2Config)) or (config.flags.SAIAUsed_ForRCC and (SAISourceIsPllI2SA or SAISourceIsPllSAIA)) or (config.flags.SAIBUsed_ForRCC and (SAISourceIsPllI2SB or SAISourceIsPllSAIB) or config.flags.LTDCUsed_ForRCC)) {
-                    VCOInputFreq_ValueLimit = .{
-                        .min = 9.5e5,
-                        .max = 2.1e6,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 1e6;
-            };
-            const VCOOutputFreq_ValueValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
-                    VCOOutputFreq_ValueLimit = .{
-                        .min = 1e8,
-                        .max = 4.32e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 1.92e8;
-            };
-            const PLLQCLKFreq_ValueValue: ?f32 = blk: {
-                if (((config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC or config.flags.RNGUsed_ForRCC))) {
-                    PLLQCLKFreq_ValueLimit = .{
-                        .min = null,
-                        .max = 7.5e7,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLLCLKFreq_ValueValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
-                    PLLCLKFreq_ValueLimit = .{
-                        .min = 2.4e7,
-                        .max = 1.8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VcooutputI2SValue: ?f32 = blk: {
-                if ((I2SSourceIsPll and config.flags.I2SUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLI2SCLK, .@"=")) and config.flags.MCO2Config)) {
-                    VcooutputI2SLimit = .{
-                        .min = null,
-                        .max = 2.16e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VcooutputI2SQValue: ?f32 = blk: {
-                if ((config.flags.SAIAUsed_ForRCC and SAISourceIsPllI2SA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllI2SB)) {
-                    VcooutputI2SQLimit = .{
-                        .min = null,
-                        .max = 2.16e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VCOI2SOutputFreq_ValueValue: ?f32 = blk: {
-                if (((I2SSourceIsPll and config.flags.I2SUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLI2SCLK, .@"=")) and config.flags.MCO2Config)) or (config.flags.SAIAUsed_ForRCC and SAISourceIsPllI2SA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllI2SB)) {
-                    VCOI2SOutputFreq_ValueLimit = .{
-                        .min = 1e8,
-                        .max = 4.32e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 1.92e8;
-            };
-            const VCOSAIOutputFreq_ValueValue: ?f32 = blk: {
-                if ((config.flags.SAIAUsed_ForRCC and SAISourceIsPllSAIA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllSAIB) or config.flags.LTDCUsed_ForRCC) {
-                    VCOSAIOutputFreq_ValueLimit = .{
-                        .min = 1e8,
-                        .max = 4.32e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 1.92e8;
-            };
-            const VCOSAIOutputFreq_ValueRValue: ?f32 = blk: {
-                if (config.flags.LTDCUsed_ForRCC) {
-                    VCOSAIOutputFreq_ValueRLimit = .{
-                        .min = null,
-                        .max = 2.16e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 1.92e8;
-            };
-            const VCOSAIOutputFreq_ValueQValue: ?f32 = blk: {
-                if ((config.flags.SAIAUsed_ForRCC and SAISourceIsPllSAIA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllSAIB)) {
-                    VCOSAIOutputFreq_ValueQLimit = .{
-                        .min = null,
-                        .max = 2.16e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 1.92e8;
-            };
-            const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
-                if (((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 168000000, .@">")))) {
-                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWR_Regulator_Voltage_Scale", "((HCLKFreq_Value > 168000000))", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((check_ref(@TypeOf(PWREXT_OverDriveValue), PWREXT_OverDriveValue, .PWREXT_OverDrive_DESACTIVATED, .@"=")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 144000000, .@">")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 144000000, .@"="))))) {
-                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWR_Regulator_Voltage_Scale", "((PWREXT_OverDrive=PWREXT_OverDrive_DESACTIVATED)&((HCLKFreq_Value > 144000000)|(HCLKFreq_Value=144000000)))", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
-                        }
-                    }
-                    break :blk item;
-                } else if ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@">"))) {
-                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .PWR_REGULATOR_VOLTAGE_SCALE2 => {},
-                            .PWR_REGULATOR_VOLTAGE_SCALE1 => {},
-                            else => {
-                                return comptime_fail_or_error(error.InvalidConfig,
-                                    \\
-                                    \\Error on {s} | expr: {s} diagnostic: {s} 
-                                    \\Option not available in this condition: {any}.
-                                    \\note: available options:
-                                    \\ - PWR_REGULATOR_VOLTAGE_SCALE2
-                                    \\ - PWR_REGULATOR_VOLTAGE_SCALE1
-                                , .{ "PWR_Regulator_Voltage_Scale", "(HCLKFreq_Value > 120000000)", "No Extra Log", item });
-                            },
-                        }
-                    }
-
-                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE2;
-                }
-                const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .PWR_REGULATOR_VOLTAGE_SCALE3 => {},
-                        .PWR_REGULATOR_VOLTAGE_SCALE2 => {},
-                        .PWR_REGULATOR_VOLTAGE_SCALE1 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE3;
-            };
-            const PWREXT_OverDriveValue: ?PWREXT_OverDriveList = blk: {
-                if ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 168000000, .@">")) or (check_ref(@TypeOf(APB1Freq_ValueValue), APB1Freq_ValueValue, 42000000, .@">")) or (check_ref(@TypeOf(APB2Freq_ValueValue), APB2Freq_ValueValue, 84000000, .@">"))) {
-                    const item: PWREXT_OverDriveList = .PWREXT_OverDrive_ACTIVATED;
-                    const conf_item = config.extra.PWREXT_OverDrive;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWREXT_OverDrive", "(HCLKFreq_Value > 168000000)|(APB1Freq_Value > 42000000)|(APB2Freq_Value > 84000000) ", "No Extra Log", "PWREXT_OverDrive_ACTIVATED", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.7, .@">")) and (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")))) {
-                    const item: PWREXT_OverDriveList = .PWREXT_OverDrive_DESACTIVATED;
-                    const conf_item = config.extra.PWREXT_OverDrive;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWREXT_OverDrive", "((VDD_VALUE>1.7)&(VDD_VALUE<2.1))", "No Extra Log", "PWREXT_OverDrive_DESACTIVATED", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE3, .@"=")) {
-                    const item: PWREXT_OverDriveList = .PWREXT_OverDrive_DESACTIVATED;
-                    const conf_item = config.extra.PWREXT_OverDrive;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PWREXT_OverDrive", "PWR_Regulator_Voltage_Scale = PWR_REGULATOR_VOLTAGE_SCALE3", "No Extra Log", "PWREXT_OverDrive_DESACTIVATED", i });
-                        }
-                    }
-                    break :blk item;
-                }
-                const conf_item = config.extra.PWREXT_OverDrive;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .PWREXT_OverDrive_DESACTIVATED => {},
-                        .PWREXT_OverDrive_ACTIVATED => {},
-                    }
-                }
-
-                break :blk conf_item orelse .PWREXT_OverDrive_DESACTIVATED;
-            };
-            const VDD_VALUEValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PWREXT_OverDriveValue), PWREXT_OverDriveValue, .PWREXT_OverDrive_ACTIVATED, .@"="))) {
-                    const config_val = config.extra.VDD_VALUE;
-                    if (config_val) |val| {
-                        if (val < 2.1e0) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Underflow Value - min: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "VDD_VALUE",
-                                "(PWREXT_OverDrive=PWREXT_OverDrive_ACTIVATED) ",
-                                "No Extra Log",
-                                2.1e0,
-                                val,
-                            });
-                        }
-                        if (val > 3.6e0) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Overflow Value - max: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "VDD_VALUE",
-                                "(PWREXT_OverDrive=PWREXT_OverDrive_ACTIVATED) ",
-                                "No Extra Log",
-                                3.6e0,
-                                val,
-                            });
-                        }
-                    }
-                    break :blk config_val orelse 3.3;
-                }
-                const config_val = config.extra.VDD_VALUE;
-                if (config_val) |val| {
-                    if (val < 1.7e0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "VDD_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            1.7e0,
-                            val,
-                        });
-                    }
-                    if (val > 3.6e0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "VDD_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            3.6e0,
-                            val,
-                        });
-                    }
-                }
-                break :blk config_val orelse 3.3;
-            };
-            const INSTRUCTION_CACHE_ENABLEValue: ?INSTRUCTION_CACHE_ENABLEList = blk: {
-                const conf_item = config.extra.INSTRUCTION_CACHE_ENABLE;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .@"1" => {},
-                        .@"0" => {},
-                    }
-                }
-
-                break :blk conf_item orelse .@"1";
-            };
-            const PREFETCH_ENABLEValue: ?PREFETCH_ENABLEList = blk: {
-                if ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) and (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<"))) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"=")))) {
-                    const item: PREFETCH_ENABLEList = .@"0";
-                    const conf_item = config.extra.PREFETCH_ENABLE;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "PREFETCH_ENABLE", "(((VDD_VALUE > 1.8) & (VDD_VALUE < 2.1))|(VDD_VALUE=1.8))", "No Extra Log", "0", i });
-                        }
-                    }
-                    break :blk item;
-                }
-                const conf_item = config.extra.PREFETCH_ENABLE;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .@"1" => {},
-                        .@"0" => {},
-                    }
-                }
-
-                break :blk conf_item orelse .@"1";
-            };
-            const DATA_CACHE_ENABLEValue: ?DATA_CACHE_ENABLEList = blk: {
-                const conf_item = config.extra.DATA_CACHE_ENABLE;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .@"1" => {},
-                        .@"0" => {},
-                    }
-                }
-
-                break :blk conf_item orelse .@"1";
-            };
-            const FLatencyValue: ?FLatencyList = blk: {
-                if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 0, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 30000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 30000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 0, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 24000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 24000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 0, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 22000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 22000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 0, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 20000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 20000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_0;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) & ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6))) &  ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 30000000)|(HCLKFreq_Value =30000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4))  & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 24000000)|(HCLKFreq_Value =24000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1))  & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 22000000)|(HCLKFreq_Value= 22000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8))   & ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 20000000)|(HCLKFreq_Value =20000000))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_0", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 30000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 60000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 60000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 24000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 48000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 48000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 22000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 44000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 44000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 20000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 40000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 40000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_1;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7))  & ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6 ))) & ((HCLKFreq_Value > 30000000) &  ((HCLKFreq_Value < 60000000)|(HCLKFreq_Value= 60000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 ))  & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 24000000) &  ((HCLKFreq_Value < 48000000)|(HCLKFreq_Value= 48000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 ))  & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 22000000) &  ((HCLKFreq_Value < 44000000)|(HCLKFreq_Value =44000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  ))  & ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 20000000) &  ((HCLKFreq_Value < 40000000)|(HCLKFreq_Value=40000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_1", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 60000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 90000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 90000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 48000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 72000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 72000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 44000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 66000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 66000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 40000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 60000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 60000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_2;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7 )) &  ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6 ))) & ((HCLKFreq_Value > 60000000) & ((HCLKFreq_Value < 90000000)|(HCLKFreq_Value = 90000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4  ))  & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 48000000) & ((HCLKFreq_Value < 72000000)|(HCLKFreq_Value = 72000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1  ))  & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 44000000) & ((HCLKFreq_Value < 66000000)|(HCLKFreq_Value= 66000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8   ))   &((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 40000000) & ((HCLKFreq_Value < 60000000)|(HCLKFreq_Value= 60000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_2", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 90000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 72000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 96000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 96000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 66000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 88000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 88000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 60000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 80000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 80000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_3;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) & ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6 )))&  ((HCLKFreq_Value > 90000000) & ((HCLKFreq_Value < 120000000)|(HCLKFreq_Value = 120000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 )) & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 72000000) & ((HCLKFreq_Value < 96000000)|(HCLKFreq_Value=   96000000 ))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 )) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 66000000) & ((HCLKFreq_Value < 88000000)|(HCLKFreq_Value =  88000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  )) & ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 60000000) & ((HCLKFreq_Value < 80000000)|(HCLKFreq_Value= 80000000   ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_3", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 150000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 150000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 96000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 88000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 110000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 110000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 80000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 100000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 100000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_4;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) &  ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6  ))) & ((HCLKFreq_Value > 120000000) &  ((HCLKFreq_Value < 150000000)|(HCLKFreq_Value= 150000000 ))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 )) &  ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7 ))) & ((HCLKFreq_Value > 96000000) &   ((HCLKFreq_Value < 120000000)|(HCLKFreq_Value = 120000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 )) &  ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4 ))) & ((HCLKFreq_Value > 88000000) &   ((HCLKFreq_Value < 110000000)|(HCLKFreq_Value= 110000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  )) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1 ))) & ((HCLKFreq_Value > 80000000) &   ((HCLKFreq_Value < 100000000)|(HCLKFreq_Value =100000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_4", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 150000000, .@">"))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 144000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 144000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 110000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 132000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 132000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 100000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_5;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) &  ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6   ))) &  (HCLKFreq_Value > 150000000))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 )) &   ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7 ))) & ((HCLKFreq_Value > 120000000) & ((HCLKFreq_Value < 144000000)|(HCLKFreq_Value =144000000  ))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 )) &   ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4 ))) & ((HCLKFreq_Value > 110000000) & ((HCLKFreq_Value < 132000000)|(HCLKFreq_Value = 132000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  )) &    ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 100000000) & ((HCLKFreq_Value < 120000000)|(HCLKFreq_Value = 120000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_5", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 144000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 168000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 168000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 132000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 154000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 154000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 120000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 140000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 140000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_6;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4)) & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 144000000) & ((HCLKFreq_Value < 168000000)|(HCLKFreq_Value = 168000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1)) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 132000000) & ((HCLKFreq_Value < 154000000)|(HCLKFreq_Value = 154000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8)) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 120000000) & ((HCLKFreq_Value < 140000000)|(HCLKFreq_Value = 140000000))))ªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_6", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 168000000, .@">"))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 154000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 176000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 176000000, .@"="))))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 140000000, .@">")) and ((check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 160000000, .@"<")) or (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 160000000, .@"="))))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_7;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4)) & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & (HCLKFreq_Value >  168000000))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1)) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 154000000) & ((HCLKFreq_Value < 176000000)|(HCLKFreq_Value = 176000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8)) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 140000000) & ((HCLKFreq_Value < 160000000)|(HCLKFreq_Value = 160000000))))ªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_7", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 176000000, .@">"))) or
-                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and (check_ref(@TypeOf(HCLKFreq_ValueValue), HCLKFreq_ValueValue, 160000000, .@">"))))
-                {
-                    const item: FLatencyList = .FLASH_LATENCY_8;
-                    const conf_item = config.extra.FLatency;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1)) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & (HCLKFreq_Value > 176000000))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8)) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & (HCLKFreq_Value > 160000000))ªªªªªªªª", "No Extra Log", "FLASH_LATENCY_8", i });
-                        }
-                    }
-                    break :blk item;
-                }
-                const conf_item = config.extra.FLatency;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .FLASH_LATENCY_0 => {},
-                        .FLASH_LATENCY_1 => {},
-                        .FLASH_LATENCY_2 => {},
-                        .FLASH_LATENCY_3 => {},
-                        .FLASH_LATENCY_4 => {},
-                        .FLASH_LATENCY_5 => {},
-                        .FLASH_LATENCY_6 => {},
-                        .FLASH_LATENCY_7 => {},
-                        .FLASH_LATENCY_8 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .FLASH_LATENCY_0;
-            };
-            const HSICalibrationValueValue: ?f32 = blk: {
-                const config_val = config.extra.HSICalibrationValue;
-                if (config_val) |val| {
-                    if (val < 0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSICalibrationValue",
-                            "Else",
-                            "No Extra Log",
-                            0,
-                            val,
-                        });
-                    }
-                    if (val > 31) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSICalibrationValue",
-                            "Else",
-                            "No Extra Log",
-                            31,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
-            };
-            const HSE_TimoutValue: ?f32 = blk: {
-                const config_val = config.extra.HSE_Timout;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSE_Timout",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 1073741823) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSE_Timout",
-                            "Else",
-                            "No Extra Log",
-                            1073741823,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 100;
-            };
-            const LSE_TimoutValue: ?f32 = blk: {
-                const config_val = config.extra.LSE_Timout;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_Timout",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 1073741823) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_Timout",
-                            "Else",
-                            "No Extra Log",
-                            1073741823,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 5000;
-            };
-            const RTCEnableValue: ?RTCEnableList = blk: {
-                if (config.flags.RTCUsed_ForRCC or ((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
-                    const item: RTCEnableList = .true;
-                    break :blk item;
-                }
-                const item: RTCEnableList = .false;
-                break :blk item;
-            };
-            const IWDGEnableValue: ?IWDGEnableList = blk: {
-                if (config.flags.IWDGUsed_ForRCC) {
-                    const item: IWDGEnableList = .true;
-                    break :blk item;
-                }
-                const item: IWDGEnableList = .false;
-                break :blk item;
-            };
-            const EnableHSERTCDevisorValue: ?EnableHSERTCDevisorList = blk: {
-                if ((config.flags.RTCUsed_ForRCC) and (config.flags.HSEOscillator or config.flags.HSEByPass) or ((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
-                    const item: EnableHSERTCDevisorList = .true;
-                    break :blk item;
-                }
-                const item: EnableHSERTCDevisorList = .false;
-                break :blk item;
-            };
-            const USBFSEnableValue: ?USBFSEnableList = blk: {
-                if (config.flags.USB_OTG_FSUsed_ForRCC) {
-                    const item: USBFSEnableList = .true;
-                    break :blk item;
-                }
-                const item: USBFSEnableList = .false;
-                break :blk item;
-            };
-            const USBHSEnableValue: ?USBHSEnableList = blk: {
-                if (config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC) {
-                    const item: USBHSEnableList = .true;
-                    break :blk item;
-                }
-                const item: USBHSEnableList = .false;
-                break :blk item;
-            };
-            const RNGEnableValue: ?RNGEnableList = blk: {
-                if (config.flags.RNGUsed_ForRCC) {
-                    const item: RNGEnableList = .true;
-                    break :blk item;
-                }
-                const item: RNGEnableList = .false;
-                break :blk item;
-            };
-            const SDIOEnableValue: ?SDIOEnableList = blk: {
-                if (config.flags.SDIOUsed_ForRCC) {
-                    const item: SDIOEnableList = .true;
-                    break :blk item;
-                }
-                const item: SDIOEnableList = .false;
-                break :blk item;
-            };
-            const I2SEnableValue: ?I2SEnableList = blk: {
-                if (!config.flags.I2SUsed_ForRCC) {
-                    const item: I2SEnableList = .false;
-                    const conf_item = config.extra.I2SEnable;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "I2SEnable", "!I2SUsed_ForRCC", "I2S ip not used", "false", i });
-                        }
-                    }
-                    break :blk item;
-                } else if (config.flags.I2SUsed_ForRCC) {
-                    const item: I2SEnableList = .true;
-                    const conf_item = config.extra.I2SEnable;
-                    if (conf_item) |i| {
-                        if (item != i) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed List Value: {s} found {any}
-                                \\note: the current condition limits the choice to only one list item,
-                                \\select the expected option or leave the value as null.
-                                \\
-                            , .{ "I2SEnable", "I2SUsed_ForRCC", "I2S ip used", "true", i });
-                        }
-                    }
-                    break :blk item;
-                }
-                const conf_item = config.extra.I2SEnable;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .true => {},
-                        .false => {},
-                    }
-                }
-
-                break :blk conf_item orelse .true;
-            };
-            const ExtClockEnableValue: ?ExtClockEnableList = blk: {
-                if (config.flags.AudioClockConfig) {
-                    const item: ExtClockEnableList = .true;
-                    break :blk item;
-                }
-                const item: ExtClockEnableList = .false;
-                break :blk item;
-            };
-            const SAIAEnableValue: ?SAIAEnableList = blk: {
-                if (config.flags.SAIAUsed_ForRCC) {
-                    const item: SAIAEnableList = .true;
-                    break :blk item;
-                }
-                const item: SAIAEnableList = .false;
-                break :blk item;
-            };
-            const SAIBEnableValue: ?SAIBEnableList = blk: {
-                if (config.flags.SAIBUsed_ForRCC) {
-                    const item: SAIBEnableList = .true;
-                    break :blk item;
-                }
-                const item: SAIBEnableList = .false;
-                break :blk item;
-            };
-            const LTDCEnableValue: ?LTDCEnableList = blk: {
-                if (config.flags.LTDCUsed_ForRCC) {
-                    const item: LTDCEnableList = .true;
-                    break :blk item;
-                }
-                const item: LTDCEnableList = .false;
-                break :blk item;
-            };
-            const MCO1OutPutEnableValue: ?MCO1OutPutEnableList = blk: {
-                if (config.flags.MCO1Config) {
-                    const item: MCO1OutPutEnableList = .true;
-                    break :blk item;
-                }
-                const item: MCO1OutPutEnableList = .false;
-                break :blk item;
-            };
-            const MCO2OutPutEnableValue: ?MCO2OutPutEnableList = blk: {
-                if (config.flags.MCO2Config) {
-                    const item: MCO2OutPutEnableList = .true;
-                    break :blk item;
-                }
-                const item: MCO2OutPutEnableList = .false;
-                break :blk item;
-            };
-            const LSIUsedValue: ?f32 = blk: {
-                if ((check_MCU("SEM2RCC_LSI_REQUIRED_TIM5") and check_MCU("TIM5") and check_MCU("Semaphore_input_Channel4TIM5")) or config.flags.IWDGUsed_ForRCC or ((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")) and (config.flags.RTCUsed_ForRCC))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const HSEUsedValue: ?f32 = blk: {
-                if (((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11"))) or (config.flags.RTCUsed_ForRCC and !((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) or (check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")))) or ((check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSE, .@"=")) and (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"="))) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSE, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_HSE, .@"=")) and (config.flags.MCO1Config)) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_HSE, .@"=")) and (config.flags.MCO2Config))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const LSEUsedValue: ?f32 = blk: {
-                if ((check_MCU("SEM2RCC_LSE_REQUIRED_TIM5") and check_MCU("TIM5") and check_MCU("Semaphore_input_Channel4TIM5")) or (check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_LSE, .@"=")) or ((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) and config.flags.RTCUsed_ForRCC)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const HSIUsedValue: ?f32 = blk: {
-                if ((((check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSI, .@"=")) and (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"="))) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSI, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_HSI, .@"=")) and (config.flags.MCO1Config)))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const EnableHSEValue: ?EnableHSEList = blk: {
-                if ((config.flags.HSEOscillator or config.flags.HSEByPass) or ((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
-                    const item: EnableHSEList = .true;
-                    break :blk item;
-                }
-                const item: EnableHSEList = .false;
-                break :blk item;
-            };
-            const EnableLSERTCValue: ?EnableLSERTCList = blk: {
-                if ((((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11"))) or config.flags.RTCUsed_ForRCC) and (config.flags.LSEOscillator or config.flags.LSEByPass)) {
-                    const item: EnableLSERTCList = .true;
-                    break :blk item;
-                }
-                const item: EnableLSERTCList = .false;
-                break :blk item;
-            };
-            const EnableLSEValue: ?EnableLSEList = blk: {
-                if ((config.flags.LSEOscillator or config.flags.LSEByPass)) {
-                    const item: EnableLSEList = .true;
-                    break :blk item;
-                }
-                const item: EnableLSEList = .false;
-                break :blk item;
-            };
-            const EnableExtClockForI2SValue: ?EnableExtClockForI2SList = blk: {
-                if (config.flags.I2SUsed_ForRCC and config.flags.AudioClockConfig) {
-                    const item: EnableExtClockForI2SList = .true;
-                    break :blk item;
-                }
-                const item: EnableExtClockForI2SList = .false;
-                break :blk item;
-            };
-            const PLLI2SCLKSAIA_BEnableValue: ?PLLI2SCLKSAIA_BEnableList = blk: {
-                if (config.flags.SAIAUsed_ForRCC or config.flags.SAIBUsed_ForRCC or config.flags.I2SUsed_ForRCC) {
-                    const item: PLLI2SCLKSAIA_BEnableList = .true;
-                    break :blk item;
-                }
-                const item: PLLI2SCLKSAIA_BEnableList = .false;
-                break :blk item;
-            };
-            const EnableExtClockForSAIAValue: ?EnableExtClockForSAIAList = blk: {
-                if ((config.flags.SAIAUsed_ForRCC and config.flags.AudioClockConfig)) {
-                    const item: EnableExtClockForSAIAList = .true;
-                    break :blk item;
-                }
-                const item: EnableExtClockForSAIAList = .false;
-                break :blk item;
-            };
-            const EnableExtClockForSAIBValue: ?EnableExtClockForSAIBList = blk: {
-                if ((config.flags.SAIBUsed_ForRCC and config.flags.AudioClockConfig)) {
-                    const item: EnableExtClockForSAIBList = .true;
-                    break :blk item;
-                }
-                const item: EnableExtClockForSAIBList = .false;
-                break :blk item;
-            };
+            const dummy = ClockNode{
+                .name = "dummy_clock",
+                .nodetype = .off,
+                .parents = &.{},
+            };
+            std.mem.doNotOptimizeAway(dummy);
 
             var HSIRC = ClockNode{
                 .name = "HSIRC",
@@ -2980,6 +1062,1101 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 .nodetype = .off,
                 .parents = &.{},
             };
+            //Pre clock reference values
+            //the following references can and/or should be validated before defining the clocks
+
+            const HSI_VALUEValue: ?f32 = blk: {
+                break :blk 1.6e7;
+            };
+            const HSE_VALUEValue: ?f32 = if (config.HSE_VALUE) |i| i else 25000000;
+            const LSI_VALUEValue: ?f32 = blk: {
+                break :blk 3.2e4;
+            };
+            const LSE_VALUEValue: ?f32 = if (config.LSE_VALUE) |i| i else 32768;
+            const RCC_RTC_Clock_SourceValue: ?RCC_RTC_Clock_SourceList = blk: {
+                if (((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
+                    const conf_item = config.RCC_RTC_Clock_Source;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .HSERTCDevisor => {},
+                            else => {
+                                return comptime_fail_or_error(error.InvalidConfig,
+                                    \\
+                                    \\Error on {s} | expr: {s} diagnostic: {s} 
+                                    \\Option not available in this condition: {any}.
+                                    \\note: available options:
+                                    \\ - HSERTCDevisor
+                                , .{ "RCC_RTC_Clock_Source", "((HSEByPass|HSEOscillator)&(SEM2RCC_HSE_REQUIRED_TIM11 & TIM11 & Semaphore_input_Channel1TIM11))", "RTC Mux should have HSE as input when TIM11 remap is used", item });
+                            },
+                        }
+                    }
+
+                    break :blk conf_item orelse null;
+                }
+                const conf_item = config.RCC_RTC_Clock_Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_RTCCLKSOURCE_LSE => {},
+                        .RCC_RTCCLKSOURCE_LSI => {},
+                        .HSERTCDevisor => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_RTCCLKSOURCE_LSI;
+            };
+            const RCC_RTC_Clock_Source_FROM_HSEValue: ?RCC_RTC_Clock_Source_FROM_HSEList = blk: {
+                const conf_item = config.RCC_RTC_Clock_Source_FROM_HSE;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_RTCCLKSOURCE_HSE_DIV2 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV3 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV4 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV5 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV6 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV7 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV8 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV9 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV10 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV11 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV12 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV13 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV14 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV15 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV16 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV17 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV18 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV19 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV20 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV21 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV22 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV23 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV24 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV25 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV26 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV27 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV28 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV29 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV30 => {},
+                        .RCC_RTCCLKSOURCE_HSE_DIV31 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_RTCCLKSOURCE_HSE_DIV2;
+            };
+            const SYSCLKSourceValue: ?SYSCLKSourceList = blk: {
+                const conf_item = config.SYSCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SYSCLKSOURCE_HSI => {},
+                        .RCC_SYSCLKSOURCE_HSE => {},
+                        .RCC_SYSCLKSOURCE_PLLCLK => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SYSCLKSOURCE_HSI;
+            };
+            const PLLSourceValue: ?PLLSourceList = blk: {
+                const conf_item = config.PLLSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_PLLSOURCE_HSI => {},
+                        .RCC_PLLSOURCE_HSE => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_PLLSOURCE_HSI;
+            };
+            const PLLMValue: ?f32 = blk: {
+                const config_val = config.PLLM;
+                if (config_val) |val| {
+                    if (val < 2) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLM",
+                            "Else",
+                            "No Extra Log",
+                            2,
+                            val,
+                        });
+                    }
+                    if (val > 63) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLM",
+                            "Else",
+                            "No Extra Log",
+                            63,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
+            };
+            const AHBCLKDividerValue: ?AHBCLKDividerList = blk: {
+                const conf_item = config.AHBCLKDivider;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SYSCLK_DIV1 => {},
+                        .RCC_SYSCLK_DIV2 => {},
+                        .RCC_SYSCLK_DIV4 => {},
+                        .RCC_SYSCLK_DIV8 => {},
+                        .RCC_SYSCLK_DIV16 => {},
+                        .RCC_SYSCLK_DIV64 => {},
+                        .RCC_SYSCLK_DIV128 => {},
+                        .RCC_SYSCLK_DIV256 => {},
+                        .RCC_SYSCLK_DIV512 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SYSCLK_DIV1;
+            };
+            const Cortex_DivValue: ?Cortex_DivList = blk: {
+                const conf_item = config.Cortex_Div;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .SYSTICK_CLKSOURCE_HCLK => HCLKDiv1 = true,
+                        .SYSTICK_CLKSOURCE_HCLK_DIV8 => {},
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    HCLKDiv1 = true;
+                    break :blk .SYSTICK_CLKSOURCE_HCLK;
+                };
+            };
+            const APB1CLKDividerValue: ?APB1CLKDividerList = blk: {
+                const conf_item = config.APB1CLKDivider;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_HCLK_DIV1 => {},
+                        .RCC_HCLK_DIV2 => {},
+                        .RCC_HCLK_DIV4 => {},
+                        .RCC_HCLK_DIV8 => {},
+                        .RCC_HCLK_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_HCLK_DIV1;
+            };
+            const RCC_TIM_PRescaler_SelectionValue: ?RCC_TIM_PRescaler_SelectionList = blk: {
+                const conf_item = config.extra.RCC_TIM_PRescaler_Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIMPRES_ACTIVATED => TimPrescalerEnabled = true,
+                        .RCC_TIMPRES_DESACTIVATED => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIMPRES_DESACTIVATED;
+            };
+            const APB1TimCLKDividerValue: ?f32 = blk: {
+                if (((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"=")))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV2, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((check_ref(@TypeOf(APB1CLKDividerValue), APB1CLKDividerValue, .RCC_HCLK_DIV4, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                }
+                break :blk 2;
+            };
+            const APB2CLKDividerValue: ?APB2CLKDividerList = blk: {
+                const conf_item = config.APB2CLKDivider;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_HCLK_DIV1 => {},
+                        .RCC_HCLK_DIV2 => {},
+                        .RCC_HCLK_DIV4 => {},
+                        .RCC_HCLK_DIV8 => {},
+                        .RCC_HCLK_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_HCLK_DIV1;
+            };
+            const APB2TimCLKDividerValue: ?f32 = blk: {
+                if (((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"=")))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_DESACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV1, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV2, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((check_ref(@TypeOf(APB2CLKDividerValue), APB2CLKDividerValue, .RCC_HCLK_DIV4, .@"=")) and (check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                } else if ((check_ref(@TypeOf(RCC_TIM_PRescaler_SelectionValue), RCC_TIM_PRescaler_SelectionValue, .RCC_TIMPRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                }
+                break :blk 2;
+            };
+            const I2SClockSourceValue: ?I2SClockSourceList = blk: {
+                const conf_item = config.I2SClockSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .I2S_CLOCK_EXTERNAL => {},
+                        .I2S_CLOCK_PLL => I2SSourceIsPll = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    I2SSourceIsPll = true;
+                    break :blk .I2S_CLOCK_PLL;
+                };
+            };
+            const EXTERNAL_CLOCK_VALUEValue: ?f32 = blk: {
+                break :blk 1.2288e7;
+            };
+            const PLLI2SDivQValue: ?f32 = blk: {
+                const config_val = config.PLLI2SDivQ;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SDivQ",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 32) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SDivQ",
+                            "Else",
+                            "No Extra Log",
+                            32,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const SAIClockSource_BlockAValue: ?SAIClockSource_BlockAList = blk: {
+                const conf_item = config.SAIClockSource_BlockA;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .SAI_CLKSOURCE_PLLI2S => SAISourceIsPllI2SA = true,
+                        .SAI_CLKSOURCE_EXT => {},
+                        .SAI_CLKSOURCE_PLLSAI => SAISourceIsPllSAIA = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SAISourceIsPllSAIA = true;
+                    break :blk .SAI_CLKSOURCE_PLLSAI;
+                };
+            };
+            const PLLSAIDivRValue: ?PLLSAIDivRList = blk: {
+                const conf_item = config.PLLSAIDivR;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_PLLSAIDIVR_2 => {},
+                        .RCC_PLLSAIDIVR_4 => {},
+                        .RCC_PLLSAIDIVR_8 => {},
+                        .RCC_PLLSAIDIVR_16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_PLLSAIDIVR_2;
+            };
+            const PLLSAIDivQValue: ?f32 = blk: {
+                const config_val = config.PLLSAIDivQ;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIDivQ",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 32) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIDivQ",
+                            "Else",
+                            "No Extra Log",
+                            32,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const SAIClockSource_BlockBValue: ?SAIClockSource_BlockBList = blk: {
+                const conf_item = config.SAIClockSource_BlockB;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .SAI_CLKSOURCE_PLLI2S => SAISourceIsPllI2SB = true,
+                        .SAI_CLKSOURCE_EXT => {},
+                        .SAI_CLKSOURCE_PLLSAI => SAISourceIsPllSAIB = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SAISourceIsPllSAIB = true;
+                    break :blk .SAI_CLKSOURCE_PLLSAI;
+                };
+            };
+            const RCC_MCO1SourceValue: ?RCC_MCO1SourceList = blk: {
+                const conf_item = config.RCC_MCO1Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCO1SOURCE_HSI => {},
+                        .RCC_MCO1SOURCE_LSE => {},
+                        .RCC_MCO1SOURCE_HSE => {},
+                        .RCC_MCO1SOURCE_PLLCLK => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCO1SOURCE_HSI;
+            };
+            const RCC_MCODiv1Value: ?RCC_MCODiv1List = blk: {
+                const conf_item = config.RCC_MCODiv1;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCODIV_1 => {},
+                        .RCC_MCODIV_2 => {},
+                        .RCC_MCODIV_3 => {},
+                        .RCC_MCODIV_4 => {},
+                        .RCC_MCODIV_5 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCODIV_1;
+            };
+            const RCC_MCO2SourceValue: ?RCC_MCO2SourceList = blk: {
+                const conf_item = config.RCC_MCO2Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCO2SOURCE_SYSCLK => {},
+                        .RCC_MCO2SOURCE_PLLI2SCLK => {},
+                        .RCC_MCO2SOURCE_HSE => {},
+                        .RCC_MCO2SOURCE_PLLCLK => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCO2SOURCE_SYSCLK;
+            };
+            const RCC_MCODiv2Value: ?RCC_MCODiv2List = blk: {
+                const conf_item = config.RCC_MCODiv2;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCODIV_1 => {},
+                        .RCC_MCODIV_2 => {},
+                        .RCC_MCODIV_3 => {},
+                        .RCC_MCODIV_4 => {},
+                        .RCC_MCODIV_5 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCODIV_1;
+            };
+            const PLLSAINValue: ?f32 = blk: {
+                const config_val = config.PLLSAIN;
+                if (config_val) |val| {
+                    if (val < 50) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIN",
+                            "Else",
+                            "No Extra Log",
+                            50,
+                            val,
+                        });
+                    }
+                    if (val > 432) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIN",
+                            "Else",
+                            "No Extra Log",
+                            432,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 49;
+            };
+            const PLLSAIRValue: ?f32 = blk: {
+                const config_val = config.PLLSAIR;
+                if (config_val) |val| {
+                    if (val < 2) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIR",
+                            "Else",
+                            "No Extra Log",
+                            2,
+                            val,
+                        });
+                    }
+                    if (val > 7) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIR",
+                            "Else",
+                            "No Extra Log",
+                            7,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const PLLSAIQValue: ?f32 = blk: {
+                const config_val = config.PLLSAIQ;
+                if (config_val) |val| {
+                    if (val < 2) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIQ",
+                            "Else",
+                            "No Extra Log",
+                            2,
+                            val,
+                        });
+                    }
+                    if (val > 15) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLSAIQ",
+                            "Else",
+                            "No Extra Log",
+                            15,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 4;
+            };
+            const PLLNValue: ?f32 = blk: {
+                const config_val = config.PLLN;
+                if (config_val) |val| {
+                    if (val < 50) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLN",
+                            "Else",
+                            "No Extra Log",
+                            50,
+                            val,
+                        });
+                    }
+                    if (val > 432) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLN",
+                            "Else",
+                            "No Extra Log",
+                            432,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 192;
+            };
+            const PLLPValue: ?PLLPList = blk: {
+                const conf_item = config.PLLP;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_PLLP_DIV2 => {},
+                        .RCC_PLLP_DIV4 => {},
+                        .RCC_PLLP_DIV6 => {},
+                        .RCC_PLLP_DIV8 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_PLLP_DIV2;
+            };
+            const PLLQValue: ?f32 = blk: {
+                const config_val = config.PLLQ;
+                if (config_val) |val| {
+                    if (val < 2) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLQ",
+                            "Else",
+                            "No Extra Log",
+                            2,
+                            val,
+                        });
+                    }
+                    if (val > 15) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLQ",
+                            "Else",
+                            "No Extra Log",
+                            15,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 4;
+            };
+            const PLLI2SNValue: ?f32 = blk: {
+                const config_val = config.PLLI2SN;
+                if (config_val) |val| {
+                    if (val < 50) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SN",
+                            "Else",
+                            "No Extra Log",
+                            50,
+                            val,
+                        });
+                    }
+                    if (val > 432) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SN",
+                            "Else",
+                            "No Extra Log",
+                            432,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 192;
+            };
+            const PLLI2SRValue: ?f32 = blk: {
+                const config_val = config.PLLI2SR;
+                if (config_val) |val| {
+                    if (val < 2) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SR",
+                            "Else",
+                            "No Extra Log",
+                            2,
+                            val,
+                        });
+                    }
+                    if (val > 7) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SR",
+                            "Else",
+                            "No Extra Log",
+                            7,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const PLLI2SQValue: ?f32 = blk: {
+                const config_val = config.PLLI2SQ;
+                if (config_val) |val| {
+                    if (val < 2) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SQ",
+                            "Else",
+                            "No Extra Log",
+                            2,
+                            val,
+                        });
+                    }
+                    if (val > 15) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "PLLI2SQ",
+                            "Else",
+                            "No Extra Log",
+                            15,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            var VDD_VALUEValue: ?f32 = if (config.extra.VDD_VALUE) |i| i else 3.3;
+            const INSTRUCTION_CACHE_ENABLEValue: ?INSTRUCTION_CACHE_ENABLEList = blk: {
+                const conf_item = config.extra.INSTRUCTION_CACHE_ENABLE;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .@"1" => {},
+                        .@"0" => {},
+                    }
+                }
+
+                break :blk conf_item orelse .@"1";
+            };
+            const DATA_CACHE_ENABLEValue: ?DATA_CACHE_ENABLEList = blk: {
+                const conf_item = config.extra.DATA_CACHE_ENABLE;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .@"1" => {},
+                        .@"0" => {},
+                    }
+                }
+
+                break :blk conf_item orelse .@"1";
+            };
+            const HSICalibrationValueValue: ?f32 = blk: {
+                const config_val = config.extra.HSICalibrationValue;
+                if (config_val) |val| {
+                    if (val < 0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSICalibrationValue",
+                            "Else",
+                            "No Extra Log",
+                            0,
+                            val,
+                        });
+                    }
+                    if (val > 31) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSICalibrationValue",
+                            "Else",
+                            "No Extra Log",
+                            31,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
+            };
+            const HSE_TimoutValue: ?f32 = blk: {
+                const config_val = config.extra.HSE_Timout;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSE_Timout",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 1073741823) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSE_Timout",
+                            "Else",
+                            "No Extra Log",
+                            1073741823,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 100;
+            };
+            const LSE_TimoutValue: ?f32 = blk: {
+                const config_val = config.extra.LSE_Timout;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_Timout",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 1073741823) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_Timout",
+                            "Else",
+                            "No Extra Log",
+                            1073741823,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 5000;
+            };
+            const PLLUsedValue: ?f32 = blk: {
+                if ((check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_PLLCLK, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_PLLCLK, .@"=")) and config.flags.MCO1Config) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLCLK, .@"=")) and config.flags.MCO2Config) or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC or config.flags.SDIOUsed_ForRCC or config.flags.RNGUsed_ForRCC) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const RTCEnableValue: ?RTCEnableList = blk: {
+                if (config.flags.RTCUsed_ForRCC or ((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
+                    const item: RTCEnableList = .true;
+                    break :blk item;
+                }
+                const item: RTCEnableList = .false;
+                break :blk item;
+            };
+            const IWDGEnableValue: ?IWDGEnableList = blk: {
+                if (config.flags.IWDGUsed_ForRCC) {
+                    const item: IWDGEnableList = .true;
+                    break :blk item;
+                }
+                const item: IWDGEnableList = .false;
+                break :blk item;
+            };
+            const EnableHSERTCDevisorValue: ?EnableHSERTCDevisorList = blk: {
+                if ((config.flags.RTCUsed_ForRCC) and (config.flags.HSEOscillator or config.flags.HSEByPass) or ((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
+                    const item: EnableHSERTCDevisorList = .true;
+                    break :blk item;
+                }
+                const item: EnableHSERTCDevisorList = .false;
+                break :blk item;
+            };
+            const USBFSEnableValue: ?USBFSEnableList = blk: {
+                if (config.flags.USB_OTG_FSUsed_ForRCC) {
+                    const item: USBFSEnableList = .true;
+                    break :blk item;
+                }
+                const item: USBFSEnableList = .false;
+                break :blk item;
+            };
+            const USBHSEnableValue: ?USBHSEnableList = blk: {
+                if (config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC) {
+                    const item: USBHSEnableList = .true;
+                    break :blk item;
+                }
+                const item: USBHSEnableList = .false;
+                break :blk item;
+            };
+            const RNGEnableValue: ?RNGEnableList = blk: {
+                if (config.flags.RNGUsed_ForRCC) {
+                    const item: RNGEnableList = .true;
+                    break :blk item;
+                }
+                const item: RNGEnableList = .false;
+                break :blk item;
+            };
+            const SDIOEnableValue: ?SDIOEnableList = blk: {
+                if (config.flags.SDIOUsed_ForRCC) {
+                    const item: SDIOEnableList = .true;
+                    break :blk item;
+                }
+                const item: SDIOEnableList = .false;
+                break :blk item;
+            };
+            const I2SEnableValue: ?I2SEnableList = blk: {
+                if (!config.flags.I2SUsed_ForRCC) {
+                    const item: I2SEnableList = .false;
+                    const conf_item = config.extra.I2SEnable;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "I2SEnable", "!I2SUsed_ForRCC", "I2S ip not used", "false", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (config.flags.I2SUsed_ForRCC) {
+                    const item: I2SEnableList = .true;
+                    const conf_item = config.extra.I2SEnable;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "I2SEnable", "I2SUsed_ForRCC", "I2S ip used", "true", i });
+                        }
+                    }
+                    break :blk item;
+                }
+                const conf_item = config.extra.I2SEnable;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .true => {},
+                        .false => {},
+                    }
+                }
+
+                break :blk conf_item orelse .true;
+            };
+            const ExtClockEnableValue: ?ExtClockEnableList = blk: {
+                if (config.flags.AudioClockConfig) {
+                    const item: ExtClockEnableList = .true;
+                    break :blk item;
+                }
+                const item: ExtClockEnableList = .false;
+                break :blk item;
+            };
+            const SAIAEnableValue: ?SAIAEnableList = blk: {
+                if (config.flags.SAIAUsed_ForRCC) {
+                    const item: SAIAEnableList = .true;
+                    break :blk item;
+                }
+                const item: SAIAEnableList = .false;
+                break :blk item;
+            };
+            const SAIBEnableValue: ?SAIBEnableList = blk: {
+                if (config.flags.SAIBUsed_ForRCC) {
+                    const item: SAIBEnableList = .true;
+                    break :blk item;
+                }
+                const item: SAIBEnableList = .false;
+                break :blk item;
+            };
+            const LTDCEnableValue: ?LTDCEnableList = blk: {
+                if (config.flags.LTDCUsed_ForRCC) {
+                    const item: LTDCEnableList = .true;
+                    break :blk item;
+                }
+                const item: LTDCEnableList = .false;
+                break :blk item;
+            };
+            const MCO1OutPutEnableValue: ?MCO1OutPutEnableList = blk: {
+                if (config.flags.MCO1Config) {
+                    const item: MCO1OutPutEnableList = .true;
+                    break :blk item;
+                }
+                const item: MCO1OutPutEnableList = .false;
+                break :blk item;
+            };
+            const MCO2OutPutEnableValue: ?MCO2OutPutEnableList = blk: {
+                if (config.flags.MCO2Config) {
+                    const item: MCO2OutPutEnableList = .true;
+                    break :blk item;
+                }
+                const item: MCO2OutPutEnableList = .false;
+                break :blk item;
+            };
+            const LSIUsedValue: ?f32 = blk: {
+                if ((check_MCU("SEM2RCC_LSI_REQUIRED_TIM5") and check_MCU("TIM5") and check_MCU("Semaphore_input_Channel4TIM5")) or config.flags.IWDGUsed_ForRCC or ((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")) and (config.flags.RTCUsed_ForRCC))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const HSEUsedValue: ?f32 = blk: {
+                if (((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11"))) or (config.flags.RTCUsed_ForRCC and !((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) or (check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")))) or ((check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSE, .@"=")) and (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"="))) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSE, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_HSE, .@"=")) and (config.flags.MCO1Config)) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_HSE, .@"=")) and (config.flags.MCO2Config))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const LSEUsedValue: ?f32 = blk: {
+                if ((check_MCU("SEM2RCC_LSE_REQUIRED_TIM5") and check_MCU("TIM5") and check_MCU("Semaphore_input_Channel4TIM5")) or (check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_LSE, .@"=")) or ((check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) and config.flags.RTCUsed_ForRCC)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const HSIUsedValue: ?f32 = blk: {
+                if ((((check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSI, .@"=")) and (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"="))) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSI, .@"=")) or ((check_ref(@TypeOf(RCC_MCO1SourceValue), RCC_MCO1SourceValue, .RCC_MCO1SOURCE_HSI, .@"=")) and (config.flags.MCO1Config)))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const EnableHSEValue: ?EnableHSEList = blk: {
+                if ((config.flags.HSEOscillator or config.flags.HSEByPass) or ((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11")))) {
+                    const item: EnableHSEList = .true;
+                    break :blk item;
+                }
+                const item: EnableHSEList = .false;
+                break :blk item;
+            };
+            const EnableLSERTCValue: ?EnableLSERTCList = blk: {
+                if ((((config.flags.HSEByPass or config.flags.HSEOscillator) and (check_MCU("SEM2RCC_HSE_REQUIRED_TIM11") and check_MCU("TIM11") and check_MCU("Semaphore_input_Channel1TIM11"))) or config.flags.RTCUsed_ForRCC) and (config.flags.LSEOscillator or config.flags.LSEByPass)) {
+                    const item: EnableLSERTCList = .true;
+                    break :blk item;
+                }
+                const item: EnableLSERTCList = .false;
+                break :blk item;
+            };
+            const EnableLSEValue: ?EnableLSEList = blk: {
+                if ((config.flags.LSEOscillator or config.flags.LSEByPass)) {
+                    const item: EnableLSEList = .true;
+                    break :blk item;
+                }
+                const item: EnableLSEList = .false;
+                break :blk item;
+            };
+            const EnableExtClockForI2SValue: ?EnableExtClockForI2SList = blk: {
+                if (config.flags.I2SUsed_ForRCC and config.flags.AudioClockConfig) {
+                    const item: EnableExtClockForI2SList = .true;
+                    break :blk item;
+                }
+                const item: EnableExtClockForI2SList = .false;
+                break :blk item;
+            };
+            const PLLI2SCLKSAIA_BEnableValue: ?PLLI2SCLKSAIA_BEnableList = blk: {
+                if (config.flags.SAIAUsed_ForRCC or config.flags.SAIBUsed_ForRCC or config.flags.I2SUsed_ForRCC) {
+                    const item: PLLI2SCLKSAIA_BEnableList = .true;
+                    break :blk item;
+                }
+                const item: PLLI2SCLKSAIA_BEnableList = .false;
+                break :blk item;
+            };
+            const EnableExtClockForSAIAValue: ?EnableExtClockForSAIAList = blk: {
+                if ((config.flags.SAIAUsed_ForRCC and config.flags.AudioClockConfig)) {
+                    const item: EnableExtClockForSAIAList = .true;
+                    break :blk item;
+                }
+                const item: EnableExtClockForSAIAList = .false;
+                break :blk item;
+            };
+            const EnableExtClockForSAIBValue: ?EnableExtClockForSAIBList = blk: {
+                if ((config.flags.SAIBUsed_ForRCC and config.flags.AudioClockConfig)) {
+                    const item: EnableExtClockForSAIBList = .true;
+                    break :blk item;
+                }
+                const item: EnableExtClockForSAIBList = .false;
+                break :blk item;
+            };
 
             const HSIRC_clk_value = HSI_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -2994,6 +2171,84 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             });
             HSIRC.nodetype = .source;
             HSIRC.value = HSIRC_clk_value;
+
+            //POST CLOCK REF HSE_VALUE VALUE
+            _ = blk: {
+                if (config.flags.HSEByPass) {
+                    const config_val = config.HSE_VALUE;
+                    if (config_val) |val| {
+                        if (val < 1e6) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Underflow Value - min: {e} found: {e}
+                                \\note: ranges values may change depending on the configuration
+                                \\
+                            , .{
+                                "HSE_VALUE",
+                                "HSEByPass",
+                                "HSEByPass",
+                                1e6,
+                                val,
+                            });
+                        }
+                        if (val > 5e7) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Overflow Value - max: {e} found: {e}
+                                \\note: ranges values may change depending on the configuration
+                                \\
+                            , .{
+                                "HSE_VALUE",
+                                "HSEByPass",
+                                "HSEByPass",
+                                5e7,
+                                val,
+                            });
+                        }
+                    }
+                    HSEOSC.value = config_val orelse 25000000;
+
+                    break :blk null;
+                }
+                const config_val = config.HSE_VALUE;
+                if (config_val) |val| {
+                    if (val < 4e6) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            4e6,
+                            val,
+                        });
+                    }
+                    if (val > 2.6e7) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            2.6e7,
+                            val,
+                        });
+                    }
+                }
+                HSEOSC.value = config_val orelse 25000000;
+
+                break :blk null;
+            };
 
             const HSEOSC_clk_value = HSE_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -3022,6 +2277,68 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             });
             LSIRC.nodetype = .source;
             LSIRC.value = LSIRC_clk_value;
+
+            //POST CLOCK REF LSE_VALUE VALUE
+            _ = blk: {
+                if (config.flags.LSEOscillator) {
+                    if (config.LSE_VALUE) |val| {
+                        if (val != 3.2768e4) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed Value: {e} found: {e}
+                                \\note: some values are fixed depending on the clock configuration.
+                                \\
+                                \\
+                            , .{
+                                "LSE_VALUE",
+                                "LSEOscillator",
+                                "LSE In crystal Mode",
+                                3.2768e4,
+                                val,
+                            });
+                        }
+                    }
+                    LSEOSC.value = 32768;
+                    break :blk null;
+                }
+                const config_val = config.LSE_VALUE;
+                if (config_val) |val| {
+                    if (val < 0e0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            0e0,
+                            val,
+                        });
+                    }
+                    if (val > 1e6) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            1e6,
+                            val,
+                        });
+                    }
+                }
+                LSEOSC.value = config_val orelse 32768;
+
+                break :blk null;
+            };
 
             const LSEOSC_clk_value = LSE_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -3057,13 +2374,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 RTCClkSource.parents = &.{RTCClkSourceparents[RTCClkSource_clk_value.get()]};
             }
             if (check_ref(@TypeOf(RTCEnableValue), RTCEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(RTCFreq_ValueValue);
-                RTCOutput.limit = RTCFreq_ValueLimit;
                 RTCOutput.nodetype = .output;
                 RTCOutput.parents = &.{&RTCClkSource};
             }
             if (check_ref(@TypeOf(IWDGEnableValue), IWDGEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(WatchDogFreq_ValueValue);
                 IWDGOutput.nodetype = .output;
                 IWDGOutput.parents = &.{&LSIRC};
             }
@@ -3150,23 +2464,12 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             AHBPrescaler.nodetype = .div;
             AHBPrescaler.value = AHBPrescaler_clk_value.get();
             AHBPrescaler.parents = &.{&SysCLKOutput};
-
-            std.mem.doNotOptimizeAway(SYSCLKFreq_VALUEValue);
-            SysCLKOutput.limit = SYSCLKFreq_VALUELimit;
             SysCLKOutput.nodetype = .output;
             SysCLKOutput.parents = &.{&SysClkSource};
-
-            std.mem.doNotOptimizeAway(EthernetFreq_ValueValue);
             EthernetPtpOutput.nodetype = .output;
             EthernetPtpOutput.parents = &.{&AHBPrescaler};
-
-            std.mem.doNotOptimizeAway(HCLKFreq_ValueValue);
-            AHBOutput.limit = HCLKFreq_ValueLimit;
             AHBOutput.nodetype = .output;
             AHBOutput.parents = &.{&AHBPrescaler};
-
-            std.mem.doNotOptimizeAway(AHBFreq_ValueValue);
-            HCLKOutput.limit = AHBFreq_ValueLimit;
             HCLKOutput.nodetype = .output;
             HCLKOutput.parents = &.{&AHBOutput};
 
@@ -3184,12 +2487,8 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             CortexPrescaler.nodetype = .div;
             CortexPrescaler.value = CortexPrescaler_clk_value.get();
             CortexPrescaler.parents = &.{&AHBOutput};
-
-            std.mem.doNotOptimizeAway(CortexFreq_ValueValue);
             CortexSysOutput.nodetype = .output;
             CortexSysOutput.parents = &.{&CortexPrescaler};
-
-            std.mem.doNotOptimizeAway(FCLKCortexFreq_ValueValue);
             FCLKCortexOutput.nodetype = .output;
             FCLKCortexOutput.parents = &.{&AHBOutput};
 
@@ -3207,9 +2506,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             APB1Prescaler.nodetype = .div;
             APB1Prescaler.value = APB1Prescaler_clk_value.get();
             APB1Prescaler.parents = &.{&AHBOutput};
-
-            std.mem.doNotOptimizeAway(APB1Freq_ValueValue);
-            APB1Output.limit = APB1Freq_ValueLimit;
             APB1Output.nodetype = .output;
             APB1Output.parents = &.{&APB1Prescaler};
 
@@ -3227,8 +2523,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             TimPrescalerAPB1.nodetype = .mul;
             TimPrescalerAPB1.value = TimPrescalerAPB1_clk_value;
             TimPrescalerAPB1.parents = &.{&APB1Prescaler};
-
-            std.mem.doNotOptimizeAway(APB1TimFreq_ValueValue);
             TimPrescOut.nodetype = .output;
             TimPrescOut.parents = &.{&TimPrescalerAPB1};
 
@@ -3246,9 +2540,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             APB2Prescaler.nodetype = .div;
             APB2Prescaler.value = APB2Prescaler_clk_value.get();
             APB2Prescaler.parents = &.{&AHBOutput};
-
-            std.mem.doNotOptimizeAway(APB2Freq_ValueValue);
-            APB2Output.limit = APB2Freq_ValueLimit;
             APB2Output.nodetype = .output;
             APB2Output.parents = &.{&APB2Prescaler};
 
@@ -3266,8 +2557,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PeriphPrescaler.nodetype = .mul;
             PeriphPrescaler.value = PeriphPrescaler_clk_value;
             PeriphPrescaler.parents = &.{&APB2Prescaler};
-
-            std.mem.doNotOptimizeAway(APB2TimFreq_ValueValue);
             PeriphPrescOutput.nodetype = .output;
             PeriphPrescOutput.parents = &.{&PeriphPrescaler};
             if (check_ref(@TypeOf(USBFSEnableValue), USBFSEnableValue, .true, .@"=") or
@@ -3275,8 +2564,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 check_ref(@TypeOf(RNGEnableValue), RNGEnableValue, .true, .@"=") or
                 check_ref(@TypeOf(SDIOEnableValue), SDIOEnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(@"48MHZClocksFreq_ValueValue");
-                USBOTGOutput.limit = @"48MHZClocksFreq_ValueLimit";
                 USBOTGOutput.nodetype = .output;
                 USBOTGOutput.parents = &.{&PLLQ};
             }
@@ -3315,8 +2602,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 I2S_CKIN.value = I2S_CKIN_clk_value;
             }
             if (check_ref(@TypeOf(I2SEnableValue), I2SEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(I2SClocksFreq_ValueValue);
-                I2SClocksOutput.limit = I2SClocksFreq_ValueLimit;
                 I2SClocksOutput.nodetype = .output;
                 I2SClocksOutput.parents = &.{&I2SSrc};
             }
@@ -3359,7 +2644,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SAI_AMuxSrc.parents = &.{SAI_AMuxSrcparents[SAI_AMuxSrc_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SAIAEnableValue), SAIAEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SAI_AClocksFreq_ValueValue);
                 SAI_ACLKOutput.nodetype = .output;
                 SAI_ACLKOutput.parents = &.{&SAI_AMuxSrc};
             }
@@ -3380,7 +2664,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 PLLSAILCDDiv.parents = &.{&PLLSAIR};
             }
             if (check_ref(@TypeOf(LTDCEnableValue), LTDCEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(LCDTFTFreq_ValueValue);
                 @"LCD-TFTCLKOutput".nodetype = .output;
                 @"LCD-TFTCLKOutput".parents = &.{&PLLSAILCDDiv};
             }
@@ -3423,7 +2706,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SAI_BMuxSrc.parents = &.{SAI_BMuxSrcparents[SAI_BMuxSrc_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SAIBEnableValue), SAIBEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SAI_BClocksFreq_ValueValue);
                 SAI_BCLKOutput.nodetype = .output;
                 SAI_BCLKOutput.parents = &.{&SAI_BMuxSrc};
             }
@@ -3465,8 +2747,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 MCO1Div.parents = &.{&MCO1Mult};
             }
             if (check_ref(@TypeOf(MCO1OutPutEnableValue), MCO1OutPutEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(MCO1PinFreq_ValueValue);
-                MCO1Pin.limit = MCO1PinFreq_ValueLimit;
                 MCO1Pin.nodetype = .output;
                 MCO1Pin.parents = &.{&MCO1Div};
             }
@@ -3508,8 +2788,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 MCO2Div.parents = &.{&MCO2Mult};
             }
             if (check_ref(@TypeOf(MCO2OutPutEnableValue), MCO2OutPutEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(MCO2PinFreq_ValueValue);
-                MCO2Pin.limit = MCO2PinFreq_ValueLimit;
                 MCO2Pin.nodetype = .output;
                 MCO2Pin.parents = &.{&MCO2Div};
             }
@@ -3672,61 +2950,749 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 PLLI2SQ.value = PLLI2SQ_clk_value;
                 PLLI2SQ.parents = &.{&PLLI2SN};
             }
-
-            std.mem.doNotOptimizeAway(RTCHSEDivFreq_ValueValue);
-            HSE_RTC.limit = RTCHSEDivFreq_ValueLimit;
             HSE_RTC.nodetype = .output;
             HSE_RTC.parents = &.{&HSERTCDevisor};
-
-            std.mem.doNotOptimizeAway(VCOInputFreq_ValueValue);
-            VCOInput.limit = VCOInputFreq_ValueLimit;
             VCOInput.nodetype = .output;
             VCOInput.parents = &.{&PLLM};
-
-            std.mem.doNotOptimizeAway(VCOOutputFreq_ValueValue);
-            VCOOutput.limit = VCOOutputFreq_ValueLimit;
             VCOOutput.nodetype = .output;
             VCOOutput.parents = &.{&PLLN};
-
-            std.mem.doNotOptimizeAway(PLLQCLKFreq_ValueValue);
-            PLL48CLK.limit = PLLQCLKFreq_ValueLimit;
             PLL48CLK.nodetype = .output;
             PLL48CLK.parents = &.{&PLLQ};
-
-            std.mem.doNotOptimizeAway(PLLCLKFreq_ValueValue);
-            PLLCLK.limit = PLLCLKFreq_ValueLimit;
             PLLCLK.nodetype = .output;
             PLLCLK.parents = &.{&PLLP};
-
-            std.mem.doNotOptimizeAway(VcooutputI2SValue);
-            PLLI2SCLK.limit = VcooutputI2SLimit;
             PLLI2SCLK.nodetype = .output;
             PLLI2SCLK.parents = &.{&PLLI2SR};
-
-            std.mem.doNotOptimizeAway(VcooutputI2SQValue);
-            PLLSAICLK_I2S.limit = VcooutputI2SQLimit;
             PLLSAICLK_I2S.nodetype = .output;
             PLLSAICLK_I2S.parents = &.{&PLLI2SQ};
-
-            std.mem.doNotOptimizeAway(VCOI2SOutputFreq_ValueValue);
-            VCOI2SOutput.limit = VCOI2SOutputFreq_ValueLimit;
             VCOI2SOutput.nodetype = .output;
             VCOI2SOutput.parents = &.{&PLLI2SN};
-
-            std.mem.doNotOptimizeAway(VCOSAIOutputFreq_ValueValue);
-            VCOSAIOutput.limit = VCOSAIOutputFreq_ValueLimit;
             VCOSAIOutput.nodetype = .output;
             VCOSAIOutput.parents = &.{&PLLSAIN};
-
-            std.mem.doNotOptimizeAway(VCOSAIOutputFreq_ValueRValue);
-            PLLLCDCLK.limit = VCOSAIOutputFreq_ValueRLimit;
             PLLLCDCLK.nodetype = .output;
             PLLLCDCLK.parents = &.{&PLLSAIR};
-
-            std.mem.doNotOptimizeAway(VCOSAIOutputFreq_ValueQValue);
-            PLLSAICLK_SAI.limit = VCOSAIOutputFreq_ValueQLimit;
             PLLSAICLK_SAI.nodetype = .output;
             PLLSAICLK_SAI.parents = &.{&PLLSAIQ};
+
+            //POST CLOCK REF RTCFreq_Value VALUE
+            _ = blk: {
+                if ((!(check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) and !(check_ref(@TypeOf(RCC_RTC_Clock_SourceValue), RCC_RTC_Clock_SourceValue, .RCC_RTCCLKSOURCE_LSI, .@"=")))) {
+                    RTCOutput.limit = .{
+                        .min = 0e0,
+                        .max = 1e6,
+                    };
+
+                    break :blk null;
+                }
+                RTCOutput.value = 32000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF SYSCLKFreq_VALUE VALUE
+            _ = blk: {
+                SysCLKOutput.limit = .{
+                    .min = null,
+                    .max = 1.8e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF HCLKFreq_Value VALUE
+            _ = blk: {
+                if (config.flags.USB_OTG_HSUsed_ForRCC) {
+                    AHBOutput.limit = .{
+                        .min = 3e7,
+                        .max = 1.8e8,
+                    };
+
+                    break :blk null;
+                } else if (config.flags.ETHUsed_ForRCC) {
+                    AHBOutput.limit = .{
+                        .min = 2.5e7,
+                        .max = 1.8e8,
+                    };
+
+                    break :blk null;
+                } else if (config.flags.USB_OTG_FSUsed_ForRCC) {
+                    AHBOutput.limit = .{
+                        .min = 1.42e7,
+                        .max = 1.8e8,
+                    };
+
+                    break :blk null;
+                }
+                AHBOutput.limit = .{
+                    .min = null,
+                    .max = 1.8e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF AHBFreq_Value VALUE
+            _ = blk: {
+                HCLKOutput.limit = .{
+                    .min = 0e0,
+                    .max = null,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB1Freq_Value VALUE
+            _ = blk: {
+                if (config.flags.RTCUsed_ForRCC) {
+                    const min: ?f32 = try math_op(?f32, RTCOutput.get_as_ref(), 4, .@"*", "APB1Freq_Value", "RTCOutput", "4");
+                    const max: ?f32 = @min(45000000, std.math.floatMax(f32));
+                    APB1Output.limit = .{
+                        .min = min,
+                        .max = max,
+                        .min_expr = "=RTCFreq_Value*4",
+                        .max_expr = "null",
+                    };
+                    break :blk null;
+                }
+                APB1Output.limit = .{
+                    .min = null,
+                    .max = 4.5e7,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB2Freq_Value VALUE
+            _ = blk: {
+                APB2Output.limit = .{
+                    .min = null,
+                    .max = 9e7,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF 48MHZClocksFreq_Value VALUE
+            _ = blk: {
+                if (config.flags.USB_OTG_FSUsed_ForRCC or config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC) {
+                    USBOTGOutput.limit = .{
+                        .min = 4.788e7,
+                        .max = 4.812e7,
+                    };
+
+                    break :blk null;
+                }
+                USBOTGOutput.limit = .{
+                    .min = null,
+                    .max = 4.8e7,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF I2SClocksFreq_Value VALUE
+            _ = blk: {
+                I2SClocksOutput.limit = .{
+                    .min = null,
+                    .max = 1.92e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF MCO1PinFreq_Value VALUE
+            _ = blk: {
+                MCO1Pin.limit = .{
+                    .min = null,
+                    .max = 1e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF MCO2PinFreq_Value VALUE
+            _ = blk: {
+                MCO2Pin.limit = .{
+                    .min = null,
+                    .max = 1e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF RTCHSEDivFreq_Value VALUE
+            _ = blk: {
+                HSE_RTC.limit = .{
+                    .min = null,
+                    .max = 1e6,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOInputFreq_Value VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=") or ((I2SSourceIsPll and config.flags.I2SUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLI2SCLK, .@"=")) and config.flags.MCO2Config)) or (config.flags.SAIAUsed_ForRCC and (SAISourceIsPllI2SA or SAISourceIsPllSAIA)) or (config.flags.SAIBUsed_ForRCC and (SAISourceIsPllI2SB or SAISourceIsPllSAIB) or config.flags.LTDCUsed_ForRCC)) {
+                    VCOInput.limit = .{
+                        .min = 9.5e5,
+                        .max = 2.1e6,
+                    };
+
+                    break :blk null;
+                }
+                VCOInput.value = 1000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOOutputFreq_Value VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
+                    VCOOutput.limit = .{
+                        .min = 1e8,
+                        .max = 4.32e8,
+                    };
+
+                    break :blk null;
+                }
+                VCOOutput.value = 192000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF PLLQCLKFreq_Value VALUE
+            _ = blk: {
+                if (((config.flags.USB_OTG_HSEmbeddedPHYUsed_ForRCC or config.flags.USB_OTG_FSUsed_ForRCC or config.flags.RNGUsed_ForRCC))) {
+                    PLL48CLK.limit = .{
+                        .min = null,
+                        .max = 7.5e7,
+                    };
+
+                    break :blk null;
+                }
+                PLL48CLK.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF PLLCLKFreq_Value VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(PLLUsedValue), PLLUsedValue, 1, .@"=")) {
+                    PLLCLK.limit = .{
+                        .min = 2.4e7,
+                        .max = 1.8e8,
+                    };
+
+                    break :blk null;
+                }
+                PLLCLK.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VcooutputI2S VALUE
+            _ = blk: {
+                if ((I2SSourceIsPll and config.flags.I2SUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLI2SCLK, .@"=")) and config.flags.MCO2Config)) {
+                    PLLI2SCLK.limit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+
+                    break :blk null;
+                }
+                PLLI2SCLK.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VcooutputI2SQ VALUE
+            _ = blk: {
+                if ((config.flags.SAIAUsed_ForRCC and SAISourceIsPllI2SA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllI2SB)) {
+                    PLLSAICLK_I2S.limit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+
+                    break :blk null;
+                }
+                PLLSAICLK_I2S.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOI2SOutputFreq_Value VALUE
+            _ = blk: {
+                if (((I2SSourceIsPll and config.flags.I2SUsed_ForRCC) or ((check_ref(@TypeOf(RCC_MCO2SourceValue), RCC_MCO2SourceValue, .RCC_MCO2SOURCE_PLLI2SCLK, .@"=")) and config.flags.MCO2Config)) or (config.flags.SAIAUsed_ForRCC and SAISourceIsPllI2SA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllI2SB)) {
+                    VCOI2SOutput.limit = .{
+                        .min = 1e8,
+                        .max = 4.32e8,
+                    };
+
+                    break :blk null;
+                }
+                VCOI2SOutput.value = 192000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOSAIOutputFreq_Value VALUE
+            _ = blk: {
+                if ((config.flags.SAIAUsed_ForRCC and SAISourceIsPllSAIA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllSAIB) or config.flags.LTDCUsed_ForRCC) {
+                    VCOSAIOutput.limit = .{
+                        .min = 1e8,
+                        .max = 4.32e8,
+                    };
+
+                    break :blk null;
+                }
+                VCOSAIOutput.value = 192000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOSAIOutputFreq_ValueR VALUE
+            _ = blk: {
+                if (config.flags.LTDCUsed_ForRCC) {
+                    PLLLCDCLK.limit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+
+                    break :blk null;
+                }
+                PLLLCDCLK.value = 192000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOSAIOutputFreq_ValueQ VALUE
+            _ = blk: {
+                if ((config.flags.SAIAUsed_ForRCC and SAISourceIsPllSAIA) or (config.flags.SAIBUsed_ForRCC and SAISourceIsPllSAIB)) {
+                    PLLSAICLK_SAI.limit = .{
+                        .min = null,
+                        .max = 2.16e8,
+                    };
+
+                    break :blk null;
+                }
+                PLLSAICLK_SAI.value = 192000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VDD_VALUE VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(config.extra.PWREXT_OverDrive), config.extra.PWREXT_OverDrive, .PWREXT_OverDrive_ACTIVATED, .@"="))) {
+                    const config_val = config.extra.VDD_VALUE;
+                    if (config_val) |val| {
+                        if (val < 2.1e0) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Underflow Value - min: {e} found: {e}
+                                \\note: ranges values may change depending on the configuration
+                                \\
+                            , .{
+                                "VDD_VALUE",
+                                "(PWREXT_OverDrive=PWREXT_OverDrive_ACTIVATED) ",
+                                "No Extra Log",
+                                2.1e0,
+                                val,
+                            });
+                        }
+                        if (val > 3.6e0) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Overflow Value - max: {e} found: {e}
+                                \\note: ranges values may change depending on the configuration
+                                \\
+                            , .{
+                                "VDD_VALUE",
+                                "(PWREXT_OverDrive=PWREXT_OverDrive_ACTIVATED) ",
+                                "No Extra Log",
+                                3.6e0,
+                                val,
+                            });
+                        }
+                    }
+                    VDD_VALUEValue = config_val orelse 3.3;
+
+                    break :blk null;
+                }
+                const config_val = config.extra.VDD_VALUE;
+                if (config_val) |val| {
+                    if (val < 1.7e0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "VDD_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            1.7e0,
+                            val,
+                        });
+                    }
+                    if (val > 3.6e0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "VDD_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            3.6e0,
+                            val,
+                        });
+                    }
+                }
+                VDD_VALUEValue = config_val orelse 3.3;
+
+                break :blk null;
+            };
+            const PREFETCH_ENABLEValue: ?PREFETCH_ENABLEList = blk: {
+                if ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) and (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<"))) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"=")))) {
+                    const item: PREFETCH_ENABLEList = .@"0";
+                    const conf_item = config.extra.PREFETCH_ENABLE;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PREFETCH_ENABLE", "(((VDD_VALUE > 1.8) & (VDD_VALUE < 2.1))|(VDD_VALUE=1.8))", "No Extra Log", "0", i });
+                        }
+                    }
+                    break :blk item;
+                }
+                const conf_item = config.extra.PREFETCH_ENABLE;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .@"1" => {},
+                        .@"0" => {},
+                    }
+                }
+
+                break :blk conf_item orelse .@"1";
+            };
+            const FLatencyValue: ?FLatencyList = blk: {
+                if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 0, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 30000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 30000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 0, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 24000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 24000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 0, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 22000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 22000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 0, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 20000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 20000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_0;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) & ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6))) &  ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 30000000)|(HCLKFreq_Value =30000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4))  & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 24000000)|(HCLKFreq_Value =24000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1))  & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 22000000)|(HCLKFreq_Value= 22000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8))   & ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 0) & ((HCLKFreq_Value < 20000000)|(HCLKFreq_Value =20000000))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_0", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 30000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 60000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 60000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 24000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 48000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 48000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 22000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 44000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 44000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 20000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 40000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 40000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_1;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7))  & ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6 ))) & ((HCLKFreq_Value > 30000000) &  ((HCLKFreq_Value < 60000000)|(HCLKFreq_Value= 60000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 ))  & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 24000000) &  ((HCLKFreq_Value < 48000000)|(HCLKFreq_Value= 48000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 ))  & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 22000000) &  ((HCLKFreq_Value < 44000000)|(HCLKFreq_Value =44000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  ))  & ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 20000000) &  ((HCLKFreq_Value < 40000000)|(HCLKFreq_Value=40000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_1", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 60000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 90000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 90000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 48000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 72000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 72000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 44000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 66000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 66000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 40000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 60000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 60000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_2;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7 )) &  ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6 ))) & ((HCLKFreq_Value > 60000000) & ((HCLKFreq_Value < 90000000)|(HCLKFreq_Value = 90000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4  ))  & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 48000000) & ((HCLKFreq_Value < 72000000)|(HCLKFreq_Value = 72000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1  ))  & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 44000000) & ((HCLKFreq_Value < 66000000)|(HCLKFreq_Value= 66000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8   ))   &((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 40000000) & ((HCLKFreq_Value < 60000000)|(HCLKFreq_Value= 60000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_2", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 90000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 72000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 96000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 96000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 66000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 88000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 88000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 60000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 80000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 80000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_3;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) & ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6 )))&  ((HCLKFreq_Value > 90000000) & ((HCLKFreq_Value < 120000000)|(HCLKFreq_Value = 120000000))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 )) & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 72000000) & ((HCLKFreq_Value < 96000000)|(HCLKFreq_Value=   96000000 ))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 )) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 66000000) & ((HCLKFreq_Value < 88000000)|(HCLKFreq_Value =  88000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  )) & ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 60000000) & ((HCLKFreq_Value < 80000000)|(HCLKFreq_Value= 80000000   ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_3", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 150000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 150000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 96000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 88000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 110000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 110000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 80000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 100000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 100000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_4;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) &  ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6  ))) & ((HCLKFreq_Value > 120000000) &  ((HCLKFreq_Value < 150000000)|(HCLKFreq_Value= 150000000 ))))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 )) &  ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7 ))) & ((HCLKFreq_Value > 96000000) &   ((HCLKFreq_Value < 120000000)|(HCLKFreq_Value = 120000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 )) &  ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4 ))) & ((HCLKFreq_Value > 88000000) &   ((HCLKFreq_Value < 110000000)|(HCLKFreq_Value= 110000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  )) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1 ))) & ((HCLKFreq_Value > 80000000) &   ((HCLKFreq_Value < 100000000)|(HCLKFreq_Value =100000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_4", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 3.6, .@"=")))) and (check_ref(?f32, AHBOutput.get_as_ref(), 150000000, .@">"))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 144000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 144000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 110000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 132000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 132000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 100000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_5;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.7)|(VDD_VALUE = 2.7)) &  ((VDD_VALUE < 3.6)|(VDD_VALUE =3.6   ))) &  (HCLKFreq_Value > 150000000))|\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4 )) &   ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7 ))) & ((HCLKFreq_Value > 120000000) & ((HCLKFreq_Value < 144000000)|(HCLKFreq_Value =144000000  ))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1 )) &   ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4 ))) & ((HCLKFreq_Value > 110000000) & ((HCLKFreq_Value < 132000000)|(HCLKFreq_Value = 132000000 ))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8  )) &    ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 100000000) & ((HCLKFreq_Value < 120000000)|(HCLKFreq_Value = 120000000 ))))ªªªªªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_5", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 144000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 168000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 168000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 132000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 154000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 154000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 140000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 140000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_6;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4)) & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & ((HCLKFreq_Value > 144000000) & ((HCLKFreq_Value < 168000000)|(HCLKFreq_Value = 168000000))))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1)) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 132000000) & ((HCLKFreq_Value < 154000000)|(HCLKFreq_Value = 154000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8)) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 120000000) & ((HCLKFreq_Value < 140000000)|(HCLKFreq_Value = 140000000))))ªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_6", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.7, .@"=")))) and (check_ref(?f32, AHBOutput.get_as_ref(), 168000000, .@">"))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 154000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 176000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 176000000, .@"="))))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and ((check_ref(?f32, AHBOutput.get_as_ref(), 140000000, .@">")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 160000000, .@"<")) or (check_ref(?f32, AHBOutput.get_as_ref(), 160000000, .@"="))))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_7;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.4)|(VDD_VALUE= 2.4)) & ((VDD_VALUE < 2.7)|(VDD_VALUE = 2.7))) & (HCLKFreq_Value >  168000000))|\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1)) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & ((HCLKFreq_Value > 154000000) & ((HCLKFreq_Value < 176000000)|(HCLKFreq_Value = 176000000))))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8)) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & ((HCLKFreq_Value > 140000000) & ((HCLKFreq_Value < 160000000)|(HCLKFreq_Value = 160000000))))ªªªªªªªªªªªª", "No Extra Log", "FLASH_LATENCY_7", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.4, .@"=")))) and (check_ref(?f32, AHBOutput.get_as_ref(), 176000000, .@">"))) or
+                    ((((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@">")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.8, .@"="))) and ((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")) or (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"=")))) and (check_ref(?f32, AHBOutput.get_as_ref(), 160000000, .@">"))))
+                {
+                    const item: FLatencyList = .FLASH_LATENCY_8;
+                    const conf_item = config.extra.FLatency;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "FLatency", "\r\n\t\t((((VDD_VALUE > 2.1)|(VDD_VALUE= 2.1)) & ((VDD_VALUE < 2.4)|(VDD_VALUE = 2.4))) & (HCLKFreq_Value > 176000000))|\r\n\t\t((((VDD_VALUE > 1.8)|(VDD_VALUE=1.8)) &  ((VDD_VALUE < 2.1)|(VDD_VALUE = 2.1))) & (HCLKFreq_Value > 160000000))ªªªªªªªª", "No Extra Log", "FLASH_LATENCY_8", i });
+                        }
+                    }
+                    break :blk item;
+                }
+                const conf_item = config.extra.FLatency;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .FLASH_LATENCY_0 => {},
+                        .FLASH_LATENCY_1 => {},
+                        .FLASH_LATENCY_2 => {},
+                        .FLASH_LATENCY_3 => {},
+                        .FLASH_LATENCY_4 => {},
+                        .FLASH_LATENCY_5 => {},
+                        .FLASH_LATENCY_6 => {},
+                        .FLASH_LATENCY_7 => {},
+                        .FLASH_LATENCY_8 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .FLASH_LATENCY_0;
+            };
+            const PWR_Regulator_Voltage_ScaleValue: ?PWR_Regulator_Voltage_ScaleList = blk: {
+                if (((check_ref(?f32, AHBOutput.get_as_ref(), 168000000, .@">")))) {
+                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWR_Regulator_Voltage_Scale", "((HCLKFreq_Value > 168000000))", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((check_ref(@TypeOf(config.extra.PWREXT_OverDrive), config.extra.PWREXT_OverDrive, .PWREXT_OverDrive_DESACTIVATED, .@"=")) and ((check_ref(?f32, AHBOutput.get_as_ref(), 144000000, .@">")) or (check_ref(?f32, AHBOutput.get_as_ref(), 144000000, .@"="))))) {
+                    const item: PWR_Regulator_Voltage_ScaleList = .PWR_REGULATOR_VOLTAGE_SCALE1;
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWR_Regulator_Voltage_Scale", "((PWREXT_OverDrive=PWREXT_OverDrive_DESACTIVATED)&((HCLKFreq_Value > 144000000)|(HCLKFreq_Value=144000000)))", "No Extra Log", "PWR_REGULATOR_VOLTAGE_SCALE1", i });
+                        }
+                    }
+                    break :blk item;
+                } else if ((check_ref(?f32, AHBOutput.get_as_ref(), 120000000, .@">"))) {
+                    const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .PWR_REGULATOR_VOLTAGE_SCALE2 => {},
+                            .PWR_REGULATOR_VOLTAGE_SCALE1 => {},
+                            else => {
+                                return comptime_fail_or_error(error.InvalidConfig,
+                                    \\
+                                    \\Error on {s} | expr: {s} diagnostic: {s} 
+                                    \\Option not available in this condition: {any}.
+                                    \\note: available options:
+                                    \\ - PWR_REGULATOR_VOLTAGE_SCALE2
+                                    \\ - PWR_REGULATOR_VOLTAGE_SCALE1
+                                , .{ "PWR_Regulator_Voltage_Scale", "(HCLKFreq_Value > 120000000)", "No Extra Log", item });
+                            },
+                        }
+                    }
+
+                    break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE2;
+                }
+                const conf_item = config.extra.PWR_Regulator_Voltage_Scale;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .PWR_REGULATOR_VOLTAGE_SCALE3 => {},
+                        .PWR_REGULATOR_VOLTAGE_SCALE2 => {},
+                        .PWR_REGULATOR_VOLTAGE_SCALE1 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .PWR_REGULATOR_VOLTAGE_SCALE3;
+            };
+            const PWREXT_OverDriveValue: ?PWREXT_OverDriveList = blk: {
+                if ((check_ref(?f32, AHBOutput.get_as_ref(), 168000000, .@">")) or (check_ref(?f32, APB1Output.get_as_ref(), 42000000, .@">")) or (check_ref(?f32, APB2Output.get_as_ref(), 84000000, .@">"))) {
+                    const item: PWREXT_OverDriveList = .PWREXT_OverDrive_ACTIVATED;
+                    const conf_item = config.extra.PWREXT_OverDrive;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWREXT_OverDrive", "(HCLKFreq_Value > 168000000)|(APB1Freq_Value > 42000000)|(APB2Freq_Value > 84000000) ", "No Extra Log", "PWREXT_OverDrive_ACTIVATED", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (((check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 1.7, .@">")) and (check_ref(@TypeOf(VDD_VALUEValue), VDD_VALUEValue, 2.1, .@"<")))) {
+                    const item: PWREXT_OverDriveList = .PWREXT_OverDrive_DESACTIVATED;
+                    const conf_item = config.extra.PWREXT_OverDrive;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWREXT_OverDrive", "((VDD_VALUE>1.7)&(VDD_VALUE<2.1))", "No Extra Log", "PWREXT_OverDrive_DESACTIVATED", i });
+                        }
+                    }
+                    break :blk item;
+                } else if (check_ref(@TypeOf(PWR_Regulator_Voltage_ScaleValue), PWR_Regulator_Voltage_ScaleValue, .PWR_REGULATOR_VOLTAGE_SCALE3, .@"=")) {
+                    const item: PWREXT_OverDriveList = .PWREXT_OverDrive_DESACTIVATED;
+                    const conf_item = config.extra.PWREXT_OverDrive;
+                    if (conf_item) |i| {
+                        if (item != i) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed List Value: {s} found {any}
+                                \\note: the current condition limits the choice to only one list item,
+                                \\select the expected option or leave the value as null.
+                                \\
+                            , .{ "PWREXT_OverDrive", "PWR_Regulator_Voltage_Scale = PWR_REGULATOR_VOLTAGE_SCALE3", "No Extra Log", "PWREXT_OverDrive_DESACTIVATED", i });
+                        }
+                    }
+                    break :blk item;
+                }
+                const conf_item = config.extra.PWREXT_OverDrive;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .PWREXT_OverDrive_DESACTIVATED => {},
+                        .PWREXT_OverDrive_ACTIVATED => {},
+                    }
+                }
+
+                break :blk conf_item orelse .PWREXT_OverDrive_DESACTIVATED;
+            };
 
             out.CortexSysOutput = try CortexSysOutput.get_output();
             out.CortexPrescaler = try CortexPrescaler.get_output();
@@ -3793,7 +3759,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             out.VCOSAIOutput = try VCOSAIOutput.get_extra_output();
             out.PLLLCDCLK = try PLLLCDCLK.get_extra_output();
             out.PLLSAICLK_SAI = try PLLSAICLK_SAI.get_extra_output();
+            ref_out.HSI_VALUE = HSI_VALUEValue;
             ref_out.HSE_VALUE = HSE_VALUEValue;
+            ref_out.LSI_VALUE = LSI_VALUEValue;
             ref_out.LSE_VALUE = LSE_VALUEValue;
             ref_out.RCC_RTC_Clock_Source = RCC_RTC_Clock_SourceValue;
             ref_out.RCC_RTC_Clock_Source_FROM_HSE = RCC_RTC_Clock_Source_FROM_HSEValue;

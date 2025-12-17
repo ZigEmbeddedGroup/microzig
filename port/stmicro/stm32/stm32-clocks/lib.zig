@@ -16,16 +16,16 @@ const STM32C0_64_STM32C0_rcc_v1_2 = @import("clocktree/STM32C0_64_STM32C0_rcc_v1
 const @"STM32F4_F401_STM32F417-rcc_v1_0" = @import("clocktree/STM32F4_F401_STM32F417-rcc_v1_0.zig");
 const STM32G0_64_STM32G0_64_rcc_v1_0 = @import("clocktree/STM32G0_64_STM32G0_64_rcc_v1_0.zig");
 
-const @"STM32F446_STM32F446-rcc_v1_0" = dummy; //TODO: fix clocktree/STM32F446_STM32F446-rcc_v1_0.zig
+const @"STM32F446_STM32F446-rcc_v1_0" = @import("clocktree/STM32F446_STM32F446-rcc_v1_0.zig");
 
 const @"STM32F4_F427-F437_STM32F427-rcc_v1_0" = dummy; //TODO: clocktree/STM32F4_F427-F437_STM32F427-rcc_v1_0.zig
 const @"STM32F4_F405-F407-F415-F417_STM32F417-rcc_v1_0" = @import("clocktree/STM32F4_F405-F407-F415-F417_STM32F417-rcc_v1_0.zig");
 const STM32F105_STM32F105_rcc_v1_0 = @import("clocktree/STM32F105_STM32F105_rcc_v1_0.zig");
 const STM32U5_9_A_STM32U5_rcc_v1_1 = @import("clocktree/STM32U5_9_A_STM32U5_rcc_v1_1.zig");
 const STM32WBA_STM32WBA_rcc_v1_0 = @import("clocktree/STM32WBA_STM32WBA_rcc_v1_0.zig");
-const @"STM32F4_F469-F479_STM32F469-rcc_v1_0" = dummy; //TODO: fix clocktree/STM32F4_F469-F479_STM32F469-rcc_v1_0.zig
-const STM32N6_STM32N6_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32N6_STM32N6_rcc_v1_0.zig
-const STM32MP_STM32MP_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32MP_STM32MP_rcc_v1_0.zig
+const @"STM32F4_F469-F479_STM32F469-rcc_v1_0" = @import("clocktree/STM32F4_F469-F479_STM32F469-rcc_v1_0.zig");
+const STM32N6_STM32N6_rcc_v1_0 = @import("clocktree/STM32N6_STM32N6_rcc_v1_0.zig");
+const STM32MP_STM32MP_rcc_v1_0 = @import("clocktree/STM32MP_STM32MP_rcc_v1_0.zig");
 const @"STM32G4-479_STM32G4-479_rcc_v1_0" = @import("clocktree/STM32G4-479_STM32G4-479_rcc_v1_0.zig");
 const STM32H723_STM32H723_rcc_v1_0 = @import("clocktree/STM32H723_STM32H723_rcc_v1_0.zig");
 const @"STM32G0-512_STM32G0-512_rcc_v1_0" = @import("clocktree/STM32G0-512_STM32G0-512_rcc_v1_0.zig");
@@ -35,23 +35,23 @@ const STM32H7_STM32H7_rcc_v1_0 = @import("clocktree/STM32H7_STM32H7_rcc_v1_0.zig
 const @"STM32F410_STM32F410-rcc_v1_0" = @import("clocktree/STM32F410_STM32F410-rcc_v1_0.zig");
 const STM32WB1_STM32WB1_rcc_v1_0 = @import("clocktree/STM32WB1_STM32WB1_rcc_v1_0.zig");
 const STM32L1_STM32L1_rcc_v1_0 = @import("clocktree/STM32L1_STM32L1_rcc_v1_0.zig");
-const STM32MP21_STM32MP2_rcc_v1_1 = dummy; //TODO: fix clocktree/STM32MP21_STM32MP2_rcc_v1_1.zig
-const STM32F777_STM32F777_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32F777_STM32F777_rcc_v1_0.zig
+const STM32MP21_STM32MP2_rcc_v1_1 = @import("clocktree/STM32MP21_STM32MP2_rcc_v1_1.zig");
+const STM32F777_STM32F777_rcc_v1_0 = @import("clocktree/STM32F777_STM32F777_rcc_v1_0.zig");
 const STM32H5_STM32H5_rcc_v1_0 = @import("clocktree/STM32H5_STM32H5_rcc_v1_0.zig");
 const STM32C0_128_STM32C0_rcc_v1_1 = @import("clocktree/STM32C0_128_STM32C0_rcc_v1_1.zig");
-const STM32MP2_STM32MP2_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32MP2_STM32MP2_rcc_v1_0.zig
+const STM32MP2_STM32MP2_rcc_v1_0 = @import("clocktree/STM32MP2_STM32MP2_rcc_v1_0.zig");
 const STM32G0_STM32G06_rcc_v1_0 = @import("clocktree/STM32G0_STM32G06_rcc_v1_0.zig");
 const STM32L4_STM32L4_rcc_v1_0 = @import("clocktree/STM32L4_STM32L4_rcc_v1_0.zig");
 const STM32H7AB_STM32H7AB_rcc_v1_0 = @import("clocktree/STM32H7AB_STM32H7AB_rcc_v1_0.zig");
 const STM32U5_STM32U5_rcc_v1_0 = @import("clocktree/STM32U5_STM32U5_rcc_v1_0.zig");
 const STM32L0_STM32L051_rcc_v1_0 = @import("clocktree/STM32L0_STM32L051_rcc_v1_0.zig");
-const STM32F7_STM32F7_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32F7_STM32F7_rcc_v1_0.zig
+const STM32F7_STM32F7_rcc_v1_0 = @import("clocktree/STM32F7_STM32F7_rcc_v1_0.zig");
 const STM32C0_STM32C0_rcc_v1_0 = @import("clocktree/STM32C0_STM32C0_rcc_v1_0.zig");
-const STM32MP13_STM32MP13_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32MP13_STM32MP13_rcc_v1_0.zig
+const STM32MP13_STM32MP13_rcc_v1_0 = @import("clocktree/STM32MP13_STM32MP13_rcc_v1_0.zig");
 const STM32G4_STM32G4_rcc_v1_0 = @import("clocktree/STM32G4_STM32G4_rcc_v1_0.zig");
 const STM32W_STM32W_rcc_v1_0 = @import("clocktree/STM32W_STM32W_rcc_v1_0.zig");
 const STM32F091_STM32F091_rcc_v1_0 = @import("clocktree/STM32F091_STM32F091_rcc_v1_0.zig");
-const STM32F722_STM32F722_rcc_v1_0 = dummy; //TODO: fix clocktree/STM32F722_STM32F722_rcc_v1_0.zig
+const STM32F722_STM32F722_rcc_v1_0 = @import("clocktree/STM32F722_STM32F722_rcc_v1_0.zig");
 const STM32U0_64_STM32U0_64_rcc_v1_0 = @import("clocktree/STM32U0_64_STM32U0_64_rcc_v1_0.zig");
 const STM32L4x6_STM32L4x6_rcc_v1_0 = @import("clocktree/STM32L4x6_STM32L4x6_rcc_v1_0.zig");
 const STM32L46_STM32L46_rcc_v1_0 = @import("clocktree/STM32L46_STM32L46_rcc_v1_0.zig");
@@ -66882,6 +66882,7 @@ test "STM32F102 RCC calculations" {
     try std.testing.expectEqual(base_tree.clock.SysCLKOutput, @as(f32, 8_000_000));
     try std.testing.expectEqual(base_tree.clock.USBoutput, @as(f32, 0));
     try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+    try std.testing.expectEqual(base_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_0);
 
     //config tree testing
     try std.testing.expectEqual(config_tree.clock.SysCLKOutput, @as(f32, 72_000_000));
@@ -66892,7 +66893,7 @@ test "STM32F102 RCC calculations" {
     try std.testing.expectEqual(config_tree.clock.TimPrescOut1, @as(f32, 72_000_000));
     try std.testing.expectEqual(config_tree.clock.TimPrescOut2, @as(f32, 72_000_000));
 
-    try std.testing.expectEqual(base_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
+    try std.testing.expectEqual(config_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
 }
 
 test "STM32F303 RCC calculations" {
@@ -66930,7 +66931,7 @@ test "STM32F303 RCC calculations" {
     try std.testing.expectEqual(config_tree.clock.TimPrescOut1, @as(f32, 72_000_000));
     try std.testing.expectEqual(config_tree.clock.TimPrescOut2, @as(f32, 72_000_000));
 
-    try std.testing.expectEqual(base_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
+    try std.testing.expectEqual(config_tree.config.FLatency, base_file.FLatencyList.FLASH_LATENCY_2);
 }
 
 test "STM32F411 RCC calculations" {
@@ -67073,7 +67074,7 @@ test "STM32H723 RCC calculations" {
 test "STM32U575 RCC calculations" {
     const base_file = STM32U5_STM32U5_rcc_v1_0;
     const base_tree = try STM32U575VG.get_clocks(.{});
-    const config_tree = comptime try STM32U575VG.get_clocks(.{
+    const config_tree = try STM32U575VG.get_clocks(.{
         .PLLSource = .RCC_PLLSOURCE_HSI,
         .PLLM = 1,
         .PLLN = 20,
@@ -67084,13 +67085,6 @@ test "STM32U575 RCC calculations" {
         .MSIKClockRange = .RCC_MSIKRANGE_0,
         .CK48CLockSelection = .RCC_CLK48CLKSOURCE_MSIK,
         .LPUART1CLockSelection = .RCC_LPUART1CLKSOURCE_PCLK3,
-
-        // NOTE: It's necessary to set .Scale 1 manually because the automatic assignment needs the sys clock value,
-        // and currently the generator creates all references and then generates clocks,
-        // which causes sysclk to be NULL at assignment time, resulting in scale3,
-        // which lowers the AHB limit from 160 MHz to 55 MHz.
-        // A fix for this is already in progress
-        .extra = .{ .PWR_Regulator_Voltage_Scale = .PWR_REGULATOR_VOLTAGE_SCALE1 },
         .flags = .{ .USB_OTG_FSUsed_ForRCC = true, .LPUARTUsed_ForRCC = true },
     });
 
@@ -67107,4 +67101,33 @@ test "STM32U575 RCC calculations" {
     try std.testing.expectEqual(config_tree.clock.APB3Output, @as(f32, 80_000_000));
     try std.testing.expectEqual(config_tree.clock.LPUART1output, @as(f32, 80_000_000));
     try std.testing.expectEqual(config_tree.clock.CK48output, @as(f32, 48_000_000));
+}
+
+test "STM32G061 RCC calculations" {
+    const base_file = STM32G0_STM32G06_rcc_v1_0;
+    const base_tree = try STM32G061C6.get_clocks(.{});
+    const config_tree = try comptime STM32G061C6.get_clocks(.{
+        .PLLM = .RCC_PLLM_DIV1,
+        .PLLN = 8,
+        .TIM1CLockSelection = .RCC_TIM1CLKSOURCE_PLL,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .flags = .{ .TIM1Used_ForRCC = true },
+    });
+
+    try std.testing.expectError(error.InvalidConfig, STM32G061C6.get_clocks(.{
+        .PLLM = .RCC_PLLM_DIV3,
+        .PLLN = 23,
+        .PLLR = .RCC_PLLR_DIV3,
+        .TIM1CLockSelection = .RCC_TIM1CLKSOURCE_PLL,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+
+        .flags = .{ .TIM1Used_ForRCC = true },
+    }));
+
+    try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.APBOutput, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+
+    try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 64_000_000));
+    try std.testing.expectEqual(config_tree.clock.APBOutput, @as(f32, 64_000_000));
 }

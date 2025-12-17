@@ -11,6 +11,7 @@ const comptime_fail_or_error = clock.comptime_fail_or_error;
 const math_op = clock.math_op;
 const check_ref = clock.check_ref;
 const Limit = clock.Limit;
+const round = clock.round;
 
 pub const MLAHBCLKSourceList = enum {
     RCC_MLAHBSSOURCE_HSI,
@@ -1585,9 +1586,12 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
         pub const Config_Output = struct {
             flags: Flags = .{},
+            HSI_VALUE: ?f32 = null, //from RCC Clock Config
             HSIDivValue: ?HSIDivValueList = null, //from RCC Clock Config
             HSE_VALUE: ?f32 = null, //from RCC Clock Config
+            LSI_VALUE: ?f32 = null, //from RCC Clock Config
             LSE_VALUE: ?f32 = null, //from RCC Clock Config
+            CSI_VALUE: ?f32 = null, //from RCC Clock Config
             EXTERNAL_CLOCK_VALUE: ?f32 = null, //from RCC Clock Config
             MLAHBCLKSource: ?MLAHBCLKSourceList = null, //from RCC Clock Config
             MPUCLKSource: ?MPUCLKSourceList = null, //from RCC Clock Config
@@ -1678,6 +1682,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ADC1CLockSelection: ?ADC1CLockSelectionList = null, //from RCC Clock Config
             RCC_USBPHY_Clock_Source_FROM_HSE: ?RCC_USBPHY_Clock_Source_FROM_HSEList = null, //from RCC Clock Config
             USBPHYCLKSource: ?USBPHYCLKSourceList = null, //from RCC Clock Config
+            USB_PHY_VALUE: ?f32 = null, //from RCC Clock Config
             USBOCLKSource: ?USBOCLKSourceList = null, //from RCC Clock Config
             HSICalibrationValue: ?f32 = null, //from RCC Advanced Config
             CSICalibrationValue: ?f32 = null, //from RCC Advanced Config
@@ -1982,3665 +1987,15 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var TimG1PrescalerEnabled: bool = false;
             var TimG2PrescalerEnabled: bool = false;
             var TimG3PrescalerEnabled: bool = false;
-            var MLAHBCLKFreq_VALUELimit: Limit = .{};
-            var MPUCLKFreq_VALUELimit: Limit = .{};
-            var AXICLKFreq_VALUELimit: Limit = .{};
-            var AXIDIVFreq_ValueLimit: Limit = .{};
-            var Hclk5DIVFreq_ValueLimit: Limit = .{};
-            var Hclk6DIVFreq_ValueLimit: Limit = .{};
-            var APB4Freq_ValueLimit: Limit = .{};
-            var APB5DIVClockFreq_ValueLimit: Limit = .{};
-            var Tim3OutputFreq_ValueLimit: Limit = .{};
-            var APB6Freq_ValueLimit: Limit = .{};
-            var SYSCLKFreq_VALUELimit: Limit = .{};
-            var APB3Freq_ValueLimit: Limit = .{};
-            var Tim1OutputFreq_ValueLimit: Limit = .{};
-            var AHB124Freq_ValueLimit: Limit = .{};
-            var APB1Freq_ValueLimit: Limit = .{};
-            var Tim2OutputFreq_ValueLimit: Limit = .{};
-            var APB2Freq_ValueLimit: Limit = .{};
-            var DFSDMFreq_ValueLimit: Limit = .{};
-            var PLL1FRACVLimit: Limit = .{};
-            var PLL2FRACVLimit: Limit = .{};
-            var DIVQ2Freq_ValueLimit: Limit = .{};
-            var DIVR2Freq_ValueLimit: Limit = .{};
-            var PLL3FRACVLimit: Limit = .{};
-            var DIVQ3Freq_ValueLimit: Limit = .{};
-            var LTDCFreq_ValueLimit: Limit = .{};
-            var DIVR3Freq_ValueLimit: Limit = .{};
-            var PLL4FRACVLimit: Limit = .{};
-            var DIVP4Freq_ValueLimit: Limit = .{};
-            var DIVQ4Freq_ValueLimit: Limit = .{};
-            var DIVR4Freq_ValueLimit: Limit = .{};
-            var RTCFreq_ValueLimit: Limit = .{};
-            var I2C12Freq_ValueLimit: Limit = .{};
-            var I2C3Freq_ValueLimit: Limit = .{};
-            var I2C4Freq_ValueLimit: Limit = .{};
-            var I2C5Freq_ValueLimit: Limit = .{};
-            var SPDIFRXFreq_ValueLimit: Limit = .{};
-            var QSPIFreq_ValueLimit: Limit = .{};
-            var FMCFreq_ValueLimit: Limit = .{};
-            var SDMMC1Freq_ValueLimit: Limit = .{};
-            var SDMMC2Freq_ValueLimit: Limit = .{};
-            var STGENFreq_ValueLimit: Limit = .{};
-            var LPTIM45Freq_ValueLimit: Limit = .{};
-            var LPTIM2Freq_ValueLimit: Limit = .{};
-            var LPTIM1Freq_ValueLimit: Limit = .{};
-            var USART1Freq_ValueLimit: Limit = .{};
-            var USART2Freq_ValueLimit: Limit = .{};
-            var USART35Freq_ValueLimit: Limit = .{};
-            var USART6Freq_ValueLimit: Limit = .{};
-            var UART78Freq_ValueLimit: Limit = .{};
-            var RNG1Freq_ValueLimit: Limit = .{};
-            var DCMIFreq_ValueLimit: Limit = .{};
-            var SAESFreq_ValueLimit: Limit = .{};
-            var LPTIM3Freq_ValueLimit: Limit = .{};
-            var SPI4Freq_ValueLimit: Limit = .{};
-            var SAI2Freq_ValueLimit: Limit = .{};
-            var USART4Freq_ValueLimit: Limit = .{};
-            var SPI1Freq_ValueLimit: Limit = .{};
-            var SPI23Freq_ValueLimit: Limit = .{};
-            var SAI1Freq_ValueLimit: Limit = .{};
-            var DFSDFAFreq_ValueLimit: Limit = .{};
-            var SPI5Freq_ValueLimit: Limit = .{};
-            var FDCANFreq_ValueLimit: Limit = .{};
-            var ETHFreq_ValueLimit: Limit = .{};
-            var ETH2Freq_ValueLimit: Limit = .{};
-            var ADC2Freq_ValueLimit: Limit = .{};
-            var ADC1Freq_ValueLimit: Limit = .{};
-            var DDRCFreq_ValueLimit: Limit = .{};
-            var DDRPERFMFreq_ValueLimit: Limit = .{};
-            var VCOInput1Freq_ValueLimit: Limit = .{};
-            var VCOInput2Freq_ValueLimit: Limit = .{};
-            var VCOInput3Freq_ValueLimit: Limit = .{};
-            var VCOInput4Freq_ValueLimit: Limit = .{};
-            var VCO1OutputFreq_ValueLimit: Limit = .{};
-            var DIVP1Freq_ValueLimit: Limit = .{};
-            var VCO2OutputFreq_ValueLimit: Limit = .{};
-            var DIVP2Freq_ValueLimit: Limit = .{};
-            var VCO3OutputFreq_ValueLimit: Limit = .{};
-            var VCO4OutputFreq_ValueLimit: Limit = .{};
-            var DIVP3Freq_ValueLimit: Limit = .{};
-            var MLAHBDIVCLKFreq_ValueLimit: Limit = .{};
-            //Ref Values
 
-            const HSI_VALUEValue: ?f32 = blk: {
-                break :blk 6.4e7;
-            };
-            const HSIDivValueValue: ?HSIDivValueList = blk: {
-                const conf_item = config.HSIDivValue;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_HSI_DIV1 => {},
-                        .RCC_HSI_DIV2 => {},
-                        .RCC_HSI_DIV4 => {},
-                        .RCC_HSI_DIV8 => {},
-                    }
-                }
-
-                break :blk conf_item orelse null;
-            };
-            const HSE_VALUEValue: ?f32 = blk: {
-                if (config.flags.HSEByPass or config.flags.HSEOscillator or config.flags.HSEDIGByPass) {
-                    const config_val = config.HSE_VALUE;
-                    if (config_val) |val| {
-                        if (val < 8e6) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Underflow Value - min: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "HSE_VALUE",
-                                "HSEByPass  | HSEOscillator|HSEDIGByPass",
-                                "HSE in bypass Mode",
-                                8e6,
-                                val,
-                            });
-                        }
-                        if (val > 4.8e7) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Overflow Value - max: {e} found: {e}
-                                \\note: ranges values may change depending on the configuration
-                                \\
-                            , .{
-                                "HSE_VALUE",
-                                "HSEByPass  | HSEOscillator|HSEDIGByPass",
-                                "HSE in bypass Mode",
-                                4.8e7,
-                                val,
-                            });
-                        }
-                    }
-                    break :blk config_val orelse 24000000;
-                }
-                const config_val = config.HSE_VALUE;
-                if (config_val) |val| {
-                    if (val < 8e6) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            8e6,
-                            val,
-                        });
-                    }
-                    if (val > 4.8e7) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            4.8e7,
-                            val,
-                        });
-                    }
-                }
-                break :blk config_val orelse 24000000;
-            };
-            const LSI_VALUEValue: ?f32 = blk: {
-                break :blk 3.2e4;
-            };
-            const LSE_VALUEValue: ?f32 = blk: {
-                if (config.flags.LSEOscillator) {
-                    if (config.LSE_VALUE) |val| {
-                        if (val != 3.2768e4) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed Value: {e} found: {e}
-                                \\note: some values are fixed depending on the clock configuration.
-                                \\
-                                \\
-                            , .{
-                                "LSE_VALUE",
-                                "LSEOscillator",
-                                "LSE In crystal Mode",
-                                3.2768e4,
-                                val,
-                            });
-                        }
-                    }
-                    break :blk 3.2768e4;
-                }
-                const config_val = config.LSE_VALUE;
-                if (config_val) |val| {
-                    if (val < 0e0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            0e0,
-                            val,
-                        });
-                    }
-                    if (val > 1e6) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {e} found: {e}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_VALUE",
-                            "Else",
-                            "No Extra Log",
-                            1e6,
-                            val,
-                        });
-                    }
-                }
-                break :blk config_val orelse 32768;
-            };
-            const CSI_VALUEValue: ?f32 = blk: {
-                break :blk 4e6;
-            };
-            const EXTERNAL_CLOCK_VALUEValue: ?f32 = blk: {
-                break :blk 1.2288e7;
-            };
-            const MLAHBCLKSourceValue: ?MLAHBCLKSourceList = blk: {
-                const conf_item = config.MLAHBCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MLAHBSSOURCE_HSI => MLAHBS_HSI = true,
-                        .RCC_MLAHBSSOURCE_CSI => MLAHBS_CSI = true,
-                        .RCC_MLAHBSSOURCE_HSE => MLAHBS_HSE = true,
-                        .RCC_MLAHBSSOURCE_PLL3 => MLAHBS_PLL3 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    MLAHBS_HSI = true;
-                    break :blk .RCC_MLAHBSSOURCE_HSI;
-                };
-            };
-            const MLAHBCLKFreq_VALUEValue: ?f32 = blk: {
-                MLAHBCLKFreq_VALUELimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const MPUCLKSourceValue: ?MPUCLKSourceList = blk: {
-                const conf_item = config.MPUCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MPUSOURCE_PLL1 => MPUSOURCE_PLL1 = true,
-                        .RCC_MPUSOURCE_MPUDIV => MPUSOURCE_MPUDIV = true,
-                        .RCC_MPUSOURCE_HSE => MPUSOURCE_HSE = true,
-                        .RCC_MPUSOURCE_HSI => MPUSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    MPUSOURCE_HSI = true;
-                    break :blk .RCC_MPUSOURCE_HSI;
-                };
-            };
-            const Max650Value: ?Max650List = blk: {
-                if (check_MCU("STM32MP133DAFx") or check_MCU("STM32MP133DAEx") or check_MCU("STM32MP131DAGx") or check_MCU("STM32MP131DAFx") or check_MCU("STM32MP131FAEx") or check_MCU("STM32MP131FAFx") or check_MCU("STM32MP131FAGx") or check_MCU("STM32MP133FAEx") or check_MCU("STM32MP133FAFx") or check_MCU("STM32MP133FAGx") or check_MCU("STM32MP135DAGx") or check_MCU("STM32MP135DAFx") or check_MCU("STM32MP135DAEx") or check_MCU("STM32MP133DAGx") or check_MCU("STM32MP131DAEx")) {
-                    const item: Max650List = .false;
-                    break :blk item;
-                }
-                const item: Max650List = .true;
-                break :blk item;
-            };
-            const MPUCLKFreq_VALUEValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(Max650Value), Max650Value, .false, .@"=")) {
-                    MPUCLKFreq_VALUELimit = .{
-                        .min = null,
-                        .max = 1e9,
-                    };
-
-                    break :blk null;
-                }
-                MPUCLKFreq_VALUELimit = .{
-                    .min = null,
-                    .max = 6.5e8,
-                };
-
-                break :blk null;
-            };
-            const CKPERCLKSourceValue: ?CKPERCLKSourceList = blk: {
-                const conf_item = config.CKPERCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_CKPERCLKSOURCE_HSI => CKPERCLKSOURCE_HSI = true,
-                        .RCC_CKPERCLKSOURCE_CSI => CKPERCLKSOURCE_CSI = true,
-                        .RCC_CKPERCLKSOURCE_HSE => CKPERCLKSOURCE_HSE = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    CKPERCLKSOURCE_HSI = true;
-                    break :blk .RCC_CKPERCLKSOURCE_HSI;
-                };
-            };
-            const CKPERCLKFreq_VALUEValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const AXICLKSourceValue: ?AXICLKSourceList = blk: {
-                const conf_item = config.AXICLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_AXISSOURCE_HSE => AXISSOURCE_HSE = true,
-                        .RCC_AXISSOURCE_HSI => AXISSOURCE_HSI = true,
-                        .RCC_AXISSOURCE_PLL2 => AXISSOURCE_PLL2 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    AXISSOURCE_HSI = true;
-                    break :blk .RCC_AXISSOURCE_HSI;
-                };
-            };
-            const AXICLKFreq_VALUEValue: ?f32 = blk: {
-                AXICLKFreq_VALUELimit = .{
-                    .min = null,
-                    .max = 2.665e8,
-                };
-
-                break :blk null;
-            };
-            const DACCLKFreq_VALUEValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const AXI_DivValue: ?AXI_DivList = blk: {
-                const conf_item = config.AXI_Div;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_AXI_DIV1 => {},
-                        .RCC_AXI_DIV2 => {},
-                        .RCC_AXI_DIV3 => {},
-                        .RCC_AXI_DIV4 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_AXI_DIV1;
-            };
-            const AXIDIVFreq_ValueValue: ?f32 = blk: {
-                AXIDIVFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.665e8,
-                };
-
-                break :blk null;
-            };
-            const Hclk5DIVFreq_ValueValue: ?f32 = blk: {
-                Hclk5DIVFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.665e8,
-                };
-
-                break :blk null;
-            };
-            const Hclk6DIVFreq_ValueValue: ?f32 = blk: {
-                Hclk6DIVFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.665e8,
-                };
-
-                break :blk null;
-            };
-            const APB4DIVValue: ?APB4DIVList = blk: {
-                const conf_item = config.APB4DIV;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_APB4_DIV1 => {},
-                        .RCC_APB4_DIV2 => {},
-                        .RCC_APB4_DIV4 => {},
-                        .RCC_APB4_DIV8 => {},
-                        .RCC_APB4_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_APB4_DIV1;
-            };
-            const APB4Freq_ValueValue: ?f32 = blk: {
-                APB4Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.3325e8,
-                };
-
-                break :blk null;
-            };
-            const APB5DIVValue: ?APB5DIVList = blk: {
-                const conf_item = config.APB5DIV;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_APB5_DIV1 => {},
-                        .RCC_APB5_DIV2 => {},
-                        .RCC_APB5_DIV4 => {},
-                        .RCC_APB5_DIV8 => {},
-                        .RCC_APB5_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_APB5_DIV1;
-            };
-            const APB5DIVClockFreq_ValueValue: ?f32 = blk: {
-                APB5DIVClockFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 6.7e7,
-                };
-
-                break :blk null;
-            };
-            const APB6DIVValue: ?APB6DIVList = blk: {
-                const conf_item = config.APB6DIV;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_APB6_DIV1 => APB6DIV_1 = true,
-                        .RCC_APB6_DIV2 => APB6DIV_2 = true,
-                        .RCC_APB6_DIV4 => APB6DIV_4 = true,
-                        .RCC_APB6_DIV8 => {},
-                        .RCC_APB6_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse null;
-            };
-            const RCC_TIM_G3_PRescaler_SelectionValue: ?RCC_TIM_G3_PRescaler_SelectionList = blk: {
-                const conf_item = config.extra.RCC_TIM_G3_PRescaler_Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIMG3PRES_ACTIVATED => TimG3PrescalerEnabled = true,
-                        .RCC_TIMG3PRES_DEACTIVATED => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIMG3PRES_DEACTIVATED;
-            };
-            const Tim3MulValue: ?f32 = blk: {
-                if (((APB6DIV_1) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_DEACTIVATED, .@"=")))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_DEACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((APB6DIV_1) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
-                    break :blk 1;
-                } else if ((APB6DIV_2) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((APB6DIV_4) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                } else if ((check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                }
-                break :blk 2;
-            };
-            const Tim3OutputFreq_ValueValue: ?f32 = blk: {
-                Tim3OutputFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const APB6Freq_ValueValue: ?f32 = blk: {
-                APB6Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const RCC_MCO1SourceValue: ?RCC_MCO1SourceList = blk: {
-                const conf_item = config.RCC_MCO1Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCO1SOURCE_HSI => MCO1SOURCE_HSI = true,
-                        .RCC_MCO1SOURCE_HSE => MCO1SOURCE_HSE = true,
-                        .RCC_MCO1SOURCE_CSI => MCO1SOURCE_CSI = true,
-                        .RCC_MCO1SOURCE_LSI => MCO1SOURCE_LSI = true,
-                        .RCC_MCO1SOURCE_LSE => MCO1SOURCE_LSE = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    MCO1SOURCE_HSI = true;
-                    break :blk .RCC_MCO1SOURCE_HSI;
-                };
-            };
-            const RCC_MCODiv1Value: ?RCC_MCODiv1List = blk: {
-                const conf_item = config.RCC_MCODiv1;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCODIV_1 => {},
-                        .RCC_MCODIV_2 => {},
-                        .RCC_MCODIV_3 => {},
-                        .RCC_MCODIV_4 => {},
-                        .RCC_MCODIV_5 => {},
-                        .RCC_MCODIV_6 => {},
-                        .RCC_MCODIV_7 => {},
-                        .RCC_MCODIV_8 => {},
-                        .RCC_MCODIV_9 => {},
-                        .RCC_MCODIV_10 => {},
-                        .RCC_MCODIV_11 => {},
-                        .RCC_MCODIV_12 => {},
-                        .RCC_MCODIV_13 => {},
-                        .RCC_MCODIV_14 => {},
-                        .RCC_MCODIV_15 => {},
-                        .RCC_MCODIV_16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCODIV_1;
-            };
-            const MCO1PinFreq_ValueValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const RCC_MCO2SourceValue: ?RCC_MCO2SourceList = blk: {
-                const conf_item = config.RCC_MCO2Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCO2SOURCE_MPU => {},
-                        .RCC_MCO2SOURCE_AXI => {},
-                        .RCC_MCO2SOURCE_MLAHB => {},
-                        .RCC_MCO2SOURCE_PLL4 => MCO2SOURCE_PLL4 = true,
-                        .RCC_MCO2SOURCE_HSE => MCO2SOURCE_HSE = true,
-                        .RCC_MCO2SOURCE_HSI => MCO2SOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCO2SOURCE_MPU;
-            };
-            const RCC_MCODiv2Value: ?RCC_MCODiv2List = blk: {
-                const conf_item = config.RCC_MCODiv2;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MCODIV_1 => {},
-                        .RCC_MCODIV_2 => {},
-                        .RCC_MCODIV_3 => {},
-                        .RCC_MCODIV_4 => {},
-                        .RCC_MCODIV_5 => {},
-                        .RCC_MCODIV_6 => {},
-                        .RCC_MCODIV_7 => {},
-                        .RCC_MCODIV_8 => {},
-                        .RCC_MCODIV_9 => {},
-                        .RCC_MCODIV_10 => {},
-                        .RCC_MCODIV_11 => {},
-                        .RCC_MCODIV_12 => {},
-                        .RCC_MCODIV_13 => {},
-                        .RCC_MCODIV_14 => {},
-                        .RCC_MCODIV_15 => {},
-                        .RCC_MCODIV_16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MCODIV_1;
-            };
-            const MCO2PinFreq_ValueValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const MLAHB_DivValue: ?MLAHB_DivList = blk: {
-                const conf_item = config.MLAHB_Div;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MLAHB_DIV1 => {},
-                        .RCC_MLAHB_DIV2 => {},
-                        .RCC_MLAHB_DIV4 => {},
-                        .RCC_MLAHB_DIV8 => {},
-                        .RCC_MLAHB_DIV16 => {},
-                        .RCC_MLAHB_DIV32 => {},
-                        .RCC_MLAHB_DIV64 => {},
-                        .RCC_MLAHB_DIV128 => {},
-                        .RCC_MLAHB_DIV256 => {},
-                        .RCC_MLAHB_DIV512 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MLAHB_DIV1;
-            };
-            const SYSCLKFreq_VALUEValue: ?f32 = blk: {
-                SYSCLKFreq_VALUELimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const APB3DIVValue: ?APB3DIVList = blk: {
-                const conf_item = config.APB3DIV;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_APB3_DIV1 => {},
-                        .RCC_APB3_DIV2 => {},
-                        .RCC_APB3_DIV4 => {},
-                        .RCC_APB3_DIV8 => {},
-                        .RCC_APB3_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_APB3_DIV1;
-            };
-            const APB3Freq_ValueValue: ?f32 = blk: {
-                APB3Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const APB1DIVValue: ?APB1DIVList = blk: {
-                const conf_item = config.APB1DIV;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_APB1_DIV1 => APB1DIV_1 = true,
-                        .RCC_APB1_DIV2 => APB1DIV_2 = true,
-                        .RCC_APB1_DIV4 => APB1DIV_4 = true,
-                        .RCC_APB1_DIV8 => {},
-                        .RCC_APB1_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    APB1DIV_1 = true;
-                    break :blk .RCC_APB1_DIV1;
-                };
-            };
-            const RCC_TIM_G1_PRescaler_SelectionValue: ?RCC_TIM_G1_PRescaler_SelectionList = blk: {
-                const conf_item = config.extra.RCC_TIM_G1_PRescaler_Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIMG1PRES_ACTIVATED => TimG1PrescalerEnabled = true,
-                        .RCC_TIMG1PRES_DEACTIVATED => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIMG1PRES_DEACTIVATED;
-            };
-            const Tim1MulValue: ?f32 = blk: {
-                if (((APB1DIV_1) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_DEACTIVATED, .@"=")))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_DEACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((APB1DIV_1) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
-                    break :blk 1;
-                } else if ((APB1DIV_2) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((APB1DIV_4) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                } else if ((check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                }
-                break :blk 2;
-            };
-            const Tim1OutputFreq_ValueValue: ?f32 = blk: {
-                Tim1OutputFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const AHB124Freq_ValueValue: ?f32 = blk: {
-                AHB124Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const APB1Freq_ValueValue: ?f32 = blk: {
-                APB1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const APB2DIVValue: ?APB2DIVList = blk: {
-                const conf_item = config.APB2DIV;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_APB2_DIV1 => APB2DIV_1 = true,
-                        .RCC_APB2_DIV2 => APB2DIV_2 = true,
-                        .RCC_APB2_DIV4 => APB2DIV_4 = true,
-                        .RCC_APB2_DIV8 => {},
-                        .RCC_APB2_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    APB2DIV_1 = true;
-                    break :blk .RCC_APB2_DIV1;
-                };
-            };
-            const RCC_TIM_G2_PRescaler_SelectionValue: ?RCC_TIM_G2_PRescaler_SelectionList = blk: {
-                const conf_item = config.extra.RCC_TIM_G2_PRescaler_Selection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_TIMG2PRES_ACTIVATED => TimG2PrescalerEnabled = true,
-                        .RCC_TIMG2PRES_DEACTIVATED => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_TIMG2PRES_DEACTIVATED;
-            };
-            const Tim2MulValue: ?f32 = blk: {
-                if (((APB2DIV_1) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_DEACTIVATED, .@"=")))) {
-                    break :blk 1;
-                } else if ((check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_DEACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((APB2DIV_1) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
-                    break :blk 1;
-                } else if ((APB2DIV_2) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
-                    break :blk 2;
-                } else if ((APB2DIV_4) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                } else if ((check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
-                    break :blk 4;
-                }
-                break :blk 2;
-            };
-            const Tim2OutputFreq_ValueValue: ?f32 = blk: {
-                Tim2OutputFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const APB2Freq_ValueValue: ?f32 = blk: {
-                APB2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const DFSDMFreq_ValueValue: ?f32 = blk: {
-                if (config.flags.DFSDM1Used_ForRCC) {
-                    DFSDMFreq_ValueLimit = .{
-                        .min = null,
-                        .max = 2.09e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLL12SourceValue: ?PLL12SourceList = blk: {
-                const conf_item = config.PLL12Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_PLL12SOURCE_HSI => PLL12SOURCE_HSI = true,
-                        .RCC_PLL12SOURCE_HSE => PLL12SOURCE_HSE = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    PLL12SOURCE_HSI = true;
-                    break :blk .RCC_PLL12SOURCE_HSI;
-                };
-            };
-            const DIVM1Value: ?f32 = blk: {
-                const config_val = config.DIVM1;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM1",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 64) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM1",
-                            "Else",
-                            "No Extra Log",
-                            64,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const DIVM2Value: ?f32 = blk: {
-                const config_val = config.DIVM2;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM2",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 64) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM2",
-                            "Else",
-                            "No Extra Log",
-                            64,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const PLL3SourceValue: ?PLL3SourceList = blk: {
-                const conf_item = config.PLL3Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_PLL3SOURCE_HSI => PLL3SOURCE_HSI = true,
-                        .RCC_PLL3SOURCE_CSI => PLL3SOURCE_CSI = true,
-                        .RCC_PLL3SOURCE_HSE => PLL3SOURCE_HSE = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    PLL3SOURCE_HSI = true;
-                    break :blk .RCC_PLL3SOURCE_HSI;
-                };
-            };
-            const DIVM3Value: ?f32 = blk: {
-                const config_val = config.DIVM3;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM3",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 64) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM3",
-                            "Else",
-                            "No Extra Log",
-                            64,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const PLL4SourceValue: ?PLL4SourceList = blk: {
-                const conf_item = config.PLL4Source;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_PLL4SOURCE_HSI => PLL4SOURCE_HSI = true,
-                        .RCC_PLL4SOURCE_CSI => PLL4SOURCE_CSI = true,
-                        .RCC_PLL4SOURCE_HSE => PLL4SOURCE_HSE = true,
-                        .RCC_PLL4SOURCE_I2S_CKIN => PLL4SOURCE_I2S_CKIN = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    PLL4SOURCE_HSI = true;
-                    break :blk .RCC_PLL4SOURCE_HSI;
-                };
-            };
-            const DIVM4Value: ?f32 = blk: {
-                const config_val = config.DIVM4;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM4",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 64) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVM4",
-                            "Else",
-                            "No Extra Log",
-                            64,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const MPU_DivValue: ?MPU_DivList = blk: {
-                const conf_item = config.MPU_Div;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_MPU_DIV_OFF => {},
-                        .RCC_MPU_DIV2 => {},
-                        .RCC_MPU_DIV4 => {},
-                        .RCC_MPU_DIV8 => {},
-                        .RCC_MPU_DIV16 => {},
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_MPU_DIV2;
-            };
-            const FreqCk1Value: ?f32 = blk: {
-                break :blk 2;
-            };
-            const DIVN1Value: ?f32 = blk: {
-                const config_val = config.DIVN1;
-                if (config_val) |val| {
-                    if (val < 25) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN1",
-                            "Else",
-                            "No Extra Log",
-                            25,
-                            val,
-                        });
-                    }
-                    if (val > 100) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN1",
-                            "Else",
-                            "No Extra Log",
-                            100,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 50;
-            };
-            const PLL1CSGValue: ?PLL1CSGList = blk: {
-                const conf_item = config.PLL1CSG;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .true => {},
-                        .false => {},
-                    }
-                }
-
-                break :blk conf_item orelse .false;
-            };
-            const PLL1MODEValue: ?PLL1MODEList = blk: {
-                if (check_ref(@TypeOf(PLL1CSGValue), PLL1CSGValue, .true, .@"=")) {
-                    const item: PLL1MODEList = .RCC_PLL_SPREAD_SPECTRUM;
-                    break :blk item;
-                } else if (check_ref(@TypeOf(PLL1FRACVValue), PLL1FRACVValue, 0, .@"=")) {
-                    const item: PLL1MODEList = .RCC_PLL_INTEGER;
-                    break :blk item;
-                }
-                const item: PLL1MODEList = .RCC_PLL_FRACTIONAL;
-                break :blk item;
-            };
-            const PLL1FRACVValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLL1MODEValue), PLL1MODEValue, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
-                    if (config.PLL1FRACV) |val| {
-                        if (val != 0) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed Value: {d} found: {d}
-                                \\note: some values are fixed depending on the clock configuration
-                                \\
-                            , .{
-                                "PLL1FRACV",
-                                "PLL1MODE = RCC_PLL_SPREAD_SPECTRUM",
-                                "No Extra Log",
-                                0,
-                                val,
-                            });
-                        }
-                    }
-                    PLL1FRACVLimit = .{
-                        .min = 0,
-                        .max = 0,
-                    };
-                    break :blk 0;
-                }
-                const config_val = config.PLL1FRACV;
-                PLL1FRACVLimit = .{
-                    .min = 0,
-                    .max = 8191,
-                };
-
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
-            };
-            const VCO1DIV2Value: ?f32 = blk: {
-                break :blk 2;
-            };
-            const DIVP1Value: ?f32 = blk: {
-                const config_val = config.DIVP1;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP1",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP1",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const DIVQ1Value: ?f32 = blk: {
-                const config_val = config.DIVQ1;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ1",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ1",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const DIVQ1Freq_ValueValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const DIVR1Value: ?f32 = blk: {
-                const config_val = config.DIVR1;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR1",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR1",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const DIVR1Freq_ValueValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const FreqCk2Value: ?f32 = blk: {
-                break :blk 2;
-            };
-            const DIVN2Value: ?f32 = blk: {
-                const config_val = config.DIVN2;
-                if (config_val) |val| {
-                    if (val < 25) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN2",
-                            "Else",
-                            "No Extra Log",
-                            25,
-                            val,
-                        });
-                    }
-                    if (val > 100) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN2",
-                            "Else",
-                            "No Extra Log",
-                            100,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 100;
-            };
-            const PLL2CSGValue: ?PLL2CSGList = blk: {
-                const conf_item = config.PLL2CSG;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .true => {},
-                        .false => {},
-                    }
-                }
-
-                break :blk conf_item orelse .false;
-            };
-            const PLL2MODEValue: ?PLL2MODEList = blk: {
-                if (check_ref(@TypeOf(PLL2CSGValue), PLL2CSGValue, .true, .@"=")) {
-                    const item: PLL2MODEList = .RCC_PLL_SPREAD_SPECTRUM;
-                    break :blk item;
-                } else if (check_ref(@TypeOf(PLL2FRACVValue), PLL2FRACVValue, 0, .@"=")) {
-                    const item: PLL2MODEList = .RCC_PLL_INTEGER;
-                    break :blk item;
-                }
-                const item: PLL2MODEList = .RCC_PLL_FRACTIONAL;
-                break :blk item;
-            };
-            const PLL2FRACVValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLL2MODEValue), PLL2MODEValue, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
-                    if (config.PLL2FRACV) |val| {
-                        if (val != 0) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed Value: {d} found: {d}
-                                \\note: some values are fixed depending on the clock configuration
-                                \\
-                            , .{
-                                "PLL2FRACV",
-                                "PLL2MODE = RCC_PLL_SPREAD_SPECTRUM",
-                                "No Extra Log",
-                                0,
-                                val,
-                            });
-                        }
-                    }
-                    PLL2FRACVLimit = .{
-                        .min = 0,
-                        .max = 0,
-                    };
-                    break :blk 0;
-                }
-                const config_val = config.PLL2FRACV;
-                PLL2FRACVLimit = .{
-                    .min = 0,
-                    .max = 8191,
-                };
-
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
-            };
-            const VCO2DIV2Value: ?f32 = blk: {
-                break :blk 2;
-            };
-            const DIVP2Value: ?f32 = blk: {
-                const config_val = config.DIVP2;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP2",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP2",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const DIVQ2Value: ?f32 = blk: {
-                const config_val = config.DIVQ2;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ2",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ2",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const DIVQ2Freq_ValueValue: ?f32 = blk: {
-                DIVQ2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 8e8,
-                };
-
-                break :blk null;
-            };
-            const DIVR2Value: ?f32 = blk: {
-                const config_val = config.DIVR2;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR2",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR2",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const PLL2RUsedValue: ?f32 = blk: {
-                if (check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVR2Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL2RUsedValue), PLL2RUsedValue, 1, .@"="))) {
-                    DIVR2Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const DIVN3Value: ?f32 = blk: {
-                const config_val = config.DIVN3;
-                if (config_val) |val| {
-                    if (val < 25) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN3",
-                            "Else",
-                            "No Extra Log",
-                            25,
-                            val,
-                        });
-                    }
-                    if (val > 200) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN3",
-                            "Else",
-                            "No Extra Log",
-                            200,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 50;
-            };
-            const PLL3CSGValue: ?PLL3CSGList = blk: {
-                const conf_item = config.PLL3CSG;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .true => {},
-                        .false => {},
-                    }
-                }
-
-                break :blk conf_item orelse .false;
-            };
-            const PLL3MODEValue: ?PLL3MODEList = blk: {
-                if (check_ref(@TypeOf(PLL3CSGValue), PLL3CSGValue, .true, .@"=")) {
-                    const item: PLL3MODEList = .RCC_PLL_SPREAD_SPECTRUM;
-                    break :blk item;
-                } else if (check_ref(@TypeOf(PLL3FRACVValue), PLL3FRACVValue, 0, .@"=")) {
-                    const item: PLL3MODEList = .RCC_PLL_INTEGER;
-                    break :blk item;
-                }
-                const item: PLL3MODEList = .RCC_PLL_FRACTIONAL;
-                break :blk item;
-            };
-            const PLL3FRACVValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLL3MODEValue), PLL3MODEValue, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
-                    if (config.PLL3FRACV) |val| {
-                        if (val != 0) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed Value: {d} found: {d}
-                                \\note: some values are fixed depending on the clock configuration
-                                \\
-                            , .{
-                                "PLL3FRACV",
-                                "PLL3MODE = RCC_PLL_SPREAD_SPECTRUM",
-                                "No Extra Log",
-                                0,
-                                val,
-                            });
-                        }
-                    }
-                    PLL3FRACVLimit = .{
-                        .min = 0,
-                        .max = 0,
-                    };
-                    break :blk 0;
-                }
-                const config_val = config.PLL3FRACV;
-                PLL3FRACVLimit = .{
-                    .min = 0,
-                    .max = 8191,
-                };
-
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
-            };
-            const DIVP3Value: ?f32 = blk: {
-                const config_val = config.DIVP3;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP3",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP3",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const DIVQ3Value: ?f32 = blk: {
-                const config_val = config.DIVQ3;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ3",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ3",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const USART2CLockSelectionValue: ?USART2CLockSelectionList = blk: {
-                const conf_item = config.USART2CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_USART2CLKSOURCE_PCLK6 => {},
-                        .RCC_USART2CLKSOURCE_PLL4 => UART2_PLL4 = true,
-                        .RCC_USART2CLKSOURCE_HSE => UART2_HSE = true,
-                        .RCC_USART2CLKSOURCE_CSI => UART2_CSI = true,
-                        .RCC_USART2CLKSOURCE_HSI => UART2_HSI = true,
-                        .RCC_USART2CLKSOURCE_PLL3 => UART2_PLL3Q = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_USART2CLKSOURCE_PCLK6;
-            };
-            const ADC1CLockSelectionValue: ?ADC1CLockSelectionList = blk: {
-                const conf_item = config.ADC1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_ADC1CLKSOURCE_PLL4 => ADC1CLKSOURCE_PLL4 = true,
-                        .RCC_ADC1CLKSOURCE_PER => ADC1CLKSOURCE_PER = true,
-                        .RCC_ADC1CLKSOURCE_PLL3 => ADC1CLKSOURCE_PLL3 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    ADC1CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_ADC1CLKSOURCE_PLL4;
-                };
-            };
-            const ADC2CLockSelectionValue: ?ADC2CLockSelectionList = blk: {
-                const conf_item = config.ADC2CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_ADC2CLKSOURCE_PLL4 => ADC2CLKSOURCE_PLL4 = true,
-                        .RCC_ADC2CLKSOURCE_PER => ADC2CLKSOURCE_PER = true,
-                        .RCC_ADC2CLKSOURCE_PLL3 => ADC2CLKSOURCE_PLL3 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    ADC2CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_ADC2CLKSOURCE_PLL4;
-                };
-            };
-            const SPI23CLockSelectionValue: ?SPI23CLockSelectionList = blk: {
-                const conf_item = config.SPI23CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SPI23CLKSOURCE_PLL4 => SPI23CLKSOURCE_PLL4 = true,
-                        .RCC_SPI23CLKSOURCE_PLL3_Q => SPI23CLKSOURCE_PLL3 = true,
-                        .RCC_SPI23CLKSOURCE_I2SCKIN => SPI23CLKSOURCE_I2SCKIN = true,
-                        .RCC_SPI23CLKSOURCE_PER => SPI23CLKSOURCE_PER = true,
-                        .RCC_SPI23CLKSOURCE_PLL3_R => SPI23CLKSOURCE_PLL3_R = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SPI23CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_SPI23CLKSOURCE_PLL4;
-                };
-            };
-            const ETH1CLockSelectionValue: ?ETH1CLockSelectionList = blk: {
-                const conf_item = config.ETH1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_ETH1CLKSOURCE_PLL4 => ETHCLKSOURCE_PLL4 = true,
-                        .RCC_ETH1CLKSOURCE_PLL3 => ETHCLKSOURCE_PLL3 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    ETHCLKSOURCE_PLL4 = true;
-                    break :blk .RCC_ETH1CLKSOURCE_PLL4;
-                };
-            };
-            const ETH2CLockSelectionValue: ?ETH2CLockSelectionList = blk: {
-                const conf_item = config.ETH2CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_ETH2CLKSOURCE_PLL4 => ETH2CLKSOURCE_PLL4 = true,
-                        .RCC_ETH2CLKSOURCE_PLL3 => ETH2CLKSOURCE_PLL3 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    ETH2CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_ETH2CLKSOURCE_PLL4;
-                };
-            };
-            const SPI1CLockSelectionValue: ?SPI1CLockSelectionList = blk: {
-                const conf_item = config.SPI1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SPI1CLKSOURCE_PLL4 => SPI1CLKSOURCE_PLL4 = true,
-                        .RCC_SPI1CLKSOURCE_PLL3_Q => SPI1CLKSOURCE_PLL3 = true,
-                        .RCC_SPI1CLKSOURCE_I2SCKIN => SPI1CLKSOURCE_I2SCKIN = true,
-                        .RCC_SPI1CLKSOURCE_PER => SPI1CLKSOURCE_PER = true,
-                        .RCC_SPI1CLKSOURCE_PLL3_R => SPI1CLKSOURCE_PLL3_R = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SPI1CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_SPI1CLKSOURCE_PLL4;
-                };
-            };
-            const SAI2CLockSelectionValue: ?SAI2CLockSelectionList = blk: {
-                const conf_item = config.SAI2CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SAI2CLKSOURCE_PLL4 => SAI2CLKSOURCE_PLL4 = true,
-                        .RCC_SAI2CLKSOURCE_PLL3_Q => SAI2CLKSOURCE_PLL3 = true,
-                        .RCC_SAI2CLKSOURCE_I2SCKIN => SAI2CLKSOURCE_I2SCKIN = true,
-                        .RCC_SAI2CLKSOURCE_PER => SAI2CLKSOURCE_PER = true,
-                        .RCC_SAI2CLKSOURCE_SPDIF => SAI2CLKSOURCE_SPDIF = true,
-                        .RCC_SAI2CLKSOURCE_PLL3_R => SAI2CLKSOURCE_PLL3_R = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SAI2CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_SAI2CLKSOURCE_PLL4;
-                };
-            };
-            const SPDIFCLockSelectionValue: ?SPDIFCLockSelectionList = blk: {
-                const conf_item = config.SPDIFCLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SPDIFRXCLKSOURCE_PLL4 => SPDIFRXCLKSOURCE_PLL4 = true,
-                        .RCC_SPDIFRXCLKSOURCE_PLL3 => SPDIFRXCLKSOURCE_PLL3 = true,
-                        .RCC_SPDIFRXCLKSOURCE_HSI => SPDIFRXCLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SPDIFRXCLKSOURCE_PLL4 = true;
-                    break :blk .RCC_SPDIFRXCLKSOURCE_PLL4;
-                };
-            };
-            const LPTIM45CLockSelectionValue: ?LPTIM45CLockSelectionList = blk: {
-                const conf_item = config.LPTIM45CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_LPTIM45CLKSOURCE_PCLK3 => LPTIM45CLKSOURCE_BCLK = true,
-                        .RCC_LPTIM45CLKSOURCE_PLL4 => LPTIM45CLKSOURCE_PLL4 = true,
-                        .RCC_LPTIM45CLKSOURCE_PLL3 => LPTIM45CLKSOURCE_PLL3 = true,
-                        .RCC_LPTIM45CLKSOURCE_LSE => LPTIM45CLKSOURCE_LSE = true,
-                        .RCC_LPTIM45CLKSOURCE_LSI => LPTIM45CLKSOURCE_LSI = true,
-                        .RCC_LPTIM45CLKSOURCE_PER => LPTIM45CLKSOURCE_PER = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    LPTIM45CLKSOURCE_BCLK = true;
-                    break :blk .RCC_LPTIM45CLKSOURCE_PCLK3;
-                };
-            };
-            const LPTIM1CLockSelectionValue: ?LPTIM1CLockSelectionList = blk: {
-                const conf_item = config.LPTIM1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_LPTIM1CLKSOURCE_PCLK1 => LPTIM1CLKSOURCE_BCLK = true,
-                        .RCC_LPTIM1CLKSOURCE_PLL4 => LPTIM1CLKSOURCE_PLL4 = true,
-                        .RCC_LPTIM1CLKSOURCE_PLL3 => LPTIM1CLKSOURCE_PLL3 = true,
-                        .RCC_LPTIM1CLKSOURCE_LSE => LPTIM1CLKSOURCE_LSE = true,
-                        .RCC_LPTIM1CLKSOURCE_LSI => LPTIM1CLKSOURCE_LSI = true,
-                        .RCC_LPTIM1CLKSOURCE_PER => LPTIM1CLKSOURCE_PER = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    LPTIM1CLKSOURCE_BCLK = true;
-                    break :blk .RCC_LPTIM1CLKSOURCE_PCLK1;
-                };
-            };
-            const USART1CLockSelectionValue: ?USART1CLockSelectionList = blk: {
-                const conf_item = config.USART1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_USART1CLKSOURCE_PCLK6 => USART1CLKSOURCE_BCLK = true,
-                        .RCC_USART1CLKSOURCE_PLL4 => USART1CLKSOURCE_PLL4 = true,
-                        .RCC_USART1CLKSOURCE_PLL3 => USART1CLKSOURCE_PLL3 = true,
-                        .RCC_USART1CLKSOURCE_HSE => USART1CLKSOURCE_HSE = true,
-                        .RCC_USART1CLKSOURCE_CSI => USART1CLKSOURCE_CSI = true,
-                        .RCC_USART1CLKSOURCE_HSI => USART1CLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    USART1CLKSOURCE_BCLK = true;
-                    break :blk .RCC_USART1CLKSOURCE_PCLK6;
-                };
-            };
-            const SAI1CLockSelectionValue: ?SAI1CLockSelectionList = blk: {
-                const conf_item = config.SAI1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SAI1CLKSOURCE_PLL4 => SAI1CLKSOURCE_PLL4 = true,
-                        .RCC_SAI1CLKSOURCE_PLL3_Q => SAI1CLKSOURCE_PLL3 = true,
-                        .RCC_SAI1CLKSOURCE_I2SCKIN => SAI1CLKSOURCE_I2SCKIN = true,
-                        .RCC_SAI1CLKSOURCE_PER => SAI1CLKSOURCE_PER = true,
-                        .RCC_SAI1CLKSOURCE_PLL3_R => SAI1CLKSOURCE_PLL3_R = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    SAI1CLKSOURCE_PLL4 = true;
-                    break :blk .RCC_SAI1CLKSOURCE_PLL4;
-                };
-            };
-            const FDCANCLockSelectionValue: ?FDCANCLockSelectionList = blk: {
-                const conf_item = config.FDCANCLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_FDCANCLKSOURCE_HSE => FDCANCLKSOURCE_HSE = true,
-                        .RCC_FDCANCLKSOURCE_PLL3 => FDCANCLKSOURCE_PLL3 = true,
-                        .RCC_FDCANCLKSOURCE_PLL4_Q => FDCANCLKSOURCE_PLL4 = true,
-                        .RCC_FDCANCLKSOURCE_PLL4_R => FDCANCLKSOURCE_PLL4_R = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    FDCANCLKSOURCE_HSE = true;
-                    break :blk .RCC_FDCANCLKSOURCE_HSE;
-                };
-            };
-            const PLL3QUsedValue: ?f32 = blk: {
-                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC or ADC1CLKSOURCE_PLL3 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or ADC2CLKSOURCE_PLL3 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or SPI23CLKSOURCE_PLL3 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or ETHCLKSOURCE_PLL3 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL3 and config.flags.ETH2_Used or SPI1CLKSOURCE_PLL3 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL3 or LPTIM45CLKSOURCE_PLL3 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM1CLKSOURCE_PLL3 and config.flags.LPTIM1Used_ForRCC or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL3") and config.flags.SPI6Used_ForRCC or SAI2CLKSOURCE_PLL3 and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or SAI1CLKSOURCE_PLL3 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or check_MCU("SAI3CLKSOURCE_PLL3") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or FDCANCLKSOURCE_PLL3 and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVQ3Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL3QUsedValue), PLL3QUsedValue, 1, .@"="))) {
-                    DIVQ3Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const DIVR3Value: ?f32 = blk: {
-                const config_val = config.DIVR3;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR3",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR3",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
-            };
-            const LTDCFreq_ValueValue: ?f32 = blk: {
-                LTDCFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 9e7,
-                };
-
-                break :blk null;
-            };
-            const QSPICLockSelectionValue: ?QSPICLockSelectionList = blk: {
-                const conf_item = config.QSPICLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_QSPICLKSOURCE_ACLK => QSPICLKSOURCE_BCLK = true,
-                        .RCC_QSPICLKSOURCE_PLL4 => QSPICLKSOURCE_PLL4 = true,
-                        .RCC_QSPICLKSOURCE_PLL3 => QSPICLKSOURCE_PLL3 = true,
-                        .RCC_QSPICLKSOURCE_PER => QSPICLKSOURCE_PER = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    QSPICLKSOURCE_BCLK = true;
-                    break :blk .RCC_QSPICLKSOURCE_ACLK;
-                };
-            };
-            const FMCCLockSelectionValue: ?FMCCLockSelectionList = blk: {
-                const conf_item = config.FMCCLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_FMCCLKSOURCE_ACLK => FMCCLKSOURCE_BCLK = true,
-                        .RCC_FMCCLKSOURCE_PLL3 => FMCCLKSOURCE_PLL3 = true,
-                        .RCC_FMCCLKSOURCE_PLL4 => FMCCLKSOURCE_PLL4 = true,
-                        .RCC_FMCCLKSOURCE_PER => FMCCLKSOURCE_PER = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    FMCCLKSOURCE_BCLK = true;
-                    break :blk .RCC_FMCCLKSOURCE_ACLK;
-                };
-            };
-            const SDMMC1CLockSelectionValue: ?SDMMC1CLockSelectionList = blk: {
-                const conf_item = config.SDMMC1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SDMMC1CLKSOURCE_HCLK6 => {},
-                        .RCC_SDMMC1CLKSOURCE_PLL3 => SDMMC1CLKSOURCE_PLL3 = true,
-                        .RCC_SDMMC1CLKSOURCE_PLL4 => SDMMC1CLKSOURCE_PLL4 = true,
-                        .RCC_SDMMC1CLKSOURCE_HSI => SDMMC1CLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SDMMC1CLKSOURCE_HCLK6;
-            };
-            const SDMMC2CLockSelectionValue: ?SDMMC2CLockSelectionList = blk: {
-                const conf_item = config.SDMMC2CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SDMMC2CLKSOURCE_HCLK6 => {},
-                        .RCC_SDMMC2CLKSOURCE_PLL3 => SDMMC2CLKSOURCE_PLL3 = true,
-                        .RCC_SDMMC2CLKSOURCE_PLL4 => SDMMC2CLKSOURCE_PLL4 = true,
-                        .RCC_SDMMC2CLKSOURCE_HSI => SDMMC2CLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SDMMC2CLKSOURCE_HCLK6;
-            };
-            const PLL3RUsedValue: ?f32 = blk: {
-                if (SPI1CLKSOURCE_PLL3_R and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL3_R and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or SAI1CLKSOURCE_PLL3_R and ((config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC) or SAI2CLKSOURCE_PLL3_R and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or check_MCU("SAI3CLKSOURCE_PLL3_R") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or check_MCU("SAI4CLKSOURCE_PLL3_R") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC) or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 or check_MCU("SDMMC3CLKSOURCE_PLL3") and config.flags.SDMMC3Used_ForRCC) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVR3Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL3RUsedValue), PLL3RUsedValue, 1, .@"="))) {
-                    DIVR3Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const DIVN4Value: ?f32 = blk: {
-                const config_val = config.DIVN4;
-                if (config_val) |val| {
-                    if (val < 25) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN4",
-                            "Else",
-                            "No Extra Log",
-                            25,
-                            val,
-                        });
-                    }
-                    if (val > 200) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVN4",
-                            "Else",
-                            "No Extra Log",
-                            200,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 50;
-            };
-            const PLL4CSGValue: ?PLL4CSGList = blk: {
-                const conf_item = config.PLL4CSG;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .true => {},
-                        .false => {},
-                    }
-                }
-
-                break :blk conf_item orelse .false;
-            };
-            const PLL4MODEValue: ?PLL4MODEList = blk: {
-                if (check_ref(@TypeOf(PLL4CSGValue), PLL4CSGValue, .true, .@"=")) {
-                    const item: PLL4MODEList = .RCC_PLL_SPREAD_SPECTRUM;
-                    break :blk item;
-                } else if (check_ref(@TypeOf(PLL4FRACVValue), PLL4FRACVValue, 0, .@"=")) {
-                    const item: PLL4MODEList = .RCC_PLL_INTEGER;
-                    break :blk item;
-                }
-                const item: PLL4MODEList = .RCC_PLL_FRACTIONAL;
-                break :blk item;
-            };
-            const PLL4FRACVValue: ?f32 = blk: {
-                if (check_ref(@TypeOf(PLL4MODEValue), PLL4MODEValue, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
-                    if (config.PLL4FRACV) |val| {
-                        if (val != 0) {
-                            return comptime_fail_or_error(error.InvalidConfig,
-                                \\
-                                \\Error on {s} | expr: {s} diagnostic: {s} 
-                                \\Expected Fixed Value: {d} found: {d}
-                                \\note: some values are fixed depending on the clock configuration
-                                \\
-                            , .{
-                                "PLL4FRACV",
-                                "PLL4MODE = RCC_PLL_SPREAD_SPECTRUM",
-                                "No Extra Log",
-                                0,
-                                val,
-                            });
-                        }
-                    }
-                    PLL4FRACVLimit = .{
-                        .min = 0,
-                        .max = 0,
-                    };
-                    break :blk 0;
-                }
-                const config_val = config.PLL4FRACV;
-                PLL4FRACVLimit = .{
-                    .min = 0,
-                    .max = 8191,
-                };
-
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
-            };
-            const DIVP4Value: ?f32 = blk: {
-                const config_val = config.DIVP4;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP4",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVP4",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const DCMICLockSelectionValue: ?DCMICLockSelectionList = blk: {
-                const conf_item = config.DCMICLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_DCMIPPCLKSOURCE_ACLK => {},
-                        .RCC_DCMIPPCLKSOURCE_PLL2 => DCMICLKSOURCE_PLL2Q = true,
-                        .RCC_DCMIPPCLKSOURCE_PLL4 => DCMICLKSOURCE_PLL4P = true,
-                        .RCC_DCMIPPCLKSOURCE_PER => DCMICLKSOURCE_CKPER = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_DCMIPPCLKSOURCE_ACLK;
-            };
-            const PLL4PUsedValue: ?f32 = blk: {
-                if (ETHCLKSOURCE_PLL4 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL4 and config.flags.ETH2_Used or DCMICLKSOURCE_PLL4P and config.flags.DCMIPP_Used or config.flags.MCO2Config and MCO2SOURCE_PLL4 or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL4 or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 or check_MCU("SDMMC3CLKSOURCE_PLL4") and config.flags.SDMMC3Used_ForRCC or LPTIM45CLKSOURCE_PLL4 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM1CLKSOURCE_PLL4 and config.flags.LPTIM1Used_ForRCC or SPI1CLKSOURCE_PLL4 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL4 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVP4Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL4PUsedValue), PLL4PUsedValue, 1, .@"="))) {
-                    DIVP4Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const DIVQ4Value: ?f32 = blk: {
-                const config_val = config.DIVQ4;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ4",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVQ4",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const LPTIM2CLockSelectionValue: ?LPTIM2CLockSelectionList = blk: {
-                const conf_item = config.LPTIM2CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_LPTIM2CLKSOURCE_PCLK3 => LPTIM2CLKSOURCE_BCLK = true,
-                        .RCC_LPTIM2CLKSOURCE_PLL4 => LPTIM2CLKSOURCE_PLL4 = true,
-                        .RCC_LPTIM2CLKSOURCE_PER => LPTIM2CLKSOURCE_PER = true,
-                        .RCC_LPTIM2CLKSOURCE_LSE => LPTIM2CLKSOURCE_LSE = true,
-                        .RCC_LPTIM2CLKSOURCE_LSI => LPTIM2CLKSOURCE_LSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    LPTIM2CLKSOURCE_BCLK = true;
-                    break :blk .RCC_LPTIM2CLKSOURCE_PCLK3;
-                };
-            };
-            const LPTIM3CLockSelectionValue: ?LPTIM3CLockSelectionList = blk: {
-                const conf_item = config.LPTIM3CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_LPTIM3CLKSOURCE_PCLK3 => LPTIM3CLKSOURCE_BCLK = true,
-                        .RCC_LPTIM3CLKSOURCE_PLL4 => LPTIM3CLKSOURCE_PLL4 = true,
-                        .RCC_LPTIM3CLKSOURCE_PER => LPTIM3CLKSOURCE_PER = true,
-                        .RCC_LPTIM3CLKSOURCE_LSE => LPTIM3CLKSOURCE_LSE = true,
-                        .RCC_LPTIM3CLKSOURCE_LSI => LPTIM3CLKSOURCE_LSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    LPTIM3CLKSOURCE_BCLK = true;
-                    break :blk .RCC_LPTIM3CLKSOURCE_PCLK3;
-                };
-            };
-            const USART4CLockSelectionValue: ?USART4CLockSelectionList = blk: {
-                const conf_item = config.USART4CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_UART4CLKSOURCE_PCLK1 => UART4_PCLK1 = true,
-                        .RCC_UART4CLKSOURCE_PLL4 => UART4_PLL4 = true,
-                        .RCC_UART4CLKSOURCE_HSE => UART4_HSE = true,
-                        .RCC_UART4CLKSOURCE_CSI => UART4_CSI = true,
-                        .RCC_UART4CLKSOURCE_HSI => UART4_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    UART4_PCLK1 = true;
-                    break :blk .RCC_UART4CLKSOURCE_PCLK1;
-                };
-            };
-            const USART35CLockSelectionValue: ?USART35CLockSelectionList = blk: {
-                const conf_item = config.USART35CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_UART35CLKSOURCE_PCLK1 => UART35CLKSOURCE_BCLK = true,
-                        .RCC_UART35CLKSOURCE_PLL4 => UART35CLKSOURCE_PLL4 = true,
-                        .RCC_UART35CLKSOURCE_HSE => UART35CLKSOURCE_HSE = true,
-                        .RCC_UART35CLKSOURCE_CSI => UART35CLKSOURCE_CSI = true,
-                        .RCC_UART35CLKSOURCE_HSI => UART35CLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    UART35CLKSOURCE_BCLK = true;
-                    break :blk .RCC_UART35CLKSOURCE_PCLK1;
-                };
-            };
-            const USART6CLockSelectionValue: ?USART6CLockSelectionList = blk: {
-                const conf_item = config.USART6CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_USART6CLKSOURCE_PCLK2 => USART6CLKSOURCE_BCLK = true,
-                        .RCC_USART6CLKSOURCE_PLL4 => USART6CLKSOURCE_PLL4 = true,
-                        .RCC_USART6CLKSOURCE_HSE => USART6CLKSOURCE_HSE = true,
-                        .RCC_USART6CLKSOURCE_CSI => USART6CLKSOURCE_CSI = true,
-                        .RCC_USART6CLKSOURCE_HSI => USART6CLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    USART6CLKSOURCE_BCLK = true;
-                    break :blk .RCC_USART6CLKSOURCE_PCLK2;
-                };
-            };
-            const UART78CLockSelectionValue: ?UART78CLockSelectionList = blk: {
-                const conf_item = config.UART78CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_UART78CLKSOURCE_PCLK1 => UART78CLKSOURCE_BCLK = true,
-                        .RCC_UART78CLKSOURCE_PLL4 => UART78CLKSOURCE_PLL4 = true,
-                        .RCC_UART78CLKSOURCE_HSE => UART78CLKSOURCE_HSE = true,
-                        .RCC_UART78CLKSOURCE_CSI => UART78CLKSOURCE_CSI = true,
-                        .RCC_UART78CLKSOURCE_HSI => UART78CLKSOURCE_HSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    UART78CLKSOURCE_BCLK = true;
-                    break :blk .RCC_UART78CLKSOURCE_PCLK1;
-                };
-            };
-            const SPI4CLockSelectionValue: ?SPI4CLockSelectionList = blk: {
-                const conf_item = config.SPI4CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SPI4CLKSOURCE_PCLK6 => {},
-                        .RCC_SPI4CLKSOURCE_PLL4 => SPI4CLKSOURCE_PLL4 = true,
-                        .RCC_SPI4CLKSOURCE_HSI => SPI4CLKSOURCE_HSI = true,
-                        .RCC_SPI4CLKSOURCE_CSI => SPI4CLKSOURCE_CSI = true,
-                        .RCC_SPI4CLKSOURCE_HSE => SPI4CLKSOURCE_HSE = true,
-                        .RCC_SPI4CLKSOURCE_I2SCKIN => SPI4_I2SCKIN = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SPI4CLKSOURCE_PCLK6;
-            };
-            const SPI5CLockSelectionValue: ?SPI5CLockSelectionList = blk: {
-                const conf_item = config.SPI5CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SPI5CLKSOURCE_PCLK6 => {},
-                        .RCC_SPI5CLKSOURCE_PLL4 => SPI5CLKSOURCE_PLL4 = true,
-                        .RCC_SPI5CLKSOURCE_HSI => SPI5CLKSOURCE_HSI = true,
-                        .RCC_SPI5CLKSOURCE_CSI => SPI5CLKSOURCE_CSI = true,
-                        .RCC_SPI5CLKSOURCE_HSE => SPI5CLKSOURCE_HSE = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SPI5CLKSOURCE_PCLK6;
-            };
-            const PLL4QUsedValue: ?f32 = blk: {
-                if (config.flags.LTDCUsed_ForRCC or LPTIM2CLKSOURCE_PLL4 and config.flags.LPTIM2Used_ForRCC or LPTIM3CLKSOURCE_PLL4 and config.flags.LPTIM3Used_ForRCC or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC or UART2_PLL4 and config.flags.USART2Used_ForRCC or UART4_PLL4 and config.flags.UART4Used_ForRCC or UART35CLKSOURCE_PLL4 and (config.flags.USART3Used_ForRCC or config.flags.UART5Used_ForRCC) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC or UART78CLKSOURCE_PLL4 and (config.flags.UART7Used_ForRCC or config.flags.UART8Used_ForRCC) or FDCANCLKSOURCE_PLL4 and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or check_MCU("SAI3CLKSOURCE_PLL4") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or check_MCU("SAI4CLKSOURCE_PLL4") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC) or (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_PLL4 or SAI1CLKSOURCE_PLL4 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or SPI4CLKSOURCE_PLL4 and (config.flags.SPI4Used_ForRCC or config.flags.I2S4Used_ForRCC) or SPI5CLKSOURCE_PLL4 and config.flags.SPI5Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL4") and config.flags.SPI6Used_ForRCC) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVQ4Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL4QUsedValue), PLL4QUsedValue, 1, .@"="))) {
-                    DIVQ4Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const DIVR4Value: ?f32 = blk: {
-                const config_val = config.DIVR4;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR4",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 128) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "DIVR4",
-                            "Else",
-                            "No Extra Log",
-                            128,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const SAESCLockSelectionValue: ?SAESCLockSelectionList = blk: {
-                const conf_item = config.SAESCLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_SAESCLKSOURCE_ACLK => {},
-                        .RCC_SAESCLKSOURCE_PER => SAES_CKPER = true,
-                        .RCC_SAESCLKSOURCE_PLL4 => SAES_PLL4R = true,
-                        .RCC_SAESCLKSOURCE_LSI => SAES_LSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse .RCC_SAESCLKSOURCE_ACLK;
-            };
-            const I2C4CLockSelectionValue: ?I2C4CLockSelectionList = blk: {
-                const conf_item = config.I2C4CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_I2C4CLKSOURCE_PCLK6 => I2C4CLKSOURCE_BCLK = true,
-                        .RCC_I2C4CLKSOURCE_PLL4 => I2C4CLKSOURCE_PLL4R = true,
-                        .RCC_I2C4CLKSOURCE_HSI => I2C4CLKSOURCE_HSI = true,
-                        .RCC_I2C4CLKSOURCE_CSI => I2C4CLKSOURCE_CSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    I2C4CLKSOURCE_BCLK = true;
-                    break :blk .RCC_I2C4CLKSOURCE_PCLK6;
-                };
-            };
-            const I2C12CLockSelectionValue: ?I2C12CLockSelectionList = blk: {
-                const conf_item = config.I2C12CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_I2C12CLKSOURCE_PCLK1 => I2C12CLKSOURCE_BCLK = true,
-                        .RCC_I2C12CLKSOURCE_PLL4 => I2C12CLKSOURCE_PLL4 = true,
-                        .RCC_I2C12CLKSOURCE_HSI => I2C12CLKSOURCE_HSI = true,
-                        .RCC_I2C12CLKSOURCE_CSI => I2C12CLKSOURCE_CSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    I2C12CLKSOURCE_BCLK = true;
-                    break :blk .RCC_I2C12CLKSOURCE_PCLK1;
-                };
-            };
-            const I2C3CLockSelectionValue: ?I2C3CLockSelectionList = blk: {
-                const conf_item = config.I2C3CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_I2C3CLKSOURCE_PCLK6 => I2C3CLKSOURCE_PCLK6 = true,
-                        .RCC_I2C3CLKSOURCE_PLL4 => I2C3CLKSOURCE_PLL4 = true,
-                        .RCC_I2C3CLKSOURCE_HSI => I2C3CLKSOURCE_HSI = true,
-                        .RCC_I2C3CLKSOURCE_CSI => I2C3CLKSOURCE_CSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    I2C3CLKSOURCE_PCLK6 = true;
-                    break :blk .RCC_I2C3CLKSOURCE_PCLK6;
-                };
-            };
-            const I2C5CLockSelectionValue: ?I2C5CLockSelectionList = blk: {
-                const conf_item = config.I2C5CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_I2C5CLKSOURCE_PCLK6 => I2C5CLKSOURCE_PCLK6 = true,
-                        .RCC_I2C5CLKSOURCE_PLL4 => I2C5CLKSOURCE_PLL4 = true,
-                        .RCC_I2C5CLKSOURCE_HSI => I2C5CLKSOURCE_HSI = true,
-                        .RCC_I2C5CLKSOURCE_CSI => I2C5CLKSOURCE_CSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    I2C5CLKSOURCE_PCLK6 = true;
-                    break :blk .RCC_I2C5CLKSOURCE_PCLK6;
-                };
-            };
-            const RNG1CLockSelectionValue: ?RNG1CLockSelectionList = blk: {
-                const conf_item = config.RNG1CLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_RNG1CLKSOURCE_CSI => RNG1CLKSOURCE_CSI = true,
-                        .RCC_RNG1CLKSOURCE_PLL4 => RNG1CLKSOURCE_PLL4 = true,
-                        .RCC_RNG1CLKSOURCE_LSI => RNG1CLKSOURCE_LSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    RNG1CLKSOURCE_CSI = true;
-                    break :blk .RCC_RNG1CLKSOURCE_CSI;
-                };
-            };
-            const USBOCLKSourceValue: ?USBOCLKSourceList = blk: {
-                const conf_item = config.USBOCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_USBOCLKSOURCE_PLL4 => USBOCLKSOURCE_PLL4 = true,
-                        .RCC_USBOCLKSOURCE_PHY => USBOCLKSOURCE_PHY = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    USBOCLKSOURCE_PLL4 = true;
-                    break :blk .RCC_USBOCLKSOURCE_PLL4;
-                };
-            };
-            const USBPHYCLKSourceValue: ?USBPHYCLKSourceList = blk: {
-                const conf_item = config.USBPHYCLKSource;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_USBPHYCLKSOURCE_HSE2 => USBPHYCLKSOURCE_HSE2 = true,
-                        .RCC_USBPHYCLKSOURCE_HSE => USBPHYCLKSOURCE_HSE = true,
-                        .RCC_USBPHYCLKSOURCE_PLL4 => USBPHYCLKSOURCE_PLL4 = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    USBPHYCLKSOURCE_PLL4 = true;
-                    break :blk .RCC_USBPHYCLKSOURCE_PLL4;
-                };
-            };
-            const PLL4RUsedValue: ?f32 = blk: {
-                if (SAES_PLL4R and config.flags.SAES_Used or ADC1CLKSOURCE_PLL4 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC or ADC2CLKSOURCE_PLL4 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or FDCANCLKSOURCE_PLL4_R and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or I2C12CLKSOURCE_PLL4 and (config.flags.I2C2Used_ForRCC or config.flags.I2C1Used_ForRCC) or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC or USBOCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC) or USBPHYCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC or config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVR4Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL4RUsedValue), PLL4RUsedValue, 1, .@"="))) {
-                    DIVR4Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const RCC_RTC_Clock_Source_FROM_HSEValue: ?f32 = blk: {
-                const config_val = config.RCC_RTC_Clock_Source_FROM_HSE;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "RCC_RTC_Clock_Source_FROM_HSE",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 64) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "RCC_RTC_Clock_Source_FROM_HSE",
-                            "Else",
-                            "No Extra Log",
-                            64,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
-            };
-            const RTCClockSelectionValue: ?RTCClockSelectionList = blk: {
-                const conf_item = config.RTCClockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_RTCCLKSOURCE_HSE_DIV => RTCCLKSOURCE_HSE_DIV = true,
-                        .RCC_RTCCLKSOURCE_LSE => RTCCLKSOURCE_LSE = true,
-                        .RCC_RTCCLKSOURCE_LSI => RTCCLKSOURCE_LSI = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    RTCCLKSOURCE_LSI = true;
-                    break :blk .RCC_RTCCLKSOURCE_LSI;
-                };
-            };
-            const RTCFreq_ValueValue: ?f32 = blk: {
-                RTCFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 4e6,
-                };
-
-                break :blk null;
-            };
-            const WatchDogFreq_ValueValue: ?f32 = blk: {
-                break :blk 3.2e4;
-            };
-            const I2C12Freq_ValueValue: ?f32 = blk: {
-                I2C12Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const I2C3Freq_ValueValue: ?f32 = blk: {
-                I2C3Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const I2C4Freq_ValueValue: ?f32 = blk: {
-                I2C4Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const I2C5Freq_ValueValue: ?f32 = blk: {
-                I2C5Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const SPDIFRXFreq_ValueValue: ?f32 = blk: {
-                SPDIFRXFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2e8,
-                };
-
-                break :blk null;
-            };
-            const QSPIFreq_ValueValue: ?f32 = blk: {
-                QSPIFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.665e8,
-                };
-
-                break :blk null;
-            };
-            const FMCFreq_ValueValue: ?f32 = blk: {
-                FMCFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.665e8,
-                };
-
-                break :blk null;
-            };
-            const SDMMC1Freq_ValueValue: ?f32 = blk: {
-                SDMMC1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.66e8,
-                };
-
-                break :blk null;
-            };
-            const SDMMC2Freq_ValueValue: ?f32 = blk: {
-                SDMMC2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.66e8,
-                };
-
-                break :blk null;
-            };
-            const STGENCLockSelectionValue: ?STGENCLockSelectionList = blk: {
-                const conf_item = config.STGENCLockSelection;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .RCC_STGENCLKSOURCE_HSI => STGENCLKSOURCE_HSI = true,
-                        .RCC_STGENCLKSOURCE_HSE => STGENCLKSOURCE_HSE = true,
-                    }
-                }
-
-                break :blk conf_item orelse {
-                    STGENCLKSOURCE_HSI = true;
-                    break :blk .RCC_STGENCLKSOURCE_HSI;
-                };
-            };
-            const STGENFreq_ValueValue: ?f32 = blk: {
-                STGENFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 6.4e7,
-                };
-
-                break :blk null;
-            };
-            const LPTIM45Freq_ValueValue: ?f32 = blk: {
-                LPTIM45Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const LPTIM2Freq_ValueValue: ?f32 = blk: {
-                LPTIM2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const LPTIM1Freq_ValueValue: ?f32 = blk: {
-                LPTIM1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const USART1Freq_ValueValue: ?f32 = blk: {
-                USART1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const USART2Freq_ValueValue: ?f32 = blk: {
-                USART2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const USART35Freq_ValueValue: ?f32 = blk: {
-                USART35Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const USART6Freq_ValueValue: ?f32 = blk: {
-                USART6Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const UART78Freq_ValueValue: ?f32 = blk: {
-                UART78Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const RNG1Freq_ValueValue: ?f32 = blk: {
-                RNG1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 3.6e8,
-                };
-
-                break :blk null;
-            };
-            const DCMIFreq_ValueValue: ?f32 = blk: {
-                DCMIFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.66e8,
-                };
-
-                break :blk null;
-            };
-            const SAESFreq_ValueValue: ?f32 = blk: {
-                SAESFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 3.6e8,
-                };
-
-                break :blk null;
-            };
-            const LPTIM3Freq_ValueValue: ?f32 = blk: {
-                LPTIM3Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const SPI4Freq_ValueValue: ?f32 = blk: {
-                SPI4Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const SAI2Freq_ValueValue: ?f32 = blk: {
-                SAI2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.3325e8,
-                };
-
-                break :blk null;
-            };
-            const USART4Freq_ValueValue: ?f32 = blk: {
-                USART4Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.045e8,
-                };
-
-                break :blk null;
-            };
-            const SPI1Freq_ValueValue: ?f32 = blk: {
-                SPI1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 2e8,
-                };
-
-                break :blk null;
-            };
-            const SPI23Freq_ValueValue: ?f32 = blk: {
-                SPI23Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 2e8,
-                };
-
-                break :blk null;
-            };
-            const SAI1Freq_ValueValue: ?f32 = blk: {
-                SAI1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.3325e8,
-                };
-
-                break :blk null;
-            };
-            const DFSDFAFreq_ValueValue: ?f32 = blk: {
-                DFSDFAFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.33e8,
-                };
-
-                break :blk null;
-            };
-            const SPI5Freq_ValueValue: ?f32 = blk: {
-                SPI5Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.3325e8,
-                };
-
-                break :blk null;
-            };
-            const FDCANFreq_ValueValue: ?f32 = blk: {
-                FDCANFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1e8,
-                };
-
-                break :blk null;
-            };
-            const ETHFreq_ValueValue: ?f32 = blk: {
-                ETHFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.25e8,
-                };
-
-                break :blk null;
-            };
-            const ETH2Freq_ValueValue: ?f32 = blk: {
-                ETH2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.25e8,
-                };
-
-                break :blk null;
-            };
-            const ADC2Freq_ValueValue: ?f32 = blk: {
-                ADC2Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.3325e8,
-                };
-
-                break :blk null;
-            };
-            const ADC1Freq_ValueValue: ?f32 = blk: {
-                ADC1Freq_ValueLimit = .{
-                    .min = null,
-                    .max = 1.3325e8,
-                };
-
-                break :blk null;
-            };
-            const DDRPHYFreq_ValueValue: ?f32 = blk: {
-                break :blk 1e7;
-            };
-            const PUBLFreq_ValueValue: ?f32 = blk: {
-                break :blk 3.2e4;
-            };
-            const DDRCFreq_ValueValue: ?f32 = blk: {
-                if (check_MCU("DDR3")) {
-                    DDRCFreq_ValueLimit = .{
-                        .min = 3e8,
-                        .max = 5.33e8,
-                    };
-
-                    break :blk null;
-                } else if (check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
-                    DDRCFreq_ValueLimit = .{
-                        .min = 1e7,
-                        .max = 5.33e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 3.2e4;
-            };
-            const DDRPERFMFreq_ValueValue: ?f32 = blk: {
-                if (check_MCU("DDR3")) {
-                    DDRPERFMFreq_ValueLimit = .{
-                        .min = 3e8,
-                        .max = 5.33e8,
-                    };
-
-                    break :blk null;
-                } else if (check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
-                    DDRPERFMFreq_ValueLimit = .{
-                        .min = 1e7,
-                        .max = 5.33e8,
-                    };
+            //Clock node bases
 
-                    break :blk null;
-                }
-                break :blk 3.2e4;
-            };
-            const RCC_USBPHY_Clock_Source_FROM_HSEValue: ?RCC_USBPHY_Clock_Source_FROM_HSEList = blk: {
-                const item: RCC_USBPHY_Clock_Source_FROM_HSEList = .RCC_USBPHYCLKSOURCE_HSE2;
-                break :blk item;
-            };
-            const USBPHYFreq_ValueValue: ?USBPHYFreq_ValueList = blk: {
-                const conf_item = config.USBPHYFreq_Value;
-
-                break :blk conf_item orelse .@"19200000";
-            };
-            const USB_PHY_VALUEValue: ?f32 = blk: {
-                break :blk 4.8e7;
-            };
-            const USBOHSFreq_ValueValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const HSIDivClkFreq_ValueValue: ?f32 = blk: {
-                break :blk 9.6e7;
-            };
-            const PLL1UserDefinedConfigValue: ?PLL1UserDefinedConfigList = blk: {
-                const conf_item = config.extra.PLL1UserDefinedConfig;
-                if (conf_item) |item| {
-                    switch (item) {
-                        .false => {},
-                        .true => {},
-                    }
-                }
-
-                break :blk conf_item orelse .false;
-            };
-            const PLL1UsedValue: ?f32 = blk: {
-                if ((MPUSOURCE_PLL1 or MPUSOURCE_MPUDIV) and (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"="))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const VCOInput1Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL1UsedValue), PLL1UsedValue, 1, .@"="))) {
-                    VCOInput1Freq_ValueLimit = .{
-                        .min = 8e6,
-                        .max = 1.6e7,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLL2UsedValue: ?f32 = blk: {
-                if (DCMICLKSOURCE_PLL2Q and config.flags.DCMIPP_Used or AXISSOURCE_PLL2 or check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3") or config.flags.GPUUsed_ForRCC) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const VCOInput2Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL2UsedValue), PLL2UsedValue, 1, .@"="))) {
-                    VCOInput2Freq_ValueLimit = .{
-                        .min = 8e6,
-                        .max = 1.6e7,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLL3UsedValue: ?f32 = blk: {
-                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC or ADC1CLKSOURCE_PLL3 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or ADC2CLKSOURCE_PLL3 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or SPI1CLKSOURCE_PLL3_R and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL3_R and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or SPI23CLKSOURCE_PLL3 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or ETHCLKSOURCE_PLL3 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL3 and config.flags.ETH2_Used or SPI1CLKSOURCE_PLL3 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or MLAHBS_PLL3 or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL3 or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 or check_MCU("SDMMC3CLKSOURCE_PLL3") and config.flags.SDMMC3Used_ForRCC or LPTIM45CLKSOURCE_PLL3 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM1CLKSOURCE_PLL3 and config.flags.LPTIM1Used_ForRCC or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL3") and config.flags.SPI6Used_ForRCC or SAI2CLKSOURCE_PLL3 and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or SAI1CLKSOURCE_PLL3 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or check_MCU("SAI3CLKSOURCE_PLL3") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or FDCANCLKSOURCE_PLL3 and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or SAI1CLKSOURCE_PLL3_R and ((config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC) or SAI2CLKSOURCE_PLL3_R and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or check_MCU("SAI3CLKSOURCE_PLL3_R") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or check_MCU("SAI4CLKSOURCE_PLL3_R") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const VCOInput3Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL3UsedValue), PLL3UsedValue, 1, .@"="))) {
-                    VCOInput3Freq_ValueLimit = .{
-                        .min = 4e6,
-                        .max = 1.6e7,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLL4UsedValue: ?f32 = blk: {
-                if (SAES_PLL4R and config.flags.SAES_Used or DCMICLKSOURCE_PLL4P and config.flags.DCMIPP_Used or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC or ETHCLKSOURCE_PLL4 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL4 and config.flags.ETH2_Used or config.flags.MCO2Config and MCO2SOURCE_PLL4 or config.flags.LTDCUsed_ForRCC or I2C12CLKSOURCE_PLL4 and (config.flags.I2C2Used_ForRCC or config.flags.I2C1Used_ForRCC) or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL4 or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 or check_MCU("SDMMC3CLKSOURCE_PLL4") and config.flags.SDMMC3Used_ForRCC or LPTIM45CLKSOURCE_PLL4 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM2CLKSOURCE_PLL4 and config.flags.LPTIM2Used_ForRCC or LPTIM3CLKSOURCE_PLL4 and config.flags.LPTIM3Used_ForRCC or LPTIM1CLKSOURCE_PLL4 and config.flags.LPTIM1Used_ForRCC or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC or UART2_PLL4 and config.flags.USART2Used_ForRCC or UART4_PLL4 and config.flags.UART4Used_ForRCC or UART35CLKSOURCE_PLL4 and (config.flags.USART3Used_ForRCC or config.flags.UART5Used_ForRCC) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC or UART78CLKSOURCE_PLL4 and (config.flags.UART7Used_ForRCC or config.flags.UART8Used_ForRCC) or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL4") and config.flags.SPI6Used_ForRCC or SPI4CLKSOURCE_PLL4 and (config.flags.SPI4Used_ForRCC or config.flags.I2S4Used_ForRCC) or SPI5CLKSOURCE_PLL4 and config.flags.SPI5Used_ForRCC or (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_PLL4 or check_MCU("SAI4CLKSOURCE_PLL4") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC) or SPI1CLKSOURCE_PLL4 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL4 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or SAI1CLKSOURCE_PLL4 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or check_MCU("SAI3CLKSOURCE_PLL4") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or (FDCANCLKSOURCE_PLL4 or FDCANCLKSOURCE_PLL4_R) and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or ADC1CLKSOURCE_PLL4 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or ADC2CLKSOURCE_PLL4 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or USBPHYCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC or config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used) or USBOCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC)) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const VCOInput4Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL4UsedValue), PLL4UsedValue, 1, .@"="))) {
-                    VCOInput4Freq_ValueLimit = .{
-                        .min = 4e6,
-                        .max = 1.6e7,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VCO1OutputFreq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL1UsedValue), PLL1UsedValue, 1, .@"="))) {
-                    VCO1OutputFreq_ValueLimit = .{
-                        .min = 9.92e8,
-                        .max = 2e9,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const DIVP1Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL1UsedValue), PLL1UsedValue, 1, .@"="))) {
-                    DIVP1Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 1e9,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VCO2OutputFreq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL2UsedValue), PLL2UsedValue, 1, .@"="))) {
-                    VCO2OutputFreq_ValueLimit = .{
-                        .min = 8e8,
-                        .max = 1.6e9,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLL2PUsedValue: ?f32 = blk: {
-                if (AXISSOURCE_PLL2) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVP2Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL2PUsedValue), PLL2PUsedValue, 1, .@"="))) {
-                    DIVP2Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VCO3OutputFreq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL3UsedValue), PLL3UsedValue, 1, .@"="))) {
-                    VCO3OutputFreq_ValueLimit = .{
-                        .min = 4e8,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const VCO4OutputFreq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL4UsedValue), PLL4UsedValue, 1, .@"="))) {
-                    VCO4OutputFreq_ValueLimit = .{
-                        .min = 4e8,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const PLL3PUsedValue: ?f32 = blk: {
-                if (MLAHBS_PLL3) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const DIVP3Freq_ValueValue: ?f32 = blk: {
-                if ((check_ref(@TypeOf(PLL3PUsedValue), PLL3PUsedValue, 1, .@"="))) {
-                    DIVP3Freq_ValueLimit = .{
-                        .min = null,
-                        .max = 8e8,
-                    };
-
-                    break :blk null;
-                }
-                break :blk 9.6e7;
-            };
-            const MLAHBDIVCLKFreq_ValueValue: ?f32 = blk: {
-                MLAHBDIVCLKFreq_ValueLimit = .{
-                    .min = null,
-                    .max = 2.09e8,
-                };
-
-                break :blk null;
-            };
-            const HSICalibrationValueValue: ?f32 = blk: {
-                const config_val = config.extra.HSICalibrationValue;
-                if (config_val) |val| {
-                    if (val < 0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSICalibrationValue",
-                            "Else",
-                            "No Extra Log",
-                            0,
-                            val,
-                        });
-                    }
-                    if (val > 127) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "HSICalibrationValue",
-                            "Else",
-                            "No Extra Log",
-                            127,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
-            };
-            const CSICalibrationValueValue: ?f32 = blk: {
-                const config_val = config.extra.CSICalibrationValue;
-                if (config_val) |val| {
-                    if (val < 0) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "CSICalibrationValue",
-                            "Else",
-                            "No Extra Log",
-                            0,
-                            val,
-                        });
-                    }
-                    if (val > 31) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "CSICalibrationValue",
-                            "Else",
-                            "No Extra Log",
-                            31,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
-            };
-            const LSE_TimoutValue: ?f32 = blk: {
-                const config_val = config.extra.LSE_Timout;
-                if (config_val) |val| {
-                    if (val < 1) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Underflow Value - min: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_Timout",
-                            "Else",
-                            "No Extra Log",
-                            1,
-                            val,
-                        });
-                    }
-                    if (val > 1073741823) {
-                        return comptime_fail_or_error(error.InvalidConfig,
-                            \\
-                            \\Error on {s} | expr: {s} diagnostic: {s} 
-                            \\Overflow Value - max: {d} found: {d}
-                            \\note: ranges values may change depending on the configuration
-                            \\
-                        , .{
-                            "LSE_Timout",
-                            "Else",
-                            "No Extra Log",
-                            1073741823,
-                            val,
-                        });
-                    }
-                }
-                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 5000;
-            };
-            const LSEUsedValue: ?f32 = blk: {
-                if (check_MCU("CRSActivatedSourceLSE") or ((check_ref(@TypeOf(RTCClockSelectionValue), RTCClockSelectionValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) and (config.flags.RTC_Used)) or (config.flags.MCO1Config and MCO1SOURCE_LSE) or (check_MCU("CECCLKSOURCE_LSE") and config.flags.CECUsed_ForRCC) or (LPTIM2CLKSOURCE_LSE and (config.flags.LPTIM2Used_ForRCC)) or (LPTIM3CLKSOURCE_LSE and config.flags.LPTIM3Used_ForRCC) or (LPTIM45CLKSOURCE_LSE and (config.flags.LPTIM3Used_ForRCC or config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC)) or LPTIM1CLKSOURCE_LSE and config.flags.LPTIM1Used_ForRCC) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const LSE_Drive_CapabilityValue: ?LSE_Drive_CapabilityList = blk: {
-                if (config.flags.LSEOscillator and (check_ref(@TypeOf(LSEUsedValue), LSEUsedValue, 1, .@"="))) {
-                    const conf_item = config.extra.LSE_Drive_Capability;
-                    if (conf_item) |item| {
-                        switch (item) {
-                            .RCC_LSEDRIVE_LOW => {},
-                            .RCC_LSEDRIVE_MEDIUMLOW => {},
-                            .RCC_LSEDRIVE_MEDIUMHIGH => {},
-                            .RCC_LSEDRIVE_HIGH => {},
-                        }
-                    }
-
-                    break :blk conf_item orelse .RCC_LSEDRIVE_MEDIUMHIGH;
-                }
-                if (config.extra.LSE_Drive_Capability) |_| {
-                    return comptime_fail_or_error(error.InvalidConfig,
-                        \\
-                        \\Error on {s} | expr: {s} diagnostic: {s} 
-                        \\Value should be null.
-                        \\note: some configurations are invalid in certain cases.
-                        \\
-                        \\
-                    , .{ "LSE_Drive_Capability", "Else", "No Extra Log" });
-                }
-                break :blk null;
-            };
-            const EnableHSEValue: ?EnableHSEList = blk: {
-                if ((config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
-                    const item: EnableHSEList = .true;
-                    break :blk item;
-                }
-                const item: EnableHSEList = .false;
-                break :blk item;
-            };
-            const EnableLSEValue: ?EnableLSEList = blk: {
-                if ((config.flags.LSEOscillator or config.flags.LSEByPass or config.flags.LSEDIGByPass)) {
-                    const item: EnableLSEList = .true;
-                    break :blk item;
-                }
-                const item: EnableLSEList = .false;
-                break :blk item;
-            };
-            const ExtClockEnableValue: ?ExtClockEnableList = blk: {
-                if (config.flags.AudioClockConfig) {
-                    const item: ExtClockEnableList = .true;
-                    break :blk item;
-                }
-                const item: ExtClockEnableList = .false;
-                break :blk item;
-            };
-            const PLL1UserDefinedConfigEnableValue: ?PLL1UserDefinedConfigEnableList = blk: {
-                if (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"=")) {
-                    const item: PLL1UserDefinedConfigEnableList = .true;
-                    break :blk item;
-                }
-                const item: PLL1UserDefinedConfigEnableList = .false;
-                break :blk item;
-            };
-            const cKPerEnableValue: ?cKPerEnableList = blk: {
-                if (config.flags.SAES_Used or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX")) or config.flags.DCMIPP_Used or config.flags.LPTIM1Used_ForRCC or config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC or config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC or config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC or config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC or config.flags.LPTIM2Used_ForRCC or check_MCU("QSPI_Selected") or (config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC) or (config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC) or config.flags.FMCUsed_ForRCC or config.flags.LPTIM3Used_ForRCC or config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) {
-                    const item: cKPerEnableList = .true;
-                    break :blk item;
-                }
-                const item: cKPerEnableList = .false;
-                break :blk item;
-            };
-            const DACEnableValue: ?DACEnableList = blk: {
-                if (check_MCU("DAC")) {
-                    const item: DACEnableList = .true;
-                    break :blk item;
-                }
-                const item: DACEnableList = .false;
-                break :blk item;
-            };
-            const MCO1OutPutEnableValue: ?MCO1OutPutEnableList = blk: {
-                if (config.flags.MCO1Config) {
-                    const item: MCO1OutPutEnableList = .true;
-                    break :blk item;
-                }
-                const item: MCO1OutPutEnableList = .false;
-                break :blk item;
-            };
-            const MCO2OutPutEnableValue: ?MCO2OutPutEnableList = blk: {
-                if (config.flags.MCO2Config) {
-                    const item: MCO2OutPutEnableList = .true;
-                    break :blk item;
-                }
-                const item: MCO2OutPutEnableList = .false;
-                break :blk item;
-            };
-            const DFSDMEnableValue: ?DFSDMEnableList = blk: {
-                if (config.flags.DFSDM1Used_ForRCC) {
-                    const item: DFSDMEnableList = .true;
-                    break :blk item;
-                }
-                const item: DFSDMEnableList = .false;
-                break :blk item;
-            };
-            const DCMIEnableValue: ?DCMIEnableList = blk: {
-                if (config.flags.DCMIPP_Used) {
-                    const item: DCMIEnableList = .true;
-                    break :blk item;
-                }
-                const item: DCMIEnableList = .false;
-                break :blk item;
-            };
-            const DDREnableValue: ?DDREnableList = blk: {
-                if (check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
-                    const item: DDREnableList = .true;
-                    break :blk item;
-                }
-                const item: DDREnableList = .false;
-                break :blk item;
-            };
-            const USART2EnableValue: ?USART2EnableList = blk: {
-                if (config.flags.USART2Used_ForRCC) {
-                    const item: USART2EnableList = .true;
-                    break :blk item;
-                }
-                const item: USART2EnableList = .false;
-                break :blk item;
-            };
-            const ADC2EnableValue: ?ADC2EnableList = blk: {
-                if ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) {
-                    const item: ADC2EnableList = .true;
-                    break :blk item;
-                }
-                const item: ADC2EnableList = .false;
-                break :blk item;
-            };
-            const ADC1EnableValue: ?ADC1EnableList = blk: {
-                if ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) {
-                    const item: ADC1EnableList = .true;
-                    break :blk item;
-                }
-                const item: ADC1EnableList = .false;
-                break :blk item;
-            };
-            const LPTIM1EnableValue: ?LPTIM1EnableList = blk: {
-                if (config.flags.LPTIM1Used_ForRCC) {
-                    const item: LPTIM1EnableList = .true;
-                    break :blk item;
-                }
-                const item: LPTIM1EnableList = .false;
-                break :blk item;
-            };
-            const ETH1EnableValue: ?ETH1EnableList = blk: {
-                if (config.flags.ETH1_Used) {
-                    const item: ETH1EnableList = .true;
-                    break :blk item;
-                }
-                const item: ETH1EnableList = .false;
-                break :blk item;
-            };
-            const ETH2EnableValue: ?ETH2EnableList = blk: {
-                if (config.flags.ETH2_Used) {
-                    const item: ETH2EnableList = .true;
-                    break :blk item;
-                }
-                const item: ETH2EnableList = .false;
-                break :blk item;
-            };
-            const EnableDFSDMAudioValue: ?EnableDFSDMAudioList = blk: {
-                if (config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) {
-                    const item: EnableDFSDMAudioList = .true;
-                    break :blk item;
-                }
-                const item: EnableDFSDMAudioList = .false;
-                break :blk item;
-            };
-            const SAI1EnableValue: ?SAI1EnableList = blk: {
-                if (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC) {
-                    const item: SAI1EnableList = .true;
-                    break :blk item;
-                }
-                const item: SAI1EnableList = .false;
-                break :blk item;
-            };
-            const SPDIFEnableValue: ?SPDIFEnableList = blk: {
-                if (config.flags.SPDIFRXUsed_ForRCC) {
-                    const item: SPDIFEnableList = .true;
-                    break :blk item;
-                }
-                const item: SPDIFEnableList = .false;
-                break :blk item;
-            };
-            const SAI2EnableValue: ?SAI2EnableList = blk: {
-                if (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) {
-                    const item: SAI2EnableList = .true;
-                    break :blk item;
-                }
-                const item: SAI2EnableList = .false;
-                break :blk item;
-            };
-            const USART1EnableValue: ?USART1EnableList = blk: {
-                if (config.flags.USART1Used_ForRCC) {
-                    const item: USART1EnableList = .true;
-                    break :blk item;
-                }
-                const item: USART1EnableList = .false;
-                break :blk item;
-            };
-            const LPTIM45EnableValue: ?LPTIM45EnableList = blk: {
-                if (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) {
-                    const item: LPTIM45EnableList = .true;
-                    break :blk item;
-                }
-                const item: LPTIM45EnableList = .false;
-                break :blk item;
-            };
-            const SPI1EnableValue: ?SPI1EnableList = blk: {
-                if ((config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC)) {
-                    const item: SPI1EnableList = .true;
-                    break :blk item;
-                }
-                const item: SPI1EnableList = .false;
-                break :blk item;
-            };
-            const SPI23EnableValue: ?SPI23EnableList = blk: {
-                if (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) {
-                    const item: SPI23EnableList = .true;
-                    break :blk item;
-                }
-                const item: SPI23EnableList = .false;
-                break :blk item;
-            };
-            const SPI4EnableValue: ?SPI4EnableList = blk: {
-                if ((config.flags.SPI4Used_ForRCC or config.flags.I2S4Used_ForRCC)) {
-                    const item: SPI4EnableList = .true;
-                    break :blk item;
-                }
-                const item: SPI4EnableList = .false;
-                break :blk item;
-            };
-            const FDCANEnableValue: ?FDCANEnableList = blk: {
-                if (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) {
-                    const item: FDCANEnableList = .true;
-                    break :blk item;
-                }
-                const item: FDCANEnableList = .false;
-                break :blk item;
-            };
-            const SDMMC1EnableValue: ?SDMMC1EnableList = blk: {
-                if (config.flags.SDMMC1Used_ForRCC) {
-                    const item: SDMMC1EnableList = .true;
-                    break :blk item;
-                }
-                const item: SDMMC1EnableList = .false;
-                break :blk item;
-            };
-            const SDMMC2EnableValue: ?SDMMC2EnableList = blk: {
-                if (config.flags.SDMMC2Used_ForRCC) {
-                    const item: SDMMC2EnableList = .true;
-                    break :blk item;
-                }
-                const item: SDMMC2EnableList = .false;
-                break :blk item;
-            };
-            const QuadSPIEnableValue: ?QuadSPIEnableList = blk: {
-                if (check_MCU("QSPI_Selected")) {
-                    const item: QuadSPIEnableList = .true;
-                    break :blk item;
-                }
-                const item: QuadSPIEnableList = .false;
-                break :blk item;
-            };
-            const FMCEnableValue: ?FMCEnableList = blk: {
-                if (config.flags.FMCUsed_ForRCC) {
-                    const item: FMCEnableList = .true;
-                    break :blk item;
-                }
-                const item: FMCEnableList = .false;
-                break :blk item;
-            };
-            const LTDCEnableValue: ?LTDCEnableList = blk: {
-                if (config.flags.LTDCUsed_ForRCC) {
-                    const item: LTDCEnableList = .true;
-                    break :blk item;
-                }
-                const item: LTDCEnableList = .false;
-                break :blk item;
-            };
-            const USART4EnableValue: ?USART4EnableList = blk: {
-                if (config.flags.UART4Used_ForRCC) {
-                    const item: USART4EnableList = .true;
-                    break :blk item;
-                }
-                const item: USART4EnableList = .false;
-                break :blk item;
-            };
-            const SPI5EnableValue: ?SPI5EnableList = blk: {
-                if (config.flags.SPI5Used_ForRCC) {
-                    const item: SPI5EnableList = .true;
-                    break :blk item;
-                }
-                const item: SPI5EnableList = .false;
-                break :blk item;
-            };
-            const UART78EnableValue: ?UART78EnableList = blk: {
-                if (config.flags.UART7Used_ForRCC or config.flags.UART8Used_ForRCC) {
-                    const item: UART78EnableList = .true;
-                    break :blk item;
-                }
-                const item: UART78EnableList = .false;
-                break :blk item;
-            };
-            const USART35EnableValue: ?USART35EnableList = blk: {
-                if (config.flags.USART3Used_ForRCC or config.flags.UART5Used_ForRCC) {
-                    const item: USART35EnableList = .true;
-                    break :blk item;
-                }
-                const item: USART35EnableList = .false;
-                break :blk item;
-            };
-            const LPTIM2EnableValue: ?LPTIM2EnableList = blk: {
-                if (config.flags.LPTIM2Used_ForRCC) {
-                    const item: LPTIM2EnableList = .true;
-                    break :blk item;
-                }
-                const item: LPTIM2EnableList = .false;
-                break :blk item;
-            };
-            const LPTIM3EnableValue: ?LPTIM3EnableList = blk: {
-                if (config.flags.LPTIM3Used_ForRCC) {
-                    const item: LPTIM3EnableList = .true;
-                    break :blk item;
-                }
-                const item: LPTIM3EnableList = .false;
-                break :blk item;
-            };
-            const USART6EnableValue: ?USART6EnableList = blk: {
-                if (config.flags.USART6Used_ForRCC) {
-                    const item: USART6EnableList = .true;
-                    break :blk item;
-                }
-                const item: USART6EnableList = .false;
-                break :blk item;
-            };
-            const SAESEnableValue: ?SAESEnableList = blk: {
-                if (config.flags.SAES_Used) {
-                    const item: SAESEnableList = .true;
-                    break :blk item;
-                }
-                const item: SAESEnableList = .false;
-                break :blk item;
-            };
-            const I2C4EnableValue: ?I2C4EnableList = blk: {
-                if (config.flags.I2C4Used_ForRCC) {
-                    const item: I2C4EnableList = .true;
-                    break :blk item;
-                }
-                const item: I2C4EnableList = .false;
-                break :blk item;
-            };
-            const I2C5EnableValue: ?I2C5EnableList = blk: {
-                if (config.flags.I2C5Used_ForRCC) {
-                    const item: I2C5EnableList = .true;
-                    break :blk item;
-                }
-                const item: I2C5EnableList = .false;
-                break :blk item;
-            };
-            const EnableUSBOHSValue: ?EnableUSBOHSList = blk: {
-                if ((config.flags.USB_OTG_HSUsed_ForRCC)) {
-                    const item: EnableUSBOHSList = .true;
-                    break :blk item;
-                }
-                const item: EnableUSBOHSList = .false;
-                break :blk item;
-            };
-            const EnableUSBHSValue: ?EnableUSBHSList = blk: {
-                if (config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used) {
-                    const item: EnableUSBHSList = .true;
-                    break :blk item;
-                }
-                const item: EnableUSBHSList = .false;
-                break :blk item;
-            };
-            const I2C3EnableValue: ?I2C3EnableList = blk: {
-                if (config.flags.I2C3Used_ForRCC) {
-                    const item: I2C3EnableList = .true;
-                    break :blk item;
-                }
-                const item: I2C3EnableList = .false;
-                break :blk item;
-            };
-            const I2C12EnableValue: ?I2C12EnableList = blk: {
-                if (config.flags.I2C1Used_ForRCC or config.flags.I2C2Used_ForRCC) {
-                    const item: I2C12EnableList = .true;
-                    break :blk item;
-                }
-                const item: I2C12EnableList = .false;
-                break :blk item;
-            };
-            const RNG1EnableValue: ?RNG1EnableList = blk: {
-                if (config.flags.RNG1Used_ForRCC) {
-                    const item: RNG1EnableList = .true;
-                    break :blk item;
-                }
-                const item: RNG1EnableList = .false;
-                break :blk item;
-            };
-            const EnableHSERTCDevisorValue: ?EnableHSERTCDevisorList = blk: {
-                if ((config.flags.RTC_Used) and (config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
-                    const item: EnableHSERTCDevisorList = .true;
-                    break :blk item;
-                }
-                const item: EnableHSERTCDevisorList = .false;
-                break :blk item;
-            };
-            const RTCEnableValue: ?RTCEnableList = blk: {
-                if (config.flags.RTC_Used) {
-                    const item: RTCEnableList = .true;
-                    break :blk item;
-                }
-                const item: RTCEnableList = .false;
-                break :blk item;
-            };
-            const IWDGEnableValue: ?IWDGEnableList = blk: {
-                if (config.flags.IWDGUsed_ForRCC) {
-                    const item: IWDGEnableList = .true;
-                    break :blk item;
-                }
-                const item: IWDGEnableList = .false;
-                break :blk item;
-            };
-            const STGENEnableValue: ?STGENEnableList = blk: {
-                const item: STGENEnableList = .true;
-                break :blk item;
-            };
-            const EnableHSEUSBPHYDevisorValue: ?EnableHSEUSBPHYDevisorList = blk: {
-                if ((config.flags.USB_OTG_HSUsed_ForRCC or config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used) and (config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
-                    const item: EnableHSEUSBPHYDevisorList = .true;
-                    break :blk item;
-                }
-                const item: EnableHSEUSBPHYDevisorList = .false;
-                break :blk item;
-            };
-            const PLL1UsedTFAValue: ?f32 = blk: {
-                if ((MPUSOURCE_PLL1 or MPUSOURCE_MPUDIV) and (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"="))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL1UsedA7Value: ?f32 = blk: {
-                if ((MPUSOURCE_PLL1 or MPUSOURCE_MPUDIV) and (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"="))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL2UsedTFAValue: ?f32 = blk: {
-                if (AXISSOURCE_PLL2 or check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL2UsedA7Value: ?f32 = blk: {
-                if (DCMICLKSOURCE_PLL2Q and config.flags.DCMIPP_Used and check_MCU("DCMIPP_LINUX") or AXISSOURCE_PLL2 or check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL3UsedTFAValue: ?f32 = blk: {
-                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC and check_MCU("USART2_BOOTLOADER") or MLAHBS_PLL3 or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") and check_MCU("QUADSPI_BOOTLOADER") or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC and check_MCU("FMC_BOOTLOADER") or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 and check_MCU("SDMMC1_BOOTLOADER") or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 and check_MCU("SDMMC2_BOOTLOADER") or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC and check_MCU("USART1_BOOTLOADER")) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL3UsedA7Value: ?f32 = blk: {
-                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC and (check_MCU("USART2_SECURE_OS") or check_MCU("USART2_LINUX")) or ADC1CLKSOURCE_PLL3 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC1_LINUX") or check_MCU("ADC1_SECURE_OS")) or ADC2CLKSOURCE_PLL3 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC2_LINUX") or check_MCU("ADC2_SECURE_OS")) or SPI1CLKSOURCE_PLL3_R and ((config.flags.SPI1Used_ForRCC and check_MCU("SPI1_LINUX")) or (config.flags.I2S1Used_ForRCC and check_MCU("I2S1_LINUX"))) or SPI23CLKSOURCE_PLL3_R and ((config.flags.SPI2Used_ForRCC and check_MCU("SPI2_LINUX")) or (config.flags.SPI3Used_ForRCC and check_MCU("SPI3_LINUX")) or (config.flags.I2S2Used_ForRCC and check_MCU("I2S2_LINUX")) or (config.flags.I2S3Used_ForRCC and check_MCU("I2S3_LINUX"))) or SPI23CLKSOURCE_PLL3 and ((config.flags.SPI2Used_ForRCC and check_MCU("SPI2_LINUX")) or (config.flags.SPI3Used_ForRCC and check_MCU("SPI3_LINUX")) or (config.flags.I2S2Used_ForRCC and check_MCU("I2S2_LINUX")) or (config.flags.I2S3Used_ForRCC and check_MCU("I2S3_LINUX"))) or ETHCLKSOURCE_PLL3 and config.flags.ETH1_Used and (check_MCU("ETH1_LINUX") or check_MCU("ETH1_SECURE_OS")) or ETH2CLKSOURCE_PLL3 and config.flags.ETH2_Used and (check_MCU("ETH2_LINUX") or check_MCU("ETH2_SECURE_OS")) or SPI1CLKSOURCE_PLL3 and ((config.flags.SPI1Used_ForRCC and check_MCU("SPI1_LINUX")) or (config.flags.I2S1Used_ForRCC and check_MCU("I2S1_LINUX"))) or MLAHBS_PLL3 or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL3 and check_MCU("SPDIFRX_LINUX") or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") and (check_MCU("QUADSPI_SECURE_OS") or check_MCU("QUADSPI_LINUX")) or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC and (check_MCU("FMC_SECURE_OS") or check_MCU("FMC_LINUX")) or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 and (check_MCU("SDMMC1_SECURE_OS") or check_MCU("SDMMC1_LINUX")) or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 and (check_MCU("SDMMC2_SECURE_OS") or check_MCU("SDMMC2_LINUX")) or LPTIM45CLKSOURCE_PLL3 and ((config.flags.LPTIM4Used_ForRCC and check_MCU("LPTIM4_LINUX")) or (config.flags.LPTIM5Used_ForRCC and check_MCU("LPTIM5_LINUX"))) or LPTIM1CLKSOURCE_PLL3 and config.flags.LPTIM1Used_ForRCC and check_MCU("LPTIM1_LINUX") or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC and (check_MCU("USART1_SECURE_OS") or check_MCU("USART1_LINUX")) or SAI2CLKSOURCE_PLL3 and ((config.flags.SAI2_SAIAUsed_ForRCC and check_MCU("SAI2_LINUX")) or (config.flags.SAI2_SAIBUsed_ForRCC and check_MCU("SAI2_LINUX"))) or SAI1CLKSOURCE_PLL3 and ((config.flags.SAI1_SAIAUsed_ForRCC and check_MCU("SAI1_LINUX")) or (config.flags.SAI1_SAIBUsed_ForRCC and check_MCU("SAI1_LINUX")) or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or FDCANCLKSOURCE_PLL3 and ((config.flags.FDCAN1Used_ForRCC and check_MCU("FDCAN1_LINUX")) or (config.flags.FDCAN2Used_ForRCC and check_MCU("FDCAN2_LINUX"))) or SAI1CLKSOURCE_PLL3_R and ((config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or (config.flags.SAI1_SAIAUsed_ForRCC and check_MCU("SAI1_LINUX")) or (config.flags.SAI1_SAIBUsed_ForRCC and check_MCU("SAI1_LINUX"))) or SAI2CLKSOURCE_PLL3_R and ((config.flags.SAI2_SAIAUsed_ForRCC and check_MCU("SAI2_LINUX")) or (config.flags.SAI2_SAIBUsed_ForRCC and check_MCU("SAI2_LINUX")))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL4UsedTFAValue: ?f32 = blk: {
-                if (SAES_PLL4R and config.flags.SAES_Used and check_MCU("SAES_BOOTLOADER") or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC and check_MCU("I2C4_BOOTLOADER") or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC and check_MCU("I2C3_BOOTLOADER") or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC and check_MCU("I2C5_BOOTLOADER") or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") and check_MCU("QUADSPI_BOOTLOADER") or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC and check_MCU("FMC_BOOTLOADER") or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 and check_MCU("SDMMC1_BOOTLOADER") or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 and check_MCU("SDMMC2_BOOTLOADER") or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC and check_MCU("USART1_BOOTLOADER") or UART2_PLL4 and config.flags.USART2Used_ForRCC and check_MCU("USART2_BOOTLOADER") or UART4_PLL4 and config.flags.UART4Used_ForRCC and check_MCU("UART4_BOOTLOADER") or UART35CLKSOURCE_PLL4 and ((config.flags.USART3Used_ForRCC and check_MCU("USART3_BOOTLOADER")) or (config.flags.UART5Used_ForRCC and check_MCU("UART5_BOOTLOADER"))) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC and check_MCU("USART6_BOOTLOADER") or UART78CLKSOURCE_PLL4 and ((config.flags.UART7Used_ForRCC and check_MCU("UART7_BOOTLOADER")) or (config.flags.UART8Used_ForRCC and check_MCU("UART8_BOOTLOADER"))) or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC and check_MCU("RNG1_BOOTLOADER") or USBOCLKSOURCE_PLL4 and config.flags.USB_OTG_HSUsed_ForRCC and check_MCU("USB_OTG_HS_BOOTLOADER") or USBPHYCLKSOURCE_PLL4 and config.flags.USB_OTG_HSUsed_ForRCC and USBOCLKSOURCE_PHY and check_MCU("USB_OTG_HS_BOOTLOADER")) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const PLL4UsedA7Value: ?f32 = blk: {
-                if (SAES_PLL4R and config.flags.SAES_Used and (check_MCU("SAES_LINUX") or check_MCU("SAES_SECURE_OS")) or DCMICLKSOURCE_PLL4P and config.flags.DCMIPP_Used and check_MCU("DCMIPP_LINUX") or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC and (check_MCU("I2C4_LINUX") or check_MCU("I2C4_SECURE_OS")) or ETHCLKSOURCE_PLL4 and config.flags.ETH1_Used and (check_MCU("ETH1_LINUX") or check_MCU("ETH1_SECURE_OS")) or ETH2CLKSOURCE_PLL4 and config.flags.ETH2_Used and (check_MCU("ETH2_LINUX") or check_MCU("ETH2_SECURE_OS")) or I2C12CLKSOURCE_PLL4 and ((config.flags.I2C2Used_ForRCC and check_MCU("I2C2_LINUX")) or (config.flags.I2C1Used_ForRCC and check_MCU("I2C1_LINUX"))) or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC and (check_MCU("I2C3_LINUX") or check_MCU("I2C3_SECURE_OS")) or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC and (check_MCU("I2C5_LINUX") or check_MCU("I2C5_SECURE_OS")) or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL4 and check_MCU("SPDIFRX_LINUX") or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") and (check_MCU("QUADSPI_SECURE_OS") or check_MCU("QUADSPI_LINUX")) or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC and (check_MCU("FMC_SECURE_OS") or check_MCU("FMC_LINUX")) or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 and (check_MCU("SDMMC1_SECURE_OS") or check_MCU("SDMMC1_LINUX")) or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 and (check_MCU("SDMMC2_SECURE_OS") or check_MCU("SDMMC2_LINUX")) or LPTIM45CLKSOURCE_PLL4 and ((config.flags.LPTIM4Used_ForRCC and check_MCU("LPTIM4_LINUX")) or (config.flags.LPTIM5Used_ForRCC and check_MCU("LPTIM5_LINUX"))) or LPTIM2CLKSOURCE_PLL4 and config.flags.LPTIM2Used_ForRCC and (check_MCU("LPTIM2_LINUX") or check_MCU("LPTIM2_SECURE_OS")) or LPTIM3CLKSOURCE_PLL4 and config.flags.LPTIM3Used_ForRCC and (check_MCU("LPTIM3_LINUX") or check_MCU("LPTIM3_SECURE_OS")) or LPTIM1CLKSOURCE_PLL4 and config.flags.LPTIM1Used_ForRCC and check_MCU("LPTIM1_LINUX") or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC and (check_MCU("USART1_SECURE_OS") or check_MCU("USART1_LINUX")) or UART2_PLL4 and config.flags.USART2Used_ForRCC and (check_MCU("USART2_SECURE_OS") or check_MCU("USART2_LINUX")) or UART4_PLL4 and config.flags.UART4Used_ForRCC and check_MCU("UART4_LINUX") or UART35CLKSOURCE_PLL4 and ((config.flags.USART3Used_ForRCC and check_MCU("USART3_LINUX")) or (config.flags.UART5Used_ForRCC and check_MCU("UART5_LINUX"))) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC and check_MCU("USART6_LINUX") or UART78CLKSOURCE_PLL4 and ((config.flags.UART7Used_ForRCC and check_MCU("UART7_LINUX")) or (config.flags.UART8Used_ForRCC and check_MCU("UART8_LINUX"))) or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC and (check_MCU("RNG1_LINUX") or check_MCU("RNG1_SECURE_OS")) or SPI4CLKSOURCE_PLL4 and ((config.flags.SPI4Used_ForRCC and (check_MCU("SPI4_SECURE_OS") or check_MCU("SPI4_LINUX"))) or (config.flags.I2S4Used_ForRCC and check_MCU("I2S4_SECURE_OS") or check_MCU("I2S4_LINUX"))) or SPI5CLKSOURCE_PLL4 and config.flags.SPI5Used_ForRCC and (check_MCU("SPI5_SECURE_OS") or check_MCU("SPI5_LINUX")) or ((config.flags.SAI2_SAIAUsed_ForRCC and check_MCU("SAI2_LINUX")) or (config.flags.SAI2_SAIBUsed_ForRCC and check_MCU("SAI2_LINUX"))) and SAI2CLKSOURCE_PLL4 or SPI1CLKSOURCE_PLL4 and ((config.flags.SPI1Used_ForRCC and check_MCU("SPI1_LINUX")) or (config.flags.I2S1Used_ForRCC and check_MCU("I2S1_LINUX"))) or SPI23CLKSOURCE_PLL4 and ((config.flags.SPI2Used_ForRCC and check_MCU("SPI2_LINUX")) or (config.flags.SPI3Used_ForRCC and check_MCU("SPI3_LINUX")) or (config.flags.I2S2Used_ForRCC and check_MCU("I2S2_LINUX")) or (config.flags.I2S3Used_ForRCC and check_MCU("I2S3_LINUX"))) or SAI1CLKSOURCE_PLL4 and ((config.flags.SAI1_SAIAUsed_ForRCC and check_MCU("SAI1_LINUX")) or (config.flags.SAI1_SAIBUsed_ForRCC and check_MCU("SAI1_LINUX")) or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or (FDCANCLKSOURCE_PLL4 or FDCANCLKSOURCE_PLL4_R) and ((config.flags.FDCAN1Used_ForRCC and check_MCU("FDCAN1_LINUX")) or (config.flags.FDCAN2Used_ForRCC and check_MCU("FDCAN2_LINUX"))) or ADC1CLKSOURCE_PLL4 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC1_LINUX") or check_MCU("ADC1_SECURE_OS")) or ADC2CLKSOURCE_PLL4 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC2_LINUX") or check_MCU("ADC2_SECURE_OS")) or USBPHYCLKSOURCE_PLL4 and ((config.flags.USB_OTG_HSUsed_ForRCC and (check_MCU("USB_OTG_HS_LINUX") or check_MCU("USB_OTG_HS_SECURE_OS")) and USBOCLKSOURCE_PHY) or (config.flags.USBH_HS1_Used and check_MCU("USBH_HS1_LINUX")) or (config.flags.USBH_HS2_Used and check_MCU("USBH_HS2_LINUX"))) or USBOCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC) and (check_MCU("USB_OTG_HS_LINUX") or check_MCU("USB_OTG_HS_SECURE_OS"))) {
-                    break :blk 1;
-                }
-                break :blk 0;
-            };
-            const EnableLSERTCValue: ?EnableLSERTCList = blk: {
-                if ((config.flags.RTC_Used) and (config.flags.LSEOscillator or config.flags.LSEByPass or config.flags.LSEDIGByPass)) {
-                    const item: EnableLSERTCList = .true;
-                    break :blk item;
-                }
-                const item: EnableLSERTCList = .false;
-                break :blk item;
-            };
-            const CECEnableValue: ?CECEnableList = blk: {
-                if (config.flags.CECUsed_ForRCC) {
-                    const item: CECEnableList = .true;
-                    break :blk item;
-                }
-                const item: CECEnableList = .false;
-                break :blk item;
-            };
-            const MCO2I2SEnableValue: ?MCO2I2SEnableList = blk: {
-                if ((config.flags.MCO2Config)) {
-                    const item: MCO2I2SEnableList = .true;
-                    break :blk item;
-                }
-                const item: MCO2I2SEnableList = .false;
-                break :blk item;
+            const dummy = ClockNode{
+                .name = "dummy_clock",
+                .nodetype = .off,
+                .parents = &.{},
             };
+            std.mem.doNotOptimizeAway(dummy);
 
             var HSIRC = ClockNode{
                 .name = "HSIRC",
@@ -6757,6 +3112,2559 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 .nodetype = .off,
                 .parents = &.{},
             };
+            //Pre clock reference values
+            //the following references can and/or should be validated before defining the clocks
+
+            const HSI_VALUEValue: ?f32 = blk: {
+                break :blk 6.4e7;
+            };
+            const HSIDivValueValue: ?HSIDivValueList = blk: {
+                const conf_item = config.HSIDivValue;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_HSI_DIV1 => {},
+                        .RCC_HSI_DIV2 => {},
+                        .RCC_HSI_DIV4 => {},
+                        .RCC_HSI_DIV8 => {},
+                    }
+                }
+
+                break :blk conf_item orelse null;
+            };
+            const HSE_VALUEValue: ?f32 = if (config.HSE_VALUE) |i| i else 24000000;
+            const LSI_VALUEValue: ?f32 = blk: {
+                break :blk 3.2e4;
+            };
+            const LSE_VALUEValue: ?f32 = if (config.LSE_VALUE) |i| i else 32768;
+            const CSI_VALUEValue: ?f32 = blk: {
+                break :blk 4e6;
+            };
+            const EXTERNAL_CLOCK_VALUEValue: ?f32 = blk: {
+                break :blk 1.2288e7;
+            };
+            const MLAHBCLKSourceValue: ?MLAHBCLKSourceList = blk: {
+                const conf_item = config.MLAHBCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MLAHBSSOURCE_HSI => MLAHBS_HSI = true,
+                        .RCC_MLAHBSSOURCE_CSI => MLAHBS_CSI = true,
+                        .RCC_MLAHBSSOURCE_HSE => MLAHBS_HSE = true,
+                        .RCC_MLAHBSSOURCE_PLL3 => MLAHBS_PLL3 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    MLAHBS_HSI = true;
+                    break :blk .RCC_MLAHBSSOURCE_HSI;
+                };
+            };
+            const MPUCLKSourceValue: ?MPUCLKSourceList = blk: {
+                const conf_item = config.MPUCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MPUSOURCE_PLL1 => MPUSOURCE_PLL1 = true,
+                        .RCC_MPUSOURCE_MPUDIV => MPUSOURCE_MPUDIV = true,
+                        .RCC_MPUSOURCE_HSE => MPUSOURCE_HSE = true,
+                        .RCC_MPUSOURCE_HSI => MPUSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    MPUSOURCE_HSI = true;
+                    break :blk .RCC_MPUSOURCE_HSI;
+                };
+            };
+            const CKPERCLKSourceValue: ?CKPERCLKSourceList = blk: {
+                const conf_item = config.CKPERCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_CKPERCLKSOURCE_HSI => CKPERCLKSOURCE_HSI = true,
+                        .RCC_CKPERCLKSOURCE_CSI => CKPERCLKSOURCE_CSI = true,
+                        .RCC_CKPERCLKSOURCE_HSE => CKPERCLKSOURCE_HSE = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    CKPERCLKSOURCE_HSI = true;
+                    break :blk .RCC_CKPERCLKSOURCE_HSI;
+                };
+            };
+            const AXICLKSourceValue: ?AXICLKSourceList = blk: {
+                const conf_item = config.AXICLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_AXISSOURCE_HSE => AXISSOURCE_HSE = true,
+                        .RCC_AXISSOURCE_HSI => AXISSOURCE_HSI = true,
+                        .RCC_AXISSOURCE_PLL2 => AXISSOURCE_PLL2 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    AXISSOURCE_HSI = true;
+                    break :blk .RCC_AXISSOURCE_HSI;
+                };
+            };
+            const AXI_DivValue: ?AXI_DivList = blk: {
+                const conf_item = config.AXI_Div;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_AXI_DIV1 => {},
+                        .RCC_AXI_DIV2 => {},
+                        .RCC_AXI_DIV3 => {},
+                        .RCC_AXI_DIV4 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_AXI_DIV1;
+            };
+            const APB4DIVValue: ?APB4DIVList = blk: {
+                const conf_item = config.APB4DIV;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_APB4_DIV1 => {},
+                        .RCC_APB4_DIV2 => {},
+                        .RCC_APB4_DIV4 => {},
+                        .RCC_APB4_DIV8 => {},
+                        .RCC_APB4_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_APB4_DIV1;
+            };
+            const APB5DIVValue: ?APB5DIVList = blk: {
+                const conf_item = config.APB5DIV;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_APB5_DIV1 => {},
+                        .RCC_APB5_DIV2 => {},
+                        .RCC_APB5_DIV4 => {},
+                        .RCC_APB5_DIV8 => {},
+                        .RCC_APB5_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_APB5_DIV1;
+            };
+            const APB6DIVValue: ?APB6DIVList = blk: {
+                const conf_item = config.APB6DIV;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_APB6_DIV1 => APB6DIV_1 = true,
+                        .RCC_APB6_DIV2 => APB6DIV_2 = true,
+                        .RCC_APB6_DIV4 => APB6DIV_4 = true,
+                        .RCC_APB6_DIV8 => {},
+                        .RCC_APB6_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse null;
+            };
+            const RCC_TIM_G3_PRescaler_SelectionValue: ?RCC_TIM_G3_PRescaler_SelectionList = blk: {
+                const conf_item = config.extra.RCC_TIM_G3_PRescaler_Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIMG3PRES_ACTIVATED => TimG3PrescalerEnabled = true,
+                        .RCC_TIMG3PRES_DEACTIVATED => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIMG3PRES_DEACTIVATED;
+            };
+            const Tim3MulValue: ?f32 = blk: {
+                if (((APB6DIV_1) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_DEACTIVATED, .@"=")))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_DEACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((APB6DIV_1) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
+                    break :blk 1;
+                } else if ((APB6DIV_2) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((APB6DIV_4) and (check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                } else if ((check_ref(@TypeOf(RCC_TIM_G3_PRescaler_SelectionValue), RCC_TIM_G3_PRescaler_SelectionValue, .RCC_TIMG3PRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                }
+                break :blk 2;
+            };
+            const RCC_MCO1SourceValue: ?RCC_MCO1SourceList = blk: {
+                const conf_item = config.RCC_MCO1Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCO1SOURCE_HSI => MCO1SOURCE_HSI = true,
+                        .RCC_MCO1SOURCE_HSE => MCO1SOURCE_HSE = true,
+                        .RCC_MCO1SOURCE_CSI => MCO1SOURCE_CSI = true,
+                        .RCC_MCO1SOURCE_LSI => MCO1SOURCE_LSI = true,
+                        .RCC_MCO1SOURCE_LSE => MCO1SOURCE_LSE = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    MCO1SOURCE_HSI = true;
+                    break :blk .RCC_MCO1SOURCE_HSI;
+                };
+            };
+            const RCC_MCODiv1Value: ?RCC_MCODiv1List = blk: {
+                const conf_item = config.RCC_MCODiv1;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCODIV_1 => {},
+                        .RCC_MCODIV_2 => {},
+                        .RCC_MCODIV_3 => {},
+                        .RCC_MCODIV_4 => {},
+                        .RCC_MCODIV_5 => {},
+                        .RCC_MCODIV_6 => {},
+                        .RCC_MCODIV_7 => {},
+                        .RCC_MCODIV_8 => {},
+                        .RCC_MCODIV_9 => {},
+                        .RCC_MCODIV_10 => {},
+                        .RCC_MCODIV_11 => {},
+                        .RCC_MCODIV_12 => {},
+                        .RCC_MCODIV_13 => {},
+                        .RCC_MCODIV_14 => {},
+                        .RCC_MCODIV_15 => {},
+                        .RCC_MCODIV_16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCODIV_1;
+            };
+            const RCC_MCO2SourceValue: ?RCC_MCO2SourceList = blk: {
+                const conf_item = config.RCC_MCO2Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCO2SOURCE_MPU => {},
+                        .RCC_MCO2SOURCE_AXI => {},
+                        .RCC_MCO2SOURCE_MLAHB => {},
+                        .RCC_MCO2SOURCE_PLL4 => MCO2SOURCE_PLL4 = true,
+                        .RCC_MCO2SOURCE_HSE => MCO2SOURCE_HSE = true,
+                        .RCC_MCO2SOURCE_HSI => MCO2SOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCO2SOURCE_MPU;
+            };
+            const RCC_MCODiv2Value: ?RCC_MCODiv2List = blk: {
+                const conf_item = config.RCC_MCODiv2;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MCODIV_1 => {},
+                        .RCC_MCODIV_2 => {},
+                        .RCC_MCODIV_3 => {},
+                        .RCC_MCODIV_4 => {},
+                        .RCC_MCODIV_5 => {},
+                        .RCC_MCODIV_6 => {},
+                        .RCC_MCODIV_7 => {},
+                        .RCC_MCODIV_8 => {},
+                        .RCC_MCODIV_9 => {},
+                        .RCC_MCODIV_10 => {},
+                        .RCC_MCODIV_11 => {},
+                        .RCC_MCODIV_12 => {},
+                        .RCC_MCODIV_13 => {},
+                        .RCC_MCODIV_14 => {},
+                        .RCC_MCODIV_15 => {},
+                        .RCC_MCODIV_16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MCODIV_1;
+            };
+            const MLAHB_DivValue: ?MLAHB_DivList = blk: {
+                const conf_item = config.MLAHB_Div;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MLAHB_DIV1 => {},
+                        .RCC_MLAHB_DIV2 => {},
+                        .RCC_MLAHB_DIV4 => {},
+                        .RCC_MLAHB_DIV8 => {},
+                        .RCC_MLAHB_DIV16 => {},
+                        .RCC_MLAHB_DIV32 => {},
+                        .RCC_MLAHB_DIV64 => {},
+                        .RCC_MLAHB_DIV128 => {},
+                        .RCC_MLAHB_DIV256 => {},
+                        .RCC_MLAHB_DIV512 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MLAHB_DIV1;
+            };
+            const APB3DIVValue: ?APB3DIVList = blk: {
+                const conf_item = config.APB3DIV;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_APB3_DIV1 => {},
+                        .RCC_APB3_DIV2 => {},
+                        .RCC_APB3_DIV4 => {},
+                        .RCC_APB3_DIV8 => {},
+                        .RCC_APB3_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_APB3_DIV1;
+            };
+            const APB1DIVValue: ?APB1DIVList = blk: {
+                const conf_item = config.APB1DIV;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_APB1_DIV1 => APB1DIV_1 = true,
+                        .RCC_APB1_DIV2 => APB1DIV_2 = true,
+                        .RCC_APB1_DIV4 => APB1DIV_4 = true,
+                        .RCC_APB1_DIV8 => {},
+                        .RCC_APB1_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    APB1DIV_1 = true;
+                    break :blk .RCC_APB1_DIV1;
+                };
+            };
+            const RCC_TIM_G1_PRescaler_SelectionValue: ?RCC_TIM_G1_PRescaler_SelectionList = blk: {
+                const conf_item = config.extra.RCC_TIM_G1_PRescaler_Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIMG1PRES_ACTIVATED => TimG1PrescalerEnabled = true,
+                        .RCC_TIMG1PRES_DEACTIVATED => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIMG1PRES_DEACTIVATED;
+            };
+            const Tim1MulValue: ?f32 = blk: {
+                if (((APB1DIV_1) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_DEACTIVATED, .@"=")))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_DEACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((APB1DIV_1) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
+                    break :blk 1;
+                } else if ((APB1DIV_2) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((APB1DIV_4) and (check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                } else if ((check_ref(@TypeOf(RCC_TIM_G1_PRescaler_SelectionValue), RCC_TIM_G1_PRescaler_SelectionValue, .RCC_TIMG1PRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                }
+                break :blk 2;
+            };
+            const APB2DIVValue: ?APB2DIVList = blk: {
+                const conf_item = config.APB2DIV;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_APB2_DIV1 => APB2DIV_1 = true,
+                        .RCC_APB2_DIV2 => APB2DIV_2 = true,
+                        .RCC_APB2_DIV4 => APB2DIV_4 = true,
+                        .RCC_APB2_DIV8 => {},
+                        .RCC_APB2_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    APB2DIV_1 = true;
+                    break :blk .RCC_APB2_DIV1;
+                };
+            };
+            const RCC_TIM_G2_PRescaler_SelectionValue: ?RCC_TIM_G2_PRescaler_SelectionList = blk: {
+                const conf_item = config.extra.RCC_TIM_G2_PRescaler_Selection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_TIMG2PRES_ACTIVATED => TimG2PrescalerEnabled = true,
+                        .RCC_TIMG2PRES_DEACTIVATED => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_TIMG2PRES_DEACTIVATED;
+            };
+            const Tim2MulValue: ?f32 = blk: {
+                if (((APB2DIV_1) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_DEACTIVATED, .@"=")))) {
+                    break :blk 1;
+                } else if ((check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_DEACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((APB2DIV_1) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
+                    break :blk 1;
+                } else if ((APB2DIV_2) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
+                    break :blk 2;
+                } else if ((APB2DIV_4) and (check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                } else if ((check_ref(@TypeOf(RCC_TIM_G2_PRescaler_SelectionValue), RCC_TIM_G2_PRescaler_SelectionValue, .RCC_TIMG2PRES_ACTIVATED, .@"="))) {
+                    break :blk 4;
+                }
+                break :blk 2;
+            };
+            const PLL12SourceValue: ?PLL12SourceList = blk: {
+                const conf_item = config.PLL12Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_PLL12SOURCE_HSI => PLL12SOURCE_HSI = true,
+                        .RCC_PLL12SOURCE_HSE => PLL12SOURCE_HSE = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    PLL12SOURCE_HSI = true;
+                    break :blk .RCC_PLL12SOURCE_HSI;
+                };
+            };
+            const DIVM1Value: ?f32 = blk: {
+                const config_val = config.DIVM1;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM1",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 64) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM1",
+                            "Else",
+                            "No Extra Log",
+                            64,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVM2Value: ?f32 = blk: {
+                const config_val = config.DIVM2;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM2",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 64) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM2",
+                            "Else",
+                            "No Extra Log",
+                            64,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const PLL3SourceValue: ?PLL3SourceList = blk: {
+                const conf_item = config.PLL3Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_PLL3SOURCE_HSI => PLL3SOURCE_HSI = true,
+                        .RCC_PLL3SOURCE_CSI => PLL3SOURCE_CSI = true,
+                        .RCC_PLL3SOURCE_HSE => PLL3SOURCE_HSE = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    PLL3SOURCE_HSI = true;
+                    break :blk .RCC_PLL3SOURCE_HSI;
+                };
+            };
+            const DIVM3Value: ?f32 = blk: {
+                const config_val = config.DIVM3;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM3",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 64) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM3",
+                            "Else",
+                            "No Extra Log",
+                            64,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const PLL4SourceValue: ?PLL4SourceList = blk: {
+                const conf_item = config.PLL4Source;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_PLL4SOURCE_HSI => PLL4SOURCE_HSI = true,
+                        .RCC_PLL4SOURCE_CSI => PLL4SOURCE_CSI = true,
+                        .RCC_PLL4SOURCE_HSE => PLL4SOURCE_HSE = true,
+                        .RCC_PLL4SOURCE_I2S_CKIN => PLL4SOURCE_I2S_CKIN = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    PLL4SOURCE_HSI = true;
+                    break :blk .RCC_PLL4SOURCE_HSI;
+                };
+            };
+            const DIVM4Value: ?f32 = blk: {
+                const config_val = config.DIVM4;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM4",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 64) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVM4",
+                            "Else",
+                            "No Extra Log",
+                            64,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const MPU_DivValue: ?MPU_DivList = blk: {
+                const conf_item = config.MPU_Div;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_MPU_DIV_OFF => {},
+                        .RCC_MPU_DIV2 => {},
+                        .RCC_MPU_DIV4 => {},
+                        .RCC_MPU_DIV8 => {},
+                        .RCC_MPU_DIV16 => {},
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_MPU_DIV2;
+            };
+            const FreqCk1Value: ?f32 = blk: {
+                break :blk 2;
+            };
+            const DIVN1Value: ?f32 = blk: {
+                const config_val = config.DIVN1;
+                if (config_val) |val| {
+                    if (val < 25) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN1",
+                            "Else",
+                            "No Extra Log",
+                            25,
+                            val,
+                        });
+                    }
+                    if (val > 100) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN1",
+                            "Else",
+                            "No Extra Log",
+                            100,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 50;
+            };
+            const PLL1FRACVValue: ?f32 = if (config.PLL1FRACV) |i| @as(f32, @floatFromInt(i)) else 0;
+            const VCO1DIV2Value: ?f32 = blk: {
+                break :blk 2;
+            };
+            const DIVP1Value: ?f32 = blk: {
+                const config_val = config.DIVP1;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP1",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP1",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const DIVQ1Value: ?f32 = blk: {
+                const config_val = config.DIVQ1;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ1",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ1",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVR1Value: ?f32 = blk: {
+                const config_val = config.DIVR1;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR1",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR1",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const FreqCk2Value: ?f32 = blk: {
+                break :blk 2;
+            };
+            const DIVN2Value: ?f32 = blk: {
+                const config_val = config.DIVN2;
+                if (config_val) |val| {
+                    if (val < 25) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN2",
+                            "Else",
+                            "No Extra Log",
+                            25,
+                            val,
+                        });
+                    }
+                    if (val > 100) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN2",
+                            "Else",
+                            "No Extra Log",
+                            100,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 100;
+            };
+            const PLL2FRACVValue: ?f32 = if (config.PLL2FRACV) |i| @as(f32, @floatFromInt(i)) else 0;
+            const VCO2DIV2Value: ?f32 = blk: {
+                break :blk 2;
+            };
+            const DIVP2Value: ?f32 = blk: {
+                const config_val = config.DIVP2;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP2",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP2",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVQ2Value: ?f32 = blk: {
+                const config_val = config.DIVQ2;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ2",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ2",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVR2Value: ?f32 = blk: {
+                const config_val = config.DIVR2;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR2",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR2",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVN3Value: ?f32 = blk: {
+                const config_val = config.DIVN3;
+                if (config_val) |val| {
+                    if (val < 25) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN3",
+                            "Else",
+                            "No Extra Log",
+                            25,
+                            val,
+                        });
+                    }
+                    if (val > 200) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN3",
+                            "Else",
+                            "No Extra Log",
+                            200,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 50;
+            };
+            const PLL3FRACVValue: ?f32 = if (config.PLL3FRACV) |i| @as(f32, @floatFromInt(i)) else 0;
+            const DIVP3Value: ?f32 = blk: {
+                const config_val = config.DIVP3;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP3",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP3",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVQ3Value: ?f32 = blk: {
+                const config_val = config.DIVQ3;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ3",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ3",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVR3Value: ?f32 = blk: {
+                const config_val = config.DIVR3;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR3",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR3",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 2;
+            };
+            const DIVN4Value: ?f32 = blk: {
+                const config_val = config.DIVN4;
+                if (config_val) |val| {
+                    if (val < 25) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN4",
+                            "Else",
+                            "No Extra Log",
+                            25,
+                            val,
+                        });
+                    }
+                    if (val > 200) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVN4",
+                            "Else",
+                            "No Extra Log",
+                            200,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 50;
+            };
+            const PLL4FRACVValue: ?f32 = if (config.PLL4FRACV) |i| @as(f32, @floatFromInt(i)) else 0;
+            const DIVP4Value: ?f32 = blk: {
+                const config_val = config.DIVP4;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP4",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVP4",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const DIVQ4Value: ?f32 = blk: {
+                const config_val = config.DIVQ4;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ4",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVQ4",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const DIVR4Value: ?f32 = blk: {
+                const config_val = config.DIVR4;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR4",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 128) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "DIVR4",
+                            "Else",
+                            "No Extra Log",
+                            128,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const RCC_RTC_Clock_Source_FROM_HSEValue: ?f32 = blk: {
+                const config_val = config.RCC_RTC_Clock_Source_FROM_HSE;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "RCC_RTC_Clock_Source_FROM_HSE",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 64) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "RCC_RTC_Clock_Source_FROM_HSE",
+                            "Else",
+                            "No Extra Log",
+                            64,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 1;
+            };
+            const RTCClockSelectionValue: ?RTCClockSelectionList = blk: {
+                const conf_item = config.RTCClockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_RTCCLKSOURCE_HSE_DIV => RTCCLKSOURCE_HSE_DIV = true,
+                        .RCC_RTCCLKSOURCE_LSE => RTCCLKSOURCE_LSE = true,
+                        .RCC_RTCCLKSOURCE_LSI => RTCCLKSOURCE_LSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    RTCCLKSOURCE_LSI = true;
+                    break :blk .RCC_RTCCLKSOURCE_LSI;
+                };
+            };
+            const I2C12CLockSelectionValue: ?I2C12CLockSelectionList = blk: {
+                const conf_item = config.I2C12CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_I2C12CLKSOURCE_PCLK1 => I2C12CLKSOURCE_BCLK = true,
+                        .RCC_I2C12CLKSOURCE_PLL4 => I2C12CLKSOURCE_PLL4 = true,
+                        .RCC_I2C12CLKSOURCE_HSI => I2C12CLKSOURCE_HSI = true,
+                        .RCC_I2C12CLKSOURCE_CSI => I2C12CLKSOURCE_CSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    I2C12CLKSOURCE_BCLK = true;
+                    break :blk .RCC_I2C12CLKSOURCE_PCLK1;
+                };
+            };
+            const I2C3CLockSelectionValue: ?I2C3CLockSelectionList = blk: {
+                const conf_item = config.I2C3CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_I2C3CLKSOURCE_PCLK6 => I2C3CLKSOURCE_PCLK6 = true,
+                        .RCC_I2C3CLKSOURCE_PLL4 => I2C3CLKSOURCE_PLL4 = true,
+                        .RCC_I2C3CLKSOURCE_HSI => I2C3CLKSOURCE_HSI = true,
+                        .RCC_I2C3CLKSOURCE_CSI => I2C3CLKSOURCE_CSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    I2C3CLKSOURCE_PCLK6 = true;
+                    break :blk .RCC_I2C3CLKSOURCE_PCLK6;
+                };
+            };
+            const I2C4CLockSelectionValue: ?I2C4CLockSelectionList = blk: {
+                const conf_item = config.I2C4CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_I2C4CLKSOURCE_PCLK6 => I2C4CLKSOURCE_BCLK = true,
+                        .RCC_I2C4CLKSOURCE_PLL4 => I2C4CLKSOURCE_PLL4R = true,
+                        .RCC_I2C4CLKSOURCE_HSI => I2C4CLKSOURCE_HSI = true,
+                        .RCC_I2C4CLKSOURCE_CSI => I2C4CLKSOURCE_CSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    I2C4CLKSOURCE_BCLK = true;
+                    break :blk .RCC_I2C4CLKSOURCE_PCLK6;
+                };
+            };
+            const I2C5CLockSelectionValue: ?I2C5CLockSelectionList = blk: {
+                const conf_item = config.I2C5CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_I2C5CLKSOURCE_PCLK6 => I2C5CLKSOURCE_PCLK6 = true,
+                        .RCC_I2C5CLKSOURCE_PLL4 => I2C5CLKSOURCE_PLL4 = true,
+                        .RCC_I2C5CLKSOURCE_HSI => I2C5CLKSOURCE_HSI = true,
+                        .RCC_I2C5CLKSOURCE_CSI => I2C5CLKSOURCE_CSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    I2C5CLKSOURCE_PCLK6 = true;
+                    break :blk .RCC_I2C5CLKSOURCE_PCLK6;
+                };
+            };
+            const SPDIFCLockSelectionValue: ?SPDIFCLockSelectionList = blk: {
+                const conf_item = config.SPDIFCLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SPDIFRXCLKSOURCE_PLL4 => SPDIFRXCLKSOURCE_PLL4 = true,
+                        .RCC_SPDIFRXCLKSOURCE_PLL3 => SPDIFRXCLKSOURCE_PLL3 = true,
+                        .RCC_SPDIFRXCLKSOURCE_HSI => SPDIFRXCLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SPDIFRXCLKSOURCE_PLL4 = true;
+                    break :blk .RCC_SPDIFRXCLKSOURCE_PLL4;
+                };
+            };
+            const QSPICLockSelectionValue: ?QSPICLockSelectionList = blk: {
+                const conf_item = config.QSPICLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_QSPICLKSOURCE_ACLK => QSPICLKSOURCE_BCLK = true,
+                        .RCC_QSPICLKSOURCE_PLL4 => QSPICLKSOURCE_PLL4 = true,
+                        .RCC_QSPICLKSOURCE_PLL3 => QSPICLKSOURCE_PLL3 = true,
+                        .RCC_QSPICLKSOURCE_PER => QSPICLKSOURCE_PER = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    QSPICLKSOURCE_BCLK = true;
+                    break :blk .RCC_QSPICLKSOURCE_ACLK;
+                };
+            };
+            const FMCCLockSelectionValue: ?FMCCLockSelectionList = blk: {
+                const conf_item = config.FMCCLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_FMCCLKSOURCE_ACLK => FMCCLKSOURCE_BCLK = true,
+                        .RCC_FMCCLKSOURCE_PLL3 => FMCCLKSOURCE_PLL3 = true,
+                        .RCC_FMCCLKSOURCE_PLL4 => FMCCLKSOURCE_PLL4 = true,
+                        .RCC_FMCCLKSOURCE_PER => FMCCLKSOURCE_PER = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    FMCCLKSOURCE_BCLK = true;
+                    break :blk .RCC_FMCCLKSOURCE_ACLK;
+                };
+            };
+            const SDMMC1CLockSelectionValue: ?SDMMC1CLockSelectionList = blk: {
+                const conf_item = config.SDMMC1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SDMMC1CLKSOURCE_HCLK6 => {},
+                        .RCC_SDMMC1CLKSOURCE_PLL3 => SDMMC1CLKSOURCE_PLL3 = true,
+                        .RCC_SDMMC1CLKSOURCE_PLL4 => SDMMC1CLKSOURCE_PLL4 = true,
+                        .RCC_SDMMC1CLKSOURCE_HSI => SDMMC1CLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SDMMC1CLKSOURCE_HCLK6;
+            };
+            const SDMMC2CLockSelectionValue: ?SDMMC2CLockSelectionList = blk: {
+                const conf_item = config.SDMMC2CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SDMMC2CLKSOURCE_HCLK6 => {},
+                        .RCC_SDMMC2CLKSOURCE_PLL3 => SDMMC2CLKSOURCE_PLL3 = true,
+                        .RCC_SDMMC2CLKSOURCE_PLL4 => SDMMC2CLKSOURCE_PLL4 = true,
+                        .RCC_SDMMC2CLKSOURCE_HSI => SDMMC2CLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SDMMC2CLKSOURCE_HCLK6;
+            };
+            const STGENCLockSelectionValue: ?STGENCLockSelectionList = blk: {
+                const conf_item = config.STGENCLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_STGENCLKSOURCE_HSI => STGENCLKSOURCE_HSI = true,
+                        .RCC_STGENCLKSOURCE_HSE => STGENCLKSOURCE_HSE = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    STGENCLKSOURCE_HSI = true;
+                    break :blk .RCC_STGENCLKSOURCE_HSI;
+                };
+            };
+            const LPTIM45CLockSelectionValue: ?LPTIM45CLockSelectionList = blk: {
+                const conf_item = config.LPTIM45CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_LPTIM45CLKSOURCE_PCLK3 => LPTIM45CLKSOURCE_BCLK = true,
+                        .RCC_LPTIM45CLKSOURCE_PLL4 => LPTIM45CLKSOURCE_PLL4 = true,
+                        .RCC_LPTIM45CLKSOURCE_PLL3 => LPTIM45CLKSOURCE_PLL3 = true,
+                        .RCC_LPTIM45CLKSOURCE_LSE => LPTIM45CLKSOURCE_LSE = true,
+                        .RCC_LPTIM45CLKSOURCE_LSI => LPTIM45CLKSOURCE_LSI = true,
+                        .RCC_LPTIM45CLKSOURCE_PER => LPTIM45CLKSOURCE_PER = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    LPTIM45CLKSOURCE_BCLK = true;
+                    break :blk .RCC_LPTIM45CLKSOURCE_PCLK3;
+                };
+            };
+            const LPTIM2CLockSelectionValue: ?LPTIM2CLockSelectionList = blk: {
+                const conf_item = config.LPTIM2CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_LPTIM2CLKSOURCE_PCLK3 => LPTIM2CLKSOURCE_BCLK = true,
+                        .RCC_LPTIM2CLKSOURCE_PLL4 => LPTIM2CLKSOURCE_PLL4 = true,
+                        .RCC_LPTIM2CLKSOURCE_PER => LPTIM2CLKSOURCE_PER = true,
+                        .RCC_LPTIM2CLKSOURCE_LSE => LPTIM2CLKSOURCE_LSE = true,
+                        .RCC_LPTIM2CLKSOURCE_LSI => LPTIM2CLKSOURCE_LSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    LPTIM2CLKSOURCE_BCLK = true;
+                    break :blk .RCC_LPTIM2CLKSOURCE_PCLK3;
+                };
+            };
+            const LPTIM1CLockSelectionValue: ?LPTIM1CLockSelectionList = blk: {
+                const conf_item = config.LPTIM1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_LPTIM1CLKSOURCE_PCLK1 => LPTIM1CLKSOURCE_BCLK = true,
+                        .RCC_LPTIM1CLKSOURCE_PLL4 => LPTIM1CLKSOURCE_PLL4 = true,
+                        .RCC_LPTIM1CLKSOURCE_PLL3 => LPTIM1CLKSOURCE_PLL3 = true,
+                        .RCC_LPTIM1CLKSOURCE_LSE => LPTIM1CLKSOURCE_LSE = true,
+                        .RCC_LPTIM1CLKSOURCE_LSI => LPTIM1CLKSOURCE_LSI = true,
+                        .RCC_LPTIM1CLKSOURCE_PER => LPTIM1CLKSOURCE_PER = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    LPTIM1CLKSOURCE_BCLK = true;
+                    break :blk .RCC_LPTIM1CLKSOURCE_PCLK1;
+                };
+            };
+            const USART1CLockSelectionValue: ?USART1CLockSelectionList = blk: {
+                const conf_item = config.USART1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_USART1CLKSOURCE_PCLK6 => USART1CLKSOURCE_BCLK = true,
+                        .RCC_USART1CLKSOURCE_PLL4 => USART1CLKSOURCE_PLL4 = true,
+                        .RCC_USART1CLKSOURCE_PLL3 => USART1CLKSOURCE_PLL3 = true,
+                        .RCC_USART1CLKSOURCE_HSE => USART1CLKSOURCE_HSE = true,
+                        .RCC_USART1CLKSOURCE_CSI => USART1CLKSOURCE_CSI = true,
+                        .RCC_USART1CLKSOURCE_HSI => USART1CLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    USART1CLKSOURCE_BCLK = true;
+                    break :blk .RCC_USART1CLKSOURCE_PCLK6;
+                };
+            };
+            const USART2CLockSelectionValue: ?USART2CLockSelectionList = blk: {
+                const conf_item = config.USART2CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_USART2CLKSOURCE_PCLK6 => {},
+                        .RCC_USART2CLKSOURCE_PLL4 => UART2_PLL4 = true,
+                        .RCC_USART2CLKSOURCE_HSE => UART2_HSE = true,
+                        .RCC_USART2CLKSOURCE_CSI => UART2_CSI = true,
+                        .RCC_USART2CLKSOURCE_HSI => UART2_HSI = true,
+                        .RCC_USART2CLKSOURCE_PLL3 => UART2_PLL3Q = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_USART2CLKSOURCE_PCLK6;
+            };
+            const USART35CLockSelectionValue: ?USART35CLockSelectionList = blk: {
+                const conf_item = config.USART35CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_UART35CLKSOURCE_PCLK1 => UART35CLKSOURCE_BCLK = true,
+                        .RCC_UART35CLKSOURCE_PLL4 => UART35CLKSOURCE_PLL4 = true,
+                        .RCC_UART35CLKSOURCE_HSE => UART35CLKSOURCE_HSE = true,
+                        .RCC_UART35CLKSOURCE_CSI => UART35CLKSOURCE_CSI = true,
+                        .RCC_UART35CLKSOURCE_HSI => UART35CLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    UART35CLKSOURCE_BCLK = true;
+                    break :blk .RCC_UART35CLKSOURCE_PCLK1;
+                };
+            };
+            const USART6CLockSelectionValue: ?USART6CLockSelectionList = blk: {
+                const conf_item = config.USART6CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_USART6CLKSOURCE_PCLK2 => USART6CLKSOURCE_BCLK = true,
+                        .RCC_USART6CLKSOURCE_PLL4 => USART6CLKSOURCE_PLL4 = true,
+                        .RCC_USART6CLKSOURCE_HSE => USART6CLKSOURCE_HSE = true,
+                        .RCC_USART6CLKSOURCE_CSI => USART6CLKSOURCE_CSI = true,
+                        .RCC_USART6CLKSOURCE_HSI => USART6CLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    USART6CLKSOURCE_BCLK = true;
+                    break :blk .RCC_USART6CLKSOURCE_PCLK2;
+                };
+            };
+            const UART78CLockSelectionValue: ?UART78CLockSelectionList = blk: {
+                const conf_item = config.UART78CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_UART78CLKSOURCE_PCLK1 => UART78CLKSOURCE_BCLK = true,
+                        .RCC_UART78CLKSOURCE_PLL4 => UART78CLKSOURCE_PLL4 = true,
+                        .RCC_UART78CLKSOURCE_HSE => UART78CLKSOURCE_HSE = true,
+                        .RCC_UART78CLKSOURCE_CSI => UART78CLKSOURCE_CSI = true,
+                        .RCC_UART78CLKSOURCE_HSI => UART78CLKSOURCE_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    UART78CLKSOURCE_BCLK = true;
+                    break :blk .RCC_UART78CLKSOURCE_PCLK1;
+                };
+            };
+            const RNG1CLockSelectionValue: ?RNG1CLockSelectionList = blk: {
+                const conf_item = config.RNG1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_RNG1CLKSOURCE_CSI => RNG1CLKSOURCE_CSI = true,
+                        .RCC_RNG1CLKSOURCE_PLL4 => RNG1CLKSOURCE_PLL4 = true,
+                        .RCC_RNG1CLKSOURCE_LSI => RNG1CLKSOURCE_LSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    RNG1CLKSOURCE_CSI = true;
+                    break :blk .RCC_RNG1CLKSOURCE_CSI;
+                };
+            };
+            const DCMICLockSelectionValue: ?DCMICLockSelectionList = blk: {
+                const conf_item = config.DCMICLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_DCMIPPCLKSOURCE_ACLK => {},
+                        .RCC_DCMIPPCLKSOURCE_PLL2 => DCMICLKSOURCE_PLL2Q = true,
+                        .RCC_DCMIPPCLKSOURCE_PLL4 => DCMICLKSOURCE_PLL4P = true,
+                        .RCC_DCMIPPCLKSOURCE_PER => DCMICLKSOURCE_CKPER = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_DCMIPPCLKSOURCE_ACLK;
+            };
+            const SAESCLockSelectionValue: ?SAESCLockSelectionList = blk: {
+                const conf_item = config.SAESCLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SAESCLKSOURCE_ACLK => {},
+                        .RCC_SAESCLKSOURCE_PER => SAES_CKPER = true,
+                        .RCC_SAESCLKSOURCE_PLL4 => SAES_PLL4R = true,
+                        .RCC_SAESCLKSOURCE_LSI => SAES_LSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SAESCLKSOURCE_ACLK;
+            };
+            const LPTIM3CLockSelectionValue: ?LPTIM3CLockSelectionList = blk: {
+                const conf_item = config.LPTIM3CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_LPTIM3CLKSOURCE_PCLK3 => LPTIM3CLKSOURCE_BCLK = true,
+                        .RCC_LPTIM3CLKSOURCE_PLL4 => LPTIM3CLKSOURCE_PLL4 = true,
+                        .RCC_LPTIM3CLKSOURCE_PER => LPTIM3CLKSOURCE_PER = true,
+                        .RCC_LPTIM3CLKSOURCE_LSE => LPTIM3CLKSOURCE_LSE = true,
+                        .RCC_LPTIM3CLKSOURCE_LSI => LPTIM3CLKSOURCE_LSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    LPTIM3CLKSOURCE_BCLK = true;
+                    break :blk .RCC_LPTIM3CLKSOURCE_PCLK3;
+                };
+            };
+            const SPI4CLockSelectionValue: ?SPI4CLockSelectionList = blk: {
+                const conf_item = config.SPI4CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SPI4CLKSOURCE_PCLK6 => {},
+                        .RCC_SPI4CLKSOURCE_PLL4 => SPI4CLKSOURCE_PLL4 = true,
+                        .RCC_SPI4CLKSOURCE_HSI => SPI4CLKSOURCE_HSI = true,
+                        .RCC_SPI4CLKSOURCE_CSI => SPI4CLKSOURCE_CSI = true,
+                        .RCC_SPI4CLKSOURCE_HSE => SPI4CLKSOURCE_HSE = true,
+                        .RCC_SPI4CLKSOURCE_I2SCKIN => SPI4_I2SCKIN = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SPI4CLKSOURCE_PCLK6;
+            };
+            const SAI2CLockSelectionValue: ?SAI2CLockSelectionList = blk: {
+                const conf_item = config.SAI2CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SAI2CLKSOURCE_PLL4 => SAI2CLKSOURCE_PLL4 = true,
+                        .RCC_SAI2CLKSOURCE_PLL3_Q => SAI2CLKSOURCE_PLL3 = true,
+                        .RCC_SAI2CLKSOURCE_I2SCKIN => SAI2CLKSOURCE_I2SCKIN = true,
+                        .RCC_SAI2CLKSOURCE_PER => SAI2CLKSOURCE_PER = true,
+                        .RCC_SAI2CLKSOURCE_SPDIF => SAI2CLKSOURCE_SPDIF = true,
+                        .RCC_SAI2CLKSOURCE_PLL3_R => SAI2CLKSOURCE_PLL3_R = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SAI2CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_SAI2CLKSOURCE_PLL4;
+                };
+            };
+            const USART4CLockSelectionValue: ?USART4CLockSelectionList = blk: {
+                const conf_item = config.USART4CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_UART4CLKSOURCE_PCLK1 => UART4_PCLK1 = true,
+                        .RCC_UART4CLKSOURCE_PLL4 => UART4_PLL4 = true,
+                        .RCC_UART4CLKSOURCE_HSE => UART4_HSE = true,
+                        .RCC_UART4CLKSOURCE_CSI => UART4_CSI = true,
+                        .RCC_UART4CLKSOURCE_HSI => UART4_HSI = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    UART4_PCLK1 = true;
+                    break :blk .RCC_UART4CLKSOURCE_PCLK1;
+                };
+            };
+            const SPI1CLockSelectionValue: ?SPI1CLockSelectionList = blk: {
+                const conf_item = config.SPI1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SPI1CLKSOURCE_PLL4 => SPI1CLKSOURCE_PLL4 = true,
+                        .RCC_SPI1CLKSOURCE_PLL3_Q => SPI1CLKSOURCE_PLL3 = true,
+                        .RCC_SPI1CLKSOURCE_I2SCKIN => SPI1CLKSOURCE_I2SCKIN = true,
+                        .RCC_SPI1CLKSOURCE_PER => SPI1CLKSOURCE_PER = true,
+                        .RCC_SPI1CLKSOURCE_PLL3_R => SPI1CLKSOURCE_PLL3_R = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SPI1CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_SPI1CLKSOURCE_PLL4;
+                };
+            };
+            const SPI23CLockSelectionValue: ?SPI23CLockSelectionList = blk: {
+                const conf_item = config.SPI23CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SPI23CLKSOURCE_PLL4 => SPI23CLKSOURCE_PLL4 = true,
+                        .RCC_SPI23CLKSOURCE_PLL3_Q => SPI23CLKSOURCE_PLL3 = true,
+                        .RCC_SPI23CLKSOURCE_I2SCKIN => SPI23CLKSOURCE_I2SCKIN = true,
+                        .RCC_SPI23CLKSOURCE_PER => SPI23CLKSOURCE_PER = true,
+                        .RCC_SPI23CLKSOURCE_PLL3_R => SPI23CLKSOURCE_PLL3_R = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SPI23CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_SPI23CLKSOURCE_PLL4;
+                };
+            };
+            const SAI1CLockSelectionValue: ?SAI1CLockSelectionList = blk: {
+                const conf_item = config.SAI1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SAI1CLKSOURCE_PLL4 => SAI1CLKSOURCE_PLL4 = true,
+                        .RCC_SAI1CLKSOURCE_PLL3_Q => SAI1CLKSOURCE_PLL3 = true,
+                        .RCC_SAI1CLKSOURCE_I2SCKIN => SAI1CLKSOURCE_I2SCKIN = true,
+                        .RCC_SAI1CLKSOURCE_PER => SAI1CLKSOURCE_PER = true,
+                        .RCC_SAI1CLKSOURCE_PLL3_R => SAI1CLKSOURCE_PLL3_R = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    SAI1CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_SAI1CLKSOURCE_PLL4;
+                };
+            };
+            const SPI5CLockSelectionValue: ?SPI5CLockSelectionList = blk: {
+                const conf_item = config.SPI5CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_SPI5CLKSOURCE_PCLK6 => {},
+                        .RCC_SPI5CLKSOURCE_PLL4 => SPI5CLKSOURCE_PLL4 = true,
+                        .RCC_SPI5CLKSOURCE_HSI => SPI5CLKSOURCE_HSI = true,
+                        .RCC_SPI5CLKSOURCE_CSI => SPI5CLKSOURCE_CSI = true,
+                        .RCC_SPI5CLKSOURCE_HSE => SPI5CLKSOURCE_HSE = true,
+                    }
+                }
+
+                break :blk conf_item orelse .RCC_SPI5CLKSOURCE_PCLK6;
+            };
+            const FDCANCLockSelectionValue: ?FDCANCLockSelectionList = blk: {
+                const conf_item = config.FDCANCLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_FDCANCLKSOURCE_HSE => FDCANCLKSOURCE_HSE = true,
+                        .RCC_FDCANCLKSOURCE_PLL3 => FDCANCLKSOURCE_PLL3 = true,
+                        .RCC_FDCANCLKSOURCE_PLL4_Q => FDCANCLKSOURCE_PLL4 = true,
+                        .RCC_FDCANCLKSOURCE_PLL4_R => FDCANCLKSOURCE_PLL4_R = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    FDCANCLKSOURCE_HSE = true;
+                    break :blk .RCC_FDCANCLKSOURCE_HSE;
+                };
+            };
+            const ETH1CLockSelectionValue: ?ETH1CLockSelectionList = blk: {
+                const conf_item = config.ETH1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_ETH1CLKSOURCE_PLL4 => ETHCLKSOURCE_PLL4 = true,
+                        .RCC_ETH1CLKSOURCE_PLL3 => ETHCLKSOURCE_PLL3 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    ETHCLKSOURCE_PLL4 = true;
+                    break :blk .RCC_ETH1CLKSOURCE_PLL4;
+                };
+            };
+            const ETH2CLockSelectionValue: ?ETH2CLockSelectionList = blk: {
+                const conf_item = config.ETH2CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_ETH2CLKSOURCE_PLL4 => ETH2CLKSOURCE_PLL4 = true,
+                        .RCC_ETH2CLKSOURCE_PLL3 => ETH2CLKSOURCE_PLL3 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    ETH2CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_ETH2CLKSOURCE_PLL4;
+                };
+            };
+            const ADC2CLockSelectionValue: ?ADC2CLockSelectionList = blk: {
+                const conf_item = config.ADC2CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_ADC2CLKSOURCE_PLL4 => ADC2CLKSOURCE_PLL4 = true,
+                        .RCC_ADC2CLKSOURCE_PER => ADC2CLKSOURCE_PER = true,
+                        .RCC_ADC2CLKSOURCE_PLL3 => ADC2CLKSOURCE_PLL3 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    ADC2CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_ADC2CLKSOURCE_PLL4;
+                };
+            };
+            const ADC1CLockSelectionValue: ?ADC1CLockSelectionList = blk: {
+                const conf_item = config.ADC1CLockSelection;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_ADC1CLKSOURCE_PLL4 => ADC1CLKSOURCE_PLL4 = true,
+                        .RCC_ADC1CLKSOURCE_PER => ADC1CLKSOURCE_PER = true,
+                        .RCC_ADC1CLKSOURCE_PLL3 => ADC1CLKSOURCE_PLL3 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    ADC1CLKSOURCE_PLL4 = true;
+                    break :blk .RCC_ADC1CLKSOURCE_PLL4;
+                };
+            };
+            const RCC_USBPHY_Clock_Source_FROM_HSEValue: ?RCC_USBPHY_Clock_Source_FROM_HSEList = blk: {
+                const item: RCC_USBPHY_Clock_Source_FROM_HSEList = .RCC_USBPHYCLKSOURCE_HSE2;
+                break :blk item;
+            };
+            const USBPHYCLKSourceValue: ?USBPHYCLKSourceList = blk: {
+                const conf_item = config.USBPHYCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_USBPHYCLKSOURCE_HSE2 => USBPHYCLKSOURCE_HSE2 = true,
+                        .RCC_USBPHYCLKSOURCE_HSE => USBPHYCLKSOURCE_HSE = true,
+                        .RCC_USBPHYCLKSOURCE_PLL4 => USBPHYCLKSOURCE_PLL4 = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    USBPHYCLKSOURCE_PLL4 = true;
+                    break :blk .RCC_USBPHYCLKSOURCE_PLL4;
+                };
+            };
+            const USB_PHY_VALUEValue: ?f32 = blk: {
+                break :blk 4.8e7;
+            };
+            const USBOCLKSourceValue: ?USBOCLKSourceList = blk: {
+                const conf_item = config.USBOCLKSource;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .RCC_USBOCLKSOURCE_PLL4 => USBOCLKSOURCE_PLL4 = true,
+                        .RCC_USBOCLKSOURCE_PHY => USBOCLKSOURCE_PHY = true,
+                    }
+                }
+
+                break :blk conf_item orelse {
+                    USBOCLKSOURCE_PLL4 = true;
+                    break :blk .RCC_USBOCLKSOURCE_PLL4;
+                };
+            };
+            const HSICalibrationValueValue: ?f32 = blk: {
+                const config_val = config.extra.HSICalibrationValue;
+                if (config_val) |val| {
+                    if (val < 0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSICalibrationValue",
+                            "Else",
+                            "No Extra Log",
+                            0,
+                            val,
+                        });
+                    }
+                    if (val > 127) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSICalibrationValue",
+                            "Else",
+                            "No Extra Log",
+                            127,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
+            };
+            const CSICalibrationValueValue: ?f32 = blk: {
+                const config_val = config.extra.CSICalibrationValue;
+                if (config_val) |val| {
+                    if (val < 0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "CSICalibrationValue",
+                            "Else",
+                            "No Extra Log",
+                            0,
+                            val,
+                        });
+                    }
+                    if (val > 31) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "CSICalibrationValue",
+                            "Else",
+                            "No Extra Log",
+                            31,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 16;
+            };
+            const LSE_TimoutValue: ?f32 = blk: {
+                const config_val = config.extra.LSE_Timout;
+                if (config_val) |val| {
+                    if (val < 1) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_Timout",
+                            "Else",
+                            "No Extra Log",
+                            1,
+                            val,
+                        });
+                    }
+                    if (val > 1073741823) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {d} found: {d}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_Timout",
+                            "Else",
+                            "No Extra Log",
+                            1073741823,
+                            val,
+                        });
+                    }
+                }
+                break :blk if (config_val) |i| @as(f32, @floatFromInt(i)) else 5000;
+            };
+            const LSEUsedValue: ?f32 = blk: {
+                if (check_MCU("CRSActivatedSourceLSE") or ((check_ref(@TypeOf(RTCClockSelectionValue), RTCClockSelectionValue, .RCC_RTCCLKSOURCE_LSE, .@"=")) and (config.flags.RTC_Used)) or (config.flags.MCO1Config and MCO1SOURCE_LSE) or (check_MCU("CECCLKSOURCE_LSE") and config.flags.CECUsed_ForRCC) or (LPTIM2CLKSOURCE_LSE and (config.flags.LPTIM2Used_ForRCC)) or (LPTIM3CLKSOURCE_LSE and config.flags.LPTIM3Used_ForRCC) or (LPTIM45CLKSOURCE_LSE and (config.flags.LPTIM3Used_ForRCC or config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC)) or LPTIM1CLKSOURCE_LSE and config.flags.LPTIM1Used_ForRCC) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const LSE_Drive_CapabilityValue: ?LSE_Drive_CapabilityList = blk: {
+                if (config.flags.LSEOscillator and (check_ref(@TypeOf(LSEUsedValue), LSEUsedValue, 1, .@"="))) {
+                    const conf_item = config.extra.LSE_Drive_Capability;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .RCC_LSEDRIVE_LOW => {},
+                            .RCC_LSEDRIVE_MEDIUMLOW => {},
+                            .RCC_LSEDRIVE_MEDIUMHIGH => {},
+                            .RCC_LSEDRIVE_HIGH => {},
+                        }
+                    }
+
+                    break :blk conf_item orelse .RCC_LSEDRIVE_MEDIUMHIGH;
+                }
+                if (config.extra.LSE_Drive_Capability) |_| {
+                    return comptime_fail_or_error(error.InvalidConfig,
+                        \\
+                        \\Error on {s} | expr: {s} diagnostic: {s} 
+                        \\Value should be null.
+                        \\note: some configurations are invalid in certain cases.
+                        \\
+                        \\
+                    , .{ "LSE_Drive_Capability", "Else", "No Extra Log" });
+                }
+                break :blk null;
+            };
+            const PLL1UserDefinedConfigValue: ?PLL1UserDefinedConfigList = blk: {
+                const conf_item = config.extra.PLL1UserDefinedConfig;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .false => {},
+                        .true => {},
+                    }
+                }
+
+                break :blk conf_item orelse .false;
+            };
+            const PLL1UsedValue: ?f32 = blk: {
+                if ((MPUSOURCE_PLL1 or MPUSOURCE_MPUDIV) and (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"="))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL2UsedValue: ?f32 = blk: {
+                if (DCMICLKSOURCE_PLL2Q and config.flags.DCMIPP_Used or AXISSOURCE_PLL2 or check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3") or config.flags.GPUUsed_ForRCC) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL3UsedValue: ?f32 = blk: {
+                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC or ADC1CLKSOURCE_PLL3 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or ADC2CLKSOURCE_PLL3 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or SPI1CLKSOURCE_PLL3_R and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL3_R and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or SPI23CLKSOURCE_PLL3 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or ETHCLKSOURCE_PLL3 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL3 and config.flags.ETH2_Used or SPI1CLKSOURCE_PLL3 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or MLAHBS_PLL3 or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL3 or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 or check_MCU("SDMMC3CLKSOURCE_PLL3") and config.flags.SDMMC3Used_ForRCC or LPTIM45CLKSOURCE_PLL3 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM1CLKSOURCE_PLL3 and config.flags.LPTIM1Used_ForRCC or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL3") and config.flags.SPI6Used_ForRCC or SAI2CLKSOURCE_PLL3 and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or SAI1CLKSOURCE_PLL3 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or check_MCU("SAI3CLKSOURCE_PLL3") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or FDCANCLKSOURCE_PLL3 and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or SAI1CLKSOURCE_PLL3_R and ((config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC) or SAI2CLKSOURCE_PLL3_R and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or check_MCU("SAI3CLKSOURCE_PLL3_R") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or check_MCU("SAI4CLKSOURCE_PLL3_R") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL4UsedValue: ?f32 = blk: {
+                if (SAES_PLL4R and config.flags.SAES_Used or DCMICLKSOURCE_PLL4P and config.flags.DCMIPP_Used or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC or ETHCLKSOURCE_PLL4 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL4 and config.flags.ETH2_Used or config.flags.MCO2Config and MCO2SOURCE_PLL4 or config.flags.LTDCUsed_ForRCC or I2C12CLKSOURCE_PLL4 and (config.flags.I2C2Used_ForRCC or config.flags.I2C1Used_ForRCC) or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL4 or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 or check_MCU("SDMMC3CLKSOURCE_PLL4") and config.flags.SDMMC3Used_ForRCC or LPTIM45CLKSOURCE_PLL4 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM2CLKSOURCE_PLL4 and config.flags.LPTIM2Used_ForRCC or LPTIM3CLKSOURCE_PLL4 and config.flags.LPTIM3Used_ForRCC or LPTIM1CLKSOURCE_PLL4 and config.flags.LPTIM1Used_ForRCC or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC or UART2_PLL4 and config.flags.USART2Used_ForRCC or UART4_PLL4 and config.flags.UART4Used_ForRCC or UART35CLKSOURCE_PLL4 and (config.flags.USART3Used_ForRCC or config.flags.UART5Used_ForRCC) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC or UART78CLKSOURCE_PLL4 and (config.flags.UART7Used_ForRCC or config.flags.UART8Used_ForRCC) or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL4") and config.flags.SPI6Used_ForRCC or SPI4CLKSOURCE_PLL4 and (config.flags.SPI4Used_ForRCC or config.flags.I2S4Used_ForRCC) or SPI5CLKSOURCE_PLL4 and config.flags.SPI5Used_ForRCC or (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_PLL4 or check_MCU("SAI4CLKSOURCE_PLL4") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC) or SPI1CLKSOURCE_PLL4 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL4 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or SAI1CLKSOURCE_PLL4 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or check_MCU("SAI3CLKSOURCE_PLL4") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or (FDCANCLKSOURCE_PLL4 or FDCANCLKSOURCE_PLL4_R) and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or ADC1CLKSOURCE_PLL4 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or ADC2CLKSOURCE_PLL4 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or USBPHYCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC or config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used) or USBOCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL1CSGValue: ?PLL1CSGList = blk: {
+                const conf_item = config.PLL1CSG;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .true => {},
+                        .false => {},
+                    }
+                }
+
+                break :blk conf_item orelse .false;
+            };
+            const PLL2CSGValue: ?PLL2CSGList = blk: {
+                const conf_item = config.PLL2CSG;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .true => {},
+                        .false => {},
+                    }
+                }
+
+                break :blk conf_item orelse .false;
+            };
+            const PLL3CSGValue: ?PLL3CSGList = blk: {
+                const conf_item = config.PLL3CSG;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .true => {},
+                        .false => {},
+                    }
+                }
+
+                break :blk conf_item orelse .false;
+            };
+            const PLL4CSGValue: ?PLL4CSGList = blk: {
+                const conf_item = config.PLL4CSG;
+                if (conf_item) |item| {
+                    switch (item) {
+                        .true => {},
+                        .false => {},
+                    }
+                }
+
+                break :blk conf_item orelse .false;
+            };
+            const EnableHSEValue: ?EnableHSEList = blk: {
+                if ((config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
+                    const item: EnableHSEList = .true;
+                    break :blk item;
+                }
+                const item: EnableHSEList = .false;
+                break :blk item;
+            };
+            const EnableLSEValue: ?EnableLSEList = blk: {
+                if ((config.flags.LSEOscillator or config.flags.LSEByPass or config.flags.LSEDIGByPass)) {
+                    const item: EnableLSEList = .true;
+                    break :blk item;
+                }
+                const item: EnableLSEList = .false;
+                break :blk item;
+            };
+            const ExtClockEnableValue: ?ExtClockEnableList = blk: {
+                if (config.flags.AudioClockConfig) {
+                    const item: ExtClockEnableList = .true;
+                    break :blk item;
+                }
+                const item: ExtClockEnableList = .false;
+                break :blk item;
+            };
+            const PLL1UserDefinedConfigEnableValue: ?PLL1UserDefinedConfigEnableList = blk: {
+                if (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"=")) {
+                    const item: PLL1UserDefinedConfigEnableList = .true;
+                    break :blk item;
+                }
+                const item: PLL1UserDefinedConfigEnableList = .false;
+                break :blk item;
+            };
+            const cKPerEnableValue: ?cKPerEnableList = blk: {
+                if (config.flags.SAES_Used or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX")) or config.flags.DCMIPP_Used or config.flags.LPTIM1Used_ForRCC or config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC or config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC or config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC or config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC or config.flags.LPTIM2Used_ForRCC or check_MCU("QSPI_Selected") or (config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC) or (config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC) or config.flags.FMCUsed_ForRCC or config.flags.LPTIM3Used_ForRCC or config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) {
+                    const item: cKPerEnableList = .true;
+                    break :blk item;
+                }
+                const item: cKPerEnableList = .false;
+                break :blk item;
+            };
+            const DACEnableValue: ?DACEnableList = blk: {
+                if (check_MCU("DAC")) {
+                    const item: DACEnableList = .true;
+                    break :blk item;
+                }
+                const item: DACEnableList = .false;
+                break :blk item;
+            };
+            const MCO1OutPutEnableValue: ?MCO1OutPutEnableList = blk: {
+                if (config.flags.MCO1Config) {
+                    const item: MCO1OutPutEnableList = .true;
+                    break :blk item;
+                }
+                const item: MCO1OutPutEnableList = .false;
+                break :blk item;
+            };
+            const MCO2OutPutEnableValue: ?MCO2OutPutEnableList = blk: {
+                if (config.flags.MCO2Config) {
+                    const item: MCO2OutPutEnableList = .true;
+                    break :blk item;
+                }
+                const item: MCO2OutPutEnableList = .false;
+                break :blk item;
+            };
+            const DFSDMEnableValue: ?DFSDMEnableList = blk: {
+                if (config.flags.DFSDM1Used_ForRCC) {
+                    const item: DFSDMEnableList = .true;
+                    break :blk item;
+                }
+                const item: DFSDMEnableList = .false;
+                break :blk item;
+            };
+            const DCMIEnableValue: ?DCMIEnableList = blk: {
+                if (config.flags.DCMIPP_Used) {
+                    const item: DCMIEnableList = .true;
+                    break :blk item;
+                }
+                const item: DCMIEnableList = .false;
+                break :blk item;
+            };
+            const DDREnableValue: ?DDREnableList = blk: {
+                if (check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
+                    const item: DDREnableList = .true;
+                    break :blk item;
+                }
+                const item: DDREnableList = .false;
+                break :blk item;
+            };
+            const USART2EnableValue: ?USART2EnableList = blk: {
+                if (config.flags.USART2Used_ForRCC) {
+                    const item: USART2EnableList = .true;
+                    break :blk item;
+                }
+                const item: USART2EnableList = .false;
+                break :blk item;
+            };
+            const ADC2EnableValue: ?ADC2EnableList = blk: {
+                if ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) {
+                    const item: ADC2EnableList = .true;
+                    break :blk item;
+                }
+                const item: ADC2EnableList = .false;
+                break :blk item;
+            };
+            const ADC1EnableValue: ?ADC1EnableList = blk: {
+                if ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) {
+                    const item: ADC1EnableList = .true;
+                    break :blk item;
+                }
+                const item: ADC1EnableList = .false;
+                break :blk item;
+            };
+            const LPTIM1EnableValue: ?LPTIM1EnableList = blk: {
+                if (config.flags.LPTIM1Used_ForRCC) {
+                    const item: LPTIM1EnableList = .true;
+                    break :blk item;
+                }
+                const item: LPTIM1EnableList = .false;
+                break :blk item;
+            };
+            const ETH1EnableValue: ?ETH1EnableList = blk: {
+                if (config.flags.ETH1_Used) {
+                    const item: ETH1EnableList = .true;
+                    break :blk item;
+                }
+                const item: ETH1EnableList = .false;
+                break :blk item;
+            };
+            const ETH2EnableValue: ?ETH2EnableList = blk: {
+                if (config.flags.ETH2_Used) {
+                    const item: ETH2EnableList = .true;
+                    break :blk item;
+                }
+                const item: ETH2EnableList = .false;
+                break :blk item;
+            };
+            const EnableDFSDMAudioValue: ?EnableDFSDMAudioList = blk: {
+                if (config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) {
+                    const item: EnableDFSDMAudioList = .true;
+                    break :blk item;
+                }
+                const item: EnableDFSDMAudioList = .false;
+                break :blk item;
+            };
+            const SAI1EnableValue: ?SAI1EnableList = blk: {
+                if (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC) {
+                    const item: SAI1EnableList = .true;
+                    break :blk item;
+                }
+                const item: SAI1EnableList = .false;
+                break :blk item;
+            };
+            const SPDIFEnableValue: ?SPDIFEnableList = blk: {
+                if (config.flags.SPDIFRXUsed_ForRCC) {
+                    const item: SPDIFEnableList = .true;
+                    break :blk item;
+                }
+                const item: SPDIFEnableList = .false;
+                break :blk item;
+            };
+            const SAI2EnableValue: ?SAI2EnableList = blk: {
+                if (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) {
+                    const item: SAI2EnableList = .true;
+                    break :blk item;
+                }
+                const item: SAI2EnableList = .false;
+                break :blk item;
+            };
+            const USART1EnableValue: ?USART1EnableList = blk: {
+                if (config.flags.USART1Used_ForRCC) {
+                    const item: USART1EnableList = .true;
+                    break :blk item;
+                }
+                const item: USART1EnableList = .false;
+                break :blk item;
+            };
+            const LPTIM45EnableValue: ?LPTIM45EnableList = blk: {
+                if (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) {
+                    const item: LPTIM45EnableList = .true;
+                    break :blk item;
+                }
+                const item: LPTIM45EnableList = .false;
+                break :blk item;
+            };
+            const SPI1EnableValue: ?SPI1EnableList = blk: {
+                if ((config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC)) {
+                    const item: SPI1EnableList = .true;
+                    break :blk item;
+                }
+                const item: SPI1EnableList = .false;
+                break :blk item;
+            };
+            const SPI23EnableValue: ?SPI23EnableList = blk: {
+                if (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) {
+                    const item: SPI23EnableList = .true;
+                    break :blk item;
+                }
+                const item: SPI23EnableList = .false;
+                break :blk item;
+            };
+            const SPI4EnableValue: ?SPI4EnableList = blk: {
+                if ((config.flags.SPI4Used_ForRCC or config.flags.I2S4Used_ForRCC)) {
+                    const item: SPI4EnableList = .true;
+                    break :blk item;
+                }
+                const item: SPI4EnableList = .false;
+                break :blk item;
+            };
+            const FDCANEnableValue: ?FDCANEnableList = blk: {
+                if (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) {
+                    const item: FDCANEnableList = .true;
+                    break :blk item;
+                }
+                const item: FDCANEnableList = .false;
+                break :blk item;
+            };
+            const SDMMC1EnableValue: ?SDMMC1EnableList = blk: {
+                if (config.flags.SDMMC1Used_ForRCC) {
+                    const item: SDMMC1EnableList = .true;
+                    break :blk item;
+                }
+                const item: SDMMC1EnableList = .false;
+                break :blk item;
+            };
+            const SDMMC2EnableValue: ?SDMMC2EnableList = blk: {
+                if (config.flags.SDMMC2Used_ForRCC) {
+                    const item: SDMMC2EnableList = .true;
+                    break :blk item;
+                }
+                const item: SDMMC2EnableList = .false;
+                break :blk item;
+            };
+            const QuadSPIEnableValue: ?QuadSPIEnableList = blk: {
+                if (check_MCU("QSPI_Selected")) {
+                    const item: QuadSPIEnableList = .true;
+                    break :blk item;
+                }
+                const item: QuadSPIEnableList = .false;
+                break :blk item;
+            };
+            const FMCEnableValue: ?FMCEnableList = blk: {
+                if (config.flags.FMCUsed_ForRCC) {
+                    const item: FMCEnableList = .true;
+                    break :blk item;
+                }
+                const item: FMCEnableList = .false;
+                break :blk item;
+            };
+            const LTDCEnableValue: ?LTDCEnableList = blk: {
+                if (config.flags.LTDCUsed_ForRCC) {
+                    const item: LTDCEnableList = .true;
+                    break :blk item;
+                }
+                const item: LTDCEnableList = .false;
+                break :blk item;
+            };
+            const USART4EnableValue: ?USART4EnableList = blk: {
+                if (config.flags.UART4Used_ForRCC) {
+                    const item: USART4EnableList = .true;
+                    break :blk item;
+                }
+                const item: USART4EnableList = .false;
+                break :blk item;
+            };
+            const SPI5EnableValue: ?SPI5EnableList = blk: {
+                if (config.flags.SPI5Used_ForRCC) {
+                    const item: SPI5EnableList = .true;
+                    break :blk item;
+                }
+                const item: SPI5EnableList = .false;
+                break :blk item;
+            };
+            const UART78EnableValue: ?UART78EnableList = blk: {
+                if (config.flags.UART7Used_ForRCC or config.flags.UART8Used_ForRCC) {
+                    const item: UART78EnableList = .true;
+                    break :blk item;
+                }
+                const item: UART78EnableList = .false;
+                break :blk item;
+            };
+            const USART35EnableValue: ?USART35EnableList = blk: {
+                if (config.flags.USART3Used_ForRCC or config.flags.UART5Used_ForRCC) {
+                    const item: USART35EnableList = .true;
+                    break :blk item;
+                }
+                const item: USART35EnableList = .false;
+                break :blk item;
+            };
+            const LPTIM2EnableValue: ?LPTIM2EnableList = blk: {
+                if (config.flags.LPTIM2Used_ForRCC) {
+                    const item: LPTIM2EnableList = .true;
+                    break :blk item;
+                }
+                const item: LPTIM2EnableList = .false;
+                break :blk item;
+            };
+            const LPTIM3EnableValue: ?LPTIM3EnableList = blk: {
+                if (config.flags.LPTIM3Used_ForRCC) {
+                    const item: LPTIM3EnableList = .true;
+                    break :blk item;
+                }
+                const item: LPTIM3EnableList = .false;
+                break :blk item;
+            };
+            const USART6EnableValue: ?USART6EnableList = blk: {
+                if (config.flags.USART6Used_ForRCC) {
+                    const item: USART6EnableList = .true;
+                    break :blk item;
+                }
+                const item: USART6EnableList = .false;
+                break :blk item;
+            };
+            const SAESEnableValue: ?SAESEnableList = blk: {
+                if (config.flags.SAES_Used) {
+                    const item: SAESEnableList = .true;
+                    break :blk item;
+                }
+                const item: SAESEnableList = .false;
+                break :blk item;
+            };
+            const I2C4EnableValue: ?I2C4EnableList = blk: {
+                if (config.flags.I2C4Used_ForRCC) {
+                    const item: I2C4EnableList = .true;
+                    break :blk item;
+                }
+                const item: I2C4EnableList = .false;
+                break :blk item;
+            };
+            const I2C5EnableValue: ?I2C5EnableList = blk: {
+                if (config.flags.I2C5Used_ForRCC) {
+                    const item: I2C5EnableList = .true;
+                    break :blk item;
+                }
+                const item: I2C5EnableList = .false;
+                break :blk item;
+            };
+            const EnableUSBOHSValue: ?EnableUSBOHSList = blk: {
+                if ((config.flags.USB_OTG_HSUsed_ForRCC)) {
+                    const item: EnableUSBOHSList = .true;
+                    break :blk item;
+                }
+                const item: EnableUSBOHSList = .false;
+                break :blk item;
+            };
+            const EnableUSBHSValue: ?EnableUSBHSList = blk: {
+                if (config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used) {
+                    const item: EnableUSBHSList = .true;
+                    break :blk item;
+                }
+                const item: EnableUSBHSList = .false;
+                break :blk item;
+            };
+            const I2C3EnableValue: ?I2C3EnableList = blk: {
+                if (config.flags.I2C3Used_ForRCC) {
+                    const item: I2C3EnableList = .true;
+                    break :blk item;
+                }
+                const item: I2C3EnableList = .false;
+                break :blk item;
+            };
+            const I2C12EnableValue: ?I2C12EnableList = blk: {
+                if (config.flags.I2C1Used_ForRCC or config.flags.I2C2Used_ForRCC) {
+                    const item: I2C12EnableList = .true;
+                    break :blk item;
+                }
+                const item: I2C12EnableList = .false;
+                break :blk item;
+            };
+            const RNG1EnableValue: ?RNG1EnableList = blk: {
+                if (config.flags.RNG1Used_ForRCC) {
+                    const item: RNG1EnableList = .true;
+                    break :blk item;
+                }
+                const item: RNG1EnableList = .false;
+                break :blk item;
+            };
+            const EnableHSERTCDevisorValue: ?EnableHSERTCDevisorList = blk: {
+                if ((config.flags.RTC_Used) and (config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
+                    const item: EnableHSERTCDevisorList = .true;
+                    break :blk item;
+                }
+                const item: EnableHSERTCDevisorList = .false;
+                break :blk item;
+            };
+            const RTCEnableValue: ?RTCEnableList = blk: {
+                if (config.flags.RTC_Used) {
+                    const item: RTCEnableList = .true;
+                    break :blk item;
+                }
+                const item: RTCEnableList = .false;
+                break :blk item;
+            };
+            const IWDGEnableValue: ?IWDGEnableList = blk: {
+                if (config.flags.IWDGUsed_ForRCC) {
+                    const item: IWDGEnableList = .true;
+                    break :blk item;
+                }
+                const item: IWDGEnableList = .false;
+                break :blk item;
+            };
+            const STGENEnableValue: ?STGENEnableList = blk: {
+                const item: STGENEnableList = .true;
+                break :blk item;
+            };
+            const EnableHSEUSBPHYDevisorValue: ?EnableHSEUSBPHYDevisorList = blk: {
+                if ((config.flags.USB_OTG_HSUsed_ForRCC or config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used) and (config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
+                    const item: EnableHSEUSBPHYDevisorList = .true;
+                    break :blk item;
+                }
+                const item: EnableHSEUSBPHYDevisorList = .false;
+                break :blk item;
+            };
+            const Max650Value: ?Max650List = blk: {
+                if (check_MCU("STM32MP133DAFx") or check_MCU("STM32MP133DAEx") or check_MCU("STM32MP131DAGx") or check_MCU("STM32MP131DAFx") or check_MCU("STM32MP131FAEx") or check_MCU("STM32MP131FAFx") or check_MCU("STM32MP131FAGx") or check_MCU("STM32MP133FAEx") or check_MCU("STM32MP133FAFx") or check_MCU("STM32MP133FAGx") or check_MCU("STM32MP135DAGx") or check_MCU("STM32MP135DAFx") or check_MCU("STM32MP135DAEx") or check_MCU("STM32MP133DAGx") or check_MCU("STM32MP131DAEx")) {
+                    const item: Max650List = .false;
+                    break :blk item;
+                }
+                const item: Max650List = .true;
+                break :blk item;
+            };
+            const PLL2RUsedValue: ?f32 = blk: {
+                if (check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL3QUsedValue: ?f32 = blk: {
+                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC or ADC1CLKSOURCE_PLL3 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or ADC2CLKSOURCE_PLL3 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or SPI23CLKSOURCE_PLL3 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or ETHCLKSOURCE_PLL3 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL3 and config.flags.ETH2_Used or SPI1CLKSOURCE_PLL3 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL3 or LPTIM45CLKSOURCE_PLL3 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM1CLKSOURCE_PLL3 and config.flags.LPTIM1Used_ForRCC or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL3") and config.flags.SPI6Used_ForRCC or SAI2CLKSOURCE_PLL3 and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or SAI1CLKSOURCE_PLL3 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or check_MCU("SAI3CLKSOURCE_PLL3") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or FDCANCLKSOURCE_PLL3 and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL3RUsedValue: ?f32 = blk: {
+                if (SPI1CLKSOURCE_PLL3_R and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL3_R and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC) or SAI1CLKSOURCE_PLL3_R and ((config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC) or SAI2CLKSOURCE_PLL3_R and (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) or check_MCU("SAI3CLKSOURCE_PLL3_R") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or check_MCU("SAI4CLKSOURCE_PLL3_R") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC) or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 or check_MCU("SDMMC3CLKSOURCE_PLL3") and config.flags.SDMMC3Used_ForRCC) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL4PUsedValue: ?f32 = blk: {
+                if (ETHCLKSOURCE_PLL4 and config.flags.ETH1_Used or ETH2CLKSOURCE_PLL4 and config.flags.ETH2_Used or DCMICLKSOURCE_PLL4P and config.flags.DCMIPP_Used or config.flags.MCO2Config and MCO2SOURCE_PLL4 or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL4 or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 or check_MCU("SDMMC3CLKSOURCE_PLL4") and config.flags.SDMMC3Used_ForRCC or LPTIM45CLKSOURCE_PLL4 and (config.flags.LPTIM4Used_ForRCC or config.flags.LPTIM5Used_ForRCC) or LPTIM1CLKSOURCE_PLL4 and config.flags.LPTIM1Used_ForRCC or SPI1CLKSOURCE_PLL4 and (config.flags.SPI1Used_ForRCC or config.flags.I2S1Used_ForRCC) or SPI23CLKSOURCE_PLL4 and (config.flags.SPI2Used_ForRCC or config.flags.SPI3Used_ForRCC or config.flags.I2S2Used_ForRCC or config.flags.I2S3Used_ForRCC)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL4QUsedValue: ?f32 = blk: {
+                if (config.flags.LTDCUsed_ForRCC or LPTIM2CLKSOURCE_PLL4 and config.flags.LPTIM2Used_ForRCC or LPTIM3CLKSOURCE_PLL4 and config.flags.LPTIM3Used_ForRCC or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC or UART2_PLL4 and config.flags.USART2Used_ForRCC or UART4_PLL4 and config.flags.UART4Used_ForRCC or UART35CLKSOURCE_PLL4 and (config.flags.USART3Used_ForRCC or config.flags.UART5Used_ForRCC) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC or UART78CLKSOURCE_PLL4 and (config.flags.UART7Used_ForRCC or config.flags.UART8Used_ForRCC) or FDCANCLKSOURCE_PLL4 and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or check_MCU("SAI3CLKSOURCE_PLL4") and (config.flags.SAI3_SAIAUsed_ForRCC or config.flags.SAI3_SAIBUsed_ForRCC) or check_MCU("SAI4CLKSOURCE_PLL4") and (config.flags.SAI4_SAIAUsed_ForRCC or config.flags.SAI4_SAIBUsed_ForRCC) or (config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_PLL4 or SAI1CLKSOURCE_PLL4 and (config.flags.SAI1_SAIAUsed_ForRCC or config.flags.SAI1_SAIBUsed_ForRCC or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or SPI4CLKSOURCE_PLL4 and (config.flags.SPI4Used_ForRCC or config.flags.I2S4Used_ForRCC) or SPI5CLKSOURCE_PLL4 and config.flags.SPI5Used_ForRCC or check_MCU("SPI6CLKSOURCE_PLL4") and config.flags.SPI6Used_ForRCC) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL4RUsedValue: ?f32 = blk: {
+                if (SAES_PLL4R and config.flags.SAES_Used or ADC1CLKSOURCE_PLL4 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC or ADC2CLKSOURCE_PLL4 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) or FDCANCLKSOURCE_PLL4_R and (config.flags.FDCAN1Used_ForRCC or config.flags.FDCAN2Used_ForRCC) or I2C12CLKSOURCE_PLL4 and (config.flags.I2C2Used_ForRCC or config.flags.I2C1Used_ForRCC) or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC or USBOCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC) or USBPHYCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC or config.flags.USBH_HS1_Used or config.flags.USBH_HS2_Used)) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL2PUsedValue: ?f32 = blk: {
+                if (AXISSOURCE_PLL2) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL3PUsedValue: ?f32 = blk: {
+                if (MLAHBS_PLL3) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL1UsedTFAValue: ?f32 = blk: {
+                if ((MPUSOURCE_PLL1 or MPUSOURCE_MPUDIV) and (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"="))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL1UsedA7Value: ?f32 = blk: {
+                if ((MPUSOURCE_PLL1 or MPUSOURCE_MPUDIV) and (check_ref(@TypeOf(PLL1UserDefinedConfigValue), PLL1UserDefinedConfigValue, .true, .@"="))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL2UsedTFAValue: ?f32 = blk: {
+                if (AXISSOURCE_PLL2 or check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL2UsedA7Value: ?f32 = blk: {
+                if (DCMICLKSOURCE_PLL2Q and config.flags.DCMIPP_Used and check_MCU("DCMIPP_LINUX") or AXISSOURCE_PLL2 or check_MCU("DDR3") or check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL3UsedTFAValue: ?f32 = blk: {
+                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC and check_MCU("USART2_BOOTLOADER") or MLAHBS_PLL3 or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") and check_MCU("QUADSPI_BOOTLOADER") or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC and check_MCU("FMC_BOOTLOADER") or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 and check_MCU("SDMMC1_BOOTLOADER") or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 and check_MCU("SDMMC2_BOOTLOADER") or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC and check_MCU("USART1_BOOTLOADER")) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL3UsedA7Value: ?f32 = blk: {
+                if (UART2_PLL3Q and config.flags.USART2Used_ForRCC and (check_MCU("USART2_SECURE_OS") or check_MCU("USART2_LINUX")) or ADC1CLKSOURCE_PLL3 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC1_LINUX") or check_MCU("ADC1_SECURE_OS")) or ADC2CLKSOURCE_PLL3 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC2_LINUX") or check_MCU("ADC2_SECURE_OS")) or SPI1CLKSOURCE_PLL3_R and ((config.flags.SPI1Used_ForRCC and check_MCU("SPI1_LINUX")) or (config.flags.I2S1Used_ForRCC and check_MCU("I2S1_LINUX"))) or SPI23CLKSOURCE_PLL3_R and ((config.flags.SPI2Used_ForRCC and check_MCU("SPI2_LINUX")) or (config.flags.SPI3Used_ForRCC and check_MCU("SPI3_LINUX")) or (config.flags.I2S2Used_ForRCC and check_MCU("I2S2_LINUX")) or (config.flags.I2S3Used_ForRCC and check_MCU("I2S3_LINUX"))) or SPI23CLKSOURCE_PLL3 and ((config.flags.SPI2Used_ForRCC and check_MCU("SPI2_LINUX")) or (config.flags.SPI3Used_ForRCC and check_MCU("SPI3_LINUX")) or (config.flags.I2S2Used_ForRCC and check_MCU("I2S2_LINUX")) or (config.flags.I2S3Used_ForRCC and check_MCU("I2S3_LINUX"))) or ETHCLKSOURCE_PLL3 and config.flags.ETH1_Used and (check_MCU("ETH1_LINUX") or check_MCU("ETH1_SECURE_OS")) or ETH2CLKSOURCE_PLL3 and config.flags.ETH2_Used and (check_MCU("ETH2_LINUX") or check_MCU("ETH2_SECURE_OS")) or SPI1CLKSOURCE_PLL3 and ((config.flags.SPI1Used_ForRCC and check_MCU("SPI1_LINUX")) or (config.flags.I2S1Used_ForRCC and check_MCU("I2S1_LINUX"))) or MLAHBS_PLL3 or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL3 and check_MCU("SPDIFRX_LINUX") or QSPICLKSOURCE_PLL3 and check_MCU("QSPI_Selected") and (check_MCU("QUADSPI_SECURE_OS") or check_MCU("QUADSPI_LINUX")) or FMCCLKSOURCE_PLL3 and config.flags.FMCUsed_ForRCC and (check_MCU("FMC_SECURE_OS") or check_MCU("FMC_LINUX")) or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL3 and (check_MCU("SDMMC1_SECURE_OS") or check_MCU("SDMMC1_LINUX")) or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL3 and (check_MCU("SDMMC2_SECURE_OS") or check_MCU("SDMMC2_LINUX")) or LPTIM45CLKSOURCE_PLL3 and ((config.flags.LPTIM4Used_ForRCC and check_MCU("LPTIM4_LINUX")) or (config.flags.LPTIM5Used_ForRCC and check_MCU("LPTIM5_LINUX"))) or LPTIM1CLKSOURCE_PLL3 and config.flags.LPTIM1Used_ForRCC and check_MCU("LPTIM1_LINUX") or USART1CLKSOURCE_PLL3 and config.flags.USART1Used_ForRCC and (check_MCU("USART1_SECURE_OS") or check_MCU("USART1_LINUX")) or SAI2CLKSOURCE_PLL3 and ((config.flags.SAI2_SAIAUsed_ForRCC and check_MCU("SAI2_LINUX")) or (config.flags.SAI2_SAIBUsed_ForRCC and check_MCU("SAI2_LINUX"))) or SAI1CLKSOURCE_PLL3 and ((config.flags.SAI1_SAIAUsed_ForRCC and check_MCU("SAI1_LINUX")) or (config.flags.SAI1_SAIBUsed_ForRCC and check_MCU("SAI1_LINUX")) or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or FDCANCLKSOURCE_PLL3 and ((config.flags.FDCAN1Used_ForRCC and check_MCU("FDCAN1_LINUX")) or (config.flags.FDCAN2Used_ForRCC and check_MCU("FDCAN2_LINUX"))) or SAI1CLKSOURCE_PLL3_R and ((config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or (config.flags.SAI1_SAIAUsed_ForRCC and check_MCU("SAI1_LINUX")) or (config.flags.SAI1_SAIBUsed_ForRCC and check_MCU("SAI1_LINUX"))) or SAI2CLKSOURCE_PLL3_R and ((config.flags.SAI2_SAIAUsed_ForRCC and check_MCU("SAI2_LINUX")) or (config.flags.SAI2_SAIBUsed_ForRCC and check_MCU("SAI2_LINUX")))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL4UsedTFAValue: ?f32 = blk: {
+                if (SAES_PLL4R and config.flags.SAES_Used and check_MCU("SAES_BOOTLOADER") or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC and check_MCU("I2C4_BOOTLOADER") or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC and check_MCU("I2C3_BOOTLOADER") or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC and check_MCU("I2C5_BOOTLOADER") or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") and check_MCU("QUADSPI_BOOTLOADER") or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC and check_MCU("FMC_BOOTLOADER") or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 and check_MCU("SDMMC1_BOOTLOADER") or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 and check_MCU("SDMMC2_BOOTLOADER") or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC and check_MCU("USART1_BOOTLOADER") or UART2_PLL4 and config.flags.USART2Used_ForRCC and check_MCU("USART2_BOOTLOADER") or UART4_PLL4 and config.flags.UART4Used_ForRCC and check_MCU("UART4_BOOTLOADER") or UART35CLKSOURCE_PLL4 and ((config.flags.USART3Used_ForRCC and check_MCU("USART3_BOOTLOADER")) or (config.flags.UART5Used_ForRCC and check_MCU("UART5_BOOTLOADER"))) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC and check_MCU("USART6_BOOTLOADER") or UART78CLKSOURCE_PLL4 and ((config.flags.UART7Used_ForRCC and check_MCU("UART7_BOOTLOADER")) or (config.flags.UART8Used_ForRCC and check_MCU("UART8_BOOTLOADER"))) or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC and check_MCU("RNG1_BOOTLOADER") or USBOCLKSOURCE_PLL4 and config.flags.USB_OTG_HSUsed_ForRCC and check_MCU("USB_OTG_HS_BOOTLOADER") or USBPHYCLKSOURCE_PLL4 and config.flags.USB_OTG_HSUsed_ForRCC and USBOCLKSOURCE_PHY and check_MCU("USB_OTG_HS_BOOTLOADER")) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const PLL4UsedA7Value: ?f32 = blk: {
+                if (SAES_PLL4R and config.flags.SAES_Used and (check_MCU("SAES_LINUX") or check_MCU("SAES_SECURE_OS")) or DCMICLKSOURCE_PLL4P and config.flags.DCMIPP_Used and check_MCU("DCMIPP_LINUX") or I2C4CLKSOURCE_PLL4R and config.flags.I2C4Used_ForRCC and (check_MCU("I2C4_LINUX") or check_MCU("I2C4_SECURE_OS")) or ETHCLKSOURCE_PLL4 and config.flags.ETH1_Used and (check_MCU("ETH1_LINUX") or check_MCU("ETH1_SECURE_OS")) or ETH2CLKSOURCE_PLL4 and config.flags.ETH2_Used and (check_MCU("ETH2_LINUX") or check_MCU("ETH2_SECURE_OS")) or I2C12CLKSOURCE_PLL4 and ((config.flags.I2C2Used_ForRCC and check_MCU("I2C2_LINUX")) or (config.flags.I2C1Used_ForRCC and check_MCU("I2C1_LINUX"))) or I2C3CLKSOURCE_PLL4 and config.flags.I2C3Used_ForRCC and (check_MCU("I2C3_LINUX") or check_MCU("I2C3_SECURE_OS")) or I2C5CLKSOURCE_PLL4 and config.flags.I2C5Used_ForRCC and (check_MCU("I2C5_LINUX") or check_MCU("I2C5_SECURE_OS")) or (((config.flags.SAI2_SAIAUsed_ForRCC or config.flags.SAI2_SAIBUsed_ForRCC) and SAI2CLKSOURCE_SPDIF) or config.flags.SPDIFRXUsed_ForRCC) and SPDIFRXCLKSOURCE_PLL4 and check_MCU("SPDIFRX_LINUX") or QSPICLKSOURCE_PLL4 and check_MCU("QSPI_Selected") and (check_MCU("QUADSPI_SECURE_OS") or check_MCU("QUADSPI_LINUX")) or FMCCLKSOURCE_PLL4 and config.flags.FMCUsed_ForRCC and (check_MCU("FMC_SECURE_OS") or check_MCU("FMC_LINUX")) or config.flags.SDMMC1Used_ForRCC and SDMMC1CLKSOURCE_PLL4 and (check_MCU("SDMMC1_SECURE_OS") or check_MCU("SDMMC1_LINUX")) or config.flags.SDMMC2Used_ForRCC and SDMMC2CLKSOURCE_PLL4 and (check_MCU("SDMMC2_SECURE_OS") or check_MCU("SDMMC2_LINUX")) or LPTIM45CLKSOURCE_PLL4 and ((config.flags.LPTIM4Used_ForRCC and check_MCU("LPTIM4_LINUX")) or (config.flags.LPTIM5Used_ForRCC and check_MCU("LPTIM5_LINUX"))) or LPTIM2CLKSOURCE_PLL4 and config.flags.LPTIM2Used_ForRCC and (check_MCU("LPTIM2_LINUX") or check_MCU("LPTIM2_SECURE_OS")) or LPTIM3CLKSOURCE_PLL4 and config.flags.LPTIM3Used_ForRCC and (check_MCU("LPTIM3_LINUX") or check_MCU("LPTIM3_SECURE_OS")) or LPTIM1CLKSOURCE_PLL4 and config.flags.LPTIM1Used_ForRCC and check_MCU("LPTIM1_LINUX") or USART1CLKSOURCE_PLL4 and config.flags.USART1Used_ForRCC and (check_MCU("USART1_SECURE_OS") or check_MCU("USART1_LINUX")) or UART2_PLL4 and config.flags.USART2Used_ForRCC and (check_MCU("USART2_SECURE_OS") or check_MCU("USART2_LINUX")) or UART4_PLL4 and config.flags.UART4Used_ForRCC and check_MCU("UART4_LINUX") or UART35CLKSOURCE_PLL4 and ((config.flags.USART3Used_ForRCC and check_MCU("USART3_LINUX")) or (config.flags.UART5Used_ForRCC and check_MCU("UART5_LINUX"))) or USART6CLKSOURCE_PLL4 and config.flags.USART6Used_ForRCC and check_MCU("USART6_LINUX") or UART78CLKSOURCE_PLL4 and ((config.flags.UART7Used_ForRCC and check_MCU("UART7_LINUX")) or (config.flags.UART8Used_ForRCC and check_MCU("UART8_LINUX"))) or RNG1CLKSOURCE_PLL4 and config.flags.RNG1Used_ForRCC and (check_MCU("RNG1_LINUX") or check_MCU("RNG1_SECURE_OS")) or SPI4CLKSOURCE_PLL4 and ((config.flags.SPI4Used_ForRCC and (check_MCU("SPI4_SECURE_OS") or check_MCU("SPI4_LINUX"))) or (config.flags.I2S4Used_ForRCC and check_MCU("I2S4_SECURE_OS") or check_MCU("I2S4_LINUX"))) or SPI5CLKSOURCE_PLL4 and config.flags.SPI5Used_ForRCC and (check_MCU("SPI5_SECURE_OS") or check_MCU("SPI5_LINUX")) or ((config.flags.SAI2_SAIAUsed_ForRCC and check_MCU("SAI2_LINUX")) or (config.flags.SAI2_SAIBUsed_ForRCC and check_MCU("SAI2_LINUX"))) and SAI2CLKSOURCE_PLL4 or SPI1CLKSOURCE_PLL4 and ((config.flags.SPI1Used_ForRCC and check_MCU("SPI1_LINUX")) or (config.flags.I2S1Used_ForRCC and check_MCU("I2S1_LINUX"))) or SPI23CLKSOURCE_PLL4 and ((config.flags.SPI2Used_ForRCC and check_MCU("SPI2_LINUX")) or (config.flags.SPI3Used_ForRCC and check_MCU("SPI3_LINUX")) or (config.flags.I2S2Used_ForRCC and check_MCU("I2S2_LINUX")) or (config.flags.I2S3Used_ForRCC and check_MCU("I2S3_LINUX"))) or SAI1CLKSOURCE_PLL4 and ((config.flags.SAI1_SAIAUsed_ForRCC and check_MCU("SAI1_LINUX")) or (config.flags.SAI1_SAIBUsed_ForRCC and check_MCU("SAI1_LINUX")) or config.flags.DFSDM1Used_ForRCC and (check_MCU("SEM2RCC_SAI1_CK_REQUIRED_DFSDM1") or check_MCU("DFSDM1_LINUX"))) or (FDCANCLKSOURCE_PLL4 or FDCANCLKSOURCE_PLL4_R) and ((config.flags.FDCAN1Used_ForRCC and check_MCU("FDCAN1_LINUX")) or (config.flags.FDCAN2Used_ForRCC and check_MCU("FDCAN2_LINUX"))) or ADC1CLKSOURCE_PLL4 and ((config.flags.USE_ADC1 and config.flags.ADC1UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC1_LINUX") or check_MCU("ADC1_SECURE_OS")) or ADC2CLKSOURCE_PLL4 and ((config.flags.USE_ADC2 and config.flags.ADC2UsedAsynchronousCLK_ForRCC)) and (check_MCU("ADC2_LINUX") or check_MCU("ADC2_SECURE_OS")) or USBPHYCLKSOURCE_PLL4 and ((config.flags.USB_OTG_HSUsed_ForRCC and (check_MCU("USB_OTG_HS_LINUX") or check_MCU("USB_OTG_HS_SECURE_OS")) and USBOCLKSOURCE_PHY) or (config.flags.USBH_HS1_Used and check_MCU("USBH_HS1_LINUX")) or (config.flags.USBH_HS2_Used and check_MCU("USBH_HS2_LINUX"))) or USBOCLKSOURCE_PLL4 and (config.flags.USB_OTG_HSUsed_ForRCC) and (check_MCU("USB_OTG_HS_LINUX") or check_MCU("USB_OTG_HS_SECURE_OS"))) {
+                    break :blk 1;
+                }
+                break :blk 0;
+            };
+            const EnableLSERTCValue: ?EnableLSERTCList = blk: {
+                if ((config.flags.RTC_Used) and (config.flags.LSEOscillator or config.flags.LSEByPass or config.flags.LSEDIGByPass)) {
+                    const item: EnableLSERTCList = .true;
+                    break :blk item;
+                }
+                const item: EnableLSERTCList = .false;
+                break :blk item;
+            };
+            const CECEnableValue: ?CECEnableList = blk: {
+                if (config.flags.CECUsed_ForRCC) {
+                    const item: CECEnableList = .true;
+                    break :blk item;
+                }
+                const item: CECEnableList = .false;
+                break :blk item;
+            };
+            const MCO2I2SEnableValue: ?MCO2I2SEnableList = blk: {
+                if ((config.flags.MCO2Config)) {
+                    const item: MCO2I2SEnableList = .true;
+                    break :blk item;
+                }
+                const item: MCO2I2SEnableList = .false;
+                break :blk item;
+            };
 
             const HSIRC_clk_value = HSI_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -6786,6 +5694,84 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             HSIDiv.nodetype = .div;
             HSIDiv.value = HSIDiv_clk_value.get();
             HSIDiv.parents = &.{&HSIRC};
+
+            //POST CLOCK REF HSE_VALUE VALUE
+            _ = blk: {
+                if (config.flags.HSEByPass or config.flags.HSEOscillator or config.flags.HSEDIGByPass) {
+                    const config_val = config.HSE_VALUE;
+                    if (config_val) |val| {
+                        if (val < 8e6) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Underflow Value - min: {e} found: {e}
+                                \\note: ranges values may change depending on the configuration
+                                \\
+                            , .{
+                                "HSE_VALUE",
+                                "HSEByPass  | HSEOscillator|HSEDIGByPass",
+                                "HSE in bypass Mode",
+                                8e6,
+                                val,
+                            });
+                        }
+                        if (val > 4.8e7) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Overflow Value - max: {e} found: {e}
+                                \\note: ranges values may change depending on the configuration
+                                \\
+                            , .{
+                                "HSE_VALUE",
+                                "HSEByPass  | HSEOscillator|HSEDIGByPass",
+                                "HSE in bypass Mode",
+                                4.8e7,
+                                val,
+                            });
+                        }
+                    }
+                    HSEOSC.value = config_val orelse 24000000;
+
+                    break :blk null;
+                }
+                const config_val = config.HSE_VALUE;
+                if (config_val) |val| {
+                    if (val < 8e6) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            8e6,
+                            val,
+                        });
+                    }
+                    if (val > 4.8e7) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "HSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            4.8e7,
+                            val,
+                        });
+                    }
+                }
+                HSEOSC.value = config_val orelse 24000000;
+
+                break :blk null;
+            };
             if (check_ref(@TypeOf(EnableHSEValue), EnableHSEValue, .true, .@"=")) {
                 const HSEOSC_clk_value = HSE_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                     \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -6815,6 +5801,68 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             });
             LSIRC.nodetype = .source;
             LSIRC.value = LSIRC_clk_value;
+
+            //POST CLOCK REF LSE_VALUE VALUE
+            _ = blk: {
+                if (config.flags.LSEOscillator) {
+                    if (config.LSE_VALUE) |val| {
+                        if (val != 3.2768e4) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed Value: {e} found: {e}
+                                \\note: some values are fixed depending on the clock configuration.
+                                \\
+                                \\
+                            , .{
+                                "LSE_VALUE",
+                                "LSEOscillator",
+                                "LSE In crystal Mode",
+                                3.2768e4,
+                                val,
+                            });
+                        }
+                    }
+                    LSEOSC.value = 32768;
+                    break :blk null;
+                }
+                const config_val = config.LSE_VALUE;
+                if (config_val) |val| {
+                    if (val < 0e0) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Underflow Value - min: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            0e0,
+                            val,
+                        });
+                    }
+                    if (val > 1e6) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Overflow Value - max: {e} found: {e}
+                            \\note: ranges values may change depending on the configuration
+                            \\
+                        , .{
+                            "LSE_VALUE",
+                            "Else",
+                            "No Extra Log",
+                            1e6,
+                            val,
+                        });
+                    }
+                }
+                LSEOSC.value = config_val orelse 32768;
+
+                break :blk null;
+            };
             if (check_ref(@TypeOf(EnableLSEValue), EnableLSEValue, .true, .@"=")) {
                 const LSEOSC_clk_value = LSE_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                     \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -6879,9 +5927,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             SysClkSource.nodetype = .multi;
             SysClkSource.parents = &.{SysClkSourceparents[SysClkSource_clk_value.get()]};
-
-            std.mem.doNotOptimizeAway(MLAHBCLKFreq_VALUEValue);
-            SysCLKOutput.limit = MLAHBCLKFreq_VALUELimit;
             SysCLKOutput.nodetype = .output;
             SysCLKOutput.parents = &.{&SysClkSource};
             if (check_ref(@TypeOf(PLL1UserDefinedConfigEnableValue), PLL1UserDefinedConfigEnableValue, .true, .@"=")) {
@@ -6906,8 +5951,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 MPUMult.parents = &.{MPUMultparents[MPUMult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(PLL1UserDefinedConfigEnableValue), PLL1UserDefinedConfigEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(MPUCLKFreq_VALUEValue);
-                MPUCLKOutput.limit = MPUCLKFreq_VALUELimit;
                 MPUCLKOutput.nodetype = .output;
                 MPUCLKOutput.parents = &.{&MPUMult};
             }
@@ -6932,7 +5975,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 CKPERMult.parents = &.{CKPERMultparents[CKPERMult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(cKPerEnableValue), cKPerEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(CKPERCLKFreq_VALUEValue);
                 CKPERCLKOutput.nodetype = .output;
                 CKPERCLKOutput.parents = &.{&CKPERMult};
             }
@@ -6955,13 +5997,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             };
             AXIMult.nodetype = .multi;
             AXIMult.parents = &.{AXIMultparents[AXIMult_clk_value.get()]};
-
-            std.mem.doNotOptimizeAway(AXICLKFreq_VALUEValue);
-            AXICLKOutput.limit = AXICLKFreq_VALUELimit;
             AXICLKOutput.nodetype = .output;
             AXICLKOutput.parents = &.{&AXIMult};
             if (check_ref(@TypeOf(DACEnableValue), DACEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DACCLKFreq_VALUEValue);
                 DACCLKOutput.nodetype = .output;
                 DACCLKOutput.parents = &.{&LSIRC};
             }
@@ -6980,19 +6018,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             AXIDIV.nodetype = .div;
             AXIDIV.value = AXIDIV_clk_value.get();
             AXIDIV.parents = &.{&AXICLKOutput};
-
-            std.mem.doNotOptimizeAway(AXIDIVFreq_ValueValue);
-            AXIOutput.limit = AXIDIVFreq_ValueLimit;
             AXIOutput.nodetype = .output;
             AXIOutput.parents = &.{&AXIDIV};
-
-            std.mem.doNotOptimizeAway(Hclk5DIVFreq_ValueValue);
-            Hclk5Output.limit = Hclk5DIVFreq_ValueLimit;
             Hclk5Output.nodetype = .output;
             Hclk5Output.parents = &.{&AXIDIV};
-
-            std.mem.doNotOptimizeAway(Hclk6DIVFreq_ValueValue);
-            Hclk6Output.limit = Hclk6DIVFreq_ValueLimit;
             Hclk6Output.nodetype = .output;
             Hclk6Output.parents = &.{&AXIDIV};
 
@@ -7010,9 +6039,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             APB4DIV.nodetype = .div;
             APB4DIV.value = APB4DIV_clk_value.get();
             APB4DIV.parents = &.{&AXIDIV};
-
-            std.mem.doNotOptimizeAway(APB4Freq_ValueValue);
-            APB4DIVOutput.limit = APB4Freq_ValueLimit;
             APB4DIVOutput.nodetype = .output;
             APB4DIVOutput.parents = &.{&APB4DIV};
 
@@ -7030,9 +6056,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             APB5DIV.nodetype = .div;
             APB5DIV.value = APB5DIV_clk_value.get();
             APB5DIV.parents = &.{&AXIDIV};
-
-            std.mem.doNotOptimizeAway(APB5DIVClockFreq_ValueValue);
-            APB5DIVOutput.limit = APB5DIVClockFreq_ValueLimit;
             APB5DIVOutput.nodetype = .output;
             APB5DIVOutput.parents = &.{&APB5DIV};
 
@@ -7065,14 +6088,8 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             Tim3Mul.nodetype = .mul;
             Tim3Mul.value = Tim3Mul_clk_value;
             Tim3Mul.parents = &.{&APB6DIV};
-
-            std.mem.doNotOptimizeAway(Tim3OutputFreq_ValueValue);
-            Tim3Output.limit = Tim3OutputFreq_ValueLimit;
             Tim3Output.nodetype = .output;
             Tim3Output.parents = &.{&Tim3Mul};
-
-            std.mem.doNotOptimizeAway(APB6Freq_ValueValue);
-            APB6DIVOutput.limit = APB6Freq_ValueLimit;
             APB6DIVOutput.nodetype = .output;
             APB6DIVOutput.parents = &.{&APB6DIV};
             if (check_ref(@TypeOf(MCO1OutPutEnableValue), MCO1OutPutEnableValue, .true, .@"=")) {
@@ -7114,7 +6131,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 MCO1Div.parents = &.{&MCO1Mult};
             }
             if (check_ref(@TypeOf(MCO1OutPutEnableValue), MCO1OutPutEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(MCO1PinFreq_ValueValue);
                 MCO1Pin.nodetype = .output;
                 MCO1Pin.parents = &.{&MCO1Div};
             }
@@ -7158,7 +6174,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 MCO2Div.parents = &.{&MCO2Mult};
             }
             if (check_ref(@TypeOf(MCO2OutPutEnableValue), MCO2OutPutEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(MCO2PinFreq_ValueValue);
                 MCO2Pin.nodetype = .output;
                 MCO2Pin.parents = &.{&MCO2Div};
             }
@@ -7177,9 +6192,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             MLAHBDIV.nodetype = .div;
             MLAHBDIV.value = MLAHBDIV_clk_value.get();
             MLAHBDIV.parents = &.{&SysCLKOutput};
-
-            std.mem.doNotOptimizeAway(SYSCLKFreq_VALUEValue);
-            MLAHBClockOutput.limit = SYSCLKFreq_VALUELimit;
             MLAHBClockOutput.nodetype = .output;
             MLAHBClockOutput.parents = &.{&MLAHBDIV};
 
@@ -7197,9 +6209,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             APB3DIV.nodetype = .div;
             APB3DIV.value = APB3DIV_clk_value.get();
             APB3DIV.parents = &.{&MLAHBDIV};
-
-            std.mem.doNotOptimizeAway(APB3Freq_ValueValue);
-            APB3Output.limit = APB3Freq_ValueLimit;
             APB3Output.nodetype = .output;
             APB3Output.parents = &.{&APB3DIV};
 
@@ -7232,19 +6241,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             Tim1Mul.nodetype = .mul;
             Tim1Mul.value = Tim1Mul_clk_value;
             Tim1Mul.parents = &.{&APB1DIV};
-
-            std.mem.doNotOptimizeAway(Tim1OutputFreq_ValueValue);
-            Tim1Output.limit = Tim1OutputFreq_ValueLimit;
             Tim1Output.nodetype = .output;
             Tim1Output.parents = &.{&Tim1Mul};
-
-            std.mem.doNotOptimizeAway(AHB124Freq_ValueValue);
-            AHBOutput.limit = AHB124Freq_ValueLimit;
             AHBOutput.nodetype = .output;
             AHBOutput.parents = &.{&MLAHBDIV};
-
-            std.mem.doNotOptimizeAway(APB1Freq_ValueValue);
-            APB1Output.limit = APB1Freq_ValueLimit;
             APB1Output.nodetype = .output;
             APB1Output.parents = &.{&APB1DIV};
 
@@ -7277,19 +6277,11 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             Tim2Mul.nodetype = .mul;
             Tim2Mul.value = Tim2Mul_clk_value;
             Tim2Mul.parents = &.{&APB2DIV};
-
-            std.mem.doNotOptimizeAway(Tim2OutputFreq_ValueValue);
-            Tim2Output.limit = Tim2OutputFreq_ValueLimit;
             Tim2Output.nodetype = .output;
             Tim2Output.parents = &.{&Tim2Mul};
-
-            std.mem.doNotOptimizeAway(APB2Freq_ValueValue);
-            APB2Output.limit = APB2Freq_ValueLimit;
             APB2Output.nodetype = .output;
             APB2Output.parents = &.{&APB2DIV};
             if (check_ref(@TypeOf(DFSDMEnableValue), DFSDMEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DFSDMFreq_ValueValue);
-                DFSDM1Output.limit = DFSDMFreq_ValueLimit;
                 DFSDM1Output.nodetype = .output;
                 DFSDM1Output.parents = &.{&MLAHBDIV};
             }
@@ -7458,6 +6450,44 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 DIVN1.value = DIVN1_clk_value;
                 DIVN1.parents = &.{ &FreqCk1, &PLL1FRACV };
             }
+
+            //POST CLOCK REF PLL1FRACV VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(config.PLL1MODE), config.PLL1MODE, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
+                    if (config.PLL1FRACV) |val| {
+                        if (val != 0) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed Value: {d} found: {d}
+                                \\note: some values are fixed depending on the clock configuration
+                                \\
+                            , .{
+                                "PLL1FRACV",
+                                "PLL1MODE = RCC_PLL_SPREAD_SPECTRUM",
+                                "No Extra Log",
+                                0,
+                                val,
+                            });
+                        }
+                    }
+                    PLL1FRACV.limit = .{
+                        .min = 0,
+                        .max = 0,
+                    };
+                    PLL1FRACV.value = 0;
+                    break :blk null;
+                }
+                const config_val = config.PLL1FRACV;
+                PLL1FRACV.limit = .{
+                    .min = 0,
+                    .max = 8191,
+                };
+
+                PLL1FRACV.value = if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
+
+                break :blk null;
+            };
             if (check_ref(@TypeOf(PLL1UserDefinedConfigEnableValue), PLL1UserDefinedConfigEnableValue, .true, .@"=")) {
                 const PLL1FRACV_clk_value = PLL1FRACVValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                     \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -7470,7 +6500,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     "No Extra Log",
                     "PLL1FRACV",
                 });
-                PLL1FRACV.limit = PLL1FRACVLimit;
                 PLL1FRACV.nodetype = .source;
                 PLL1FRACV.value = PLL1FRACV_clk_value;
             }
@@ -7523,7 +6552,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 DIVQ1.parents = &.{&DIVN1Mul2Div2};
             }
             if (false) {
-                std.mem.doNotOptimizeAway(DIVQ1Freq_ValueValue);
                 DIVQ1output.nodetype = .output;
                 DIVQ1output.parents = &.{&DIVQ1};
             }
@@ -7544,7 +6572,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 DIVR1.parents = &.{&DIVN1Mul2Div2};
             }
             if (false) {
-                std.mem.doNotOptimizeAway(DIVR1Freq_ValueValue);
                 DIVR1output.nodetype = .output;
                 DIVR1output.parents = &.{&DIVR1};
             }
@@ -7579,6 +6606,44 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             DIVN2.value = DIVN2_clk_value;
             DIVN2.parents = &.{ &FreqCk2, &PLL2FRACV };
 
+            //POST CLOCK REF PLL2FRACV VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(config.PLL2MODE), config.PLL2MODE, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
+                    if (config.PLL2FRACV) |val| {
+                        if (val != 0) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed Value: {d} found: {d}
+                                \\note: some values are fixed depending on the clock configuration
+                                \\
+                            , .{
+                                "PLL2FRACV",
+                                "PLL2MODE = RCC_PLL_SPREAD_SPECTRUM",
+                                "No Extra Log",
+                                0,
+                                val,
+                            });
+                        }
+                    }
+                    PLL2FRACV.limit = .{
+                        .min = 0,
+                        .max = 0,
+                    };
+                    PLL2FRACV.value = 0;
+                    break :blk null;
+                }
+                const config_val = config.PLL2FRACV;
+                PLL2FRACV.limit = .{
+                    .min = 0,
+                    .max = 8191,
+                };
+
+                PLL2FRACV.value = if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
+
+                break :blk null;
+            };
+
             const PLL2FRACV_clk_value = PLL2FRACVValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
                 \\Clock is active but the reference value {s} is null
@@ -7590,7 +6655,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 "No Extra Log",
                 "PLL2FRACV",
             });
-            PLL2FRACV.limit = PLL2FRACVLimit;
             PLL2FRACV.nodetype = .source;
             PLL2FRACV.value = PLL2FRACV_clk_value;
 
@@ -7640,8 +6704,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 DIVQ2.parents = &.{&DIVN2Mul2Div2};
             }
             if (check_ref(@TypeOf(DCMIEnableValue), DCMIEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DIVQ2Freq_ValueValue);
-                DIVQ2output.limit = DIVQ2Freq_ValueLimit;
                 DIVQ2output.nodetype = .output;
                 DIVQ2output.parents = &.{&DIVQ2};
             }
@@ -7662,8 +6724,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 DIVR2.parents = &.{&DIVN2Mul2Div2};
             }
             if (check_ref(@TypeOf(DDREnableValue), DDREnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DIVR2Freq_ValueValue);
-                DIVR2output.limit = DIVR2Freq_ValueLimit;
                 DIVR2output.nodetype = .output;
                 DIVR2output.parents = &.{&DIVR2};
             }
@@ -7683,6 +6743,44 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             DIVN3.value = DIVN3_clk_value;
             DIVN3.parents = &.{ &DIVM3, &PLL3FRACV };
 
+            //POST CLOCK REF PLL3FRACV VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(config.PLL3MODE), config.PLL3MODE, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
+                    if (config.PLL3FRACV) |val| {
+                        if (val != 0) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed Value: {d} found: {d}
+                                \\note: some values are fixed depending on the clock configuration
+                                \\
+                            , .{
+                                "PLL3FRACV",
+                                "PLL3MODE = RCC_PLL_SPREAD_SPECTRUM",
+                                "No Extra Log",
+                                0,
+                                val,
+                            });
+                        }
+                    }
+                    PLL3FRACV.limit = .{
+                        .min = 0,
+                        .max = 0,
+                    };
+                    PLL3FRACV.value = 0;
+                    break :blk null;
+                }
+                const config_val = config.PLL3FRACV;
+                PLL3FRACV.limit = .{
+                    .min = 0,
+                    .max = 8191,
+                };
+
+                PLL3FRACV.value = if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
+
+                break :blk null;
+            };
+
             const PLL3FRACV_clk_value = PLL3FRACVValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
                 \\Clock is active but the reference value {s} is null
@@ -7694,7 +6792,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 "No Extra Log",
                 "PLL3FRACV",
             });
-            PLL3FRACV.limit = PLL3FRACVLimit;
             PLL3FRACV.nodetype = .source;
             PLL3FRACV.value = PLL3FRACV_clk_value;
 
@@ -7758,8 +6855,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 check_ref(@TypeOf(SPI4EnableValue), SPI4EnableValue, .true, .@"=") or
                 check_ref(@TypeOf(FDCANEnableValue), FDCANEnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(DIVQ3Freq_ValueValue);
-                DIVQ3output.limit = DIVQ3Freq_ValueLimit;
                 DIVQ3output.nodetype = .output;
                 DIVQ3output.parents = &.{&DIVQ3};
             }
@@ -7790,8 +6885,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if (check_MCU("LTDC_Exist")) {
                 if (check_ref(@TypeOf(LTDCEnableValue), LTDCEnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(LTDCFreq_ValueValue);
-                    LTDCOutput.limit = LTDCFreq_ValueLimit;
                     LTDCOutput.nodetype = .output;
                     LTDCOutput.parents = &.{&DIVQ4};
                 }
@@ -7806,8 +6899,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 check_ref(@TypeOf(SPI23EnableValue), SPI23EnableValue, .true, .@"=") or
                 check_ref(@TypeOf(SPI1EnableValue), SPI1EnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(DIVR3Freq_ValueValue);
-                DIVR3output.limit = DIVR3Freq_ValueLimit;
                 DIVR3output.nodetype = .output;
                 DIVR3output.parents = &.{&DIVR3};
             }
@@ -7827,6 +6918,44 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             DIVN4.value = DIVN4_clk_value;
             DIVN4.parents = &.{ &DIVM4, &PLL4FRACV };
 
+            //POST CLOCK REF PLL4FRACV VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(config.PLL4MODE), config.PLL4MODE, .RCC_PLL_SPREAD_SPECTRUM, .@"=")) {
+                    if (config.PLL4FRACV) |val| {
+                        if (val != 0) {
+                            return comptime_fail_or_error(error.InvalidConfig,
+                                \\
+                                \\Error on {s} | expr: {s} diagnostic: {s} 
+                                \\Expected Fixed Value: {d} found: {d}
+                                \\note: some values are fixed depending on the clock configuration
+                                \\
+                            , .{
+                                "PLL4FRACV",
+                                "PLL4MODE = RCC_PLL_SPREAD_SPECTRUM",
+                                "No Extra Log",
+                                0,
+                                val,
+                            });
+                        }
+                    }
+                    PLL4FRACV.limit = .{
+                        .min = 0,
+                        .max = 0,
+                    };
+                    PLL4FRACV.value = 0;
+                    break :blk null;
+                }
+                const config_val = config.PLL4FRACV;
+                PLL4FRACV.limit = .{
+                    .min = 0,
+                    .max = 8191,
+                };
+
+                PLL4FRACV.value = if (config_val) |i| @as(f32, @floatFromInt(i)) else 0;
+
+                break :blk null;
+            };
+
             const PLL4FRACV_clk_value = PLL4FRACVValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
                 \\Clock is active but the reference value {s} is null
@@ -7838,7 +6967,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 "No Extra Log",
                 "PLL4FRACV",
             });
-            PLL4FRACV.limit = PLL4FRACVLimit;
             PLL4FRACV.nodetype = .source;
             PLL4FRACV.value = PLL4FRACV_clk_value;
             if (check_ref(@TypeOf(DCMIEnableValue), DCMIEnableValue, .true, .@"=") or
@@ -7884,8 +7012,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 check_ref(@TypeOf(SPI23EnableValue), SPI23EnableValue, .true, .@"=") or
                 check_ref(@TypeOf(MCO2OutPutEnableValue), MCO2OutPutEnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(DIVP4Freq_ValueValue);
-                DIVP4output.limit = DIVP4Freq_ValueLimit;
                 DIVP4output.nodetype = .output;
                 DIVP4output.parents = &.{&DIVP4};
             }
@@ -7938,8 +7064,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 check_ref(@TypeOf(LPTIM3EnableValue), LPTIM3EnableValue, .true, .@"=") or
                 check_ref(@TypeOf(USART6EnableValue), USART6EnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(DIVQ4Freq_ValueValue);
-                DIVQ4output.limit = DIVQ4Freq_ValueLimit;
                 DIVQ4output.nodetype = .output;
                 DIVQ4output.parents = &.{&DIVQ4};
             }
@@ -7982,8 +7106,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 check_ref(@TypeOf(ADC2EnableValue), ADC2EnableValue, .true, .@"=") or
                 check_ref(@TypeOf(ADC1EnableValue), ADC1EnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(DIVR4Freq_ValueValue);
-                DIVR4output.limit = DIVR4Freq_ValueLimit;
                 DIVR4output.nodetype = .output;
                 DIVR4output.parents = &.{&DIVR4};
             }
@@ -8024,13 +7146,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 RTCClkSource.parents = &.{RTCClkSourceparents[RTCClkSource_clk_value.get()]};
             }
             if (check_ref(@TypeOf(RTCEnableValue), RTCEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(RTCFreq_ValueValue);
-                RTCOutput.limit = RTCFreq_ValueLimit;
                 RTCOutput.nodetype = .output;
                 RTCOutput.parents = &.{&RTCClkSource};
             }
             if (check_ref(@TypeOf(IWDGEnableValue), IWDGEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(WatchDogFreq_ValueValue);
                 IWDGOutput.nodetype = .output;
                 IWDGOutput.parents = &.{&LSIRC};
             }
@@ -8056,8 +7175,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 I2C12Mult.parents = &.{I2C12Multparents[I2C12Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(I2C12EnableValue), I2C12EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(I2C12Freq_ValueValue);
-                I2C12output.limit = I2C12Freq_ValueLimit;
                 I2C12output.nodetype = .output;
                 I2C12output.parents = &.{&I2C12Mult};
             }
@@ -8083,8 +7200,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 I2C3Mult.parents = &.{I2C3Multparents[I2C3Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(I2C3EnableValue), I2C3EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(I2C3Freq_ValueValue);
-                I2C3output.limit = I2C3Freq_ValueLimit;
                 I2C3output.nodetype = .output;
                 I2C3output.parents = &.{&I2C3Mult};
             }
@@ -8110,8 +7225,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 I2C4Mult.parents = &.{I2C4Multparents[I2C4Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(I2C4EnableValue), I2C4EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(I2C4Freq_ValueValue);
-                I2C4output.limit = I2C4Freq_ValueLimit;
                 I2C4output.nodetype = .output;
                 I2C4output.parents = &.{&I2C4Mult};
             }
@@ -8137,8 +7250,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 I2C5Mult.parents = &.{I2C5Multparents[I2C5Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(I2C5EnableValue), I2C5EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(I2C5Freq_ValueValue);
-                I2C5output.limit = I2C5Freq_ValueLimit;
                 I2C5output.nodetype = .output;
                 I2C5output.parents = &.{&I2C5Mult};
             }
@@ -8167,8 +7278,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             if (check_ref(@TypeOf(SPDIFEnableValue), SPDIFEnableValue, .true, .@"=") or
                 check_ref(@TypeOf(SAI2EnableValue), SAI2EnableValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(SPDIFRXFreq_ValueValue);
-                SPDIFoutput.limit = SPDIFRXFreq_ValueLimit;
                 SPDIFoutput.nodetype = .output;
                 SPDIFoutput.parents = &.{&SPDIFMult};
             }
@@ -8194,8 +7303,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 QSPIMult.parents = &.{QSPIMultparents[QSPIMult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(QuadSPIEnableValue), QuadSPIEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(QSPIFreq_ValueValue);
-                QSPIoutput.limit = QSPIFreq_ValueLimit;
                 QSPIoutput.nodetype = .output;
                 QSPIoutput.parents = &.{&QSPIMult};
             }
@@ -8221,8 +7328,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 FMCMult.parents = &.{FMCMultparents[FMCMult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(FMCEnableValue), FMCEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(FMCFreq_ValueValue);
-                FMCoutput.limit = FMCFreq_ValueLimit;
                 FMCoutput.nodetype = .output;
                 FMCoutput.parents = &.{&FMCMult};
             }
@@ -8248,8 +7353,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SDMMC1Mult.parents = &.{SDMMC1Multparents[SDMMC1Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SDMMC1EnableValue), SDMMC1EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SDMMC1Freq_ValueValue);
-                SDMMC1output.limit = SDMMC1Freq_ValueLimit;
                 SDMMC1output.nodetype = .output;
                 SDMMC1output.parents = &.{&SDMMC1Mult};
             }
@@ -8275,8 +7378,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SDMMC2Mult.parents = &.{SDMMC2Multparents[SDMMC2Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SDMMC2EnableValue), SDMMC2EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SDMMC2Freq_ValueValue);
-                SDMMC2output.limit = SDMMC2Freq_ValueLimit;
                 SDMMC2output.nodetype = .output;
                 SDMMC2output.parents = &.{&SDMMC2Mult};
             }
@@ -8300,8 +7401,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 STGENMult.parents = &.{STGENMultparents[STGENMult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(STGENEnableValue), STGENEnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(STGENFreq_ValueValue);
-                STGENoutput.limit = STGENFreq_ValueLimit;
                 STGENoutput.nodetype = .output;
                 STGENoutput.parents = &.{&STGENMult};
             }
@@ -8329,8 +7428,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 LPTIM45Mult.parents = &.{LPTIM45Multparents[LPTIM45Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(LPTIM45EnableValue), LPTIM45EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(LPTIM45Freq_ValueValue);
-                LPTIM45output.limit = LPTIM45Freq_ValueLimit;
                 LPTIM45output.nodetype = .output;
                 LPTIM45output.parents = &.{&LPTIM45Mult};
             }
@@ -8357,8 +7454,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 LPTIM2Mult.parents = &.{LPTIM2Multparents[LPTIM2Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(LPTIM2EnableValue), LPTIM2EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(LPTIM2Freq_ValueValue);
-                LPTIM2output.limit = LPTIM2Freq_ValueLimit;
                 LPTIM2output.nodetype = .output;
                 LPTIM2output.parents = &.{&LPTIM2Mult};
             }
@@ -8386,8 +7481,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 LPTIM1Mult.parents = &.{LPTIM1Multparents[LPTIM1Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(LPTIM1EnableValue), LPTIM1EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(LPTIM1Freq_ValueValue);
-                LPTIM1output.limit = LPTIM1Freq_ValueLimit;
                 LPTIM1output.nodetype = .output;
                 LPTIM1output.parents = &.{&LPTIM1Mult};
             }
@@ -8418,8 +7511,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if ((check_MCU("USART1_Exist"))) {
                 if (check_ref(@TypeOf(USART1EnableValue), USART1EnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(USART1Freq_ValueValue);
-                    USART1output.limit = USART1Freq_ValueLimit;
                     USART1output.nodetype = .output;
                     USART1output.parents = &.{&USART1Mult};
                 }
@@ -8448,8 +7539,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 USART2Mult.parents = &.{USART2Multparents[USART2Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(USART2EnableValue), USART2EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(USART2Freq_ValueValue);
-                USART2output.limit = USART2Freq_ValueLimit;
                 USART2output.nodetype = .output;
                 USART2output.parents = &.{&USART2Mult};
             }
@@ -8476,8 +7565,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 USART35Mult.parents = &.{USART35Multparents[USART35Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(USART35EnableValue), USART35EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(USART35Freq_ValueValue);
-                USART35output.limit = USART35Freq_ValueLimit;
                 USART35output.nodetype = .output;
                 USART35output.parents = &.{&USART35Mult};
             }
@@ -8504,8 +7591,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 USART6Mult.parents = &.{USART6Multparents[USART6Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(USART6EnableValue), USART6EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(USART6Freq_ValueValue);
-                USART6output.limit = USART6Freq_ValueLimit;
                 USART6output.nodetype = .output;
                 USART6output.parents = &.{&USART6Mult};
             }
@@ -8532,8 +7617,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 UART78Mult.parents = &.{UART78Multparents[UART78Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(UART78EnableValue), UART78EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(UART78Freq_ValueValue);
-                USART78output.limit = UART78Freq_ValueLimit;
                 USART78output.nodetype = .output;
                 USART78output.parents = &.{&UART78Mult};
             }
@@ -8561,8 +7644,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if ((check_MCU("RNG1_Exist"))) {
                 if (check_ref(@TypeOf(RNG1EnableValue), RNG1EnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(RNG1Freq_ValueValue);
-                    RNG1output.limit = RNG1Freq_ValueLimit;
                     RNG1output.nodetype = .output;
                     RNG1output.parents = &.{&RNG1Mult};
                 }
@@ -8592,8 +7673,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if ((check_MCU("DCMIPP_Exist"))) {
                 if (check_ref(@TypeOf(DCMIEnableValue), DCMIEnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(DCMIFreq_ValueValue);
-                    DCMIoutput.limit = DCMIFreq_ValueLimit;
                     DCMIoutput.nodetype = .output;
                     DCMIoutput.parents = &.{&DCMIMult};
                 }
@@ -8623,8 +7702,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if ((check_MCU("SAES_Exist"))) {
                 if (check_ref(@TypeOf(SAESEnableValue), SAESEnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(SAESFreq_ValueValue);
-                    SAESoutput.limit = SAESFreq_ValueLimit;
                     SAESoutput.nodetype = .output;
                     SAESoutput.parents = &.{&SAESMult};
                 }
@@ -8652,8 +7729,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 LPTIM3Mult.parents = &.{LPTIM3Multparents[LPTIM3Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(LPTIM3EnableValue), LPTIM3EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(LPTIM3Freq_ValueValue);
-                LPTIM3output.limit = LPTIM3Freq_ValueLimit;
                 LPTIM3output.nodetype = .output;
                 LPTIM3output.parents = &.{&LPTIM3Mult};
             }
@@ -8681,8 +7756,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SPI4Mult.parents = &.{SPI4Multparents[SPI4Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SPI4EnableValue), SPI4EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SPI4Freq_ValueValue);
-                SPI4output.limit = SPI4Freq_ValueLimit;
                 SPI4output.nodetype = .output;
                 SPI4output.parents = &.{&SPI4Mult};
             }
@@ -8710,8 +7783,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SAI2Mult.parents = &.{SAI2Multparents[SAI2Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SAI2EnableValue), SAI2EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SAI2Freq_ValueValue);
-                SAI2output.limit = SAI2Freq_ValueLimit;
                 SAI2output.nodetype = .output;
                 SAI2output.parents = &.{&SAI2Mult};
             }
@@ -8738,8 +7809,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 USART4Mult.parents = &.{USART4Multparents[USART4Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(USART4EnableValue), USART4EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(USART4Freq_ValueValue);
-                USART4output.limit = USART4Freq_ValueLimit;
                 USART4output.nodetype = .output;
                 USART4output.parents = &.{&USART4Mult};
             }
@@ -8766,8 +7835,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SPI1Mult.parents = &.{SPI1Multparents[SPI1Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SPI1EnableValue), SPI1EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SPI1Freq_ValueValue);
-                SPI1output.limit = SPI1Freq_ValueLimit;
                 SPI1output.nodetype = .output;
                 SPI1output.parents = &.{&SPI1Mult};
             }
@@ -8794,8 +7861,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SPI23Mult.parents = &.{SPI23Multparents[SPI23Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SPI23EnableValue), SPI23EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SPI23Freq_ValueValue);
-                SPI23output.limit = SPI23Freq_ValueLimit;
                 SPI23output.nodetype = .output;
                 SPI23output.parents = &.{&SPI23Mult};
             }
@@ -8824,14 +7889,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SAI1Mult.parents = &.{SAI1Multparents[SAI1Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SAI1EnableValue), SAI1EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SAI1Freq_ValueValue);
-                SAI1output.limit = SAI1Freq_ValueLimit;
                 SAI1output.nodetype = .output;
                 SAI1output.parents = &.{&SAI1Mult};
             }
             if (check_ref(@TypeOf(EnableDFSDMAudioValue), EnableDFSDMAudioValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DFSDFAFreq_ValueValue);
-                DFSDF1Audiooutput.limit = DFSDFAFreq_ValueLimit;
                 DFSDF1Audiooutput.nodetype = .output;
                 DFSDF1Audiooutput.parents = &.{&SAI1Mult};
             }
@@ -8858,8 +7919,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 SPI5Mult.parents = &.{SPI5Multparents[SPI5Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(SPI5EnableValue), SPI5EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(SPI5Freq_ValueValue);
-                SPI5output.limit = SPI5Freq_ValueLimit;
                 SPI5output.nodetype = .output;
                 SPI5output.parents = &.{&SPI5Mult};
             }
@@ -8888,8 +7947,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if (check_MCU("FDCAN1_Exist") or check_MCU("FDCAN2_Exist")) {
                 if (check_ref(@TypeOf(FDCANEnableValue), FDCANEnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(FDCANFreq_ValueValue);
-                    FDCANoutput.limit = FDCANFreq_ValueLimit;
                     FDCANoutput.nodetype = .output;
                     FDCANoutput.parents = &.{&FDCANMult};
                 }
@@ -8914,8 +7971,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 ETH1Mult.parents = &.{ETH1Multparents[ETH1Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(ETH1EnableValue), ETH1EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(ETHFreq_ValueValue);
-                ETH1output.limit = ETHFreq_ValueLimit;
                 ETH1output.nodetype = .output;
                 ETH1output.parents = &.{&ETH1Mult};
             }
@@ -8942,8 +7997,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if (check_MCU("ETH2_Exist")) {
                 if (check_ref(@TypeOf(ETH2EnableValue), ETH2EnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(ETH2Freq_ValueValue);
-                    ETH2output.limit = ETH2Freq_ValueLimit;
                     ETH2output.nodetype = .output;
                     ETH2output.parents = &.{&ETH2Mult};
                 }
@@ -8969,8 +8022,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 ADC2Mult.parents = &.{ADC2Multparents[ADC2Mult_clk_value.get()]};
             }
             if (check_ref(@TypeOf(ADC2EnableValue), ADC2EnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(ADC2Freq_ValueValue);
-                ADC2output.limit = ADC2Freq_ValueLimit;
                 ADC2output.nodetype = .output;
                 ADC2output.parents = &.{&ADC2Mult};
             }
@@ -8998,31 +8049,23 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             }
             if (check_MCU("ADC1_Exist")) {
                 if (check_ref(@TypeOf(ADC1EnableValue), ADC1EnableValue, .true, .@"=")) {
-                    std.mem.doNotOptimizeAway(ADC1Freq_ValueValue);
-                    ADC1output.limit = ADC1Freq_ValueLimit;
                     ADC1output.nodetype = .output;
                     ADC1output.parents = &.{&ADC1Mult};
                 }
             }
             if (check_ref(@TypeOf(DDREnableValue), DDREnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DDRPHYFreq_ValueValue);
                 DDRPHYC.nodetype = .output;
                 DDRPHYC.parents = &.{&DIVR2};
             }
             if (check_ref(@TypeOf(DDREnableValue), DDREnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(PUBLFreq_ValueValue);
                 PUBL.nodetype = .output;
                 PUBL.parents = &.{&DIVR2};
             }
             if (check_ref(@TypeOf(DDREnableValue), DDREnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DDRCFreq_ValueValue);
-                DDRC.limit = DDRCFreq_ValueLimit;
                 DDRC.nodetype = .output;
                 DDRC.parents = &.{&DIVR2};
             }
             if (check_ref(@TypeOf(DDREnableValue), DDREnableValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(DDRPERFMFreq_ValueValue);
-                DDRPERFM.limit = DDRPERFMFreq_ValueLimit;
                 DDRPERFM.nodetype = .output;
                 DDRPERFM.parents = &.{&DIVR2};
             }
@@ -9067,7 +8110,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             if (check_ref(@TypeOf(EnableUSBOHSValue), EnableUSBOHSValue, .true, .@"=") or
                 check_ref(@TypeOf(EnableUSBHSValue), EnableUSBHSValue, .true, .@"="))
             {
-                std.mem.doNotOptimizeAway(USBPHYFreq_ValueValue);
                 USBPHYCLKOutput.nodetype = .output;
                 USBPHYCLKOutput.parents = &.{&USBPHYCLKMux};
             }
@@ -9106,74 +8148,941 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 USBOCLKMux.parents = &.{USBOCLKMuxparents[USBOCLKMux_clk_value.get()]};
             }
             if (check_ref(@TypeOf(EnableUSBOHSValue), EnableUSBOHSValue, .true, .@"=")) {
-                std.mem.doNotOptimizeAway(USBOHSFreq_ValueValue);
                 USBOFSCLKOutput.nodetype = .output;
                 USBOFSCLKOutput.parents = &.{&USBOCLKMux};
             }
-
-            std.mem.doNotOptimizeAway(HSIDivClkFreq_ValueValue);
             HSIDivClk.nodetype = .output;
             HSIDivClk.parents = &.{&HSIDiv};
-
-            std.mem.doNotOptimizeAway(VCOInput1Freq_ValueValue);
-            VCOInput.limit = VCOInput1Freq_ValueLimit;
             VCOInput.nodetype = .output;
             VCOInput.parents = &.{&DIVM1};
-
-            std.mem.doNotOptimizeAway(VCOInput2Freq_ValueValue);
-            VCO2Input.limit = VCOInput2Freq_ValueLimit;
             VCO2Input.nodetype = .output;
             VCO2Input.parents = &.{&DIVM2};
-
-            std.mem.doNotOptimizeAway(VCOInput3Freq_ValueValue);
-            VCO3Input.limit = VCOInput3Freq_ValueLimit;
             VCO3Input.nodetype = .output;
             VCO3Input.parents = &.{&DIVM3};
-
-            std.mem.doNotOptimizeAway(VCOInput4Freq_ValueValue);
-            VCO4Input.limit = VCOInput4Freq_ValueLimit;
             VCO4Input.nodetype = .output;
             VCO4Input.parents = &.{&DIVM4};
-
-            std.mem.doNotOptimizeAway(VCO1OutputFreq_ValueValue);
-            VCO1Output.limit = VCO1OutputFreq_ValueLimit;
             VCO1Output.nodetype = .output;
             VCO1Output.parents = &.{&DIVN1};
-
-            std.mem.doNotOptimizeAway(DIVP1Freq_ValueValue);
-            PLL1CLK.limit = DIVP1Freq_ValueLimit;
             PLL1CLK.nodetype = .output;
             PLL1CLK.parents = &.{&DIVP1};
-
-            std.mem.doNotOptimizeAway(VCO2OutputFreq_ValueValue);
-            VCO2Output.limit = VCO2OutputFreq_ValueLimit;
             VCO2Output.nodetype = .output;
             VCO2Output.parents = &.{&DIVN2};
-
-            std.mem.doNotOptimizeAway(DIVP2Freq_ValueValue);
-            PLL2CLK.limit = DIVP2Freq_ValueLimit;
             PLL2CLK.nodetype = .output;
             PLL2CLK.parents = &.{&DIVP2};
-
-            std.mem.doNotOptimizeAway(VCO3OutputFreq_ValueValue);
-            VCO3Output.limit = VCO3OutputFreq_ValueLimit;
             VCO3Output.nodetype = .output;
             VCO3Output.parents = &.{&DIVN3};
-
-            std.mem.doNotOptimizeAway(VCO4OutputFreq_ValueValue);
-            VCO4Output.limit = VCO4OutputFreq_ValueLimit;
             VCO4Output.nodetype = .output;
             VCO4Output.parents = &.{&DIVN4};
-
-            std.mem.doNotOptimizeAway(DIVP3Freq_ValueValue);
-            PLL3CLK.limit = DIVP3Freq_ValueLimit;
             PLL3CLK.nodetype = .output;
             PLL3CLK.parents = &.{&DIVP3};
-
-            std.mem.doNotOptimizeAway(MLAHBDIVCLKFreq_ValueValue);
-            MLAHBDIVCLK.limit = MLAHBDIVCLKFreq_ValueLimit;
             MLAHBDIVCLK.nodetype = .output;
             MLAHBDIVCLK.parents = &.{&MLAHBDIV};
+
+            //POST CLOCK REF MLAHBCLKFreq_VALUE VALUE
+            _ = blk: {
+                SysCLKOutput.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF MPUCLKFreq_VALUE VALUE
+            _ = blk: {
+                if (check_ref(@TypeOf(Max650Value), Max650Value, .false, .@"=")) {
+                    MPUCLKOutput.limit = .{
+                        .min = null,
+                        .max = 1e9,
+                    };
+
+                    break :blk null;
+                }
+                MPUCLKOutput.limit = .{
+                    .min = null,
+                    .max = 6.5e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF AXICLKFreq_VALUE VALUE
+            _ = blk: {
+                AXICLKOutput.limit = .{
+                    .min = null,
+                    .max = 2.665e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF AXIDIVFreq_Value VALUE
+            _ = blk: {
+                AXIOutput.limit = .{
+                    .min = null,
+                    .max = 2.665e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF Hclk5DIVFreq_Value VALUE
+            _ = blk: {
+                Hclk5Output.limit = .{
+                    .min = null,
+                    .max = 2.665e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF Hclk6DIVFreq_Value VALUE
+            _ = blk: {
+                Hclk6Output.limit = .{
+                    .min = null,
+                    .max = 2.665e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB4Freq_Value VALUE
+            _ = blk: {
+                APB4DIVOutput.limit = .{
+                    .min = null,
+                    .max = 1.3325e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB5DIVClockFreq_Value VALUE
+            _ = blk: {
+                APB5DIVOutput.limit = .{
+                    .min = null,
+                    .max = 6.7e7,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF Tim3OutputFreq_Value VALUE
+            _ = blk: {
+                Tim3Output.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB6Freq_Value VALUE
+            _ = blk: {
+                APB6DIVOutput.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SYSCLKFreq_VALUE VALUE
+            _ = blk: {
+                MLAHBClockOutput.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB3Freq_Value VALUE
+            _ = blk: {
+                APB3Output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF Tim1OutputFreq_Value VALUE
+            _ = blk: {
+                Tim1Output.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF AHB124Freq_Value VALUE
+            _ = blk: {
+                AHBOutput.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB1Freq_Value VALUE
+            _ = blk: {
+                APB1Output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF Tim2OutputFreq_Value VALUE
+            _ = blk: {
+                Tim2Output.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF APB2Freq_Value VALUE
+            _ = blk: {
+                APB2Output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF DFSDMFreq_Value VALUE
+            _ = blk: {
+                if (config.flags.DFSDM1Used_ForRCC) {
+                    DFSDM1Output.limit = .{
+                        .min = null,
+                        .max = 2.09e8,
+                    };
+
+                    break :blk null;
+                }
+                DFSDM1Output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVQ2Freq_Value VALUE
+            _ = blk: {
+                DIVQ2output.limit = .{
+                    .min = null,
+                    .max = 8e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVR2Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL2RUsedValue), PLL2RUsedValue, 1, .@"="))) {
+                    DIVR2output.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                DIVR2output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVQ3Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL3QUsedValue), PLL3QUsedValue, 1, .@"="))) {
+                    DIVQ3output.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                DIVQ3output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF LTDCFreq_Value VALUE
+            _ = blk: {
+                LTDCOutput.limit = .{
+                    .min = null,
+                    .max = 9e7,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVR3Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL3RUsedValue), PLL3RUsedValue, 1, .@"="))) {
+                    DIVR3output.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                DIVR3output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVP4Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL4PUsedValue), PLL4PUsedValue, 1, .@"="))) {
+                    DIVP4output.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                DIVP4output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVQ4Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL4QUsedValue), PLL4QUsedValue, 1, .@"="))) {
+                    DIVQ4output.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                DIVQ4output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVR4Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL4RUsedValue), PLL4RUsedValue, 1, .@"="))) {
+                    DIVR4output.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                DIVR4output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF RTCFreq_Value VALUE
+            _ = blk: {
+                RTCOutput.limit = .{
+                    .min = null,
+                    .max = 4e6,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF I2C12Freq_Value VALUE
+            _ = blk: {
+                I2C12output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF I2C3Freq_Value VALUE
+            _ = blk: {
+                I2C3output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF I2C4Freq_Value VALUE
+            _ = blk: {
+                I2C4output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF I2C5Freq_Value VALUE
+            _ = blk: {
+                I2C5output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SPDIFRXFreq_Value VALUE
+            _ = blk: {
+                SPDIFoutput.limit = .{
+                    .min = null,
+                    .max = 2e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF QSPIFreq_Value VALUE
+            _ = blk: {
+                QSPIoutput.limit = .{
+                    .min = null,
+                    .max = 2.665e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF FMCFreq_Value VALUE
+            _ = blk: {
+                FMCoutput.limit = .{
+                    .min = null,
+                    .max = 2.665e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SDMMC1Freq_Value VALUE
+            _ = blk: {
+                SDMMC1output.limit = .{
+                    .min = null,
+                    .max = 2.66e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SDMMC2Freq_Value VALUE
+            _ = blk: {
+                SDMMC2output.limit = .{
+                    .min = null,
+                    .max = 2.66e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF STGENFreq_Value VALUE
+            _ = blk: {
+                STGENoutput.limit = .{
+                    .min = null,
+                    .max = 6.4e7,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF LPTIM45Freq_Value VALUE
+            _ = blk: {
+                LPTIM45output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF LPTIM2Freq_Value VALUE
+            _ = blk: {
+                LPTIM2output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF LPTIM1Freq_Value VALUE
+            _ = blk: {
+                LPTIM1output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF USART1Freq_Value VALUE
+            _ = blk: {
+                USART1output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF USART2Freq_Value VALUE
+            _ = blk: {
+                USART2output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF USART35Freq_Value VALUE
+            _ = blk: {
+                USART35output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF USART6Freq_Value VALUE
+            _ = blk: {
+                USART6output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF UART78Freq_Value VALUE
+            _ = blk: {
+                USART78output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF RNG1Freq_Value VALUE
+            _ = blk: {
+                RNG1output.limit = .{
+                    .min = null,
+                    .max = 3.6e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF DCMIFreq_Value VALUE
+            _ = blk: {
+                DCMIoutput.limit = .{
+                    .min = null,
+                    .max = 2.66e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SAESFreq_Value VALUE
+            _ = blk: {
+                SAESoutput.limit = .{
+                    .min = null,
+                    .max = 3.6e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF LPTIM3Freq_Value VALUE
+            _ = blk: {
+                LPTIM3output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SPI4Freq_Value VALUE
+            _ = blk: {
+                SPI4output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SAI2Freq_Value VALUE
+            _ = blk: {
+                SAI2output.limit = .{
+                    .min = null,
+                    .max = 1.3325e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF USART4Freq_Value VALUE
+            _ = blk: {
+                USART4output.limit = .{
+                    .min = null,
+                    .max = 1.045e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SPI1Freq_Value VALUE
+            _ = blk: {
+                SPI1output.limit = .{
+                    .min = null,
+                    .max = 2e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SPI23Freq_Value VALUE
+            _ = blk: {
+                SPI23output.limit = .{
+                    .min = null,
+                    .max = 2e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SAI1Freq_Value VALUE
+            _ = blk: {
+                SAI1output.limit = .{
+                    .min = null,
+                    .max = 1.3325e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF DFSDFAFreq_Value VALUE
+            _ = blk: {
+                DFSDF1Audiooutput.limit = .{
+                    .min = null,
+                    .max = 1.33e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF SPI5Freq_Value VALUE
+            _ = blk: {
+                SPI5output.limit = .{
+                    .min = null,
+                    .max = 1.3325e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF FDCANFreq_Value VALUE
+            _ = blk: {
+                FDCANoutput.limit = .{
+                    .min = null,
+                    .max = 1e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF ETHFreq_Value VALUE
+            _ = blk: {
+                ETH1output.limit = .{
+                    .min = null,
+                    .max = 1.25e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF ETH2Freq_Value VALUE
+            _ = blk: {
+                ETH2output.limit = .{
+                    .min = null,
+                    .max = 1.25e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF ADC2Freq_Value VALUE
+            _ = blk: {
+                ADC2output.limit = .{
+                    .min = null,
+                    .max = 1.3325e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF ADC1Freq_Value VALUE
+            _ = blk: {
+                ADC1output.limit = .{
+                    .min = null,
+                    .max = 1.3325e8,
+                };
+
+                break :blk null;
+            };
+
+            //POST CLOCK REF DDRCFreq_Value VALUE
+            _ = blk: {
+                if (check_MCU("DDR3")) {
+                    DDRC.limit = .{
+                        .min = 3e8,
+                        .max = 5.33e8,
+                    };
+
+                    break :blk null;
+                } else if (check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
+                    DDRC.limit = .{
+                        .min = 1e7,
+                        .max = 5.33e8,
+                    };
+
+                    break :blk null;
+                }
+                DDRC.value = 32000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DDRPERFMFreq_Value VALUE
+            _ = blk: {
+                if (check_MCU("DDR3")) {
+                    DDRPERFM.limit = .{
+                        .min = 3e8,
+                        .max = 5.33e8,
+                    };
+
+                    break :blk null;
+                } else if (check_MCU("LPDDR2") or check_MCU("LPDDR3")) {
+                    DDRPERFM.limit = .{
+                        .min = 1e7,
+                        .max = 5.33e8,
+                    };
+
+                    break :blk null;
+                }
+                DDRPERFM.value = 32000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOInput1Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL1UsedValue), PLL1UsedValue, 1, .@"="))) {
+                    VCOInput.limit = .{
+                        .min = 8e6,
+                        .max = 1.6e7,
+                    };
+
+                    break :blk null;
+                }
+                VCOInput.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOInput2Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL2UsedValue), PLL2UsedValue, 1, .@"="))) {
+                    VCO2Input.limit = .{
+                        .min = 8e6,
+                        .max = 1.6e7,
+                    };
+
+                    break :blk null;
+                }
+                VCO2Input.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOInput3Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL3UsedValue), PLL3UsedValue, 1, .@"="))) {
+                    VCO3Input.limit = .{
+                        .min = 4e6,
+                        .max = 1.6e7,
+                    };
+
+                    break :blk null;
+                }
+                VCO3Input.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCOInput4Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL4UsedValue), PLL4UsedValue, 1, .@"="))) {
+                    VCO4Input.limit = .{
+                        .min = 4e6,
+                        .max = 1.6e7,
+                    };
+
+                    break :blk null;
+                }
+                VCO4Input.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCO1OutputFreq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL1UsedValue), PLL1UsedValue, 1, .@"="))) {
+                    VCO1Output.limit = .{
+                        .min = 9.92e8,
+                        .max = 2e9,
+                    };
+
+                    break :blk null;
+                }
+                VCO1Output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVP1Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL1UsedValue), PLL1UsedValue, 1, .@"="))) {
+                    PLL1CLK.limit = .{
+                        .min = null,
+                        .max = 1e9,
+                    };
+
+                    break :blk null;
+                }
+                PLL1CLK.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCO2OutputFreq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL2UsedValue), PLL2UsedValue, 1, .@"="))) {
+                    VCO2Output.limit = .{
+                        .min = 8e8,
+                        .max = 1.6e9,
+                    };
+
+                    break :blk null;
+                }
+                VCO2Output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVP2Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL2PUsedValue), PLL2PUsedValue, 1, .@"="))) {
+                    PLL2CLK.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                PLL2CLK.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCO3OutputFreq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL3UsedValue), PLL3UsedValue, 1, .@"="))) {
+                    VCO3Output.limit = .{
+                        .min = 4e8,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                VCO3Output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF VCO4OutputFreq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL4UsedValue), PLL4UsedValue, 1, .@"="))) {
+                    VCO4Output.limit = .{
+                        .min = 4e8,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                VCO4Output.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF DIVP3Freq_Value VALUE
+            _ = blk: {
+                if ((check_ref(@TypeOf(PLL3PUsedValue), PLL3PUsedValue, 1, .@"="))) {
+                    PLL3CLK.limit = .{
+                        .min = null,
+                        .max = 8e8,
+                    };
+
+                    break :blk null;
+                }
+                PLL3CLK.value = 96000000;
+                break :blk null;
+            };
+
+            //POST CLOCK REF MLAHBDIVCLKFreq_Value VALUE
+            _ = blk: {
+                MLAHBDIVCLK.limit = .{
+                    .min = null,
+                    .max = 2.09e8,
+                };
+
+                break :blk null;
+            };
+            const PLL1MODEValue: ?PLL1MODEList = blk: {
+                if (check_ref(@TypeOf(PLL1CSGValue), PLL1CSGValue, .true, .@"=")) {
+                    const item: PLL1MODEList = .RCC_PLL_SPREAD_SPECTRUM;
+                    break :blk item;
+                } else if (check_ref(@TypeOf(PLL1FRACVValue), PLL1FRACVValue, 0, .@"=")) {
+                    const item: PLL1MODEList = .RCC_PLL_INTEGER;
+                    break :blk item;
+                }
+                const item: PLL1MODEList = .RCC_PLL_FRACTIONAL;
+                break :blk item;
+            };
+            const PLL2MODEValue: ?PLL2MODEList = blk: {
+                if (check_ref(@TypeOf(PLL2CSGValue), PLL2CSGValue, .true, .@"=")) {
+                    const item: PLL2MODEList = .RCC_PLL_SPREAD_SPECTRUM;
+                    break :blk item;
+                } else if (check_ref(@TypeOf(PLL2FRACVValue), PLL2FRACVValue, 0, .@"=")) {
+                    const item: PLL2MODEList = .RCC_PLL_INTEGER;
+                    break :blk item;
+                }
+                const item: PLL2MODEList = .RCC_PLL_FRACTIONAL;
+                break :blk item;
+            };
+            const PLL3MODEValue: ?PLL3MODEList = blk: {
+                if (check_ref(@TypeOf(PLL3CSGValue), PLL3CSGValue, .true, .@"=")) {
+                    const item: PLL3MODEList = .RCC_PLL_SPREAD_SPECTRUM;
+                    break :blk item;
+                } else if (check_ref(@TypeOf(PLL3FRACVValue), PLL3FRACVValue, 0, .@"=")) {
+                    const item: PLL3MODEList = .RCC_PLL_INTEGER;
+                    break :blk item;
+                }
+                const item: PLL3MODEList = .RCC_PLL_FRACTIONAL;
+                break :blk item;
+            };
+            const PLL4MODEValue: ?PLL4MODEList = blk: {
+                if (check_ref(@TypeOf(PLL4CSGValue), PLL4CSGValue, .true, .@"=")) {
+                    const item: PLL4MODEList = .RCC_PLL_SPREAD_SPECTRUM;
+                    break :blk item;
+                } else if (check_ref(@TypeOf(PLL4FRACVValue), PLL4FRACVValue, 0, .@"=")) {
+                    const item: PLL4MODEList = .RCC_PLL_INTEGER;
+                    break :blk item;
+                }
+                const item: PLL4MODEList = .RCC_PLL_FRACTIONAL;
+                break :blk item;
+            };
 
             out.MLAHBClockOutput = try MLAHBClockOutput.get_output();
             out.APB3Output = try APB3Output.get_output();
@@ -9361,9 +9270,12 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             out.VCO4Output = try VCO4Output.get_extra_output();
             out.PLL3CLK = try PLL3CLK.get_extra_output();
             out.MLAHBDIVCLK = try MLAHBDIVCLK.get_extra_output();
+            ref_out.HSI_VALUE = HSI_VALUEValue;
             ref_out.HSIDivValue = HSIDivValueValue;
             ref_out.HSE_VALUE = HSE_VALUEValue;
+            ref_out.LSI_VALUE = LSI_VALUEValue;
             ref_out.LSE_VALUE = LSE_VALUEValue;
+            ref_out.CSI_VALUE = CSI_VALUEValue;
             ref_out.EXTERNAL_CLOCK_VALUE = EXTERNAL_CLOCK_VALUEValue;
             ref_out.MLAHBCLKSource = MLAHBCLKSourceValue;
             ref_out.MPUCLKSource = MPUCLKSourceValue;
@@ -9454,6 +9366,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.ADC1CLockSelection = ADC1CLockSelectionValue;
             ref_out.RCC_USBPHY_Clock_Source_FROM_HSE = RCC_USBPHY_Clock_Source_FROM_HSEValue;
             ref_out.USBPHYCLKSource = USBPHYCLKSourceValue;
+            ref_out.USB_PHY_VALUE = USB_PHY_VALUEValue;
             ref_out.USBOCLKSource = USBOCLKSourceValue;
             ref_out.HSICalibrationValue = HSICalibrationValueValue;
             ref_out.CSICalibrationValue = CSICalibrationValueValue;
