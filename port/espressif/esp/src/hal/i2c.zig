@@ -488,14 +488,6 @@ pub const I2C = struct {
         }
     }
 
-    fn stop_operation(self: I2C) !void {
-        var cmd_idx: usize = 0;
-        try self.add_cmd(&cmd_idx, Command.stop);
-
-        self.start_transmission();
-        try self.wait_for_completion(mdf.time.Deadline.init_absolute(null));
-    }
-
     /// Read data from an I2C slave
     pub fn read_blocking(self: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) !void {
         return self.readv_blocking(addr, &.{dst}, timeout);
@@ -546,29 +538,24 @@ pub const I2C = struct {
         if (buffer.len == 0 and !start and !stop)
             return;
 
-        try self.start_read_operation(addr, buffer, start, will_continue);
-        try self.wait_for_completion(deadline);
-
-        // Read data from FIFO into buffer
-        try self.read_all_from_fifo(buffer);
-
-        if (stop)
-            try self.stop_operation();
-    }
-
-    fn start_read_operation(self: I2C, addr: Address, buffer: []u8, start: bool, will_continue: bool) !void {
         self.reset_fifo();
         self.reset_command_list();
 
+        // See TRM sections 28.5.5.1 and 28.5.8.1 to understand the command structure
         var cmd_idx: usize = 0;
-
         if (start)
             try self.add_cmd(&cmd_idx, Command.start);
 
         try self.setup_read(addr, buffer, start, will_continue, &cmd_idx);
 
-        try self.add_cmd(&cmd_idx, Command.end);
+        try self.add_cmd(&cmd_idx, if (stop) Command.stop else Command.end);
+
         self.start_transmission();
+
+        try self.wait_for_completion(deadline);
+
+        // Read data from FIFO into buffer
+        try self.read_all_from_fifo(buffer);
     }
 
     /// Write data to an I2C slave
@@ -655,25 +642,20 @@ pub const I2C = struct {
 
         self.clear_interrupts();
 
-        try self.start_write_operation(addr, bytes, start);
-        try self.wait_for_completion(deadline);
-
-        if (stop)
-            try self.stop_operation();
-    }
-
-    fn start_write_operation(self: I2C, addr: Address, bytes: []const u8, start: bool) !void {
         self.reset_fifo();
         self.reset_command_list();
 
+        // See TRM sections 28.5.1.1 and 28.5.4.1 to understand the command structure
         var cmd_idx: usize = 0;
-
         if (start)
             try self.add_cmd(&cmd_idx, Command.start);
 
         try self.setup_write(addr, bytes, start, &cmd_idx);
 
-        try self.add_cmd(&cmd_idx, Command.end);
+        try self.add_cmd(&cmd_idx, if (stop) Command.stop else Command.end);
+
         self.start_transmission();
+
+        try self.wait_for_completion(deadline);
     }
 };
