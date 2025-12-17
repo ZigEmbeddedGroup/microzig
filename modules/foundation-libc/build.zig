@@ -13,12 +13,14 @@ pub fn build(b: *std.Build) void {
         b.getInstallStep().dependOn(validation_step);
     }
 
-    const libc = b.addStaticLibrary(.{
+    const libc = b.addLibrary(.{
         .name = "foundation",
-        .target = target,
-        .optimize = optimize,
-        .root_source_file = b.path("src/libc.zig"),
-        .single_threaded = single_threaded,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("src/libc.zig"),
+            .single_threaded = single_threaded,
+        }),
     });
 
     libc.addIncludePath(b.path("include"));

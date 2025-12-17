@@ -38,7 +38,7 @@ const led_pin = gpio.num(23);
 
 pub fn main() !void {
     pio.gpio_init(led_pin);
-    pio.sm_set_pindir(sm, @intFromEnum(led_pin), 1, .out);
+    try pio.sm_set_pindir(sm, led_pin, 1, .out);
 
     const cycles_per_bit: comptime_int = ws2812_program.defines[0].value + //T1
         ws2812_program.defines[1].value + //T2
@@ -49,10 +49,7 @@ pub fn main() !void {
     pio.sm_load_and_start_program(sm, ws2812_program, .{
         .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(div),
         .pin_mappings = .{
-            .side_set = .{
-                .base = @intFromEnum(led_pin),
-                .count = 1,
-            },
+            .side_set = .single(led_pin),
         },
         .shift = .{
             .out_shiftdir = .left,

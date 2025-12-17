@@ -5,11 +5,9 @@ const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
-const ClockDevice = rp2xxx.drivers.ClockDevice;
 const A4988 = microzig.drivers.stepper.A4988;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -26,12 +24,9 @@ pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
-        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);
-
-    var cd = ClockDevice{};
 
     // Setup all pins for the stepper driver
     var pins: struct {
@@ -53,7 +48,7 @@ pub fn main() !void {
         .ms3_pin = pins.ms3.digital_io(),
         .dir_pin = pins.dir.digital_io(),
         .step_pin = pins.step.digital_io(),
-        .clock_device = cd.clock_device(),
+        .clock_device = rp2xxx.drivers.clock_device(),
     });
 
     try stepper.begin(100, 1);

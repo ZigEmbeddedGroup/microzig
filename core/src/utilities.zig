@@ -1,21 +1,34 @@
 const std = @import("std");
+const assert = std.debug.assert;
+
 const microzig = @import("microzig.zig");
 
-/// Fills .bss with zeroes and copies .data from flash into ram. May be called
-/// by the cpu module at startup.
-pub fn initialize_system_memories() void {
+/// Fills .bss with zeroes and *maybe* copies .data from flash into ram. May be
+/// called by the cpu module at startup.
+pub inline fn initialize_system_memories(which: enum {
+    /// Decides between .all and .bss_only based on whether we are in a RAM
+    /// image or not. `initialize_system_memories(.auto)` is equivalent to:
+    /// ```zig
+    /// if (!microzig.config.ram_image) {
+    ///     microzig.utilities.initialize_system_memories(.all);
+    /// } else {
+    ///     microzig.utilities.initialize_system_memories(.bss_only);
+    /// }
+    /// ```
+    pub const auto: @This() = if (!microzig.config.ram_image) .all else .bss_only;
+
+    all,
+    bss_only,
+}) void {
 
     // Contains references to the microzig .data and .bss sections, also
     // contains the initial load address for .data if it is in flash.
     const sections = struct {
-        // it looks odd to just use a u8 here, but in C it's common to use a
-        // char when linking these values from the linkerscript. What's
-        // important is the addresses of these values.
-        extern var microzig_data_start: u8;
-        extern var microzig_data_end: u8;
-        extern var microzig_bss_start: u8;
-        extern var microzig_bss_end: u8;
-        extern const microzig_data_load_start: u8;
+        extern var microzig_data_start: anyopaque;
+        extern var microzig_data_end: anyopaque;
+        extern var microzig_bss_start: anyopaque;
+        extern var microzig_bss_end: anyopaque;
+        extern const microzig_data_load_start: anyopaque;
     };
 
     // fill .bss with zeroes
@@ -28,7 +41,7 @@ pub fn initialize_system_memories() void {
     }
 
     // load .data from flash
-    {
+    if (which != .bss_only) {
         const data_start: [*]u8 = @ptrCast(&sections.microzig_data_start);
         const data_end: [*]u8 = @ptrCast(&sections.microzig_data_end);
         const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
@@ -40,7 +53,7 @@ pub fn initialize_system_memories() void {
 
 /// A helper class that allows operating on a slice of slices
 /// with similar operations to those of a slice.
-pub fn Slice_Vector(comptime Slice: type) type {
+pub fn SliceVector(comptime Slice: type) type {
     const type_info = @typeInfo(Slice);
     if (type_info != .pointer)
         @compileError("Slice must have a slice type!");
@@ -293,8 +306,8 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
     });
 }
 
-test Slice_Vector {
-    const vec = Slice_Vector([]const u8).init(&.{
+test SliceVector {
+    const vec = SliceVector([]const u8).init(&.{
         "Hello,",
         " ",
         "World!",
@@ -310,8 +323,8 @@ test Slice_Vector {
     }
 }
 
-test "Slice_Vector.init" {
-    const vec_strip_head = Slice_Vector([]const u8).init(&.{
+test "SliceVector.init" {
+    const vec_strip_head = SliceVector([]const u8).init(&.{
         &.{},
         &.{},
         &.{},
@@ -321,7 +334,7 @@ test "Slice_Vector.init" {
     try std.testing.expectEqual(1, vec_strip_head.slices.len);
     try std.testing.expectEqualStrings("hello", vec_strip_head.slices[0]);
 
-    const vec_strip_tail = Slice_Vector([]const u8).init(&.{
+    const vec_strip_tail = SliceVector([]const u8).init(&.{
         "hello",
         &.{},
         &.{},
@@ -331,7 +344,7 @@ test "Slice_Vector.init" {
     try std.testing.expectEqual(1, vec_strip_tail.slices.len);
     try std.testing.expectEqualStrings("hello", vec_strip_tail.slices[0]);
 
-    const vec_strip_both = Slice_Vector([]const u8).init(&.{
+    const vec_strip_both = SliceVector([]const u8).init(&.{
         &.{},
         &.{},
         "hello",
@@ -341,7 +354,7 @@ test "Slice_Vector.init" {
     try std.testing.expectEqual(1, vec_strip_both.slices.len);
     try std.testing.expectEqualStrings("hello", vec_strip_both.slices[0]);
 
-    const vec_keep_center = Slice_Vector([]const u8).init(&.{
+    const vec_keep_center = SliceVector([]const u8).init(&.{
         &.{},
         "hello",
         &.{},
@@ -356,8 +369,8 @@ test "Slice_Vector.init" {
     try std.testing.expectEqualStrings("world", vec_keep_center.slices[3]);
 }
 
-test "Slice_Vector.iterator" {
-    const vec = Slice_Vector([]const u8).init(&.{
+test "SliceVector.iterator" {
+    const vec = SliceVector([]const u8).init(&.{
         &.{},
         &.{},
         "Hello,",
@@ -393,11 +406,11 @@ test "Slice_Vector.iterator" {
     }
 }
 
-test "Slice_Vector.iterator (mutable)" {
+test "SliceVector.iterator (mutable)" {
     var buffer: [8]u8 = undefined;
     const expected = "01234567";
 
-    const vec = Slice_Vector([]u8).init(&.{
+    const vec = SliceVector([]u8).init(&.{
         &.{},
         &.{},
         buffer[0..3],
@@ -420,8 +433,8 @@ test "Slice_Vector.iterator (mutable)" {
     try std.testing.expectEqualStrings(expected, &buffer);
 }
 
-test "Slice_Vector.Iterator.next_chunk" {
-    const vec = Slice_Vector([]const u8).init(&.{
+test "SliceVector.Iterator.next_chunk" {
+    const vec = SliceVector([]const u8).init(&.{
         &.{},
         &.{},
         "Hello,",
@@ -483,4 +496,146 @@ pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
     }
 
     return frame_count;
+}
+
+pub fn get_end_of_stack() *const anyopaque {
+    if (microzig.config.end_of_stack.address) |address| {
+        return @ptrFromInt(address);
+    } else if (microzig.config.end_of_stack.symbol_name) |sym_name| {
+        return @extern(*const anyopaque, .{ .name = sym_name });
+    } else {
+        @panic("expected at least one of end_of_stack.address or end_of_stack.symbol_name to be set");
+    }
+}
+
+/// A naive circular buffer implementation. At time of writing, it's intended
+/// to fill in where the deleted std.fifo.LinearFifo was used, so the API might
+/// seem unfinished.
+pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
+    return struct {
+        items: [len]T,
+        start: usize,
+        end: usize,
+        full: bool,
+
+        const Self = @This();
+        pub const empty: Self = .{
+            .items = undefined,
+            .start = 0,
+            .end = 0,
+            .full = false,
+        };
+
+        fn assert_valid(buffer: *const Self) void {
+            assert(buffer.start < len);
+            assert(buffer.end < len);
+        }
+
+        pub fn get_writable_len(buffer: *const Self) usize {
+            buffer.assert_valid();
+            return len - buffer.get_readable_len();
+        }
+
+        pub fn is_empty(buffer: *const Self) bool {
+            return !buffer.full and (buffer.start == buffer.end);
+        }
+
+        pub fn get_readable_len(buffer: *const Self) usize {
+            buffer.assert_valid();
+            if (buffer.full)
+                return len;
+            return if (buffer.start <= buffer.end)
+                buffer.end - buffer.start
+            else
+                len - buffer.start + buffer.end;
+        }
+
+        fn increment_end(buffer: *Self) void {
+            increment(&buffer.end);
+        }
+
+        fn increment_start(buffer: *Self) void {
+            increment(&buffer.start);
+        }
+
+        fn increment(counter: *usize) void {
+            if (counter.* >= (len - 1)) {
+                counter.* = 0;
+            } else {
+                counter.* += 1;
+            }
+        }
+
+        pub fn write_assume_capacity(buffer: *Self, values: []const T) void {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            var first = true;
+            for (values) |value| {
+                if (first) {
+                    first = false;
+                } else {
+                    assert(buffer.start != buffer.end);
+                }
+
+                buffer.items[buffer.end] = value;
+                buffer.increment_end();
+            }
+
+            if (buffer.start == buffer.end)
+                buffer.full = true;
+        }
+
+        pub fn read(buffer: *Self, out: []u8) usize {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            var count: usize = 0;
+            while (!buffer.is_empty() and count < out.len) {
+                out[count] = buffer.pop().?;
+                count += 1;
+            }
+
+            return count;
+        }
+
+        pub fn write(buffer: *Self, data: []const u8) error{Full}!void {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            for (data) |d| {
+                if (buffer.full)
+                    return error.Full;
+
+                buffer.items[buffer.end] = d;
+                buffer.increment_end();
+            }
+        }
+
+        /// Pop item from front of buffer. Return null if empty
+        pub fn pop(buffer: *Self) ?T {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            if (buffer.is_empty())
+                return null;
+
+            defer {
+                buffer.increment_start();
+                if (buffer.full) {
+                    buffer.full = false;
+                }
+            }
+            return buffer.items[buffer.start];
+        }
+
+        pub fn reset(buffer: *Self) void {
+            buffer.assert_valid();
+            defer buffer.assert_valid();
+
+            buffer.start = 0;
+            buffer.end = 0;
+            buffer.full = false;
+        }
+    };
 }

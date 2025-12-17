@@ -1,17 +1,14 @@
 //NOTE: This is just an experimental test, USB HAL for the F1 family is not complete.
+//NOTE: THIS EXAMPLE ONLY RUNS IN RELEASE BUILDS, debug builds add too much overhead and USB ends up missing response timing
 
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
-const flash = microzig.chip.peripherals.FLASH;
-const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;
-const flash_v1 = microzig.chip.types.peripherals.flash_f1;
-
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-const Timeout = stm32.drivers.Timeout;
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
@@ -187,7 +184,7 @@ const SerialState = packed struct(u8) {
 
 //=============== USB DATA =================
 var USB_RX_BUFFER: [64]u8 = undefined;
-var CDC_fifo: std.fifo.LinearFifo(u8, .{ .Static = 64 }) = undefined;
+var CDC_fifo: microzig.utilities.CircularBuffer(u8, 64) = .empty;
 var device_addr: ?u7 = null;
 var remain_pkg: ?[]const u8 = null;
 var config: bool = false;
@@ -232,13 +229,13 @@ fn get_descriptor(setup: []const u8, epc: EpControl) void {
     }
 }
 
-fn set_addr(recive_addr: u7, epc: EpControl) void {
-    device_addr = recive_addr;
+fn set_addr(receive_addr: u7, epc: EpControl) void {
+    device_addr = receive_addr;
     epc.ZLP(.force_data1) catch unreachable;
 }
 
 fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
-    const setup = epc.USB_read(.endpoint_ctr) catch unreachable;
+    const setup = epc.USB_read(.no_change) catch unreachable;
     if (setup.len != 8) {
         return;
     }
@@ -271,7 +268,7 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
 }
 
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
-    const rev = epc.USB_read(.endpoint_ctr) catch unreachable;
+    const rev = epc.USB_read(.no_change) catch unreachable;
     if (CDC_coding) {
         const ep1 = usb_ll.EpControl.EPC1;
         epc.ZLP(.force_data1) catch unreachable;
@@ -302,7 +299,7 @@ fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
         }
         return;
     }
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
+    epc.set_status(.RX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
@@ -317,10 +314,10 @@ fn ep2_tx(_: EpControl, _: ?*anyopaque) void {
 }
 
 fn ep3_rx(epc: EpControl, _: ?*anyopaque) void {
-    const recv = epc.USB_read(.endpoint_ctr) catch unreachable;
-    const free_data = CDC_fifo.writableLength();
+    const recv = epc.USB_read(.no_change) catch unreachable;
+    const free_data = CDC_fifo.get_writable_len();
     const to_write = @min(recv.len, free_data);
-    CDC_fifo.writeAssumeCapacity(recv[0..to_write]);
+    CDC_fifo.write_assume_capacity(recv[0..to_write]);
 }
 
 //=============== USB FUNC =================
@@ -384,67 +381,26 @@ const USB_conf = usb_ll.Config{
     .RX_buffer = &USB_RX_BUFFER,
 };
 
-//set clock to 72Mhz and USB to 48Mhz
-//NOTE: USB clock must be exactly 48Mhz
-fn config_clock() void {
-    RCC.CR.modify(.{
-        .HSEON = 1,
-    });
-    while (RCC.CR.read().HSERDY == 0) {
-        asm volatile ("nop");
-    }
-
-    RCC.CFGR.modify(.{
-        .PLLSRC = rcc_v1.PLLSRC.HSE_Div_PREDIV,
-        .PLLMUL = rcc_v1.PLLMUL.Mul9,
-    });
-
-    RCC.CR.modify(.{
-        .PLLON = 1,
-    });
-
-    while (RCC.CR.read().PLLRDY == 0) {
-        asm volatile ("nop");
-    }
-
-    flash.ACR.modify(.{
-        .LATENCY = flash_v1.LATENCY.WS2,
-        .PRFTBE = 1,
-    });
-
-    RCC.CFGR.modify(.{
-        .PPRE1 = rcc_v1.PPRE.Div2,
-        .USBPRE = rcc_v1.USBPRE.Div1_5,
-    });
-
-    RCC.CFGR.modify(.{
-        .SW = rcc_v1.SW.PLL1_P,
-    });
-
-    while (RCC.CFGR.read().SWS != rcc_v1.SW.PLL1_P) {
-        asm volatile ("nop");
-    }
-}
-
 fn CDC_write(msg: []const u8) void {
     const send: *volatile bool = &CDC_send;
     const EP2 = usb_ll.EpControl.EPC2;
     send.* = true;
-    EP2.USB_send(msg, .force_data0) catch unreachable;
+    EP2.USB_send(msg, .no_change) catch unreachable;
     while (send.*) {
         asm volatile ("nop"); //don't call WFE or WFI here, USB events don't count for wakeup
     }
 }
 
-fn CDC_read(buf: []u8, timeout: Timeout) ![]const u8 {
-    const fifo: *std.fifo.LinearFifo(u8, .{ .Static = 64 }) = &CDC_fifo;
+fn CDC_read(buf: []u8, timeout: ?Duration) ![]const u8 {
+    const deadline = microzig.drivers.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+    const fifo = &CDC_fifo;
     var index: usize = 0;
     reader: for (buf) |*byte| {
-        while (fifo.readableLength() == 0) {
-            if (timeout.check_timeout()) break :reader;
+        while (fifo.get_readable_len() == 0) {
+            if (deadline.is_reached_by(time.get_time_since_boot())) break :reader;
         }
 
-        byte.* = fifo.readItem().?;
+        byte.* = fifo.pop().?;
         index += 1;
     }
     if (index == 0) {
@@ -455,31 +411,33 @@ fn CDC_read(buf: []u8, timeout: Timeout) ![]const u8 {
 }
 
 pub fn main() !void {
-    config_clock();
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .GPIOAEN = 1,
-        .GPIOBEN = 1,
-        .GPIOCEN = 1,
+    try rcc.apply_clock(.{
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1Prescaler = .RCC_HCLK_DIV2,
+        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
     });
 
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-        .USBEN = 1,
-    });
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.GPIOC);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.USB);
+    time.init_timer(.TIM2);
+
     const led = gpio.Pin.from_port(.B, 2);
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-    CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
+    CDC_fifo.reset();
 
-    Counter = timer.counter_device(72_000_000);
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
-    usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
+    usb_ll.usb_init(USB_conf, Duration.from_ms(25));
     var recv_byte: [64]u8 = undefined;
     const conf: *volatile bool = &config;
     while (true) {
         led.toggle();
         if (!conf.*) continue;
-        const recv = CDC_read(&recv_byte, Counter.make_ms_timeout(10)) catch continue;
+        const recv = CDC_read(&recv_byte, Duration.from_ms(10)) catch continue;
         CDC_write(recv);
     }
 }

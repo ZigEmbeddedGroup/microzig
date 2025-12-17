@@ -6,6 +6,7 @@ const Self = @This();
 
 chips: Chips,
 boards: struct {
+    stm32l476discovery: *const microzig.Target,
     stm32f3discovery: *const microzig.Target,
     stm32f4discovery: *const microzig.Target,
     stm3240geval: *const microzig.Target,
@@ -19,6 +20,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
     return .{
         .chips = chips,
         .boards = .{
+            .stm32l476discovery = chips.STM32L476VG.derive(.{
+                .board = .{
+                    .name = "STM32L476DISCOVERY",
+                    .root_source_file = b.path("src/boards/STM32L476DISCOVERY.zig"),
+                },
+            }),
             .stm32f3discovery = chips.STM32F303VC.derive(.{
                 .board = .{
                     .name = "STM32F3DISCOVERY",
@@ -61,9 +68,11 @@ pub fn build(b: *std.Build) !void {
 
     const generate_exe = b.addExecutable(.{
         .name = "generate",
-        .root_source_file = b.path("src/generate.zig"),
-        .target = b.graph.host,
-        .optimize = generate_optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/generate.zig"),
+            .target = b.graph.host,
+            .optimize = generate_optimize,
+        }),
     });
     generate_exe.root_module.addImport("regz", regz);
 

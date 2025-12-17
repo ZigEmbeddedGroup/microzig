@@ -4,11 +4,21 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
+pub const bootmeta = @import("hal/bootmeta.zig");
 pub const clocks = @import("hal/clocks.zig");
+pub const compatibility = @import("hal/compatibility.zig");
+pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
+pub const dcp = switch (compatibility.chip) {
+    .RP2040 => @compileError("RP2040 doesn't support DCP"),
+    .RP2350 => switch (compatibility.arch) {
+        .arm => @import("hal/dcp.zig"),
+        .riscv => @compileError("RP2350 riscv doesn't support DCP"),
+    },
+};
 pub const dma = @import("hal/dma.zig");
+pub const drivers = @import("hal/drivers.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
-pub const irq = @import("hal/irq.zig");
 pub const multicore = @import("hal/multicore.zig");
 pub const mutex = @import("hal/mutex.zig");
 pub const pins = @import("hal/pins.zig");
@@ -22,15 +32,12 @@ pub const rtc = switch (compatibility.chip) {
     .RP2350 => @import("hal/always_on_timer.zig"),
 };
 pub const spi = @import("hal/spi.zig");
+pub const system_timer = @import("hal/system_timer.zig");
 pub const i2c = @import("hal/i2c.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
-pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
-pub const drivers = @import("hal/drivers.zig");
-pub const compatibility = @import("hal/compatibility.zig");
-pub const bootmeta = @import("hal/bootmeta.zig");
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
@@ -52,11 +59,15 @@ pub const HAL_Options = switch (compatibility.chip) {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
 
-            /// Next metadata block to link after image_def. **Last block in the
-            /// chain must link back to the first one** (to
+            /// Next metadata block to link after image_def. **Last block in
+            /// the chain must link back to the first one** (to
             /// `bootmeta.image_def_block`).
             next_block: ?*const anyopaque = null,
         } = .{},
+
+        /// Enable the DCP and export intrinsics. Leads to faster double
+        /// precision floating point arithmetic. Ignored on riscv.
+        use_dcp: bool = true,
     },
 };
 
@@ -74,8 +85,17 @@ pub inline fn init() void {
 }
 
 /// Allows user to easily swap in their own clock config while still
-/// using the reccomended initialization sequence
+/// using the recommended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
+    if (compatibility.chip == .RP2350 and compatibility.arch == .arm and
+        microzig.options.hal.use_dcp)
+    {
+        // Export double floating point intrinsics
+        _ = dcp;
+
+        enable_dcp();
+    }
+
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 
@@ -104,6 +124,21 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     resets.unreset_block_wait(resets.masks.all);
 }
 
+/// Enables dcp on RP2350 arm.
+///
+/// NOTE: Called automatically in the hal startup sequence and in core1
+/// startup.
+pub inline fn enable_dcp() void {
+    if (!(compatibility.chip == .RP2350 and compatibility.arch == .arm)) {
+        @compileError("DCP is only available on RP2350 arm");
+    }
+
+    // enable the DCP for the current core
+    microzig.cpu.peripherals.scb.CPACR.modify(.{
+        .CP4 = .full_access,
+    });
+}
+
 pub fn get_cpu_id() u32 {
     return SIO.CPUID.read().CPUID;
 }
@@ -113,4 +148,5 @@ test "hal tests" {
     _ = usb;
     _ = i2c;
     _ = uart;
+    _ = mutex;
 }

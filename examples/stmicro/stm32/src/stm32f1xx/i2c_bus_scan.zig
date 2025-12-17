@@ -1,11 +1,11 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 
 const I2c = stm32.i2c;
 
@@ -26,19 +26,13 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    RCC.APB2ENR.modify(.{
-        .GPIOBEN = 1,
-        .GPIOAEN = 1,
-        .AFIOEN = 1,
-        .USART1EN = 1,
-    });
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.USART1);
+    rcc.enable_clock(.I2C2);
+    rcc.enable_clock(.TIM2);
 
-    RCC.APB1ENR.modify(.{
-        .I2C2EN = 1,
-        .TIM2EN = 1,
-    });
-
-    const counter = timer.counter_device(8_000_000);
+    time.init_timer(.TIM2);
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
@@ -54,9 +48,8 @@ pub fn main() !void {
 
     i2c.apply(config);
 
-    uart.apply(.{
-        .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+    try uart.apply_runtime(.{
+        .clock_speed = rcc.get_clock(.USART1),
     });
 
     stm32.uart.init_logger(&uart);
@@ -66,7 +59,7 @@ pub fn main() !void {
         std.log.info("starting i2c scan:", .{});
         for (1..127) |val| {
             const addr = I2c.Address.new(@intCast(val));
-            i2c.write_blocking(addr, &[_]u8{0}, counter.make_ms_timeout(100)) catch |err| {
+            i2c.write_blocking(addr, &[_]u8{0}, Duration.from_ms(100)) catch |err| {
                 if (err == error.UnrecoverableError) {
                     i2c.apply(config);
                 } else {
@@ -75,7 +68,6 @@ pub fn main() !void {
                 continue;
             };
             std.log.info("found device at 0x{x}", .{val});
-            counter.sleep_ms(1000);
         }
     }
 }

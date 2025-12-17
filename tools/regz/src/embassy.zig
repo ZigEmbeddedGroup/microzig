@@ -156,11 +156,11 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
     const allocator = arena.allocator();
 
-    var chip_files = std.ArrayList(std.json.Parsed(ChipFile)).init(allocator);
+    var chip_files: std.ArrayList(std.json.Parsed(ChipFile)) = .empty;
     defer {
         for (chip_files.items) |chip_file|
             chip_file.deinit();
-        chip_files.deinit();
+        chip_files.deinit(allocator);
     }
 
     var register_files = std.StringArrayHashMap(std.json.Parsed(std.json.Value)).init(allocator);
@@ -198,7 +198,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         });
         errdefer chips_file.deinit();
 
-        try chip_files.append(chips_file);
+        try chip_files.append(allocator, chips_file);
     }
 
     var registers_dir = try data_dir.openDir("registers", .{ .iterate = true });
@@ -296,12 +296,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                 const register_name = item.object.get("name").?.string;
                 const description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
                 const byte_offset = item.object.get("byte_offset").?.integer;
+                const item_bit_size = if (item.object.get("bit_size")) |v| v.integer else 32;
 
                 const register_id = try db.create_register(group_id, .{
                     .name = register_name,
                     .description = description,
                     .offset_bytes = @intCast(byte_offset),
-                    .size_bits = 32,
+                    .size_bits = @intCast(item_bit_size),
                     .count = if (item.object.get("array")) |array| blk: {
                         if (array.object.get("len")) |count| {
                             // ensure stride is always 4 for now, assuming that
@@ -444,6 +445,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                 .name = interrupt.name,
                 .idx = interrupt.number,
             });
+
+            if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
+                try db.add_device_property(device_id, .{
+                    .key = "cpu.fpuPresent",
+                    .value = "true",
+                });
+            }
         }
 
         for (core.peripherals) |peripheral| {

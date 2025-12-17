@@ -3,6 +3,12 @@ pub const peripherals = microzig.chip.peripherals;
 
 pub const pins = @import("ch32v003/pins.zig");
 pub const gpio = @import("ch32v003/gpio.zig");
+pub const clocks = @import("clocks.zig");
+pub const time = @import("time.zig");
+
+/// HSI (High Speed Internal) oscillator frequency
+/// This is the fixed internal RC oscillator frequency for CH32V003
+pub const hsi_frequency: u32 = 8_000_000; // 8 MHz
 
 // pub fn init() void {}
 

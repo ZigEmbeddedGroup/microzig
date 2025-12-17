@@ -1,9 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
-const timer = microzig.hal.timer.GPTimer.init(.TIM2).into_counter_mode();
+const rcc = stm32.rcc;
+const time = stm32.time;
 
 const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
@@ -26,16 +26,12 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-    });
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .USART1EN = 1,
-        .GPIOAEN = 1,
-        .ADC1EN = 1,
-    });
-    const counter = timer.counter_device(8_000_000);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.AFIO);
+    rcc.enable_clock(.USART1);
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.ADC1);
+    time.init_timer(.TIM2);
     const adc = ADC.init(.ADC1);
     var adc_out_buf: [10]u16 = undefined;
 
@@ -43,14 +39,13 @@ pub fn main() !void {
     ADC_pin1.set_input_mode(.analog);
     ADC_pin2.set_input_mode(.analog);
 
-    uart.apply(.{
-        .baud_rate = 115200,
-        .clock_speed = 8_000_000,
+    try uart.apply_runtime(.{
+        .clock_speed = rcc.get_clock(.USART1),
     });
 
     stm32.uart.init_logger(&uart);
 
-    adc.enable(&counter);
+    adc.enable();
     adc.set_channel_sample_rate(16, .@"239.5");
     adc.set_channel_sample_rate(17, .@"239.5");
     adc.set_channel_sample_rate(1, .@"13.5");
@@ -59,8 +54,8 @@ pub fn main() !void {
     std.log.info("start ADC scan", .{});
     while (true) {
         const adc_buf: []const u16 = try adc.read_multiple_channels(&adc_out_buf);
-        counter.sleep_ms(100);
-        std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
+        time.sleep_ms(100);
+        std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(adc_buf[0])});
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});

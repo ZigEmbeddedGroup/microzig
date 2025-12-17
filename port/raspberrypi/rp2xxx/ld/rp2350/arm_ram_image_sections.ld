@@ -7,12 +7,3 @@ SECTIONS {
   } > ram0
 }
 INSERT AFTER .ram_start;
-
-SECTIONS {
-  .ram_vectors (NOLOAD) :
-  {
-    KEEP(*(ram_vectors))
-  } > ram0
-}
-INSERT AFTER .bss;
-

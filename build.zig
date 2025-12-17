@@ -1,6 +1,7 @@
 const std = @import("std");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
+const assert = std.debug.assert;
 
 const internals = @import("build-internals");
 pub const Target = internals.Target;
@@ -10,6 +11,7 @@ pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const LinkerScript = internals.LinkerScript;
+pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
@@ -26,6 +28,7 @@ const port_list: []const struct {
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
+    .{ .name = "mcx", .dep_name = "port/nxp/mcx" },
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
@@ -43,11 +46,15 @@ const exe_targets: []const std.Target.Query = &.{
 pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
-    const generate_linker_script_exe = b.addExecutable(.{
-        .name = "generate_linker_script",
+    const generate_linker_script_mod = b.createModule(.{
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.graph.host,
         .optimize = optimize,
+    });
+
+    const generate_linker_script_exe = b.addExecutable(.{
+        .name = "generate_linker_script",
+        .root_module = generate_linker_script_mod,
     });
 
     generate_linker_script_exe.root_module.addImport(
@@ -132,25 +139,35 @@ fn generate_release_steps(b: *Build) void {
     }
 }
 
-pub const PortSelect = blk: {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    for (port_list) |port| {
-        fields = fields ++ [_]std.builtin.Type.StructField{.{
-            .name = port.name,
-            .type = bool,
-            .default_value_ptr = @as(*const anyopaque, @ptrCast(&false)),
-            .is_comptime = false,
-            .alignment = @alignOf(bool),
-        }};
+pub const PortSelect = struct {
+    esp: bool = false,
+    gd32: bool = false,
+    atsam: bool = false,
+    avr: bool = false,
+    nrf5x: bool = false,
+    lpc: bool = false,
+    mcx: bool = false,
+    rp2xxx: bool = false,
+    stm32: bool = false,
+    ch32v: bool = false,
+
+    pub const all: PortSelect = blk: {
+        var ret: PortSelect = undefined;
+        for (@typeInfo(PortSelect).@"struct".fields) |field| {
+            @field(ret, field.name) = true;
+        }
+
+        break :blk ret;
+    };
+
+    comptime {
+        // assumes fields are in the same order as the port list
+        for (port_list, @typeInfo(PortSelect).@"struct".fields) |port_entry, field| {
+            assert(std.mem.eql(u8, port_entry.name, field.name));
+            const default_value_ptr: *const bool = @ptrCast(field.default_value_ptr);
+            assert(false == default_value_ptr.*);
+        }
     }
-    break :blk @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
 };
 
 // Don't know if this is required but it doesn't hurt either.
@@ -207,6 +224,16 @@ var port_cache: PortCache = .{};
 /// ```
 pub fn MicroBuild(port_select: PortSelect) type {
     return struct {
+        builder: *Build,
+        dep: *Build.Dependency,
+        core_dep: *Build.Dependency,
+        drivers_dep: *Build.Dependency,
+
+        /// Contains all the ports you selected.
+        ports: SelectedPorts,
+
+        const Self = @This();
+
         const SelectedPorts = blk: {
             var fields: []const std.builtin.Type.StructField = &.{};
 
@@ -233,18 +260,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             });
         };
 
-        const Self = @This();
-
-        builder: *Build,
-        dep: *Build.Dependency,
-        core_dep: *Build.Dependency,
-        drivers_dep: *Build.Dependency,
-
-        /// Contains all the ports you selected.
-        ports: SelectedPorts,
-
         const InitReturnType = blk: {
-            @setEvalBranchQuota(2000);
+            @setEvalBranchQuota(5000);
 
             var ok = true;
             for (port_list) |port| {
@@ -333,6 +350,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LinkerScript = null,
 
+            /// If set, overrides the `stack` property of the target.
+            stack: ?Stack = null,
+
             /// If set, overrides the default `entry` property of the arget.
             entry: ?Build.Step.Compile.Entry = null,
 
@@ -361,11 +381,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
         };
 
         fn serialize_patches(b: *Build, patches: []const regz.patch.Patch) []const u8 {
-            var buf = std.ArrayList(u8).init(b.allocator);
+            var buf: std.Io.Writer.Allocating = .init(b.allocator);
 
             for (patches) |patch| {
-                std.json.stringify(patch, .{}, buf.writer()) catch @panic("OOM");
-                buf.writer().writeByte('\n') catch @panic("OOM");
+                buf.writer.print("{f}", .{std.json.fmt(patch, .{})}) catch @panic("OOM");
+                buf.writer.writeByte('\n') catch @panic("OOM");
             }
 
             return buf.toOwnedSlice() catch @panic("OOM");
@@ -382,13 +402,25 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 region.validate_tag();
             }
 
-            // TODO: let the user override which ram section to use the stack on,
-            // for now just using the first ram section in the memory region list
-            const first_ram = blk: {
-                for (target.chip.memory_regions) |region| {
-                    if (region.tag == .ram)
-                        break :blk region;
-                } else @panic("no ram memory region found for setting the end-of-stack address");
+            // TODO: use unions when they are supported in the build system
+            const EndOfStack = struct {
+                address: ?usize = null,
+                symbol_name: ?[]const u8 = null,
+            };
+
+            const end_of_stack: EndOfStack = switch (options.stack orelse options.target.stack) {
+                .address => |address| .{ .address = address },
+                .ram_region_index => |index| blk: {
+                    var i: usize = 0;
+                    for (target.chip.memory_regions) |region| {
+                        if (region.tag == .ram) {
+                            if (i == index)
+                                break :blk .{ .address = region.offset + region.length };
+                            i += 1;
+                        }
+                    } else @panic("no ram memory region found for setting the end-of-stack address");
+                },
+                .symbol_name => |name| .{ .symbol_name = name },
             };
 
             const zig_resolved_target = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
@@ -404,7 +436,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             config.addOption([]const u8, "cpu_name", cpu.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
             config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
-            config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
+            config.addOption(EndOfStack, "end_of_stack", end_of_stack);
             config.addOption(bool, "ram_image", target.ram_image);
 
             const core_mod = b.createModule(.{
@@ -440,7 +472,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
+                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
                     // From chip definition
                     patches.appendSlice(target.chip.patches) catch @panic("OOM");
@@ -471,7 +503,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
 
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
+                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
                     // From chip definition
                     patches.appendSlice(target.chip.patches) catch @panic("OOM");
@@ -580,7 +612,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .ram_image = target.ram_image,
                 };
 
-                const args_str = std.json.stringifyAlloc(
+                const args_str = std.json.Stringify.valueAlloc(
                     b.allocator,
                     generate_linker_script_args,
                     .{},
@@ -704,25 +736,20 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             break :blk objcopy.getOutput();
                         },
 
-                        .uf2 => |family_id| blk: {
-                            const uf2_exe = fw.mb.dep.builder.dependency("tools/uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
-
-                            const convert = fw.mb.builder.addRunArtifact(uf2_exe);
-
-                            convert.addArg("--family-id");
-                            convert.addArg(@tagName(family_id));
-
-                            convert.addArg("--elf-path");
-                            convert.addFileArg(elf_file);
-
-                            convert.addArg("--output-path");
-                            break :blk convert.addOutputFileArg(basename);
-                        },
+                        .uf2 => |options| @import("tools/uf2").from_elf(
+                            fw.mb.dep.builder.dependency("tools/uf2", .{
+                                .optimize = .ReleaseSafe,
+                            }),
+                            elf_file,
+                            options,
+                        ),
 
                         .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
 
                         .esp => |options| @import("tools/esp-image").from_elf(
-                            fw.mb.dep.builder.dependency("tools/esp-image", .{}),
+                            fw.mb.dep.builder.dependency("tools/esp-image", .{
+                                .optimize = .ReleaseSafe,
+                            }),
                             elf_file,
                             options,
                         ),
@@ -861,7 +888,7 @@ pub inline fn custom_lazy_import(
 }
 
 inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []const u8 {
-    @setEvalBranchQuota(2000);
+    @setEvalBranchQuota(5000);
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
 

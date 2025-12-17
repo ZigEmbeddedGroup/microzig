@@ -23,6 +23,12 @@ pub const Patch = union(enum) {
         device_name: []const u8,
         arch: Arch,
     },
+    set_device_property: struct {
+        device_name: []const u8,
+        key: []const u8,
+        value: []const u8,
+        description: ?[]const u8 = null,
+    },
     add_enum: struct {
         parent: []const u8,
         @"enum": Type.Enum,
@@ -47,7 +53,7 @@ pub const Patch = union(enum) {
 
 /// List for assembling patches in build scripts
 pub const PatchList = struct {
-    entries: std.ArrayList(Patch),
+    entries: std.array_list.Managed(Patch),
 
     pub fn append(list: *PatchList, patch: Patch) void {
         list.append(patch) catch @panic("OOM");

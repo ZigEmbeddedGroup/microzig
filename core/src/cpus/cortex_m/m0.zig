@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
+const builtin = @import("builtin");
 const mmio = microzig.mmio;
-
-pub const CPU_Options = struct {};
+const shared = @import("shared_types.zig");
 
 pub const scb_base_offset = 0x0d00;
 
@@ -127,7 +127,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// The processor also wakes up on execution of an SEV instruction or an external event.
         SEVONPEND: u1,
-        reserved2: u17 = 0,
+        reserved2: u27 = 0,
     }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {

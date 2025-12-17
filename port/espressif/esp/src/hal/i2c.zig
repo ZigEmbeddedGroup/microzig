@@ -1,6 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
+const drivers = mdf.base;
 const peripherals = microzig.chip.peripherals;
 pub const I2C0 = peripherals.I2C0;
 
@@ -16,45 +17,13 @@ pub const ConfigError = error{
     PeripheralDisabled,
 };
 
-pub const Error = error{
+pub const Address = drivers.I2C_Device.Address;
+pub const AddressError = drivers.I2C_Device.Address.Error;
+pub const Error = drivers.I2C_Device.Error || error{
     FifoExceeded,
-    AcknowledgeCheckFailed,
-    Timeout,
     ArbitrationLost,
     ExecutionIncomplete,
     CommandNumberExceeded,
-    ZeroLengthInvalid,
-    TargetAddressReserved,
-};
-
-///
-/// 7-bit I²C address, without the read/write bit.
-///
-pub const Address = enum(u7) {
-    _,
-
-    pub fn new(addr: u7) Address {
-        var a = @as(Address, @enumFromInt(addr));
-        std.debug.assert(!a.is_reserved());
-        return a;
-    }
-
-    ///
-    /// Returns `true` if the Address is a reserved I²C address.
-    ///
-    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
-    ///
-    /// See more here: https://www.i2c-bus.org/addressing/
-    pub fn is_reserved(addr: Address) bool {
-        const value: u7 = @intFromEnum(addr);
-        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
-    }
-
-    pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
-    }
 };
 
 const Opcode = enum(u4) {
@@ -141,16 +110,10 @@ const OperationType = enum(u1) {
     read = 1,
 };
 
-/// Pins used by the I2C interface
-pub const Pins = struct {
-    sda: gpio.Pin,
-    scl: gpio.Pin,
-};
-
 pub const instance = struct {
-    pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub fn num(n: u1) I2C {
-        return @as(I2C, @enumFromInt(n));
+        if (n != 0) @compileError("Only I2C0 is present");
+        return .{ .regs = I2C0 };
     }
 };
 
@@ -161,33 +124,24 @@ const I2C_FIFO_SIZE: usize = 32;
 const I2C_CHUNK_SIZE: usize = I2C_FIFO_SIZE - 1;
 
 /// I2C Master peripheral driver
-pub const I2C = enum(u1) {
-    _,
+pub const I2C = struct {
+    regs: *volatile I2cRegs,
+    frequency: u32 = 100_000,
 
-    inline fn get_regs(i2c: I2C) *volatile I2cRegs {
-        _ = i2c;
-        return I2C0;
+    inline fn get_regs(self: I2C) *volatile I2cRegs {
+        return self.regs;
     }
 
-    pub fn apply(self: I2C, pins: Pins, frequency: u32) ConfigError!void {
+    pub fn apply(self: *I2C, frequency: u32) ConfigError!void {
+        self.frequency = frequency;
+        try self.init();
+    }
+
+    pub fn init(self: I2C) ConfigError!void {
         const regs = self.get_regs();
 
         // Enable I2C peripheral clock and take it out of reset
         microzig.hal.system.enable_clocks_and_release_reset(.{ .i2c_ext0 = true });
-
-        // Setup SDA pin
-        pins.sda.set_open_drain_output(true);
-        pins.sda.set_input_enable(true);
-        pins.sda.set_pullup(true);
-        pins.sda.connect_peripheral_to_output(.i2cext0_sda);
-        pins.sda.connect_input_to_peripheral(.i2cext0_sda);
-
-        // Setup SCL pin
-        pins.scl.set_open_drain_output(true);
-        pins.scl.set_input_enable(true);
-        pins.scl.set_pullup(true);
-        pins.scl.connect_peripheral_to_output(.i2cext0_scl);
-        pins.scl.connect_input_to_peripheral(.i2cext0_scl);
 
         // Reset entire peripheral (also resets fifo)
         self.reset();
@@ -214,10 +168,25 @@ pub const I2C = enum(u1) {
 
         // Configure frequency
         // TODO: Take timeout as extra arg and handle saturation?
-        try self.set_frequency(SOURCE_CLK_FREQ, frequency);
+        try self.set_frequency(SOURCE_CLK_FREQ, self.frequency);
 
         // Propagate configuration changes
         self.update_config();
+    }
+
+    pub fn connect_pins(_: I2C, pins: struct {
+        sda: ?gpio.Pin = null,
+        scl: ?gpio.Pin = null,
+    }) void {
+        if (pins.sda) |sda_pin| {
+            sda_pin.connect_peripheral_to_output(.{ .signal = .i2cext0_sda });
+            sda_pin.connect_input_to_peripheral(.{ .signal = .i2cext0_sda });
+        }
+
+        if (pins.scl) |scl_pin| {
+            scl_pin.connect_peripheral_to_output(.{ .signal = .i2cext0_scl });
+            scl_pin.connect_input_to_peripheral(.{ .signal = .i2cext0_scl });
+        }
     }
 
     /// Reset the I2C controller
@@ -243,6 +212,7 @@ pub const I2C = enum(u1) {
             .RX_FIFO_RST = 1,
             // Esp hal sets these here
             .NONFIFO_EN = 0,
+            .FIFO_PRT_EN = 1,
             // Esp hal sets these, but why?
             .RXFIFO_WM_THRHD = 1,
             .TXFIFO_WM_THRHD = 31,
@@ -252,12 +222,6 @@ pub const I2C = enum(u1) {
         self.get_regs().FIFO_CONF.modify(.{
             .TX_FIFO_RST = 0,
             .RX_FIFO_RST = 0,
-        });
-
-        // Make sure the FIFO operates in FIFO mode
-        self.get_regs().FIFO_CONF.modify(.{
-            .NONFIFO_EN = 0,
-            .FIFO_PRT_EN = 0,
         });
 
         self.get_regs().INT_CLR.modify(.{
@@ -338,21 +302,30 @@ pub const I2C = enum(u1) {
         });
     }
 
+    fn reset_fsm(self: I2C) !void {
+        // Even though C2 and C3 have a FSM reset bit, esp-idf does not
+        // define SOC_I2C_SUPPORT_HW_FSM_RST for them, so include them in the fallback impl.
+        microzig.hal.system.peripheral_reset(.{ .i2c_ext0 = true });
+
+        try self.init();
+    }
+
     fn check_errors(self: I2C) !void {
         // Reset the peripheral in case of error
-        errdefer self.reset();
+        errdefer self.reset_fsm() catch {};
 
         const interrupts = self.get_regs().INT_RAW.read();
         if (interrupts.TIME_OUT_INT_RAW == 1) {
             return Error.Timeout;
         } else if (interrupts.NACK_INT_RAW == 1) {
-            return Error.AcknowledgeCheckFailed;
+            return Error.NoAcknowledge;
         } else if (interrupts.ARBITRATION_LOST_INT_RAW == 1) {
             return Error.ArbitrationLost;
         } else if (interrupts.TRANS_COMPLETE_INT_RAW == 1 and self.get_regs().SR.read().RESP_REC == 0) {
-            return Error.AcknowledgeCheckFailed;
+            return Error.NoAcknowledge;
         }
     }
+
     /// Propagate configuration to the peripheral
     inline fn update_config(self: I2C) void {
         self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
@@ -397,7 +370,7 @@ pub const I2C = enum(u1) {
         cmd_start_idx: *usize,
     ) !void {
         if (buffer.len == 0)
-            return Error.ZeroLengthInvalid;
+            return Error.NoData;
 
         const max_len = if (will_continue) I2C_CHUNK_SIZE else I2C_CHUNK_SIZE + 1;
         const initial_len: u8 = @truncate(if (will_continue) buffer.len else buffer.len - 1);
@@ -463,43 +436,12 @@ pub const I2C = enum(u1) {
         const write_len: u8 = @truncate(if (start) bytes.len + 1 else bytes.len);
 
         if (write_len > 0) {
-            if (write_len < 2) {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len),
-                } });
-            } else if (start) {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len - 1),
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-            } else {
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = @bitCast(write_len - 2),
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-                try self.add_cmd(cmd_start_idx, .{ .write = .{
-                    .ack_exp = .ack,
-                    .ack_check_en = true,
-                    .length = 1,
-                } });
-            }
+            try self.add_cmd(cmd_start_idx, .{ .write = .{
+                .ack_exp = .ack,
+                .ack_check_en = true,
+                .length = @bitCast(write_len),
+            } });
         }
-
-        self.update_config();
 
         // Load address and R/W bit
         if (start)
@@ -546,14 +488,6 @@ pub const I2C = enum(u1) {
         }
     }
 
-    fn stop_operation(self: I2C) !void {
-        var cmd_idx: usize = 0;
-        try self.add_cmd(&cmd_idx, Command.stop);
-
-        self.start_transmission();
-        try self.wait_for_completion(mdf.time.Deadline.init_absolute(null));
-    }
-
     /// Read data from an I2C slave
     pub fn read_blocking(self: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) !void {
         return self.readv_blocking(addr, &.{dst}, timeout);
@@ -562,7 +496,7 @@ pub const I2C = enum(u1) {
     pub fn readv_blocking(self: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) !void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        const read_vec = microzig.utilities.SliceVector([]u8).init(chunks);
 
         var is_first_chunk = true;
         // Always saving room for the address byte. With a custom iterator we could make sure only the first chunk is 31 (room for address)
@@ -595,8 +529,8 @@ pub const I2C = enum(u1) {
         will_continue: bool,
         deadline: mdf.time.Deadline,
     ) !void {
-        if (addr.is_reserved())
-            return Error.TargetAddressReserved;
+        addr.check_reserved() catch return Error.TargetAddressReserved;
+
         self.clear_interrupts();
 
         // Short circuit for zero length reads as that would be an invalid operation.
@@ -604,29 +538,24 @@ pub const I2C = enum(u1) {
         if (buffer.len == 0 and !start and !stop)
             return;
 
-        try self.start_read_operation(addr, buffer, start, will_continue);
-        try self.wait_for_completion(deadline);
-
-        // Read data from FIFO into buffer
-        try self.read_all_from_fifo(buffer);
-
-        if (stop)
-            try self.stop_operation();
-    }
-
-    fn start_read_operation(self: I2C, addr: Address, buffer: []u8, start: bool, will_continue: bool) !void {
         self.reset_fifo();
         self.reset_command_list();
 
+        // See TRM sections 28.5.5.1 and 28.5.8.1 to understand the command structure
         var cmd_idx: usize = 0;
-
         if (start)
             try self.add_cmd(&cmd_idx, Command.start);
 
         try self.setup_read(addr, buffer, start, will_continue, &cmd_idx);
 
-        try self.add_cmd(&cmd_idx, Command.end);
+        try self.add_cmd(&cmd_idx, if (stop) Command.stop else Command.end);
+
         self.start_transmission();
+
+        try self.wait_for_completion(deadline);
+
+        // Read data from FIFO into buffer
+        try self.read_all_from_fifo(buffer);
     }
 
     /// Write data to an I2C slave
@@ -649,7 +578,7 @@ pub const I2C = enum(u1) {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         // TODO: Write a new utility that does similar but that will coalesce into a specified size
-        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        const write_vec = microzig.utilities.SliceVector([]const u8).init(chunks);
         if (write_vec.size() == 0)
             return self.write_operation_blocking(addr, &.{}, start, stop, deadline);
 
@@ -665,10 +594,12 @@ pub const I2C = enum(u1) {
         while (remaining != 0) {
             const max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
                 remaining
-            else if (remaining > I2C_CHUNK_SIZE + 2)
+            else if (is_first_chunk)
+                // Reserve space for start byte
                 I2C_CHUNK_SIZE
             else
-                I2C_CHUNK_SIZE - 2;
+                // Fully use the FIFO
+                I2C_CHUNK_SIZE + 1;
 
             const buffer_remaining = max_chunk_size - buffer_level;
             if (buffer_remaining == 0) {
@@ -699,8 +630,10 @@ pub const I2C = enum(u1) {
         stop: bool,
         deadline: mdf.time.Deadline,
     ) Error!void {
-        if (addr.is_reserved())
-            return Error.TargetAddressReserved;
+        addr.check_reserved() catch |err| switch (err) {
+            AddressError.GeneralCall => {},
+            else => return Error.TargetAddressReserved,
+        };
 
         // Short circuit for zero length writes without start or end as that would be an
         // invalid operation. Write lengths in the TRM are 1-255.
@@ -709,25 +642,20 @@ pub const I2C = enum(u1) {
 
         self.clear_interrupts();
 
-        try self.start_write_operation(addr, bytes, start);
-        try self.wait_for_completion(deadline);
-
-        if (stop)
-            try self.stop_operation();
-    }
-
-    fn start_write_operation(self: I2C, addr: Address, bytes: []const u8, start: bool) !void {
         self.reset_fifo();
         self.reset_command_list();
 
+        // See TRM sections 28.5.1.1 and 28.5.4.1 to understand the command structure
         var cmd_idx: usize = 0;
-
         if (start)
             try self.add_cmd(&cmd_idx, Command.start);
 
         try self.setup_write(addr, bytes, start, &cmd_idx);
 
-        try self.add_cmd(&cmd_idx, Command.end);
+        try self.add_cmd(&cmd_idx, if (stop) Command.stop else Command.end);
+
         self.start_transmission();
+
+        try self.wait_for_completion(deadline);
     }
 };

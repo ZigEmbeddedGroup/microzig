@@ -7,7 +7,8 @@
 //! Example usage:
 //! ```zig
 //! var sensor = try ICM_20948.init(
-//!     i2c_device.datagram_device(),
+//!     i2c_device.i2c_device(),
+//!     @enumFromInt(0x69),
 //!     clock.clock_device(),
 //!     .{
 //!         .accel_range = .gs4,
@@ -62,7 +63,8 @@ pub const ICM_20948 = struct {
     const MAG_READ_DELAY_US = 10_000;
     const MAG_RESET_DELAY_US = 100_000;
 
-    dev: mdf.base.Datagram_Device,
+    dev: mdf.base.I2C_Device,
+    address: mdf.base.I2C_Device.Address,
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
@@ -320,8 +322,13 @@ pub const ICM_20948 = struct {
         i2c_slv0_en: u1 = 0,
     };
 
-    pub fn init(dev: mdf.base.Datagram_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
-        return Self{ .dev = dev, .clock = clock, .config = config };
+    pub fn init(
+        dev: mdf.base.I2C_Device,
+        address: mdf.base.I2C_Device.Address,
+        clock: mdf.base.Clock_Device,
+        config: Config,
+    ) Error!Self {
+        return Self{ .dev = dev, .address = address, .clock = clock, .config = config };
     }
 
     pub fn setup(self: *Self) Error!void {
@@ -394,12 +401,12 @@ pub const ICM_20948 = struct {
         log.debug("Device health check passed", .{});
     }
 
-    pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) Error!void {
+    pub inline fn read_reg(self: *Self, reg: Self.Register, buf: []u8) Error!void {
         if (buf.len == 0) return Error.InvalidParameter;
 
         try self.set_bank(reg.bank());
 
-        self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf}) catch |err| {
+        self.dev.writev_then_readv(self.address, &.{&.{reg.value()}}, &.{buf}) catch |err| {
             log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
             return Error.ReadError;
         };
@@ -409,14 +416,14 @@ pub const ICM_20948 = struct {
 
     pub inline fn read_byte(self: *Self, reg: Self.Register) Error!u8 {
         var buf: [1]u8 = undefined;
-        try self.read_register(reg, &buf);
+        try self.read_reg(reg, &buf);
         return buf[0];
     }
 
     pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) Error!void {
         try self.set_bank(reg.bank());
 
-        self.dev.write(&.{ reg.value(), val }) catch |err| {
+        self.dev.write(self.address, &.{ reg.value(), val }) catch |err| {
             log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
             return Error.WriteError;
         };
@@ -425,7 +432,7 @@ pub const ICM_20948 = struct {
     }
 
     /// Read the register and modify the matching fields as provided
-    pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) Error!void {
+    pub inline fn modify_reg(self: *Self, reg: Self.Register, T: type, fields: anytype) Error!void {
         // Read the current value
         const current_val = self.read_byte(reg) catch |err| {
             log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
@@ -433,7 +440,7 @@ pub const ICM_20948 = struct {
         };
 
         // Cast to the correct type and modify the named fields
-        var val: reg_t = @bitCast(current_val);
+        var val: T = @bitCast(current_val);
         inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
             @field(val, field.name) = @field(fields, field.name);
         }
@@ -452,7 +459,7 @@ pub const ICM_20948 = struct {
         if (bank == self.current_bank) return;
 
         // Bits 5:4 - directly write to bank0 register without recursion
-        self.dev.write(&.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
+        self.dev.write(self.address, &.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
             log.err("Failed to switch to bank {}: {}", .{ bank, err });
             return Error.BankSwitchFailed;
         };
@@ -469,7 +476,7 @@ pub const ICM_20948 = struct {
         // Reset the slave address as well
         self.slave_address = 0;
 
-        self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true }) catch
+        self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true }) catch
             return Error.ResetFailed;
 
         // Sleep longer after reset to ensure device is ready
@@ -480,15 +487,15 @@ pub const ICM_20948 = struct {
     }
 
     pub fn sleep(self: *Self, on: bool) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
     }
 
     pub fn low_power(self: *Self, on: bool) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
     }
 
     pub fn set_clocks(self: *Self) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
             // 1 = Auto select
             .CLKSEL = 1,
             .SLEEP = false,
@@ -499,7 +506,7 @@ pub const ICM_20948 = struct {
     pub fn set_sample_mode(self: *Self) Error!void {
         // TODO: Support setting these individually. Could set based on if ODR fields are set (make
         // optional?)
-        try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
+        try self.modify_reg(.{ .bank0 = .lp_config }, lp_config, .{
             // Use I2C_MST_ODR_CONFIG, unless gyro or accel set their own data rate
             .I2C_MST_CYCLE = 1,
             // NOTE: We seem to need this set to 0?
@@ -533,7 +540,7 @@ pub const ICM_20948 = struct {
     }
 
     pub fn disable_accelerometer(self: *Self) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
             .DISABLE_ACCEL = .disable,
         });
     }
@@ -547,7 +554,7 @@ pub const ICM_20948 = struct {
     pub fn get_accel_data_unscaled(self: *Self) Error!Accel_data_unscaled {
         var raw_data: Accel_data_unscaled = .{};
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read accelerometer data: {}", .{err});
             return err;
         };
@@ -597,7 +604,7 @@ pub const ICM_20948 = struct {
     }
 
     pub fn disable_gyroscope(self: *Self) Error!void {
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
+        try self.modify_reg(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
             .DISABLE_GYRO = .disable,
         });
     }
@@ -611,7 +618,7 @@ pub const ICM_20948 = struct {
     pub fn get_gyro_data_unscaled(self: *Self) Error!Gyro_data_unscaled {
         var raw_data: Gyro_data_unscaled = .{};
 
-        self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read gyroscope data: {}", .{err});
             return err;
         };
@@ -657,7 +664,7 @@ pub const ICM_20948 = struct {
             temp: i16 = 0,
         }{};
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read combined accel/gyro data: {}", .{err});
             return err;
         };
@@ -691,7 +698,7 @@ pub const ICM_20948 = struct {
             mag: Mag_data_unscaled = .{},
         }{};
 
-        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read combined accel/gyro/mag data: {}", .{err});
             return err;
         };
@@ -722,7 +729,7 @@ pub const ICM_20948 = struct {
     pub fn get_temp(self: *Self) Error!f32 {
         var raw_data: i16 = undefined;
 
-        self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read temperature data: {}", .{err});
             return err;
         };
@@ -741,7 +748,7 @@ pub const ICM_20948 = struct {
         try self.write_byte(.{ .bank3 = .i2c_mst_odr_config }, config.mag_i2c_mst_odr_config);
 
         // Enable I2C master on this device
-        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
+        try self.modify_reg(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_EN = 1 });
         // We need to sleep here
         self.clock.sleep_ms(10);
 
@@ -799,7 +806,7 @@ pub const ICM_20948 = struct {
         // Give the device time to hit the magnetometer
         self.clock.sleep_us(MAG_READ_DELAY_US);
         // Read the data the master read in
-        return try self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
+        return try self.read_reg(.{ .bank0 = .ext_slv_sens_data_00 }, buf);
     }
 
     pub inline fn mag_read_byte(self: *Self, reg: MagRegister) Error!u8 {
@@ -827,7 +834,7 @@ pub const ICM_20948 = struct {
         self.clock.sleep_us(MAG_RESET_DELAY_US);
 
         // Reset I2C master on device
-        try self.modify_register(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
+        try self.modify_reg(.{ .bank0 = .user_ctrl }, user_ctrl, .{ .I2C_MST_RST = 1 });
     }
 
     const Mag_data_unscaled = packed struct {
@@ -857,7 +864,7 @@ pub const ICM_20948 = struct {
         try self.mag_set_sensor_read();
         var raw_data: Mag_data_unscaled = .{};
 
-        self.read_register(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
+        self.read_reg(.{ .bank0 = .ext_slv_sens_data_00 }, std.mem.asBytes(&raw_data)) catch |err| {
             log.err("Failed to read magnetometer data: {}", .{err});
             return err;
         };
@@ -889,17 +896,16 @@ pub const ICM_20948 = struct {
 };
 
 // Testing
-const TestDatagramDevice = mdf.base.Datagram_Device.Test_Device;
+const TestI2CDevice = mdf.base.I2C_Device.Test_Device;
 const TestTime = mdf.base.Clock_Device.Test_Device;
 
 test "set_bank" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -923,12 +929,11 @@ test "set_bank" {
 
 test "reset" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -942,12 +947,11 @@ test "reset" {
 
 test "read_byte" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Read byte will set the bank
     // -- Put in the values it expects to read
@@ -960,12 +964,11 @@ test "read_byte" {
 
 test "error handling in setup" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Test wrong WHO_AM_I response, first byte is read during reset()
     d.input_sequence = &.{ &.{0x00}, &.{0xFF} }; // Wrong ID after reset
@@ -975,12 +978,11 @@ test "error handling in setup" {
 
 test "device responsiveness check" {
     var ttd = TestTime.init();
-    var d = TestDatagramDevice.init(null, true);
+    var d = TestI2CDevice.init(null, true);
     defer d.deinit();
-    const dd = d.datagram_device();
-    try dd.connect();
+    const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
 
     // Test with correct WHO_AM_I
     d.input_sequence = &.{&.{ICM_20948.WHOAMI}};

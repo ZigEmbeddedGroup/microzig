@@ -3,12 +3,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const CPU_Options = struct {
-    /// When true, interrupt vectors are moved to RAM so handlers can be set at runtime.
-    ram_vectors: bool = false,
-    /// When true, the RAM vectors are placed in section `ram_vectors`.
-    has_ram_vectors_section: bool = false,
-};
+const shared = @import("shared_types.zig");
 
 pub const scb_base_offset = 0x0cfc;
 
@@ -189,18 +184,18 @@ pub const SystemControlBlock = extern struct {
     /// System Handler Priority Registers.
     SHPR: [12]u8,
     /// System Handler Control and State Register.
-    SHCSR: u32,
+    SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
         /// MemManage Fault Register.
-        MMFSR: u8,
+        MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
-        BFSR: u8,
+        BFSR: shared.scb.BFSR,
         /// Usage Fault Status Register.
-        UFSR: u16,
+        UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: u32,
+    HFSR: mmio.Mmio(shared.scb.HFSR),
     /// Debug Fault Status Register.
     DFSR: u32,
     /// MemManage Fault Address Register.

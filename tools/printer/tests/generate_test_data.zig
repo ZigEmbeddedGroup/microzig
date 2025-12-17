@@ -4,61 +4,55 @@ const printer = @import("printer");
 
 const common = @import("common");
 
+var test_data_writer_buf: [1024]u8 = undefined;
+var elf_file_reader_buf: [1024]u8 = undefined;
+
 pub fn main() !void {
     var arena_allocator: std.heap.ArenaAllocator = .init(std.heap.page_allocator);
     defer arena_allocator.deinit();
     const allocator = arena_allocator.allocator();
 
     const args = try std.process.argsAlloc(allocator);
+    if (args.len != 3) return error.UsageError;
 
-    if (args.len != 1 and args.len != 3) {
-        return error.UsageError;
-    }
+    const elf_path = args[1];
+    const test_data_path = args[2];
 
-    const elf_paths: []const []const u8 = &.{
-        "tests/test_program.dwarf32.elf",
-        "tests/test_program.dwarf64.elf",
-    };
+    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
+    defer elf_file.close();
+    var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
 
-    const cwd = std.fs.cwd();
-    if (args.len == 3) {
-        try cwd.copyFile(args[1], cwd, "tests/test_program.dwarf32.elf", .{});
-        try cwd.copyFile(args[2], cwd, "tests/test_program.dwarf64.elf", .{});
-    }
+    const elf = try printer.Elf.init(allocator, &elf_file_reader);
+    var debug_info = try printer.DebugInfo.init(allocator, elf);
 
-    var test_data_file = try std.fs.cwd().createFile("tests/test_data.zon", .{});
-    defer test_data_file.close();
+    var tests: std.ArrayList(common.Test) = .empty;
 
-    var all_data: std.ArrayListUnmanaged(common.Data) = .empty;
+    for (debug_info.loc_list[0..@min(debug_info.loc_list.len, 10)]) |tmp_src_loc| {
+        const address = tmp_src_loc.address;
+        const query_result = debug_info.query(address);
+        const src_loc = query_result.source_location.?; // this shouldn't be null
 
-    for (elf_paths) |elf_path| {
-        const elf_file = try std.fs.cwd().openFile(elf_path, .{});
-        defer elf_file.close();
-
-        const elf = try printer.Elf.init(allocator, elf_file);
-        var debug_info = try printer.DebugInfo.init(allocator, elf);
-
-        var tests: std.ArrayListUnmanaged(common.Test) = .empty;
-        for (elf.loaded_regions) |region| {
-            if (!region.flags.exec) continue;
-
-            var address = region.start_address;
-            while (address < region.end_address) : (address += 0x1000) {
-                const query_result = debug_info.query(address);
-                try tests.append(allocator, .{
-                    .address = address,
-                    .query_result = query_result,
-                });
-            }
-        }
-
-        try all_data.append(allocator, .{
-            .elf_path = elf_path,
-            .tests = tests.items,
+        try tests.append(allocator, .{
+            .address = address,
+            .expected = .{
+                .line = src_loc.line,
+                .column = src_loc.column,
+                .file_path = src_loc.file_path,
+                .module_name = query_result.module_name,
+                .function_name = query_result.function_name,
+            },
         });
     }
 
-    const writer = test_data_file.writer();
-    try std.zon.stringify.serialize(all_data.items, .{}, writer);
-    try writer.writeByte('\n');
+    var test_data_file = try std.fs.cwd().createFile(test_data_path, .{});
+    defer test_data_file.close();
+    var test_data_writer = test_data_file.writer(&.{});
+
+    const data: common.Data = .{
+        .zig_version = builtin.zig_version_string,
+        .tests = tests.items,
+    };
+    try std.zon.stringify.serialize(data, .{}, &test_data_writer.interface);
+    try test_data_writer.interface.writeByte('\n');
+    try test_data_writer.interface.flush();
 }

@@ -5,8 +5,10 @@ const microzig = @import("microzig");
 
 //example usage
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const GPTimer = stm32.timer.GPTimer;
+const time = stm32.time;
 
 //gpios
 const ch1 = gpio.Pin.from_port(.A, 0);
@@ -16,24 +18,21 @@ const ch4 = gpio.Pin.from_port(.A, 3);
 
 //timers
 const pwm = GPTimer.init(.TIM2).into_pwm_mode();
-const counter = GPTimer.init(.TIM3).into_counter_mode();
 pub fn main() !void {
 
     //first we need to enable the clocks for the GPIO and TIM peripherals
 
     //use HSE as system clock source, more stable than HSI
-    try stm32.rcc.clock_init(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
+    try rcc.apply_clock(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
 
     //enable GPIOA and TIM2, TIM3, AFIO clocks
     //AFIO is needed for alternate function remapping, not used in this example but eneble for easy remapping
     //if needed
-    stm32.rcc.enable_clock(.GPIOA);
-    stm32.rcc.enable_clock(.TIM2);
-    stm32.rcc.enable_clock(.TIM3);
-    stm32.rcc.enable_clock(.AFIO);
-
-    //counter device to genereate delays
-    const cd = counter.counter_device(8_000_000); //8MHz clock
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.TIM3);
+    rcc.enable_clock(.AFIO);
+    time.init_timer(.TIM3);
 
     //configure GPIO pins for PWM output
     for (&[_]gpio.Pin{ ch1, ch2, ch3, ch4 }) |pin| {
@@ -87,7 +86,7 @@ pub fn main() !void {
             //force update to apply the new duty cycle immediately, not obrigatory
             //but it is a good practice to force update after changing the duty cycle
             pwm.force_update();
-            cd.sleep_ms(10); //wait for 10ms
+            time.sleep_ms(10); //wait for 10ms
         }
     }
 }

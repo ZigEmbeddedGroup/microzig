@@ -30,7 +30,7 @@ pub fn main() !void {
     var data_dir = try package_dir.openDir("data", .{});
     defer data_dir.close();
 
-    var chip_files = std.ArrayList(std.json.Parsed(ChipFile)).init(allocator);
+    var chip_files = std.array_list.Managed(std.json.Parsed(ChipFile)).init(allocator);
     defer {
         for (chip_files.items) |chip_file|
             chip_file.deinit();
@@ -73,7 +73,9 @@ pub fn main() !void {
     const chips_file = try std.fs.cwd().createFile("src/Chips.zig", .{});
     defer chips_file.close();
 
-    try generate_chips_file(allocator, chips_file.writer(), chip_files.items);
+    var buf: [4096]u8 = undefined;
+    var writer = chips_file.writer(&buf);
+    try generate_chips_file(allocator, &writer.interface, chip_files.items);
 }
 
 // Chip
@@ -83,7 +85,7 @@ pub fn main() !void {
 
 fn generate_chips_file(
     allocator: std.mem.Allocator,
-    writer: anytype,
+    writer: *std.Io.Writer,
     chip_files: []const std.json.Parsed(ChipFile),
 ) !void {
     try writer.writeAll(
@@ -97,7 +99,7 @@ fn generate_chips_file(
 
     for (chip_files) |json| {
         const chip_file = json.value;
-        try writer.print("{}: *microzig.Target,\n", .{std.zig.fmtId(chip_file.name)});
+        try writer.print("{f}: *microzig.Target,\n", .{std.zig.fmtId(chip_file.name)});
     }
 
     try writer.writeAll(
@@ -129,8 +131,8 @@ fn generate_chips_file(
         }
 
         try writer.print(
-            \\    ret.{} = b.allocator.create(microzig.Target) catch @panic("out of memory");
-            \\    ret.{}.* = .{{
+            \\    ret.{f} = b.allocator.create(microzig.Target) catch @panic("out of memory");
+            \\    ret.{f}.* = .{{
             \\        .dep = dep,
             \\        .preferred_binary_format = .elf,
             \\        .zig_target = .{{
@@ -174,7 +176,7 @@ fn generate_chips_file(
         );
 
         {
-            var chip_memory = try std.ArrayList(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
+            var chip_memory = try std.array_list.Managed(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
             defer chip_memory.deinit();
 
             // Some flash bank regions are not merged so we better do that.
@@ -257,6 +259,14 @@ fn generate_chips_file(
                 \\
             );
         }
+        if (std.mem.startsWith(u8, chip_file.name, "STM32L47")) {
+            try writer.writeAll(
+                \\        .hal = .{
+                \\            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+                \\        },
+                \\
+            );
+        }
 
         try writer.writeAll(
             \\    };
@@ -270,4 +280,6 @@ fn generate_chips_file(
         \\}
         \\
     );
+
+    try writer.flush();
 }

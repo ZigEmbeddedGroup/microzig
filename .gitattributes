@@ -1,2 +1,6 @@
 *.zig text=auto eol=lf
 flake.lock -diff
+
+# Mark auto-generated test artifacts as generated
+sim/aviron/testsuite/instructions/*.elf linguist-generated=true
+sim/aviron/testsuite/instructions/*.elf.json linguist-generated=true

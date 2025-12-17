@@ -358,20 +358,21 @@ pub const StructLayout = enum {
 };
 
 fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null }) []const u8 {
-    var buf = std.BoundedArray(u8, 4096).init(0) catch unreachable;
-    const writer = buf.writer();
+    var buf: [4096]u8 = undefined;
+    var fbs: std.Io.Writer = .fixed(&buf);
+
     inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
         if (i != 0)
-            writer.writeAll(", ") catch unreachable;
+            fbs.writeAll(", ") catch unreachable;
 
         if (opts.prefix) |prefix|
-            writer.print("{s}.", .{prefix}) catch unreachable;
+            fbs.print("{s}.", .{prefix}) catch unreachable;
 
-        writer.print("{s}", .{field.name}) catch unreachable;
+        fbs.print("{s}", .{field.name}) catch unreachable;
     }
 
     const buf_copy = buf;
-    return buf_copy.slice();
+    return buf_copy[0..fbs.buffered().len];
 }
 
 fn zig_type_to_sql_type(comptime T: type) []const u8 {
@@ -393,7 +394,8 @@ fn gen_sql_table(comptime name: []const u8, comptime T: type) []const u8 {
 }
 
 fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
-    var buf = try std.BoundedArray(u8, 4096).init(0);
+    var buf: [4096]u8 = undefined;
+    var fbs: std.Io.Writer = .fixed(&buf);
 
     // check that primary key and foreign keys exist
     var primary_key_found = T.sql_opts.primary_key == null;
@@ -408,41 +410,54 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
 
     assert(primary_key_found);
 
-    const writer = buf.writer();
-    try writer.print("CREATE TABLE {s} (\n", .{name});
+    try fbs.print("CREATE TABLE {s} (\n", .{name});
     var first = true;
     inline for (info.@"struct".fields) |field| {
         if (first) {
             first = false;
         } else {
-            try writer.writeAll(",\n");
+            try fbs.writeAll(",\n");
         }
-        try writer.print("  {s}", .{field.name});
-        try writer.print(" {s}", .{zig_type_to_sql_type(field.type)});
+        try fbs.print("  {s}", .{field.name});
+        try fbs.print(" {s}", .{zig_type_to_sql_type(field.type)});
 
         const field_type_info = @typeInfo(field.type);
         if (field_type_info != .optional)
-            try writer.writeAll(" NOT NULL");
+            try fbs.writeAll(" NOT NULL");
 
         if (T.sql_opts.primary_key) |primary_key| {
             if (std.mem.eql(u8, primary_key.name, field.name)) {
-                try writer.writeAll(" PRIMARY KEY");
+                try fbs.writeAll(" PRIMARY KEY");
 
                 if (primary_key.autoincrement)
-                    try writer.writeAll(" AUTOINCREMENT");
+                    try fbs.writeAll(" AUTOINCREMENT");
             }
         }
     }
 
+    for (T.sql_opts.unique_constraints) |unique_constraint| {
+        try fbs.writeAll(",\nUNIQUE(");
+        first = true;
+        for (unique_constraint) |col_name| {
+            if (first) {
+                first = false;
+            } else {
+                try fbs.writeAll(", ");
+            }
+            try fbs.writeAll(col_name);
+        }
+        try fbs.writeAll(")");
+    }
+
     for (T.sql_opts.foreign_keys) |foreign_key| {
-        try writer.writeAll(",\n");
+        try fbs.writeAll(",\n");
 
         const field = for (@typeInfo(T).@"struct".fields) |field| {
             if (std.mem.eql(u8, field.name, foreign_key.name))
                 break field;
         } else unreachable;
 
-        try writer.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
+        try fbs.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
             foreign_key.name,
             (switch (@typeInfo(field.type)) {
                 .optional => |opt| opt.child,
@@ -455,10 +470,10 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
 
     // foreign keys
 
-    try writer.writeAll(");\n");
+    try fbs.writeAll(");\n");
 
     const buf_copy = buf;
-    return buf_copy.slice();
+    return buf_copy[0..fbs.buffered().len];
 }
 
 const schema: []const []const u8 = &.{
@@ -510,13 +525,8 @@ fn ID(comptime T: type, comptime table_name: []const u8) type {
 
         pub fn format(
             id: @This(),
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
+            writer: *std.Io.Writer,
         ) !void {
-            _ = fmt;
-            _ = options;
-
             const ID_Type = @TypeOf(id);
             try writer.print("{s}({})", .{ ID_Type.table, @intFromEnum(id) });
         }
@@ -618,7 +628,7 @@ fn exec(db: *Database, comptime query: []const u8, args: anytype) !void {
     db.sql.execDynamic(query, .{ .diags = &db.diags }, args) catch |err| {
         std.log.err("Failed Query:\n{s}", .{query});
         if (err == error.SQLiteError)
-            std.log.err("{}", .{db.diags});
+            std.log.err("{f}", .{db.diags});
 
         return err;
     };
@@ -661,6 +671,20 @@ fn get_id_by_name(db: *Database, comptime T: type, name: []const u8) !?T {
 
 pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
     return db.get_id_by_name(PeripheralID, name);
+}
+
+/// Get the struct ID for a struct decl with `name` in parent struct
+pub fn get_struct_decl_id_by_name(db: *Database, parent: StructID, name: []const u8) !StructID {
+    const query =
+        \\SELECT struct_id
+        \\FROM struct_decls
+        \\WHERE parent_id = ? AND name = ?
+    ;
+
+    return db.one(StructID, query, .{
+        .parent_id = parent,
+        .name = name,
+    });
 }
 
 pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: StructID, name: []const u8) !StructDecl {
@@ -712,7 +736,7 @@ fn get_one(db: *Database, comptime T: type, comptime query: []const u8, args: an
     return db.sql.one(T, query, .{ .diags = &db.diags }, args) catch |err| {
         std.log.err("Failed Query:\n{s}", .{query});
         if (err == error.SQLiteError)
-            std.log.err("{}", .{db.diags});
+            std.log.err("{f}", .{db.diags});
 
         return err;
     };
@@ -777,7 +801,7 @@ fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: A
     }) catch |err| {
         if (err == error.SQLiteError) {
             log.err("query failed: {s}", .{query});
-            log.err("{}", .{db.diags});
+            log.err("{f}", .{db.diags});
         }
 
         return err;
@@ -789,7 +813,7 @@ fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: A
     }, args) catch |err| {
         if (err == error.SQLiteError) {
             log.err("query failed: {s}", .{query});
-            log.err("{}", .{db.diags});
+            log.err("{f}", .{db.diags});
         }
 
         return err;
@@ -936,30 +960,34 @@ fn recursively_calculate_struct_size(
 /// is calculated to be zero, the nested struct field will not be reported.
 pub fn get_nested_struct_fields_with_calculated_size(
     db: *Database,
-    allocator: Allocator,
+    gpa: Allocator,
     struct_id: StructID,
 ) ![]NestedStructField {
-    var ret: std.ArrayList(NestedStructField) = .init(allocator);
-    defer ret.deinit();
+    var ret: std.ArrayList(NestedStructField) = .empty;
+    defer ret.deinit(gpa);
 
-    const nested_struct_fields = try db.get_nested_struct_fields(allocator, struct_id);
-    defer allocator.free(nested_struct_fields);
+    const nested_struct_fields = try db.get_nested_struct_fields(gpa, struct_id);
+    defer gpa.free(nested_struct_fields);
 
-    var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(allocator);
+    log.debug("nested_struct_fields.len={} struct_id={}", .{ nested_struct_fields.len, struct_id });
+
+    var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(gpa);
     defer size_cache.deinit();
 
     for (nested_struct_fields) |*nsf| {
-        if (nsf.size_bytes != null)
+        if (nsf.size_bytes != null) {
+            try ret.append(gpa, nsf.*);
             continue;
+        }
 
         var depth: u8 = 0;
-        const size_bytes = try db.recursively_calculate_struct_size(&depth, &size_cache, allocator, nsf.struct_id);
+        const size_bytes = try db.recursively_calculate_struct_size(&depth, &size_cache, gpa, nsf.struct_id);
         std.log.debug("Calculated struct size: struct_id={} size_bytes={}", .{ nsf.struct_id, size_bytes });
         nsf.size_bytes = if (size_bytes > 0) size_bytes else continue;
-        try ret.append(nsf.*);
+        try ret.append(gpa, nsf.*);
     }
 
-    return ret.toOwnedSlice();
+    return ret.toOwnedSlice(gpa);
 }
 
 pub fn get_struct_modes(
@@ -1039,7 +1067,7 @@ pub fn get_enum(
     allocator: Allocator,
     id: EnumID,
 ) !Enum {
-    log.debug("get_enum: id={}", .{id});
+    log.debug("get_enum: id={f}", .{id});
     const query = std.fmt.comptimePrint("SELECT {s} FROM enums WHERE id = ?", .{
         comptime gen_field_list(Enum, .{}),
     });
@@ -1369,7 +1397,7 @@ pub fn get_enum_by_name(
     struct_id: StructID,
     name: []const u8,
 ) !Enum {
-    log.debug("get_enum_by_name: struct_id={} name='{s}'", .{ struct_id, name });
+    log.debug("get_enum_by_name: struct_id={f} name='{s}'", .{ struct_id, name });
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
         \\FROM enums
@@ -1392,7 +1420,7 @@ pub fn get_enum_by_name(
                     return err;
                 };
 
-                log.debug("get_enum_by_name: parent_id={} name='{s}'", .{ parent_id, name });
+                log.debug("get_enum_by_name: parent_id={f} name='{s}'", .{ parent_id, name });
                 return db.one_alloc(Enum, allocator, query, .{
                     .struct_id = parent_id,
                     .name = name,
@@ -1439,7 +1467,7 @@ fn get_one_alloc(
     return db.sql.oneAlloc(T, allocator, query, .{ .diags = &db.diags }, args) catch |err| {
         log.err("Failed query:\n{s}", .{query});
         if (err == error.SQLiteError) {
-            log.err("{}", .{db.diags});
+            log.err("{f}", .{db.diags});
         }
 
         return err;
@@ -1495,7 +1523,7 @@ pub fn add_nested_struct_field(
         .count = opts.count,
     });
 
-    log.debug("add_nested_struct_field: parent={} name='{s}' struct_id={} offset_bytes={} size_bytes={?} count={?}", .{
+    log.debug("add_nested_struct_field: parent={f} name='{s}' struct_id={f} offset_bytes={} size_bytes={?} count={?}", .{
         parent,
         opts.name,
         opts.struct_id,
@@ -1534,7 +1562,7 @@ pub fn create_nested_struct(
     });
 
     savepoint.commit();
-    log.debug("created struct_decl: parent={} struct_id={} name='{s}' description='{?s}' size_bytes={?}", .{
+    log.debug("created struct_decl: parent={f} struct_id={f} name='{s}' description='{?s}' size_bytes={?}", .{
         parent,
         struct_id,
         opts.name,
@@ -1589,7 +1617,7 @@ const CreateInterruptOptions = struct {
 };
 
 pub fn create_interrupt(db: *Database, device_id: DeviceID, opts: CreateInterruptOptions) !InterruptID {
-    log.debug("create_interrupt: device_id={} name={s} idx={} desc={?s}", .{
+    log.debug("create_interrupt: device_id={f} name={s} idx={} desc={?s}", .{
         device_id,
         opts.name,
         opts.idx,
@@ -1643,7 +1671,7 @@ pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !Peripher
     const peripheral_id: PeripheralID = @enumFromInt(db.sql.getLastInsertRowID());
     savepoint.commit();
 
-    log.debug("created {}: struct_id={?} name={s} size_bytes={?} desc={?s}", .{
+    log.debug("created {f}: struct_id={f} name={s} size_bytes={?} desc={?s}", .{
         peripheral_id,
         struct_id,
         opts.name,
@@ -1666,7 +1694,7 @@ pub fn create_device_peripheral(
     device_id: DeviceID,
     opts: CreateDevicePeripheralOptions,
 ) !DevicePeripheralID {
-    log.debug("create_device_peripherals: device_id={} struct_id={} name={s} offset=0x{X} desc={?s}", .{
+    log.debug("create_device_peripherals: device_id={f} struct_id={f} name={s} offset=0x{X} desc={?s}", .{
         device_id,
         opts.struct_id,
         opts.name,
@@ -1706,7 +1734,7 @@ pub const CreateModeOptions = struct {
 pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !ModeID {
     var savepoint = try db.sql.savepoint("create_mode");
     defer savepoint.rollback();
-    log.debug("create_mode: name={s} parent={}", .{ opts.name, parent });
+    log.debug("create_mode: name={s} parent={f}", .{ opts.name, parent });
 
     try db.exec(
         \\INSERT INTO modes
@@ -1725,7 +1753,7 @@ pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !Mo
     savepoint.commit();
 
     log.debug(
-        "created {}: struct_id={} name='{s}' value='{s}' qualifier='{s}'",
+        "created {f}: struct_id={f} name='{s}' value='{s}' qualifier='{s}'",
         .{ mode_id, parent, opts.name, opts.value, opts.qualifier },
     );
 
@@ -1748,7 +1776,7 @@ pub const CreateRegisterOptions = struct {
 };
 
 pub fn add_register_mode(db: *Database, register_id: RegisterID, mode_id: ModeID) !void {
-    log.debug("add_register_mode: mode_id={} register_id={}", .{ mode_id, register_id });
+    log.debug("add_register_mode: mode_id={f} register_id={f}", .{ mode_id, register_id });
     try db.exec(
         \\INSERT INTO register_modes
         \\  (register_id, mode_id)
@@ -1793,7 +1821,7 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
 
     savepoint.commit();
 
-    log.debug("created {}: name='{s}' parent_id={} offset_bytes={} size_bits={}", .{
+    log.debug("created {f}: name='{s}' parent_id={f} offset_bytes={} size_bits={}", .{
         register_id,
         opts.name,
         parent,
@@ -1848,7 +1876,7 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
             .id = parent,
         });
 
-        log.debug("{} now has {}", .{ parent, struct_id });
+        log.debug("{f} now has {f}", .{ parent, struct_id });
         break :blk struct_id;
     };
 
@@ -1878,7 +1906,7 @@ pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOpt
 
     savepoint.commit();
 
-    log.debug("add_struct_field: parent={} name='{s}' offset_bits={} size_bits={} enum_id={?} count={?} stride={?}", .{
+    log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?}", .{
         parent,
         opts.name,
         opts.offset_bits,
@@ -1914,7 +1942,7 @@ pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions)
     const enum_id: EnumID = @enumFromInt(db.sql.getLastInsertRowID());
     savepoint.commit();
 
-    log.debug("created {}: struct_id={?} name='{?s}' description='{?s}' size_bits={}", .{
+    log.debug("created {f}: struct_id={?f} name='{?s}' description='{?s}' size_bits={}", .{
         enum_id,
         struct_id,
         opts.name,
@@ -1956,7 +1984,7 @@ pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     const struct_id: StructID = @enumFromInt(db.sql.getLastInsertRowID());
     savepoint.commit();
 
-    log.debug("created {}", .{struct_id});
+    log.debug("created {f}", .{struct_id});
     return struct_id;
 }
 
@@ -2093,17 +2121,17 @@ pub fn cleanup_unused_enums(db: *Database) !void {
 }
 
 pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
-    var list = std.ArrayList(std.json.Parsed(Patch)).init(db.gpa);
+    var list: std.ArrayList(std.json.Parsed(Patch)) = .empty;
     defer {
         for (list.items) |*entry| entry.deinit();
-        list.deinit();
+        list.deinit(db.gpa);
     }
 
     var line_it = std.mem.tokenizeScalar(u8, ndjson, '\n');
     while (line_it.next()) |line| {
         const p = try Patch.from_json_str(db.gpa, line);
         errdefer p.deinit();
-        try list.append(p);
+        try list.append(db.gpa, p);
     }
 
     for (list.items) |patch| {
@@ -2120,6 +2148,27 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
                 , .{
                     .arch = override_arch.arch,
                     .device_id = device_id,
+                });
+            },
+            .set_device_property => |set_prop| {
+                const device_id = try db.get_device_id_by_name(set_prop.device_name) orelse {
+                    return error.DeviceNotFound;
+                };
+
+                try db.exec(
+                    \\INSERT INTO device_properties
+                    \\  (device_id, key, value, description)
+                    \\VALUES
+                    \\  (?, ?, ?, ?)
+                    \\ON CONFLICT(device_id, key)
+                    \\DO UPDATE SET
+                    \\  value = excluded.value,
+                    \\  description = excluded.description;
+                , .{
+                    .device_id = @intFromEnum(device_id),
+                    .key = set_prop.key,
+                    .value = set_prop.value,
+                    .description = set_prop.description,
                 });
             },
             .add_enum => |add_enum| {

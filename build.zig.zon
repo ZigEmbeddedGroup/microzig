@@ -2,8 +2,8 @@
     .name = .microzig,
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
-    .version = "0.14.1",
-    .minimum_zig_version = "0.14.1",
+    .version = "0.15.0",
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
         .core = .{ .path = "core" },
@@ -29,14 +29,15 @@
         .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
         .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
         .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
+        .@"port/nxp/mcx" = .{ .path = "port/nxp/mcx", .lazy = true },
         .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer.git#d50d7916b1f850048b2ad7e63a7abf05bd73c0e6",
-            .hash = "boxzer-0.1.0--ed-MLzlAADinFJMGZncIcYAE07MoAbAr8a2R7Cr-xln",
+            .url = "git+https://codeberg.org/mattnite/boxzer.git#4021540de4b07c11102dd4d46383ce0066f838bb",
+            .hash = "boxzer-0.1.0--ed-MPrnAAAQAwXnfMJuSkgAsw4FseHEHKcn7OMKXGZS",
         },
     },
     .paths = .{

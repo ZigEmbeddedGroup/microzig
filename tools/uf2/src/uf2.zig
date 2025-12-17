@@ -1,47 +1,86 @@
 const std = @import("std");
 const testing = std.testing;
 const assert = std.debug.assert;
-const LibExeObjStep = std.build.LibExeObjStep;
 const Allocator = std.mem.Allocator;
-const GeneratedFile = std.build.GeneratedFile;
+
+pub const FamilyId = @import("family_id.zig").FamilyId;
 
 const prog_page_size = 256;
 const uf2_alignment = 4;
 
-pub const Options = struct {
-    // TODO: when implemented set to true by default
-    bundle_source: bool = false,
-    family_id: ?FamilyId = null,
-};
-
 pub const Archive = struct {
     allocator: Allocator,
     blocks: std.ArrayList(Block),
-    families: std.AutoHashMap(FamilyId, void),
+    families: std.AutoArrayHashMapUnmanaged(FamilyId, void),
     // TODO: keep track of contained files
 
-    const Self = @This();
-
     pub fn init(allocator: std.mem.Allocator) Archive {
-        return Self{
+        return .{
             .allocator = allocator,
-            .blocks = std.ArrayList(Block).init(allocator),
-            .families = std.AutoHashMap(FamilyId, void).init(allocator),
+            .blocks = .empty,
+            .families = .empty,
         };
     }
 
-    pub fn deinit(self: *Self) void {
-        self.blocks.deinit();
-        self.families.deinit();
+    pub fn deinit(self: *Archive) void {
+        self.blocks.deinit(self.allocator);
+        self.families.deinit(self.allocator);
     }
 
-    pub fn add_elf(self: *Self, path: []const u8, opts: Options) !void {
-        // TODO: ensures this reports an error if there is a collision
-        if (opts.family_id) |family_id|
-            try self.families.putNoClobber(family_id, {});
+    pub fn write_to(self: *Archive, writer: *std.Io.Writer) !void {
+        for (self.blocks.items, 0..) |*block, i| {
+            block.block_number = @as(u32, @intCast(i));
+            block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
+            try writer.writeStruct(block.*, .little);
+        }
+        try writer.flush();
+    }
 
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+    pub const ReadFromOptions = struct {
+        /// If true, checks if any new block has a family_id already present in
+        /// the archive.
+        check_family_id_collision: bool = true,
+    };
+
+    /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
+    /// bytes.
+    pub fn read_from(self: *Archive, reader: *std.Io.Reader, options: ReadFromOptions) !void {
+        var new_family_ids: std.AutoArrayHashMapUnmanaged(FamilyId, void) = .empty;
+        defer new_family_ids.deinit(self.allocator);
+
+        while (reader.takeStruct(Block, .little)) |block| {
+            if (block.flags.family_id_present) {
+                const family_id = block.file_size_or_family_id.family_id;
+
+                // Check if family id is already present in the archive
+                if (try new_family_ids.fetchPut(self.allocator, family_id, {}) == null and
+                    try self.families.fetchPut(self.allocator, family_id, {}) != null)
+                {
+                    if (options.check_family_id_collision) {
+                        return error.FamilyIdCollision;
+                    }
+                }
+            }
+
+            try self.blocks.append(self.allocator, block);
+        } else |err| switch (err) {
+            error.EndOfStream => {},
+            else => return err,
+        }
+    }
+
+    pub const ELF_Options = struct {
+        // TODO: when implemented set to true by default
+        bundle_source: bool = false,
+        family_id: ?FamilyId = null,
+    };
+
+    /// Adds an elf to the archive. Returns error if the family id (if
+    /// specified) is already present in the archive.
+    pub fn add_elf(self: *Archive, reader: *std.fs.File.Reader, opts: ELF_Options) !void {
+        if (opts.family_id) |family_id|
+            if (try self.families.fetchPut(self.allocator, family_id, {}) != null)
+                return error.FamilyIdCollision;
 
         const Segment = struct {
             addr: u32,
@@ -53,15 +92,15 @@ pub const Archive = struct {
             }
         };
 
-        var segments = std.ArrayList(Segment).init(self.allocator);
-        defer segments.deinit();
+        var segments: std.ArrayList(Segment) = .empty;
+        defer segments.deinit(self.allocator);
 
-        const header = try std.elf.Header.read(file);
-        var it = header.program_header_iterator(file);
+        const header = try std.elf.Header.read(&reader.interface);
+        var it = header.iterateProgramHeaders(reader);
         while (try it.next()) |prog_hdr|
             if (prog_hdr.p_type == std.elf.PT_LOAD and prog_hdr.p_memsz > 0 and prog_hdr.p_filesz > 0) {
                 std.log.debug("segment: {}", .{prog_hdr});
-                try segments.append(.{
+                try segments.append(self.allocator, .{
                     .addr = @as(u32, @intCast(prog_hdr.p_paddr)),
                     .file_offset = @as(u32, @intCast(prog_hdr.p_offset)),
                     .size = @as(u32, @intCast(prog_hdr.p_memsz)),
@@ -80,7 +119,7 @@ pub const Archive = struct {
             while (segment_offset < segment.size) {
                 const addr = segment.addr + segment_offset;
                 if (first or addr >= self.blocks.items[self.blocks.items.len - 1].target_addr + prog_page_size) {
-                    try self.blocks.append(.{
+                    try self.blocks.append(self.allocator, .{
                         .flags = .{
                             .not_main_flash = false,
                             .file_container = false,
@@ -107,8 +146,8 @@ pub const Archive = struct {
                 const block_offset = addr - block.target_addr;
                 const n_bytes = @min(prog_page_size - block_offset, segment.size - segment_offset);
 
-                try file.seekTo(segment.file_offset + segment_offset);
-                try file.reader().readNoEof(block.data[block_offset..][0..n_bytes]);
+                try reader.seekTo(segment.file_offset + segment_offset);
+                try reader.interface.readSliceAll(block.data[block_offset..][0..n_bytes]);
 
                 segment_offset += n_bytes;
             }
@@ -118,15 +157,7 @@ pub const Archive = struct {
             @panic("TODO: bundle source in UF2 file");
     }
 
-    pub fn write_to(self: *Self, writer: anytype) !void {
-        for (self.blocks.items, 0..) |*block, i| {
-            block.block_number = @as(u32, @intCast(i));
-            block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
-            try block.write_to(writer);
-        }
-    }
-
-    pub fn add_file(self: *Self, path: []const u8) !void {
+    pub fn add_file(self: *Archive, path: []const u8) !void {
         const file = if (std.fs.path.isAbsolute(path))
             try std.fs.openFileAbsolute(path, .{})
         else
@@ -139,7 +170,7 @@ pub const Archive = struct {
 
         var target_addr: u32 = 0;
         while (true) {
-            try self.blocks.append(.{
+            try self.blocks.append(self.allocator, .{
                 .flags = .{
                     .not_main_flash = true,
                     .file_container = true,
@@ -201,10 +232,6 @@ pub const Flags = packed struct(u32) {
     md5_checksum_present: bool,
     extension_tags_present: bool,
     padding: u16 = 0,
-
-    comptime {
-        assert(@sizeOf(Flags) == @sizeOf(u32));
-    }
 };
 
 const first_magic = 0x0a324655;
@@ -236,141 +263,92 @@ pub const Block = extern struct {
     comptime {
         assert(512 == @sizeOf(Block));
     }
-
-    pub fn from_reader(reader: anytype) !Block {
-        var block: Block = undefined;
-        inline for (std.meta.fields(Block)) |field| {
-            switch (field.type) {
-                u32 => @field(block, field.name) = try reader.readInt(u32, .little),
-                [476]u8 => {
-                    const n = try reader.readAll(&@field(block, field.name));
-                    if (n != @sizeOf(field.type))
-                        return error.EndOfStream;
-                },
-                else => {
-                    assert(4 == @sizeOf(field.type));
-                    @field(block, field.name) =
-                        @as(field.type, @bitCast(try reader.readInt(u32, .little)));
-                },
-            }
-        }
-
-        return block;
-    }
-
-    pub fn write_to(self: Block, writer: anytype) !void {
-        inline for (std.meta.fields(Block)) |field| {
-            switch (field.type) {
-                u32 => try writer.writeInt(u32, @field(self, field.name), .little),
-                [476]u8 => try writer.writeAll(&@field(self, field.name)),
-                else => {
-                    assert(4 == @sizeOf(field.type));
-                    try writer.writeInt(
-                        u32,
-                        @as(u32, @bitCast(@field(self, field.name))),
-                        .little,
-                    );
-                },
-            }
-        }
-    }
 };
 
-fn expect_equal_block(expected: Block, actual: Block) !void {
-    try testing.expectEqual(@as(u32, first_magic), actual.magic_start1);
-    try testing.expectEqual(expected.magic_start1, actual.magic_start1);
-    try testing.expectEqual(@as(u32, second_magic), actual.magic_start2);
-    try testing.expectEqual(expected.magic_start2, actual.magic_start2);
-
-    try testing.expectEqual(expected.flags, actual.flags);
-    try testing.expectEqual(expected.target_addr, actual.target_addr);
-    try testing.expectEqual(expected.payload_size, actual.payload_size);
-    try testing.expectEqual(expected.block_number, actual.block_number);
-    try testing.expectEqual(expected.total_blocks, actual.total_blocks);
-    try testing.expectEqual(
-        expected.file_size_or_family_id.file_size,
-        actual.file_size_or_family_id.file_size,
-    );
-    try testing.expectEqual(expected.data, actual.data);
-
-    try testing.expectEqual(@as(u32, last_magic), actual.magic_end);
-    try testing.expectEqual(expected.magic_end, actual.magic_end);
-}
-
-test "Block loopback" {
-    var buf: [512]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-
-    var prng = std.Random.DefaultPrng.init(0xf163bfab);
-    var rand = prng.random();
-    var expected = Block{
-        .flags = @as(Flags, @bitCast(rand.int(u32))),
-        .target_addr = rand.int(u32),
-        .payload_size = rand.int(u32),
-        .block_number = rand.int(u32),
-        .total_blocks = rand.int(u32),
-        .file_size_or_family_id = .{
-            .file_size = rand.int(u32),
+test "Archive read and write" {
+    const data_1_block_1: Block = .{
+        .flags = .{
+            .not_main_flash = false,
+            .file_container = false,
+            .family_id_present = true,
+            .md5_checksum_present = false,
+            .extension_tags_present = false,
         },
-        .data = undefined,
+        .target_addr = 0x10000000,
+        .payload_size = prog_page_size,
+        .block_number = undefined,
+        .total_blocks = undefined,
+        .file_size_or_family_id = .{
+            .family_id = .RP2040,
+        },
+        .data = @splat(0),
     };
-    rand.bytes(&expected.data);
+    const data_1_block_2: Block = .{
+        .flags = .{
+            .not_main_flash = false,
+            .file_container = false,
+            .family_id_present = true,
+            .md5_checksum_present = false,
+            .extension_tags_present = false,
+        },
+        .target_addr = 0x10000000,
+        .payload_size = prog_page_size,
+        .block_number = undefined,
+        .total_blocks = undefined,
+        .file_size_or_family_id = .{
+            .family_id = .RP2350_ARM_S,
+        },
+        .data = @splat(0),
+    };
+    const data_2_block_1: Block = .{
+        .flags = .{
+            .not_main_flash = false,
+            .file_container = false,
+            .family_id_present = true,
+            .md5_checksum_present = false,
+            .extension_tags_present = false,
+        },
+        .target_addr = 0x10000100,
+        .payload_size = prog_page_size,
+        .block_number = 1,
+        .total_blocks = 2,
+        .file_size_or_family_id = .{
+            .family_id = .RP2350_ARM_S,
+        },
+        .data = @splat(0),
+    };
 
-    try expected.write_to(fbs.writer());
+    var data_1: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer data_1.deinit();
+    try data_1.writer.writeStruct(data_1_block_1, .little);
+    try data_1.writer.writeStruct(data_1_block_2, .little);
 
-    // needs to be reset for reader
-    fbs.reset();
-    const actual = try Block.from_reader(fbs.reader());
+    var data_2: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer data_2.deinit();
+    try data_2.writer.writeStruct(data_2_block_1, .little);
 
-    try expect_equal_block(expected, actual);
+    var data_1_reader: std.Io.Reader = .fixed(data_1.written());
+
+    var archive = Archive.init(std.testing.allocator);
+    defer archive.deinit();
+
+    try archive.read_from(&data_1_reader, .{});
+
+    var output: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer output.deinit();
+
+    try archive.write_to(&output.writer);
+
+    try std.testing.expectEqualSlices(FamilyId, archive.families.keys(), &.{ .RP2040, .RP2350_ARM_S });
+
+    // these are set by write_to
+    std.mem.writeInt(u32, data_1.written()[@offsetOf(Block, "block_number")..][0..4], 0, .little);
+    std.mem.writeInt(u32, data_1.written()[@offsetOf(Block, "total_blocks")..][0..4], 2, .little);
+    std.mem.writeInt(u32, data_1.written()[@sizeOf(Block)..][@offsetOf(Block, "block_number")..][0..4], 1, .little);
+    std.mem.writeInt(u32, data_1.written()[@sizeOf(Block)..][@offsetOf(Block, "total_blocks")..][0..4], 2, .little);
+    try std.testing.expectEqualSlices(u8, data_1.written(), output.written());
+
+    // test name collisions
+    var data_2_reader: std.Io.Reader = .fixed(data_2.written());
+    try std.testing.expectError(error.FamilyIdCollision, archive.read_from(&data_2_reader, .{}));
 }
-
-pub const FamilyId = enum(u32) {
-    ATMEGA32 = 0x16573617,
-    SAML21 = 0x1851780a,
-    NRF52 = 0x1b57745f,
-    ESP32 = 0x1c5f21b0,
-    STM32L1 = 0x1e1f432d,
-    STM32L0 = 0x202e3a91,
-    STM32WL = 0x21460ff0,
-    LPC55 = 0x2abc77ec,
-    STM32G0 = 0x300f5633,
-    GD32F350 = 0x31d228c6,
-    STM32L5 = 0x04240bdf,
-    STM32G4 = 0x4c71240a,
-    MIMXRT10XX = 0x4fb2d5bd,
-    STM32F7 = 0x53b80f00,
-    SAMD51 = 0x55114460,
-    STM32F4 = 0x57755a57,
-    FX2 = 0x5a18069b,
-    STM32F2 = 0x5d1a0a2e,
-    STM32F1 = 0x5ee21072,
-    NRF52833 = 0x621e937a,
-    STM32F0 = 0x647824b6,
-    SAMD21 = 0x68ed2b88,
-    STM32F3 = 0x6b846188,
-    STM32F407 = 0x6d0922fa,
-    STM32H7 = 0x6db66082,
-    STM32WB = 0x70d16653,
-    ESP8266 = 0x7eab61ed,
-    KL32L2 = 0x7f83e793,
-    STM32F407VG = 0x8fb060fe,
-    NRF52840 = 0xada52840,
-    ESP32S2 = 0xbfdd4eee,
-    ESP32S3 = 0xc47e5767,
-    ESP32C3 = 0xd42ba06c,
-    ESP32C2 = 0x2b88d29c,
-    ESP32H2 = 0x332726f6,
-    RP2040 = 0xe48bff56,
-    RP2XXX_ABSOLUTE = 0xe48b_ff57,
-    RP2XXX_DATA = 0xe48b_ff58,
-    RP2350_ARM_S = 0xe48b_ff59,
-    RP2350_RISC_V = 0xe48b_ff5a,
-    RP2350_ARM_NS = 0xe48b_ff5b,
-    STM32L4 = 0x00ff6919,
-    GD32VF103 = 0x9af03e33,
-    CSK4 = 0x4f6ace52,
-    CSK6 = 0x6e7348a8,
-    M0SENSE = 0x11de784a,
-    _,
-};

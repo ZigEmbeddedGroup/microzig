@@ -16,11 +16,11 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    var issues: std.ArrayList(Issue) = .init(allocator);
+    var issues: std.array_list.Managed(Issue) = .init(allocator);
     defer issues.deinit();
 
     for (args[1..]) |path| {
-        const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, 1, 0) catch |err| {
+        const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, .@"1", 0) catch |err| {
             std.log.err("Failed to read file '{s}': {}", .{ path, err });
             return err;
         };
@@ -67,8 +67,10 @@ pub fn main() !void {
         }
     }
 
-    const stdout = std.io.getStdOut().writer();
-    try std.json.stringify(issues.items, .{}, stdout);
+    const stdout = std.fs.File.stdout();
+    var buf: [4096]u8 = undefined;
+    var writer = stdout.writer(&buf);
+    try std.json.Stringify.value(issues.items, .{}, &writer.interface);
 }
 
 const Token = std.zig.Token;
@@ -115,7 +117,7 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
     if (str.len == 0)
         return str;
 
-    var ret = std.ArrayList(u8).init(arena);
+    var ret = std.array_list.Managed(u8).init(arena);
     errdefer ret.deinit();
 
     if (std.ascii.isUpper(str[0])) {

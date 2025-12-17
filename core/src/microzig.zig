@@ -35,6 +35,7 @@ pub const concurrency = @import("concurrency.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const mmio = @import("mmio.zig");
 pub const utilities = @import("utilities.zig");
+pub const Allocator = @import("allocator.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub const panic = std.debug.FullPanic(struct {
@@ -87,6 +88,7 @@ pub const Options = struct {
         }
     }.log,
     interrupts: InterruptOptions = .{},
+    overwrite_hal_interrupts: bool = false, //force overwrite the Hal default interrupts
     cpu: CPU_Options = .{},
     hal: HAL_Options = .{},
 
@@ -108,7 +110,7 @@ pub fn hang() noreturn {
     cpu.interrupt.disable_interrupts();
     while (true) {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
-        asm volatile ("" ::: "memory");
+        asm volatile ("" ::: .{ .memory = true });
     }
 }
 

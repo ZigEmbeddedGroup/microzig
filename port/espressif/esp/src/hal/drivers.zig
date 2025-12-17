@@ -13,11 +13,13 @@ const time = microzig.drivers.time;
 const Datagram_Device = drivers.Datagram_Device;
 const Digital_IO = drivers.Digital_IO;
 const Clock_Device = drivers.Clock_Device;
+const I2CError = drivers.I2C_Device.Error;
+const I2CAddress = drivers.I2C_Device.Address;
 
 ///
 /// A datagram device attached to an I²C bus.
 ///
-pub const I2C_Device = struct {
+pub const I2C_Datagram_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
 
     pub const WriteError = Datagram_Device.WriteError;
@@ -32,7 +34,7 @@ pub const I2C_Device = struct {
     /// Default timeout duration
     timeout: ?mdf.time.Duration = null,
 
-    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_Device {
+    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_Datagram_Device {
         return .{
             .bus = bus,
             .address = address,
@@ -40,38 +42,38 @@ pub const I2C_Device = struct {
         };
     }
 
-    pub fn datagram_device(dev: *I2C_Device) Datagram_Device {
+    pub fn datagram_device(dev: *I2C_Datagram_Device) Datagram_Device {
         return .{
             .ptr = dev,
             .vtable = &vtable,
         };
     }
 
-    pub fn connect(dev: I2C_Device) ConnectError!void {
+    pub fn connect(dev: I2C_Datagram_Device) ConnectError!void {
         _ = dev;
     }
 
-    pub fn disconnect(dev: I2C_Device) void {
+    pub fn disconnect(dev: I2C_Datagram_Device) void {
         _ = dev;
     }
 
-    pub fn write(dev: I2C_Device, datagram: []const u8) !void {
+    pub fn write(dev: I2C_Datagram_Device, datagram: []const u8) !void {
         try dev.bus.write_blocking(dev.address, datagram, dev.timeout);
     }
 
-    pub fn writev(dev: I2C_Device, datagrams: []const []const u8) !void {
+    pub fn writev(dev: I2C_Datagram_Device, datagrams: []const []const u8) !void {
         try dev.bus.writev_blocking(dev.address, datagrams, dev.timeout);
     }
 
-    pub fn read(dev: I2C_Device, datagram: []u8) !usize {
+    pub fn read(dev: I2C_Datagram_Device, datagram: []u8) !usize {
         try dev.bus.read_blocking(dev.address, datagram, dev.timeout);
         return datagram.len;
     }
 
-    pub fn readv(dev: I2C_Device, datagrams: []const []u8) !usize {
+    pub fn readv(dev: I2C_Datagram_Device, datagrams: []const []u8) !usize {
         try dev.bus.readv_blocking(dev.address, datagrams, dev.timeout);
 
-        return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
+        return microzig.utilities.SliceVector([]u8).init(datagrams).size();
     }
 
     const vtable = Datagram_Device.VTable{
@@ -92,7 +94,7 @@ pub const I2C_Device = struct {
     }
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |e|
             switch (e) {
                 hal.i2c.Error.Timeout => WriteError.Timeout,
@@ -101,12 +103,140 @@ pub const I2C_Device = struct {
     }
 
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
         return dev.readv(chunks) catch |e|
             switch (e) {
                 hal.i2c.Error.Timeout => WriteError.Timeout,
                 else => WriteError.IoError,
             };
+    }
+};
+
+///
+/// A Implementation of the I2C_Device interface
+///
+pub const I2C_Device = struct {
+    /// Selects which I²C bus should be used.
+    bus: hal.i2c.I2C,
+
+    /// Default timeout duration
+    timeout: ?mdf.time.Duration = null,
+
+    pub fn init(bus: hal.i2c.I2C, timeout: ?mdf.time.Duration) I2C_Device {
+        return .{
+            .bus = bus,
+            .timeout = timeout,
+        };
+    }
+
+    pub fn i2c_device(dev: *I2C_Device) drivers.I2C_Device {
+        return .{
+            .ptr = dev,
+            .vtable = &i2c_vtable,
+        };
+    }
+
+    pub fn write(dev: I2C_Device, address: I2CAddress, buf: []const u8) I2CError!void {
+        return dev.bus.write_blocking(address, buf, dev.timeout) catch |err| switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    pub fn writev(dev: I2C_Device, address: I2CAddress, chunks: []const []const u8) I2CError!void {
+        return dev.bus.writev_blocking(address, chunks, dev.timeout) catch |err| switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    pub fn read(dev: I2C_Device, address: I2CAddress, buf: []u8) I2CError!usize {
+        dev.bus.read_blocking(address, buf, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+        return buf.len;
+    }
+
+    pub fn readv(dev: I2C_Device, address: I2CAddress, chunks: []const []u8) I2CError!usize {
+        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+        return microzig.utilities.SliceVector([]u8).init(chunks).size();
+    }
+
+    pub fn write_then_read(dev: I2C_Device, address: I2CAddress, src: []const u8, dst: []u8) I2CError!void {
+        dev.bus.write_then_read_blocking(address, src, dst, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    pub fn writev_then_readv(
+        dev: I2C_Device,
+        address: I2CAddress,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) I2CError!void {
+        // TODO: When writev_then_readv_blocking is implemented in the HAL, use that.
+        // NOTE: Since we are making two calls with the same timeout, we are effectively doubling
+        // the timeout here.
+        dev.bus.writev_blocking(address, write_chunks, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+        dev.bus.readv_blocking(address, read_chunks, dev.timeout) catch |err| return switch (err) {
+            error.FifoExceeded => I2CError.UnknownAbort,
+            error.ArbitrationLost => I2CError.UnknownAbort,
+            error.ExecutionIncomplete => I2CError.UnknownAbort,
+            error.CommandNumberExceeded => I2CError.UnknownAbort,
+            else => |e| e,
+        };
+    }
+
+    const i2c_vtable = drivers.I2C_Device.VTable{
+        .writev_fn = writev_fn,
+        .readv_fn = readv_fn,
+        .writev_then_readv_fn = writev_then_readv_fn,
+    };
+
+    fn writev_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []const u8) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev(address, chunks);
+    }
+
+    fn readv_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []u8) I2CError!usize {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.readv(address, chunks);
+    }
+
+    fn writev_then_readv_fn(
+        dd: *anyopaque,
+        address: I2CAddress,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) I2CError!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev_then_readv(address, write_chunks, read_chunks);
     }
 };
 
@@ -124,11 +254,11 @@ pub const SPI_Device = struct {
         active_level: Digital_IO.State,
     };
 
-    bus: hal.spi.SPI_Bus,
+    bus: hal.spi.SPI,
     bit_mode: hal.spi.BitMode,
     maybe_chip_select: ?ChipSelect = null,
 
-    pub fn init(bus: hal.spi.SPI_Bus, bit_mode: hal.spi.BitMode, maybe_chip_select: ?ChipSelect) SPI_Device {
+    pub fn init(bus: hal.spi.SPI, bit_mode: hal.spi.BitMode, maybe_chip_select: ?ChipSelect) SPI_Device {
         if (maybe_chip_select) |chip_select| {
             chip_select.pin.apply(.{
                 .output_enable = true,
@@ -155,18 +285,18 @@ pub const SPI_Device = struct {
 
     pub fn connect(dev: SPI_Device) ConnectError!void {
         if (dev.maybe_chip_select) |chip_select| {
-            chip_select.pin.write(switch (chip_select.active_level) {
-                .low => .low,
-                .high => .high,
+            chip_select.pin.put(switch (chip_select.active_level) {
+                .low => 0,
+                .high => 1,
             });
         }
     }
 
     pub fn disconnect(dev: SPI_Device) void {
         if (dev.maybe_chip_select) |chip_select| {
-            chip_select.pin.write(switch (chip_select.active_level) {
-                .low => .high,
-                .high => .low,
+            chip_select.pin.put(switch (chip_select.active_level) {
+                .low => 1,
+                .high => 0,
             });
         }
     }
@@ -269,22 +399,23 @@ pub const GPIO_Device = struct {
     }
 
     pub fn set_direction(dio: GPIO_Device, dir: Direction) SetDirError!void {
-        dio.pin.set_output_enable(dir == .output);
+        dio.pin.set_output_enabled(dir == .output);
+        dio.pin.set_input_enabled(dir == .input);
     }
 
     pub fn set_bias(dio: GPIO_Device, maybe_bias: ?State) SetBiasError!void {
-        dio.pin.set_pullup(if (maybe_bias) |bias| switch (bias) {
-            .low => false,
-            .high => true,
-        } else false);
+        dio.pin.set_pull(if (maybe_bias) |bias| switch (bias) {
+            .low => .down,
+            .high => .up,
+        } else .disabled);
     }
 
     pub fn write(dio: GPIO_Device, state: State) WriteError!void {
-        dio.pin.write(@enumFromInt(state.value()));
+        dio.pin.put(state.value());
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @enumFromInt(@intFromEnum(dio.pin.read()));
+        return @enumFromInt(dio.pin.read());
     }
 
     const vtable = Digital_IO.VTable{
@@ -318,24 +449,21 @@ pub const GPIO_Device = struct {
 };
 
 ///
-/// Implementation of a time device
+/// Implementation of a `Clock_Device` that uses the HAL's `time` module.
 ///
-// TODO What do we call this concrete implementation?
-pub const ClockDevice = struct {
-    pub fn clock_device(td: *ClockDevice) Clock_Device {
-        _ = td;
-        return Clock_Device{
-            .ptr = undefined,
-            .vtable = &vtable,
+pub fn clock_device() Clock_Device {
+    const S = struct {
+        const vtable: Clock_Device.VTable = .{
+            .get_time_since_boot = get_time_since_boot_fn,
         };
-    }
-    const vtable = Clock_Device.VTable{
-        .get_time_since_boot = get_time_since_boot_fn,
+
+        fn get_time_since_boot_fn(_: *anyopaque) time.Absolute {
+            return hal.time.get_time_since_boot();
+        }
     };
 
-    fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
-        _ = td;
-        const t = hal.time.get_time_since_boot().to_us();
-        return @enumFromInt(t);
-    }
-};
+    return .{
+        .ptr = undefined,
+        .vtable = &S.vtable,
+    };
+}

@@ -1,25 +1,23 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const board = microzig.board;
 const nrf = microzig.hal;
 
 const gpio = nrf.gpio;
 const i2c = nrf.i2c;
 
-const ClockDevice = nrf.drivers.ClockDevice;
 const I2C_Device = nrf.drivers.I2C_Device;
-const uart = nrf.uart.num(0);
-const i2c0 = i2c.num(0);
-
 const ICM_20948 = microzig.drivers.sensor.ICM_20948;
 
-const sleep_ms = nrf.time.sleep_ms;
+const uart = nrf.uart.num(0);
+const i2c0 = i2c.num(0);
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = nrf.uart.log,
 };
+
+const sleep_ms = nrf.time.sleep_ms;
 
 pub fn main() !void {
     board.init();
@@ -27,7 +25,6 @@ pub fn main() !void {
     uart.apply(.{
         .tx_pin = board.uart_tx,
         .rx_pin = board.uart_rx,
-        .baud_rate = .@"115200",
     });
 
     nrf.uart.init_logger(uart);
@@ -39,13 +36,13 @@ pub fn main() !void {
         .sda_pin = gpio.num(0, 10),
     });
 
-    // Create i2c datagram device
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x69), null);
-    // Pass i2c device to driver to create sensor instance
-    var cd = ClockDevice{};
+    // Create i2c and clock devices
+    var i2c_device = I2C_Device.init(i2c0, null);
+    // Pass devices to driver to create sensor instance
     var dev = try ICM_20948.init(
-        i2c_device.datagram_device(),
-        cd.clock_device(),
+        i2c_device.i2c_device(),
+        @enumFromInt(0x69),
+        nrf.drivers.clock_device(),
         .{
             .accel_dlp = .@"6Hz",
             .gyro_dlp = .@"6Hz",

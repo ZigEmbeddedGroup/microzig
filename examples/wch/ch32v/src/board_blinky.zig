@@ -1,4 +1,5 @@
 const microzig = @import("microzig");
+const hal = microzig.hal;
 const board = microzig.board;
 
 // Can define in the board file.
@@ -12,6 +13,9 @@ const board = microzig.board;
 // };
 
 pub fn main() !void {
+    // Board brings up clocks and time
+    board.init();
+
     const pins = board.pin_config.apply();
 
     while (true) {
@@ -22,18 +26,6 @@ pub fn main() !void {
         // }
         pins.led.toggle();
 
-        busy_delay(1000);
-    }
-}
-
-inline fn busy_delay(comptime ms: u32) void {
-    const cpu_frequency = board.cpu_frequency;
-    const cycles_per_ms = cpu_frequency / 1_000;
-    const loop_cycles = 3;
-    const limit = cycles_per_ms * ms / loop_cycles;
-
-    var i: u32 = 0;
-    while (i < limit) : (i += 1) {
-        asm volatile ("" ::: "memory");
+        hal.time.sleep_ms(1000);
     }
 }

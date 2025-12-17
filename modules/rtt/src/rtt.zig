@@ -98,12 +98,9 @@ pub const channel = struct {
                 self.flags = (self.flags & ~@as(usize, 3)) | @intFromEnum(mode_);
             }
 
-            const WriteError = error{};
-            const Writer = std.io.GenericWriter(*Self, WriteError, write_allow_dropped_data);
-
             /// Writes up to available space left in buffer for reading by probe, returning number of bytes
             /// written.
-            fn write_available(self: *Self, bytes: []const u8) WriteError!usize {
+            fn write_available(self: *Self, bytes: []const u8) usize {
 
                 // The probe can change self.read_offset via memory modification at any time,
                 // so must perform a volatile read on this value.
@@ -148,11 +145,11 @@ pub const channel = struct {
             }
 
             /// Blocks until all bytes are written to buffer
-            fn write_blocking(self: *Self, bytes: []const u8) WriteError!usize {
+            fn write_blocking(self: *Self, bytes: []const u8) usize {
                 const count = bytes.len;
                 var written: usize = 0;
                 while (written != count) {
-                    written += try self.write_available(bytes[written..]);
+                    written += self.write_available(bytes[written..]);
                 }
                 return count;
             }
@@ -160,7 +157,7 @@ pub const channel = struct {
             /// Behavior depends on up channel's mode, attempts to write all
             /// bytes to the RTT control block, and returns how many it successfully wrote.
             /// Writing less than requested number of bytes is not an error.
-            fn write(self: *Self, bytes: []const u8) WriteError!usize {
+            fn write(self: *Self, bytes: []const u8) usize {
                 exclusive_access.lock_fn(exclusive_access.context);
                 defer exclusive_access.unlock_fn(exclusive_access.context);
                 switch (self.mode()) {
@@ -180,31 +177,24 @@ pub const channel = struct {
                 return bytes.len;
             }
 
-            /// Same as write, but allows silently dropping data and always returns
-            /// the length of bytes regardless of if all bytes were actually written. This
-            /// is to keep a GenericWriter from blocking indefinitely when a probe isn't connected.
-            fn write_allow_dropped_data(self: *Self, bytes: []const u8) WriteError!usize {
+            /// Same as write, but silently drops data if there isn't enough room in the RTT buffer.
+            fn write_allow_dropped_data(self: *Self, bytes: []const u8) void {
                 exclusive_access.lock_fn(exclusive_access.context);
                 defer exclusive_access.unlock_fn(exclusive_access.context);
                 switch (self.mode()) {
                     .NoBlockSkip => {
                         if (bytes.len <= self.available_space()) {
-                            _ = try self.write_available(bytes);
+                            _ = self.write_available(bytes);
                         }
                     },
                     .NoBlockTrim => {
-                        _ = try self.write_available(bytes);
+                        _ = self.write_available(bytes);
                     },
                     .BlockIfFull => {
-                        _ = try self.write_blocking(bytes);
+                        _ = self.write_blocking(bytes);
                     },
                     _ => unreachable,
                 }
-                return bytes.len;
-            }
-
-            fn writer(self: *Self) Writer {
-                return .{ .context = self };
             }
 
             /// Available space in the ring buffer for writing, including wrap-around
@@ -219,6 +209,55 @@ pub const channel = struct {
                 } else {
                     return read_offset - self.write_offset - 1;
                 }
+            }
+
+            /// Implements the std.Io.Writer interface
+            pub const Writer = struct {
+                up_channel: *Self,
+                interface: std.Io.Writer,
+
+                fn init(uc: *Self, buf: []u8) Writer {
+                    return .{
+                        .up_channel = uc,
+                        .interface = .{
+                            .vtable = &.{
+                                .drain = drain,
+                            },
+                            .buffer = buf,
+                            .end = 0,
+                        },
+                    };
+                }
+
+                /// Implements drain for the Io.Writer interface. Note that this will drop data if it can't all fit
+                /// in the RTT Up channel buffer. This is to prevent constantly returning a WriteError when a debug
+                /// probe isn't connected.
+                ///
+                /// TODO: build.zig option that allows users to opt-in to returning WriteError on full RTT buffer?
+                fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+                    const up: *Self = @as(*Writer, @alignCast(@fieldParentPtr("interface", io_w))).up_channel;
+
+                    const buffered = io_w.buffered();
+                    if (buffered.len > 0) {
+                        up.write_allow_dropped_data(buffered);
+                        _ = io_w.consumeAll();
+                    }
+                    var n: usize = 0;
+                    for (data[0 .. data.len - 1]) |d| {
+                        up.write_allow_dropped_data(d);
+                        n += d.len;
+                    }
+                    for (0..splat) |_| {
+                        const to_splat = data[data.len - 1];
+                        up.write_allow_dropped_data(to_splat);
+                        n += to_splat.len;
+                    }
+                    return n;
+                }
+            };
+
+            pub fn writer(uc: *Self, buf: []u8) Writer {
+                return Writer.init(uc, buf);
             }
         };
     }
@@ -273,14 +312,11 @@ pub const channel = struct {
                 self.flags = (self.flags & ~@as(usize, 3)) | @intFromEnum(mode_);
             }
 
-            pub const ReadError = error{};
-            pub const Reader = std.io.GenericReader(*Self, ReadError, read_available);
-
             /// Reads up to a number of bytes from probe non-blocking. Reading less than the requested number of bytes
             /// is not an error.
             ///
             /// TODO: Does the channel's mode actually matter here?
-            pub fn read_available(self: *Self, bytes: []u8) ReadError!usize {
+            pub fn read_available(self: *Self, bytes: []u8) usize {
                 exclusive_access.lock_fn(exclusive_access.context);
                 defer exclusive_access.unlock_fn(exclusive_access.context);
 
@@ -320,11 +356,7 @@ pub const channel = struct {
                 return bytes_read;
             }
 
-            pub fn reader(self: *Self) Reader {
-                return .{ .context = self };
-            }
-
-            /// Number of bytes written from probe in ring buffer.
+            /// Number of bytes from probe available in ring buffer.
             pub fn bytes_available(self: *Self) usize {
 
                 // The probe can change self.write_offset via memory modification at any time,
@@ -335,6 +367,52 @@ pub const channel = struct {
                 } else {
                     return write_offset - self.read_offset;
                 }
+            }
+
+            /// Implements the std.Io.Reader interface
+            pub const Reader = struct {
+                down_channel: *Self,
+                interface: std.Io.Reader,
+
+                fn init(dc: *Self, buf: []u8) Reader {
+                    return .{
+                        .down_channel = dc,
+                        .interface = .{
+                            .vtable = &.{
+                                .stream = stream,
+
+                                // Default discarding behavior is acceptable, and will still work even with a zero
+                                // length buffer
+                                .discard = std.Io.Reader.defaultDiscard,
+
+                                // The default behavior prioritizes reading entire internal buffers worth of data rather
+                                // than directly calling RTT reads individually, which is exactly what is desired
+                                .readVec = std.Io.Reader.defaultReadVec,
+
+                                // The default rebase behavior of moving data back to the start of the internal buffer
+                                // is acceptable
+                                .rebase = std.Io.Reader.defaultRebase,
+                            },
+                            .buffer = buf,
+                            .end = 0,
+                            .seek = 0,
+                        },
+                    };
+                }
+
+                /// Fetches new data directly from the RTT ring buffer
+                fn stream(io_r: *std.Io.Reader, io_w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+                    const down: *Self = @as(*Reader, @alignCast(@fieldParentPtr("interface", io_r))).down_channel;
+                    const dest = limit.slice(try io_w.writableSliceGreedy(1));
+                    if (down.bytes_available() == 0) return error.EndOfStream;
+                    const n = down.read_available(dest);
+                    io_w.advance(n);
+                    return n;
+                }
+            };
+
+            pub fn reader(self: *Self, buffer: []u8) Reader {
+                return Reader.init(self, buffer);
             }
         };
     }
@@ -451,9 +529,9 @@ pub fn RTT(comptime config: Config) type {
         ) = undefined;
 
         comptime {
-            if (config.linker_section) |section| @export(&control_block, .{
+            @export(&control_block, .{
                 .name = "RttControlBlock",
-                .section = section,
+                .section = config.linker_section orelse ".data",
             });
         }
 
@@ -462,40 +540,48 @@ pub fn RTT(comptime config: Config) type {
             control_block.init();
         }
 
-        pub const WriteError = channel.Up(exclusive_access, mb_fn).WriteError;
-        pub const Writer = channel.Up(exclusive_access, mb_fn).Writer;
-
         /// Write bytes to a given up channel
-        pub fn write(comptime channel_number: usize, bytes: []const u8) WriteError!usize {
+        pub fn write(comptime channel_number: usize, bytes: []const u8) usize {
             comptime {
                 if (channel_number >= config.up_channels.len) @compileError(std.fmt.comptimePrint("Channel number {d} exceeds max up channel number of {d}", .{ channel_number, config.up_channels.len - 1 }));
             }
             return control_block.up_channels[channel_number].write(bytes);
         }
 
-        pub fn writer(comptime channel_number: usize) Writer {
+        pub const Writer = channel.Up(exclusive_access, mb_fn).Writer;
+
+        /// Returns a Writer that implements the std.Io.Writer interface for a given up channel.
+        /// A zero length buffer (&.{}) is valid across the entire std.Io.Writer API, and means that
+        /// all calls to the API will immediatly write data to RTT up channel, making .flush() a noop.
+        /// A small buffer is recomended if application code frequently makes consecutive, small writes.
+        /// Buffering allows the interface to consolidate these to a single write with .flush(), reducing the
+        /// number of locks/interrupt enable/disables.
+        pub fn writer(comptime channel_number: usize, buf: []u8) Writer {
             comptime {
                 if (channel_number >= config.up_channels.len) @compileError(std.fmt.comptimePrint("Channel number {d} exceeds max up channel number of {d}", .{ channel_number, config.up_channels.len - 1 }));
             }
-            return control_block.up_channels[channel_number].writer();
+            return control_block.up_channels[channel_number].writer(buf);
         }
 
-        pub const ReadError = channel.Down(exclusive_access, mb_fn).ReadError;
-        pub const Reader = channel.Down(exclusive_access, mb_fn).Reader;
-
         /// Read bytes from a given down channel
-        pub fn read(comptime channel_number: usize, bytes: []u8) ReadError!usize {
+        pub fn read(comptime channel_number: usize, bytes: []u8) usize {
             comptime {
                 if (channel_number >= config.down_channels.len) @compileError(std.fmt.comptimePrint("Channel number {d} exceeds max down channel number of {d}", .{ channel_number, config.down_channels.len - 1 }));
             }
             return control_block.down_channels[channel_number].read_available(bytes);
         }
 
-        pub fn reader(comptime channel_number: usize) Reader {
+        pub const Reader = channel.Down(exclusive_access, mb_fn).Reader;
+
+        /// Returns a Reader that implements the std.Io.Reader interface for a given down channel.
+        /// A zero-length buffer will cause asserts in any of the std.Io.Reader functions that require buffering
+        /// (peek*() functions, delimiter searching functions, etc.). Supplying a small buffer also helps with
+        /// reducing the total number of read calls to RTT, and thus total number of locks/interrupt enable/disable.
+        pub fn reader(comptime channel_number: usize, buffer: []u8) Reader {
             comptime {
                 if (channel_number >= config.down_channels.len) @compileError(std.fmt.comptimePrint("Channel number {d} exceeds max down channel number of {d}", .{ channel_number, config.down_channels.len - 1 }));
             }
-            return control_block.down_channels[channel_number].reader();
+            return control_block.down_channels[channel_number].reader(buffer);
         }
     };
 }

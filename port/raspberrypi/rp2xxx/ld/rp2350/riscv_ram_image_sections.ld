@@ -5,19 +5,5 @@ SECTIONS {
     KEEP(*(.bootmeta))
     __bootmeta_end__ = .;
   } > ram0
-
-  .vectors :
-  {
-    KEEP(*(core_vectors))
-  } > ram0
 }
 INSERT AFTER .ram_start;
-
-SECTIONS {
-  .ram_vectors (NOLOAD) :
-  {
-    KEEP(*(ram_vectors))
-  } > ram0
-}
-INSERT AFTER .bss;
-

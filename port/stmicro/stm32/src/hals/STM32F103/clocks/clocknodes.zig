@@ -56,11 +56,14 @@ pub const ClockNodesTypes = union(enum) {
 };
 
 pub const ClockError = struct {
-    recive: f32 = 0,
+    receive: f32 = 0,
     limit: f32 = 0,
     node: *const ClockNode,
 };
 
+///why f32 if the clock is given in Hz?
+///internally this structure is also used for fractional values and results of divisions
+///outputs can be converted to u32 without issues
 pub const ClockState = union(enum) {
     Ok: f32,
     Overflow: ClockError,
@@ -97,6 +100,13 @@ pub const ClockNode = struct {
             .output => |out_val| {
                 return self.output(out_val);
             },
+        }
+    }
+
+    pub fn get_or_panic(self: Self) f32 {
+        switch (self.get()) {
+            .Ok => |val| return val,
+            else => @panic("invalid Clock configuration, use get_comptime for more details"),
         }
     }
 
@@ -140,8 +150,8 @@ pub const ClockNode = struct {
             const name = get_name_from_error(err);
             const error_msg = switch (err) {
                 .NoParent => "No Parent list!",
-                .Overflow => |data| comptimePrint("Overflow | Recive: {d} max: {d}", .{ data.recive, data.limit }),
-                .Underflow => |data| comptimePrint("Underflow | Recive: {d} min: {d}", .{ data.recive, data.limit }),
+                .Overflow => |data| comptimePrint("Overflow | Received: {d} max: {d}", .{ data.receive, data.limit }),
+                .Underflow => |data| comptimePrint("Underflow | Received: {d} min: {d}", .{ data.receive, data.limit }),
                 else => unreachable,
             };
             const main_msg = comptimePrint("Error on node {s} => {s}\n", .{ name, error_msg });
@@ -149,7 +159,7 @@ pub const ClockNode = struct {
                 .NoParent => @compileError(main_msg),
                 .Overflow, .Underflow => |node| {
                     const parent = get_parent(node.node) orelse unreachable;
-                    const tree = comptimePrint("TREE TRACE: {s} -> {s}: {d} <- ERROR\n\n", .{ print_tree(parent), node.node.name, node.recive });
+                    const tree = comptimePrint("TREE TRACE: {s} -> {s}: {d} <- ERROR\n\n", .{ print_tree(parent), node.node.name, node.receive });
                     @compileError(comptimePrint("{s}{s}", .{ main_msg, tree }));
                 },
                 else => unreachable,
@@ -203,7 +213,7 @@ pub const ClockNode = struct {
                     .Overflow = .{
                         .node = self,
                         .limit = limit.max,
-                        .recive = value,
+                        .receive = value,
                     },
                 };
             } else if (value < limit.min) {
@@ -211,7 +221,7 @@ pub const ClockNode = struct {
                     .Underflow = .{
                         .node = self,
                         .limit = limit.min,
-                        .recive = value,
+                        .receive = value,
                     },
                 };
             }

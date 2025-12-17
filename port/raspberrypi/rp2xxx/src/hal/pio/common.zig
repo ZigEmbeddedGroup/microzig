@@ -2,6 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
+
 const Chip = @import("../chip.zig").Chip;
 
 pub const PIO = microzig.chip.types.peripherals.PIO0;
@@ -100,7 +101,7 @@ pub const ClkDivOptions = struct {
 };
 
 pub const ExecOptions = struct {
-    jmp_pin: u5 = 0,
+    jmp_pin: ?gpio.Pin = null,
     wrap: u5 = 31,
     wrap_target: u5 = 0,
     side_pindir: bool = false,
@@ -109,16 +110,25 @@ pub const ExecOptions = struct {
 
 pub fn PinMapping(comptime Count: type) type {
     return struct {
-        base: u5 = 0,
-        count: Count = 0,
+        /// Creates a mapping with a single pin, length 1
+        pub fn single(pin: gpio.Pin) PinMapping(Count) {
+            return .{ .low = pin, .high = pin };
+        }
+
+        low: gpio.Pin,
+        high: gpio.Pin,
+
+        fn count(range: @This()) Count {
+            return @intCast(@intFromEnum(range.high) - @intFromEnum(range.low) + 1);
+        }
     };
 }
 
 pub const PinMappingOptions = struct {
-    out: PinMapping(u6) = .{},
-    set: PinMapping(u3) = .{ .count = 5 },
-    side_set: PinMapping(u3) = .{},
-    in_base: u5 = 0,
+    out: ?PinMapping(u6) = null,
+    set: ?PinMapping(u3) = null,
+    side_set: ?PinMapping(u3) = null,
+    in_base: ?gpio.Pin = null,
 };
 
 pub fn PioImpl(EnumType: type, chip: Chip) type {
@@ -133,8 +143,12 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 if (origin != offset)
                     return false;
 
+            // Will never fit in the first place:
+            if (offset + program.instructions.len > 32)
+                return false;
+
             const used_mask = UsedInstructionSpace(chip).val[@intFromEnum(self)];
-            const program_mask = program.get_mask();
+            const program_mask = (program.get_mask() << offset);
 
             // We can add the program if the masks don't overlap, if there is
             // overlap the result of a bitwise AND will have a non-zero result
@@ -159,8 +173,16 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 return error.NoSpace;
 
             const instruction_memory = self.get_instruction_memory();
-            for (program.instructions, offset..) |insn, i|
-                instruction_memory[i] = insn;
+            for (program.instructions, program.relocations, offset..) |insn, reloc, i|
+                instruction_memory[i] = switch (reloc) {
+                    .none => insn,
+                    .jmpslot => blk: {
+                        // Add the base address of the program to the jmp offset so it's relative to the start
+                        var jmp: Instruction(chip) = @bitCast(insn);
+                        jmp.payload.jmp.address += offset;
+                        break :blk @as(u16, @bitCast(jmp));
+                    },
+                };
 
             const program_mask = program.get_mask();
             UsedInstructionSpace(chip).val[@intFromEnum(self)] |= program_mask << offset;
@@ -190,8 +212,9 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             } else error.NoSpace;
         }
 
-        pub fn set_input_sync_bypass(self: EnumType, pin: u5) void {
-            const mask = @as(u32, 1) << pin;
+        pub fn set_input_sync_bypass(self: EnumType, pin: gpio.Pin) !void {
+            const index = try pin_to_index(self, pin);
+            const mask = @as(u32, 1) << index;
             var val = self.get_regs().INPUT_SYNC_BYPASS.raw;
             val |= mask;
             self.get_regs().INPUT_SYNC_BYPASS.write_raw(val);
@@ -221,7 +244,16 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             });
         }
 
-        pub fn sm_set_exec_options(self: EnumType, sm: StateMachine, options: ExecOptions) void {
+        fn pin_to_index(self: EnumType, pin: gpio.Pin) error{InvalidPin}!u5 {
+            const index = @intFromEnum(pin);
+            const base = self.get_gpio_base();
+            if (index < base or index >= base + 32) {
+                return error.InvalidPin;
+            }
+            return @intCast(index - base);
+        }
+
+        pub fn sm_set_exec_options(self: EnumType, sm: StateMachine, options: ExecOptions) !void {
             const sm_regs = self.get_sm_regs(sm);
             sm_regs.execctrl.modify(.{
                 // NOTE: EXEC_STALLED is RO
@@ -229,7 +261,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 .WRAP_TOP = options.wrap,
                 .SIDE_PINDIR = @intFromBool(options.side_pindir),
                 .SIDE_EN = @intFromBool(options.side_set_optional),
-                .JMP_PIN = options.jmp_pin,
+                .JMP_PIN = if (options.jmp_pin) |jmp_pin| try pin_to_index(self, jmp_pin) else 0,
 
                 // TODO: plug in rest of the options
                 // STATUS_N
@@ -240,55 +272,38 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 // EXEC_STALLED
             });
         }
-        pub fn sm_set_pin_mappings(self: EnumType, sm: StateMachine, options: PinMappingOptions) void {
+
+        pub fn sm_set_pin_mappings(self: EnumType, sm: StateMachine, options: PinMappingOptions, side_set_optional: bool) !void {
             const sm_regs = self.get_sm_regs(sm);
             sm_regs.pinctrl.modify(.{
-                .OUT_BASE = options.out.base,
-                .OUT_COUNT = options.out.count,
+                .OUT_BASE = if (options.out) |out| try pin_to_index(self, out.low) else 0,
+                .OUT_COUNT = if (options.out) |out| out.count() else 0,
 
-                .SET_BASE = options.set.base,
-                .SET_COUNT = options.set.count,
+                .SET_BASE = if (options.set) |set| try pin_to_index(self, set.low) else 0,
+                .SET_COUNT = if (options.set) |set| set.count() else 0,
 
-                .SIDESET_BASE = options.side_set.base,
-                .SIDESET_COUNT = options.side_set.count,
+                .SIDESET_BASE = if (options.side_set) |side_set| try pin_to_index(self, side_set.low) else 0,
+                // If side set is set, but optional, we have to account for the 'enable' bit here.
+                .SIDESET_COUNT = if (options.side_set) |side_set|
+                    side_set.count() + @intFromBool(side_set_optional)
+                else
+                    0,
 
-                .IN_BASE = options.in_base,
+                .IN_BASE = if (options.in_base) |in_base| try pin_to_index(self, in_base) else 0,
             });
         }
 
-        pub fn sm_set_pindir(self: EnumType, sm: StateMachine, base: u5, count: u5, dir: gpio.Direction) void {
+        pub fn sm_set_pindir(self: EnumType, sm: StateMachine, base: gpio.Pin, count: u5, dir: gpio.Direction) !void {
             const sm_regs = self.get_sm_regs(sm);
             const reg_pinctrl__copy = sm_regs.pinctrl;
             const reg_execctrl__copy = sm_regs.execctrl;
 
-            for (base..base + count) |pin__number| {
+            for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .out = .{
-                        .base = 0,
-                        .count = 0,
-                    },
-                    .set = .{
-                        .base = @intCast(pin__number),
-                        .count = 1,
-                    },
-                    .side_set = .{
-                        .base = 0,
-                        .count = 0,
-                    },
-                    .in_base = 0,
+                    .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
                 };
-                sm_regs.pinctrl.modify(.{
-                    .OUT_BASE = pin_config.out.base,
-                    .OUT_COUNT = pin_config.out.count,
+                try sm_set_pin_mappings(self, sm, pin_config, false);
 
-                    .SET_BASE = pin_config.set.base,
-                    .SET_COUNT = pin_config.set.count,
-
-                    .SIDESET_BASE = pin_config.side_set.base,
-                    .SIDESET_COUNT = pin_config.side_set.count,
-
-                    .IN_BASE = pin_config.in_base,
-                });
                 self.sm_exec(sm, .{
                     .payload = .{
                         .set = .{
@@ -304,39 +319,16 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             sm_regs.execctrl = reg_execctrl__copy;
         }
 
-        pub fn sm_set_pin(self: EnumType, sm: StateMachine, base: u5, count: u5, value: u1) void {
+        pub fn sm_set_pin(self: EnumType, sm: StateMachine, base: gpio.Pin, count: u5, value: u1) !void {
             const sm_regs = self.get_sm_regs(sm);
             const reg_pinctrl__copy = sm_regs.pinctrl;
             const reg_execctrl__copy = sm_regs.execctrl;
 
-            for (base..base + count) |pin__number| {
+            for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .out = .{
-                        .base = 0,
-                        .count = 0,
-                    },
-                    .set = .{
-                        .base = @intCast(pin__number),
-                        .count = 1,
-                    },
-                    .side_set = .{
-                        .base = 0,
-                        .count = 0,
-                    },
-                    .in_base = 0,
+                    .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
                 };
-                sm_regs.pinctrl.modify(.{
-                    .OUT_BASE = pin_config.out.base,
-                    .OUT_COUNT = pin_config.out.count,
-
-                    .SET_BASE = pin_config.set.base,
-                    .SET_COUNT = pin_config.set.count,
-
-                    .SIDESET_BASE = pin_config.side_set.base,
-                    .SIDESET_COUNT = pin_config.side_set.count,
-
-                    .IN_BASE = pin_config.in_base,
-                });
+                try sm_set_pin_mappings(self, sm, pin_config, false);
                 self.sm_exec(sm, .{
                     .payload = .{
                         .set = .{
@@ -487,13 +479,13 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             sm: StateMachine,
             initial_pc: u5,
             options: StateMachineInitOptions(chip),
-        ) void {
+        ) !void {
             // Halt the machine, set some sensible defaults
             self.sm_set_enabled(sm, false);
             self.sm_set_clkdiv(sm, options.clkdiv);
-            self.sm_set_exec_options(sm, options.exec);
+            try self.sm_set_exec_options(sm, options.exec);
             self.sm_set_shift_options(sm, options.shift);
-            self.sm_set_pin_mappings(sm, options.pin_mappings);
+            try self.sm_set_pin_mappings(sm, options.pin_mappings, options.exec.side_set_optional);
 
             self.sm_clear_fifos(sm);
             self.sm_clear_debug(sm);
@@ -525,30 +517,30 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             program: Program,
             options: LoadAndStartProgramOptions(chip),
         ) !void {
+            // We don't account for the optional bit here because it's not known to the pin_mappings
             const expected_side_set_pins = if (program.side_set) |side_set|
-                if (side_set.optional)
-                    side_set.count + 1
-                else
-                    side_set.count
+                side_set.count
             else
                 0;
 
-            assert(expected_side_set_pins == options.pin_mappings.side_set.count);
+            const config_count = if (options.pin_mappings.side_set) |side_set| side_set.count() else 0;
+            assert(expected_side_set_pins == config_count);
 
             // TODO: check program settings vs pin mapping
             const offset = try self.add_program(program);
-            self.sm_init(sm, offset, .{
+
+            try self.sm_init(sm, offset, .{
                 .clkdiv = options.clkdiv,
                 .shift = options.shift,
                 .pin_mappings = options.pin_mappings,
                 .exec = .{
                     .wrap = if (program.wrap) |wrap|
-                        wrap
+                        wrap + offset // program.wrap is relative but actual wrap is absolute
                     else
                         offset + @as(u5, @intCast(program.instructions.len)),
 
                     .wrap_target = if (program.wrap_target) |wrap_target|
-                        wrap_target
+                        wrap_target + offset // program.wrap_target is relative but actual wrap is absolute
                     else
                         offset,
 

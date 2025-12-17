@@ -24,9 +24,11 @@ pub fn build(b: *Build) !void {
 
     const regz = b.addExecutable(.{
         .name = "regz",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     regz.root_module.addImport("sqlite", sqlite);
@@ -49,8 +51,11 @@ pub fn build(b: *Build) !void {
 
     const contextualize_fields = b.addExecutable(.{
         .name = "contextualize-fields",
-        .root_source_file = b.path("src/contextualize-fields.zig"),
-        .target = b.graph.host,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/contextualize-fields.zig"),
+            .target = b.graph.host,
+        }),
+        .use_llvm = true,
     });
     contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
     const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
@@ -62,8 +67,11 @@ pub fn build(b: *Build) !void {
 
     const characterize = b.addExecutable(.{
         .name = "characterize",
-        .root_source_file = b.path("src/characterize.zig"),
-        .target = b.graph.host,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/characterize.zig"),
+            .target = b.graph.host,
+        }),
+        .use_llvm = true,
     });
     characterize.linkLibrary(libxml2_dep.artifact("xml2"));
     const characterize_run = b.addRunArtifact(characterize);
@@ -71,9 +79,12 @@ pub fn build(b: *Build) !void {
     characterize_step.dependOn(&characterize_run.step);
 
     const tests = b.addTest(.{
-        .root_source_file = b.path("src/Database.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/Database.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+        .use_llvm = true,
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
     tests.root_module.addImport("sqlite", sqlite);

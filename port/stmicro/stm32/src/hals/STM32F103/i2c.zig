@@ -1,13 +1,16 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const Timeout = @import("drivers.zig").Timeout;
+const time = @import("time.zig");
 const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
 
-const I2CREGS = *volatile microzig.chip.types.peripherals.i2c_v1.I2C;
+const I2C_t = microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
 const F_S = microzig.chip.types.peripherals.i2c_v1.F_S;
 const peripherals = microzig.chip.peripherals;
 const mdf = microzig.drivers;
+const drivers = mdf.base;
+const Duration = mdf.time.Duration;
+const Deadline = mdf.time.Deadline;
 
 pub const Mode = enum {
     standard,
@@ -24,9 +27,11 @@ pub const Address = struct {
     addr: u10,
 
     pub fn new(addr: u7) Address {
-        return .{
-            .addr = addr,
-        };
+        return .{ .addr = addr };
+    }
+
+    pub fn from_generic(addr: mdf.base.I2C_Device.Address) Address {
+        return .{ .addr = @intFromEnum(addr) };
     }
 
     pub fn new_10bits(addr: u10) Address {
@@ -55,12 +60,10 @@ pub const ConfigError = error{
     InvalidCCR,
 };
 
-pub const IOError = error{
-    AckFailure,
+pub const Error = drivers.I2C_Device.Error || error{
     ArbitrationLoss,
     BusError,
     BusTimeout,
-    Timeout,
 
     //https://www.st.com/content/ccc/resource/technical/document/errata_sheet/f5/50/c9/46/56/db/4a/f6/CD00197763.pdf/files/CD00197763.pdf/jcr:content/translations/en.CD00197763.pdf
     //Timeout during start and stop may indicate that the bus is stuck, therefore it is necessary to reset the I2C
@@ -94,11 +97,11 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
 }
 
 pub const Instances = create_peripheral_enum("I2C", "i2c_v1");
-fn get_regs(instance: Instances) I2CREGS {
+fn get_regs(comptime instance: Instances) *volatile I2C_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 pub const I2C = struct {
-    regs: I2CREGS,
+    regs: *volatile I2C_t,
     fn validate_pclk(pclk: usize, mode: Mode) !void {
         if (pclk > 50_000_000) return comptime_fail_or_error("pclk needs to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
         switch (mode) {
@@ -203,30 +206,31 @@ pub const I2C = struct {
         regs.CR1.modify(.{ .SWRST = 0 });
     }
 
-    fn check_error(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+    fn check_error(i2c: *const I2C, deadline: Deadline) Error!void {
         const regs = i2c.regs;
         const status = regs.SR1.read();
 
-        var io_err: ?IOError = null;
+        var io_err: ?Error = null;
 
         if (status.AF == 1) {
-            io_err = IOError.AckFailure;
+            io_err = Error.NoAcknowledge;
         } else if (status.ARLO == 1) {
-            io_err = IOError.ArbitrationLoss;
+            io_err = Error.ArbitrationLoss;
         } else if (status.BERR == 1) {
-            io_err = IOError.BusError;
+            io_err = Error.BusError;
         } else if (status.TIMEOUT == 1) {
-            io_err = IOError.BusTimeout;
-        } else if (timeout) |check| {
-            if (check.check_timeout()) {
-                io_err = IOError.Timeout;
-            }
+            io_err = Error.BusTimeout;
+        } else if (deadline.is_reached_by(time.get_time_since_boot())) {
+            io_err = Error.Timeout;
         }
 
         //generate a stop condition if there is an error
         //if stop condition is not generated in time, i2c bus need to be reset
         if (io_err) |err| {
-            try i2c.STOP(timeout);
+            switch (err) {
+                error.Timeout => {},
+                else => try i2c.STOP(deadline),
+            }
             return err;
         }
     }
@@ -240,7 +244,7 @@ pub const I2C = struct {
         });
     }
 
-    fn START(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+    fn START(i2c: *const I2C, deadline: Deadline) Error!void {
         const regs = i2c.regs;
 
         regs.CR1.modify(.{
@@ -251,11 +255,11 @@ pub const I2C = struct {
         //if start condition is not generated in time, i2c bus need to be reset
         //NOTE: this is a workaround for the errata 2.9.4
         while (regs.SR1.read().START != 1) {
-            i2c.check_error(timeout) catch return IOError.UnrecoverableError;
+            i2c.check_error(deadline) catch return Error.UnrecoverableError;
         }
     }
 
-    fn STOP(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+    fn STOP(i2c: *const I2C, deadline: Deadline) Error!void {
         const regs = i2c.regs;
 
         //if stop is already set, just wait for it to be cleared
@@ -269,8 +273,8 @@ pub const I2C = struct {
         //if stop condition is not generated in time, i2c bus need to be reset
         //if the bus still busy after stop condition, it means that the bus is in an error state, errata: 2.9.7
         while ((regs.CR1.read().STOP != 0) or i2c.is_busy()) {
-            if (timeout) |check| {
-                if (check.check_timeout()) return IOError.UnrecoverableError;
+            if (deadline.is_reached_by(time.get_time_since_boot())) {
+                return Error.UnrecoverableError;
             }
         }
     }
@@ -282,20 +286,20 @@ pub const I2C = struct {
         std.mem.doNotOptimizeAway(regs.SR2.raw);
     }
 
-    fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
+    fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, deadline: Deadline) Error!void {
         const regs = i2c.regs;
         const addr7 = @as(u8, @intCast(addr));
         const byte: u8 = (addr7 << 1) + IO;
         regs.DR.modify(.{ .DR = byte });
 
         while (regs.SR1.read().ADDR != 1) {
-            try i2c.check_error(timeout);
+            try i2c.check_error(deadline);
         }
 
         i2c.clear_flags();
     }
 
-    fn send_10bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
+    fn send_10bits_addr(i2c: *const I2C, addr: u10, IO: u1, deadline: Deadline) Error!void {
         const regs = i2c.regs;
 
         //10 bits address is sent in 2 bytes
@@ -308,39 +312,39 @@ pub const I2C = struct {
 
         regs.DR.modify(.{ .DR = header });
         while (regs.SR1.read().ADD10 != 1) {
-            try i2c.check_error(timeout);
+            try i2c.check_error(deadline);
         }
 
         regs.DR.modify(.{ .DR = low });
         while (regs.SR1.read().ADDR != 1) {
-            try i2c.check_error(timeout);
+            try i2c.check_error(deadline);
         }
         //clear ADDR register
         i2c.clear_flags();
         if (IO == 1) {
             const read_header: u8 = header | 1;
-            try i2c.START(timeout);
+            try i2c.START(deadline);
             regs.DR.modify(.{ .DR = read_header });
             while (regs.SR1.read().ADDR != 1) {
-                try i2c.check_error(timeout);
+                try i2c.check_error(deadline);
             }
 
             i2c.clear_flags();
         }
     }
 
-    fn set_addr(i2c: *const I2C, address: Address, rw: u1, timeout: ?Timeout) IOError!void {
+    fn set_addr(i2c: *const I2C, address: Address, rw: u1, deadline: Deadline) Error!void {
         switch (address.mode) {
-            .@"7bits" => try i2c.send_7bits_addr(address.addr, rw, timeout),
-            .@"10bits" => try i2c.send_10bits_addr(address.addr, rw, timeout),
+            .@"7bits" => try i2c.send_7bits_addr(address.addr, rw, deadline),
+            .@"10bits" => try i2c.send_10bits_addr(address.addr, rw, deadline),
         }
     }
 
-    pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) IOError!void {
+    pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []const []u8, timeout: ?Duration) Error!void {
         const regs = i2c.regs;
-
-        try i2c.START(timeout);
-        try i2c.set_addr(addr, 1, timeout);
+        const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
+        try i2c.START(deadline);
+        try i2c.set_addr(addr, 1, deadline);
 
         regs.CR1.modify(.{
             .ACK = 1,
@@ -354,30 +358,31 @@ pub const I2C = struct {
                     });
                 }
                 while (regs.SR1.read().RXNE != 1) {
-                    try i2c.check_error(timeout);
+                    try i2c.check_error(deadline);
                 }
 
                 data[index] = regs.DR.read().DR;
             }
 
             while (regs.SR1.read().BTF != 1) {
-                try i2c.check_error(timeout);
+                try i2c.check_error(deadline);
             }
         }
 
-        try i2c.STOP(timeout);
+        try i2c.STOP(deadline);
     }
 
-    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
+    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Duration) Error!void {
         const regs = i2c.regs;
+        const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        try i2c.START(timeout);
-        try i2c.set_addr(addr, 0, timeout);
+        try i2c.START(deadline);
+        try i2c.set_addr(addr, 0, deadline);
 
         for (chunks) |data| {
             for (data) |byte| {
                 while (regs.SR1.read().TXE != 1) {
-                    try i2c.check_error(timeout);
+                    try i2c.check_error(deadline);
                 }
 
                 regs.DR.modify(.{
@@ -387,29 +392,29 @@ pub const I2C = struct {
         }
 
         while (regs.SR1.read().BTF != 1) {
-            try i2c.check_error(timeout);
+            try i2c.check_error(deadline);
         }
 
-        try i2c.STOP(timeout);
+        try i2c.STOP(deadline);
     }
 
-    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Timeout) IOError!void {
+    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Duration) Error!void {
         return i2c.writev_blocking(address, &.{data}, timeout);
     }
 
-    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Timeout) IOError!void {
+    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Duration) Error!void {
         return i2c.readv_blocking(address, &.{data}, timeout);
     }
 
     ///use this function to check if the i2c is busy in multi-master mode
-    /// NOTE: in single master mode
-    /// having a busy state before the start condition means that the bus is in an error state.
+    ///NOTE: in single master mode
+    ///having a busy state before the start condition means that the bus is in an error state.
     pub fn is_busy(i2c: *const I2C) bool {
         const regs = i2c.regs;
         return regs.SR2.read().BUSY == 1;
     }
 
-    pub fn init(instance: Instances) I2C {
+    pub fn init(comptime instance: Instances) I2C {
         return .{ .regs = get_regs(instance) };
     }
 };

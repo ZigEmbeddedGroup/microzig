@@ -2,12 +2,17 @@
 //TODO: Synchronous mode (For USART only)
 
 const std = @import("std");
+const time = @import("time.zig");
 const microzig = @import("microzig");
-const Timeout = @import("drivers.zig").Timeout;
 const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
 
+const mdf = microzig.drivers;
+const drivers = mdf.base;
+const Duration = mdf.time.Duration;
+const Deadline = mdf.time.Deadline;
+
 const peripherals = microzig.chip.peripherals;
-const UartReg = *volatile microzig.chip.types.peripherals.usart_v1.USART;
+const usart_t = microzig.chip.types.peripherals.usart_v1.USART;
 const M0 = microzig.chip.types.peripherals.usart_v1.M0;
 const PS = microzig.chip.types.peripherals.usart_v1.PS;
 const STOP = microzig.chip.types.peripherals.usart_v1.STOP;
@@ -45,7 +50,7 @@ pub const ConfigError = error{
 
 pub const Config = struct {
     clock_speed: u32,
-    baud_rate: u32,
+    baud_rate: u32 = 115200,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
     parity: Parity = .none,
@@ -80,7 +85,7 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
 }
 
 pub const Instances = create_peripheral_enum("ART", null);
-fn get_regs(instance: Instances) UartReg {
+fn get_regs(comptime instance: Instances) *volatile usart_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
@@ -88,8 +93,8 @@ pub const UART = struct {
     pub const Writer = std.io.GenericWriter(*const UART, TransmitError, generic_writer_fn);
     pub const Reader = std.io.GenericReader(*const UART, ReceiveError, generic_reader_fn);
 
-    regs: UartReg,
-    /// Returns an error at runtime, and raises a compile error at comptime.
+    regs: *volatile usart_t,
+    ///Returns an error at runtime, and raises a compile error at comptime.
     fn validate_baudrate(baud_rate: u32, peri_freq: u32) ConfigError!void {
         const val: f32 = @as(f32, @floatFromInt(peri_freq)) / (@as(f32, @floatFromInt(baud_rate)) * 16);
         if (val > 4095) {
@@ -126,7 +131,7 @@ pub const UART = struct {
         uart.apply_internal(config);
     }
 
-    pub fn apply_runtime(uart: *const UART, comptime config: Config) !void {
+    pub fn apply_runtime(uart: *const UART, config: Config) !void {
         try validate_baudrate(config.baud_rate, config.clock_speed);
         try validate_config(uart, config);
         uart.apply_internal(config);
@@ -220,32 +225,30 @@ pub const UART = struct {
         return (0 != uart.regs.SR.read().TXE);
     }
 
-    pub fn writev_blocking(uart: *const UART, payloads: []const []const u8, timeout: ?Timeout) TransmitError!void {
+    pub fn writev_blocking(uart: *const UART, payloads: []const []const u8, timeout: ?Duration) TransmitError!usize {
+        const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
         const regs = uart.regs;
+        var n: usize = 0;
         for (payloads) |pkgs| {
             for (pkgs) |byte| {
                 while (!uart.is_writeable()) {
-                    if (timeout) |check| {
-                        if (check.check_timeout()) {
-                            return error.Timeout;
-                        }
-                    }
+                    if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
                 }
                 regs.DR.raw = @intCast(byte);
+                n += 1;
             }
         }
+        return n;
     }
 
-    pub fn readv_blocking(uart: *const UART, buffers: []const []u8, timeout: ?Timeout) ReceiveError!void {
+    pub fn readv_blocking(uart: *const UART, buffers: []const []u8, timeout: ?Duration) ReceiveError!usize {
+        const deadline = Deadline.init_relative(time.get_time_since_boot(), timeout);
         const regs = uart.regs;
+        var n: usize = 0;
         for (buffers) |buf| {
             for (buf) |*bytes| {
                 while (!uart.is_readable()) {
-                    if (timeout) |check| {
-                        if (check.check_timeout()) {
-                            return error.Timeout;
-                        }
-                    }
+                    if (deadline.is_reached_by(time.get_time_since_boot())) return n;
                 }
                 const SR = regs.SR.read();
 
@@ -261,8 +264,10 @@ pub const UART = struct {
                 const rx = regs.DR.raw;
 
                 bytes.* = @intCast(0xFF & rx);
+                n += 1;
             }
         }
+        return n;
     }
 
     pub fn get_errors(uart: *const UART) ErrorStates {
@@ -282,12 +287,12 @@ pub const UART = struct {
         std.mem.doNotOptimizeAway(regs.DR.raw);
     }
 
-    pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Timeout) TransmitError!void {
-        try uart.writev_blocking(&.{data}, timeout);
+    pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Duration) TransmitError!usize {
+        return uart.writev_blocking(&.{data}, timeout);
     }
 
-    pub fn read_blocking(uart: *const UART, data: []u8, timeout: ?Timeout) ReceiveError!void {
-        try uart.readv_blocking(&.{data}, timeout);
+    pub fn read_blocking(uart: *const UART, data: []u8, timeout: ?Duration) ReceiveError!usize {
+        return uart.readv_blocking(&.{data}, timeout);
     }
 
     pub fn writer(uart: *const UART) Writer {
@@ -298,28 +303,26 @@ pub const UART = struct {
         return .{ .context = uart };
     }
     fn generic_writer_fn(uart: *const UART, buffer: []const u8) TransmitError!usize {
-        try uart.write_blocking(buffer, null);
-        return buffer.len;
+        return uart.write_blocking(buffer, null);
     }
 
     fn generic_reader_fn(uart: *const UART, buffer: []u8) ReceiveError!usize {
-        try uart.read_blocking(buffer, null);
-        return buffer.len;
+        return uart.read_blocking(buffer, null);
     }
 
-    pub fn init(uart: Instances) UART {
+    pub fn init(comptime uart: Instances) UART {
         return .{ .regs = get_regs(uart) };
     }
 };
 
 var uart_logger: ?UART.Writer = null;
 
-/// Set a specific uart instance to be used for logging.
+///Set a specific uart instance to be used for logging.
 ///
-/// Allows system logging over uart via:
-/// pub const microzig_options = .{
-///     .logFn = hal.uart.log,
-/// };
+///Allows system logging over uart via:
+///pub const microzig_options = .{
+///    .logFn = hal.uart.log,
+///};
 pub fn init_logger(uart: *const UART) void {
     uart_logger = uart.writer();
     if (uart_logger) |logger| {
@@ -327,7 +330,7 @@ pub fn init_logger(uart: *const UART) void {
     }
 }
 
-/// Disables logging via the uart instance.
+///Disables logging via the uart instance.
 pub fn deinit_logger() void {
     uart_logger = null;
 }

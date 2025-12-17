@@ -1,26 +1,25 @@
 //NOTE: This is just an experimental test, USB HAL for the F1 family is not complete.
+//NOTE: THIS EXAMPLE ONLY RUNS IN RELEASE BUILDS, debug builds add too much overhead and USB ends up missing response timing
 
 const std = @import("std");
 const microzig = @import("microzig");
 
-const RCC = microzig.chip.peripherals.RCC;
-const flash = microzig.chip.peripherals.FLASH;
-const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;
-const flash_v1 = microzig.chip.types.peripherals.flash_f1;
-
 const stm32 = microzig.hal;
+const rcc = stm32.rcc;
 const gpio = stm32.gpio;
-const timer = stm32.timer.GPTimer.init(.TIM2).into_counter_mode();
+const time = stm32.time;
+const Duration = microzig.drivers.time.Duration;
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
 const EpControl = usb_ll.EpControl;
 
 const interrupt = microzig.interrupt;
-var Counter: stm32.drivers.CounterDevice = undefined;
 
 pub const microzig_options: microzig.Options = .{
-    .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
+    .interrupts = .{
+        .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler },
+    },
 };
 
 // ============== HID Descriptor ================
@@ -172,8 +171,8 @@ fn get_descriptor(setup: []const u8, epc: EpControl) void {
     epc.USB_send(buffer[0..length], .force_data1) catch unreachable;
 }
 
-fn set_addr(recive_addr: u7, epc: EpControl) void {
-    device_addr = recive_addr;
+fn set_addr(receive_addr: u7, epc: EpControl) void {
+    device_addr = receive_addr;
     epc.ZLP(.force_data1) catch unreachable;
 }
 
@@ -198,61 +197,19 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
 }
 
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
+    epc.set_status(.RX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
     if (device_addr) |addr| {
         usb_ll.set_addr(addr);
     }
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
+    epc.set_status(.RX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
     to_report = false;
     epc.set_status(.TX, .Nak, .no_change) catch unreachable;
-}
-
-//set clock to 72Mhz and USB to 48Mhz
-//NOTE: USB clock must be exactly 48Mhz
-fn config_clock() void {
-    RCC.CR.modify(.{
-        .HSEON = 1,
-    });
-    while (RCC.CR.read().HSERDY == 0) {
-        asm volatile ("nop");
-    }
-
-    RCC.CFGR.modify(.{
-        .PLLSRC = rcc_v1.PLLSRC.HSE_Div_PREDIV,
-        .PLLMUL = rcc_v1.PLLMUL.Mul9,
-    });
-
-    RCC.CR.modify(.{
-        .PLLON = 1,
-    });
-
-    while (RCC.CR.read().PLLRDY == 0) {
-        asm volatile ("nop");
-    }
-
-    flash.ACR.modify(.{
-        .LATENCY = flash_v1.LATENCY.WS2,
-        .PRFTBE = 1,
-    });
-
-    RCC.CFGR.modify(.{
-        .PPRE1 = rcc_v1.PPRE.Div2,
-        .USBPRE = rcc_v1.USBPRE.Div1_5,
-    });
-
-    RCC.CFGR.modify(.{
-        .SW = rcc_v1.SW.PLL1_P,
-    });
-
-    while (RCC.CFGR.read().SWS != rcc_v1.SW.PLL1_P) {
-        asm volatile ("nop");
-    }
 }
 
 const endpoint0 = usb_ll.Endpoint{
@@ -288,38 +245,39 @@ const USB_conf = usb_ll.Config{
 
 //TODO: full HID report function
 fn report(keys: []const u8) void {
-    const len = @min(keys.len, 6);
+    const len = @min(keys.len, 5);
     const epc = usb_ll.EpControl.EPC1;
     const report_flag: *volatile bool = &to_report;
     if (!config) return;
     while (report_flag.*) {}
     std.mem.copyForwards(u8, HID_send[3..], keys[0..len]);
     report_flag.* = true;
-    epc.USB_send(&HID_send, .endpoint_ctr) catch unreachable;
+    epc.USB_send(&HID_send, .no_change) catch unreachable;
 }
 
 pub fn main() !void {
-    config_clock();
-    RCC.APB2ENR.modify(.{
-        .AFIOEN = 1,
-        .GPIOAEN = 1,
-        .GPIOBEN = 1,
-        .GPIOCEN = 1,
+    try rcc.apply_clock(.{
+        .PLLSource = .RCC_PLLSOURCE_HSE,
+        .PLLMUL = .RCC_PLL_MUL9,
+        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1Prescaler = .RCC_HCLK_DIV2,
+        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
     });
 
-    RCC.APB1ENR.modify(.{
-        .TIM2EN = 1,
-        .USBEN = 1,
-    });
+    rcc.enable_clock(.GPIOA);
+    rcc.enable_clock(.GPIOB);
+    rcc.enable_clock(.GPIOC);
+    rcc.enable_clock(.TIM2);
+    rcc.enable_clock(.USB);
+    time.init_timer(.TIM2);
+
     const led = gpio.Pin.from_port(.B, 2);
-    Counter = timer.counter_device(72_000_000);
 
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
-    usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
-
+    usb_ll.usb_init(USB_conf, Duration.from_ms(25));
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     while (true) {
-        Counter.sleep_ms(1000);
+        time.sleep_ms(1000);
         led.toggle();
         report(&.{ 0xb, 0x8, 0xf });
         report(&.{ 0, 0, 0, 0, 0, 0 });

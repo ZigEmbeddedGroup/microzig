@@ -2,6 +2,9 @@ const std = @import("std");
 const microzig = @import("microzig/build-internals");
 const CpuName = @import("src/cpus/main.zig").CpuName;
 
+// Technical reference manuals:
+// 003: https://ch32-riscv-ug.github.io/CH32V003/datasheet_en/CH32V003RM.PDF
+// 20x, 30x, 31x: https://static.chipdip.ru/lib/820/DOC059820997.pdf
 const Self = @This();
 
 const KiB = 1024;
@@ -67,7 +70,10 @@ const BaseChip = struct {
 };
 
 // Generated with:
-// curl 'https://www.wch-ic.com/api/product_tables/47?page=1&limit=100' | jq -r '.data[] | select(.["Part NO."] | startswith("CH32V")) | [ "    ", (.["Part NO."] | ascii_downcase), ": *const microzig.Target, // ", .Flash, " / ", .SRAM, " / ", .Freq ] | join("")' | awk 'match($0, /    ch32v/) { $0 = substr($0, 1, RSTART+11) "x" substr($0, RSTART+13, 1) substr($0, RSTART+16) }; {print}' | sort -n | uniq
+// curl 'https://www.wch-ic.com/api/product_tables/47?page=1&limit=100' |
+// jq -r '.data[] | select(.["Part NO."] | startswith("CH32V")) | [ "    ", (.["Part NO."] | ascii_downcase), ": *const microzig.Target, // ", .Flash, " / ", .SRAM, " / ", .Freq ] | join("")' |
+// awk 'match($0, /    ch32v/) { $0 = substr($0, 1, RSTART+11) "x" substr($0, RSTART+13, 1) substr($0, RSTART+16) }; {print}' |
+// sort -n | uniq
 chips: struct {
     ch32v003x4: *const microzig.Target, // 16K / 2K / 48MHz
     ch32v103x6: *const microzig.Target, // 32K / 10K / 80MHz
@@ -91,6 +97,7 @@ boards: struct {
     },
     ch32v203: struct {
         suzuduino_uno_v1b: *const microzig.Target,
+        lana_tny: *const microzig.Target,
     },
     ch32v305: struct {
         nano_ch32v305: *const microzig.Target,
@@ -191,6 +198,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     });
 
+    const board_lana_tny = chip_ch32v203x6.derive(.{
+        .board = .{
+            .name = "LANA TNY",
+            .url = "https://phyx.be/LANA_TNY/",
+            .root_source_file = b.path("src/boards/LANA_TNY.zig"),
+        },
+    });
+
     return .{
         .chips = .{
             .ch32v003x4 = chip_ch32v003x4,
@@ -215,6 +230,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .ch32v203 = .{
                 .suzuduino_uno_v1b = board_suzuduino_uno_v1b,
+                .lana_tny = board_lana_tny,
             },
             .ch32v305 = .{
                 .nano_ch32v305 = board_nano_ch32v305,

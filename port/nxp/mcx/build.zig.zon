@@ -1,0 +1,19 @@
+.{
+    .name = .mz_port_mcx,
+    .version = "0.0.0",
+    .fingerprint = 0xe43e30911cb3fe37,
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"mcux-soc-svd" = .{
+            .url = "https://github.com/nxp-mcuxpresso/mcux-soc-svd/archive/refs/tags/MCUX_2.16.100.tar.gz",
+            .hash = "N-V-__8AADdFeofKFhsuzMbDdzLAKB4-syMJsHSEOTYGFrlH",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+}
