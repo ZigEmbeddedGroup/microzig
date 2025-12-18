@@ -62,9 +62,9 @@ pub const Bus = struct {
             const setup_regs = SetupRegs{
                 .ctrl = .{
                     .word_length = .word_32,
-                    .endianness = .little_endian,
-                    .speed_mode = .high_speed,
-                    .interrupt_polarity = .high_polarity,
+                    .endianness = .little,
+                    .speed_mode = .high,
+                    .interrupt_polarity = .high,
                     .wake_up = true,
                 },
                 .response_delay = .{
@@ -309,18 +309,18 @@ const CtrlReg = packed struct(u8) {
     };
 
     const Endianness = enum(u1) {
-        little_endian = 0,
-        big_endian = 1,
+        little = 0,
+        big = 1,
     };
 
     const SpeedMode = enum(u1) {
         normal = 0,
-        high_speed = 1,
+        high = 1,
     };
 
     const InterruptPolarity = enum(u1) {
-        low_polarity = 0,
-        high_polarity = 1,
+        low = 0,
+        high = 1,
     };
 
     word_length: WordLength,
