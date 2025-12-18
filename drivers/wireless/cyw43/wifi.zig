@@ -410,9 +410,9 @@ pub const WiFi = struct {
                 const evt = rsp.event().msg;
                 if (evt.event_type == .none and evt.status == .success)
                     return;
-                log.err(
-                    "unhandled event type: {s:<15}, status: {s} ",
-                    .{ @tagName(evt.event_type), @tagName(evt.status) },
+                log.info(
+                    "unhandled event type: {}, status: {} ",
+                    .{ evt.event_type, evt.status },
                 );
             },
             .control => {
