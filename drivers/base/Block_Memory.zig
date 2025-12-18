@@ -20,56 +20,56 @@ pub const Block_Memory = @This();
 ptr: *anyopaque,
 vtable: VTable,
 
-pub fn enableWrite(flash: Block_Memory) BaseError!void {
-    if (flash.vtable.enable_write_fn) |enable_write_fn| {
-        return try enable_write_fn(flash.ptr);
+pub fn enable_write(mem: Block_Memory) BaseError!void {
+    if (mem.vtable.enable_write_fn) |enable_write_fn| {
+        return try enable_write_fn(mem.ptr);
     }
 }
-pub fn disableWrite(flash: Block_Memory) BaseError!void {
-    if (flash.vtable.disable_write_fn) |disable_write_fn| {
-        return try disable_write_fn(flash.ptr);
+pub fn disable_write(mem: Block_Memory) BaseError!void {
+    if (mem.vtable.disable_write_fn) |disable_write_fn| {
+        return try disable_write_fn(mem.ptr);
     }
 }
-pub fn eraseSector(flash: Block_Memory, sector: u32) WriteError!void {
-    const erase_fn = flash.vtable.erase_fn orelse return error.Unsupported;
-    return erase_fn(flash.ptr, sector);
+pub fn erase_sector(mem: Block_Memory, sector: u32) WriteError!void {
+    const erase_fn = mem.vtable.erase_fn orelse return error.Unsupported;
+    return erase_fn(mem.ptr, sector);
 }
-pub fn write(flash: Block_Memory, sector: u32, data: []u8) WriteError!void {
-    const sector_size = try flash.sectorSize(sector);
-    if (data.len > sector_size) return error.SectorOverrun;
-    try flash.eraseSector(sector);
-    const write_fn = flash.vtable.write_fn orelse return error.Unsupported;
-    return write_fn(flash.ptr, sector, data);
+pub fn write(mem: Block_Memory, sector: u32, data: []u8) WriteError!void {
+    const sector_capacity = try mem.sector_size(sector);
+    if (data.len > sector_capacity) return error.SectorOverrun;
+    try mem.erase_sector(sector);
+    const write_fn = mem.vtable.write_fn orelse return error.Unsupported;
+    return write_fn(mem.ptr, sector, data);
 }
-pub fn read(flash: Block_Memory, offset: u32, data: []u8) ReadError!usize {
-    const read_fn = flash.vtable.read_fn orelse return error.Unsupported;
-    return read_fn(flash.ptr, offset, data);
+pub fn read(mem: Block_Memory, offset: u32, data: []u8) ReadError!usize {
+    const read_fn = mem.vtable.read_fn orelse return error.Unsupported;
+    return read_fn(mem.ptr, offset, data);
 }
 // pub fn findSector(flash: Block_Memory, offset: u32) BaseError!u8 {
 
 // }
-pub fn sectorSize(flash: Block_Memory, sector: u32) BaseError!u32 {
-    const sector_size_fn = flash.vtable.sector_size_fn orelse return error.Unsupported;
-    return sector_size_fn(flash.ptr, sector);
+pub fn sector_size(mem: Block_Memory, sector: u32) BaseError!u32 {
+    const sector_size_fn = mem.vtable.sector_size_fn orelse return error.Unsupported;
+    return sector_size_fn(mem.ptr, sector);
 }
 
 pub const TestDevice = struct {
     arena: std.heap.ArenaAllocator,
     write_enabled: bool = false,
     read_enabled: bool = false,
-    sector_size: u32 = 16384,
+    sector_capacity: u32 = 16384,
     num_sectors: u8 = 4,
 
     pub fn block_memory(td: *TestDevice) Block_Memory {
         return Block_Memory{ .vtable = vtable, .ptr = td };
     }
-    pub fn enableWrite(ctx: *anyopaque) BaseError!void {
+    pub fn enable_write(ctx: *anyopaque) BaseError!void {
         const td: *TestDevice = @ptrCast(@alignCast(ctx));
         std.debug.print("Enable flash Write\n", .{});
         td.read_enabled = true;
         td.write_enabled = true;
     }
-    pub fn disableWrite(ctx: *anyopaque) BaseError!void {
+    pub fn disable_write(ctx: *anyopaque) BaseError!void {
         const td: *TestDevice = @ptrCast(@alignCast(ctx));
         std.debug.print("Disable flash Write\n", .{});
         td.read_enabled = false;
@@ -105,21 +105,21 @@ pub const TestDevice = struct {
             return error.ReadDisabled;
         }
     }
-    pub fn sectorSize(ctx: *anyopaque, sector: u32) BaseError!u32 {
+    pub fn sector_size(ctx: *anyopaque, sector: u32) BaseError!u32 {
         const td: *TestDevice = @ptrCast(@alignCast(ctx));
         if (sector < td.num_sectors) {
-            return td.sector_size;
+            return td.sector_capacity;
         } else {
             return error.InvalidSector;
         }
     }
     const vtable = VTable{
-        .enable_write_fn = TestDevice.enableWrite,
-        .disable_write_fn = TestDevice.disableWrite,
+        .enable_write_fn = TestDevice.enable_write,
+        .disable_write_fn = TestDevice.disable_write,
         .erase_fn = TestDevice.erase,
         .write_fn = TestDevice.write,
         .read_fn = TestDevice.read,
-        .sector_size_fn = TestDevice.sectorSize,
+        .sector_size_fn = TestDevice.sector_size,
     };
 };
 
@@ -130,14 +130,14 @@ test TestDevice {
         .arena = allocator,
     };
 
-    td.sector_size = 10;
+    td.sector_capacity = 10;
 
     const fd = td.block_memory();
     var buffer: [3]u8 = .{ 42, 43, 44 };
     try std.testing.expectError(error.WriteDisabled, fd.write(0, buffer[0..]));
     try std.testing.expectError(error.ReadDisabled, fd.read(0, buffer[0..]));
 
-    try fd.enableWrite();
+    try fd.enable_write();
 
     try fd.write(0, buffer[0..]);
     try std.testing.expectEqual(buffer.len, fd.read(0x123, buffer[0..]));
