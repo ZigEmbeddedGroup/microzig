@@ -113,6 +113,9 @@ pub const ClockNode = struct {
                 return val;
             },
             else => |err| {
+                if (err == .ClockOff) {
+                    if (self.nodetype == .output or self.parents[0].nodetype == .output) return 0;
+                }
                 if (@inComptime()) {
                     print_comptime_error(err);
                 }

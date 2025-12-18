@@ -67131,3 +67131,36 @@ test "STM32G061 RCC calculations" {
     try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 64_000_000));
     try std.testing.expectEqual(config_tree.clock.APBOutput, @as(f32, 64_000_000));
 }
+
+test "STM32F777 RCC calculations" {
+    const base_file = STM32F777_STM32F777_rcc_v1_0;
+    const base_tree = try comptime STM32F777II.get_clocks(.{});
+    const config_tree = try STM32F777II.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLM = 8,
+        .PLLN = 216,
+        .PLLP = .RCC_PLLP_DIV2,
+        .APB1CLKDivider = .RCC_HCLK_DIV4,
+        .APB2CLKDivider = .RCC_HCLK_DIV2,
+    });
+
+    try std.testing.expectError(error.Overflow, STM32F777II.get_clocks(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .PLLM = 4,
+        .PLLN = 108,
+        .PLLP = .RCC_PLLP_DIV2,
+        .APB1CLKDivider = .RCC_HCLK_DIV4,
+        .APB2CLKDivider = .RCC_HCLK_DIV4,
+    }));
+
+    try std.testing.expectEqual(base_tree.clock.AHBOutput, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB1Output, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.clock.APB2Output, @as(f32, 16_000_000));
+    try std.testing.expectEqual(base_tree.config.SYSCLKSource, base_file.SYSCLKSourceList.RCC_SYSCLKSOURCE_HSI);
+
+    try std.testing.expectEqual(config_tree.clock.AHBOutput, @as(f32, 216_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB1Output, @as(f32, 54_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut1, @as(f32, 108_000_000));
+    try std.testing.expectEqual(config_tree.clock.APB2Output, @as(f32, 108_000_000));
+    try std.testing.expectEqual(config_tree.clock.TimPrescOut2, @as(f32, 216_000_000));
+}
