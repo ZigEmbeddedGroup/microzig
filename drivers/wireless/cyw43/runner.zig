@@ -10,7 +10,7 @@ const log = std.log.scoped(.cyw43_runner);
 pub const Runner = struct {
     const Self = @This();
 
-    // tx: 1500 MTU + 14 ethernet header + 18 bus header = 1532 bytes + 4 ioctl cmd = 1536 bytes
+    // tx: 4 ioctl cmd + 18 bus header + 14 ethernet header + 1500 MTU = 1536
     // rx: 22 bus (18 + 4 padding) + 14 ethernet header + 1500 MTU = 1536 bytes + 4 bytes status
     // aligned to 4 bytes for dma = 1536 / 4 + 1 = 385 u32 words
     pub const Buffer = [(1536 / 4) + 1]u32;
@@ -45,8 +45,8 @@ pub const Runner = struct {
     }
 
     pub fn tx_buffer(self: *Self) []u8 {
-        // first word is reserved for bus command
-        // then 18 bytes are bus header
+        // first word (4 bytes) is reserved for bus command
+        // then 18 bytes are reserved for bus header
         return mem.sliceAsBytes(self.wifi.buffer[1..])[18..];
     }
 
@@ -92,6 +92,11 @@ pub const Runner = struct {
     pub fn send(ptr: *anyopaque, data: []const u8) anyerror!void {
         const self: *Self = @ptrCast(@alignCast(ptr));
         try self.wifi.send(data);
+    }
+
+    pub fn ready(ptr: *anyopaque) bool {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        return self.wifi.has_credit();
     }
 };
 

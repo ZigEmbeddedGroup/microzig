@@ -1,5 +1,6 @@
 const std = @import("std");
 const log = std.log.scoped(.lwip);
+const assert = std.debug.assert;
 
 const c = @cImport({
     @cInclude("lwip/init.h");
@@ -23,8 +24,9 @@ link: struct {
     ptr: *anyopaque,
     recv: *const fn (*anyopaque) anyerror!?[]const u8,
     send: *const fn (*anyopaque, []const u8) anyerror!void,
+    ready: *const fn (*anyopaque) bool,
 },
-tx_buffer: []u8,
+link_buffer: []u8,
 
 pub fn init(self: *Self) !void {
     c.lwip_init();
@@ -59,6 +61,7 @@ fn netif_init(netif_c: [*c]c.netif) callconv(.c) c.err_t {
     netif.output = c.etharp_output;
     netif.output_ip6 = c.ethip6_output;
     netif.mtu = 1500;
+    assert(self.link_buffer.len >= netif.mtu + 14); // ip mtu + ethernet header
     netif.flags = c.NETIF_FLAG_BROADCAST | c.NETIF_FLAG_ETHARP | c.NETIF_FLAG_ETHERNET | c.NETIF_FLAG_IGMP | c.NETIF_FLAG_MLD6;
     std.mem.copyForwards(u8, &netif.hwaddr, &self.mac);
     netif.hwaddr_len = c.ETH_HWADDR_LEN;
@@ -67,40 +70,48 @@ fn netif_init(netif_c: [*c]c.netif) callconv(.c) c.err_t {
 
 fn netif_status_callback(netif_c: [*c]c.netif) callconv(.c) void {
     const netif: *c.netif = netif_c;
-    log.info("netif changed ip to {f}", .{IPFormatter.new(netif.ip_addr)});
+    const self: *Self = @fieldParentPtr("netif", netif);
+    log.info("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}, flags: {b}", .{
+        netif.flags & c.NETIF_FLAG_LINK_UP > 0,
+        netif.flags & c.NETIF_FLAG_UP > 0,
+        self.ready(),
+        IPFormatter.new(netif.ip_addr),
+        netif.flags,
+    });
 }
 
+/// Called by lwip when there is packet to send.
+/// pbuf chain total_len is <= netif.mtu + ethernet header
 fn netif_linkoutput(netif_c: [*c]c.netif, pbuf_c: [*c]c.pbuf) callconv(.c) c.err_t {
     const netif: *c.netif = netif_c;
     var pbuf: *c.pbuf = pbuf_c;
     const self: *Self = @fieldParentPtr("netif", netif);
 
-    // TODO what to retrun if send is not ready
-    var tx_buffer = self.tx_buffer;
-    var tx_pos: usize = 0;
+    if (!self.link.ready(self.link.ptr)) {
+        log.err("linkouput link not ready", .{});
+        return c.ERR_MEM; // lwip will try later
+    }
+    var link_buffer = self.link_buffer;
+    var pos: usize = 0;
+    if (pbuf.tot_len > link_buffer.len) {
+        log.err("linkouput overflow {} > {}", .{ pbuf.tot_len, link_buffer.len });
+    }
+    assert(pbuf.tot_len <= link_buffer.len);
 
-    const tot_len = pbuf.tot_len;
     while (true) {
         if (pbuf.payload) |ptr| {
-            var buf: []const u8 = @as([*]u8, @ptrCast(ptr))[0..pbuf.len];
-            //log.debug("sending tot_len: {} , len: {} bytes {any}", .{ pbuf.tot_len, pbuf.len, payload });
-            if (&buf[0] != &tx_buffer[tx_pos]) {
-                @memcpy(tx_buffer[tx_pos..][0..buf.len], buf);
-                //log.debug("memcpy {} {x} {b}", .{ buf.len, @intFromPtr(buf.ptr), @intFromPtr(buf.ptr) });
-            } else {
-                //log.debug("skip memcpy {}", .{buf.len});
+            var payload: []const u8 = @as([*]u8, @ptrCast(ptr))[0..pbuf.len];
+            if (&payload[0] != &link_buffer[pos]) {
+                @memcpy(link_buffer[pos..][0..payload.len], payload);
             }
-            tx_pos += buf.len;
-            if (tx_pos >= tot_len) break;
-        } else {
-            break;
+            pos += payload.len;
         }
-        pbuf = pbuf.next;
+        pbuf = pbuf.next orelse break;
     }
-    if (tx_pos > 0) {
-        //log.debug("send buf: {} {x}", .{ tx_pos, tx_buffer[0..@min(64, tx_pos)] });
-        self.link.send(self.link.ptr, tx_buffer[0..tx_pos]) catch return c.ERR_ARG;
-    }
+    self.link.send(self.link.ptr, link_buffer[0..pos]) catch |err| {
+        log.err("link send {}", .{err});
+        return c.ERR_ARG;
+    };
     return c.ERR_OK;
 }
 
@@ -112,13 +123,25 @@ pub fn ready(self: *Self) bool {
 }
 
 pub fn poll(self: *Self) !void {
-    while (try self.link.recv(self.link.ptr)) |buf| {
-        const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(buf.len), c.PBUF_REF);
-        defer _ = c.pbuf_free(pbuf);
-        pbuf.payload = @constCast(buf.ptr);
+    c.sys_check_timeouts();
+    while (try self.link.recv(self.link.ptr)) |data| {
+        const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
+        errdefer _ = c.pbuf_free(pbuf); // netif.input: transfers ownership of pbuf on success
+        try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
         try c_err(self.netif.input.?(pbuf, &self.netif));
     }
     c.sys_check_timeouts();
+}
+
+pub fn log_stats(self: *Self) !void {
+    _ = self;
+    const stats = c.lwip_stats;
+    log.debug("stats ip_frag: {}", .{stats.ip_frag});
+    log.debug("stats icpmp: {}", .{stats.icmp});
+    log.debug("stats mem: {} ", .{stats.mem});
+    for (stats.memp, 0..) |s, i| {
+        log.debug("stats memp {}: {}", .{ i, s.* });
+    }
 }
 
 pub const Udp = struct {
@@ -133,10 +156,10 @@ pub const Udp = struct {
         udp.pcb.ttl = 64;
     }
 
-    pub fn send(udp: *Udp, buf: []const u8) !void {
-        const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(buf.len), c.PBUF_POOL);
+    pub fn send(udp: *Udp, data: []const u8) !void {
+        const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
         defer _ = c.pbuf_free(pbuf);
-        try c_err(c.pbuf_take(pbuf, buf.ptr, @intCast(buf.len)));
+        try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
         try c_err(c.udp_sendto(&udp.pcb, pbuf, &udp.addr, udp.port));
     }
 };
@@ -145,7 +168,7 @@ pub fn udp_init(self: *Self, udp: *Udp, target: []const u8, port: u16) !void {
     try udp.init(self, target, port);
 }
 
-const LwipError = error{
+const Error = error{
     /// Out of memory error.
     OutOfMemory,
     /// Buffer error.
@@ -180,25 +203,25 @@ const LwipError = error{
     IllegalArgument,
 };
 
-fn c_err(err: c.err_t) LwipError!void {
+fn c_err(err: c.err_t) Error!void {
     return switch (err) {
         c.ERR_OK => {},
-        c.ERR_MEM => LwipError.OutOfMemory,
-        c.ERR_BUF => LwipError.BufferError,
-        c.ERR_TIMEOUT => LwipError.Timeout,
-        c.ERR_RTE => LwipError.Routing,
-        c.ERR_INPROGRESS => LwipError.InProgress,
-        c.ERR_VAL => LwipError.IllegalValue,
-        c.ERR_WOULDBLOCK => LwipError.WouldBlock,
-        c.ERR_USE => LwipError.AddressInUse,
-        c.ERR_ALREADY => LwipError.AlreadyConnecting,
-        c.ERR_ISCONN => LwipError.AlreadyConnected,
-        c.ERR_CONN => LwipError.NotConnected,
-        c.ERR_IF => LwipError.LowlevelInterfaceError,
-        c.ERR_ABRT => LwipError.ConnectionAborted,
-        c.ERR_RST => LwipError.ConnectionReset,
-        c.ERR_CLSD => LwipError.ConnectionClosed,
-        c.ERR_ARG => LwipError.IllegalArgument,
+        c.ERR_MEM => Error.OutOfMemory,
+        c.ERR_BUF => Error.BufferError,
+        c.ERR_TIMEOUT => Error.Timeout,
+        c.ERR_RTE => Error.Routing,
+        c.ERR_INPROGRESS => Error.InProgress,
+        c.ERR_VAL => Error.IllegalValue,
+        c.ERR_WOULDBLOCK => Error.WouldBlock,
+        c.ERR_USE => Error.AddressInUse,
+        c.ERR_ALREADY => Error.AlreadyConnecting,
+        c.ERR_ISCONN => Error.AlreadyConnected,
+        c.ERR_CONN => Error.NotConnected,
+        c.ERR_IF => Error.LowlevelInterfaceError,
+        c.ERR_ABRT => Error.ConnectionAborted,
+        c.ERR_RST => Error.ConnectionReset,
+        c.ERR_CLSD => Error.ConnectionClosed,
+        c.ERR_ARG => Error.IllegalArgument,
         else => {
             log.err("error code: {}", .{err});
             @panic("unexpected lwip error code!");
@@ -238,4 +261,13 @@ export fn net_rand() u32 {
 
 export fn __aeabi_read_tp() u32 {
     return 0;
+}
+
+export fn lwip_assert(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
+    log.err("assert: {s} in file: {s}, line: {}", .{ msg, file, line });
+    @panic("lwip assert");
+}
+
+export fn lwip_diag(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
+    log.debug("{s} in file: {s}, line: {}", .{ msg, file, line });
 }

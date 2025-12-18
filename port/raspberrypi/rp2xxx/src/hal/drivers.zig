@@ -470,6 +470,7 @@ pub const WiFi = struct {
     pub const Chip = mdf.wireless.Cyw43;
     pub const recv = Chip.recv;
     pub const send = Chip.send;
+    pub const ready = Chip.ready;
 
     const Spi = hal.Cyw43PioSpi;
     pub const Config = Spi.Config;

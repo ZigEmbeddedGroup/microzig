@@ -15,8 +15,9 @@ pub const WiFi = struct {
 
     buffer: []u32,
     bus: *Bus,
-    ioctl_request_id: u16 = 0,
-    ioctl_tx_sequence: u8 = 0,
+    request_id: u16 = 0,
+    credit: u8 = 0,
+    tx_sequence: u8 = 0,
     status: ?Status = null,
 
     pub fn init(self: *Self) !void {
@@ -211,15 +212,15 @@ pub const WiFi = struct {
     }
 
     fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
-        self.ioctl_request_id +%= 1;
-        self.ioctl_tx_sequence +%= 1;
+        self.request_id +%= 1;
+        self.tx_sequence +%= 1;
         const bytes = ioctl.request(
             mem.sliceAsBytes(self.buffer[1..]), // 1 word reserved for ioctl cmd
             cmd,
             name,
             data,
-            self.ioctl_request_id,
-            self.ioctl_tx_sequence,
+            self.request_id,
+            self.tx_sequence,
         );
         const words_len = ((bytes.len + 3) >> 2) + 1;
         self.bus.write(.wlan, 0, @intCast(bytes.len), self.buffer[0..words_len]);
@@ -236,7 +237,7 @@ pub const WiFi = struct {
             switch (rsp.sdp.chan) {
                 .control => {
                     const cdc = rsp.cdc();
-                    if (cdc.id == self.ioctl_request_id) {
+                    if (cdc.id == self.request_id) {
                         if (cdc.cmd == cmd and cdc.status_ok()) {
                             if (data) |d| {
                                 const rsp_data = rsp.data();
@@ -362,10 +363,10 @@ pub const WiFi = struct {
             switch (rsp.sdp.chan) {
                 .event => {
                     const evt = rsp.event().msg;
-                    log.debug(
-                        "  event type: {s:<15}, status: {s} flags: {x}",
-                        .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
-                    );
+                    // log.debug(
+                    //     "  event type: {s:<15}, status: {s} flags: {x}",
+                    //     .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
+                    // );
                     switch (evt.event_type) {
                         .link => {
                             if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
@@ -460,11 +461,12 @@ pub const WiFi = struct {
     //
     // eth_frame is layer2 packet, contains ethernet header, ip header, protocol header and payload
     pub fn send(self: *Self, eth_frame: []const u8) anyerror!void {
-        self.ioctl_tx_sequence +%= 1;
+        if (!self.has_credit()) return error.Cyw43NoCredit;
+        self.tx_sequence +%= 1;
         // leave one word at the start for bus command
         const tx_bytes = mem.sliceAsBytes(self.buffer[1..]);
         // add bus header
-        tx_bytes[0..ioctl.tx_header_len].* = ioctl.tx_header(@intCast(eth_frame.len), self.ioctl_tx_sequence);
+        tx_bytes[0..ioctl.tx_header_len].* = ioctl.tx_header(@intCast(eth_frame.len), self.tx_sequence);
         // append ethernet frame (if not already there)
         if (&tx_bytes[ioctl.tx_header_len] != &eth_frame[0]) {
             @memcpy(tx_bytes[ioctl.tx_header_len..][0..eth_frame.len], eth_frame);
@@ -475,13 +477,16 @@ pub const WiFi = struct {
         self.bus.write(.wlan, 0, @intCast(bytes_len), self.buffer[0..words_len]);
     }
 
+    pub fn has_credit(self: *Self) bool {
+        return self.tx_sequence != self.credit and (self.credit -% self.tx_sequence) & 0x80 == 0;
+    }
+
     // Read packet from the wifi chip. Assuming that this is used in the loop
     // until it returns null. That way we can cache status from previous read.
     fn read_packet(self: *Self) !?ioctl.Response {
         if (self.status == null) self.read_status();
         const status = self.status.?;
         self.status = null;
-
         if (status.f2_packet_available and status.packet_length > 0) {
             assert(status.packet_length < self.buffer.len * 4);
             const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
@@ -489,8 +494,11 @@ pub const WiFi = struct {
             self.bus.read(.wlan, 0, status.packet_length, words);
             // last word is status
             self.status = @bitCast(words[words.len - 1]);
-            const buf = mem.sliceAsBytes(words)[0..status.packet_length];
-            return try ioctl.response(buf);
+            // parse response
+            const rsp = try ioctl.response(mem.sliceAsBytes(words)[0..status.packet_length]);
+            // update credit
+            self.credit = rsp.sdp.credit;
+            return rsp;
         }
         // TODO: do we need this, probably when irq is used
         // // ..or clear interrupt, and discard data

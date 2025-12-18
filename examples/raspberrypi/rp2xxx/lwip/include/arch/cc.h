@@ -11,9 +11,18 @@ extern void net_lock_interrupts(bool *state);
 extern void net_unlock_interrupts(bool state);
 extern uint32_t net_rand(void);
 extern uint32_t __aeabi_read_tp(void);
+extern void lwip_assert(const char *msg, const char *file, int line);
+extern void lwip_diag(const char *msg, const char *file, int line);
 
-#define LWIP_PLATFORM_DIAG(x)   // TODO: Implement these
-#define LWIP_PLATFORM_ASSERT(x) // TODO: Implement these
+// #define LWIP_NOASSERT 1
+#define LWIP_PLATFORM_DIAG(x)                                                  \
+    do {                                                                       \
+        lwip_diag((msg), __FILE__, __LINE__);                                  \
+    } while (0)
+#define LWIP_PLATFORM_ASSERT(msg)                                              \
+    do {                                                                       \
+        lwip_assert((msg), __FILE__, __LINE__);                                \
+    } while (0)
 
 #define BYTE_ORDER LITTLE_ENDIAN
 

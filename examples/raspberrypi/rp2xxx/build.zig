@@ -87,14 +87,15 @@ pub fn build(b: *std.Build) void {
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         const lwip = std.mem.eql(u8, example.name, "cyw43");
-        available_examples.append(.{
-            .target = raspberrypi.pico,
-            .name = b.fmt("pico_{s}", .{example.name}),
-            .file = example.file,
-            .imports = example.imports,
-            .lwip = lwip,
-        }) catch @panic("out of memory");
-
+        if (!lwip) {
+            available_examples.append(.{
+                .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+                .name = b.fmt("pico_{s}", .{example.name}),
+                .file = example.file,
+                .imports = example.imports,
+                .lwip = lwip,
+            }) catch @panic("out of memory");
+        }
         available_examples.append(.{
             .target = raspberrypi.pico2_arm,
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
