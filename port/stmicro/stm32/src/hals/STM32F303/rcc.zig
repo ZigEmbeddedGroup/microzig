@@ -134,6 +134,22 @@ pub fn enable_i2c(comptime i2cindex: enums.I2CType, clock: ICSW) void {
     });
 }
 
+pub fn enable_spi(comptime spiindex: enums.SPIType) void {
+    switch (spiindex) {
+        .SPI1 => RCC.APB2ENR.modify(.{ .SPI1EN = 1 }),
+
+        .SPI2 => RCC.APB1ENR.modify(.{ .SPI2EN = 1 }),
+        .SPI3 => RCC.APB1ENR.modify(.{ .SPI3EN = 1 }),
+    }
+}
+
+pub fn get_spi_clk(spiindex: enums.SPIType) u32 {
+    return switch (spiindex) {
+        .SPI1 => current_clock.p2_clk,
+        .SPI2, .SPI3 => current_clock.p1_clk,
+    };
+}
+
 fn adjust_flash() void {
     if (current_clock.sys_clk < 24_000_000) {
         FLASH.ACR.modify(.{ .LATENCY = .WS0 });

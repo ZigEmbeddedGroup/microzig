@@ -8,10 +8,9 @@ const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
 const GPIO = gpio_v2.GPIO;
 const MODER = gpio_v2.MODER;
 const PUPDR = gpio_v2.PUPDR;
+const OSPEEDR = gpio_v2.OSPEEDR;
 const OT = gpio_v2.OT;
 const AFIO = microzig.chip.peripherals.AFIO;
-
-pub const Function = enum {};
 
 pub const Port = enum {
     A,
@@ -28,17 +27,23 @@ pub const Mode = union(enum) {
     output: OutputMode,
     analog: AnalogMode,
     alternate_function: AlternateFunction,
+    digital_io: Digital_IO,
 };
+
+pub const Digital_IO = struct {};
 
 pub const InputMode = struct {
     resistor: PUPDR,
 };
 
-pub const OutputMode = struct { resistor: PUPDR, o_type: OT };
+pub const OutputMode = struct {
+    resistor: PUPDR,
+    o_type: OT,
+    o_speed: OSPEEDR = .LowSpeed,
+};
 
-pub const AnalogMode = enum(u2) {
-    //todo
-    _,
+pub const AnalogMode = struct {
+    resistor: PUPDR = .Floating,
 };
 
 pub const AF = enum(u4) {
@@ -64,6 +69,7 @@ pub const AlternateFunction = struct {
     afr: AF,
     resistor: PUPDR = .Floating,
     o_type: OT = .PushPull,
+    o_speed: OSPEEDR = .HighSpeed,
 };
 
 // This is mostly internal to hal for writing configuration.
@@ -71,31 +77,38 @@ pub const AlternateFunction = struct {
 pub const Pin = enum(usize) {
     _,
 
-    inline fn write_pin_config(gpio: Pin, mode: Mode) void {
-        const port = gpio.get_port();
-        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
-        const modMask: u32 = @as(u32, 0b11) << (pin << 1);
-        const afrMask: u32 = @as(u32, 0b1111) << ((pin % 8) << 2);
-
+    pub inline fn write_pin_config(gpio: Pin, mode: Mode) void {
         switch (mode) {
             .input => |imode| {
-                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Input)) << (pin << 1));
-                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(imode.resistor)) << (pin << 1));
+                gpio.set_moder(MODER.Input);
+                gpio.set_bias(imode.resistor);
             },
             .output => |omode| {
-                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Output)) << (pin << 1));
-                port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(omode.o_type)) << pin);
-                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(omode.resistor)) << (pin << 1));
+                gpio.set_moder(MODER.Output);
+                gpio.set_output_type(omode.o_type);
+                gpio.set_bias(omode.resistor);
+                gpio.set_speed(omode.o_speed);
             },
-            .analog => {},
+            .analog => |amode| {
+                gpio.set_moder(MODER.Analog);
+                gpio.set_bias(amode.resistor);
+            },
             .alternate_function => |afmode| {
-                port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(MODER.Alternate)) << (pin << 1));
-                port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(afmode.o_type)) << pin);
-                port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(afmode.resistor)) << (pin << 1));
-                const register = if (pin > 7) &port.AFR[1] else &port.AFR[0];
-                register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afmode.afr)) << ((pin % 8) << 2));
+                gpio.set_moder(MODER.Alternate);
+                gpio.set_bias(afmode.resistor);
+                gpio.set_speed(afmode.o_speed);
+                gpio.set_output_type(afmode.o_type);
+                gpio.set_alternate_function(afmode.afr);
+            },
+            .digital_io => {
+                // Nothing for now
             },
         }
+    }
+
+    pub fn mask_2bit(gpio: Pin) u32 {
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+        return @as(u32, 0b11) << (pin << 1);
     }
 
     pub fn mask(gpio: Pin) u32 {
@@ -118,8 +131,43 @@ pub const Pin = enum(usize) {
         }
     }
 
-    pub inline fn set_mode(gpio: Pin, mode: Mode) void {
-        gpio.write_pin_config(mode);
+    pub inline fn set_bias(gpio: Pin, bias: PUPDR) void {
+        const port = gpio.get_port();
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+        const modMask: u32 = gpio.mask_2bit();
+
+        port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(bias)) << (pin << 1));
+    }
+
+    pub inline fn set_speed(gpio: Pin, speed: OSPEEDR) void {
+        const port = gpio.get_port();
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+        const modMask: u32 = gpio.mask_2bit();
+
+        port.OSPEEDR.write_raw((port.OSPEEDR.raw & ~modMask) | @as(u32, @intFromEnum(speed)) << (pin << 1));
+    }
+
+    pub inline fn set_moder(gpio: Pin, moder: MODER) void {
+        const port = gpio.get_port();
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+        const modMask: u32 = gpio.mask_2bit();
+
+        port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(moder)) << (pin << 1));
+    }
+
+    pub inline fn set_output_type(gpio: Pin, otype: OT) void {
+        const port = gpio.get_port();
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+
+        port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(otype)) << pin);
+    }
+
+    pub inline fn set_alternate_function(gpio: Pin, afr: AF) void {
+        const port = gpio.get_port();
+        const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
+        const afrMask: u32 = @as(u32, 0b1111) << ((pin % 8) << 2);
+        const register = if (pin > 7) &port.AFR[1] else &port.AFR[0];
+        register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afr)) << ((pin % 8) << 2));
     }
 
     pub fn from_port(port: Port, pin: u4) Pin {
