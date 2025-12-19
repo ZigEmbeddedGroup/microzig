@@ -25,26 +25,12 @@ pub const microzig_options = microzig.Options{
 
 var wifi_driver: drivers.WiFi = .{};
 var wifi_buffer: drivers.WiFi.Chip.Buffer = undefined;
-var wifi_rx_ready = false;
 
 const Net = @import("lwip.zig");
 const Udp = Net.Udp;
 
 var net: Net = undefined;
 var udp: Udp = .{};
-
-// const irq_pin = gpio.num(24);
-
-// fn wifi_wakeup() linksection(".ram_text") callconv(.c) void {
-//     var iter = gpio.IrqEventIter{};
-//     while (iter.next()) |e| {
-//         e.pin.acknowledge_irq(e.events);
-//         if (e.pin == irq_pin) {
-//             log.debug("wifi_wakeup", .{});
-//             wifi_rx_ready = true;
-//         }
-//     }
-// }
 
 pub fn main() !void {
     // init uart logging
@@ -57,9 +43,6 @@ pub fn main() !void {
 
     var wifi = try wifi_driver.init(.{}, &wifi_buffer);
     log.debug("mac address: {x}", .{wifi.mac});
-
-    // irq_pin.set_irq_enabled(gpio.IrqEvents{ .rise = 1 }, true);
-    // microzig.interrupt.enable(.IO_IRQ_BANK0);
 
     try wifi.join("ninazara", "PeroZdero1");
 
@@ -78,8 +61,6 @@ pub fn main() !void {
     var i: usize = 1000;
     while (true) : (i +%= 1) {
         time.sleep_ms(100);
-        // if (!wifi_rx_ready) continue;
-        // wifi_rx_ready = false;
         wifi.led_toggle();
         net.poll() catch |err| {
             log.err("pool {}", .{err});
@@ -96,8 +77,6 @@ pub fn main() !void {
     var buf: [128]u8 = @splat(0);
     while (true) : (i +%= 1) {
         time.sleep_ms(100);
-        // if (wifi_rx_ready) continue;
-        // wifi_rx_ready = false;
         wifi.led_toggle();
         net.poll() catch |err| {
             log.err("pool {}", .{err});
