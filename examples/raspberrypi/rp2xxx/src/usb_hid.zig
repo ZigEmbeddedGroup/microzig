@@ -11,16 +11,21 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const UsbSerial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
+const HidDriver = usb.drivers.hid.HidClassDriver(
+    .{ .max_packet_size = 64, .boot_protocol = true, .endpoint_interval = 0 },
+    usb.descriptor.hid.ReportDescriptorKeyboard,
+);
+
+const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create();
 
 var usb_dev: rp2xxx.usb.Polled(
     usb.Config{
         .device_descriptor = .{
             .bcd_usb = .from(0x0200),
             .device_triple = .{
-                .class = .Miscellaneous,
-                .subclass = 2,
-                .protocol = 1,
+                .class = .Unspecified,
+                .subclass = 0,
+                .protocol = 0,
             },
             .max_packet_size0 = 64,
             .vendor = .from(0x2E8A),
@@ -36,14 +41,14 @@ var usb_dev: rp2xxx.usb.Polled(
             .from_str("Raspberry Pi"),
             .from_str("Pico Test Device"),
             .from_str("someserial"),
-            .from_str("Board CDC"),
+            .from_str("Boot Keyboard"),
         },
         .configurations = &.{.{
             .num = 1,
             .configuration_s = 0,
             .attributes = .{ .self_powered = true },
             .max_current_ma = 100,
-            .Drivers = struct { serial: UsbSerial },
+            .Drivers = struct { hid: HidDriver },
         }},
     },
     .{},
@@ -76,65 +81,18 @@ pub fn main() !void {
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
-
-    var i: u32 = 0;
     while (true) {
         // You can now poll for USB events
         usb_dev.poll();
 
         if (usb_dev.controller.drivers()) |drivers| {
+            _ = drivers; // TODO
+
             new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {
                 old = new;
                 led.toggle();
-                i += 1;
-                std.log.info("cdc test: {}\r\n", .{i});
-
-                usb_cdc_write(&drivers.serial, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
-            }
-
-            // read and print host command if present
-            const message = usb_cdc_read(&drivers.serial);
-            if (message.len > 0) {
-                usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
             }
         }
     }
-}
-
-var usb_tx_buff: [1024]u8 = undefined;
-
-// Transfer data to host
-// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
-pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype) void {
-    const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
-
-    var write_buff = text;
-    while (write_buff.len > 0) {
-        write_buff = serial.write(write_buff);
-        usb_dev.poll();
-    }
-    // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
-    _ = serial.write_flush();
-    usb_dev.poll();
-}
-
-var usb_rx_buff: [1024]u8 = undefined;
-
-// Receive data from host
-// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
-pub fn usb_cdc_read(
-    serial: *UsbSerial,
-) []const u8 {
-    var total_read: usize = 0;
-    var read_buff: []u8 = usb_rx_buff[0..];
-
-    while (true) {
-        const len = serial.read(read_buff);
-        read_buff = read_buff[len..];
-        total_read += len;
-        if (len == 0) break;
-    }
-
-    return usb_rx_buff[0..total_read];
 }
