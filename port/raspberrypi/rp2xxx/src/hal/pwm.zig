@@ -109,14 +109,12 @@ pub const Pwm = struct {
 };
 
 /// Enable in parallel using the PWM EN register (which aliases to the individual slice CSR_EN bits)
-/// Does a read -> modify -> write to ensure only the relevant bits are effected (concurrency issues?)
 pub fn set_en_bits(en_mask: u32) void {
     const set_reg: *volatile u32 = hw.set_alias_raw(&microzig.chip.peripherals.PWM.EN);
     set_reg.* = en_mask;
 }
 
 /// Disable in parallel using the PWM EN register (which aliases to the individual slice CSR_EN bits)
-/// Does a read -> modify -> write to ensure only the relevant bits are effected (concurrency issues?)
 pub fn unset_en_bits(en_mask: u32) void {
     const clear_reg: *volatile u32 = hw.clear_alias_raw(&microzig.chip.peripherals.PWM.EN);
     clear_reg.* = en_mask;
