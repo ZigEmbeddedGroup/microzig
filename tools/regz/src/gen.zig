@@ -14,6 +14,7 @@ const EnumID = Database.EnumID;
 const StructID = Database.StructID;
 const NestedStructField = Database.NestedStructField;
 
+const Properties = @import("properties.zig").Properties;
 const Directory = @import("Directory.zig");
 const arm = @import("arch/arm.zig");
 const avr = @import("arch/avr.zig");
@@ -84,20 +85,26 @@ fn write_device_file(
 
     try write_imports(opts, true, "types.zig", writer);
 
-    try writer.writeAll(
+    try writer.writeAll(@embedFile("properties.zig") ++
+        \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
         \\    index: i16,
         \\    description: ?[:0]const u8,
         \\};
         \\
-        \\
     );
 
-    const properties = try db.get_device_properties(arena, device.id);
-    if (properties.len > 0) {
-        try writer.writeAll("pub const properties = struct {\n");
-        for (properties) |prop| {
+    const raw_properties = try db.get_device_properties(arena, device.id);
+    const properties = process_properties(raw_properties);
+
+    try writer.writeAll("\npub const properties: Properties = ");
+    try std.zon.stringify.serialize(properties, .{}, writer);
+    try writer.writeAll(";\n");
+
+    if (raw_properties.len > 0) {
+        try writer.writeAll("\npub const raw_properties = struct {\n");
+        for (raw_properties) |prop| {
             try writer.print("pub const {f} = ", .{
                 std.zig.fmtId(prop.key),
             });
@@ -118,7 +125,7 @@ fn write_device_file(
     const device_peripherals = try db.get_device_peripherals(arena, device.id);
     log.debug("peripheral instances: {}", .{device_peripherals.len});
     if (device_peripherals.len > 0) {
-        try writer.writeAll("pub const peripherals = struct {\n");
+        try writer.writeAll("\npub const peripherals = struct {\n");
         for (device_peripherals) |instance| {
             write_device_peripheral(db, arena, &instance, writer) catch |err| {
                 log.warn("failed to serialize peripheral instance: {}", .{err});
@@ -1283,6 +1290,83 @@ fn write_fields(
 
 fn to_zero_sentinel(buf: []const u8) [:0]const u8 {
     return buf[0 .. buf.len - 1 :0];
+}
+
+fn process_properties(raw_props: []const Database.DeviceProperty) Properties {
+    var properties: Properties = .{};
+
+    for (raw_props) |prop| {
+        if (std.mem.eql(u8, prop.key, "cpu.nvicPrioBits") or
+            std.mem.eql(u8, prop.key, "__NVIC_PRIO_BITS"))
+        {
+            if (prop.value) |value| {
+                properties.interrupt_priority_bits = std.fmt.parseInt(u8, value, 10) catch blk: {
+                    log.warn("failed to parse `interrupt_priority_bits` property value: expected integer, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`interrupt_priority_bits` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.vtorPresent") or
+            std.mem.eql(u8, prop.key, "__VTOR_PRESENT"))
+        {
+            if (prop.value) |value| {
+                properties.has_vtor = raw_property_value_to_bool(value) catch blk: {
+                    log.warn("failed to parse `has_vtor` property value: expected boolean, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`has_vtor` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.mpuPresent") or
+            std.mem.eql(u8, prop.key, "__MPU_PRESENT"))
+        {
+            if (prop.value) |value| {
+                properties.has_mpu = raw_property_value_to_bool(value) catch blk: {
+                    log.warn("failed to interpret `has_mpu` property value: expected boolean, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`has_mpu` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.fpuPresent") or
+            std.mem.eql(u8, prop.key, "__FPU_PRESENT"))
+        {
+            if (prop.value) |value| {
+                properties.has_fpu = raw_property_value_to_bool(value) catch blk: {
+                    log.warn("failed to interpret `has_fpu` property value: expected boolean, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`has_fpu` property candidate detected but it has no value", .{});
+            }
+        }
+    }
+
+    return properties;
+}
+
+fn raw_property_value_to_bool(value: []const u8) !bool {
+    inline for (&.{ "false", "true" }, 0..) |str, i| {
+        if (std.mem.eql(u8, value, str)) {
+            return i == 1;
+        }
+    }
+
+    inline for (&.{ "0", "1" }, 0..) |str, i| {
+        if (std.mem.eql(u8, value, str)) {
+            return i == 1;
+        }
+    }
+
+    log.warn("failed to interpret `{s}` as bool", .{value});
+    return error.BadValue;
 }
 
 const tests = @import("output_tests.zig");

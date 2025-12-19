@@ -15,12 +15,12 @@ pub const microzig_options: microzig.Options = .{
     .logFn = microzig.hal.uart.log,
 };
 
-pub noinline fn init() void {
+pub fn init() void {
     microzig.board.init();
     microzig.board.init_log();
 }
 
-pub noinline fn main() !void {
+pub fn main() !void {
     _ = (stm32.pins.GlobalConfiguration{
         .GPIOB = .{
             // I2C
@@ -33,9 +33,9 @@ pub noinline fn main() !void {
         },
     }).apply();
 
-    var i2c1 = stm32.i2c.I2CDevice.init(.I2C1);
+    var i2c1 = stm32.i2c.I2C_Device.init(.I2C1);
     try i2c1.apply();
-    var device = i2c1.as_device();
+    var device = i2c1.i2c_device();
 
     var hts221 = HTS221.init(&device);
     try hts221.configure(.{
@@ -51,7 +51,12 @@ pub noinline fn main() !void {
         if (try hts221.temperature_ready()) {
             const temp = try hts221.read_temperature();
 
-            std.log.info("Reading temp sensor {}°C", .{temp});
+            std.log.info("Reading temperature {d:.2}°C", .{temp});
+        }
+        if (try hts221.humidity_ready()) {
+            const humidity = try hts221.read_humidity();
+
+            std.log.info("Reading relative humidity {d:.2}%", .{humidity});
         }
     }
 }

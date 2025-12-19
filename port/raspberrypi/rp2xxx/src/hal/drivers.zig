@@ -484,25 +484,25 @@ pub const CYW43_Pio_Device = struct {
     cyw43_bus: Cyw43_Bus = undefined,
     cyw43_runner: Cyw43_Runner = undefined,
 
-    pub fn init(this: *Self, config: CYW43_Pio_Device_Config) !void {
+    pub fn init(self: *Self, config: CYW43_Pio_Device_Config) !void {
         std.log.info("before gpio init", .{});
 
-        this.cyw43_pio_spi = try hal.cyw49_pio_spi.init(config.spi);
-        this.cyw43_spi = this.cyw43_pio_spi.cyw43_spi();
+        self.cyw43_pio_spi = try hal.cyw49_pio_spi.init(config.spi);
+        self.cyw43_spi = self.cyw43_pio_spi.cyw43_spi();
 
         config.pwr_pin.set_function(.sio);
         config.pwr_pin.set_direction(.out);
         var pwr_gpio = GPIO_Device.init(config.pwr_pin);
 
-        this.cyw43_bus = .{ .pwr_pin = pwr_gpio.digital_io(), .spi = &this.cyw43_spi, .internal_delay_ms = hal.time.sleep_ms };
-        this.cyw43_runner = .{ .bus = &this.cyw43_bus, .internal_delay_ms = hal.time.sleep_ms };
+        self.cyw43_bus = .{ .pwr_pin = pwr_gpio.digital_io(), .spi = &self.cyw43_spi, .internal_delay_ms = hal.time.sleep_ms };
+        self.cyw43_runner = .{ .bus = &self.cyw43_bus, .internal_delay_ms = hal.time.sleep_ms };
 
-        try this.cyw43_runner.init();
+        try self.cyw43_runner.init();
     }
 
-    pub fn test_loop(this: *Self) void {
+    pub fn test_loop(self: *Self) void {
         while (true) {
-            this.cyw43_runner.run();
+            self.cyw43_runner.run();
         }
     }
 };

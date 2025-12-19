@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const assert = std.debug.assert;
 
@@ -77,7 +78,15 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         fn _wrapper(_: u32, _: u32, _: u32, _: u32, entry: u32, stack_base: [*]u32) callconv(.c) void {
             // TODO: protect stack using MPU
             _ = stack_base;
-            microzig.hal.maybe_enable_fpu_and_dcp();
+            if (microzig.hal.compatibility.chip == .RP2350) {
+                if (microzig.options.cpu.enable_fpu) {
+                    microzig.cpu.enable_fpu();
+                }
+
+                if (microzig.options.hal.use_dcp) {
+                    microzig.hal.enable_dcp();
+                }
+            }
             @as(*const fn () void, @ptrFromInt(entry))();
         }
     }._wrapper;

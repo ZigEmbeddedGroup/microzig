@@ -3,8 +3,6 @@ const mmio = microzig.mmio;
 
 const shared = @import("shared_types.zig");
 
-pub const CPU_Options = shared.options.Ram_Vector_Options;
-
 pub const scb_base_offset = 0x0d00;
 
 pub const SystemControlBlock = extern struct {
@@ -68,11 +66,11 @@ pub const SystemControlBlock = extern struct {
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
         /// MemManage Fault Register.
-        MMFSR: u8,
+        MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
-        BFSR: u8,
+        BFSR: shared.scb.BFSR,
         /// Usage Fault Status Register.
-        UFSR: u16,
+        UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
     HFSR: mmio.Mmio(shared.scb.HFSR),
