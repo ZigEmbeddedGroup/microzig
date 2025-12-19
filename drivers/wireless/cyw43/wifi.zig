@@ -72,7 +72,6 @@ pub const WiFi = struct {
 
         // "Set up the interrupt mask and enable interrupts"
         bus.write_int(u32, .backplane, chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
-
         bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
 
         // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."
@@ -500,11 +499,6 @@ pub const WiFi = struct {
             self.credit = rsp.sdp.credit;
             return rsp;
         }
-        // TODO: do we need this, probably when irq is used
-        // // ..or clear interrupt, and discard data
-        // self.bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FRAME_CONTROL, 0x01);
-        // const v = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
-        // self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, v);
         return null;
     }
 

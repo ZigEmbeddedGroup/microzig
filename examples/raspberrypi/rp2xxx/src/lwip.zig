@@ -123,7 +123,6 @@ pub fn ready(self: *Self) bool {
 }
 
 pub fn poll(self: *Self) !void {
-    c.sys_check_timeouts();
     while (try self.link.recv(self.link.ptr)) |data| {
         const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
         errdefer _ = c.pbuf_free(pbuf); // netif.input: transfers ownership of pbuf on success
