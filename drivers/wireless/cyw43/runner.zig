@@ -13,8 +13,6 @@ pub const Runner = struct {
     // tx: 4 ioctl cmd + 18 bus header + 14 ethernet header + 1500 MTU = 1536
     // rx: 22 bus (18 + 4 padding) + 14 ethernet header + 1500 MTU = 1536 bytes + 4 bytes status
     // aligned to 4 bytes for dma = 1536 / 4 + 1 = 385 u32 words
-    pub const Buffer = [(1536 / 4) + 1]u32;
-    buffer: *Buffer = undefined,
 
     bus: Bus = undefined,
     wifi: WiFi = undefined,
@@ -26,15 +24,11 @@ pub const Runner = struct {
         spi: SpiInterface,
         sleep_ms: *const fn (delay: u32) void,
         led_pin: ?u2,
-        buffer: *Buffer,
     ) !void {
         self.bus = .{ .spi = spi, .sleep_ms = sleep_ms };
         try self.bus.init();
 
-        self.wifi = .{
-            .bus = &self.bus,
-            .buffer = buffer,
-        };
+        self.wifi = .{ .bus = &self.bus };
         try self.wifi.init();
 
         if (led_pin) |pin| {
@@ -42,12 +36,6 @@ pub const Runner = struct {
             self.wifi.gpio_enable(pin);
         }
         self.mac = try self.read_mac();
-    }
-
-    pub fn tx_buffer(self: *Self) []u8 {
-        // first word (4 bytes) is reserved for bus command
-        // then 18 bytes are reserved for bus header
-        return mem.sliceAsBytes(self.wifi.buffer[1..])[18..];
     }
 
     pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
@@ -79,9 +67,9 @@ pub const Runner = struct {
         self.wifi.gpio_toggle(self.led_pin.?);
     }
 
-    pub fn recv(ptr: *anyopaque) anyerror!?[]const u8 {
+    pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        return self.wifi.recv();
+        return self.wifi.recv_zc(bytes);
     }
 
     // data is network header + payload, network header is
@@ -89,9 +77,10 @@ pub const Runner = struct {
     //   ICMP : 14 (Eth) + 20 (IPv4) + 8 (ICMP) = 42 bytes
     //   ARP  : 14 (Eth) + 28 (ARP)             = 42 bytes
     //
-    pub fn send(ptr: *anyopaque, data: []const u8) anyerror!void {
+
+    pub fn send_zc(ptr: *anyopaque, bytes: []u8) anyerror!void {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        try self.wifi.send(data);
+        try self.wifi.send_zc(bytes);
     }
 
     pub fn ready(ptr: *anyopaque) bool {

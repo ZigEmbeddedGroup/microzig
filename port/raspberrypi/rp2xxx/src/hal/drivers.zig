@@ -468,8 +468,8 @@ pub fn clock_device() Clock_Device {
 pub const WiFi = struct {
     const Self = @This();
     pub const Chip = mdf.wireless.Cyw43;
-    pub const recv = Chip.recv;
-    pub const send = Chip.send;
+    pub const recv = Chip.recv_zc;
+    pub const send = Chip.send_zc;
     pub const ready = Chip.ready;
 
     const Spi = hal.Cyw43PioSpi;
@@ -480,7 +480,7 @@ pub const WiFi = struct {
     spi: Spi = undefined,
     chip: Chip = .{}, // cyw43 chip interface
 
-    pub fn init(self: *Self, config: Config, buffer: *Chip.Buffer) !*Chip {
+    pub fn init(self: *Self, config: Config) !*Chip {
         self.spi = try Spi.init(config);
         try self.chip.init(
             .{
@@ -492,7 +492,6 @@ pub const WiFi = struct {
             },
             hal.time.sleep_ms,
             led_pin,
-            buffer,
         );
         return &self.chip;
     }

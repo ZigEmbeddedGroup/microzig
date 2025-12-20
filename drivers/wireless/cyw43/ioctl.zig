@@ -165,6 +165,15 @@ pub const Response = struct {
         return self.buffer[head..tail];
     }
 
+    // head position and length of the data in the buffer sent to init
+    pub fn data_pos(self: Self) struct { usize, usize } {
+        const head: usize = self.sdp.hdrlen + switch (self.sdp.chan) {
+            .control => @sizeOf(CdcHeader),
+            .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),
+        };
+        return .{ head, self.sdp.len - head };
+    }
+
     pub fn event(self: Self) EventPacket {
         assert(self.sdp.chan == .event);
         const buf = self.data();
@@ -305,6 +314,10 @@ test "parse response" {
     try testing.expectEqual(0, ioctl.status);
 
     try testing.expectEqualSlices(u8, expected, rsp.data()[0..expected.len]);
+    const head, const len = rsp.data_pos();
+    try testing.expectEqual(236, head);
+    try testing.expectEqual(20, len);
+    try testing.expectEqualSlices(u8, expected, rsp_bytes[head..][0..len][0..expected.len]);
 }
 
 pub fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
@@ -656,6 +669,22 @@ test bytes_to_words {
         try testing.expectEqualSlices(u32, &.{ 0xddccbbaa, 0x2211ffee }, words);
         try testing.expectEqual(0x554433, padding.?);
     }
+}
+
+test "unaligned" {
+    const hex = hexToBytes("aabbccddeeff1122334455");
+    const bytes = hex[0..5];
+
+    // var bytes2: []u8 = undefined;
+    // bytes2.ptr = @constCast(bytes.ptr);
+    // bytes2.len = 8;
+    // const words: []u32 = @alignCast(mem.bytesAsSlice(u32, @constCast(bytes2)));
+
+    var words: []u32 = undefined;
+    words.ptr = @ptrCast(@alignCast(@constCast(bytes.ptr)));
+    words.len = 2;
+
+    try testing.expectEqualSlices(u32, &.{ 0xddccbbaa, 0x2211ffee }, words);
 }
 
 test "small data is padded in request to 4 bytes" {

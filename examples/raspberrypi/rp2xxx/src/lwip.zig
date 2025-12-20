@@ -16,17 +16,16 @@ const c = @cImport({
 
 const Self = @This();
 
-netif: c.struct_netif = .{},
-dhcp: c.struct_dhcp = .{},
+netif: c.netif = .{},
+dhcp: c.dhcp = .{},
 
 mac: [6]u8,
 link: struct {
     ptr: *anyopaque,
-    recv: *const fn (*anyopaque) anyerror!?[]const u8,
-    send: *const fn (*anyopaque, []const u8) anyerror!void,
+    recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
+    send: *const fn (*anyopaque, []u8) anyerror!void,
     ready: *const fn (*anyopaque) bool,
 },
-link_buffer: []u8,
 
 pub fn init(self: *Self) !void {
     c.lwip_init();
@@ -60,8 +59,7 @@ fn netif_init(netif_c: [*c]c.netif) callconv(.c) c.err_t {
     netif.linkoutput = netif_linkoutput;
     netif.output = c.etharp_output;
     netif.output_ip6 = c.ethip6_output;
-    netif.mtu = 1500;
-    assert(self.link_buffer.len >= netif.mtu + 14); // ip mtu + ethernet header
+    netif.mtu = sz.mtu;
     netif.flags = c.NETIF_FLAG_BROADCAST | c.NETIF_FLAG_ETHARP | c.NETIF_FLAG_ETHERNET | c.NETIF_FLAG_IGMP | c.NETIF_FLAG_MLD6;
     std.mem.copyForwards(u8, &netif.hwaddr, &self.mac);
     netif.hwaddr_len = c.ETH_HWADDR_LEN;
@@ -91,28 +89,37 @@ fn netif_linkoutput(netif_c: [*c]c.netif, pbuf_c: [*c]c.pbuf) callconv(.c) c.err
         log.err("linkouput link not ready", .{});
         return c.ERR_MEM; // lwip will try later
     }
-    var link_buffer = self.link_buffer;
-    var pos: usize = 0;
-    if (pbuf.tot_len > link_buffer.len) {
-        log.err("linkouput overflow {} > {}", .{ pbuf.tot_len, link_buffer.len });
-    }
-    assert(pbuf.tot_len <= link_buffer.len);
 
-    while (true) {
-        if (pbuf.payload) |ptr| {
-            var payload: []const u8 = @as([*]u8, @ptrCast(ptr))[0..pbuf.len];
-            if (&payload[0] != &link_buffer[pos]) {
-                @memcpy(link_buffer[pos..][0..payload.len], payload);
-            }
-            pos += payload.len;
-        }
-        pbuf = pbuf.next orelse break;
+    if (c.pbuf_header(pbuf, sz.link_head) != 0) {
+        log.err("can't get pbuf headroom len: {}, tot_len: {} ", .{ pbuf.len, pbuf.tot_len });
+        return c.ERR_ARG;
     }
-    self.link.send(self.link.ptr, link_buffer[0..pos]) catch |err| {
+
+    if (pbuf.next != null) {
+        // log.debug("concat pbufs len: {}, tot_len: {}", .{ pbuf.len, pbuf.tot_len });
+        // var p: *c.pbuf = pbuf;
+        // while (true) {
+        //     log.debug("  {} ", .{p.len});
+        //     p = p.next orelse break;
+        // }
+
+        // clone chain into single packet buffer
+        pbuf = c.pbuf_clone(c.PBUF_RAW, c.PBUF_POOL, pbuf) orelse return c.ERR_MEM;
+    }
+    defer {
+        // free local clone is clone was made
+        if (pbuf_c.*.next != null) _ = c.pbuf_free(pbuf);
+    }
+
+    self.link.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
         log.err("link send {}", .{err});
         return c.ERR_ARG;
     };
     return c.ERR_OK;
+}
+
+fn payload_bytes(pbuf: *c.pbuf) []u8 {
+    return @as([*]u8, @ptrCast(pbuf.payload.?))[0..pbuf.len];
 }
 
 pub fn ready(self: *Self) bool {
@@ -123,16 +130,40 @@ pub fn ready(self: *Self) bool {
 }
 
 pub fn poll(self: *Self) !void {
-    while (try self.link.recv(self.link.ptr)) |data| {
-        const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
+    var mem_err_count: usize = 0;
+    while (true) {
+        // get packet buffer of the max size
+        const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_RAW, sz.pbuf_pool, c.PBUF_POOL) orelse {
+            if (mem_err_count > 2) {
+                self.log_stats();
+                return error.OutOfMemory;
+            }
+            mem_err_count += 1;
+            c.sys_check_timeouts();
+            continue;
+        };
+        mem_err_count = 0;
+        assert(pbuf.next == null);
+        assert(pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool);
+
+        // receive into that buffer
+        const head, const len = try self.link.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
+            // no data release packet buffer and exit loop
+            _ = c.pbuf_free(pbuf);
+            break;
+        };
         errdefer _ = c.pbuf_free(pbuf); // netif.input: transfers ownership of pbuf on success
-        try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
+        // set payload header and len
+        if (c.pbuf_header(pbuf, -@as(c.s16_t, @intCast(head))) != 0) return error.InvalidPbufHead;
+        pbuf.len = @intCast(len);
+        pbuf.tot_len = @intCast(len);
+        // pass data to the lwip input function
         try c_err(self.netif.input.?(pbuf, &self.netif));
     }
     c.sys_check_timeouts();
 }
 
-pub fn log_stats(self: *Self) !void {
+pub fn log_stats(self: *Self) void {
     _ = self;
     const stats = c.lwip_stats;
     log.debug("stats ip_frag: {}", .{stats.ip_frag});
@@ -156,7 +187,7 @@ pub const Udp = struct {
     }
 
     pub fn send(udp: *Udp, data: []const u8) !void {
-        const pbuf: *c.struct_pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
+        const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
         defer _ = c.pbuf_free(pbuf);
         try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
         try c_err(c.udp_sendto(&udp.pcb, pbuf, &udp.addr, udp.port));
@@ -200,32 +231,42 @@ const Error = error{
     ConnectionClosed,
     /// Illegal argument.
     IllegalArgument,
+    ///
+    Unknown,
 };
 
-fn c_err(err: c.err_t) Error!void {
-    return switch (err) {
-        c.ERR_OK => {},
-        c.ERR_MEM => Error.OutOfMemory,
-        c.ERR_BUF => Error.BufferError,
-        c.ERR_TIMEOUT => Error.Timeout,
-        c.ERR_RTE => Error.Routing,
-        c.ERR_INPROGRESS => Error.InProgress,
-        c.ERR_VAL => Error.IllegalValue,
-        c.ERR_WOULDBLOCK => Error.WouldBlock,
-        c.ERR_USE => Error.AddressInUse,
-        c.ERR_ALREADY => Error.AlreadyConnecting,
-        c.ERR_ISCONN => Error.AlreadyConnected,
-        c.ERR_CONN => Error.NotConnected,
-        c.ERR_IF => Error.LowlevelInterfaceError,
-        c.ERR_ABRT => Error.ConnectionAborted,
-        c.ERR_RST => Error.ConnectionReset,
-        c.ERR_CLSD => Error.ConnectionClosed,
-        c.ERR_ARG => Error.IllegalArgument,
-        else => {
-            log.err("error code: {}", .{err});
-            @panic("unexpected lwip error code!");
+fn c_err(res: anytype) Error!void {
+    switch (@TypeOf(res)) {
+        c.err_t => return switch (res) {
+            c.ERR_OK => {},
+            c.ERR_MEM => Error.OutOfMemory,
+            c.ERR_BUF => Error.BufferError,
+            c.ERR_TIMEOUT => Error.Timeout,
+            c.ERR_RTE => Error.Routing,
+            c.ERR_INPROGRESS => Error.InProgress,
+            c.ERR_VAL => Error.IllegalValue,
+            c.ERR_WOULDBLOCK => Error.WouldBlock,
+            c.ERR_USE => Error.AddressInUse,
+            c.ERR_ALREADY => Error.AlreadyConnecting,
+            c.ERR_ISCONN => Error.AlreadyConnected,
+            c.ERR_CONN => Error.NotConnected,
+            c.ERR_IF => Error.LowlevelInterfaceError,
+            c.ERR_ABRT => Error.ConnectionAborted,
+            c.ERR_RST => Error.ConnectionReset,
+            c.ERR_CLSD => Error.ConnectionClosed,
+            c.ERR_ARG => Error.IllegalArgument,
+            else => {
+                log.err("error code: {}", .{res});
+                @panic("unexpected lwip error code!");
+            },
         },
-    };
+        c.u8_t => {
+            if (res != 0) {
+                return Error.Unknown;
+            }
+        },
+        else => @compileError("unknown type"),
+    }
 }
 
 const IPFormatter = struct {
@@ -269,4 +310,34 @@ export fn lwip_assert(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
 
 export fn lwip_diag(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
     log.debug("{s} in file: {s}, line: {}", .{ msg, file, line });
+}
+
+// required buffer sizes
+const sz = struct {
+    const pbuf_pool = c.PBUF_POOL_BUFSIZE; // 1540 = 1500 mtu + ethernet + link head/tail
+    const link_head = c.PBUF_LINK_ENCAPSULATION_HLEN; // 22
+    const link_tail = 4; // reserved for the status in rx buffer
+    const ethernet = 14; // layer 2 ethernet header size
+
+    // layer 3 (ip) mtu,
+    const mtu = pbuf_pool - link_head - link_tail - ethernet; // 1500
+
+    // ip v4 sizes
+    const v4 = struct {
+        // headers
+        const ip = 20;
+        const udp = 8;
+        const tcp = 20;
+
+        const payload = struct {
+            const udp = mtu - ip - v4.udp; // 1472
+        };
+    };
+};
+
+// test lwipopts.h config
+comptime {
+    assert(sz.pbuf_pool == 1540);
+    assert(sz.link_head == 22);
+    assert(sz.mtu == 1500);
 }

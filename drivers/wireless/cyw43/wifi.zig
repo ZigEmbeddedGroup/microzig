@@ -13,7 +13,6 @@ pub const WiFi = struct {
     // const chip_log = std.log.scoped(.cyw43_chip);
     // chip_log_state: LogState = .{},
 
-    buffer: []u32,
     bus: *Bus,
     request_id: u16 = 0,
     credit: u8 = 0,
@@ -213,8 +212,9 @@ pub const WiFi = struct {
     fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
         self.request_id +%= 1;
         self.tx_sequence +%= 1;
+        var words: [256]u32 = undefined;
         const bytes = ioctl.request(
-            mem.sliceAsBytes(self.buffer[1..]), // 1 word reserved for ioctl cmd
+            mem.sliceAsBytes(words[1..]), // 1 word reserved for ioctl cmd
             cmd,
             name,
             data,
@@ -222,13 +222,14 @@ pub const WiFi = struct {
             self.tx_sequence,
         );
         const words_len = ((bytes.len + 3) >> 2) + 1;
-        self.bus.write(.wlan, 0, @intCast(bytes.len), self.buffer[0..words_len]);
+        self.bus.write(.wlan, 0, @intCast(bytes.len), words[0..words_len]);
     }
 
     fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
+        var bytes: [512]u8 align(4) = undefined;
         var delay: usize = 0;
         while (delay < ioctl.response_wait) {
-            const rsp = try self.read_packet() orelse {
+            const rsp = try self.read(&bytes) orelse {
                 self.sleep_ms(ioctl.response_poll_interval);
                 delay += ioctl.response_poll_interval;
                 continue;
@@ -351,10 +352,11 @@ pub const WiFi = struct {
         var link_up: bool = false;
         var link_auth: bool = false;
         var set_ssid: bool = false;
+        var buytes: [512]u8 align(4) = undefined;
 
         log.debug("wifi join", .{});
         while (delay < wait_ms) {
-            const rsp = try self.read_packet() orelse {
+            const rsp = try self.read(&buytes) orelse {
                 self.sleep_ms(ioctl.response_poll_interval);
                 delay += ioctl.response_poll_interval;
                 continue;
@@ -444,6 +446,16 @@ pub const WiFi = struct {
         }
     }
 
+    pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
+        while (true) {
+            const rsp = try self.read(buffer) orelse return null;
+            switch (rsp.sdp.chan) {
+                .data => return rsp.data_pos(),
+                else => self.log_response(rsp),
+            }
+        }
+    }
+
     // buffer content:
     // - 4 bytes (1 word) reserved for ioctl command
     // - 18 bytes bus header:
@@ -459,21 +471,22 @@ pub const WiFi = struct {
     //    1472 bytes payload      |                     |                       | 1460 tcp payload
     //
     // eth_frame is layer2 packet, contains ethernet header, ip header, protocol header and payload
-    pub fn send(self: *Self, eth_frame: []const u8) anyerror!void {
-        if (!self.has_credit()) return error.Cyw43NoCredit;
-        self.tx_sequence +%= 1;
-        // leave one word at the start for bus command
-        const tx_bytes = mem.sliceAsBytes(self.buffer[1..]);
+
+    pub fn send_zc(self: *Self, bytes: []u8) !void {
+        const eth_frame_len = bytes.len - 22;
         // add bus header
-        tx_bytes[0..ioctl.tx_header_len].* = ioctl.tx_header(@intCast(eth_frame.len), self.tx_sequence);
-        // append ethernet frame (if not already there)
-        if (&tx_bytes[ioctl.tx_header_len] != &eth_frame[0]) {
-            @memcpy(tx_bytes[ioctl.tx_header_len..][0..eth_frame.len], eth_frame);
-        }
+        self.tx_sequence +%= 1;
+        bytes[4..][0..18].* = ioctl.tx_header(@intCast(eth_frame_len), self.tx_sequence);
+
         // bus write
-        const bytes_len = ioctl.tx_header_len + eth_frame.len;
+        const bytes_len = 18 + eth_frame_len;
         const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
-        self.bus.write(.wlan, 0, @intCast(bytes_len), self.buffer[0..words_len]);
+
+        var words: []u32 = undefined;
+        words.ptr = @ptrCast(@alignCast(@constCast(bytes.ptr)));
+        words.len = words_len;
+
+        self.bus.write(.wlan, 0, @intCast(bytes_len), words);
     }
 
     pub fn has_credit(self: *Self) bool {
@@ -482,14 +495,18 @@ pub const WiFi = struct {
 
     // Read packet from the wifi chip. Assuming that this is used in the loop
     // until it returns null. That way we can cache status from previous read.
-    fn read_packet(self: *Self) !?ioctl.Response {
+    fn read(self: *Self, buffer: []u8) !?ioctl.Response {
         if (self.status == null) self.read_status();
         const status = self.status.?;
         self.status = null;
         if (status.f2_packet_available and status.packet_length > 0) {
-            assert(status.packet_length < self.buffer.len * 4);
             const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
-            const words = self.buffer[0..words_len];
+
+            // TODO: extract into function
+            var words: []u32 = undefined;
+            words.ptr = @ptrCast(@alignCast(@constCast(buffer.ptr)));
+            words.len = words_len;
+
             self.bus.read(.wlan, 0, status.packet_length, words);
             // last word is status
             self.status = @bitCast(words[words.len - 1]);

@@ -13,22 +13,17 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const Net = @import("lwip.zig");
+const Udp = Net.Udp;
+
 const log = std.log.scoped(.main);
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-    .interrupts = .{
-        //        .IO_IRQ_BANK0 = .{ .c = wifi_wakeup },
-    },
 };
 
 var wifi_driver: drivers.WiFi = .{};
-var wifi_buffer: drivers.WiFi.Chip.Buffer = undefined;
-
-const Net = @import("lwip.zig");
-const Udp = Net.Udp;
-
 var net: Net = undefined;
 var udp: Udp = .{};
 
@@ -41,7 +36,7 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    var wifi = try wifi_driver.init(.{}, &wifi_buffer);
+    var wifi = try wifi_driver.init(.{});
     log.debug("mac address: {x}", .{wifi.mac});
 
     try wifi.join("ninazara", "PeroZdero1");
@@ -54,7 +49,6 @@ pub fn main() !void {
             .send = drivers.WiFi.send,
             .ready = drivers.WiFi.ready,
         },
-        .link_buffer = wifi.tx_buffer(),
     };
     try net.init();
 
@@ -74,16 +68,16 @@ pub fn main() !void {
     log.debug("net ready", .{});
     try net.udp_init(&udp, "192.168.190.235", 9999);
 
-    var buf: [128]u8 = @splat(0);
-    while (true) : (i +%= 1) {
+    var buf: [2048]u8 = @splat('-');
+    while (true) : (i +%= 8) {
         time.sleep_ms(100);
         wifi.led_toggle();
         net.poll() catch |err| {
             log.err("pool {}", .{err});
             continue;
         };
-        const msg = try std.fmt.bufPrint(&buf, "hello from pico {}\n", .{i});
-        try udp.send(msg);
+        _ = try std.fmt.bufPrint(&buf, "hello from pico {}\n", .{i});
+        try udp.send(buf[0 .. i % buf.len]);
         uart_read() catch {}; // Check for the reboot code.  Ignore errors.
     }
 
