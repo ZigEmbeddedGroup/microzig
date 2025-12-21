@@ -1,26 +1,26 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const stm32 = microzig.hal;
+const systick = stm32.systick;
 const HTS221 = microzig.drivers.sensor.HTS221;
-
-fn delay() void {
-    var i: u32 = 0;
-    while (i < 8_000_000) {
-        microzig.cpu.nop();
-        i += 1;
-    }
-}
 
 pub const microzig_options: microzig.Options = .{
     .logFn = microzig.hal.uart.log,
+    .interrupts = .{
+        .SysTick = .{ .c = systick.SysTick_handler },
+    },
 };
 
 pub fn init() void {
     microzig.board.init();
     microzig.board.init_log();
+    systick.init() catch {
+        @panic("systick failed to initialized");
+    };
 }
 
 pub fn main() !void {
+    const clock = try stm32.systick_timer.clock_device();
     _ = (stm32.pins.GlobalConfiguration{
         .GPIOB = .{
             // I2C
@@ -46,7 +46,7 @@ pub fn main() !void {
     try hts221.turn_on();
 
     while (true) {
-        delay();
+        clock.sleep_ms(2_000);
 
         if (try hts221.temperature_ready()) {
             const temp = try hts221.read_temperature();
