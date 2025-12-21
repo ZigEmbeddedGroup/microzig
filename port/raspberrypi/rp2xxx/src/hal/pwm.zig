@@ -63,7 +63,7 @@ pub const Slice = enum(u32) {
     }
 };
 
-/// returns PWM associated with the pin number
+/// Return PWM associated with the pin number.
 /// Does not set the gpio function (must be done separately)
 /// e.g. rp2xxx.gpio.num(pin_num).set_function(.pwm)
 pub fn get_pwm(pinnum: u9) Pwm {
