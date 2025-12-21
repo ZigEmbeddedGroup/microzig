@@ -8,14 +8,15 @@
 //!
 //! https://iosoft.blog/2022/12/06/picowi_part3/
 //!
-//! https://github.com/embassy-rs/embassy/blob/main/cyw43/src/structs.rs !
+//! https://github.com/embassy-rs/embassy/blob/main/cyw43/src/structs.rs
 //! https://github.com/jbentham/picowi/blob/main/lib/picowi_ioctl.h
 //!
 const std = @import("std");
 const mem = std.mem;
 const assert = std.debug.assert;
 const testing = std.testing;
-const log = std.log.scoped(.ioctl);
+
+const log = std.log.scoped(.cyw43_ioctl);
 
 // Time to wait for ioctl response (msec)
 pub const response_wait = response_poll_interval * 8;

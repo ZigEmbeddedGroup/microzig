@@ -1,549 +1,555 @@
 const std = @import("std");
-const consts = @import("consts.zig");
 const NVRAM = @import("nvram.zig").NVRAM;
-const Bus = @import("bus.zig").Bus;
+const Bus = @import("bus.zig");
 const ioctl = @import("ioctl.zig");
 const assert = std.debug.assert;
 const mem = std.mem;
 
 const log = std.log.scoped(.cyw43_wifi);
 
-pub const WiFi = struct {
-    const Self = @This();
-    // const chip_log = std.log.scoped(.cyw43_chip);
-    // chip_log_state: LogState = .{},
+const Self = @This();
+// const chip_log = std.log.scoped(.cyw43_chip);
+// chip_log_state: LogState = .{},
 
-    bus: *Bus,
-    request_id: u16 = 0,
-    credit: u8 = 0,
-    tx_sequence: u8 = 0,
-    status: ?Status = null,
+bus: *Bus,
+request_id: u16 = 0,
+credit: u8 = 0,
+tx_sequence: u8 = 0,
+status: ?Status = null,
 
-    pub fn init(self: *Self) !void {
-        const bus = self.bus;
+pub fn init(self: *Self) !void {
+    const bus = self.bus;
 
-        // Init ALP (Active Low Power) clock
-        {
-            _ = bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, consts.BACKPLANE_ALP_AVAIL_REQ);
-            _ = bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, 0x10);
-            const watermark = bus.read_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK);
-            if (watermark != 0x10) {
-                log.err("unexpected watermark {x}", .{watermark});
-                return error.Cyw43Watermark;
-            }
-            // waiting for clock...
-            while (bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & consts.BACKPLANE_ALP_AVAIL == 0) {}
-            // clear request for ALP
-            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0);
-
-            // const chip_id = bus.read_int(u16, .backplane, chip.pmu_base_address);
-            // log.debug("chip ID: 0x{X}", .{chip_id});
+    // Init ALP (Active Low Power) clock
+    {
+        _ = bus.write_int(u8, .backplane, Bus.backplane.chip_clock_csr, Bus.backplane.alp_avail_req);
+        _ = bus.write_int(u8, .backplane, Bus.backplane.function2_watermark, 0x10);
+        const watermark = bus.read_int(u8, .backplane, Bus.backplane.function2_watermark);
+        if (watermark != 0x10) {
+            log.err("unexpected watermark {x}", .{watermark});
+            return error.Cyw43Watermark;
         }
-        // Upload firmware
-        {
-            self.core_disable(.wlan);
-            self.core_reset(.socram);
+        // waiting for clock...
+        while (bus.read_int(u8, .backplane, Bus.backplane.chip_clock_csr) & Bus.backplane.alp_avail == 0) {}
+        // clear request for ALP
+        bus.write_int(u8, .backplane, Bus.backplane.chip_clock_csr, 0);
 
-            // this is 4343x specific stuff: Disable remap for SRAM_3
-            bus.write_int(u32, .backplane, chip.socsram_base_address + 0x10, 3);
-            bus.write_int(u32, .backplane, chip.socsram_base_address + 0x44, 0);
+        // const chip_id = bus.read_int(u16, .backplane, chip.pmu_base_address);
+        // log.debug("chip ID: 0x{X}", .{chip_id});
+    }
+    // Upload firmware
+    {
+        self.core_disable(.wlan);
+        self.core_reset(.socram);
 
-            const firmware = @embedFile("firmware/43439A0_7_95_61.bin");
-            bus.backplane_write(chip.atcm_ram_base_address, firmware);
-        }
-        // Load nvram
-        {
-            const nvram_len = ((NVRAM.len + 3) >> 2) * 4; // Round up to 4 bytes.
-            const addr_magic = chip.atcm_ram_base_address + chip.chip_ram_size - 4;
-            const addr = addr_magic - nvram_len;
-            bus.backplane_write(addr, NVRAM);
+        // this is 4343x specific stuff: Disable remap for SRAM_3
+        bus.write_int(u32, .backplane, chip.socsram_base_address + 0x10, 3);
+        bus.write_int(u32, .backplane, chip.socsram_base_address + 0x44, 0);
 
-            const nvram_len_words = (nvram_len >> 2);
-            const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
-            bus.write_int(u32, .backplane, addr_magic, nvram_len_magic);
-        }
-        // starting up core...
-        self.core_reset(.wlan);
-        try self.core_is_up(.wlan);
+        const firmware = @embedFile("firmware/43439A0_7_95_61.bin");
+        bus.backplane_write(chip.atcm_ram_base_address, firmware);
+    }
+    // Load nvram
+    {
+        const nvram_len = ((NVRAM.len + 3) >> 2) * 4; // Round up to 4 bytes.
+        const addr_magic = chip.atcm_ram_base_address + chip.chip_ram_size - 4;
+        const addr = addr_magic - nvram_len;
+        bus.backplane_write(addr, NVRAM);
 
-        // wait until HT clock is available; takes about 29ms
-        while (bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
+        const nvram_len_words = (nvram_len >> 2);
+        const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
+        bus.write_int(u32, .backplane, addr_magic, nvram_len_magic);
+    }
+    // starting up core...
+    self.core_reset(.wlan);
+    try self.core_is_up(.wlan);
 
-        // "Set up the interrupt mask and enable interrupts"
-        bus.write_int(u32, .backplane, chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
-        bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
+    // wait until HT clock is available; takes about 29ms
+    while (bus.read_int(u8, .backplane, Bus.backplane.chip_clock_csr) & 0x80 == 0) {}
 
-        // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."
-        bus.write_int(u8, .backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, consts.SPI_F2_WATERMARK);
+    // "Set up the interrupt mask and enable interrupts"
+    const sdio_int_host_mask: u32 = 0x24;
+    const i_hmb_sw_mask: u32 = 0x000000f0;
+    bus.write_int(
+        u32,
+        .backplane,
+        chip.sdiod_core_base_address + sdio_int_host_mask,
+        i_hmb_sw_mask,
+    );
+    bus.write_int(u16, .bus, Bus.reg.interrupt_enable, @bitCast(Bus.Irq{ .f2_packet_available = true }));
 
-        // waiting for F2 to be ready...
-        while (bus.read_int(u32, .bus, consts.REG_BUS_STATUS) & consts.STATUS_F2_RX_READY == 0) {}
+    // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."
+    bus.write_int(u8, .backplane, Bus.backplane.function2_watermark, 0x20);
 
-        // clear pad pulls
-        bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0);
-        _ = bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
-
-        // start HT clock
-        bus.write_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0x10);
-        while (bus.read_int(u8, .backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
-
-        // Load Country Locale Matrix (CLM)
-        {
-            const data = @embedFile("firmware/43439A0_clm.bin");
-
-            var clr: extern struct {
-                name: [8]u8 = "clmload\x00".*,
-                flag: u16 = 0,
-                typ: u16 = 2,
-                len: u32 = 0,
-                crc: u32 = 0,
-            } = .{};
-
-            var nbytes: usize = 0;
-            while (nbytes < data.len) {
-                const n = @min(512 - 48, data.len - nbytes);
-                clr.flag = 1 << 12 | (if (nbytes > 0) @as(u16, 0) else 2) | (if (nbytes + n >= data.len) @as(u16, 4) else 0);
-                clr.len = n;
-                const cmd_name = std.mem.asBytes(&clr);
-                // HACK: remove 1 byte from name, set_var adds sentinel, works because crc is always 0
-                try self.set_var(cmd_name[0 .. cmd_name.len - 1], data[nbytes..][0..n]);
-                nbytes += n;
-            }
-        }
-        //self.log_init();
+    // waiting for F2 to be ready...
+    while (true) {
+        const status: Status = @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
+        if (status.f2_rx_ready) break;
     }
 
-    fn core_disable(self: *Self, core: Core) void {
-        const base = core.base_addr();
-        // Dummy read?
-        _ = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
-        // Check it isn't already reset
-        const r = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
-        if (r & consts.AI_RESETCTRL_BIT_RESET != 0) {
-            return;
-        }
-        self.bus.write_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET, 0);
-        _ = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
-        self.sleep_ms(1);
-        self.bus.write_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET, consts.AI_RESETCTRL_BIT_RESET);
-        _ = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
-    }
+    // clear pad pulls
+    bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0);
+    _ = bus.read_int(u8, .backplane, Bus.backplane.pull_up);
 
-    fn core_reset(self: *Self, core: Core) void {
-        self.core_disable(core);
-        const base = core.base_addr();
-        self.bus.write_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN);
-        _ = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
-        self.bus.write_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET, 0);
-        self.sleep_ms(1);
-        self.bus.write_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_CLOCK_EN);
-        _ = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
-        self.sleep_ms(1);
-    }
+    // start HT clock
+    bus.write_int(u8, .backplane, Bus.backplane.chip_clock_csr, 0x10);
+    while (bus.read_int(u8, .backplane, Bus.backplane.chip_clock_csr) & 0x80 == 0) {}
 
-    fn core_is_up(self: *Self, core: Core) !void {
-        const base = core.base_addr();
-        const io = self.bus.read_int(u8, .backplane, base + consts.AI_IOCTRL_OFFSET);
-        if (io & (consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN) != consts.AI_IOCTRL_BIT_CLOCK_EN) {
-            log.err("core_is_up fail due to bad ioctrl 0x{X}", .{io});
-            return error.Cyw43CoreIsUp;
-        }
-        const r = self.bus.read_int(u8, .backplane, base + consts.AI_RESETCTRL_OFFSET);
-        if (r & (consts.AI_RESETCTRL_BIT_RESET) != 0) {
-            log.err("core_is_up fail due to bad resetctrl 0x{X}", .{r});
-            return error.Cyw43CoreIsUp;
+    // Load Country Locale Matrix (CLM)
+    {
+        const data = @embedFile("firmware/43439A0_clm.bin");
+
+        var clr: extern struct {
+            name: [8]u8 = "clmload\x00".*,
+            flag: u16 = 0,
+            typ: u16 = 2,
+            len: u32 = 0,
+            crc: u32 = 0,
+        } = .{};
+
+        var nbytes: usize = 0;
+        while (nbytes < data.len) {
+            const n = @min(512 - 48, data.len - nbytes);
+            clr.flag = 1 << 12 | (if (nbytes > 0) @as(u16, 0) else 2) | (if (nbytes + n >= data.len) @as(u16, 4) else 0);
+            clr.len = n;
+            const cmd_name = std.mem.asBytes(&clr);
+            // HACK: remove 1 byte from name, set_var adds sentinel, works because crc is always 0
+            try self.set_var(cmd_name[0 .. cmd_name.len - 1], data[nbytes..][0..n]);
+            nbytes += n;
         }
     }
+    //self.log_init();
+}
 
-    // fn log_init(self: *Self) void {
-    //     const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
-    //     const shared_addr = self.bus.read_int(u32, .backplane, addr);
-    //     //log.debug("shared_addr 0x{X}", .{shared_addr});
-    //     var shared: SharedMemData = undefined;
-    //     self.bus.backplane_read(shared_addr, std.mem.asBytes(&shared));
-    //     self.chip_log_state.addr = shared.console_addr + 8;
-    // }
-
-    // fn log_read(self: *Self) void {
-    //     var chip_log_mem: SharedMemLog = undefined;
-    //     self.bus.backplane_read(self.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
-    //     const idx = chip_log_mem.idx;
-    //     // If pointer hasn't moved, no need to do anything.
-    //     if (idx == self.chip_log_state.last_idx) {
-    //         return;
-    //     }
-    //     // Read entire buf for now. We could read only what we need, but then we
-    //     // run into annoying alignment issues in `bp_read`.
-    //     var buf: [1024]u8 = undefined;
-    //     self.bus.backplane_read(chip_log_mem.buf, &buf);
-    //     while (self.chip_log_state.last_idx != idx) {
-    //         const b = buf[self.chip_log_state.last_idx];
-    //         if (b == '\r' or b == '\n') {
-    //             if (self.chip_log_state.buf_count != 0) {
-    //                 chip_log.debug("{s}", .{self.chip_log_state.buf[0..self.chip_log_state.buf_count]});
-    //                 self.chip_log_state.buf_count = 0;
-    //             }
-    //         } else if (self.chip_log_state.buf_count < self.chip_log_state.buf.len) {
-    //             self.chip_log_state.buf[self.chip_log_state.buf_count] = b;
-    //             self.chip_log_state.buf_count += 1;
-    //         }
-    //         self.chip_log_state.last_idx += 1;
-    //         if (self.chip_log_state.last_idx == 1024) {
-    //             self.chip_log_state.last_idx = 0;
-    //         }
-    //     }
-    // }
-
-    pub fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
-        self.request(.set_var, name, data);
-        _ = try self.response_poll(.set_var, null);
+fn core_disable(self: *Self, core: Core) void {
+    const base = core.base_addr();
+    // Dummy read?
+    _ = self.bus.read_int(u8, .backplane, base + ai.resetctrl_offset);
+    // Check it isn't already reset
+    const r = self.bus.read_int(u8, .backplane, base + ai.resetctrl_offset);
+    if (r & ai.resetctrl_bit_reset != 0) {
+        return;
     }
+    self.bus.write_int(u8, .backplane, base + ai.ioctrl_offset, 0);
+    _ = self.bus.read_int(u8, .backplane, base + ai.ioctrl_offset);
+    self.sleep_ms(1);
+    self.bus.write_int(u8, .backplane, base + ai.resetctrl_offset, ai.resetctrl_bit_reset);
+    _ = self.bus.read_int(u8, .backplane, base + ai.resetctrl_offset);
+}
 
-    pub fn set_cmd(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
-        self.request(cmd, "", data);
-        _ = try self.response_poll(cmd, null);
+fn core_reset(self: *Self, core: Core) void {
+    self.core_disable(core);
+    const base = core.base_addr();
+    self.bus.write_int(u8, .backplane, base + ai.ioctrl_offset, ai.ioctrle_bit_fgc | ai.ioctrl_bit_clock_en);
+    _ = self.bus.read_int(u8, .backplane, base + ai.ioctrl_offset);
+    self.bus.write_int(u8, .backplane, base + ai.resetctrl_offset, 0);
+    self.sleep_ms(1);
+    self.bus.write_int(u8, .backplane, base + ai.ioctrl_offset, ai.ioctrl_bit_clock_en);
+    _ = self.bus.read_int(u8, .backplane, base + ai.ioctrl_offset);
+    self.sleep_ms(1);
+}
+
+fn core_is_up(self: *Self, core: Core) !void {
+    const base = core.base_addr();
+    const io = self.bus.read_int(u8, .backplane, base + ai.ioctrl_offset);
+    if (io & (ai.ioctrle_bit_fgc | ai.ioctrl_bit_clock_en) != ai.ioctrl_bit_clock_en) {
+        log.err("core_is_up fail due to bad ioctrl 0x{X}", .{io});
+        return error.Cyw43CoreIsUp;
     }
-
-    pub fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
-        self.request(.get_var, name, data);
-        return try self.response_poll(.get_var, data);
+    const r = self.bus.read_int(u8, .backplane, base + ai.resetctrl_offset);
+    if (r & (ai.resetctrl_bit_reset) != 0) {
+        log.err("core_is_up fail due to bad resetctrl 0x{X}", .{r});
+        return error.Cyw43CoreIsUp;
     }
+}
 
-    fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
-        self.request_id +%= 1;
-        self.tx_sequence +%= 1;
-        var words: [256]u32 = undefined;
-        const bytes = ioctl.request(
-            mem.sliceAsBytes(words[1..]), // 1 word reserved for ioctl cmd
-            cmd,
-            name,
-            data,
-            self.request_id,
-            self.tx_sequence,
-        );
-        const words_len = ((bytes.len + 3) >> 2) + 1;
-        self.bus.write(.wlan, 0, @intCast(bytes.len), words[0..words_len]);
-    }
+// fn log_init(self: *Self) void {
+//     const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
+//     const shared_addr = self.bus.read_int(u32, .backplane, addr);
+//     //log.debug("shared_addr 0x{X}", .{shared_addr});
+//     var shared: SharedMemData = undefined;
+//     self.bus.backplane_read(shared_addr, std.mem.asBytes(&shared));
+//     self.chip_log_state.addr = shared.console_addr + 8;
+// }
 
-    fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
-        var bytes: [512]u8 align(4) = undefined;
-        var delay: usize = 0;
-        while (delay < ioctl.response_wait) {
-            const rsp = try self.read(&bytes) orelse {
-                self.sleep_ms(ioctl.response_poll_interval);
-                delay += ioctl.response_poll_interval;
-                continue;
-            };
-            switch (rsp.sdp.chan) {
-                .control => {
-                    const cdc = rsp.cdc();
-                    if (cdc.id == self.request_id) {
-                        if (cdc.cmd == cmd and cdc.status_ok()) {
-                            if (data) |d| {
-                                const rsp_data = rsp.data();
-                                // log.debug("rsp_data.len: {}, d.len: {}, len: {}", .{ rsp_data.len, d.len, len });
-                                const n = @min(rsp_data.len, d.len);
-                                @memcpy(d[0..n], rsp_data[0..n]);
-                                return n;
-                            }
-                            return 0;
+// fn log_read(self: *Self) void {
+//     var chip_log_mem: SharedMemLog = undefined;
+//     self.bus.backplane_read(self.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
+//     const idx = chip_log_mem.idx;
+//     // If pointer hasn't moved, no need to do anything.
+//     if (idx == self.chip_log_state.last_idx) {
+//         return;
+//     }
+//     // Read entire buf for now. We could read only what we need, but then we
+//     // run into annoying alignment issues in `bp_read`.
+//     var buf: [1024]u8 = undefined;
+//     self.bus.backplane_read(chip_log_mem.buf, &buf);
+//     while (self.chip_log_state.last_idx != idx) {
+//         const b = buf[self.chip_log_state.last_idx];
+//         if (b == '\r' or b == '\n') {
+//             if (self.chip_log_state.buf_count != 0) {
+//                 chip_log.debug("{s}", .{self.chip_log_state.buf[0..self.chip_log_state.buf_count]});
+//                 self.chip_log_state.buf_count = 0;
+//             }
+//         } else if (self.chip_log_state.buf_count < self.chip_log_state.buf.len) {
+//             self.chip_log_state.buf[self.chip_log_state.buf_count] = b;
+//             self.chip_log_state.buf_count += 1;
+//         }
+//         self.chip_log_state.last_idx += 1;
+//         if (self.chip_log_state.last_idx == 1024) {
+//             self.chip_log_state.last_idx = 0;
+//         }
+//     }
+// }
+
+pub fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
+    self.request(.set_var, name, data);
+    _ = try self.response_poll(.set_var, null);
+}
+
+pub fn set_cmd(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
+    self.request(cmd, "", data);
+    _ = try self.response_poll(cmd, null);
+}
+
+pub fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
+    self.request(.get_var, name, data);
+    return try self.response_poll(.get_var, data);
+}
+
+fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
+    self.request_id +%= 1;
+    self.tx_sequence +%= 1;
+    var words: [256]u32 = undefined;
+    const bytes = ioctl.request(
+        mem.sliceAsBytes(words[1..]), // 1 word reserved for ioctl cmd
+        cmd,
+        name,
+        data,
+        self.request_id,
+        self.tx_sequence,
+    );
+    const words_len = ((bytes.len + 3) >> 2) + 1;
+    self.bus.write(.wlan, 0, @intCast(bytes.len), words[0..words_len]);
+}
+
+fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
+    var bytes: [512]u8 align(4) = undefined;
+    var delay: usize = 0;
+    while (delay < ioctl.response_wait) {
+        const rsp = try self.read(&bytes) orelse {
+            self.sleep_ms(ioctl.response_poll_interval);
+            delay += ioctl.response_poll_interval;
+            continue;
+        };
+        switch (rsp.sdp.chan) {
+            .control => {
+                const cdc = rsp.cdc();
+                if (cdc.id == self.request_id) {
+                    if (cdc.cmd == cmd and cdc.status_ok()) {
+                        if (data) |d| {
+                            const rsp_data = rsp.data();
+                            // log.debug("rsp_data.len: {}, d.len: {}, len: {}", .{ rsp_data.len, d.len, len });
+                            const n = @min(rsp_data.len, d.len);
+                            @memcpy(d[0..n], rsp_data[0..n]);
+                            return n;
                         }
-                        self.log_response(rsp);
-                        return error.Cyw43InvalidCommandStatus;
+                        return 0;
                     }
-                },
-                else => self.log_response(rsp),
-            }
+                    self.log_response(rsp);
+                    return error.Cyw43InvalidCommandStatus;
+                }
+            },
+            else => self.log_response(rsp),
         }
-        log.err("ioctl: missing response in wait_response", .{});
-        return error.Cyw43NoResponse;
+    }
+    log.err("ioctl: missing response in wait_response", .{});
+    return error.Cyw43NoResponse;
+}
+
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
+    const bus = self.bus;
+
+    // Clear pullups
+    {
+        bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0xf);
+        bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0);
+        _ = self.bus.read_int(u8, .backplane, Bus.backplane.pull_up);
+    }
+    // Clear data unavail error
+    {
+        const val = self.bus.read_int(u16, .bus, Bus.reg.interrupt);
+        if (val & 1 > 0)
+            self.bus.write_int(u16, .bus, Bus.reg.interrupt, val);
+    }
+    // Set sleep KSO (should poll to check for success)
+    {
+        bus.write_int(u8, .backplane, Bus.backplane.sleep_csr, 1);
+        bus.write_int(u8, .backplane, Bus.backplane.sleep_csr, 1);
+        _ = self.bus.read_int(u8, .backplane, Bus.backplane.pull_up);
+        //log.debug("REG_BACKPLANE_SLEEP_CSR value: {}", .{val});
+    }
+    // Set country
+    {
+        // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
+        // abbrev++rev++code in u32
+        const buf = "XX\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "XX\x00\x00";
+        try self.set_var("country", buf);
+    }
+    try self.set_cmd(.set_antdiv, &.{0});
+    // Data aggregation
+    {
+        try self.set_var("bus:txglom", &.{0x00});
+        try self.set_var("apsta", &.{0x01});
+        try self.set_var("ampdu_ba_wsize", &.{0x08});
+        try self.set_var("ampdu_mpdu", &.{0x04});
+        try self.set_var("ampdu_rx_factor", &.{0x00});
+        self.sleep_ms(150);
+    }
+    // Enable events
+    {
+        // using events list from: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L38
+        // ref: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L74
+        // can be something like:
+        // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/control.rs#L242
+        const buf = ioctl.hexToBytes("000000008B120102004000000000800100000000000000000000");
+        try self.set_var("bsscfg:event_msgs", &buf);
+        self.sleep_ms(50);
+    }
+    var buf: [64]u8 = @splat(0); // space for 10 addresses
+    // Enable multicast
+    {
+        @memcpy(buf[0..4], &[_]u8{ 0x01, 0x00, 0x00, 0x00 }); // number of addresses
+        @memcpy(buf[4..][0..6], &[_]u8{ 0x01, 0x00, 0x5E, 0x00, 0x00, 0xFB }); // address
+        try self.set_var("mcast_list", &buf);
+        self.sleep_ms(50);
+    }
+    // join_restart function
+    {
+        try self.set_cmd(.up, &.{});
+        try self.set_cmd(.set_gmode, &.{1});
+        try self.set_cmd(.set_band, &.{0});
+        try self.set_var("pm2_sleep_ret", &.{0xc8});
+        try self.set_var("bcn_li_bcn", &.{1});
+        try self.set_var("bcn_li_dtim", &.{1});
+        try self.set_var("assoc_listen", &.{0x0a});
+
+        try self.set_cmd(.set_infra, &.{1});
+        try self.set_cmd(.set_auth, &.{0});
+        try self.set_cmd(.set_wsec, &.{6}); // wpa security
+
+        try self.set_var("bsscfg:sup_wpa", "\x00\x00\x00\x00\x01\x00\x00\x00");
+        try self.set_var("bsscfg:sup_wpa2_eapver", "\x00\x00\x00\x00\xFF\xFF\xFF\xFF");
+        try self.set_var("bsscfg:sup_wpa_tmo", "\x00\x00\x00\x00\xC4\x09\x00\x00");
+        self.sleep_ms(2);
+
+        try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
+        try self.set_cmd(.set_infra, &.{1});
+        try self.set_cmd(.set_auth, &.{0});
+        try self.set_cmd(.set_wpa_auth, &.{0x80}); // wpa
+
+        try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
     }
 
-    pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
-        const bus = self.bus;
+    try self.join_wait(30 * 1000);
+}
 
-        // Clear pullups
-        {
-            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0xf);
-            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP, 0);
-            _ = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
-            //log.debug("REG_BACKPLANE_PULL_UP value: {}", .{val});
-        }
-        // Clear data unavail error
-        {
-            const val = self.bus.read_int(u16, .bus, consts.REG_BUS_INTERRUPT);
-            if (val & 1 > 0)
-                self.bus.write_int(u16, .bus, consts.REG_BUS_INTERRUPT, val);
-        }
-        // Set sleep KSO (should poll to check for success)
-        {
-            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_SLEEP_CSR, 1);
-            bus.write_int(u8, .backplane, consts.REG_BACKPLANE_SLEEP_CSR, 1);
-            _ = self.bus.read_int(u8, .backplane, consts.REG_BACKPLANE_PULL_UP);
-            //log.debug("REG_BACKPLANE_SLEEP_CSR value: {}", .{val});
-        }
-        // Set country
-        {
-            // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
-            // abbrev++rev++code in u32
-            const buf = "XX\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "XX\x00\x00";
-            try self.set_var("country", buf);
-        }
-        try self.set_cmd(.set_antdiv, &.{0});
-        // Data aggregation
-        {
-            try self.set_var("bus:txglom", &.{0x00});
-            try self.set_var("apsta", &.{0x01});
-            try self.set_var("ampdu_ba_wsize", &.{0x08});
-            try self.set_var("ampdu_mpdu", &.{0x04});
-            try self.set_var("ampdu_rx_factor", &.{0x00});
-            self.sleep_ms(150);
-        }
-        // Enable events
-        {
-            // using events list from: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L38
-            // ref: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L74
-            // can be something like:
-            // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/control.rs#L242
-            const buf = ioctl.hexToBytes("000000008B120102004000000000800100000000000000000000");
-            try self.set_var("bsscfg:event_msgs", &buf);
-            self.sleep_ms(50);
-        }
-        var buf: [64]u8 = @splat(0); // space for 10 addresses
-        // Enable multicast
-        {
-            @memcpy(buf[0..4], &[_]u8{ 0x01, 0x00, 0x00, 0x00 }); // number of addresses
-            @memcpy(buf[4..][0..6], &[_]u8{ 0x01, 0x00, 0x5E, 0x00, 0x00, 0xFB }); // address
-            try self.set_var("mcast_list", &buf);
-            self.sleep_ms(50);
-        }
-        // join_restart function
-        {
-            try self.set_cmd(.up, &.{});
-            try self.set_cmd(.set_gmode, &.{1});
-            try self.set_cmd(.set_band, &.{0});
-            try self.set_var("pm2_sleep_ret", &.{0xc8});
-            try self.set_var("bcn_li_bcn", &.{1});
-            try self.set_var("bcn_li_dtim", &.{1});
-            try self.set_var("assoc_listen", &.{0x0a});
+fn join_wait(self: *Self, wait_ms: u32) !void {
+    var delay: u32 = 0;
+    var link_up: bool = false;
+    var link_auth: bool = false;
+    var set_ssid: bool = false;
+    var buytes: [512]u8 align(4) = undefined;
 
-            try self.set_cmd(.set_infra, &.{1});
-            try self.set_cmd(.set_auth, &.{0});
-            try self.set_cmd(.set_wsec, &.{6}); // wpa security
-
-            try self.set_var("bsscfg:sup_wpa", "\x00\x00\x00\x00\x01\x00\x00\x00");
-            try self.set_var("bsscfg:sup_wpa2_eapver", "\x00\x00\x00\x00\xFF\xFF\xFF\xFF");
-            try self.set_var("bsscfg:sup_wpa_tmo", "\x00\x00\x00\x00\xC4\x09\x00\x00");
-            self.sleep_ms(2);
-
-            try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
-            try self.set_cmd(.set_infra, &.{1});
-            try self.set_cmd(.set_auth, &.{0});
-            try self.set_cmd(.set_wpa_auth, &.{0x80}); // wpa
-
-            try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
-        }
-
-        try self.join_wait(30 * 1000);
-    }
-
-    fn join_wait(self: *Self, wait_ms: u32) !void {
-        var delay: u32 = 0;
-        var link_up: bool = false;
-        var link_auth: bool = false;
-        var set_ssid: bool = false;
-        var buytes: [512]u8 align(4) = undefined;
-
-        log.debug("wifi join", .{});
-        while (delay < wait_ms) {
-            const rsp = try self.read(&buytes) orelse {
-                self.sleep_ms(ioctl.response_poll_interval);
-                delay += ioctl.response_poll_interval;
-                continue;
-            };
-            switch (rsp.sdp.chan) {
-                .event => {
-                    const evt = rsp.event().msg;
-                    // log.debug(
-                    //     "  event type: {s:<15}, status: {s} flags: {x}",
-                    //     .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
-                    // );
-                    switch (evt.event_type) {
-                        .link => {
-                            if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
-                            link_up = true;
-                        },
-                        .psk_sup => {
-                            if (evt.status != .unsolicited) return error.Cyw43JoinWpaHandshake;
-                            link_auth = true;
-                        },
-                        .assoc => {
-                            if (evt.status != .success) return error.Cyw43JoinAssocRequest;
-                        },
-                        .auth => {
-                            if (evt.status != .success) return error.Cyw43JoinAuthRequest;
-                        },
-                        .disassoc_ind => {
-                            return error.Cyw43JoinDisassocIndication;
-                        },
-                        .set_ssid => {
-                            if (evt.status != .success) return error.Cyw43JoinSetSsid;
-                            set_ssid = true;
-                        },
-                        else => {},
-                    }
-                    if (set_ssid and link_up and link_auth) {
-                        log.debug("join OK", .{});
-                        return;
-                    }
-                },
-                else => self.log_response(rsp),
-            }
-        }
-        return error.Cyw43JoinTimeout;
-    }
-
-    // show unexpected command response
-    // can be assert also
-    fn log_response(self: *Self, rsp: ioctl.Response) void {
-        _ = self;
+    log.debug("wifi join", .{});
+    while (delay < wait_ms) {
+        const rsp = try self.read(&buytes) orelse {
+            self.sleep_ms(ioctl.response_poll_interval);
+            delay += ioctl.response_poll_interval;
+            continue;
+        };
         switch (rsp.sdp.chan) {
             .event => {
                 const evt = rsp.event().msg;
-                if (evt.event_type == .none and evt.status == .success)
+                // log.debug(
+                //     "  event type: {s:<15}, status: {s} flags: {x}",
+                //     .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
+                // );
+                switch (evt.event_type) {
+                    .link => {
+                        if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
+                        link_up = true;
+                    },
+                    .psk_sup => {
+                        if (evt.status != .unsolicited) return error.Cyw43JoinWpaHandshake;
+                        link_auth = true;
+                    },
+                    .assoc => {
+                        if (evt.status != .success) return error.Cyw43JoinAssocRequest;
+                    },
+                    .auth => {
+                        if (evt.status != .success) return error.Cyw43JoinAuthRequest;
+                    },
+                    .disassoc_ind => {
+                        return error.Cyw43JoinDisassocIndication;
+                    },
+                    .set_ssid => {
+                        if (evt.status != .success) return error.Cyw43JoinSetSsid;
+                        set_ssid = true;
+                    },
+                    else => {},
+                }
+                if (set_ssid and link_up and link_auth) {
+                    log.debug("join OK", .{});
                     return;
-                log.info(
-                    "unhandled event type: {}, status: {} ",
-                    .{ evt.event_type, evt.status },
-                );
+                }
             },
-            .control => {
-                log.err("unexpected command response:", .{});
-                log.err("  bus: {}", .{rsp.sdp});
-                log.err("  cdc: {}", .{rsp.cdc()});
-                log.err("  data: {x}", .{rsp.data()});
-            },
-            .data => {
-                log.err("unexpected data:", .{});
-                log.err("  bus: {}", .{rsp.sdp});
-                log.err("  bdc: {}", .{rsp.bdc()});
-                log.err("  data: {x}", .{rsp.data()});
-            },
+            else => self.log_response(rsp),
         }
     }
+    return error.Cyw43JoinTimeout;
+}
 
-    fn sleep_ms(self: *Self, delay: u32) void {
-        self.bus.sleep_ms(delay);
+// show unexpected command response
+// can be assert also
+fn log_response(self: *Self, rsp: ioctl.Response) void {
+    _ = self;
+    switch (rsp.sdp.chan) {
+        .event => {
+            const evt = rsp.event().msg;
+            if (evt.event_type == .none and evt.status == .success)
+                return;
+            log.info(
+                "unhandled event type: {}, status: {} ",
+                .{ evt.event_type, evt.status },
+            );
+        },
+        .control => {
+            log.err("unexpected command response:", .{});
+            log.err("  bus: {}", .{rsp.sdp});
+            log.err("  cdc: {}", .{rsp.cdc()});
+            log.err("  data: {x}", .{rsp.data()});
+        },
+        .data => {
+            log.err("unexpected data:", .{});
+            log.err("  bus: {}", .{rsp.sdp});
+            log.err("  bdc: {}", .{rsp.bdc()});
+            log.err("  data: {x}", .{rsp.data()});
+        },
     }
+}
 
-    pub fn recv(self: *Self) !?[]const u8 {
-        while (true) {
-            const rsp = try self.read_packet() orelse return null;
-            switch (rsp.sdp.chan) {
-                .data => return rsp.data(),
-                else => self.log_response(rsp),
-            }
+fn sleep_ms(self: *Self, delay: u32) void {
+    self.bus.sleep_ms(delay);
+}
+
+pub fn recv(self: *Self) !?[]const u8 {
+    while (true) {
+        const rsp = try self.read_packet() orelse return null;
+        switch (rsp.sdp.chan) {
+            .data => return rsp.data(),
+            else => self.log_response(rsp),
         }
     }
+}
 
-    pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
-        while (true) {
-            const rsp = try self.read(buffer) orelse return null;
-            switch (rsp.sdp.chan) {
-                .data => return rsp.data_pos(),
-                else => self.log_response(rsp),
-            }
+pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
+    while (true) {
+        const rsp = try self.read(buffer) orelse return null;
+        switch (rsp.sdp.chan) {
+            .data => return rsp.data_pos(),
+            else => self.log_response(rsp),
         }
     }
+}
 
-    // buffer content:
-    // - 4 bytes (1 word) reserved for ioctl command
-    // - 18 bytes bus header:
-    //     12 bytes sdp header
-    //      2 bytes padding (aligns ethernet to 4 bytes)
-    //      4 bytes cdc header
-    //      -- after this align is 2
-    // - 14 bytes ethernet header
-    //      -- align 4
-    // - 1500 bytes of MTU
-    //      20 bytes ip header    | 28 bytes arp header | 20 bytes ip           |   20 bytes ip
-    //       8 bytes udp header   |                     |  8 bytes icmp header  |   20 bytes tcp header
-    //    1472 bytes payload      |                     |                       | 1460 tcp payload
-    //
-    // eth_frame is layer2 packet, contains ethernet header, ip header, protocol header and payload
+// buffer content:
+// - 4 bytes (1 word) reserved for ioctl command
+// - 18 bytes bus header:
+//     12 bytes sdp header
+//      2 bytes padding (aligns ethernet to 4 bytes)
+//      4 bytes cdc header
+//      -- after this align is 2
+// - 14 bytes ethernet header
+//      -- align 4
+// - 1500 bytes of MTU
+//      20 bytes ip header    | 28 bytes arp header | 20 bytes ip           |   20 bytes ip
+//       8 bytes udp header   |                     |  8 bytes icmp header  |   20 bytes tcp header
+//    1472 bytes payload      |                     |                       | 1460 tcp payload
+//
+// eth_frame is layer2 packet, contains ethernet header, ip header, protocol header and payload
 
-    pub fn send_zc(self: *Self, bytes: []u8) !void {
-        const eth_frame_len = bytes.len - 22;
-        // add bus header
-        self.tx_sequence +%= 1;
-        bytes[4..][0..18].* = ioctl.tx_header(@intCast(eth_frame_len), self.tx_sequence);
+pub fn send_zc(self: *Self, bytes: []u8) !void {
+    const eth_frame_len = bytes.len - 22;
+    // add bus header
+    self.tx_sequence +%= 1;
+    bytes[4..][0..18].* = ioctl.tx_header(@intCast(eth_frame_len), self.tx_sequence);
 
-        // bus write
-        const bytes_len = 18 + eth_frame_len;
-        const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
+    // bus write
+    const bytes_len = 18 + eth_frame_len;
+    const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
 
+    var words: []u32 = undefined;
+    words.ptr = @ptrCast(@alignCast(@constCast(bytes.ptr)));
+    words.len = words_len;
+
+    self.bus.write(.wlan, 0, @intCast(bytes_len), words);
+}
+
+pub fn has_credit(self: *Self) bool {
+    return self.tx_sequence != self.credit and (self.credit -% self.tx_sequence) & 0x80 == 0;
+}
+
+// Read packet from the wifi chip. Assuming that this is used in the loop
+// until it returns null. That way we can cache status from previous read.
+fn read(self: *Self, buffer: []u8) !?ioctl.Response {
+    if (self.status == null) self.read_status();
+    const status = self.status.?;
+    self.status = null;
+    if (status.f2_packet_available and status.packet_length > 0) {
+        const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
+
+        // TODO: extract into function
         var words: []u32 = undefined;
-        words.ptr = @ptrCast(@alignCast(@constCast(bytes.ptr)));
+        words.ptr = @ptrCast(@alignCast(@constCast(buffer.ptr)));
         words.len = words_len;
 
-        self.bus.write(.wlan, 0, @intCast(bytes_len), words);
+        self.bus.read(.wlan, 0, status.packet_length, words);
+        // last word is status
+        self.status = @bitCast(words[words.len - 1]);
+        // parse response
+        const rsp = try ioctl.response(mem.sliceAsBytes(words)[0..status.packet_length]);
+        // update credit
+        self.credit = rsp.sdp.credit;
+        return rsp;
     }
+    return null;
+}
 
-    pub fn has_credit(self: *Self) bool {
-        return self.tx_sequence != self.credit and (self.credit -% self.tx_sequence) & 0x80 == 0;
-    }
+fn read_status(self: *Self) void {
+    self.status = @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
+}
 
-    // Read packet from the wifi chip. Assuming that this is used in the loop
-    // until it returns null. That way we can cache status from previous read.
-    fn read(self: *Self, buffer: []u8) !?ioctl.Response {
-        if (self.status == null) self.read_status();
-        const status = self.status.?;
-        self.status = null;
-        if (status.f2_packet_available and status.packet_length > 0) {
-            const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
+pub fn gpio_enable(self: *Self, pin: u2) void {
+    self.bus.write_int(u32, .backplane, gpio.enable, @as(u32, 1) << pin);
+}
 
-            // TODO: extract into function
-            var words: []u32 = undefined;
-            words.ptr = @ptrCast(@alignCast(@constCast(buffer.ptr)));
-            words.len = words_len;
+pub fn gpio_toggle(self: *Self, pin: u2) void {
+    var val = self.bus.read_int(u32, .backplane, gpio.output);
+    val = val ^ @as(u32, 1) << pin;
+    self.bus.write_int(u32, .backplane, gpio.output, val);
+}
 
-            self.bus.read(.wlan, 0, status.packet_length, words);
-            // last word is status
-            self.status = @bitCast(words[words.len - 1]);
-            // parse response
-            const rsp = try ioctl.response(mem.sliceAsBytes(words)[0..status.packet_length]);
-            // update credit
-            self.credit = rsp.sdp.credit;
-            return rsp;
-        }
-        return null;
-    }
-
-    fn read_status(self: *Self) void {
-        self.status = @bitCast(self.bus.read_int(u32, .bus, consts.REG_BUS_STATUS));
-    }
-
-    pub fn gpio_enable(self: *Self, pin: u2) void {
-        self.bus.write_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_ENABLE, @as(u32, 1) << pin);
-    }
-
-    pub fn gpio_toggle(self: *Self, pin: u2) void {
-        var val = self.bus.read_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_OUTPUT);
-        val = val ^ @as(u32, 1) << pin;
-        self.bus.write_int(u32, .backplane, consts.REG_BACKPLANE_GPIO_OUTPUT, val);
-    }
-
-    // to set gpio pin by sending command
-    pub fn gpio_out(self: *Self, pin: u2, on: bool) !void {
-        var data: [8]u8 = @splat(0);
-        data[0] = @as(u8, 1) << pin;
-        data[4] = if (on) 1 else 0;
-        try self.set_var("gpioout", &data);
-    }
-};
+// to set gpio pin by sending command
+pub fn gpio_out(self: *Self, pin: u2, on: bool) !void {
+    var data: [8]u8 = @splat(0);
+    data[0] = @as(u8, 1) << pin;
+    data[4] = if (on) 1 else 0;
+    try self.set_var("gpioout", &data);
+}
 
 // ref: datasheet 'Table 5. gSPI Status Field Details'
-pub const Status = packed struct {
+const Status = packed struct {
     data_not_available: bool, //  The requested read data is not available.
     underflow: bool, //           FIFO underflow occurred due to current (F2, F3) read command.
     overflow: bool, //            FIFO overflow occurred due to current (F1, F2, F3) write command.
@@ -609,11 +615,23 @@ const chip: Chip = .{
     .chanspec_ctl_sb_mask = 0x0700,
 };
 
-const LogState = struct {
-    addr: u32 = 0,
-    last_idx: usize = 0,
-    buf: [256]u8 = undefined,
-    buf_count: usize = 0,
+// Broadcom AMBA (Advanced Microcontroller Bus Architecture) Interconnect
+const ai = struct {
+    const ioctrl_offset: u32 = 0x408;
+    const ioctrle_bit_fgc: u8 = 0x0002;
+    const ioctrl_bit_clock_en: u8 = 0x0001;
+    const ioctrl_bit_cpuhalt: u8 = 0x0020;
+
+    const resetctrl_offset: u32 = 0x800;
+    const resetctrl_bit_reset: u8 = 1;
+
+    const resetstatus_offset: u32 = 0x804;
+};
+
+const gpio = struct {
+    const base_addr = 0x18000000; // CHIPCOMMON_BASE_ADDRESS
+    pub const output = (base_addr + 0x64);
+    pub const enable = (base_addr + 0x68);
 };
 
 const Core = enum(u2) {
@@ -628,6 +646,13 @@ const Core = enum(u2) {
             .sdiod => chip.sdiod_core_base_address,
         };
     }
+};
+
+const LogState = struct {
+    addr: u32 = 0,
+    last_idx: usize = 0,
+    buf: [256]u8 = undefined,
+    buf_count: usize = 0,
 };
 
 const SharedMemData = extern struct {
