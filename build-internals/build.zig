@@ -100,23 +100,12 @@ pub const Target = struct {
             from.chip.copy(allocator);
 
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
-        ret.* = .{
-            .dep = from.dep,
-            .preferred_binary_format = options.preferred_binary_format orelse from.preferred_binary_format,
-            .zig_target = options.zig_target orelse from.zig_target,
-            .cpu = options.cpu orelse from.cpu,
-            .chip = chip,
-            .single_threaded = options.single_threaded orelse from.single_threaded,
-            .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
-            .bundle_ubsan_rt = options.bundle_ubsan_rt orelse from.bundle_ubsan_rt,
-            .ram_image = options.ram_image orelse from.ram_image,
-            .hal = options.hal orelse from.hal,
-            .board = options.board orelse from.board,
-            .linker_script = options.linker_script orelse from.linker_script,
-            .stack = options.stack orelse from.stack,
-            .entry = options.entry orelse from.entry,
-            .patch_elf = options.patch_elf orelse from.patch_elf,
-        };
+		ret.* = from.*;
+
+		inline for(std.meta.fields(DeriveOptions)) |field| {
+			const value = @field(options, field.name);
+			if(value) |val| @field(ret, field.name) = val;
+		}
         return ret;
     }
 };
