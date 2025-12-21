@@ -8,8 +8,8 @@ const mem = std.mem;
 const log = std.log.scoped(.cyw43_wifi);
 
 const Self = @This();
-// const chip_log = std.log.scoped(.cyw43_chip);
-// chip_log_state: LogState = .{},
+
+log_state: LogState = .{},
 
 bus: *Bus,
 request_id: u16 = 0,
@@ -118,7 +118,7 @@ pub fn init(self: *Self) !void {
             nbytes += n;
         }
     }
-    //self.log_init();
+    self.log_init();
 }
 
 fn core_disable(self: *Self, core: Core) void {
@@ -140,7 +140,7 @@ fn core_disable(self: *Self, core: Core) void {
 fn core_reset(self: *Self, core: Core) void {
     self.core_disable(core);
     const base = core.base_addr();
-    self.bus.write_int(u8, .backplane, base + ai.ioctrl_offset, ai.ioctrle_bit_fgc | ai.ioctrl_bit_clock_en);
+    self.bus.write_int(u8, .backplane, base + ai.ioctrl_offset, ai.ioctrl_bit_fgc | ai.ioctrl_bit_clock_en);
     _ = self.bus.read_int(u8, .backplane, base + ai.ioctrl_offset);
     self.bus.write_int(u8, .backplane, base + ai.resetctrl_offset, 0);
     self.sleep_ms(1);
@@ -152,7 +152,7 @@ fn core_reset(self: *Self, core: Core) void {
 fn core_is_up(self: *Self, core: Core) !void {
     const base = core.base_addr();
     const io = self.bus.read_int(u8, .backplane, base + ai.ioctrl_offset);
-    if (io & (ai.ioctrle_bit_fgc | ai.ioctrl_bit_clock_en) != ai.ioctrl_bit_clock_en) {
+    if (io & (ai.ioctrl_bit_fgc | ai.ioctrl_bit_clock_en) != ai.ioctrl_bit_clock_en) {
         log.err("core_is_up fail due to bad ioctrl 0x{X}", .{io});
         return error.Cyw43CoreIsUp;
     }
@@ -163,44 +163,33 @@ fn core_is_up(self: *Self, core: Core) !void {
     }
 }
 
-// fn log_init(self: *Self) void {
-//     const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
-//     const shared_addr = self.bus.read_int(u32, .backplane, addr);
-//     //log.debug("shared_addr 0x{X}", .{shared_addr});
-//     var shared: SharedMemData = undefined;
-//     self.bus.backplane_read(shared_addr, std.mem.asBytes(&shared));
-//     self.chip_log_state.addr = shared.console_addr + 8;
-// }
+fn log_init(self: *Self) void {
+    const addr = chip.atcm_ram_base_address + chip.chip_ram_size - 4 - chip.socram_srmem_size;
+    const shared_addr = self.bus.read_int(u32, .backplane, addr);
+    var shared: SharedMemData = undefined;
+    self.bus.backplane_read(shared_addr, std.mem.asBytes(&shared));
+    self.log_state.addr = shared.console_addr + 8;
+}
 
-// fn log_read(self: *Self) void {
-//     var chip_log_mem: SharedMemLog = undefined;
-//     self.bus.backplane_read(self.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
-//     const idx = chip_log_mem.idx;
-//     // If pointer hasn't moved, no need to do anything.
-//     if (idx == self.chip_log_state.last_idx) {
-//         return;
-//     }
-//     // Read entire buf for now. We could read only what we need, but then we
-//     // run into annoying alignment issues in `bp_read`.
-//     var buf: [1024]u8 = undefined;
-//     self.bus.backplane_read(chip_log_mem.buf, &buf);
-//     while (self.chip_log_state.last_idx != idx) {
-//         const b = buf[self.chip_log_state.last_idx];
-//         if (b == '\r' or b == '\n') {
-//             if (self.chip_log_state.buf_count != 0) {
-//                 chip_log.debug("{s}", .{self.chip_log_state.buf[0..self.chip_log_state.buf_count]});
-//                 self.chip_log_state.buf_count = 0;
-//             }
-//         } else if (self.chip_log_state.buf_count < self.chip_log_state.buf.len) {
-//             self.chip_log_state.buf[self.chip_log_state.buf_count] = b;
-//             self.chip_log_state.buf_count += 1;
-//         }
-//         self.chip_log_state.last_idx += 1;
-//         if (self.chip_log_state.last_idx == 1024) {
-//             self.chip_log_state.last_idx = 0;
-//         }
-//     }
-// }
+pub fn log_read(self: *Self) void {
+    const chip_log = std.log.scoped(.cyw43_chip);
+
+    var shared: SharedMemLog = undefined;
+    self.bus.backplane_read(self.log_state.addr, std.mem.asBytes(&shared));
+    if (shared.idx == self.log_state.idx) return;
+
+    var buf: [1024]u8 align(4) = undefined;
+    self.bus.backplane_read(shared.buf, &buf);
+    if (shared.idx == 0 or buf[shared.idx - 1] != '\n') return;
+
+    const tail = if (shared.idx < self.log_state.idx) buf.len else shared.idx;
+    var iter = mem.splitAny(u8, buf[self.log_state.idx..tail], &.{ '\r', '\n' });
+    while (iter.next()) |line| {
+        if (line.len == 0) continue;
+        chip_log.debug("{s}", .{line});
+    }
+    self.log_state.idx = if (tail == buf.len) 0 else tail;
+}
 
 pub fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
     self.request(.set_var, name, data);
@@ -531,13 +520,13 @@ fn read_status(self: *Self) void {
 }
 
 pub fn gpio_enable(self: *Self, pin: u2) void {
-    self.bus.write_int(u32, .backplane, gpio.enable, @as(u32, 1) << pin);
+    self.bus.write_int(u32, .backplane, chip.gpio.enable, @as(u32, 1) << pin);
 }
 
 pub fn gpio_toggle(self: *Self, pin: u2) void {
-    var val = self.bus.read_int(u32, .backplane, gpio.output);
+    var val = self.bus.read_int(u32, .backplane, chip.gpio.output);
     val = val ^ @as(u32, 1) << pin;
-    self.bus.write_int(u32, .backplane, gpio.output, val);
+    self.bus.write_int(u32, .backplane, chip.gpio.output, val);
 }
 
 // to set gpio pin by sending command
@@ -562,63 +551,43 @@ const Status = packed struct {
     _reserved3: u12,
 };
 
-const Chip = struct {
-    const WRAPPER_REGISTER_OFFSET: u32 = 0x100000;
-
-    arm_core_base_address: u32,
-    socsram_base_address: u32,
-    bluetooth_base_address: u32,
-    socsram_wrapper_base_address: u32,
-    sdiod_core_base_address: u32,
-    pmu_base_address: u32,
-    chip_ram_size: u32,
-    atcm_ram_base_address: u32,
-    socram_srmem_size: u32,
-    chanspec_band_mask: u32,
-    chanspec_band_2g: u32,
-    chanspec_band_5g: u32,
-    chanspec_band_shift: u32,
-    chanspec_bw_10: u32,
-    chanspec_bw_20: u32,
-    chanspec_bw_40: u32,
-    chanspec_bw_mask: u32,
-    chanspec_bw_shift: u32,
-    chanspec_ctl_sb_lower: u32,
-    chanspec_ctl_sb_upper: u32,
-    chanspec_ctl_sb_none: u32,
-    chanspec_ctl_sb_mask: u32,
-};
-
 // CYW43439 chip values
-const chip: Chip = .{
-    .arm_core_base_address = 0x18003000 + Chip.WRAPPER_REGISTER_OFFSET,
-    .socsram_base_address = 0x18004000,
-    .bluetooth_base_address = 0x19000000,
-    .socsram_wrapper_base_address = 0x18004000 + Chip.WRAPPER_REGISTER_OFFSET,
-    .sdiod_core_base_address = 0x18002000,
-    .pmu_base_address = 0x18000000,
-    .chip_ram_size = 512 * 1024,
-    .atcm_ram_base_address = 0,
-    .socram_srmem_size = 64 * 1024,
-    .chanspec_band_mask = 0xc000,
-    .chanspec_band_2g = 0x0000,
-    .chanspec_band_5g = 0xc000,
-    .chanspec_band_shift = 14,
-    .chanspec_bw_10 = 0x0800,
-    .chanspec_bw_20 = 0x1000,
-    .chanspec_bw_40 = 0x1800,
-    .chanspec_bw_mask = 0x3800,
-    .chanspec_bw_shift = 11,
-    .chanspec_ctl_sb_lower = 0x0000,
-    .chanspec_ctl_sb_upper = 0x0100,
-    .chanspec_ctl_sb_none = 0x0000,
-    .chanspec_ctl_sb_mask = 0x0700,
+const chip = struct {
+    const wrapper_register_offset: u32 = 0x100000;
+
+    const arm_core_base_address: u32 = 0x18003000 + wrapper_register_offset;
+    const socsram_base_address: u32 = 0x18004000;
+    const bluetooth_base_address: u32 = 0x19000000;
+    const socsram_wrapper_base_address: u32 = 0x18004000 + wrapper_register_offset;
+    const sdiod_core_base_address: u32 = 0x18002000;
+    const pmu_base_address: u32 = 0x18000000;
+    const chip_ram_size: u32 = 512 * 1024;
+    const atcm_ram_base_address: u32 = 0;
+    const socram_srmem_size: u32 = 64 * 1024;
+    const chanspec_band_mask: u32 = 0xc000;
+    const chanspec_band_2g: u32 = 0x0000;
+    const chanspec_band_5g: u32 = 0xc000;
+    const chanspec_band_shift: u32 = 14;
+    const chanspec_bw_10: u32 = 0x0800;
+    const chanspec_bw_20: u32 = 0x1000;
+    const chanspec_bw_40: u32 = 0x1800;
+    const chanspec_bw_mask: u32 = 0x3800;
+    const chanspec_bw_shift: u32 = 11;
+    const chanspec_ctl_sb_lower: u32 = 0x0000;
+    const chanspec_ctl_sb_upper: u32 = 0x0100;
+    const chanspec_ctl_sb_none: u32 = 0x0000;
+    const chanspec_ctl_sb_mask: u32 = 0x0700;
+
+    const gpio = struct {
+        pub const output = (pmu_base_address + 0x64);
+        pub const enable = (pmu_base_address + 0x68);
+    };
 };
 
 // Broadcom AMBA (Advanced Microcontroller Bus Architecture) Interconnect
 const ai = struct {
     const ioctrl_offset: u32 = 0x408;
-    const ioctrle_bit_fgc: u8 = 0x0002;
+    const ioctrl_bit_fgc: u8 = 0x0002;
     const ioctrl_bit_clock_en: u8 = 0x0001;
     const ioctrl_bit_cpuhalt: u8 = 0x0020;
 
@@ -626,12 +595,6 @@ const ai = struct {
     const resetctrl_bit_reset: u8 = 1;
 
     const resetstatus_offset: u32 = 0x804;
-};
-
-const gpio = struct {
-    const base_addr = 0x18000000; // CHIPCOMMON_BASE_ADDRESS
-    pub const output = (base_addr + 0x64);
-    pub const enable = (base_addr + 0x68);
 };
 
 const Core = enum(u2) {
@@ -650,9 +613,7 @@ const Core = enum(u2) {
 
 const LogState = struct {
     addr: u32 = 0,
-    last_idx: usize = 0,
-    buf: [256]u8 = undefined,
-    buf_count: usize = 0,
+    idx: usize = 0,
 };
 
 const SharedMemData = extern struct {
