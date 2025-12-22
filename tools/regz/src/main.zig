@@ -26,7 +26,6 @@ const Arguments = struct {
     output_path: ?[:0]const u8 = null,
     patch_path: ?[]const u8 = null,
     dump_path: ?[:0]const u8 = null,
-    microzig: bool = false,
     help: bool = false,
 
     fn deinit(args: *Arguments) void {
@@ -41,7 +40,6 @@ fn print_usage(writer: *std.Io.Writer) !void {
         \\regz
         \\  --help                Display this help and exit
         \\  --db_dump_path <str>  Dump SQLite file
-        \\  --microzig            Generate for microzig instead of a standalone file
         \\  --format <str>        Explicitly set format type, one of: svd, atdf, json, embassy
         \\  --output_path <str>   Write to a file
         \\  --patch_path <str>    After reading format, apply NDJSON based patch file
@@ -67,8 +65,6 @@ fn parse_args(allocator: Allocator) !Arguments {
         } else if (std.mem.eql(u8, args[i], "--db_dump_path")) {
             i += 1;
             ret.dump_path = try allocator.dupeZ(u8, args[i]);
-        } else if (std.mem.eql(u8, args[i], "--microzig")) {
-            ret.microzig = true;
         } else if (std.mem.eql(u8, args[i], "--format")) {
             i += 1;
             if (i >= args.len)
@@ -166,5 +162,5 @@ fn main_impl() anyerror!void {
     defer output_dir.close();
 
     var fs = FS_Directory.init(output_dir);
-    try db.to_zig(fs.directory(), .{ .for_microzig = args.microzig });
+    try db.to_zig(fs.directory(), .{});
 }

@@ -22,9 +22,7 @@ const riscv = @import("arch/riscv.zig");
 
 const log = std.log.scoped(.gen);
 
-pub const ToZigOptions = struct {
-    for_microzig: bool = false,
-};
+pub const ToZigOptions = struct {};
 
 pub fn to_zig(db: *Database, dir: Directory, opts: ToZigOptions) !void {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
@@ -49,24 +47,16 @@ fn write_device_files(
 }
 
 fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8, writer: *std.Io.Writer) !void {
+    _ = opts;
     const public: []const u8 = if (types_public) "pub" else "";
-    if (opts.for_microzig) {
-        try writer.print(
-            \\const microzig = @import("microzig");
-            \\const mmio = microzig.mmio;
-            \\
-            \\{s} const types = @import("{s}");
-            \\
-            \\
-        , .{ public, types_path });
-    } else {
-        try writer.print(
-            \\const mmio = @import("mmio");
-            \\{s} const types = @import("{s}");
-            \\
-            \\
-        , .{ public, types_path });
-    }
+    try writer.print(
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
+        \\
+        \\{s} const types = @import("{s}");
+        \\
+        \\
+    , .{ public, types_path });
 }
 
 fn write_device_file(
