@@ -1,20 +1,17 @@
-#ifndef ASHET_OS_cc_h
-#define ASHET_OS_cc_h
+#ifndef lwip__cc_h
+#define lwip__cc_h
 
 #include <stdbool.h>
 #include <stdint.h>
 
 typedef unsigned int sys_prot_t;
 
-// ashet apis, implemented in src/main.zig:
-extern void net_lock_interrupts(bool *state);
-extern void net_unlock_interrupts(bool state);
-extern uint32_t net_rand(void);
-extern uint32_t __aeabi_read_tp(void);
+extern uint32_t lwip_rand(void);
+extern void lwip_lock_interrupts(bool *state);
+extern void lwip_unlock_interrupts(bool state);
 extern void lwip_assert(const char *msg, const char *file, int line);
 extern void lwip_diag(const char *msg, const char *file, int line);
 
-// #define LWIP_NOASSERT 1
 #define LWIP_PLATFORM_DIAG(x)                                                  \
     do {                                                                       \
         lwip_diag((msg), __FILE__, __LINE__);                                  \
@@ -26,7 +23,7 @@ extern void lwip_diag(const char *msg, const char *file, int line);
 
 #define BYTE_ORDER LITTLE_ENDIAN
 
-#define LWIP_RAND() ((u32_t)net_rand())
+#define LWIP_RAND() ((u32_t)lwip_rand())
 
 #define LWIP_NO_STDDEF_H 0
 #define LWIP_NO_STDINT_H 0
@@ -41,7 +38,7 @@ extern void lwip_diag(const char *msg, const char *file, int line);
 // https://www.nongnu.org/lwip/2_1_x/group__sys__prot.html
 
 #define SYS_ARCH_DECL_PROTECT(lev) bool lev
-#define SYS_ARCH_PROTECT(lev) net_lock_interrupts(&lev)
-#define SYS_ARCH_UNPROTECT(lev) net_unlock_interrupts(lev)
+#define SYS_ARCH_PROTECT(lev) lwip_lock_interrupts(&lev)
+#define SYS_ARCH_UNPROTECT(lev) lwip_unlock_interrupts(lev)
 
-#endif // ASHET_OS_cc_h
+#endif // lwip__cc_h

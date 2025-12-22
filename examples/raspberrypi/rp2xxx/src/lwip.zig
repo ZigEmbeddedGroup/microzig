@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const log = std.log.scoped(.lwip);
 const assert = std.debug.assert;
 
@@ -284,39 +285,11 @@ const IPFormatter = struct {
     }
 };
 
-// exports required by lwip
-
-export fn net_lock_interrupts(were_enabled: *bool) void {
-    _ = were_enabled;
-}
-
-export fn net_unlock_interrupts(enable: bool) void {
-    _ = enable;
-}
-
-export fn net_rand() u32 {
-    // TODO: Improve this
-    return 4; // chose by a fair dice roll
-}
-
-export fn __aeabi_read_tp() u32 {
-    return 0;
-}
-
-export fn lwip_assert(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
-    log.err("assert: {s} in file: {s}, line: {}", .{ msg, file, line });
-    @panic("lwip assert");
-}
-
-export fn lwip_diag(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
-    log.debug("{s} in file: {s}, line: {}", .{ msg, file, line });
-}
-
 // required buffer sizes
 const sz = struct {
     const pbuf_pool = c.PBUF_POOL_BUFSIZE; // 1540 = 1500 mtu + ethernet + link head/tail
     const link_head = c.PBUF_LINK_ENCAPSULATION_HLEN; // 22
-    const link_tail = 4; // reserved for the status in rx buffer
+    const link_tail = 4; // reserved for the status in recv buffer
     const ethernet = 14; // layer 2 ethernet header size
 
     // layer 3 (ip) mtu,

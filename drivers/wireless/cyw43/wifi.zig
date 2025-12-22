@@ -9,13 +9,12 @@ const log = std.log.scoped(.cyw43_wifi);
 
 const Self = @This();
 
-log_state: LogState = .{},
-
 bus: *Bus,
 request_id: u16 = 0,
 credit: u8 = 0,
 tx_sequence: u8 = 0,
 status: ?Status = null,
+log_state: LogState = .{},
 
 pub fn init(self: *Self) !void {
     const bus = self.bus;
@@ -238,7 +237,6 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
                     if (cdc.cmd == cmd and cdc.status_ok()) {
                         if (data) |d| {
                             const rsp_data = rsp.data();
-                            // log.debug("rsp_data.len: {}, d.len: {}, len: {}", .{ rsp_data.len, d.len, len });
                             const n = @min(rsp_data.len, d.len);
                             @memcpy(d[0..n], rsp_data[0..n]);
                             return n;
@@ -252,7 +250,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
             else => self.log_response(rsp),
         }
     }
-    log.err("ioctl: missing response in wait_response", .{});
+    log.err("ioctl: missing response in response_poll", .{});
     return error.Cyw43NoResponse;
 }
 
@@ -432,16 +430,20 @@ fn sleep_ms(self: *Self, delay: u32) void {
     self.bus.sleep_ms(delay);
 }
 
-pub fn recv(self: *Self) !?[]const u8 {
-    while (true) {
-        const rsp = try self.read_packet() orelse return null;
-        switch (rsp.sdp.chan) {
-            .data => return rsp.data(),
-            else => self.log_response(rsp),
-        }
-    }
-}
-
+/// buffer.len should be 1540 bytes. Last 4 bytes are for the status which is
+/// writen after each read. 22 bytes at the start is bus header, 18 bytes header
+/// + 4 bytes padding. After that is layer 2, ethernet, packet; 14 bytes of
+/// ethernet header and 1500 bytes of layer 3 mtu.
+///
+///   22 bytes bus header (18 + padding)
+///   14 bytes ethernet header
+/// 1500 bytes layer 3 mtu
+///    4 bytes status
+/// 1540 bytes total
+///
+/// Layer 2 header+payload position is passed to the caller. First return
+/// argumen is start of that data in the buffer seconds is length.
+///
 pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
     while (true) {
         const rsp = try self.read(buffer) orelse return null;
@@ -452,37 +454,30 @@ pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
     }
 }
 
-// buffer content:
-// - 4 bytes (1 word) reserved for ioctl command
-// - 18 bytes bus header:
-//     12 bytes sdp header
-//      2 bytes padding (aligns ethernet to 4 bytes)
-//      4 bytes cdc header
-//      -- after this align is 2
-// - 14 bytes ethernet header
-//      -- align 4
-// - 1500 bytes of MTU
-//      20 bytes ip header    | 28 bytes arp header | 20 bytes ip           |   20 bytes ip
-//       8 bytes udp header   |                     |  8 bytes icmp header  |   20 bytes tcp header
-//    1472 bytes payload      |                     |                       | 1460 tcp payload
-//
-// eth_frame is layer2 packet, contains ethernet header, ip header, protocol header and payload
+/// Buffer has to have 22 bytes headroom for ioctl command (4 bytes) and bus
+/// header (18 bytes). After that layer 2 should be prepared, 14 bytes ethernet
+/// header and up to 1500 bytes layer 3 mtu.
+///
+///    22 bytes headroom for ioctl command and bus header
+///    14 bytes ethernet header
+///  1500 bytes layer 3 mtu
+///  1536 bytes total
+///
+/// Buffer has to be 4 bytes aligned and it will be extended in as_words to the
+/// word boundary!
+pub fn send_zc(self: *Self, buffer: []u8) !void {
+    if (!self.has_credit()) return error.Cyw43NoCredit;
 
-pub fn send_zc(self: *Self, bytes: []u8) !void {
-    const eth_frame_len = bytes.len - 22;
+    const eth_frame_len = buffer.len - 22;
     // add bus header
     self.tx_sequence +%= 1;
-    bytes[4..][0..18].* = ioctl.tx_header(@intCast(eth_frame_len), self.tx_sequence);
+    buffer[4..][0..18].* = ioctl.tx_header(@intCast(eth_frame_len), self.tx_sequence);
 
     // bus write
     const bytes_len = 18 + eth_frame_len;
     const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
 
-    var words: []u32 = undefined;
-    words.ptr = @ptrCast(@alignCast(@constCast(bytes.ptr)));
-    words.len = words_len;
-
-    self.bus.write(.wlan, 0, @intCast(bytes_len), words);
+    self.bus.write(.wlan, 0, @intCast(bytes_len), as_words(buffer, words_len));
 }
 
 pub fn has_credit(self: *Self) bool {
@@ -497,11 +492,7 @@ fn read(self: *Self, buffer: []u8) !?ioctl.Response {
     self.status = null;
     if (status.f2_packet_available and status.packet_length > 0) {
         const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
-
-        // TODO: extract into function
-        var words: []u32 = undefined;
-        words.ptr = @ptrCast(@alignCast(@constCast(buffer.ptr)));
-        words.len = words_len;
+        const words = as_words(buffer, words_len);
 
         self.bus.read(.wlan, 0, status.packet_length, words);
         // last word is status
@@ -513,6 +504,13 @@ fn read(self: *Self, buffer: []u8) !?ioctl.Response {
         return rsp;
     }
     return null;
+}
+
+fn as_words(bytes: []u8, len: usize) []u32 {
+    var words: []u32 = undefined;
+    words.ptr = @ptrCast(@alignCast(@constCast(bytes.ptr)));
+    words.len = len;
+    return words;
 }
 
 fn read_status(self: *Self) void {

@@ -5,23 +5,24 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const pio = rp2xxx.pio;
 const drivers = microzig.hal.drivers;
-const interrupt = microzig.cpu.interrupt;
+
+const Net = @import("lwip.zig");
+comptime {
+    _ = @import("lwip_exports.zig");
+}
+const Udp = Net.Udp;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-const Net = @import("lwip.zig");
-const Udp = Net.Udp;
-
-const log = std.log.scoped(.main);
-
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
 };
+
+const log = std.log.scoped(.main);
 
 var wifi_driver: drivers.WiFi = .{};
 var net: Net = undefined;
@@ -84,11 +85,7 @@ pub fn main() !void {
     rp2xxx.rom.reset_to_usb_boot();
 }
 
-export fn sys_now() u32 {
-    const ts = time.get_time_since_boot();
-    return @truncate(ts.to_us() / 1000);
-}
-
+// Puts pico in bootsel mode by uart command.
 fn uart_read() !void {
     const MAGICREBOOTCODE: u8 = 0xAB;
     const v = uart.read_word() catch {

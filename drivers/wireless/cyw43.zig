@@ -66,16 +66,6 @@ pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
     return self.wifi.recv_zc(bytes);
 }
 
-// tx: 4 ioctl cmd + 18 bus header + 14 ethernet header + 1500 MTU = 1536
-// rx: 22 bus (18 + 4 padding) + 14 ethernet header + 1500 MTU = 1536 bytes + 4 bytes status
-// aligned to 4 bytes for dma = 1536 / 4 + 1 = 385 u32 words
-
-// data is network header + payload, network header is
-//   UDP  : 14 (Eth) + 20 (IPv4) + 8 (UDP)  = 42 bytes
-//   ICMP : 14 (Eth) + 20 (IPv4) + 8 (ICMP) = 42 bytes
-//   ARP  : 14 (Eth) + 28 (ARP)             = 42 bytes
-//
-
 pub fn send_zc(ptr: *anyopaque, bytes: []u8) anyerror!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     try self.wifi.send_zc(bytes);
