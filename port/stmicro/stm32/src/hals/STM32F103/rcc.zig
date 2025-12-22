@@ -122,31 +122,20 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
     secure_enable();
     set_flash(latency, prefetch);
 
-    hse_config: {
-        if (config.EnableHSE) |en| {
-            switch (en) {
-                .true => {
-                    const timout = if (config.HSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
-                    try enable_hse(config.flags.HSEByPass, timout);
-                    break :hse_config;
-                },
-                else => {},
-            }
-        }
+    if (config.flags.EnableHSE) {
+        const timout = if (config.HSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+        try enable_hse(config.flags.HSEByPass, timout);
+    } else {
         disable_hse();
     }
 
-    pll_config: {
-        if (config.PLLUsed) |en| {
-            if (en != 0) {
-                const source: PLLSRC = if (config.PLLSource) |src| @enumFromInt(@as(u1, @intFromEnum(src))) else PLLSRC.HSI_Div2;
-                const mul: PLLMUL = if (config.PLLMUL) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else PLLMUL.Mul2;
-                const pre_div: PLLXTPRE = if (config.HSEDivPLL) |pre| @enumFromInt(@as(u1, @intFromEnum(pre))) else PLLXTPRE.Div1;
-                config_pll(source, mul, pre_div);
-                enable_pll();
-                break :pll_config;
-            }
-        }
+    if (config.flags.PLLUsed) {
+        const source: PLLSRC = if (config.PLLSource) |src| @enumFromInt(@as(u1, @intFromEnum(src))) else PLLSRC.HSI_Div2;
+        const mul: PLLMUL = if (config.PLLMUL) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else PLLMUL.Mul2;
+        const pre_div: PLLXTPRE = if (config.HSEDivPLL) |pre| @enumFromInt(@as(u1, @intFromEnum(pre))) else PLLXTPRE.Div1;
+        config_pll(source, mul, pre_div);
+        enable_pll();
+    } else {
         disable_pll();
     }
 
@@ -154,65 +143,42 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
 
     //BACKUP DOMAIN CLOCK CONFIG
 
-    lse_config: {
-        if (config.EnableLSE) |en| {
-            switch (en) {
-                .true => {
-                    const timeout = if (config.LSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
-                    const bypass = config.flags.LSEByPass;
-                    try enable_lse(timeout, bypass);
-                    break :lse_config;
-                },
-                else => {},
-            }
-        }
+    if (config.flags.EnableLSE) {
+        const timeout = if (config.LSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+        const bypass = config.flags.LSEByPass;
+        try enable_lse(timeout, bypass);
+    } else {
         disable_lse();
     }
 
-    lsi_config: {
-        if (config.LSIUsed) |en| {
-            set_lsi(en != 0);
-            break :lsi_config;
-        }
-        set_lsi(false);
-    }
+    set_lsi(config.flags.LSIUsed);
 
     rtc_config: {
-        if (config.RTCEnable) |en| {
-            switch (en) {
-                .true => {
-                    if (config.RTCClockSelection) |s| {
-                        const source = switch (s) {
-                            .RCC_RTCCLKSOURCE_HSE_DIV128 => RTCSEL.HSE,
-                            .RCC_RTCCLKSOURCE_LSE => RTCSEL.LSE,
-                            .RCC_RTCCLKSOURCE_LSI => RTCSEL.LSI,
-                        };
-
-                        config_rtc(source);
-                        break :rtc_config;
-                    }
-                },
-                else => {},
+        if (config.flags.RTCEnable) {
+            if (config.RTCClockSelection) |s| {
+                const source = switch (s) {
+                    .RCC_RTCCLKSOURCE_HSE_DIV128 => RTCSEL.HSE,
+                    .RCC_RTCCLKSOURCE_LSE => RTCSEL.LSE,
+                    .RCC_RTCCLKSOURCE_LSI => RTCSEL.LSI,
+                };
+                config_rtc(source);
+                break :rtc_config;
             }
         }
         config_rtc(.DISABLE);
     }
+
     mco_config: {
-        if (config.MCOEnable) |en| {
-            switch (en) {
-                .true => {
-                    if (config.RCC_MCOSource) |src| {
-                        const source: MCOSEL = switch (src) {
-                            .RCC_MCO1SOURCE_HSE => .HSE,
-                            .RCC_MCO1SOURCE_HSI => .HSI,
-                            .RCC_MCO1SOURCE_PLLCLK => .PLL,
-                            .RCC_MCO1SOURCE_SYSCLK => .SYS,
-                        };
-                        config_mco(source);
-                        break :mco_config;
-                    }
-                },
-                else => {},
+        if (config.flags.MCOEnable) {
+            if (config.RCC_MCOSource) |src| {
+                const source: MCOSEL = switch (src) {
+                    .RCC_MCO1SOURCE_HSE => .HSE,
+                    .RCC_MCO1SOURCE_HSI => .HSI,
+                    .RCC_MCO1SOURCE_PLLCLK => .PLL,
+                    .RCC_MCO1SOURCE_SYSCLK => .SYS,
+                };
+                config_mco(source);
+                break :mco_config;
             }
         }
         config_mco(.DISABLE);
@@ -223,16 +189,10 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
 
     //in case of HSI not used, we have to disable it here
     //becuse the system clock configuration 'secure_enable' enables it by default
-    hsi_config: {
-        if (config.HSIUsed) |en| {
-            set_hsi(en != 0);
-            if (config.HSICalibrationValue) |val| {
-                calib_hsi(@intFromFloat(val));
-            }
-            break :hsi_config;
-        }
-        set_hsi(false);
+    if (config.HSICalibrationValue) |val| {
+        calib_hsi(@intFromFloat(val));
     }
+    set_hsi(config.flags.HSIUsed);
 }
 
 pub inline fn set_flash(latency: flash_v1.LATENCY, prefetch: bool) void {
