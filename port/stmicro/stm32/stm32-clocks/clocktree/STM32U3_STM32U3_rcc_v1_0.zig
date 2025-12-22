@@ -1043,10 +1043,100 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             TimPrescOut2: f32 = 0,
             LSIclk: f32 = 0,
         };
+        /// Flag Configuration output after processing the clock tree.
+        pub const Flag_Output = struct {
+            HSEByPass: bool = false,
+            HSEDIGByPass: bool = false,
+            HSEOscillator: bool = false,
+            LSEByPass: bool = false,
+            LSEOscillator: bool = false,
+            LSEByPassRTC: bool = false,
+            LSEOscillatorRTC: bool = false,
+            MCOConfig: bool = false,
+            MCO2Config: bool = false,
+            LSCOConfig: bool = false,
+            SAI1EXTCLK: bool = false,
+            CRSActivatedSourceGPIO: bool = false,
+            CRSActivatedSourceLSE: bool = false,
+            CRSActivatedSourceUSB: bool = false,
+            LCDEnable: bool = false,
+            USE_ADC1: bool = false,
+            USE_ADC2: bool = false,
+            SAI1_SAIBUsed_ForRCC: bool = false,
+            SAI1_SAIAUsed_ForRCC: bool = false,
+            USB_OTG_FS_Used: bool = false,
+            USB_Used: bool = false,
+            SDMMC1_Used: bool = false,
+            SDMMC2_Used: bool = false,
+            RTC_Used: bool = false,
+            LPTIM4_Used: bool = false,
+            LPTIM3_Used: bool = false,
+            OCTOSPI1_Used: bool = false,
+            ADF1_Used: bool = false,
+            I2C3_Used: bool = false,
+            I2C2_Used: bool = false,
+            I3C2_Used: bool = false,
+            I3C1_Used: bool = false,
+            RNG_Used: bool = false,
+            SPI1_Used: bool = false,
+            SPI3_Used: bool = false,
+            SPI2_Used: bool = false,
+            IWDG_Used: bool = false,
+            USART1_Used: bool = false,
+            USART3_Used: bool = false,
+            UART4_Used: bool = false,
+            UART5_Used: bool = false,
+            LPUART1_Used: bool = false,
+            LPTIM1_Used: bool = false,
+            LPTIM2_Used: bool = false,
+            FDCAN1_Used: bool = false,
+            I2C1_Used: bool = false,
+            ADC1UsedAsynchronousCLK_ForRCC: bool = false,
+            ADC2UsedAsynchronousCLK_ForRCC: bool = false,
+            EnableCRS: bool = false,
+            MCOEnable: bool = false,
+            MCO2Enable: bool = false,
+            USBEnable: bool = false,
+            RNGEnable: bool = false,
+            LSIEnable: bool = false,
+            EnableExtClockForSAI1: bool = false,
+            SPI1Enable: bool = false,
+            SPI3Enable: bool = false,
+            SPI2Enable: bool = false,
+            EnableHSERTCDevisor: bool = false,
+            RTCEnable: bool = false,
+            IWDGEnable: bool = false,
+            USART1Enable: bool = false,
+            USART3Enable: bool = false,
+            UART4Enable: bool = false,
+            ADCEnable: bool = false,
+            DACEnable: bool = false,
+            UART5Enable: bool = false,
+            LPUART1Enable: bool = false,
+            LPTIM1Enable: bool = false,
+            LPTIM2Enable: bool = false,
+            SDMMCEnable: bool = false,
+            FDCANEnable: bool = false,
+            I2C1Enable: bool = false,
+            I3C1Enable: bool = false,
+            I3C2Enable: bool = false,
+            I2C2Enable: bool = false,
+            I2C3Enable: bool = false,
+            SAI1Enable: bool = false,
+            ADF1Enable: bool = false,
+            OCTOSPIMEnable: bool = false,
+            LPTIM3Enable: bool = false,
+            LSCOEnable: bool = false,
+            LSEUsed: bool = false,
+            EnableCSSLSE: bool = false,
+            MSIUsed: bool = false,
+            MSIKUsed: bool = false,
+            MSISUsed: bool = false,
+        };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
         pub const Config_Output = struct {
-            flags: Flags = .{},
+            flags: Flag_Output = .{},
             HSI_VALUE: ?f32 = null, //from RCC Clock Config
             HSI48_VALUE: ?f32 = null, //from RCC Clock Config
             HSE_VALUE: ?f32 = null, //from RCC Clock Config
@@ -1120,49 +1210,10 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             HSE_Timout: ?f32 = null, //from RCC Advanced Config
             LSE_Timout: ?f32 = null, //from RCC Advanced Config
             LSE_Drive_Capability: ?LSE_Drive_CapabilityList = null, //from RCC Advanced Config
-            EnableCRS: ?EnableCRSList = null, //from extra RCC references
-            MCOEnable: ?MCOEnableList = null, //from extra RCC references
-            MCO2Enable: ?MCO2EnableList = null, //from extra RCC references
-            USBEnable: ?USBEnableList = null, //from extra RCC references
-            RNGEnable: ?RNGEnableList = null, //from extra RCC references
-            LSIEnable: ?LSIEnableList = null, //from extra RCC references
-            EnableExtClockForSAI1: ?EnableExtClockForSAI1List = null, //from extra RCC references
-            SPI1Enable: ?SPI1EnableList = null, //from extra RCC references
-            SPI3Enable: ?SPI3EnableList = null, //from extra RCC references
-            SPI2Enable: ?SPI2EnableList = null, //from extra RCC references
-            EnableHSERTCDevisor: ?EnableHSERTCDevisorList = null, //from extra RCC references
-            RTCEnable: ?RTCEnableList = null, //from extra RCC references
-            IWDGEnable: ?IWDGEnableList = null, //from extra RCC references
-            USART1Enable: ?USART1EnableList = null, //from extra RCC references
-            USART3Enable: ?USART3EnableList = null, //from extra RCC references
-            UART4Enable: ?UART4EnableList = null, //from extra RCC references
-            ADCEnable: ?ADCEnableList = null, //from extra RCC references
-            DACEnable: ?DACEnableList = null, //from extra RCC references
-            UART5Enable: ?UART5EnableList = null, //from extra RCC references
-            LPUART1Enable: ?LPUART1EnableList = null, //from extra RCC references
-            LPTIM1Enable: ?LPTIM1EnableList = null, //from extra RCC references
-            LPTIM2Enable: ?LPTIM2EnableList = null, //from extra RCC references
-            SDMMCEnable: ?SDMMCEnableList = null, //from extra RCC references
-            FDCANEnable: ?FDCANEnableList = null, //from extra RCC references
-            I2C1Enable: ?I2C1EnableList = null, //from extra RCC references
-            I3C1Enable: ?I3C1EnableList = null, //from extra RCC references
-            I3C2Enable: ?I3C2EnableList = null, //from extra RCC references
-            I2C2Enable: ?I2C2EnableList = null, //from extra RCC references
-            I2C3Enable: ?I2C3EnableList = null, //from extra RCC references
-            SAI1Enable: ?SAI1EnableList = null, //from extra RCC references
-            ADF1Enable: ?ADF1EnableList = null, //from extra RCC references
-            OCTOSPIMEnable: ?OCTOSPIMEnableList = null, //from extra RCC references
-            LPTIM3Enable: ?LPTIM3EnableList = null, //from extra RCC references
-            LSCOEnable: ?LSCOEnableList = null, //from extra RCC references
             LSEState: ?LSEStateList = null, //from extra RCC references
-            LSEUsed: ?f32 = null, //from extra RCC references
-            EnableCSSLSE: ?EnableCSSLSEList = null, //from RCC Advanced Config
             CortexCLockSelectionVirtual: ?CortexCLockSelectionVirtualList = null, //from extra RCC references
             LSCOSource1Virtual: ?LSCOSource1VirtualList = null, //from extra RCC references
             DACCLockSelectionVirtual: ?DACCLockSelectionVirtualList = null, //from extra RCC references
-            MSIUsed: ?f32 = null, //from extra RCC references
-            MSIKUsed: ?f32 = null, //from extra RCC references
-            MSISUsed: ?f32 = null, //from extra RCC references
         };
 
         pub const Tree_Output = struct {
@@ -1177,7 +1228,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             if (@inComptime()) @setEvalBranchQuota(10000);
             var out = Clock_Output{};
             var ref_out = Config_Output{};
-            ref_out.flags = config.flags;
 
             //Semaphores flags
 
@@ -6149,49 +6199,97 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.HSE_Timout = HSE_TimoutValue;
             ref_out.LSE_Timout = LSE_TimoutValue;
             ref_out.LSE_Drive_Capability = LSE_Drive_CapabilityValue;
-            ref_out.EnableCRS = EnableCRSValue;
-            ref_out.MCOEnable = MCOEnableValue;
-            ref_out.MCO2Enable = MCO2EnableValue;
-            ref_out.USBEnable = USBEnableValue;
-            ref_out.RNGEnable = RNGEnableValue;
-            ref_out.LSIEnable = LSIEnableValue;
-            ref_out.EnableExtClockForSAI1 = EnableExtClockForSAI1Value;
-            ref_out.SPI1Enable = SPI1EnableValue;
-            ref_out.SPI3Enable = SPI3EnableValue;
-            ref_out.SPI2Enable = SPI2EnableValue;
-            ref_out.EnableHSERTCDevisor = EnableHSERTCDevisorValue;
-            ref_out.RTCEnable = RTCEnableValue;
-            ref_out.IWDGEnable = IWDGEnableValue;
-            ref_out.USART1Enable = USART1EnableValue;
-            ref_out.USART3Enable = USART3EnableValue;
-            ref_out.UART4Enable = UART4EnableValue;
-            ref_out.ADCEnable = ADCEnableValue;
-            ref_out.DACEnable = DACEnableValue;
-            ref_out.UART5Enable = UART5EnableValue;
-            ref_out.LPUART1Enable = LPUART1EnableValue;
-            ref_out.LPTIM1Enable = LPTIM1EnableValue;
-            ref_out.LPTIM2Enable = LPTIM2EnableValue;
-            ref_out.SDMMCEnable = SDMMCEnableValue;
-            ref_out.FDCANEnable = FDCANEnableValue;
-            ref_out.I2C1Enable = I2C1EnableValue;
-            ref_out.I3C1Enable = I3C1EnableValue;
-            ref_out.I3C2Enable = I3C2EnableValue;
-            ref_out.I2C2Enable = I2C2EnableValue;
-            ref_out.I2C3Enable = I2C3EnableValue;
-            ref_out.SAI1Enable = SAI1EnableValue;
-            ref_out.ADF1Enable = ADF1EnableValue;
-            ref_out.OCTOSPIMEnable = OCTOSPIMEnableValue;
-            ref_out.LPTIM3Enable = LPTIM3EnableValue;
-            ref_out.LSCOEnable = LSCOEnableValue;
             ref_out.LSEState = LSEStateValue;
-            ref_out.LSEUsed = LSEUsedValue;
-            ref_out.EnableCSSLSE = EnableCSSLSEValue;
             ref_out.CortexCLockSelectionVirtual = CortexCLockSelectionVirtualValue;
             ref_out.LSCOSource1Virtual = LSCOSource1VirtualValue;
             ref_out.DACCLockSelectionVirtual = DACCLockSelectionVirtualValue;
-            ref_out.MSIUsed = MSIUsedValue;
-            ref_out.MSIKUsed = MSIKUsedValue;
-            ref_out.MSISUsed = MSISUsedValue;
+            ref_out.flags.HSEByPass = config.flags.HSEByPass;
+            ref_out.flags.HSEDIGByPass = config.flags.HSEDIGByPass;
+            ref_out.flags.HSEOscillator = config.flags.HSEOscillator;
+            ref_out.flags.LSEByPass = config.flags.LSEByPass;
+            ref_out.flags.LSEOscillator = config.flags.LSEOscillator;
+            ref_out.flags.LSEByPassRTC = config.flags.LSEByPassRTC;
+            ref_out.flags.LSEOscillatorRTC = config.flags.LSEOscillatorRTC;
+            ref_out.flags.MCOConfig = config.flags.MCOConfig;
+            ref_out.flags.MCO2Config = config.flags.MCO2Config;
+            ref_out.flags.LSCOConfig = config.flags.LSCOConfig;
+            ref_out.flags.SAI1EXTCLK = config.flags.SAI1EXTCLK;
+            ref_out.flags.CRSActivatedSourceGPIO = config.flags.CRSActivatedSourceGPIO;
+            ref_out.flags.CRSActivatedSourceLSE = config.flags.CRSActivatedSourceLSE;
+            ref_out.flags.CRSActivatedSourceUSB = config.flags.CRSActivatedSourceUSB;
+            ref_out.flags.LCDEnable = config.flags.LCDEnable;
+            ref_out.flags.USE_ADC1 = config.flags.USE_ADC1;
+            ref_out.flags.USE_ADC2 = config.flags.USE_ADC2;
+            ref_out.flags.SAI1_SAIBUsed_ForRCC = config.flags.SAI1_SAIBUsed_ForRCC;
+            ref_out.flags.SAI1_SAIAUsed_ForRCC = config.flags.SAI1_SAIAUsed_ForRCC;
+            ref_out.flags.USB_OTG_FS_Used = config.flags.USB_OTG_FS_Used;
+            ref_out.flags.USB_Used = config.flags.USB_Used;
+            ref_out.flags.SDMMC1_Used = config.flags.SDMMC1_Used;
+            ref_out.flags.SDMMC2_Used = config.flags.SDMMC2_Used;
+            ref_out.flags.RTC_Used = config.flags.RTC_Used;
+            ref_out.flags.LPTIM4_Used = config.flags.LPTIM4_Used;
+            ref_out.flags.LPTIM3_Used = config.flags.LPTIM3_Used;
+            ref_out.flags.OCTOSPI1_Used = config.flags.OCTOSPI1_Used;
+            ref_out.flags.ADF1_Used = config.flags.ADF1_Used;
+            ref_out.flags.I2C3_Used = config.flags.I2C3_Used;
+            ref_out.flags.I2C2_Used = config.flags.I2C2_Used;
+            ref_out.flags.I3C2_Used = config.flags.I3C2_Used;
+            ref_out.flags.I3C1_Used = config.flags.I3C1_Used;
+            ref_out.flags.RNG_Used = config.flags.RNG_Used;
+            ref_out.flags.SPI1_Used = config.flags.SPI1_Used;
+            ref_out.flags.SPI3_Used = config.flags.SPI3_Used;
+            ref_out.flags.SPI2_Used = config.flags.SPI2_Used;
+            ref_out.flags.IWDG_Used = config.flags.IWDG_Used;
+            ref_out.flags.USART1_Used = config.flags.USART1_Used;
+            ref_out.flags.USART3_Used = config.flags.USART3_Used;
+            ref_out.flags.UART4_Used = config.flags.UART4_Used;
+            ref_out.flags.UART5_Used = config.flags.UART5_Used;
+            ref_out.flags.LPUART1_Used = config.flags.LPUART1_Used;
+            ref_out.flags.LPTIM1_Used = config.flags.LPTIM1_Used;
+            ref_out.flags.LPTIM2_Used = config.flags.LPTIM2_Used;
+            ref_out.flags.FDCAN1_Used = config.flags.FDCAN1_Used;
+            ref_out.flags.I2C1_Used = config.flags.I2C1_Used;
+            ref_out.flags.ADC1UsedAsynchronousCLK_ForRCC = config.flags.ADC1UsedAsynchronousCLK_ForRCC;
+            ref_out.flags.ADC2UsedAsynchronousCLK_ForRCC = config.flags.ADC2UsedAsynchronousCLK_ForRCC;
+            ref_out.flags.EnableCRS = check_ref(?EnableCRSList, EnableCRSValue, .true, .@"=");
+            ref_out.flags.MCOEnable = check_ref(?MCOEnableList, MCOEnableValue, .true, .@"=");
+            ref_out.flags.MCO2Enable = check_ref(?MCO2EnableList, MCO2EnableValue, .true, .@"=");
+            ref_out.flags.USBEnable = check_ref(?USBEnableList, USBEnableValue, .true, .@"=");
+            ref_out.flags.RNGEnable = check_ref(?RNGEnableList, RNGEnableValue, .true, .@"=");
+            ref_out.flags.LSIEnable = check_ref(?LSIEnableList, LSIEnableValue, .true, .@"=");
+            ref_out.flags.EnableExtClockForSAI1 = check_ref(?EnableExtClockForSAI1List, EnableExtClockForSAI1Value, .true, .@"=");
+            ref_out.flags.SPI1Enable = check_ref(?SPI1EnableList, SPI1EnableValue, .true, .@"=");
+            ref_out.flags.SPI3Enable = check_ref(?SPI3EnableList, SPI3EnableValue, .true, .@"=");
+            ref_out.flags.SPI2Enable = check_ref(?SPI2EnableList, SPI2EnableValue, .true, .@"=");
+            ref_out.flags.EnableHSERTCDevisor = check_ref(?EnableHSERTCDevisorList, EnableHSERTCDevisorValue, .true, .@"=");
+            ref_out.flags.RTCEnable = check_ref(?RTCEnableList, RTCEnableValue, .true, .@"=");
+            ref_out.flags.IWDGEnable = check_ref(?IWDGEnableList, IWDGEnableValue, .true, .@"=");
+            ref_out.flags.USART1Enable = check_ref(?USART1EnableList, USART1EnableValue, .true, .@"=");
+            ref_out.flags.USART3Enable = check_ref(?USART3EnableList, USART3EnableValue, .true, .@"=");
+            ref_out.flags.UART4Enable = check_ref(?UART4EnableList, UART4EnableValue, .true, .@"=");
+            ref_out.flags.ADCEnable = check_ref(?ADCEnableList, ADCEnableValue, .true, .@"=");
+            ref_out.flags.DACEnable = check_ref(?DACEnableList, DACEnableValue, .true, .@"=");
+            ref_out.flags.UART5Enable = check_ref(?UART5EnableList, UART5EnableValue, .true, .@"=");
+            ref_out.flags.LPUART1Enable = check_ref(?LPUART1EnableList, LPUART1EnableValue, .true, .@"=");
+            ref_out.flags.LPTIM1Enable = check_ref(?LPTIM1EnableList, LPTIM1EnableValue, .true, .@"=");
+            ref_out.flags.LPTIM2Enable = check_ref(?LPTIM2EnableList, LPTIM2EnableValue, .true, .@"=");
+            ref_out.flags.SDMMCEnable = check_ref(?SDMMCEnableList, SDMMCEnableValue, .true, .@"=");
+            ref_out.flags.FDCANEnable = check_ref(?FDCANEnableList, FDCANEnableValue, .true, .@"=");
+            ref_out.flags.I2C1Enable = check_ref(?I2C1EnableList, I2C1EnableValue, .true, .@"=");
+            ref_out.flags.I3C1Enable = check_ref(?I3C1EnableList, I3C1EnableValue, .true, .@"=");
+            ref_out.flags.I3C2Enable = check_ref(?I3C2EnableList, I3C2EnableValue, .true, .@"=");
+            ref_out.flags.I2C2Enable = check_ref(?I2C2EnableList, I2C2EnableValue, .true, .@"=");
+            ref_out.flags.I2C3Enable = check_ref(?I2C3EnableList, I2C3EnableValue, .true, .@"=");
+            ref_out.flags.SAI1Enable = check_ref(?SAI1EnableList, SAI1EnableValue, .true, .@"=");
+            ref_out.flags.ADF1Enable = check_ref(?ADF1EnableList, ADF1EnableValue, .true, .@"=");
+            ref_out.flags.OCTOSPIMEnable = check_ref(?OCTOSPIMEnableList, OCTOSPIMEnableValue, .true, .@"=");
+            ref_out.flags.LPTIM3Enable = check_ref(?LPTIM3EnableList, LPTIM3EnableValue, .true, .@"=");
+            ref_out.flags.LSCOEnable = check_ref(?LSCOEnableList, LSCOEnableValue, .true, .@"=");
+            ref_out.flags.LSEUsed = check_ref(?f32, LSEUsedValue, 1, .@"=");
+            ref_out.flags.EnableCSSLSE = check_ref(?EnableCSSLSEList, EnableCSSLSEValue, .true, .@"=");
+            ref_out.flags.MSIUsed = check_ref(?f32, MSIUsedValue, 1, .@"=");
+            ref_out.flags.MSIKUsed = check_ref(?f32, MSIKUsedValue, 1, .@"=");
+            ref_out.flags.MSISUsed = check_ref(?f32, MSISUsedValue, 1, .@"=");
             return Tree_Output{
                 .clock = out,
                 .config = ref_out,

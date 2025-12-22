@@ -395,10 +395,43 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             MCODiv: f32 = 0,
             MCOPin: f32 = 0,
         };
+        /// Flag Configuration output after processing the clock tree.
+        pub const Flag_Output = struct {
+            HSEOscillator: bool = false,
+            LSEByPass: bool = false,
+            LSEOscillator: bool = false,
+            MCOConfig: bool = false,
+            LSCOConfig: bool = false,
+            RTCUsed_ForRCC: bool = false,
+            IWDGUsed_ForRCC: bool = false,
+            MR_BLE_Used: bool = false,
+            ADC_Used: bool = false,
+            LCSC_Used: bool = false,
+            LCD_Used: bool = false,
+            LPAWUR_Used: bool = false,
+            LPUART1_Used: bool = false,
+            SPI3_Used: bool = false,
+            I2S3_Used: bool = false,
+            MRSUBG_Used: bool = false,
+            EnableHSE: bool = false,
+            LPUART1Enable: bool = false,
+            LSCOEnable: bool = false,
+            SysSourceHSEEnable: bool = false,
+            SYSCLK64Enable: bool = false,
+            SPI3Enable: bool = false,
+            RTCEnable: bool = false,
+            IWDGEnable: bool = false,
+            MRSUBGEnable: bool = false,
+            LPAWUREnable: bool = false,
+            LCDEnable: bool = false,
+            LCSCEnable: bool = false,
+            MCOEnable: bool = false,
+            HSIUsed: bool = false,
+        };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
         pub const Config_Output = struct {
-            flags: Flags = .{},
+            flags: Flag_Output = .{},
             HSI_VALUE: ?f32 = null, //from RCC Clock Config
             PLL64_VALUE: ?f32 = null, //from RCC Clock Config
             HSE_VALUE: ?HSE_VALUEList = null, //from RCC Clock Config
@@ -436,20 +469,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             HSE_Timout: ?f32 = null, //from RCC Advanced Config
             LSE_Timout: ?f32 = null, //from RCC Advanced Config
             LSE_Drive_Capability: ?LSE_Drive_CapabilityList = null, //from RCC Advanced Config
-            EnableHSE: ?EnableHSEList = null, //from extra RCC references
-            LPUART1Enable: ?LPUART1EnableList = null, //from extra RCC references
-            LSCOEnable: ?LSCOEnableList = null, //from extra RCC references
-            SysSourceHSEEnable: ?SysSourceHSEEnableList = null, //from extra RCC references
-            SYSCLK64Enable: ?SYSCLK64EnableList = null, //from extra RCC references
-            SPI3Enable: ?SPI3EnableList = null, //from extra RCC references
-            RTCEnable: ?RTCEnableList = null, //from extra RCC references
-            IWDGEnable: ?IWDGEnableList = null, //from extra RCC references
-            MRSUBGEnable: ?MRSUBGEnableList = null, //from extra RCC references
-            LPAWUREnable: ?LPAWUREnableList = null, //from extra RCC references
-            LCDEnable: ?LCDEnableList = null, //from extra RCC references
-            LCSCEnable: ?LCSCEnableList = null, //from extra RCC references
-            MCOEnable: ?MCOEnableList = null, //from extra RCC references
-            HSIUsed: ?f32 = null, //from extra RCC references
         };
 
         pub const Tree_Output = struct {
@@ -464,7 +483,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             if (@inComptime()) @setEvalBranchQuota(10000);
             var out = Clock_Output{};
             var ref_out = Config_Output{};
-            ref_out.flags = config.flags;
 
             //Semaphores flags
 
@@ -2211,20 +2229,36 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.HSE_Timout = HSE_TimoutValue;
             ref_out.LSE_Timout = LSE_TimoutValue;
             ref_out.LSE_Drive_Capability = LSE_Drive_CapabilityValue;
-            ref_out.EnableHSE = EnableHSEValue;
-            ref_out.LPUART1Enable = LPUART1EnableValue;
-            ref_out.LSCOEnable = LSCOEnableValue;
-            ref_out.SysSourceHSEEnable = SysSourceHSEEnableValue;
-            ref_out.SYSCLK64Enable = SYSCLK64EnableValue;
-            ref_out.SPI3Enable = SPI3EnableValue;
-            ref_out.RTCEnable = RTCEnableValue;
-            ref_out.IWDGEnable = IWDGEnableValue;
-            ref_out.MRSUBGEnable = MRSUBGEnableValue;
-            ref_out.LPAWUREnable = LPAWUREnableValue;
-            ref_out.LCDEnable = LCDEnableValue;
-            ref_out.LCSCEnable = LCSCEnableValue;
-            ref_out.MCOEnable = MCOEnableValue;
-            ref_out.HSIUsed = HSIUsedValue;
+            ref_out.flags.HSEOscillator = config.flags.HSEOscillator;
+            ref_out.flags.LSEByPass = config.flags.LSEByPass;
+            ref_out.flags.LSEOscillator = config.flags.LSEOscillator;
+            ref_out.flags.MCOConfig = config.flags.MCOConfig;
+            ref_out.flags.LSCOConfig = config.flags.LSCOConfig;
+            ref_out.flags.RTCUsed_ForRCC = config.flags.RTCUsed_ForRCC;
+            ref_out.flags.IWDGUsed_ForRCC = config.flags.IWDGUsed_ForRCC;
+            ref_out.flags.MR_BLE_Used = config.flags.MR_BLE_Used;
+            ref_out.flags.ADC_Used = config.flags.ADC_Used;
+            ref_out.flags.LCSC_Used = config.flags.LCSC_Used;
+            ref_out.flags.LCD_Used = config.flags.LCD_Used;
+            ref_out.flags.LPAWUR_Used = config.flags.LPAWUR_Used;
+            ref_out.flags.LPUART1_Used = config.flags.LPUART1_Used;
+            ref_out.flags.SPI3_Used = config.flags.SPI3_Used;
+            ref_out.flags.I2S3_Used = config.flags.I2S3_Used;
+            ref_out.flags.MRSUBG_Used = config.flags.MRSUBG_Used;
+            ref_out.flags.EnableHSE = check_ref(?EnableHSEList, EnableHSEValue, .true, .@"=");
+            ref_out.flags.LPUART1Enable = check_ref(?LPUART1EnableList, LPUART1EnableValue, .true, .@"=");
+            ref_out.flags.LSCOEnable = check_ref(?LSCOEnableList, LSCOEnableValue, .true, .@"=");
+            ref_out.flags.SysSourceHSEEnable = check_ref(?SysSourceHSEEnableList, SysSourceHSEEnableValue, .true, .@"=");
+            ref_out.flags.SYSCLK64Enable = check_ref(?SYSCLK64EnableList, SYSCLK64EnableValue, .true, .@"=");
+            ref_out.flags.SPI3Enable = check_ref(?SPI3EnableList, SPI3EnableValue, .true, .@"=");
+            ref_out.flags.RTCEnable = check_ref(?RTCEnableList, RTCEnableValue, .true, .@"=");
+            ref_out.flags.IWDGEnable = check_ref(?IWDGEnableList, IWDGEnableValue, .true, .@"=");
+            ref_out.flags.MRSUBGEnable = check_ref(?MRSUBGEnableList, MRSUBGEnableValue, .true, .@"=");
+            ref_out.flags.LPAWUREnable = check_ref(?LPAWUREnableList, LPAWUREnableValue, .true, .@"=");
+            ref_out.flags.LCDEnable = check_ref(?LCDEnableList, LCDEnableValue, .true, .@"=");
+            ref_out.flags.LCSCEnable = check_ref(?LCSCEnableList, LCSCEnableValue, .true, .@"=");
+            ref_out.flags.MCOEnable = check_ref(?MCOEnableList, MCOEnableValue, .true, .@"=");
+            ref_out.flags.HSIUsed = check_ref(?f32, HSIUsedValue, 1, .@"=");
             return Tree_Output{
                 .clock = out,
                 .config = ref_out,
