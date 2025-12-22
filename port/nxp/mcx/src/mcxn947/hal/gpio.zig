@@ -4,6 +4,7 @@ const syscon = @import("./syscon.zig");
 const chip = microzig.chip;
 
 pub fn num(comptime n: u3, comptime pin: u5) GPIO {
+	// TODO: check unavailable pins
     return @enumFromInt(@as(u8, n) << 5 | pin);
 }
 
@@ -27,8 +28,8 @@ pub const GPIO = enum(u8) {
 
     pub fn put(gpio: GPIO, output: u1) void {
         const regs = gpio.get_regs();
-        // const old: u32 = regs.PDOR.raw;
-        const new = @as(u32, output) << gpio.get_pin();
+
+        const new: u32 = @as(u32, 1) << gpio.get_pin();
         if(output == 1)
             regs.PSOR.write_raw(new)
         else 
@@ -43,9 +44,8 @@ pub const GPIO = enum(u8) {
 
     pub fn toggle(gpio: GPIO) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PTOR.raw;
 
-        regs.PTOR.write_raw(old | gpio.get_mask());
+        regs.PTOR.write_raw(gpio.get_mask());
     }
 
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
@@ -56,6 +56,7 @@ pub const GPIO = enum(u8) {
         regs.PDDR.write_raw((old & ~gpio.get_mask()) | new);
     }
 
+	// TODO: check
     pub fn set_interrupt_config(gpio: GPIO, trigger: InterruptConfig) void {
         const regs = gpio.get_regs();
         const irqc = @as(u32, @intFromEnum(trigger)) << 16;
@@ -64,12 +65,14 @@ pub const GPIO = enum(u8) {
         regs.ICR[gpio.get_pin()].write_raw(irqc | isf);
     }
 
+	// TODO: check
     pub fn get_interrupt_flag(gpio: GPIO) bool {
         const regs = gpio.get_regs();
 
         return regs.ISFR0.raw >> gpio.get_pin() & 1 != 0;
     }
 
+	// TODO: check
     pub fn clear_interrupt_flag(gpio: GPIO) void {
         const regs = gpio.get_regs();
         const old: u32 = regs.ISFR0.raw;
@@ -78,14 +81,9 @@ pub const GPIO = enum(u8) {
     }
 
     fn get_regs(gpio: GPIO) *volatile chip.types.peripherals.GPIO0 {
+		const base: u32 = @intFromPtr(chip.peripherals.GPIO0);
         return switch (gpio.get_n()) {
-            0 => chip.peripherals.GPIO0,
-            // TODO: check if the structures are actually equal
-            1 => @ptrCast(chip.peripherals.GPIO1),
-            2 => @ptrCast(chip.peripherals.GPIO2),
-            3 => @ptrCast(chip.peripherals.GPIO3),
-            4 => @ptrCast(chip.peripherals.GPIO4),
-            5 => @ptrCast(chip.peripherals.GPIO5),
+            0...5 => |i| @ptrFromInt(base + i * @as(u32, 0x2000)),
             else => unreachable
         };
     }
