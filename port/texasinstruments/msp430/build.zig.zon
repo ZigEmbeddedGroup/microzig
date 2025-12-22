@@ -1,0 +1,15 @@
+.{
+    .name = .mz_port_texasinstruments_msp430,
+    .fingerprint = 0x21359f74fc48338b,
+    .version = "0.0.0",
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
