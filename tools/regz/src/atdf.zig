@@ -125,7 +125,11 @@ fn load_param(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
     const value = node.get_attribute("value") orelse return error.MissingParamName;
     const desc = node.get_attribute("caption");
 
-    try db.add_device_property(device_id, .{ .key = name, .value = value, .description = desc });
+    try db.add_device_property(device_id, .{
+        .key = name,
+        .value = value,
+        .description = desc,
+    });
 }
 
 fn load_interrupts(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {

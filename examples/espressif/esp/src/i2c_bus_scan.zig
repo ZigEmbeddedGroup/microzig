@@ -7,7 +7,7 @@ const i2c = esp.i2c;
 const gpio = esp.gpio;
 const peripherals = microzig.chip.peripherals;
 
-const i2c0 = i2c.instance.num(0);
+var i2c0 = i2c.instance.num(0);
 
 const usb_serial_jtag = esp.usb_serial_jtag;
 

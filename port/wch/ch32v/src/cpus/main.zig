@@ -397,11 +397,27 @@ pub const csr = struct {
     pub const Csr = riscv32_common.csr.Csr;
 
     /// Architecture Number Register
+    /// Fields correspond to individual letters. 1=A, 2=B, etc.
     /// Examples:
     /// - 0xDC68D841 - WCH-V2A
     /// - 0xDC68D886 - WCH-V4F
-    pub const marchid = riscv32_common.csr.marchid;
-    pub const mimpid = riscv32_common.csr.mimpid;
+    pub const marchid = Csr(0xF12, packed struct(u32) {
+        version: u4 = 0,
+        serial: u5 = 0,
+        arch: u5 = 0,
+        reserved15: u1 = 0,
+        vendor2: u5 = 0, // 'H'
+        vendor1: u5 = 0, // 'C'
+        vendor0: u5 = 0, // 'W'
+        reserved: u1 = 0,
+    });
+    pub const mimpid = Csr(0xF13, packed struct(u32) {
+        reserved0: u16 = 0,
+        vendor2: u5 = 0, // 'H'
+        vendor1: u5 = 0, // 'C'
+        vendor0: u5 = 0, // 'W'
+        reserved31: u1 = 0,
+    });
 
     /// Machine Mode Status Register
     pub const mstatus = Csr(0x300, packed struct(u32) {
@@ -414,26 +430,29 @@ pub const csr = struct {
         };
 
         /// [2:0] Reserved
-        reserved4: u3 = 0,
+        reserved0: u3 = 0,
         /// [3] Machine mode interrupt enable
         mie: u1,
         /// [6:4] Reserved
-        reserved3: u3 = 0,
+        reserved4: u3 = 0,
         /// [7] Interrupt enable state before entering interrupt
         mpie: u1,
         /// [10:8] Reserved
-        reserved2: u3 = 0,
+        reserved8: u3 = 0,
         /// [12:11] Privileged mode before entering break
         mpp: u2 = 0,
-        /// [14:13] Reserved
-        reserved1: u2 = 0,
         /// [14:13] Floating-point unit status
         /// Valid only for WCH-V4F
+        /// NOTE: reserved on other chips
         fs: Fs = .off,
         /// [31:15] Reserved
-        reserved0: u15 = 0,
+        reserved15: u17 = 0,
     });
-    pub const misa = riscv32_common.csr.misa;
+    pub const misa = Csr(0x301, packed struct(u32) {
+        extensions: u26 = 0,
+        reserved26: u4 = 0,
+        mxl: u2 = 0,
+    });
     /// Machine Mode Exception Base Address Register
     pub const mtvec = Csr(0x305, packed struct(u32) {
         /// [0] Mode 0
@@ -463,7 +482,15 @@ pub const csr = struct {
     pub const pmpaddr2 = riscv32_common.csr.pmpaddr2;
     pub const pmpaddr3 = riscv32_common.csr.pmpaddr3;
 
-    pub const fcsr = riscv32_common.csr.fcsr;
+    pub const fcsr = Csr(0x003, packed struct(u32) {
+        nx: u1 = 0,
+        uf: u1 = 0,
+        of: u1 = 0,
+        dz: u1 = 0,
+        nv: u1 = 0,
+        frm: u3 = 0,
+        reserved8: u24 = 0,
+    });
     pub const fflags = riscv32_common.csr.fflags;
     pub const frm = riscv32_common.csr.frm;
 
@@ -475,13 +502,25 @@ pub const csr = struct {
     pub const gintenr = Csr(0x800, u32);
     pub const intsyscr = Csr(0x804, cpu_impl.csr_types.intsyscr);
     pub const corecfgr = Csr(0xBC0, u32);
-    pub const cstrcr = Csr(0xBC2, u32);
+    pub const cstrcr = Csr(0xBC2, packed struct(u32) {
+        reserved0: u1 = 0,
+        icddisable: u1 = 0,
+        reserved2: u22 = 0,
+        iccodestren: u1 = 0,
+        icsramstren: u1 = 0,
+        reserved26: u6 = 0,
+    });
     pub const cpmpocr = Csr(0xBC3, u32);
-    pub const cmcr = Csr(0xBD0, u32);
-    pub const cinfor = Csr(0xFC0, u32);
-
-    // Cycle counters
-    pub const cycle = riscv32_common.csr.cycle;
-    pub const cycleh = riscv32_common.csr.cycleh;
-    pub const mcountinhibit = riscv32_common.csr.mcountinhibit;
+    pub const cmcr = Csr(0xBD0, packed struct(u32) {
+        opcode: u2 = 0,
+        idxmode: u1 = 0,
+        reserved3: u2 = 0,
+        vaddr: u27 = 0,
+    });
+    pub const cinfor = Csr(0xFC0, packed struct(u32) {
+        iclinesize: u2 = 0,
+        icszie: u3 = 0,
+        icway: u2 = 0,
+        reserved7: u25 = 0,
+    });
 };
