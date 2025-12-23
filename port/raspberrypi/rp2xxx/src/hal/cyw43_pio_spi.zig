@@ -73,7 +73,7 @@ pub fn init(config: Config) !Self {
     pins.io.set_output_disabled(false);
     pins.io.set_pull(.disabled);
     pins.io.set_schmitt_trigger_enabled(true);
-    pio.set_input_sync_bypass(pin_num(pins.io));
+    try pio.set_input_sync_bypass(pins.io);
     pins.io.set_drive_strength(.@"12mA");
     pins.io.set_slew_rate(.fast);
 
@@ -89,10 +89,10 @@ pub fn init(config: Config) !Self {
         // 50MHz i recomended by datasheet
         .clkdiv = .{ .int = 3, .frac = 0 },
         .pin_mappings = .{
-            .out = .{ .base = pin_num(pins.io), .count = 1 },
-            .set = .{ .base = pin_num(pins.io), .count = 1 },
-            .side_set = .{ .base = pin_num(pins.clk), .count = 1 },
-            .in_base = pin_num(pins.io),
+            .out = .single(pins.io),
+            .set = .single(pins.io),
+            .side_set = .single(pins.clk),
+            .in_base = pins.io,
         },
         .shift = .{
             .out_shiftdir = .left,
@@ -102,11 +102,18 @@ pub fn init(config: Config) !Self {
         },
     });
 
-    try config.pio.sm_set_pindir(sm, config.clk_pin, 1, .out);
-    try config.pio.sm_set_pindir(sm, config.io_pin, 1, .out);
+    try pio.sm_set_pindir(sm, pins.clk, 1, .out);
+    try pio.sm_set_pindir(sm, pins.io, 1, .out);
+    try pio.sm_set_pin(sm, pins.clk, 1, 0);
+    try pio.sm_set_pin(sm, pins.io, 1, 0);
 
-    try config.pio.sm_set_pin(sm, config.clk_pin, 1, 0);
-    try config.pio.sm_set_pin(sm, config.io_pin, 1, 0);
+    // Power init sequence
+    pins.pwr.set_function(.sio);
+    pins.pwr.set_direction(.out);
+    pins.pwr.put(0);
+    hal.time.sleep_ms(50);
+    pins.pwr.put(1);
+    hal.time.sleep_ms(250);
 
     return .{
         .pio = pio,
