@@ -141,23 +141,39 @@ jobs:
         run: zig build -Doptimize=ReleaseSmall
 
   unit-test-ports:
-    name: Unit Test Ports
+    name: Unit Test Ports on ${{ matrix.os }}
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        port_dir: [gigadevice/gd32, raspberrypi/rp2xxx, stmicro/stm32]
+    env:
+      PORT_DIRS: "gigadevice/gd32,raspberrypi/rp2xxx,stmicro/stm32"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Unit Test Ports
-        run: zig build test
-        working-directory: port/${{ matrix.port_dir }}
+
+      - name: Unit Test All Ports
+        shell: bash
+        run: |
+          IFS=',' read -ra PORTS <<< "$PORT_DIRS"
+          for port_dir in "${PORTS[@]}"; do
+            echo "::group::Testing $port_dir"
+            cd port/$port_dir
+            if zig build test; then
+              echo "✓ $port_dir passed"
+            else
+              echo "✗ $port_dir failed"
+              exit 1
+            fi
+            cd $GITHUB_WORKSPACE
+            echo "::endgroup::"
+          done
 
   build-examples:
     name: Build Examples
