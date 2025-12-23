@@ -194,7 +194,7 @@ fn create_file_fn(ctx: *anyopaque, path: []const u8, content: []const u8) Direct
     var components: std.ArrayList([]const u8) = .{};
     defer components.deinit(fs.gpa);
 
-    var it = try std.fs.path.componentIterator(path);
+    var it = try std.mem.tokenizeScalar(u8, path, '/');
     while (it.next()) |component|
         try components.append(fs.gpa, component.name);
 
