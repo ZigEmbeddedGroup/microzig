@@ -67,8 +67,10 @@ pub fn main() !void {
 
     const stdout = std.fs.File.stdout();
     var buf: [4096]u8 = undefined;
-    var writer = stdout.writer(&buf);
-    try std.json.Stringify.value(issues.items, .{}, &writer.interface);
+    var file_writer = stdout.writer(&buf);
+    const writer = &file_writer.interface;
+
+    try std.json.Stringify.value(issues.items, .{}, writer);
     try writer.flush();
 }
 
