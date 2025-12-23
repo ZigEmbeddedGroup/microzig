@@ -64,58 +64,66 @@ jobs:
                   review_id: reviewId
                 });
 
-                // Get unique thread IDs using GraphQL
-                for (const comment of comments.data) {
-                  try {
-                    // Query to get the thread ID for this comment
-                    const query = `
-                      query($owner: String!, $repo: String!, $commentId: Int!) {
-                        repository(owner: $owner, name: $repo) {
-                          pullRequest(number: ${context.issue.number}) {
-                            reviewThreads(first: 100) {
+                if (comments.data.length === 0) {
+                  console.log(`No comments found for review ${reviewId}`);
+                  return;
+                }
+
+                // Get all review threads for this PR
+                const query = `
+                  query($owner: String!, $repo: String!, $prNumber: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      pullRequest(number: $prNumber) {
+                        reviewThreads(first: 100) {
+                          nodes {
+                            id
+                            isResolved
+                            comments(first: 10) {
                               nodes {
-                                id
-                                isResolved
-                                comments(first: 1) {
-                                  nodes {
-                                    databaseId
-                                  }
-                                }
+                                databaseId
                               }
                             }
                           }
                         }
                       }
-                    `;
+                    }
+                  }
+                `;
 
-                    const result = await github.graphql(query, {
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      commentId: comment.id
-                    });
+                const result = await github.graphql(query, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  prNumber: context.issue.number
+                });
 
-                    // Find threads that contain this comment and aren't resolved
-                    const threads = result.repository.pullRequest.reviewThreads.nodes;
-                    for (const thread of threads) {
-                      const hasComment = thread.comments.nodes.some(c => c.databaseId === comment.id);
-                      if (hasComment && !thread.isResolved) {
-                        // Resolve this thread
-                        await github.graphql(`
-                          mutation($threadId: ID!) {
-                            resolveReviewThread(input: {threadId: $threadId}) {
-                              thread {
-                                id
-                              }
+                const threads = result.repository.pullRequest.reviewThreads.nodes;
+                const commentIds = new Set(comments.data.map(c => c.id));
+
+                // Find and resolve threads that contain comments from this review
+                for (const thread of threads) {
+                  if (thread.isResolved) continue;
+
+                  const hasReviewComment = thread.comments.nodes.some(c => 
+                    commentIds.has(c.databaseId)
+                  );
+
+                  if (hasReviewComment) {
+                    try {
+                      await github.graphql(`
+                        mutation($threadId: ID!) {
+                          resolveReviewThread(input: {threadId: $threadId}) {
+                            thread {
+                              id
                             }
                           }
-                        `, {
-                          threadId: thread.id
-                        });
-                        console.log(`Resolved thread ${thread.id}`);
-                      }
+                        }
+                      `, {
+                        threadId: thread.id
+                      });
+                      console.log(`Resolved thread ${thread.id}`);
+                    } catch (error) {
+                      console.log(`Could not resolve thread ${thread.id}: ${error.message}`);
                     }
-                  } catch (error) {
-                    console.log(`Could not resolve thread for comment ${comment.id}: ${error.message}`);
                   }
                 }
               } catch (error) {
