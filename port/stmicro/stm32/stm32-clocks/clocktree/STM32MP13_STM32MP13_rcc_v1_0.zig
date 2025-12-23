@@ -1216,6 +1216,10 @@ pub const MCO2I2SEnableList = enum {
     true,
     false,
 };
+pub const EnbaleCSSList = enum {
+    true,
+    false,
+};
 pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
     return struct {
         pub const Flags = struct {
@@ -1302,6 +1306,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             LSE_Timout: ?u32 = null,
             LSE_Drive_Capability: ?LSE_Drive_CapabilityList = null,
             PLL1UserDefinedConfig: ?PLL1UserDefinedConfigList = null,
+            EnbaleCSS: ?EnbaleCSSList = null,
         };
         pub const Config = struct {
             HSIDivValue: ?HSIDivValueList = null,
@@ -1732,6 +1737,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             EnableLSERTC: bool = false,
             CECEnable: bool = false,
             MCO2I2SEnable: bool = false,
+            EnbaleCSS: bool = false,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -2061,6 +2067,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var TimG1PrescalerEnabled: bool = false;
             var TimG2PrescalerEnabled: bool = false;
             var TimG3PrescalerEnabled: bool = false;
+            var CSSEnabled: bool = false;
 
             //Clock node bases
 
@@ -5737,6 +5744,34 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                     break :blk item;
                 }
                 const item: MCO2I2SEnableList = .false;
+                break :blk item;
+            };
+            const EnbaleCSSValue: ?EnbaleCSSList = blk: {
+                if ((((check_ref(@TypeOf(PLL3SourceValue), PLL3SourceValue, .RCC_PLL3SOURCE_HSE, .@"=")) and (check_ref(@TypeOf(MLAHBCLKSourceValue), MLAHBCLKSourceValue, .RCC_MLAHBSSOURCE_PLL3, .@"="))) or (check_ref(@TypeOf(MLAHBCLKSourceValue), MLAHBCLKSourceValue, .RCC_MLAHBSSOURCE_HSE, .@"="))) and (config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
+                    const conf_item = config.extra.EnbaleCSS;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .true => CSSEnabled = true,
+                            .false => {},
+                        }
+                    }
+
+                    break :blk conf_item orelse .false;
+                }
+                const item: EnbaleCSSList = .false;
+                const conf_item = config.extra.EnbaleCSS;
+                if (conf_item) |i| {
+                    if (item != i) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Expected Fixed List Value: {s} found {any}
+                            \\note: the current condition limits the choice to only one list item,
+                            \\select the expected option or leave the value as null.
+                            \\
+                        , .{ "EnbaleCSS", "Else", "No Extra Log", "false", i });
+                    }
+                }
                 break :blk item;
             };
 
@@ -9607,6 +9642,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.EnableLSERTC = check_ref(?EnableLSERTCList, EnableLSERTCValue, .true, .@"=");
             ref_out.flags.CECEnable = check_ref(?CECEnableList, CECEnableValue, .true, .@"=");
             ref_out.flags.MCO2I2SEnable = check_ref(?MCO2I2SEnableList, MCO2I2SEnableValue, .true, .@"=");
+            ref_out.flags.EnbaleCSS = check_ref(?EnbaleCSSList, EnbaleCSSValue, .true, .@"=");
             return Tree_Output{
                 .clock = out,
                 .config = ref_out,

@@ -3422,6 +3422,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCUsed_ForRCC: bool = false,
             RTC_Used: bool = false,
             DSIUsed_ForRCC: bool = false,
+            EnableCSS: bool = false,
             ETH3_Used: bool = false,
             GPU_Used: bool = false,
             IWDG5_Used: bool = false,
@@ -4207,6 +4208,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCUsed_ForRCC: bool = false,
             RTC_Used: bool = false,
             DSIUsed_ForRCC: bool = false,
+            EnableCSS: bool = false,
             ETH3_Used: bool = false,
             GPU_Used: bool = false,
             IWDG5_Used: bool = false,
@@ -23862,6 +23864,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.RTCUsed_ForRCC = config.flags.RTCUsed_ForRCC;
             ref_out.flags.RTC_Used = config.flags.RTC_Used;
             ref_out.flags.DSIUsed_ForRCC = config.flags.DSIUsed_ForRCC;
+            ref_out.flags.EnableCSS = config.flags.EnableCSS;
             ref_out.flags.ETH3_Used = config.flags.ETH3_Used;
             ref_out.flags.GPU_Used = config.flags.GPU_Used;
             ref_out.flags.IWDG5_Used = config.flags.IWDG5_Used;

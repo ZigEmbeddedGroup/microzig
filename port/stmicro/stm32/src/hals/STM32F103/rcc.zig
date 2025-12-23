@@ -110,7 +110,7 @@ pub fn apply(comptime config: ClockTree.Config) ClockInitError!ClockTree.Clock_O
 
 fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
     const latency: flash_v1.LATENCY = if (config.FLatency) |lat| @enumFromInt(@as(u3, @intFromEnum(lat))) else .WS0;
-    const prefetch = if (config.PREFETCH_ENABLE) |pre| (pre == .@"1") else false;
+    const prefetch = config.flags.PREFETCH_ENABLE;
     const apb1: ?PPRE = if (config.APB1CLKDivider) |pre| @enumFromInt(@as(u3, @intFromEnum(pre))) else null;
     const apb2: ?PPRE = if (config.APB2CLKDivider) |pre| @enumFromInt(@as(u3, @intFromEnum(pre))) else null;
     const ahb: ?HPRE = if (config.AHBCLKDivider) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else null;
@@ -124,7 +124,7 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
 
     if (config.flags.EnableHSE) {
         const timout = if (config.HSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
-        try enable_hse(config.flags.HSEByPass, timout);
+        try enable_hse(config.flags.HSEByPass, config.flags.EnbaleCSS, timout);
     } else {
         disable_hse();
     }
@@ -248,7 +248,7 @@ fn set_lsi(on: bool) void {
     }
 }
 
-pub fn enable_hse(bypass: bool, timeout: ?usize) ClockInitError!void {
+pub fn enable_hse(bypass: bool, css: bool, timeout: ?usize) ClockInitError!void {
     const max_wait: u32 = blk: {
         if (timeout) |val| {
             if (val != 0) {
@@ -259,8 +259,11 @@ pub fn enable_hse(bypass: bool, timeout: ?usize) ClockInitError!void {
     };
     var ticks: usize = calc_wait_ticks(max_wait - 1);
 
-    rcc.CR.modify_one("HSEBYP", @intFromBool(bypass));
-    rcc.CR.modify(.{ .HSEON = 1 });
+    rcc.CR.modify(.{
+        .HSEON = 1,
+        .HSEBYP = @intFromBool(bypass),
+        .CSSON = @intFromBool(css),
+    });
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == 0) return error.HSETimeout;
         ticks -= 1;
@@ -269,6 +272,7 @@ pub fn enable_hse(bypass: bool, timeout: ?usize) ClockInitError!void {
 }
 
 pub inline fn disable_hse() void {
+    rcc.CR.modify(.{ .CSSON = 0 });
     rcc.CR.modify(.{ .HSEON = 0 });
 }
 

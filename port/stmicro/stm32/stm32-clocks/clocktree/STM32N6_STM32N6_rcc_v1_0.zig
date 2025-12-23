@@ -1879,6 +1879,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             MCO1Config: bool = false,
             MCO2Config: bool = false,
             AudioClockConfig: bool = false,
+            EnableCSS: bool = false,
             IWDG_Used: bool = false,
             UCPD1_Used: bool = false,
             USB1_OTG_HS_Used: bool = false,
@@ -2347,6 +2348,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             MCO1Config: bool = false,
             MCO2Config: bool = false,
             AudioClockConfig: bool = false,
+            EnableCSS: bool = false,
             IWDG_Used: bool = false,
             UCPD1_Used: bool = false,
             USB1_OTG_HS_Used: bool = false,
@@ -13433,6 +13435,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.MCO1Config = config.flags.MCO1Config;
             ref_out.flags.MCO2Config = config.flags.MCO2Config;
             ref_out.flags.AudioClockConfig = config.flags.AudioClockConfig;
+            ref_out.flags.EnableCSS = config.flags.EnableCSS;
             ref_out.flags.IWDG_Used = config.flags.IWDG_Used;
             ref_out.flags.UCPD1_Used = config.flags.UCPD1_Used;
             ref_out.flags.USB1_OTG_HS_Used = config.flags.USB1_OTG_HS_Used;

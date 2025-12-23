@@ -294,6 +294,10 @@ pub const EnableLSEList = enum {
     true,
     false,
 };
+pub const EnbaleCSSList = enum {
+    true,
+    false,
+};
 pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
     return struct {
         pub const Flags = struct {
@@ -323,6 +327,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PWR_Regulator_Voltage_Scale: ?PWR_Regulator_Voltage_ScaleList = null,
             HSE_Timout: ?u32 = null,
             LSE_Timout: ?u32 = null,
+            EnbaleCSS: ?EnbaleCSSList = null,
         };
         pub const Config = struct {
             MSIClockRange: ?MSIClockRangeList = null,
@@ -403,6 +408,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             SDIOUsed_ForRCC: bool = false,
             IWDGUsed_ForRCC: bool = false,
             CSSEnabled: bool = false,
+            INSTRUCTION_CACHE_ENABLE: bool = false,
+            PREFETCH_ENABLE: bool = false,
+            DATA_CACHE_ENABLE: bool = false,
             RTCEnable: bool = false,
             LCDEnable: bool = false,
             HSIUsed: bool = false,
@@ -422,6 +430,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             HSEUsed: bool = false,
             LSEUsed: bool = false,
             LSIUsed: bool = false,
+            EnbaleCSS: bool = false,
         };
         /// Configuration output after processing the clock tree.
         /// Values marked as null indicate that the RCC configuration should remain at its reset value.
@@ -448,9 +457,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             DIV2USB: ?f32 = null, //from RCC Clock Config
             PLLDIV: ?PLLDIVList = null, //from RCC Clock Config
             VDD_VALUE: ?f32 = null, //from RCC Advanced Config
-            INSTRUCTION_CACHE_ENABLE: ?INSTRUCTION_CACHE_ENABLEList = null, //from RCC Advanced Config
-            PREFETCH_ENABLE: ?PREFETCH_ENABLEList = null, //from RCC Advanced Config
-            DATA_CACHE_ENABLE: ?DATA_CACHE_ENABLEList = null, //from RCC Advanced Config
             FLatency: ?FLatencyList = null, //from RCC Advanced Config
             HSICalibrationValue: ?f32 = null, //from RCC Advanced Config
             MSICalibrationValue: ?f32 = null, //from RCC Advanced Config
@@ -487,6 +493,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var scale11: bool = false;
             var scale3: bool = false;
             var NVICusedCssLSE: bool = false;
+            var CSSEnabled: bool = false;
 
             //Clock node bases
 
@@ -1263,6 +1270,34 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                 }
                 break :blk 0;
             };
+            const EnbaleCSSValue: ?EnbaleCSSList = blk: {
+                if ((((check_ref(@TypeOf(PLLSourceValue), PLLSourceValue, .RCC_PLLSOURCE_HSE, .@"=")) and check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_PLLCLK, .@"=")) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSE, .@"="))) and (config.flags.HSEOscillator or config.flags.HSEByPass)) {
+                    const conf_item = config.extra.EnbaleCSS;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .true => CSSEnabled = true,
+                            .false => {},
+                        }
+                    }
+
+                    break :blk conf_item orelse .false;
+                }
+                const item: EnbaleCSSList = .false;
+                const conf_item = config.extra.EnbaleCSS;
+                if (conf_item) |i| {
+                    if (item != i) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Expected Fixed List Value: {s} found {any}
+                            \\note: the current condition limits the choice to only one list item,
+                            \\select the expected option or leave the value as null.
+                            \\
+                        , .{ "EnbaleCSS", "Else", "No Extra Log", "false", i });
+                    }
+                }
+                break :blk item;
+            };
 
             const HSIRC_clk_value = HSI_VALUEValue orelse return comptime_fail_or_error(error.InvalidClockValue,
                 \\Error on Clock {s} | expr: {s} diagnostic: {s}
@@ -1410,7 +1445,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
 
             //POST CLOCK REF HSE_VALUE VALUE
             _ = blk: {
-                if ((((PLLscale) or config.flags.CSSEnabled)) and config.flags.HSEByPass) {
+                if ((((PLLscale) or CSSEnabled)) and config.flags.HSEByPass) {
                     const config_val = config.HSE_VALUE;
                     if (config_val) |val| {
                         if (val < 1e6) {
@@ -2573,9 +2608,6 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.DIV2USB = DIV2USBValue;
             ref_out.PLLDIV = PLLDIVValue;
             ref_out.VDD_VALUE = VDD_VALUEValue;
-            ref_out.INSTRUCTION_CACHE_ENABLE = INSTRUCTION_CACHE_ENABLEValue;
-            ref_out.PREFETCH_ENABLE = PREFETCH_ENABLEValue;
-            ref_out.DATA_CACHE_ENABLE = DATA_CACHE_ENABLEValue;
             ref_out.FLatency = FLatencyValue;
             ref_out.HSICalibrationValue = HSICalibrationValueValue;
             ref_out.MSICalibrationValue = MSICalibrationValueValue;
@@ -2594,6 +2626,9 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.SDIOUsed_ForRCC = config.flags.SDIOUsed_ForRCC;
             ref_out.flags.IWDGUsed_ForRCC = config.flags.IWDGUsed_ForRCC;
             ref_out.flags.CSSEnabled = config.flags.CSSEnabled;
+            ref_out.flags.INSTRUCTION_CACHE_ENABLE = check_ref(?INSTRUCTION_CACHE_ENABLEList, INSTRUCTION_CACHE_ENABLEValue, .@"1", .@"=");
+            ref_out.flags.PREFETCH_ENABLE = check_ref(?PREFETCH_ENABLEList, PREFETCH_ENABLEValue, .@"1", .@"=");
+            ref_out.flags.DATA_CACHE_ENABLE = check_ref(?DATA_CACHE_ENABLEList, DATA_CACHE_ENABLEValue, .@"1", .@"=");
             ref_out.flags.RTCEnable = check_ref(?RTCEnableList, RTCEnableValue, .true, .@"=");
             ref_out.flags.LCDEnable = check_ref(?LCDEnableList, LCDEnableValue, .true, .@"=");
             ref_out.flags.HSIUsed = check_ref(?f32, HSIUsedValue, 1, .@"=");
@@ -2613,6 +2648,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.HSEUsed = check_ref(?f32, HSEUsedValue, 1, .@"=");
             ref_out.flags.LSEUsed = check_ref(?f32, LSEUsedValue, 1, .@"=");
             ref_out.flags.LSIUsed = check_ref(?f32, LSIUsedValue, 1, .@"=");
+            ref_out.flags.EnbaleCSS = check_ref(?EnbaleCSSList, EnbaleCSSValue, .true, .@"=");
             return Tree_Output{
                 .clock = out,
                 .config = ref_out,

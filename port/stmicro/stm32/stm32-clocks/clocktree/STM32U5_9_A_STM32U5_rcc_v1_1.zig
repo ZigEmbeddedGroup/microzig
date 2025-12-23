@@ -1342,6 +1342,10 @@ pub const EnableCSSLSEList = enum {
     true,
     false,
 };
+pub const EnbaleCSSList = enum {
+    true,
+    false,
+};
 pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
     return struct {
         pub const Flags = struct {
@@ -1436,6 +1440,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             PLL1MBOOST: ?PLL1MBOOSTList = null,
             MSIKERON: ?MSIKERONList = null,
             HSIKERON: ?HSIKERONList = null,
+            EnbaleCSS: ?EnbaleCSSList = null,
         };
         pub const Config = struct {
             SAESSource: ?SAESSourceList = null,
@@ -1827,6 +1832,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             MSISUsed: bool = false,
             LSEUsed: bool = false,
             EnableCSSLSE: bool = false,
+            EnbaleCSS: bool = false,
             PLL3RUsed: bool = false,
             PLL1RUsed: bool = false,
             MSIUsed: bool = false,
@@ -2131,6 +2137,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             var AutomaticRelaod: bool = false;
             var hsikeron_ENABLED: bool = false;
             var RCC_LSECSS_ENABLED: bool = false;
+            var CSSEnabled: bool = false;
 
             //Clock node bases
 
@@ -6953,6 +6960,34 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
                             \\select the expected option or leave the value as null.
                             \\
                         , .{ "EnableCSSLSE", "Else", "No Extra Log", "false", i });
+                    }
+                }
+                break :blk item;
+            };
+            const EnbaleCSSValue: ?EnbaleCSSList = blk: {
+                if (((PLLSourceHSE and SysSourcePLL) or (check_ref(@TypeOf(SYSCLKSourceValue), SYSCLKSourceValue, .RCC_SYSCLKSOURCE_HSE, .@"="))) and (config.flags.HSEOscillator or config.flags.HSEByPass or config.flags.HSEDIGByPass)) {
+                    const conf_item = config.extra.EnbaleCSS;
+                    if (conf_item) |item| {
+                        switch (item) {
+                            .true => CSSEnabled = true,
+                            .false => {},
+                        }
+                    }
+
+                    break :blk conf_item orelse .false;
+                }
+                const item: EnbaleCSSList = .false;
+                const conf_item = config.extra.EnbaleCSS;
+                if (conf_item) |i| {
+                    if (item != i) {
+                        return comptime_fail_or_error(error.InvalidConfig,
+                            \\
+                            \\Error on {s} | expr: {s} diagnostic: {s} 
+                            \\Expected Fixed List Value: {s} found {any}
+                            \\note: the current condition limits the choice to only one list item,
+                            \\select the expected option or leave the value as null.
+                            \\
+                        , .{ "EnbaleCSS", "Else", "No Extra Log", "false", i });
                     }
                 }
                 break :blk item;
@@ -12539,6 +12574,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.MSISUsed = check_ref(?f32, MSISUsedValue, 1, .@"=");
             ref_out.flags.LSEUsed = check_ref(?f32, LSEUsedValue, 1, .@"=");
             ref_out.flags.EnableCSSLSE = check_ref(?EnableCSSLSEList, EnableCSSLSEValue, .true, .@"=");
+            ref_out.flags.EnbaleCSS = check_ref(?EnbaleCSSList, EnbaleCSSValue, .true, .@"=");
             ref_out.flags.PLL3RUsed = check_ref(?f32, PLL3RUsedValue, 1, .@"=");
             ref_out.flags.PLL1RUsed = check_ref(?f32, PLL1RUsedValue, 1, .@"=");
             ref_out.flags.MSIUsed = check_ref(?f32, MSIUsedValue, 1, .@"=");

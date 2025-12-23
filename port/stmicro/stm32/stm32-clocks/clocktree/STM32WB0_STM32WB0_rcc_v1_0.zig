@@ -306,6 +306,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCUsed_ForRCC: bool = false,
             RADIO_Used: bool = false,
             ADC_Used: bool = false,
+            EnableCSS: bool = false,
             IWDG_Used: bool = false,
             I2S2_Used: bool = false,
             I2S3_Used: bool = false,
@@ -402,11 +403,15 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RTCUsed_ForRCC: bool = false,
             RADIO_Used: bool = false,
             ADC_Used: bool = false,
+            EnableCSS: bool = false,
             IWDG_Used: bool = false,
             I2S2_Used: bool = false,
             I2S3_Used: bool = false,
             RADIO_TIMER_Used: bool = false,
             LPUART1_Used: bool = false,
+            INSTRUCTION_CACHE_ENABLE: bool = false,
+            PREFETCH_ENABLE: bool = false,
+            DATA_CACHE_ENABLE: bool = false,
             EnableHSE: bool = false,
             EnableLSI: bool = false,
             SysSourceHSEEnable: bool = false,
@@ -455,10 +460,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             RCC_MCO1Source: ?RCC_MCO1SourceList = null, //from RCC Clock Config
             RCC_MCODiv: ?RCC_MCODivList = null, //from RCC Clock Config
             VDD_VALUE: ?f32 = null, //from RCC Advanced Config
-            INSTRUCTION_CACHE_ENABLE: ?INSTRUCTION_CACHE_ENABLEList = null, //from RCC Advanced Config
             FLatency: ?FLatencyList = null, //from RCC Advanced Config
-            PREFETCH_ENABLE: ?PREFETCH_ENABLEList = null, //from RCC Advanced Config
-            DATA_CACHE_ENABLE: ?DATA_CACHE_ENABLEList = null, //from RCC Advanced Config
             HSICalibrationValue: ?f32 = null, //from RCC Advanced Config
             HSE_current_control: ?HSE_current_controlList = null, //from RCC Advanced Config
             HSE_Capacitor_Tuning: ?f32 = null, //from RCC Advanced Config
@@ -2372,10 +2374,7 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.RCC_MCO1Source = RCC_MCO1SourceValue;
             ref_out.RCC_MCODiv = RCC_MCODivValue;
             ref_out.VDD_VALUE = VDD_VALUEValue;
-            ref_out.INSTRUCTION_CACHE_ENABLE = INSTRUCTION_CACHE_ENABLEValue;
             ref_out.FLatency = FLatencyValue;
-            ref_out.PREFETCH_ENABLE = PREFETCH_ENABLEValue;
-            ref_out.DATA_CACHE_ENABLE = DATA_CACHE_ENABLEValue;
             ref_out.HSICalibrationValue = HSICalibrationValueValue;
             ref_out.HSE_current_control = HSE_current_controlValue;
             ref_out.HSE_Capacitor_Tuning = HSE_Capacitor_TuningValue;
@@ -2390,11 +2389,15 @@ pub fn ClockTree(comptime mcu_data: std.StaticStringMap(void)) type {
             ref_out.flags.RTCUsed_ForRCC = config.flags.RTCUsed_ForRCC;
             ref_out.flags.RADIO_Used = config.flags.RADIO_Used;
             ref_out.flags.ADC_Used = config.flags.ADC_Used;
+            ref_out.flags.EnableCSS = config.flags.EnableCSS;
             ref_out.flags.IWDG_Used = config.flags.IWDG_Used;
             ref_out.flags.I2S2_Used = config.flags.I2S2_Used;
             ref_out.flags.I2S3_Used = config.flags.I2S3_Used;
             ref_out.flags.RADIO_TIMER_Used = config.flags.RADIO_TIMER_Used;
             ref_out.flags.LPUART1_Used = config.flags.LPUART1_Used;
+            ref_out.flags.INSTRUCTION_CACHE_ENABLE = check_ref(?INSTRUCTION_CACHE_ENABLEList, INSTRUCTION_CACHE_ENABLEValue, .@"1", .@"=");
+            ref_out.flags.PREFETCH_ENABLE = check_ref(?PREFETCH_ENABLEList, PREFETCH_ENABLEValue, .@"1", .@"=");
+            ref_out.flags.DATA_CACHE_ENABLE = check_ref(?DATA_CACHE_ENABLEList, DATA_CACHE_ENABLEValue, .@"1", .@"=");
             ref_out.flags.EnableHSE = check_ref(?EnableHSEList, EnableHSEValue, .true, .@"=");
             ref_out.flags.EnableLSI = check_ref(?EnableLSIList, EnableLSIValue, .true, .@"=");
             ref_out.flags.SysSourceHSEEnable = check_ref(?SysSourceHSEEnableList, SysSourceHSEEnableValue, .true, .@"=");
