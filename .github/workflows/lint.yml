@@ -74,7 +74,7 @@ jobs:
                 review.body && review.body.includes('<!-- lint-review -->')
               );
 
-              if (botReview) {
+              if (botReview && botReview.state !== 'DISMISSED') {
                 await github.rest.pulls.dismissReview({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -84,6 +84,7 @@ jobs:
                 });
                 console.log('Dismissed previous lint review - no issues found');
               }
+
               return;
             }
 
@@ -113,8 +114,8 @@ jobs:
               return;
             }
 
-            // Dismiss existing review if it exists
-            if (botReview) {
+            // Dismiss existing review if it exists and is not already dismissed
+            if (botReview && botReview.state !== 'DISMISSED') {
               await github.rest.pulls.dismissReview({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
