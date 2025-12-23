@@ -33,7 +33,7 @@ pub fn main() !void {
 
     std.log.info("Scanning for WiFi networks...", .{});
 
-    var results_buf: [64]Wifi.BssInfo = undefined;
+    var results_buf: [64]Wifi.BSS_Info = undefined;
     const results = try wifi.scan(.{
         .active_time = 200,
         .nprobes = 6,
