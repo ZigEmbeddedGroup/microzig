@@ -158,14 +158,9 @@ pub const Register = struct {
 
     pub fn format(
         register: Register,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
+        writer: *std.Io.Writer,
     ) !void {
-        _ = fmt;
-        _ = options;
-
-        try writer.print("Register: id={} struct_id={?} name='{s}' size_bits={} offset_bytes={} desc='{?s}'", .{
+        try writer.print("Register: id={f} struct_id={?f} name='{s}' size_bits={} offset_bytes={} desc='{?s}'", .{
             register.id,
             register.struct_id,
             register.name,
@@ -703,7 +698,7 @@ pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: Stru
 }
 
 pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?Peripheral {
-    log.debug("get_peripheral_by_struct_id: strut_id={}", .{struct_id});
+    log.debug("get_peripheral_by_struct_id: strut_id={f}", .{struct_id});
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
         \\FROM peripherals
@@ -718,7 +713,7 @@ pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_i
 }
 
 pub fn get_struct_decl_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
-    log.debug("get_struct_decl_by_struct_id: struct_id={}", .{struct_id});
+    log.debug("get_struct_decl_by_struct_id: struct_id={f}", .{struct_id});
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
         \\FROM struct_decls
@@ -969,7 +964,7 @@ pub fn get_nested_struct_fields_with_calculated_size(
     const nested_struct_fields = try db.get_nested_struct_fields(gpa, struct_id);
     defer gpa.free(nested_struct_fields);
 
-    log.debug("nested_struct_fields.len={} struct_id={}", .{ nested_struct_fields.len, struct_id });
+    log.debug("nested_struct_fields.len={} struct_id={f}", .{ nested_struct_fields.len, struct_id });
 
     var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(gpa);
     defer size_cache.deinit();
@@ -982,7 +977,7 @@ pub fn get_nested_struct_fields_with_calculated_size(
 
         var depth: u8 = 0;
         const size_bytes = try db.recursively_calculate_struct_size(&depth, &size_cache, gpa, nsf.struct_id);
-        std.log.debug("Calculated struct size: struct_id={} size_bytes={}", .{ nsf.struct_id, size_bytes });
+        std.log.debug("Calculated struct size: struct_id={f} size_bytes={}", .{ nsf.struct_id, size_bytes });
         nsf.size_bytes = if (size_bytes > 0) size_bytes else continue;
         try ret.append(gpa, nsf.*);
     }
