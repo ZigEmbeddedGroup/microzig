@@ -558,6 +558,21 @@ pub fn MicroBuild(port_select: PortSelect) type {
             app_mod.addImport("microzig", core_mod);
             core_mod.addImport("app", app_mod);
 
+            const generate_root_exe = mb.builder.addExecutable(.{
+                .name = "generate_root",
+                .root_module = mb.builder.createModule(.{
+                    .root_source_file = mb.core_dep.path("src/generate_root.zig"),
+                    .target = mb.builder.graph.host,
+                    .optimize = .Debug,
+                    .imports = &.{
+                        .{ .name = "app", .module = app_mod },
+                    },
+                }),
+            });
+
+            const generate_root_run = mb.builder.addRunArtifact(generate_root_exe);
+            const root_file = generate_root_run.addOutputFileArg("main.zig");
+
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{
                 .mb = mb,
@@ -567,7 +582,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .root_module = b.createModule(.{
                         .optimize = options.optimize,
                         .target = zig_resolved_target,
-                        .root_source_file = mb.core_dep.path("src/start.zig"),
+                        .root_source_file = root_file,
                         .single_threaded = options.single_threaded orelse target.single_threaded,
                         .strip = options.strip,
                         .unwind_tables = options.unwind_tables,
@@ -587,6 +602,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.link_function_sections = options.strip_unused_symbols;
             fw.artifact.link_data_sections = options.strip_unused_symbols;
             fw.artifact.entry = options.entry orelse target.entry orelse .default;
+
+            for (options.imports) |import|
+                fw.artifact.root_module.addImport(import.name, import.module);
 
             fw.artifact.root_module.addImport("microzig", core_mod);
             fw.artifact.root_module.addImport("app", app_mod);
