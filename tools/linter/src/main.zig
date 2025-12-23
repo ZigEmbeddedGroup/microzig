@@ -49,8 +49,6 @@ pub fn main() !void {
                             .message = message,
                             .file = path,
                         });
-                        // TODO: break up camel case
-                        std.log.info("FAILED SNAKE CASE: {s}, location: {}", .{ identifier_str, location });
                     }
                 },
 
@@ -71,6 +69,7 @@ pub fn main() !void {
     var buf: [4096]u8 = undefined;
     var writer = stdout.writer(&buf);
     try std.json.Stringify.value(issues.items, .{}, &writer.interface);
+    try writer.flush();
 }
 
 const Token = std.zig.Token;
