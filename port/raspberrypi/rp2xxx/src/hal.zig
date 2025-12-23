@@ -7,6 +7,7 @@ pub const adc = @import("hal/adc.zig");
 pub const bootmeta = @import("hal/bootmeta.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
+pub const cyw43 = @import("hal/cyw43.zig");
 pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
 pub const dcp = switch (compatibility.chip) {
     .RP2040 => @compileError("RP2040 doesn't support DCP"),
