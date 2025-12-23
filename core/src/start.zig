@@ -23,7 +23,7 @@ pub const std_options: std.Options = blk: {
         @compileError("It seems that you're trying to change the stdlib's log_level. Please set this in the microzig_options.");
 
     if (options.log_scope_levels.len > 0)
-        @compileError("It seems that you're trying to change the stdlib's log_scop_levels. Please set this in the microzig_options.");
+        @compileError("It seems that you're trying to change the stdlib's log_scope_levels. Please set this in the microzig_options.");
 
     options.logFn = microzig.options.logFn;
     options.log_level = microzig.options.log_level;
