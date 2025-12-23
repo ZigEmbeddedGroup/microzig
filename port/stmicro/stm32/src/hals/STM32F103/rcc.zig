@@ -104,7 +104,7 @@ var current_clocks: ClockTree.Clock_Output = blk: {
 pub fn apply(comptime config: ClockTree.Config) ClockInitError!ClockTree.Clock_Output {
     const out_data = comptime ClockTree.get_clocks(config) catch unreachable;
     try apply_internal(out_data.config);
-    corrent_clocks = out_data.clock;
+    current_clocks = out_data.clock;
     return out_data.clock;
 }
 
@@ -572,10 +572,10 @@ pub fn get_clock(comptime source: RccPeriferals) u32 {
         .SRAM,
         .FLASH,
         .CRC,
-        => corrent_clocks.AHBOutput,
+        => current_clocks.AHBOutput,
 
-        .FSMC => corrent_clocks.FSMClkOutput,
-        .SDIO => corrent_clocks.SDIOClkOutput,
+        .FSMC => current_clocks.FSMClkOutput,
+        .SDIO => current_clocks.SDIOClkOutput,
 
         // APB2 peripherals
         .AFIO,
@@ -588,16 +588,16 @@ pub fn get_clock(comptime source: RccPeriferals) u32 {
         .GPIOG,
         .SPI1,
         .USART1,
-        => corrent_clocks.APB2Prescaler,
+        => current_clocks.APB2Prescaler,
 
-        .ADC1, .ADC2 => corrent_clocks.ADCoutput,
+        .ADC1, .ADC2 => current_clocks.ADCoutput,
 
-        .TIM1 => corrent_clocks.TimPrescalerAPB2,
+        .TIM1 => current_clocks.TimPrescalerAPB2,
 
         // APB1 peripherals
-        .TIM2, .TIM3, .TIM4, .TIM5, .TIM6, .TIM7 => corrent_clocks.TimPrescalerAPB1,
+        .TIM2, .TIM3, .TIM4, .TIM5, .TIM6, .TIM7 => current_clocks.TimPrescalerAPB1,
 
-        .DAC => corrent_clocks.APB1Output,
+        .DAC => current_clocks.APB1Output,
 
         .WWDG,
         .SPI2,
@@ -611,19 +611,19 @@ pub fn get_clock(comptime source: RccPeriferals) u32 {
         .CAN,
         .BKP,
         .PWR,
-        => corrent_clocks.APB1Output,
+        => current_clocks.APB1Output,
 
-        .USB => corrent_clocks.USBoutput,
-        .RTC => corrent_clocks.RTCOutput,
+        .USB => current_clocks.USBoutput,
+        .RTC => current_clocks.RTCOutput,
     });
 }
 
 pub inline fn get_sys_clk() u32 {
-    return @intFromFloat(corrent_clocks.SysCLKOutput);
+    return @intFromFloat(current_clocks.SysCLKOutput);
 }
 
 inline fn calc_wait_ticks(val: usize) usize {
-    const corrent_clock: usize = @intFromFloat(corrent_clocks.SysCLKOutput);
+    const corrent_clock: usize = @intFromFloat(current_clocks.SysCLKOutput);
     const ms_per_tick = corrent_clock / 1000;
     return ms_per_tick * val;
 }
