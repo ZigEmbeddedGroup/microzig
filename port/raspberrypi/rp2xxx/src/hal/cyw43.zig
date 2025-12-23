@@ -8,6 +8,8 @@ const Cyw43_Bus = microzig.drivers.wireless.Cyw43_Bus;
 const Cyw43_Runner = microzig.drivers.wireless.Cyw43_Runner;
 const GPIO_Device = hal.drivers.GPIO_Device;
 
+pub const Wifi = microzig.drivers.wireless.cyw43.Wifi;
+
 // See page 8 of the Raspberry Pi Pico 2 W Datasheet
 /// Pico 2 W pin configuration for CYW43
 const pico2w_config = .{
@@ -60,6 +62,12 @@ pub fn init() !void {
 
     try state.runner.init();
     state.initialized = true;
+}
+
+/// Get the WiFi driver instance for WiFi operations (enable, scan, connect, etc.)
+/// Must call init() first.
+pub fn wifi() *Wifi {
+    return state.runner.wifi();
 }
 
 /// CYW43 GPIO interface
