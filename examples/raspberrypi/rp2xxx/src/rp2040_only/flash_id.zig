@@ -15,9 +15,9 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     while (true) {}
 }
 
-pub const std_options = struct {
-    pub const log_level = .debug;
-    pub const logFn = rp2xxx.uart.log;
+pub const microzig_options: microzig.Options = .{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
 };
 
 pub fn main() !void {

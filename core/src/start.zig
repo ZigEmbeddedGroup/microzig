@@ -10,10 +10,25 @@ pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub const std_options: std.Options = .{
-    .log_level = microzig.options.log_level,
-    .log_scope_levels = microzig.options.log_scope_levels,
-    .logFn = microzig.options.logFn,
+pub const std_options: std.Options = blk: {
+    var options = if (@hasDecl(app, "std_options"))
+        app.std_options
+    else
+        std.Options{};
+
+    if (options.logFn != std.log.defaultLog)
+        @compileError("It seems that you're trying to change the stdlib's logFn. Please set this in the microzig_options, we require this so that embedded executables don't give compile errors by default.");
+
+    if (options.log_level != std.log.default_level)
+        @compileError("It seems that you're trying to change the stdlib's log_level. Please set this in the microzig_options.");
+
+    if (options.log_scope_levels.len > 0)
+        @compileError("It seems that you're trying to change the stdlib's log_scop_levels. Please set this in the microzig_options.");
+
+    options.logFn = microzig.options.logFn;
+    options.log_level = microzig.options.log_level;
+    options.log_scope_levels = microzig.options.log_scope_levels;
+    break :blk options;
 };
 
 // Startup logic:
