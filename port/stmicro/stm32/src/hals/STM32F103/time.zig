@@ -4,7 +4,7 @@ const microzig = @import("microzig");
 const rcc = @import("rcc.zig");
 const bkp = @import("backup.zig");
 const rtc = @import("rtc.zig");
-const timer = @import("timer.zig");
+const timer = @import("../common/timer_v1.zig");
 const time = microzig.drivers.time;
 const std = @import("std");
 

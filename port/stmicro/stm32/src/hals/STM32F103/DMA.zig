@@ -7,7 +7,7 @@
 //this may have affected the code generation in bdma_v1
 
 const microzig = @import("microzig");
-const util = @import("util.zig");
+const util = @import("../common/util.zig");
 
 const Bdma_v1 = microzig.chip.types.peripherals.bdma_v1;
 const DMA = Bdma_v1.DMA;

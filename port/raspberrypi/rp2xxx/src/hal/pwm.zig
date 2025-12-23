@@ -5,6 +5,7 @@ const pins = microzig.hal.pins;
 
 const compatibility = @import("compatibility.zig");
 const has_rp2350b = compatibility.has_rp2350b;
+const hw = @import("hw.zig");
 
 pub const Config = struct {};
 
@@ -19,6 +20,11 @@ pub const Channel = enum(u1) { a, b };
 
 pub const Slice = enum(u32) {
     _,
+
+    /// Access slice specific registers directly.
+    pub fn get_registers(self: Slice) *volatile Regs {
+        return get_regs(@intFromEnum(self));
+    }
 
     /// Set the wrap value for the slice.  This is the number of pwm clock
     /// cycles that the slice will count to before wrapping.
@@ -57,6 +63,16 @@ pub const Slice = enum(u32) {
     }
 };
 
+/// Return PWM associated with the pin number.
+/// Does not set the gpio function (must be done separately)
+/// e.g. rp2xxx.gpio.num(pin_num).set_function(.pwm)
+pub fn get_pwm(pinnum: u9) Pwm {
+    const tmp_num: u32 = if (pinnum > 15) pinnum - 16 else pinnum;
+    const slice_num: u32 = tmp_num >> 1;
+    const chan: Channel = @enumFromInt(tmp_num & 1);
+    return .{ .channel = chan, .slice_number = slice_num };
+}
+
 // An instance of Pwm corresponds to one of the channels
 //
 // There are eight pwm instances on RP2040 and RP2350A and
@@ -91,6 +107,18 @@ pub const Pwm = struct {
         return @enumFromInt(self.slice_number);
     }
 };
+
+/// Enable in parallel using the PWM EN register (which aliases to the individual slice CSR_EN bits)
+pub fn set_en_bits(en_mask: u32) void {
+    const set_reg: *volatile u32 = hw.set_alias_raw(&microzig.chip.peripherals.PWM.EN);
+    set_reg.* = en_mask;
+}
+
+/// Disable in parallel using the PWM EN register (which aliases to the individual slice CSR_EN bits)
+pub fn unset_en_bits(en_mask: u32) void {
+    const clear_reg: *volatile u32 = hw.clear_alias_raw(&microzig.chip.peripherals.PWM.EN);
+    clear_reg.* = en_mask;
+}
 
 pub const ClkDivMode = enum(u2) {
     free_running,

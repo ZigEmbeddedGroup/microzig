@@ -45,6 +45,7 @@ pub const led = struct {
 pub const sensor = struct {
     pub const AS5600 = @import("sensor/AS5600.zig").AS5600;
     pub const HTS221 = @import("sensor/HTS221.zig").HTS221;
+    pub const DS18B20 = @import("sensor/DS18B20.zig").DS18B20;
     pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
     pub const MLX90640 = @import("sensor/MLX90640.zig").MLX90640;
     pub const MPU_6050 = @import("sensor/MPU-6050.zig").MPU_6050;
@@ -206,6 +207,7 @@ pub const base = struct {
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
     pub const Clock_Device = @import("base/Clock_Device.zig");
+    pub const Block_Memory = @import("base/Block_Memory.zig");
     pub const I2C_Device = @import("base/I2C_Device.zig");
 };
 
@@ -238,6 +240,7 @@ test {
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
     _ = base.Digital_IO;
+    _ = base.Block_Memory;
     _ = base.Clock_Device;
     _ = base.I2C_Device;
 }

@@ -13,8 +13,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const regz = @import("regz");
+const VirtualFilesystem = regz.VirtualFilesystem;
+
 const dvui = @import("dvui");
-const VirtualFilesystem = @import("VirtualFilesystem.zig");
 
 var count: usize = 0;
 
@@ -48,7 +49,7 @@ pub fn create(gpa: Allocator, format: regz.Database.Format, path: []const u8) !*
         .vfs = .init(gpa),
     };
 
-    try db.to_zig(window.vfs.dir(), .{ .for_microzig = true });
+    try db.to_zig(window.vfs.dir(), .{});
 
     count += 1;
 

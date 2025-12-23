@@ -3,6 +3,18 @@ const emus_type = @import("./enums.zig");
 
 const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
+const I2C1SEL = microzig.chip.types.peripherals.rcc_l4.I2C1SEL;
+const I2C2SEL = microzig.chip.types.peripherals.rcc_l4.I2C2SEL;
+
+const ICSW = enum(u2) {
+    /// PCLK clock selected
+    PCLK1 = 0x0,
+    /// SYSCLK clock selected
+    SYS = 0x1,
+    /// HSI clock selected
+    HSI = 0x2,
+    _,
+};
 const pins = microzig.hal.pins;
 
 pub const Clock = struct {
@@ -37,6 +49,18 @@ pub fn enable_uart(comptime index: emus_type.UARTType) void {
         .UART4 => RCC.APB1ENR1.modify(.{ .UART4EN = 1 }),
         .UART5 => RCC.APB1ENR1.modify(.{ .UART5EN = 1 }),
     }
+}
+
+pub fn enable_i2c(comptime i2cindex: emus_type.I2CType, clock: ICSW) void {
+    RCC.APB1ENR1.modify(switch (i2cindex) {
+        .I2C1 => .{ .I2C1EN = 1 },
+        .I2C2 => .{ .I2C2EN = 1 },
+    });
+
+    RCC.CCIPR.modify(switch (i2cindex) {
+        .I2C1 => .{ .I2C1SEL = @as(I2C1SEL, @enumFromInt(@intFromEnum(clock))) },
+        .I2C2 => .{ .I2C2SEL = @as(I2C2SEL, @enumFromInt(@intFromEnum(clock))) },
+    });
 }
 
 pub fn enable_rtc_lcd() void {

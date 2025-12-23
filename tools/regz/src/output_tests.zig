@@ -45,6 +45,8 @@ pub fn peripheral_instantiation(allocator: Allocator) !*Database {
         .name = "TEST_REGISTER",
         .size_bits = 32,
         .offset_bytes = 0,
+        .reset_mask = 0x1,
+        .reset_value = 0x1,
     });
 
     _ = try db.add_register_field(register_id, .{
@@ -252,6 +254,41 @@ pub fn field_with_named_enum(allocator: Allocator) !*Database {
     return db;
 }
 
+pub fn field_with_named_enum_and_named_default(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .reset_mask = 0xF,
+        .reset_value = 0x1,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
+
+    return db;
+}
+
 pub fn field_with_anonymous_enum(allocator: Allocator) !*Database {
     var db = try Database.create(allocator);
     errdefer db.destroy();
@@ -272,6 +309,40 @@ pub fn field_with_anonymous_enum(allocator: Allocator) !*Database {
         .name = "TEST_REGISTER",
         .size_bits = 8,
         .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
+
+    return db;
+}
+
+pub fn field_with_anonymous_enum_and_default(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const enum_id = try db.create_enum(null, .{
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .reset_mask = 0xF,
+        .reset_value = 0x1,
     });
 
     try db.add_register_field(register_id, .{
@@ -591,6 +662,41 @@ pub fn enums_with_name_collision(allocator: Allocator) !*Database {
         .size_bits = 4,
         .offset_bits = 4,
         .enum_id = enum2_id,
+    });
+
+    return db;
+}
+
+pub fn field_with_named_enum_and_unnamed_default(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .reset_mask = 0xF,
+        .reset_value = 0xA,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
     });
 
     return db;

@@ -13,3 +13,5 @@
 - [Getting Started](docs/getting-started)
 - [Contributing Guidelines](docs/contributing)
 - [MicroZig Internals](docs/internals)
+- How Tos:
+  - [How to use Regz for Standalone Projects](docs/how-to-regz-standalone)

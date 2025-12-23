@@ -25,8 +25,7 @@ const Arguments = struct {
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
     patch_path: ?[]const u8 = null,
-    dump: bool = false,
-    microzig: bool = false,
+    dump_path: ?[:0]const u8 = null,
     help: bool = false,
 
     fn deinit(args: *Arguments) void {
@@ -40,9 +39,8 @@ fn print_usage(writer: *std.Io.Writer) !void {
     try writer.writeAll(
         \\regz
         \\  --help                Display this help and exit
-        \\  --dump                Dump SQLite file instead of generate code
-        \\  --microzig            Generate for microzig instead of a standalone file
-        \\  --format <str>        Explicitly set format type, one of: svd, atdf, json
+        \\  --db_dump_path <str>  Dump SQLite file
+        \\  --format <str>        Explicitly set format type, one of: svd, atdf, json, embassy
         \\  --output_path <str>   Write to a file
         \\  --patch_path <str>    After reading format, apply NDJSON based patch file
         \\<str>
@@ -64,10 +62,9 @@ fn parse_args(allocator: Allocator) !Arguments {
     while (i < args.len) : (i += 1)
         if (std.mem.eql(u8, args[i], "--help")) {
             ret.help = true;
-        } else if (std.mem.eql(u8, args[i], "--dump")) {
-            ret.dump = true;
-        } else if (std.mem.eql(u8, args[i], "--microzig")) {
-            ret.microzig = true;
+        } else if (std.mem.eql(u8, args[i], "--db_dump_path")) {
+            i += 1;
+            ret.dump_path = try allocator.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--format")) {
             i += 1;
             if (i >= args.len)
@@ -76,7 +73,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             const format_str = args[i];
 
             ret.format = std.meta.stringToEnum(Database.Format, format_str) orelse {
-                std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{
+                std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json, embassy", .{
                     format_str,
                 });
                 return error.Explained;
@@ -157,15 +154,13 @@ fn main_impl() anyerror!void {
         }
     }
 
-    if (args.dump) {
-        try db.backup(output_path);
-        return;
+    if (args.dump_path) |dump_path| {
+        try db.backup(dump_path);
     }
-
     // output_path is the directory to write files
-    var output_dir = try std.fs.cwd().makeOpenPath(args.output_path.?, .{});
+    var output_dir = try std.fs.cwd().makeOpenPath(output_path, .{});
     defer output_dir.close();
 
     var fs = FS_Directory.init(output_dir);
-    try db.to_zig(fs.directory(), .{ .for_microzig = args.microzig });
+    try db.to_zig(fs.directory(), .{});
 }

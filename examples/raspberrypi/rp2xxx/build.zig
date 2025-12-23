@@ -63,6 +63,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "squarewave", .file = "src/squarewave.zig" },
         .{ .name = "ws2812", .file = "src/ws2812.zig" },
         .{ .name = "blinky", .file = "src/blinky.zig" },
+        .{ .name = "ds18b20", .file = "src/ds18b20.zig" },
         .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
         .{ .name = "gpio-interrupts", .file = "src/gpio_irq.zig" },
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },

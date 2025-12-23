@@ -10,10 +10,29 @@ pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub const std_options: std.Options = .{
-    .log_level = microzig.options.log_level,
-    .log_scope_levels = microzig.options.log_scope_levels,
-    .logFn = microzig.options.logFn,
+pub const std_options: std.Options = blk: {
+    var options = if (@hasDecl(app, "std_options"))
+        app.std_options
+    else
+        std.Options{};
+
+    if (options.logFn != std.log.defaultLog)
+        @compileError("It seems that you're trying to change the stdlib's " ++
+            "logFn. Please set this in the microzig_options, we require this " ++
+            "so that embedded executables don't give compile errors by default.");
+
+    if (options.log_level != std.log.default_level)
+        @compileError("It seems that you're trying to change the stdlib's " ++
+            "log_level. Please set this in the microzig_options.");
+
+    if (options.log_scope_levels.len > 0)
+        @compileError("It seems that you're trying to change the stdlib's " ++
+            "log_scope_levels. Please set this in the microzig_options.");
+
+    options.logFn = microzig.options.logFn;
+    options.log_level = microzig.options.log_level;
+    options.log_scope_levels = microzig.options.log_scope_levels;
+    break :blk options;
 };
 
 // Startup logic:
@@ -40,8 +59,8 @@ export fn microzig_main() noreturn {
     if (!@hasDecl(app, "main"))
         @compileError("The root source file must provide a public function main!");
 
-    const main = @field(app, "main");
-    const info: std.builtin.Type = @typeInfo(@TypeOf(main));
+    const app_main = @field(app, "main");
+    const info: std.builtin.Type = @typeInfo(@TypeOf(app_main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
     if (info != .@"fn" or info.@"fn".params.len > 0)
@@ -62,7 +81,7 @@ export fn microzig_main() noreturn {
         microzig.hal.init();
 
     if (@typeInfo(return_type) == .error_union) {
-        main() catch |err| {
+        app_main() catch |err| {
             // Although here we could use @errorReturnTrace similar to
             // `std.start` and just dump the trace (without panic), the user
             // might not use logging and have the panic handler just blink an
@@ -90,7 +109,7 @@ export fn microzig_main() noreturn {
             }
         };
     } else {
-        main();
+        app_main();
     }
 
     // Main returned, just hang around here a bit.

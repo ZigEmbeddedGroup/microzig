@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const util = @import("util.zig");
+const util = @import("../common/util.zig");
 
 const spi_f1 = microzig.chip.types.peripherals.spi_f1;
 const spi_t = spi_f1.SPI;
