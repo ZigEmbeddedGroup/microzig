@@ -59,30 +59,34 @@ jobs:
             }
 
             const content = fs.readFileSync('lint_results.json', 'utf8').trim();
+
+            // Get all existing bot reviews
+            const existingReviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const botReviews = existingReviews.data.filter(review =>
+              review.user.login === 'github-actions[bot]' &&
+              review.body && review.body.includes('<!-- lint-review -->')
+            );
+
             if (!content || content === '[]') {
               console.log('No lint issues found');
 
-              // Check if there's an existing review to dismiss
-              const existingReviews = await github.rest.pulls.listReviews({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number
-              });
-
-              const botReview = existingReviews.data.find(review =>
-                review.user.login === 'github-actions[bot]' &&
-                review.body && review.body.includes('<!-- lint-review -->')
-              );
-
-              if (botReview && botReview.state !== 'DISMISSED') {
-                await github.rest.pulls.dismissReview({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.issue.number,
-                  review_id: botReview.id,
-                  message: 'All lint issues have been resolved'
-                });
-                console.log('Dismissed previous lint review - no issues found');
+              // Dismiss all existing bot reviews
+              for (const review of botReviews) {
+                if (review.state !== 'DISMISSED') {
+                  await github.rest.pulls.dismissReview({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: context.issue.number,
+                    review_id: review.id,
+                    message: 'All lint issues have been resolved'
+                  });
+                  console.log(`Dismissed review ${review.id}`);
+                }
               }
 
               return;
@@ -90,39 +94,34 @@ jobs:
 
             const issues = JSON.parse(content);
 
-            // Check for existing bot review
-            const existingReviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            const botReview = existingReviews.data.find(review =>
-              review.user.login === 'github-actions[bot]' &&
-              review.body && review.body.includes('<!-- lint-review -->')
-            );
-
             // Create hash of current issues to check if review needs updating
             const issuesHash = crypto.createHash('md5')
               .update(JSON.stringify(issues.map(i => `${i.file}:${i.line}:${i.message}`)))
               .digest('hex')
               .substring(0, 8);
 
-            // Check if existing review has the same issues
-            if (botReview && botReview.body.includes(`<!-- lint-hash:${issuesHash} -->`)) {
+            // Check if any existing review has the same issues
+            const matchingReview = botReviews.find(review => 
+              review.body.includes(`<!-- lint-hash:${issuesHash} -->`)
+            );
+
+            if (matchingReview) {
               console.log('Review already exists with same issues, skipping');
               return;
             }
 
-            // Dismiss existing review if it exists and is not already dismissed
-            if (botReview && botReview.state !== 'DISMISSED') {
-              await github.rest.pulls.dismissReview({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number,
-                review_id: botReview.id,
-                message: 'Updating with new lint results'
-              });
+            // Dismiss ALL existing bot reviews
+            for (const review of botReviews) {
+              if (review.state !== 'DISMISSED') {
+                await github.rest.pulls.dismissReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number,
+                  review_id: review.id,
+                  message: 'Updating with new lint results'
+                });
+                console.log(`Dismissed review ${review.id}`);
+              }
             }
 
             // Prepare review comments
