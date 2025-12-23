@@ -13,8 +13,7 @@ const Allocator = std.mem.Allocator;
 const Map = std.AutoArrayHashMapUnmanaged;
 const assert = std.debug.assert;
 
-const regz = @import("regz");
-const Directory = regz.Database.Directory;
+const Directory = @import("Database.zig").Directory;
 
 pub const Kind = enum {
     file,
@@ -64,6 +63,47 @@ pub fn dir(fs: *VirtualFilesystem) Directory {
         .ptr = @ptrCast(fs),
         .vtable = &.{
             .create_file = create_file_fn,
+        },
+    };
+}
+
+pub fn get_file(fs: *VirtualFilesystem, path: []const u8) !?ID {
+    var components: std.ArrayList([]const u8) = .{};
+    defer components.deinit(fs.gpa);
+
+    var it = std.mem.tokenizeScalar(u8, path, '/');
+    while (it.next()) |component|
+        try components.append(fs.gpa, component);
+
+    return fs.recursive_get_file(.root, components.items);
+}
+
+fn recursive_get_file(fs: *VirtualFilesystem, dir_id: ID, components: []const []const u8) !?ID {
+    return switch (components.len) {
+        0 => null,
+        1 => blk: {
+            const children = try fs.get_children(fs.gpa, dir_id);
+            defer fs.gpa.free(children);
+
+            break :blk for (children) |child| {
+                if (child.kind != .file)
+                    continue;
+
+                const name = fs.get_name(child.id);
+                if (std.mem.eql(u8, name, components[0]))
+                    break child.id;
+            } else null;
+        },
+        else => blk: {
+            const children = try fs.get_children(fs.gpa, dir_id);
+            defer fs.gpa.free(children);
+
+            break :blk for (children) |child| {
+                if (child.kind != .directory)
+                    continue;
+
+                break try fs.recursive_get_file(child.id, components[1..]) orelse continue;
+            } else null;
         },
     };
 }
