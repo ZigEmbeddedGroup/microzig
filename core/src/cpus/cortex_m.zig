@@ -841,7 +841,7 @@ pub const startup_logic = struct {
     fn DebugExceptionHandler(comptime name: []const u8) type {
         if (microzig.options.cpu.verbose_unhandled_irq) {
             return struct {
-                pub const handle = debugExceptionHandler(name);
+                pub const handle = debug_exception_handler(name);
             };
         }
         return ReleaseExceptionHandler;
@@ -849,7 +849,7 @@ pub const startup_logic = struct {
 
     const IrqHandlerFn = *const fn () callconv(.c) void;
 
-    fn debugExceptionHandler(comptime name: []const u8) IrqHandlerFn {
+    fn debug_exception_handler(comptime name: []const u8) IrqHandlerFn {
         // Only use verbose fault handlers on cores that have the required registers
         const has_hfsr = @hasField(types.peripherals.SystemControlBlock, "HFSR");
         const has_cfsr = @hasField(types.peripherals.SystemControlBlock, "CFSR");
