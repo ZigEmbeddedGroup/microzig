@@ -4570,6 +4570,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4595,6 +4596,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4620,6 +4622,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4645,6 +4648,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4670,6 +4674,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4695,6 +4700,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4720,6 +4726,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4745,6 +4752,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4770,6 +4778,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4795,6 +4804,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4820,6 +4830,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4846,6 +4857,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4872,6 +4884,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4897,6 +4910,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4922,6 +4936,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4947,6 +4962,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4972,6 +4988,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -4997,6 +5014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5022,6 +5040,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5047,6 +5066,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5072,6 +5092,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5097,6 +5118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5123,6 +5145,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5149,6 +5172,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5174,6 +5198,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5199,6 +5224,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5224,6 +5250,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5250,6 +5277,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -5276,6 +5304,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32F103.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28563,6 +28592,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28591,6 +28621,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28619,6 +28650,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28647,6 +28679,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28675,6 +28708,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28703,6 +28737,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28731,6 +28766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28759,6 +28795,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28787,6 +28824,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28815,6 +28853,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28843,6 +28882,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28871,6 +28911,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28899,6 +28940,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28927,6 +28969,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28955,6 +28998,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -28983,6 +29027,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29011,6 +29056,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29039,6 +29085,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29067,6 +29114,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29095,6 +29143,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29123,6 +29172,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29151,6 +29201,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29179,6 +29230,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29207,6 +29259,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29235,6 +29288,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29263,6 +29317,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29291,6 +29346,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -29319,6 +29375,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .hal = .{
             .root_source_file = b.path("src/hals/STM32L47X.zig"),
+            .imports = hal_imports,
         },
     };
 

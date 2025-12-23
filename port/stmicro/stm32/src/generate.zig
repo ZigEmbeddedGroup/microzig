@@ -273,6 +273,7 @@ fn generate_chips_file(
             try writer.writeAll(
                 \\        .hal = .{
                 \\            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+                \\            .imports = hal_imports,
                 \\        },
                 \\
             );
