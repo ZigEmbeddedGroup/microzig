@@ -139,10 +139,3 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
 
     return ret.toOwnedSlice();
 }
-
-pub fn anotherHandler() void {}
-pub fn addAnotherProblem() void {}
-pub fn whatIsThis() void {}
-pub fn WhatABOUTTHIS() void {}
-pub fn buildItUp() void {}
-pub fn runningOutOfCamels() void {}
