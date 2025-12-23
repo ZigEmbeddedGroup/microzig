@@ -2,6 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const stm32 = microzig.hal;
 const systick = stm32.systick;
+const board = microzig.board;
 const HTS221 = microzig.drivers.sensor.HTS221;
 
 pub const microzig_options: microzig.Options = .{
@@ -12,8 +13,8 @@ pub const microzig_options: microzig.Options = .{
 };
 
 pub fn init() void {
-    microzig.board.init();
-    microzig.board.init_log();
+    board.init();
+    board.init_log();
     systick.init() catch {
         @panic("systick failed to initialized");
     };
@@ -21,19 +22,7 @@ pub fn init() void {
 
 pub fn main() !void {
     const clock = try stm32.systick_timer.clock_device();
-    _ = (stm32.pins.GlobalConfiguration{
-        .GPIOB = .{
-            // I2C
-            .PIN6 = .{ .mode = .{ .alternate_function = .{
-                .afr = .AF4,
-            } } },
-            .PIN7 = .{ .mode = .{ .alternate_function = .{
-                .afr = .AF4,
-            } } },
-        },
-    }).apply();
-
-    var i2c1 = stm32.i2c.I2C_Device.init(.I2C1);
+    var i2c1 = board.i2c1();
     try i2c1.apply();
     var device = i2c1.i2c_device();
 

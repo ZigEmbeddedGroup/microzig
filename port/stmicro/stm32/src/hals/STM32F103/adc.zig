@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const utils = @import("util.zig");
+const utils = @import("../common/util.zig");
 const periferals = microzig.chip.peripherals;
 const adc_regs = microzig.chip.types.peripherals.adc_f1.ADC;
 const DUALMOD = microzig.chip.types.peripherals.adc_f1.DUALMOD;

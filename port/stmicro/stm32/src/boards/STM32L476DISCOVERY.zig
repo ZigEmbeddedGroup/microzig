@@ -4,12 +4,21 @@
 // https://www.st.com/resource/en/user_manual/um1879-discovery-kit-with-stm32l476vg-mcu-stmicroelectronics.pdf
 const std = @import("std");
 const microzig = @import("microzig");
+const hal = microzig.hal;
+const LcdRam = hal.lcd.LcdRam;
+const hal_pins = hal.pins;
 
-const LcdRam = microzig.hal.lcd.LcdRam;
-const pins = microzig.hal.pins;
+pub const leds_config = (hal_pins.GlobalConfiguration{
+    .GPIOB = .{
+        .PIN2 = .{ .name = "LD4", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+    },
+    .GPIOE = .{
+        .PIN8 = .{ .name = "LD5", .mode = .{ .output = .{ .resistor = .Floating, .o_type = .PushPull } } },
+    },
+});
 
 pub const Lcd = struct {
-    const hal_lcd = microzig.hal.lcd;
+    const hal_lcd = hal.lcd;
 
     current_ram: LcdRam,
 
@@ -142,7 +151,7 @@ pub const Lcd = struct {
     }
 
     fn init_pins() void {
-        _ = (pins.GlobalConfiguration{
+        _ = (hal_pins.GlobalConfiguration{
             .GPIOA = .{
                 .PIN6 = .{ .mode = .{ .alternate_function = .{ .afr = .AF11 } } },
                 .PIN7 = .{ .mode = .{ .alternate_function = .{ .afr = .AF11 } } },
@@ -191,3 +200,36 @@ pub const Lcd = struct {
         return .{ .current_ram = .{} };
     }
 };
+
+pub fn i2c1() hal.i2c.I2C_Device {
+    _ = (hal.pins.GlobalConfiguration{
+        .GPIOB = .{
+            // I2C
+            .PIN6 = .{ .mode = .{ .alternate_function = .{
+                .afr = .AF4,
+            } } },
+            .PIN7 = .{ .mode = .{ .alternate_function = .{
+                .afr = .AF4,
+            } } },
+        },
+    }).apply();
+
+    return hal.i2c.I2C_Device.init(.I2C1);
+}
+
+var uart_log: ?hal.uart.Uart(.USART2) = null;
+
+pub fn init_log() void {
+    _ = (hal.pins.GlobalConfiguration{
+        .GPIOD = .{
+            .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
+            .PIN6 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
+        },
+    }).apply();
+    uart_log = try hal.uart.Uart(.USART2).init(.{ .baud_rate = 9600 });
+    if (uart_log) |*logger| {
+        hal.uart.init_logger(.USART2, logger);
+    }
+}
+
+pub fn init() void {}
