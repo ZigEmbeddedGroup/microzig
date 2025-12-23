@@ -254,10 +254,10 @@ pub fn MemoryMapping(comptime BusType: type) type {
 
             // Sort by base address
             std.sort.block(Segment, owned, {}, struct {
-                fn lessThan(_: void, a: Segment, b: Segment) bool {
+                fn less_than(_: void, a: Segment, b: Segment) bool {
                     return a.at < b.at;
                 }
-            }.lessThan);
+            }.less_than);
 
             // Validate non-overlap
             if (owned.len > 1) {

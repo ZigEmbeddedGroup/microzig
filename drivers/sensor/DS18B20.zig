@@ -65,7 +65,7 @@ pub const DS18B20 = struct {
             };
         }
 
-        fn fromInt(value: u2) Resolution {
+        fn from_int(value: u2) Resolution {
             return @enumFromInt(value);
         }
     };
@@ -203,7 +203,7 @@ pub const DS18B20 = struct {
 
         return .{
             .alarms = .{ .th = th, .tl = tl },
-            .resolution = .fromInt(resolution_bits),
+            .resolution = .from_int(resolution_bits),
         };
     }
 

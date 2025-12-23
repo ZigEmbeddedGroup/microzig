@@ -1,3 +1,7 @@
+const std = @import("std");
+const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
+
 const Issue = struct {
     file: []const u8,
     line: u32,
@@ -49,8 +53,6 @@ pub fn main() !void {
                             .message = message,
                             .file = path,
                         });
-                        // TODO: break up camel case
-                        std.log.info("FAILED SNAKE CASE: {s}, location: {}", .{ identifier_str, location });
                     }
                 },
 
@@ -69,8 +71,11 @@ pub fn main() !void {
 
     const stdout = std.fs.File.stdout();
     var buf: [4096]u8 = undefined;
-    var writer = stdout.writer(&buf);
-    try std.json.Stringify.value(issues.items, .{}, &writer.interface);
+    var file_writer = stdout.writer(&buf);
+    const writer = &file_writer.interface;
+
+    try std.json.Stringify.value(issues.items, .{}, writer);
+    try writer.flush();
 }
 
 const Token = std.zig.Token;
@@ -82,10 +87,6 @@ fn find_first_token_tag(ast: std.zig.Ast, tag: Token.Tag, start_idx: TokenIndex)
             break @intCast(token_idx);
     } else unreachable;
 }
-
-const std = @import("std");
-const assert = std.debug.assert;
-const Allocator = std.mem.Allocator;
 
 fn is_snake_case(str: []const u8) bool {
     for (str) |c| {
