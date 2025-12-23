@@ -17,13 +17,17 @@ pub const std_options: std.Options = blk: {
         std.Options{};
 
     if (options.logFn != std.log.defaultLog)
-        @compileError("It seems that you're trying to change the stdlib's logFn. Please set this in the microzig_options, we require this so that embedded executables don't give compile errors by default.");
+        @compileError("It seems that you're trying to change the stdlib's " ++
+            "logFn. Please set this in the microzig_options, we require this " ++
+            "so that embedded executables don't give compile errors by default.");
 
     if (options.log_level != std.log.default_level)
-        @compileError("It seems that you're trying to change the stdlib's log_level. Please set this in the microzig_options.");
+        @compileError("It seems that you're trying to change the stdlib's " ++
+            "log_level. Please set this in the microzig_options.");
 
     if (options.log_scope_levels.len > 0)
-        @compileError("It seems that you're trying to change the stdlib's log_scope_levels. Please set this in the microzig_options.");
+        @compileError("It seems that you're trying to change the stdlib's " ++
+            "log_scope_levels. Please set this in the microzig_options.");
 
     options.logFn = microzig.options.logFn;
     options.log_level = microzig.options.log_level;
