@@ -142,3 +142,4 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
 
 pub fn anotherHandler() void {}
 pub fn addAnotherProblem() void {}
+pub fn andAnother() void {}
