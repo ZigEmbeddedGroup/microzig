@@ -9,7 +9,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # Required for resolveReviewThread GraphQL mutation
       pull-requests: write
 
     steps:
