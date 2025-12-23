@@ -20,8 +20,7 @@ pub fn main() !void {
     try writer.writeAll(@embedFile("start.zig"));
 
     inline for (@typeInfo(app).@"struct".decls) |decl| {
-        if (!std.mem.eql(u8, "main", decl.name) and
-            !std.mem.eql(u8, "panic", decl.name) and
+        if (!std.mem.eql(u8, "panic", decl.name) and
             !std.mem.eql(u8, "std_options", decl.name))
         {
             try writer.print("pub const {f} = app.{f};\n", .{ std.zig.fmtId(decl.name), std.zig.fmtId(decl.name) });

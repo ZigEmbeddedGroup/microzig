@@ -59,8 +59,8 @@ export fn microzig_main() noreturn {
     if (!@hasDecl(app, "main"))
         @compileError("The root source file must provide a public function main!");
 
-    const main = @field(app, "main");
-    const info: std.builtin.Type = @typeInfo(@TypeOf(main));
+    const app_main = @field(app, "main");
+    const info: std.builtin.Type = @typeInfo(@TypeOf(app_main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
     if (info != .@"fn" or info.@"fn".params.len > 0)
@@ -81,7 +81,7 @@ export fn microzig_main() noreturn {
         microzig.hal.init();
 
     if (@typeInfo(return_type) == .error_union) {
-        main() catch |err| {
+        app_main() catch |err| {
             // Although here we could use @errorReturnTrace similar to
             // `std.start` and just dump the trace (without panic), the user
             // might not use logging and have the panic handler just blink an
@@ -109,7 +109,7 @@ export fn microzig_main() noreturn {
             }
         };
     } else {
-        main();
+        app_main();
     }
 
     // Main returned, just hang around here a bit.
