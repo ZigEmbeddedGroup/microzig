@@ -137,3 +137,6 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
 
     return ret.toOwnedSlice();
 }
+
+pub fn someFunction() void {}
+pub fn anotherFunc() void {}
