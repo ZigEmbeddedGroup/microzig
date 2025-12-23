@@ -35,7 +35,7 @@ const MFP_NONE: u32 = 0;
 const MFP_CAPABLE: u32 = 1;
 const MFP_REQUIRED: u32 = 2;
 
-/// WiFi event types for use with enableEvent/disableEvent
+/// WiFi event types for use with enable_events/disable_events
 pub const Event = struct {
     pub const SET_SSID: u32 = 0;
     pub const AUTH: u32 = 3;
@@ -71,7 +71,7 @@ const CountryInfo = extern struct {
     country_code: [4]u8,
 };
 
-const SsidInfo = extern struct {
+const SSID_Info = extern struct {
     len: u32,
     ssid: [32]u8,
 };
@@ -83,7 +83,7 @@ const PassphraseInfo = extern struct {
 };
 
 /// SAE passphrase info for WPA3
-const SaePassphraseInfo = extern struct {
+const SAE_PassphraseInfo = extern struct {
     len: u16,
     passphrase: [128]u8,
 };
@@ -107,7 +107,7 @@ const DownloadHeader = extern struct {
 pub const CYW43_Wifi = struct {
     const Self = @This();
 
-    transport: sdpcm.Sdpcm,
+    transport: sdpcm.SDPCM,
 
     mac_address: [6]u8 = .{ 0, 0, 0, 0, 0, 0 },
     mac_valid: bool = false,
@@ -120,7 +120,7 @@ pub const CYW43_Wifi = struct {
 
     pub fn init(bus: *cyw43_bus.Cyw43_Bus) CYW43_Wifi {
         return CYW43_Wifi{
-            .transport = sdpcm.Sdpcm.init(bus),
+            .transport = sdpcm.SDPCM.init(bus),
         };
     }
 
@@ -131,7 +131,7 @@ pub const CYW43_Wifi = struct {
         // Enable F2 packet available interrupt
         self.transport.bus.write16(.bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
 
-        try self.loadClm();
+        try self.load_clm();
 
         // Disable TX glomming
         try self.transport.set_iovar_u32("bus:txglom", 0);
@@ -141,8 +141,8 @@ pub const CYW43_Wifi = struct {
         try self.transport.set_iovar_u32("apsta", 1);
         self.transport.bus.internal_delay_ms(10);
 
-        try self.initMacAddress();
-        try self.setCountry(country);
+        try self.init_mac_address();
+        try self.set_country(country);
         self.transport.bus.internal_delay_ms(100);
 
         // Configure antenna
@@ -155,11 +155,11 @@ pub const CYW43_Wifi = struct {
         try self.transport.set_iovar_u32("ampdu_mpdu", 4);
         self.transport.bus.internal_delay_ms(10);
 
-        try self.sendEventMask();
+        try self.send_event_mask();
 
         // Disable spammy events by default, following embassy-rs/cyw43.
-        // Users can re-enable with enableEvents() if needed.
-        try self.disableEvents(&.{
+        // Users can re-enable with enable_events() if needed.
+        try self.disable_events(&.{
             Event.RADIO,
             Event.ROAM,
             Event.IF,
@@ -183,7 +183,7 @@ pub const CYW43_Wifi = struct {
         log.info("WiFi initialized", .{});
     }
 
-    pub const BssInfo = struct {
+    pub const BSS_Info = struct {
         bssid: [6]u8,
         rssi: i16,
         channel: u16,
@@ -204,7 +204,7 @@ pub const CYW43_Wifi = struct {
 
         truncated: bool = false,
 
-        out: []BssInfo = &.{},
+        out: []BSS_Info = &.{},
     };
 
     pub const ScanType = enum(u8) { active = 0, passive = 1 };
@@ -241,7 +241,7 @@ pub const CYW43_Wifi = struct {
         channel_num: u32,
     };
 
-    fn packScanParams(out: []u8, params: ScanParams, channels: []const u16) ![]const u8 {
+    fn pack_scan_params(out: []u8, params: ScanParams, channels: []const u16) ![]const u8 {
         const wire_len = @sizeOf(ScanParamsWire);
         const total = wire_len + channels.len * @sizeOf(u16);
         if (total > out.len) return error.PayloadTooLarge;
@@ -280,12 +280,12 @@ pub const CYW43_Wifi = struct {
     }
 
     pub const ScanResults = struct {
-        bsss: []BssInfo,
+        bsss: []BSS_Info,
         seen: usize,
         truncated: bool,
     };
 
-    fn startScan(self: *Self, params: ScanParams, channels: []const u16, out: []BssInfo) !void {
+    fn start_scan(self: *Self, params: ScanParams, channels: []const u16, out: []BSS_Info) !void {
         if (self.scan_ctx.state == .running)
             return error.ScanAlreadyRunning;
 
@@ -300,7 +300,7 @@ pub const CYW43_Wifi = struct {
         const max_payload = 1280 - ("escan".len + 1);
         var payload_buf: [max_payload]u8 = undefined;
 
-        const payload = try packScanParams(&payload_buf, params, channels);
+        const payload = try pack_scan_params(&payload_buf, params, channels);
         try self.transport.set_iovar("escan", payload);
     }
 
@@ -308,9 +308,9 @@ pub const CYW43_Wifi = struct {
         self: *Self,
         params: ScanParams,
         channels: []const u16,
-        out: []BssInfo,
+        out: []BSS_Info,
     ) !ScanResults {
-        try self.startScan(params, channels, out);
+        try self.start_scan(params, channels, out);
         errdefer self.scan_ctx.state = .failed;
 
         while (self.scan_ctx.state == .running) {
@@ -365,7 +365,7 @@ pub const CYW43_Wifi = struct {
             self.transport.bus.internal_delay_ms(10);
 
             if (security == .wpa3_sae) {
-                var sae = SaePassphraseInfo{
+                var sae = SAE_PassphraseInfo{
                     .len = @intCast(password.len),
                     .passphrase = .{0} ** 128,
                 };
@@ -412,7 +412,7 @@ pub const CYW43_Wifi = struct {
             self.transport.bus.internal_delay_ms(10);
         }
 
-        var ssid_info = SsidInfo{
+        var ssid_info = SSID_Info{
             .len = @intCast(ssid.len),
             .ssid = .{0} ** 32,
         };
@@ -429,11 +429,11 @@ pub const CYW43_Wifi = struct {
 
         switch (result) {
             .control => |ctrl| {
-                self.handleControlResponse(ctrl);
+                self.handle_control_response(ctrl);
                 return null;
             },
             .event => |event| {
-                self.handleEvent(event);
+                self.handle_event(event);
                 return null;
             },
             .data => |data| {
@@ -462,7 +462,7 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Handle control channel response (log errors)
-    fn handleControlResponse(self: *Self, ctrl: sdpcm.ControlResponse) void {
+    fn handle_control_response(self: *Self, ctrl: sdpcm.ControlResponse) void {
         _ = self;
         if (ctrl.is_error) {
             log.warn("Ioctl error: cmd={} status={}", .{ ctrl.cmd, ctrl.status });
@@ -471,8 +471,8 @@ pub const CYW43_Wifi = struct {
         }
     }
 
-    /// Parse an escan partial result into a BssInfo struct
-    fn parseEscanPartial(payload: []const u8) ?BssInfo {
+    /// Parse an escan partial result into a BSS_Info struct
+    fn parse_escan_partial(payload: []const u8) ?BSS_Info {
         // wl_escan_result_t prefix:
         // u32 buflen, u32 version, u16 sync_id, u16 bss_count  => 12 bytes
         const escan_hdr_len: usize = 12;
@@ -500,7 +500,7 @@ pub const CYW43_Wifi = struct {
         const ssid_len_off: usize = 18;
         const ssid_off: usize = 19;
 
-        var out: BssInfo = std.mem.zeroes(BssInfo);
+        var out: BSS_Info = std.mem.zeroes(BSS_Info);
 
         @memcpy(out.bssid[0..6], bss[bssid_off .. bssid_off + 6]);
 
@@ -520,7 +520,7 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Handle event from chip
-    fn handleEvent(self: *Self, evt: []const u8) void {
+    fn handle_event(self: *Self, evt: []const u8) void {
         if (evt.len < @sizeOf(sdpcm.EventMessage)) {
             return;
         }
@@ -579,7 +579,7 @@ pub const CYW43_Wifi = struct {
                 if (status == EVENT_STATUS_PARTIAL) {
                     log.debug("Scan result (partial)", .{});
                     // you should already have `payload` as the event payload slice
-                    if (parseEscanPartial(payload)) |bss| {
+                    if (parse_escan_partial(payload)) |bss| {
                         self.scan_ctx.seen += 1;
 
                         if (self.scan_ctx.stored < self.scan_ctx.out.len) {
@@ -614,7 +614,7 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Load CLM data
-    fn loadClm(self: *Self) !void {
+    fn load_clm(self: *Self) !void {
         log.info("Loading CLM data ({} bytes)...", .{clm_data.len});
 
         var offset: usize = 0;
@@ -652,7 +652,7 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Initialize MAC address from chip
-    fn initMacAddress(self: *Self) !void {
+    fn init_mac_address(self: *Self) !void {
         var buf: [64]u8 = undefined;
         const name = "cur_etheraddr";
         @memcpy(buf[0..name.len], name);
@@ -678,7 +678,7 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Set country code
-    fn setCountry(self: *Self, country: []const u8) !void {
+    fn set_country(self: *Self, country: []const u8) !void {
         var info = CountryInfo{
             .country_abbrev = .{ 0, 0, 0, 0 },
             .revision = -1,
@@ -695,7 +695,7 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Send the current event mask to the chip.
-    fn sendEventMask(self: *Self) !void {
+    fn send_event_mask(self: *Self) !void {
         // Buffer format: 4 bytes interface index + 24 bytes mask
         var buf: [28]u8 = undefined;
         @memcpy(buf[0..4], &[_]u8{ 0, 0, 0, 0 }); // interface 0
@@ -704,22 +704,22 @@ pub const CYW43_Wifi = struct {
     }
 
     /// Enable event types. Use Event.* constants.
-    pub fn enableEvents(self: *Self, events: []const u32) !void {
+    pub fn enable_events(self: *Self, events: []const u32) !void {
         for (events) |event| {
             const byte_idx = event / 8;
             const bit_idx: u3 = @intCast(event % 8);
             self.event_mask[byte_idx] |= (@as(u8, 1) << bit_idx);
         }
-        try self.sendEventMask();
+        try self.send_event_mask();
     }
 
     /// Disable event types. Use Event.* constants.
-    pub fn disableEvents(self: *Self, events: []const u32) !void {
+    pub fn disable_events(self: *Self, events: []const u32) !void {
         for (events) |event| {
             const byte_idx = event / 8;
             const bit_idx: u3 = @intCast(event % 8);
             self.event_mask[byte_idx] &= ~(@as(u8, 1) << bit_idx);
         }
-        try self.sendEventMask();
+        try self.send_event_mask();
     }
 };

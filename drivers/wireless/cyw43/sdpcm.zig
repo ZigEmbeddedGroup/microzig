@@ -53,7 +53,7 @@ const BDC_VERSION: u8 = 2;
 const BROADCOM_OUI: [3]u8 = .{ 0x00, 0x10, 0x18 };
 
 /// SDPCM Header (12 bytes)
-const SdpcmHeader = extern struct {
+const SDPCM_Header = extern struct {
     const ChannelAndFlags = packed struct(u8) {
         channel: u4,
         flags: u4 = 0,
@@ -69,13 +69,13 @@ const SdpcmHeader = extern struct {
     bus_data_credit: u8,
     reserved: [2]u8,
 
-    fn validate(self: *const SdpcmHeader) bool {
+    fn validate(self: *const SDPCM_Header) bool {
         return self.len == ~self.len_inv;
     }
 };
 
 /// CDC Header (16 bytes)
-const CdcHeader = extern struct {
+const CDC_Header = extern struct {
     const Flags = packed struct(u16) {
         is_error: bool = false,
         is_set: bool,
@@ -91,7 +91,7 @@ const CdcHeader = extern struct {
 };
 
 /// BDC Header (4 bytes)
-const BdcHeader = extern struct {
+const BDC_Header = extern struct {
     const Flags = packed struct(u8) {
         flags: u4 = 0,
         version: u4,
@@ -143,7 +143,7 @@ pub const PollResult = union(enum) {
     data: []const u8,
 };
 
-pub const Sdpcm = struct {
+pub const SDPCM = struct {
     const Self = @This();
 
     pub const Error = error{
@@ -173,8 +173,8 @@ pub const Sdpcm = struct {
     last_control_status: u32 = 0,
     last_control_valid: bool = false,
 
-    pub fn init(bus: *cyw43_bus.Cyw43_Bus) Sdpcm {
-        return Sdpcm{
+    pub fn init(bus: *cyw43_bus.Cyw43_Bus) SDPCM {
+        return SDPCM{
             .bus = bus,
         };
     }
@@ -192,8 +192,8 @@ pub const Sdpcm = struct {
             return error.NoCredit;
         }
 
-        const sdpcm_len = @sizeOf(SdpcmHeader);
-        const cdc_len = @sizeOf(CdcHeader);
+        const sdpcm_len = @sizeOf(SDPCM_Header);
+        const cdc_len = @sizeOf(CDC_Header);
         const total_len = sdpcm_len + cdc_len + data.len;
         const tx_bytes = self.bus.get_wlan_tx_buffer();
 
@@ -204,7 +204,7 @@ pub const Sdpcm = struct {
         log.debug("TX ioctl: cmd={} set={} len={}", .{ cmd, is_set, data.len });
 
         // Build SDPCM header
-        const sdpcm: *SdpcmHeader = @ptrCast(@alignCast(tx_bytes.ptr));
+        const sdpcm: *SDPCM_Header = @ptrCast(@alignCast(tx_bytes.ptr));
         sdpcm.* = .{
             .len = @intCast(total_len),
             .len_inv = @intCast(~@as(u16, @intCast(total_len))),
@@ -218,7 +218,7 @@ pub const Sdpcm = struct {
         };
 
         // Build CDC header
-        const cdc: *CdcHeader = @ptrCast(@alignCast(tx_bytes[sdpcm_len..].ptr));
+        const cdc: *CDC_Header = @ptrCast(@alignCast(tx_bytes[sdpcm_len..].ptr));
         cdc.* = .{
             .cmd = cmd,
             .len = @intCast(data.len),
@@ -262,12 +262,12 @@ pub const Sdpcm = struct {
         // Read packet via bus
         const rx_data = self.bus.wlan_recv(len);
 
-        if (len < @sizeOf(SdpcmHeader)) {
+        if (len < @sizeOf(SDPCM_Header)) {
             log.warn("Packet too short: {}", .{len});
             return null;
         }
 
-        const header: *const SdpcmHeader = @ptrCast(@alignCast(rx_data.ptr));
+        const header: *const SDPCM_Header = @ptrCast(@alignCast(rx_data.ptr));
 
         if (!header.validate()) {
             log.warn("Invalid SDPCM: len={} len_inv={}", .{ header.len, header.len_inv });
@@ -288,11 +288,11 @@ pub const Sdpcm = struct {
         const payload = rx_data[data_offset..len];
 
         switch (channel) {
-            CHANNEL_CONTROL => return self.parseControlResponse(payload),
-            CHANNEL_EVENT => return self.parseEvent(payload),
+            CHANNEL_CONTROL => return self.parse_control_response(payload),
+            CHANNEL_EVENT => return self.parse_event(payload),
             CHANNEL_DATA => {
                 log.info("RX DATA frame: payload.len={}", .{payload.len});
-                return self.parseDataPacket(payload);
+                return self.parse_data_packet(payload);
             },
             else => {
                 log.warn("Unknown channel: {}", .{channel});
@@ -302,13 +302,13 @@ pub const Sdpcm = struct {
     }
 
     /// Parse control channel response
-    fn parseControlResponse(self: *Self, payload: []const u8) ?PollResult {
-        if (payload.len < @sizeOf(CdcHeader)) {
+    fn parse_control_response(self: *Self, payload: []const u8) ?PollResult {
+        if (payload.len < @sizeOf(CDC_Header)) {
             return null;
         }
 
-        const cdc: *const CdcHeader = @ptrCast(@alignCast(payload.ptr));
-        const cdc_len = @sizeOf(CdcHeader);
+        const cdc: *const CDC_Header = @ptrCast(@alignCast(payload.ptr));
+        const cdc_len = @sizeOf(CDC_Header);
 
         log.debug("Ioctl response: cmd={} status={} err={}", .{ cdc.cmd, cdc.status, cdc.flags.is_error });
 
@@ -330,15 +330,15 @@ pub const Sdpcm = struct {
 
     /// Parse event channel packet. Returns event if valid Broadcom event found.
     /// Structure: [BDC Header][Ethernet Header][EventHeader][EventMessage][event payload...]
-    fn parseEvent(self: *Self, payload: []const u8) ?PollResult {
-        const bdc_len = @sizeOf(BdcHeader);
+    fn parse_event(self: *Self, payload: []const u8) ?PollResult {
+        const bdc_len = @sizeOf(BDC_Header);
         const eth_len: usize = 14;
         const event_header_len: usize = 10; // subtype(2) + length(2) + version(1) + oui(3) + user_subtype(2)
 
         if (payload.len < bdc_len) return null;
 
         // Read BDC header to get data_offset
-        const bdc: *const BdcHeader = @ptrCast(@alignCast(payload.ptr));
+        const bdc: *const BDC_Header = @ptrCast(@alignCast(payload.ptr));
         const data_offset = @as(usize, bdc.data_offset) * 4;
 
         const eth_start = bdc_len + data_offset;
@@ -372,14 +372,14 @@ pub const Sdpcm = struct {
     }
 
     /// Parse data channel packet. Returns Ethernet frame if valid.
-    fn parseDataPacket(self: *Self, payload: []const u8) ?PollResult {
-        const bdc_len = @sizeOf(BdcHeader);
+    fn parse_data_packet(self: *Self, payload: []const u8) ?PollResult {
+        const bdc_len = @sizeOf(BDC_Header);
 
         if (payload.len < bdc_len) {
             return null;
         }
 
-        const bdc: *const BdcHeader = @ptrCast(@alignCast(payload.ptr));
+        const bdc: *const BDC_Header = @ptrCast(@alignCast(payload.ptr));
         const data_offset = @as(usize, bdc.data_offset) * 4;
 
         const frame_start = bdc_len + data_offset;
@@ -405,9 +405,9 @@ pub const Sdpcm = struct {
             return error.NoCredit;
         }
 
-        const sdpcm_len = @sizeOf(SdpcmHeader);
+        const sdpcm_len = @sizeOf(SDPCM_Header);
         const pad_len: usize = 2;
-        const bdc_len = @sizeOf(BdcHeader);
+        const bdc_len = @sizeOf(BDC_Header);
         const total_len = sdpcm_len + pad_len + bdc_len + frame.len;
         const tx_bytes = self.bus.get_wlan_tx_buffer();
 
@@ -416,7 +416,7 @@ pub const Sdpcm = struct {
         }
 
         // Build SDPCM header
-        const sdpcm: *SdpcmHeader = @ptrCast(@alignCast(tx_bytes.ptr));
+        const sdpcm: *SDPCM_Header = @ptrCast(@alignCast(tx_bytes.ptr));
         sdpcm.* = .{
             .len = @intCast(total_len),
             .len_inv = @intCast(~@as(u16, @intCast(total_len))),
@@ -434,7 +434,7 @@ pub const Sdpcm = struct {
         tx_bytes[sdpcm_len + 1] = 0;
 
         // BDC header
-        const bdc: *BdcHeader = @ptrCast(@alignCast(tx_bytes[sdpcm_len + pad_len ..].ptr));
+        const bdc: *BDC_Header = @ptrCast(@alignCast(tx_bytes[sdpcm_len + pad_len ..].ptr));
         bdc.* = .{
             .flags = .{ .version = BDC_VERSION },
             .priority = .{},
