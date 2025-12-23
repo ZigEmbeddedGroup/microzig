@@ -144,7 +144,7 @@ pub fn build(b: *std.Build) void {
             });
             const lwip_mod = lwip_dep.module("lwip");
             lwip_mod.linkLibrary(foundation_dep.artifact("foundation"));
-            lwip_mod.addIncludePath(b.path("lwip/include/"));
+            lwip_mod.addIncludePath(lwip_dep.path("include"));
 
             firmware.app_mod.addIncludePath(foundation_dep.path("include"));
             for (lwip_mod.include_dirs.items) |dir| {
