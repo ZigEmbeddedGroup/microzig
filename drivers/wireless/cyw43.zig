@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const assert = std.debug.assert;
 
 const Bus = @import("cyw43/bus.zig");
 const WiFi = @import("cyw43/wifi.zig");
@@ -10,14 +11,12 @@ const Self = @This();
 
 bus: Bus = undefined,
 wifi: WiFi = undefined,
-led_pin: ?u2 = null,
 mac: [6]u8 = @splat(0),
 
 pub fn init(
     self: *Self,
     spi: Bus.Spi,
     sleep_ms: *const fn (delay: u32) void,
-    led_pin: ?u2,
 ) !void {
     self.bus = .{ .spi = spi, .sleep_ms = sleep_ms };
     try self.bus.init();
@@ -25,10 +24,6 @@ pub fn init(
     self.wifi = .{ .bus = &self.bus };
     try self.wifi.init();
 
-    if (led_pin) |pin| {
-        self.led_pin = pin;
-        self.wifi.gpio_enable(pin);
-    }
     self.mac = try self.read_mac();
 }
 
@@ -57,10 +52,6 @@ fn read_mac(self: *Self) ![6]u8 {
     return mac;
 }
 
-pub fn led_toggle(self: *Self) void {
-    self.wifi.gpio_toggle(self.led_pin.?);
-}
-
 pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
     const self: *Self = @ptrCast(@alignCast(ptr));
     return self.wifi.recv_zc(bytes);
@@ -75,6 +66,32 @@ pub fn ready(ptr: *anyopaque) bool {
     const self: *Self = @ptrCast(@alignCast(ptr));
     return self.wifi.has_credit();
 }
+
+pub fn gpio(self: *Self, pin: u2) Pin {
+    assert(pin < 3);
+    self.wifi.gpio_enable(pin);
+    return .{
+        .pin = pin,
+        .wifi = &self.wifi,
+    };
+}
+
+pub const Pin = struct {
+    pin: u2,
+    wifi: *WiFi,
+
+    pub fn get(self: *Pin) bool {
+        return self.wifi.gpio_get(self.pin);
+    }
+
+    pub fn put(self: *Pin, value: u1) void {
+        self.wifi.gpio_set(self.pin, value);
+    }
+
+    pub fn toggle(self: *Pin) void {
+        self.wifi.gpio_toggle(self.pin);
+    }
+};
 
 // References:
 //   https://github.com/embassy-rs/embassy/blob/abb1d8286e2415686150e2e315ca1c380659c3c3/cyw43/src/consts.rs

@@ -70,12 +70,11 @@ fn netif_init(netif_c: [*c]c.netif) callconv(.c) c.err_t {
 fn netif_status_callback(netif_c: [*c]c.netif) callconv(.c) void {
     const netif: *c.netif = netif_c;
     const self: *Self = @fieldParentPtr("netif", netif);
-    log.info("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}, flags: {b}", .{
+    log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}", .{
         netif.flags & c.NETIF_FLAG_LINK_UP > 0,
         netif.flags & c.NETIF_FLAG_UP > 0,
         self.ready(),
         IPFormatter.new(netif.ip_addr),
-        netif.flags,
     });
 }
 

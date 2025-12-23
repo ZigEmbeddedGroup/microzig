@@ -348,7 +348,7 @@ fn join_wait(self: *Self, wait_ms: u32) !void {
     var set_ssid: bool = false;
     var buytes: [512]u8 align(4) = undefined;
 
-    log.debug("wifi join", .{});
+    //log.debug("wifi join", .{});
     while (delay < wait_ms) {
         const rsp = try self.read(&buytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
@@ -387,7 +387,7 @@ fn join_wait(self: *Self, wait_ms: u32) !void {
                     else => {},
                 }
                 if (set_ssid and link_up and link_auth) {
-                    log.debug("join OK", .{});
+                    //log.debug("join OK", .{});
                     return;
                 }
             },

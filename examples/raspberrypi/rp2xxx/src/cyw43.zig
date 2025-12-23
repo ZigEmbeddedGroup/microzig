@@ -28,6 +28,8 @@ var wifi_driver: drivers.WiFi = .{};
 var net: Net = undefined;
 var udp: Udp = .{};
 
+const secrets = @import("secrets.zig");
+
 pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
@@ -37,11 +39,15 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
+    // init cyw43
     var wifi = try wifi_driver.init(.{});
     log.debug("mac address: {x}", .{wifi.mac});
+    var led = wifi.gpio(0);
+    // join network
+    try wifi.join(secrets.ssid, secrets.pwd);
+    log.debug("wifi joined", .{});
 
-    try wifi.join("ninazara", "PeroZdero1");
-
+    // init lwip
     net = .{
         .mac = wifi.mac,
         .link = .{
@@ -53,40 +59,31 @@ pub fn main() !void {
     };
     try net.init();
 
-    var i: usize = 1000;
-    while (true) : (i +%= 1) {
+    // wait for lwip dhcp
+    while (!net.ready()) {
         time.sleep_ms(100);
-        wifi.led_toggle();
-        net.poll() catch |err| {
-            log.err("pool {}", .{err});
-            continue;
-        };
-
-        if (net.ready()) {
-            break;
-        }
+        led.toggle();
+        try net.poll();
     }
     log.debug("net ready", .{});
+
+    // send udp packets
     try net.udp_init(&udp, "192.168.190.235", 9999);
+    var buf: [128]u8 = @splat('-');
+    var i: usize = 0;
+    while (true) : (i += 1) {
+        time.sleep_ms(500);
+        led.toggle();
+        try net.poll();
 
-    var buf: [2048]u8 = @splat('-');
-    while (true) : (i +%= 8) {
-        time.sleep_ms(100);
-        wifi.led_toggle();
-        net.poll() catch |err| {
-            log.err("pool {}", .{err});
-            continue;
-        };
-        _ = try std.fmt.bufPrint(&buf, "hello from pico {}\n", .{i});
-        try udp.send(buf[0 .. i % buf.len]);
-        uart_read() catch {}; // Check for the reboot code.  Ignore errors.
+        const msg = try std.fmt.bufPrint(&buf, "hello from pico {}\n", .{i});
+        try udp.send(msg);
+        check_reboot(); // Check for the reboot code.
     }
-
-    rp2xxx.rom.reset_to_usb_boot();
 }
 
 // Puts pico in bootsel mode by uart command.
-fn uart_read() !void {
+fn check_reboot() void {
     const MAGICREBOOTCODE: u8 = 0xAB;
     const v = uart.read_word() catch {
         uart.clear_errors();
@@ -94,6 +91,6 @@ fn uart_read() !void {
     } orelse return;
     if (v == MAGICREBOOTCODE) {
         std.log.warn("Reboot cmd received", .{});
-        microzig.hal.rom.reset_to_usb_boot();
+        rp2xxx.rom.reset_to_usb_boot();
     }
 }

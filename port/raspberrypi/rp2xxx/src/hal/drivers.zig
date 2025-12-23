@@ -475,8 +475,6 @@ pub const WiFi = struct {
     const Spi = hal.Cyw43PioSpi;
     pub const Config = Spi.Config;
 
-    const led_pin: u2 = 0; // led is connected to the gpio pin 0 on pico w
-
     spi: Spi = undefined,
     chip: Chip = .{}, // cyw43 chip interface
 
@@ -491,7 +489,6 @@ pub const WiFi = struct {
                 },
             },
             hal.time.sleep_ms,
-            led_pin,
         );
         return &self.chip;
     }
