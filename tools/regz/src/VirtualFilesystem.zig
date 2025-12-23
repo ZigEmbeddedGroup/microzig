@@ -196,7 +196,7 @@ fn create_file_fn(ctx: *anyopaque, path: []const u8, content: []const u8) Direct
 
     var it = std.mem.tokenizeScalar(u8, path, '/');
     while (it.next()) |component|
-        try components.append(fs.gpa, component.name);
+        try components.append(fs.gpa, component);
 
     var parent: ID = .root;
     if (components.items.len > 1) for (components.items[0 .. components.items.len - 2]) |component| {
