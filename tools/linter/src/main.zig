@@ -1,3 +1,7 @@
+const std = @import("std");
+const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
+
 const Issue = struct {
     file: []const u8,
     line: u32,
@@ -84,10 +88,6 @@ fn find_first_token_tag(ast: std.zig.Ast, tag: Token.Tag, start_idx: TokenIndex)
     } else unreachable;
 }
 
-const std = @import("std");
-const assert = std.debug.assert;
-const Allocator = std.mem.Allocator;
-
 fn is_snake_case(str: []const u8) bool {
     for (str) |c| {
         switch (c) {
@@ -143,7 +143,6 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
 pub fn anotherHandler() void {}
 pub fn addAnotherProblem() void {}
 pub fn whatIsThis() void {}
-pub fn yetAnother() void {}
 pub fn WhatABOUTTHIS() void {}
 pub fn buildItUp() void {}
 pub fn runningOutOfCamels() void {}
