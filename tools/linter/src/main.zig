@@ -139,3 +139,6 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
 
     return ret.toOwnedSlice();
 }
+
+pub fn failedFunc() void {}
+pub fn anotherHandler() void {}
