@@ -92,7 +92,7 @@ pub const Bus = enum {
 };
 
 //default clock config
-var corrent_clocks: ClockTree.Clock_Output = blk: {
+var current_clocks: ClockTree.Clock_Output = blk: {
     const out = ClockTree.get_clocks(.{}) catch unreachable;
     break :blk out.clock;
 };
