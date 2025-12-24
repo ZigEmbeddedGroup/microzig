@@ -502,7 +502,7 @@ pub const CYW43_Pio_Device = struct {
 
     pub fn test_loop(self: *Self) void {
         while (true) {
-            self.cyw43_runner.run();
+            _ = self.cyw43_runner.run();
         }
     }
 };

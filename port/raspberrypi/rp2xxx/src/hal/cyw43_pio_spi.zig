@@ -76,7 +76,7 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
         .pin_mappings = .{
             .out = .single(config.io_pin),
             .set = .single(config.io_pin),
-            .side_set = .single(config.io_pin),
+            .side_set = .single(config.clk_pin),
             .in_base = config.io_pin,
         },
         .shift = .{

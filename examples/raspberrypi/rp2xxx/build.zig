@@ -76,6 +76,9 @@ pub fn build(b: *std.Build) void {
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
         .{ .name = "dma", .file = "src/dma.zig" },
         .{ .name = "cyw43", .file = "src/cyw43.zig" },
+        .{ .name = "cyw43-blinky", .file = "src/cyw43/blinky.zig" },
+        .{ .name = "cyw43-wifi-scan", .file = "src/cyw43/wifi_scan.zig" },
+        .{ .name = "cyw43-wifi-connect", .file = "src/cyw43/wifi_connect.zig" },
         .{ .name = "allocator", .file = "src/allocator.zig" },
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
         .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{

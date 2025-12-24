@@ -5,6 +5,7 @@
 Demos are divided into two categories:
 - Those that can be compiled for/run on both RP2040 (Pico 1) and RP2350 (Pico 2) with no code changes
 - Those that are ONLY for a specific chip, RP2040 or RP2350 due to a unique feature present on one but not the other
+- Note that since the wireless boards (Pico 1 W and Pico 2 W) require the LED to be driven in a slightly different manner, these are included in a separate section alongside some wireless specific tests
 
 Currently many demos are marked as "RP2040 only" simply because HAL functionality hasn't been ported to the RP2350 given it's a very new chip. Most
 examples will eventually be able to run on either chip with no changes due to their peripherals being extremely similar. All demos that run on the the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board can also be run on the [RP2040-Plus](https://www.waveshare.com/rp2040-plus.htm) without modification.
@@ -12,7 +13,7 @@ examples will eventually be able to run on either chip with no changes due to th
 
 ### Chip Agnostic
 - [blinky](src/blinky.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
-  Blinks the LED on the board.
+  Blinks the LED on the board. For the [Pico W](https://thepihut.com/products/raspberry-pi-pico-w) or [Pico2 W](https://thepihut.com/products/raspberry-pi-pico-2-w) see the [CYW43](#cyw43) section below.
 - [changing system clocks](src/rp2040_only/changing_system_clocks.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
   Shows an example of changing SYS and REF clock frequencies.
 - [custom clock config](src/rp2040_only/custom_clock_config.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
@@ -53,6 +54,11 @@ examples will eventually be able to run on either chip with no changes due to th
 
 ### RP2350 Only
 None for now! But an HSTX or other new feature example could go here in the future.
+
+### CYW43
+- [blinky](src/cyw43/blinky.zig) on the [Pico W](https://thepihut.com/products/raspberry-pi-pico-w) or [Pico2 W](https://thepihut.com/products/raspberry-pi-pico-2-w)
+  Blinks the LED on the board.
+
 
 ## Flashing
 
