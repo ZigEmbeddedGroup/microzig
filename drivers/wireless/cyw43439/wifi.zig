@@ -96,7 +96,7 @@ pub fn init(self: *Self) !void {
 
     // Load Country Locale Matrix (CLM)
     {
-        const data = @embedFile("firmware/43439A0_clm.bin");
+        const data = @embedFile("../cyw43/firmware/43439A0_clm.bin");
 
         var clr: extern struct {
             name: [8]u8 = "clmload\x00".*,
