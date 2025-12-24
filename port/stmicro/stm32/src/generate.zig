@@ -112,10 +112,10 @@ fn generate_chips_file(
         \\    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
         \\    var ret: Self = undefined;
         \\    const hal_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
-        \\     .{ 
-        \\          .name = "ClockTree",
-        \\          .module = std.Build.Module.create(b, .{ .root_source_file = b.path("stm32-clocks/lib.zig") }),
-        \\      },
+        \\        .{
+        \\            .name = "ClockTree",
+        \\            .module = std.Build.Module.create(b, .{ .root_source_file = b.path("stm32-clocks/lib.zig") }),
+        \\        },
         \\    }) catch @panic("out of memory");
         \\
         \\
