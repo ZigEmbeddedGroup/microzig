@@ -1,6 +1,7 @@
 .{
     .name = .examples_raspberrypi_rp2xxx,
     .fingerprint = 0xffa4bfa151162a57,
+    .minimum_zig_version = "0.15.1",
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

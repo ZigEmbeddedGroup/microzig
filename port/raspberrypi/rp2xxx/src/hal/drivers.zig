@@ -506,3 +506,33 @@ pub const CYW43_Pio_Device = struct {
         }
     }
 };
+
+
+pub const WiFi = struct {
+    const Self = @This();
+    pub const Chip = mdf.wireless.Cyw43439;
+    pub const recv = Chip.recv_zc;
+    pub const send = Chip.send_zc;
+    pub const ready = Chip.ready;
+
+    const Spi = @import("cyw43439_pio_spi.zig");
+    pub const Config = Spi.Config;
+
+    spi: Spi = undefined,
+    chip: Chip = .{}, // cyw43 chip interface
+
+    pub fn init(self: *Self, config: Config) !*Chip {
+        self.spi = try Spi.init(config);
+        try self.chip.init(
+            .{
+                .ptr = &self.spi,
+                .vtable = &.{
+                    .read = Spi.read,
+                    .write = Spi.write,
+                },
+            },
+            hal.time.sleep_ms,
+        );
+        return &self.chip;
+    }
+};
