@@ -164,6 +164,22 @@ pub fn build(b: *std.Build) void {
         // For debugging, we also always install the firmware as an ELF file
         mb.install_firmware(firmware, .{ .format = .elf });
     }
+
+    // blinky unit tests
+    const blinky = mb.add_firmware(.{
+        .name = "blinky_test",
+        .target = raspberrypi.pico,
+        .optimize = .Debug,
+        .root_source_file = b.path("src/blinky.zig"),
+    });
+
+    const blinky_test = blinky.add_test(.{
+        .root_source_file = b.path("src/blinky_test.zig"),
+    });
+    const run_test = b.addRunArtifact(blinky_test);
+
+    const test_step = b.step("test", "");
+    test_step.dependOn(&run_test.step);
 }
 
 const Example = struct {

@@ -821,6 +821,83 @@ pub fn MicroBuild(port_select: PortSelect) type {
             pub fn add_object_file(fw: *Firmware, source: LazyPath) void {
                 fw.artifact.addObjectFile(source);
             }
+
+            pub const TestOptions = struct {
+                root_source_file: LazyPath,
+
+                // create module options
+                optimize: std.builtin.OptimizeMode = .Debug,
+                link_libc: ?bool = null,
+                link_libcpp: ?bool = null,
+                single_threaded: ?bool = null,
+                strip: ?bool = null,
+                unwind_tables: ?std.builtin.UnwindTables = null,
+                dwarf_format: ?std.dwarf.Format = null,
+                code_model: std.builtin.CodeModel = .default,
+                stack_protector: ?bool = null,
+                stack_check: ?bool = null,
+                sanitize_c: ?std.zig.SanitizeC = null,
+                sanitize_thread: ?bool = null,
+                fuzz: ?bool = null,
+                valgrind: ?bool = null,
+                pic: ?bool = null,
+                red_zone: ?bool = null,
+                omit_frame_pointer: ?bool = null,
+                error_tracing: ?bool = null,
+                no_builtin: ?bool = null,
+
+                // add test options
+                name: []const u8 = "test",
+                max_rss: usize = 0,
+                filters: []const []const u8 = &.{},
+                test_runner: ?Build.Step.Compile.TestRunner = null,
+                use_llvm: ?bool = null,
+                use_lld: ?bool = null,
+                zig_lib_dir: ?LazyPath = null,
+                emit_object: bool = false,
+            };
+
+            /// Creates a test compilation unit with `microzig` as an importable module. Assumes you want to run on the host.
+            pub fn add_test(fw: *Firmware, opts: TestOptions) *Build.Step.Compile {
+                const root_module = fw.mb.builder.createModule(.{
+                    .root_source_file = opts.root_source_file,
+                    .optimize = opts.optimize,
+                    .target = fw.mb.builder.graph.host,
+                    .link_libc = opts.link_libc,
+                    .link_libcpp = opts.link_libcpp,
+                    .single_threaded = opts.single_threaded,
+                    .strip = opts.strip,
+                    .unwind_tables = opts.unwind_tables,
+                    .dwarf_format = opts.dwarf_format,
+                    .code_model = opts.code_model,
+                    .stack_protector = opts.stack_protector,
+                    .stack_check = opts.stack_check,
+                    .sanitize_c = opts.sanitize_c,
+                    .sanitize_thread = opts.sanitize_thread,
+                    .fuzz = opts.fuzz,
+                    .valgrind = opts.valgrind,
+                    .pic = opts.pic,
+                    .red_zone = opts.red_zone,
+                    .omit_frame_pointer = opts.omit_frame_pointer,
+                    .error_tracing = opts.error_tracing,
+                    .no_builtin = opts.no_builtin,
+                });
+
+                for (fw.app_mod.import_table.keys(), fw.app_mod.import_table.values()) |name, module|
+                    root_module.addImport(name, module);
+
+                return fw.mb.builder.addTest(.{
+                    .name = opts.name,
+                    .root_module = root_module,
+                    .max_rss = opts.max_rss,
+                    .filters = opts.filters,
+                    .test_runner = opts.test_runner,
+                    .use_llvm = opts.use_llvm,
+                    .use_lld = opts.use_lld,
+                    .zig_lib_dir = opts.zig_lib_dir,
+                    .emit_object = opts.emit_object,
+                });
+            }
         };
 
         fn get_default_cpu(mb: *Self, target: std.Target) Cpu {
