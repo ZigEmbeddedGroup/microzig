@@ -9,6 +9,8 @@
             .url = "git+https://github.com/Gnyblast/zig-ssd1306-gddram-fonts#84dd5fab70ddc1198eef1cd1305cc82f08f419dc",
             .hash = "ssd1306_font_8x8-0.0.0-oGb_cERcAAA6NJzWDOMepgnY6r4blNEHjpkldDaRAui5",
         },
+        .foundationlibc = .{ .path = "../../../modules/foundation-libc/" },
+        .lwip = .{ .path = "../../../modules/lwip/" },
     },
     .paths = .{
         "README.md",
