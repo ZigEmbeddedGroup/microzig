@@ -1,0 +1,699 @@
+.github/workflows/ci.yml:150:        port_dir: [gigadevice/gd32, raspberrypi/rp2xxx, stmicro/stm32]
+.github/workflows/ci.yml:177:            raspberrypi/rp2xxx,
+build.zig:32:    .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
+build.zig:150:    rp2xxx: bool = false,
+build.zig:207:///     .rp2xxx = true,
+build.zig:219:///         .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+build.zig:405:            // TODO: use unions when they are supported in the build system
+build.zig.zon:33:        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
+core/src/core/experimental/pin.zig:15:    // TODO: Depened on board and chip here
+core/src/core/experimental/semihosting.zig:355:            // TODO: implement splat
+core/src/core/experimental/semihosting.zig:369:            // TODO: limit
+core/src/core/experimental/spi.zig:114:            clock.ensure(); // TODO: Wat?
+core/src/core/experimental/spi.zig:136:    // TODO: add common options, like clock polarity and phase, and CS polarity
+core/src/core/experimental/spi.zig:140:    // TODO: add common options
+core/src/core/experimental/uart.zig:76:    /// TODO: Make this optional, to support STM32F303 et al. auto baud-rate detection?
+core/src/core/experimental/uart.zig:83:// TODO: comptime verify that the enums are valid
+core/src/core/usb.zig:321:                                    // TODO: call mount callback if any
+core/src/core/usb.zig:323:                                    // TODO: call umount callback if any
+core/src/core/usb.zig:338:                                    // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
+core/src/core/usb.zig:393:            // TODO: we support just one config for now so ignore config index
+core/src/core/usb/drivers/cdc.zig:186:                    .SetLineCoding => return usb.ack, // HACK, we should handle data phase somehow to read sent line_coding
+core/src/core/usb/drivers/hid.zig:88:                            // TODO: The host is attempting to limit bandwidth by requesting that
+core/src/core/usb/drivers/hid.zig:98:                            // TODO: The device should switch the format of its reports from the
+core/src/core/usb/drivers/hid.zig:111:                            // TODO: This request sends a feature or output report to the device,
+core/src/cpus/cortex_m/m7.zig:253:    /// TODO: Reserved have values ? see armv7-m reference manual
+core/src/start.zig:72:        @compileError("TODO: Embedded event loop not supported yet. Please try again later.");
+drivers/base/DateTime.zig:278:    // ### TODO ### Add more localizations
+drivers/base/I2C_Device.zig:44:    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
+drivers/display/sh1106.zig:132:                    .spi_3wire => @compileError("TODO"),
+drivers/display/sh1106.zig:137:                    .spi_3wire => @compileError("TODO"),
+drivers/display/ssd1306.zig:74:    // TODO(philippwendel) Add doc comments for functions
+drivers/display/ssd1306.zig:75:    // TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ControlByte.command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine
+drivers/display/ssd1306.zig:149:                    .spi_3wire => @compileError("TODO"),
+drivers/display/ssd1306.zig:154:                    .spi_3wire => @compileError("TODO"),
+drivers/display/ssd1306.zig:346:        // TODO(philippwendel) Make config to enum
+drivers/display/ssd1306.zig:352:        // TODO(philippwendel) Split in two funktions
+drivers/display/ssd1306.zig:363:        // TODO(philippwendel) Make level to enum
+drivers/display/ssd1306.zig:533:        // TODO(philippwendel) Test more values and error
+drivers/display/st77xx.zig:441:            //     ST77XX_INVON  ,   ST_CMD_DELAY,  //  7: hack
+drivers/io_expander/pca9685.zig:50:            // TODO: this can be optimized to single Mode1 read
+drivers/sensor/AS5600.zig:174:    // TODO: Write burn functions. Scary.
+drivers/sensor/ICM-20948.zig:27://! TODO:
+drivers/sensor/ICM-20948.zig:200:        // TODO: Fields to enable each part and only configure what we need. Put the rest in low power mode
+drivers/sensor/ICM-20948.zig:208:                // TODO: Support converting to Gs
+drivers/sensor/ICM-20948.zig:230:                // TODO: Support converting to radians
+drivers/sensor/ICM-20948.zig:507:        // TODO: Support setting these individually. Could set based on if ODR fields are set (make
+drivers/sensor/MPU-6050.zig:19://! TODO:
+drivers/sensor/TLV493D.zig:176:        // TODO: Support other modes
+drivers/sensor/TLV493D.zig:188:        // TODO: Figure out why when using the broadcast address, the subsequent reads seem to hang
+drivers/sensor/TLV493D.zig:235:    // TODO: Figure out why this causes the device to stop responding
+drivers/stepper/ULN2003.zig:173:        // TODO: respect direction
+drivers/wireless/cyw43/bus.zig:105:        // TODO: Make sure error interrupt bits are clear?
+drivers/wireless/cyw43/bus.zig:111:        // TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR
+drivers/wireless/cyw43/runner.zig:56:        self.core_disable(.socram); // TODO: is this needed if we reset right after?
+drivers/wireless/cyw43/runner.zig:91:        // TODO - bluetooth interrupts
+drivers/wireless/cyw43/runner.zig:117:        // TODO: bluetooth setup
+drivers/wireless/cyw43/sdpcm.zig:245:        // TODO: Make bus return error unions?
+drivers/wireless/cyw43/sdpcm.zig:463:            // TODO: Events and data packets received while waiting for the control response
+examples/build.zig:10:    "raspberrypi/rp2xxx",
+examples/build.zig:25:        example_dep.builder.install_path = b.pathJoin(&.{ b.install_path, example_dep_name }); // HACK: install in the current directory
+examples/build.zig.zon:13:        .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },
+examples/microchip/atsam/src/blinky.zig:5:    // TODO: Implement the blinky
+examples/nordic/nrf5x/build.zig:21:    // TODO: better system for examples
+examples/raspberrypi/rp2xxx/build.zig:5:    .rp2xxx = true,
+examples/raspberrypi/rp2xxx/build.zig:15:    const raspberrypi = mb.ports.rp2xxx.boards.raspberrypi;
+examples/raspberrypi/rp2xxx/build.zig:43:        .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040_matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
+examples/raspberrypi/rp2xxx/build.zig.zon:2:    .name = .examples_raspberrypi_rp2xxx,
+examples/raspberrypi/rp2xxx/src/adc.zig:5:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/adc.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/adc.zig:7:const adc = rp2xxx.adc;
+examples/raspberrypi/rp2xxx/src/adc.zig:8:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/adc.zig:10:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/adc.zig:14:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/adc.zig:21:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/adc.zig:23:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/blinky.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/blinky.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/blinky.zig:6:const pin_config: rp2xxx.pins.GlobalConfiguration = .{
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:6:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:8:/// The HAL provides a convenvience function for detecting which of the RP2XXX
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:10:const chip = rp2xxx.compatibility.chip;
+examples/raspberrypi/rp2xxx/src/changing_system_clocks.zig:26:    rp2xxx.init_sequence(system_clock_cfg);
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:6:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:11:/// The HAL provides a convenvience function for detecting which of the RP2XXX
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:13:const chip = rp2xxx.compatibility.chip;
+examples/raspberrypi/rp2xxx/src/custom_clock_config.zig:115:    rp2xxx.init_sequence(system_clock_cfg);
+examples/raspberrypi/rp2xxx/src/cyw43.zig:6:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/cyw43.zig:7:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/cyw43.zig:8:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/cyw43.zig:9:const pio = rp2xxx.pio;
+examples/raspberrypi/rp2xxx/src/cyw43.zig:14:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/cyw43.zig:19:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/cyw43.zig:26:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/cyw43.zig:28:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/cyw43/blinky.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/cyw43/blinky.zig:4:const cyw43 = rp2xxx.cyw43;
+examples/raspberrypi/rp2xxx/src/cyw43/blinky.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:6:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:7:const cyw43 = rp2xxx.cyw43;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:13:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:18:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:28:    uart.apply(.{ .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_connect.zig:29:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:6:const cyw43 = rp2xxx.cyw43;
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:10:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:15:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:20:    uart.apply(.{ .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/cyw43/wifi_scan.zig:21:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/dma.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/dma.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/dma.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/dma.zig:7:const dma = rp2xxx.dma;
+examples/raspberrypi/rp2xxx/src/dma.zig:9:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/dma.zig:23:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/dma.zig:30:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/dma.zig:33:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/ds18b20.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/ds18b20.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/ds18b20.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/ds18b20.zig:9:const pin_config: rp2xxx.pins.GlobalConfiguration = .{
+examples/raspberrypi/rp2xxx/src/ds18b20.zig:26:    var ds18b20_gpio = rp2xxx.drivers.GPIO_Device.init(pins.ds18b20);
+examples/raspberrypi/rp2xxx/src/ds18b20.zig:27:    const clock_device = rp2xxx.drivers.clock_device();
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:6:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:7:const Pin = rp2xxx.gpio.Pin;
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:13:    const led_gpio = rp2xxx.gpio.num(25);
+examples/raspberrypi/rp2xxx/src/gpio_clock_output.zig:29:        rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:10:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:18:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:55:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/gpio_irq.zig:57:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:6:const i2c = rp2xxx.i2c;
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:8:const ClockDevice = rp2xxx.drivers.ClockDevice;
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:9:const I2C_Device = rp2xxx.drivers.I2C_Device;
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:12:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:18:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:21:const sleep_ms = rp2xxx.time.sleep_ms;
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:27:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:29:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:42:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/i2c_accel.zig:51:        rp2xxx.drivers.clock_device(),
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:5:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:6:const i2c = rp2xxx.i2c;
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:7:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:9:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:14:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:23:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:25:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/i2c_bus_scan.zig:36:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:7:const i2c = rp2xxx.i2c;
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:9:const I2C_Device = rp2xxx.drivers.I2C_Device;
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:12:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:18:const sleep_ms = rp2xxx.time.sleep_ms;
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:22:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:30:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:32:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:43:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/i2c_hall_effect.zig:52:        rp2xxx.drivers.clock_device(),
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:6:const i2c = rp2xxx.i2c;
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:7:const I2C_Device = rp2xxx.drivers.I2C_Device;
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:10:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:12:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:17:const pin_config = rp2xxx.pins.GlobalConfiguration{
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:23:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:34:        .clock = rp2xxx.drivers.clock_device(),
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:73:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:76:    i2c0.apply(i2c.Config{ .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/mlx90640.zig:78:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/pwm.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/pwm.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/pwm.zig:5:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/pwm.zig:6:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/pwm.zig:8:const multicore = rp2xxx.multicore;
+examples/raspberrypi/rp2xxx/src/pwm.zig:10:const pin_config = rp2xxx.pins.GlobalConfiguration{
+examples/raspberrypi/rp2xxx/src/rp2040_only/blinky_core1.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/blinky_core1.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/blinky_core1.zig:6:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rp2040_only/blinky_core1.zig:7:const multicore = rp2xxx.multicore;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:7:const flash = rp2xxx.flash;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:9:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:20:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:27:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_id.zig:29:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:5:const flash = rp2xxx.flash;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:6:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:7:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:8:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:11:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:15:const flash_target_contents = @as([*]const u8, @ptrFromInt(rp2xxx.flash.XIP_BASE + flash_target_offset));
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:25:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:32:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/rp2040_only/flash_program.zig:34:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:5:const i2c = rp2xxx.i2c;
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:6:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:8:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:11:const pin_config = rp2xxx.pins.GlobalConfiguration{
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:26:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:37:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/rp2040_only/i2c_slave.zig:39:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:6:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:7:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:8:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:9:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:10:const rand = rp2xxx.rand;
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:13:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:24:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:31:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/rp2040_only/random.zig:33:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:6:const pin_config = rp2xxx.pins.GlobalConfiguration{
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:28:    rp2xxx.rtc.alarm.disable();
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:29:    rp2xxx.rtc.alarm.enable();
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:39:    rp2xxx.rtc.set_datetime(.{
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:48:    rp2xxx.rtc.apply(rp2xxx.clock_config);
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:51:    rp2xxx.rtc.alarm.configure(.{ .second = 0 });
+examples/raspberrypi/rp2xxx/src/rp2040_only/rtc.zig:54:    rp2xxx.rtc.irq.enable();
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:5:const Pio = rp2xxx.pio.Pio;
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:6:const StateMachine = rp2xxx.pio.StateMachine;
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:10:    break :blk rp2xxx.pio.assemble(
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:35:const pio: Pio = rp2xxx.pio.num(0);
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:80:    const div = @as(f32, @floatFromInt(rp2xxx.clock_config.sys.?.frequency())) /
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:84:        .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(div),
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:122:        rp2xxx.time.sleep_ms(50);
+examples/raspberrypi/rp2xxx/src/rp2040_only/tiles.zig:133:    _pio.sm_exec(_sm, rp2xxx.pio.Instruction{
+examples/raspberrypi/rp2xxx/src/rtt_log.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/rtt_log.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/rtt_log.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/rtt_log.zig:85:    var led_gpio = rp2xxx.gpio.num(25);
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:7:const dma = rp2xxx.dma;
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:9:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:13:const spi = rp2xxx.spi.instance.SPI0;
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:17:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:24:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:27:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/spi_loopback_dma.zig:32:    try spi.apply(.{ .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/spi_master.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/spi_master.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/spi_master.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/spi_master.zig:9:const spi = rp2xxx.spi.instance.SPI0;
+examples/raspberrypi/rp2xxx/src/spi_master.zig:14:// NOTE: rp2xxx doesn't label pins as MOSI/MISO. Instead a pin is always for
+examples/raspberrypi/rp2xxx/src/spi_master.zig:22:    const csn = rp2xxx.gpio.num(CS_PIN);
+examples/raspberrypi/rp2xxx/src/spi_master.zig:23:    const mosi = rp2xxx.gpio.num(TX_PIN);
+examples/raspberrypi/rp2xxx/src/spi_master.zig:24:    const sck = rp2xxx.gpio.num(SCK_PIN);
+examples/raspberrypi/rp2xxx/src/spi_master.zig:29:    try spi.apply(.{ .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:7:const chip = rp2xxx.compatibility.chip;
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:9:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:14:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:18:const spi = rp2xxx.spi.instance.SPI0;
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:23:// NOTE: rp2xxx doesn't label pins as MOSI/MISO. Instead a pin is always for
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:39:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:42:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/spi_slave.zig:47:    try spi.apply(.{ .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/squarewave.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/squarewave.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/squarewave.zig:6:const Pio = rp2xxx.pio.Pio;
+examples/raspberrypi/rp2xxx/src/squarewave.zig:7:const StateMachine = rp2xxx.pio.StateMachine;
+examples/raspberrypi/rp2xxx/src/squarewave.zig:11:    break :blk rp2xxx.pio.assemble(
+examples/raspberrypi/rp2xxx/src/squarewave.zig:29:const pio: Pio = rp2xxx.pio.num(0);
+examples/raspberrypi/rp2xxx/src/squarewave.zig:36:        .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(125),
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:6:const i2c = rp2xxx.i2c;
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:14:    // Safe buffer size for rp2xxx to allocate, value can change for other chips
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:27:    rp2xxx.i2c.I2C.apply(i2c0, .{ .baud_rate = 400_000, .clock_config = rp2xxx.clock_config });
+examples/raspberrypi/rp2xxx/src/ssd1306_oled.zig:29:    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:7:const GPIO_Device = rp2xxx.drivers.GPIO_Device;
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:10:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:20:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:27:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:29:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/stepper_driver.zig:51:        .clock_device = rp2xxx.drivers.clock_device(),
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:7:const GPIO_Device = rp2xxx.drivers.GPIO_Device;
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:10:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:20:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:27:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:29:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/stepper_driver_dumb.zig:49:        .clock_device = rp2xxx.drivers.clock_device(),
+examples/raspberrypi/rp2xxx/src/system_timer.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/system_timer.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/system_timer.zig:5:const system_timer = rp2xxx.system_timer;
+examples/raspberrypi/rp2xxx/src/system_timer.zig:6:const chip = rp2xxx.compatibility.chip;
+examples/raspberrypi/rp2xxx/src/system_timer.zig:8:const led = rp2xxx.gpio.num(25);
+examples/raspberrypi/rp2xxx/src/system_timer.zig:9:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/system_timer.zig:10:const uart_tx_pin = rp2xxx.gpio.num(0);
+examples/raspberrypi/rp2xxx/src/system_timer.zig:17:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/system_timer.zig:23:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/system_timer.zig:45:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/system_timer.zig:47:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/system_timer.zig:58:    if (rp2xxx.compatibility.arch == .riscv) {
+examples/raspberrypi/rp2xxx/src/uart_echo.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/uart_echo.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/uart_echo.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/uart_echo.zig:7:const clocks = rp2xxx.clocks;
+examples/raspberrypi/rp2xxx/src/uart_echo.zig:10:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/uart_echo.zig:23:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/uart_log.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/uart_log.zig:4:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/uart_log.zig:5:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/uart_log.zig:8:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/uart_log.zig:19:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/uart_log.zig:30:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/uart_log.zig:33:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:11:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:16:var usb_dev: rp2xxx.usb.Polled(
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:60:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:66:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/usb_cdc.zig:68:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:4:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:6:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:11:const uart = rp2xxx.uart.instance.num(0);
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:21:var usb_dev: rp2xxx.usb.Polled(
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:65:    .logFn = rp2xxx.uart.log,
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:71:        .clock_config = rp2xxx.clock_config,
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:73:    rp2xxx.uart.init_logger(uart);
+examples/raspberrypi/rp2xxx/src/usb_hid.zig:89:            _ = drivers; // TODO
+examples/raspberrypi/rp2xxx/src/watchdog_timer.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/watchdog_timer.zig:4:const watchdog = rp2xxx.watchdog;
+examples/raspberrypi/rp2xxx/src/watchdog_timer.zig:5:const time = rp2xxx.time;
+examples/raspberrypi/rp2xxx/src/watchdog_timer.zig:7:const pin_config = rp2xxx.pins.GlobalConfiguration{
+examples/raspberrypi/rp2xxx/src/ws2812.zig:3:const rp2xxx = microzig.hal;
+examples/raspberrypi/rp2xxx/src/ws2812.zig:4:const gpio = rp2xxx.gpio;
+examples/raspberrypi/rp2xxx/src/ws2812.zig:5:const Pio = rp2xxx.pio.Pio;
+examples/raspberrypi/rp2xxx/src/ws2812.zig:6:const StateMachine = rp2xxx.pio.StateMachine;
+examples/raspberrypi/rp2xxx/src/ws2812.zig:10:    break :blk rp2xxx.pio.assemble(
+examples/raspberrypi/rp2xxx/src/ws2812.zig:35:const pio: Pio = rp2xxx.pio.num(0);
+examples/raspberrypi/rp2xxx/src/ws2812.zig:46:    const div = @as(f32, @floatFromInt(rp2xxx.clock_config.sys.?.frequency())) /
+examples/raspberrypi/rp2xxx/src/ws2812.zig:50:        .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(div),
+examples/raspberrypi/rp2xxx/src/ws2812.zig:65:        rp2xxx.time.sleep_ms(1000);
+examples/raspberrypi/rp2xxx/src/ws2812.zig:67:        rp2xxx.time.sleep_ms(1000);
+examples/raspberrypi/rp2xxx/src/ws2812.zig:69:        rp2xxx.time.sleep_ms(1000);
+examples/stmicro/stm32/build.zig:18:        // TODO: stm32.pins.GlobalConfiguration is not available on those targets
+examples/stmicro/stm32/src/stm32f1xx/usb_cdc.zig:210://TODO port USB driver from RPxxxx USB HAL
+examples/stmicro/stm32/src/stm32f1xx/usb_hid.zig:154://TODO port USB driver from RPxxxx USB HAL
+examples/stmicro/stm32/src/stm32f1xx/usb_hid.zig:246://TODO: full HID report function
+examples/stmicro/stm32/src/stm32f1xx/usb_remote_hid.zig:168://TODO port USB driver from RPxxxx USB HAL
+examples/stmicro/stm32/src/stm32f1xx/usb_remote_hid.zig:302://TODO: full HID report function
+modules/foundation-libc/include/uchar.h:7:    int dummy; // TODO: fill in internal multi-byte conversion state
+modules/foundation-libc/src/modules/string.zig:9:// TODO: memchr
+modules/foundation-libc/src/modules/string.zig:10:// TODO: memcmp
+modules/foundation-libc/src/modules/string.zig:11:// TODO: memmove
+modules/foundation-libc/src/modules/string.zig:12:// TODO: strcat
+modules/foundation-libc/src/modules/string.zig:13:// TODO: strcmp
+modules/foundation-libc/src/modules/string.zig:14:// TODO: strcpy
+modules/foundation-libc/src/modules/string.zig:15:// TODO: strcspn
+modules/foundation-libc/src/modules/string.zig:16:// TODO: strerror
+modules/foundation-libc/src/modules/string.zig:17:// TODO: strncat
+modules/foundation-libc/src/modules/string.zig:18:// TODO: strncpy
+modules/foundation-libc/src/modules/string.zig:19:// TODO: strpbrk
+modules/foundation-libc/src/modules/string.zig:20:// TODO: strrchr
+modules/foundation-libc/src/modules/string.zig:21:// TODO: strspn
+modules/foundation-libc/src/modules/string.zig:22:// TODO: strstr
+modules/riscv32-common/src/riscv32_common.zig:46:// TODO: Verbose exception handler
+modules/riscv32-common/src/riscv32_common.zig:130:    // TODO: supervisor level csrs
+modules/rtt/src/rtt.zig:236:                /// TODO: build.zig option that allows users to opt-in to returning WriteError on full RTT buffer?
+modules/rtt/src/rtt.zig:318:            /// TODO: Does the channel's mode actually matter here?
+port/espressif/esp/ld/esp32_c3/image_boot_sections.ld:51:    /* TODO: in the case of memory protection there should be some alignment
+port/espressif/esp/ld/esp32_c3/rom_functions.ld:411:r_lld_init_start_hack = 0x400011a4;
+port/espressif/esp/src/cpus/esp_riscv.zig:365:        // TODO: make a better default exception handler
+port/espressif/esp/src/hal.zig:50:    // TODO: disable watchdogs in a more elegant way (with a hal).
+port/espressif/esp/src/hal/clocks/esp32_c3.zig:33:    // TODO: add support for rc_fast_clk source
+port/espressif/esp/src/hal/drivers.zig:197:        // TODO: When writev_then_readv_blocking is implemented in the HAL, use that.
+port/espressif/esp/src/hal/gpio.zig:292:    // TODO: bypass gpio matrix
+port/espressif/esp/src/hal/gpio.zig:309:    // TODO: bypass gpio matrix
+port/espressif/esp/src/hal/i2c.zig:12:// TODO: How and why. Is this xtal? That clock is 40_000_000 according to the hal
+port/espressif/esp/src/hal/i2c.zig:170:        // TODO: Take timeout as extra arg and handle saturation?
+port/espressif/esp/src/hal/i2c.zig:507:        // TODO: Maybe we don't need 31 byte limit for reads
+port/espressif/esp/src/hal/i2c.zig:580:        // TODO: Write a new utility that does similar but that will coalesce into a specified size
+port/espressif/esp/src/hal/spi.zig:29:// TODO: add support for peripheral controlled chip select pins
+port/espressif/esp/src/hal/spi.zig:51:            // TODO: we can return directly the packed type if we add some patches
+port/espressif/esp/src/hal/spi.zig:163:    // TODO: not sure if this is the best way to do this
+port/espressif/esp/src/hal/systimer.zig:30:    // TODO: Not sure how this should be called.
+port/espressif/esp/src/hal/uart.zig:5:// TODO: chip independent. currently specific to esp32c3.
+port/espressif/esp/src/hal/usb_serial_jtag.zig:86:        // TODO: add timestamp to log message
+port/gigadevice/gd32/src/boards/longan_nano.zig:110:    // TODO: implement
+port/gigadevice/gd32/src/hals/GD32VF103.zig:36:        // TODO: check if pin is already configured as output
+port/gigadevice/gd32/src/hals/GD32VF103.zig:40:        // TODO: check if pin is already configured as input
+port/gigadevice/gd32/src/hals/GD32VF103.zig:45:        // TODO: check if pin is configured as input
+port/gigadevice/gd32/src/hals/GD32VF103.zig:52:        // TODO: check if pin is configured as output
+port/gigadevice/gd32/src/hals/GD32VF103.zig:79:        @compileError("TODO: custom pins are not currently supported");
+port/gigadevice/gd32/src/hals/GD32VF103/pins.zig:54:                @panic("TODO");
+port/gigadevice/gd32/src/hals/GD32VF103/pins.zig:187:                // TODO: ensure only one instance of an input function exists
+port/gigadevice/gd32/src/hals/GD32VF103/uart.zig:29:        @compileError("TODO: custom pins are not currently supported");
+port/nordic/nrf5x/build.zig:123:                // TODO: use code ram for `.ram_text`
+port/nordic/nrf5x/src/boards/microbit.zig:70:// TODO: should led matrix be a driver?
+port/nordic/nrf5x/src/hal.zig:12:// TODO: adc, timers, pwm, rng, rtc alarms, interrupts, wdt, wifi, nfc, bt, zigbee
+port/nordic/nrf5x/src/hal/gpio.zig:46:// TODO: Do we want to follow the rp2350 design where we encode the package
+port/nordic/nrf5x/src/hal/gpio.zig:50:    // TODO: Add support for LATCH, DETECTMODE
+port/nordic/nrf5x/src/hal/i2c.zig:185:    // TODO: Could move the check into read/write and remove this struct
+port/nordic/nrf5x/src/hal/i2cdma.zig:30:    // TODO: Name these more nicely
+port/nordic/nrf5x/src/hal/i2cdma.zig:146:        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+port/nordic/nrf5x/src/hal/i2cdma.zig:161:        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+port/nordic/nrf5x/src/hal/i2cdma.zig:360:        // TODO: We can handle this if for some reason we want to send a start and immediate stop?
+port/nordic/nrf5x/src/hal/i2cdma.zig:377:        // TODO: We only set the stop one if this is the last transaction... we could handle writev
+port/nordic/nrf5x/src/hal/i2cdma.zig:401:        // TODO: We can handle this actually
+port/nordic/nrf5x/src/hal/spim.zig:79:        // TODO: Chip-specific
+port/nordic/nrf5x/src/hal/spim.zig:113:        // TODO: Does MOSI idle change here?
+port/nordic/nrf5x/src/hal/spim.zig:256:        // TODO: DMA won't work if they are trying to copy from Flash (e.g. program memory). In that
+port/nordic/nrf5x/src/hal/spim.zig:285:                // TODO: Do we have to stop the task on timeout?
+port/nordic/nrf5x/src/hal/uart.zig:8:// TODO: UARTE0? Does DMA, just set rxd.ptr or txd.ptr. UART0 is deprecated (but still works?) on nRF52840
+port/nordic/nrf5x/src/hal/uart.zig:65:// TODO: On 52840 the CONFIG register has 1 bit for STOP bits
+port/nordic/nrf5x/src/hal/uart.zig:122:        // TODO: Make these optional... could have rx only for example
+port/nxp/lpc/src/hals/LPC176x5x.zig:124:        @compileError("TODO: custom pins are not currently supported");
+port/nxp/lpc/src/hals/LPC176x5x.zig:170:            // TODO: UARTN_FIFOS_ARE_DISA is not available in all uarts
+port/raspberrypi/rp2xxx/build.zig:91:                // TODO: maybe these can be used for stacks
+port/raspberrypi/rp2xxx/build.zig:142:                // TODO: maybe these can be used for stacks
+port/raspberrypi/rp2xxx/build.zig.zon:2:    .name = .mz_port_raspberrypi_rp2xxx,
+port/raspberrypi/rp2xxx/src/boards/adafruit_metro_rp2350.zig:5:// ### TODO ### Add automatic default pin configuration for board pins
+port/raspberrypi/rp2xxx/src/hal.zig:44:    // HACK: tests can't access microzig. maybe there's a better way to do this.
+port/raspberrypi/rp2xxx/src/hal/adc.zig:164:    // TODO: consider fixed-point
+port/raspberrypi/rp2xxx/src/hal/adc.zig:273:    // TODO: what happens when DMA and IRQ are enabled?
+port/raspberrypi/rp2xxx/src/hal/adc.zig:310:    // TODO: do we need to acknowledge an ADC interrupt?
+port/raspberrypi/rp2xxx/src/hal/adc.zig:314:        // TODO: check if this works
+port/raspberrypi/rp2xxx/src/hal/clocks/common.zig:9:/// The current HAL requires XOSC configuration with the RP2xxx chip, although this isn't
+port/raspberrypi/rp2xxx/src/hal/clocks/common.zig:11:/// TODO: Find a way to allow this to be "null" as it's not explicitly required as long
+port/raspberrypi/rp2xxx/src/hal/clocks/common.zig:64:        /// TODO: Currently we don't support non-integer division to avoid any
+port/raspberrypi/rp2xxx/src/hal/clocks/common.zig:183:            // TODO: Currently leave all fractional bits 0 to only support integer divisors
+port/raspberrypi/rp2xxx/src/hal/clocks/common.zig:223:                    // TODO: should use `compatibility.arch` but for some reason it breaks the code.
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2040.zig:176:                    @compileError("TODO: Currently don't support fractional clock dividers due to potential clock jitter headaches");
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2040.zig:242:                .src_gpin0, .src_gpin1 => @panic("TODO: No way to know the frequency of an external clock input unless specified by user."),
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2040.zig:300:        ///     - TODO: Could vary the PLL frequency based on sys_freq input to open up a broader range of SYS frequencies
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig:199:                @compileError("TODO: Currently don't support fractional clock dividers due to potential clock jitter headaches");
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig:262:                .src_gpin0, .src_gpin1 => @panic("TODO: No way to know the frequency of an external clock input unless specified by user."),
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig:263:                .otp_clk2fc, .pll_usb_primary_ref_opcg => @panic("TODO: These clocks aren't really documented and shouldn't be used with this function yet"),
+port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig:321:        ///     - TODO: Could vary the PLL frequency based on sys_freq input to open up a broader range of SYS frequencies
+port/raspberrypi/rp2xxx/src/hal/compatibility.zig:11:        @compileError(std.fmt.comptimePrint("Unsupported chip for RP2XXX HAL: \"{s}\"", .{microzig.config.chip_name}));
+port/raspberrypi/rp2xxx/src/hal/dma.zig:120:        // TODO:
+port/raspberrypi/rp2xxx/src/hal/drivers.zig:478:// TODO: CYW43 top level struct just for testing purpose (please redesign)
+port/raspberrypi/rp2xxx/src/hal/flash.zig:95:    // TODO: add sanity checks, e.g., offset + count < flash size
+port/raspberrypi/rp2xxx/src/hal/flash.zig:119:    // TODO: add sanity checks, e.g., offset + count < flash size
+port/raspberrypi/rp2xxx/src/hal/hw.zig:8:        @panic("TODO");
+port/raspberrypi/rp2xxx/src/hal/hw.zig:13:        @panic("TODO");
+port/raspberrypi/rp2xxx/src/hal/i2c.zig:286:    // TODO: Could move the check into read/write and remove this struct
+port/raspberrypi/rp2xxx/src/hal/i2c.zig:339:        //     TODO Could there be an abort while waiting for the STOP
+port/raspberrypi/rp2xxx/src/hal/multicore.zig:73:    // TODO: disable SIO interrupts
+port/raspberrypi/rp2xxx/src/hal/multicore.zig:79:            // TODO: protect stack using MPU
+port/raspberrypi/rp2xxx/src/hal/multicore.zig:98:            // TODO: protect stack using MPU
+port/raspberrypi/rp2xxx/src/hal/pins.zig:875:        // TODO: ensure only one instance of an input function exists
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/Expression.zig:150:        // TODO: how about if the expression is fully enveloped in parenthesis?
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/Expression.zig:381:                        // TODO: other requirement for @divExact
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/comparison_tests/irq.pio.h:3:// TODO: Exercise more? delays, optional sideset, etc?
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig:140:            // TODO: assert we have the code identifier and open curly bracket
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig:624:        // TODO: I need to take a break. There is no rush to finish this. The thing
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig:1146:        // TODO: use Value instead of numbers
+port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig:1150:            // TODO: delay can look like [T1-1], so we could consider the square
+port/raspberrypi/rp2xxx/src/hal/pio/common.zig:84:        // TODO: determine what this does, is it just a combination of the
+port/raspberrypi/rp2xxx/src/hal/pio/common.zig:202:            // TODO: const lock = hw.Lock.claim()
+port/raspberrypi/rp2xxx/src/hal/pio/common.zig:266:                // TODO: plug in rest of the options
+port/raspberrypi/rp2xxx/src/hal/pio/common.zig:444:            // TODO: why does the raw interrupt register no have irq1/0?
+port/raspberrypi/rp2xxx/src/hal/pio/common.zig:450:        // TODO: be able to disable an interrupt
+port/raspberrypi/rp2xxx/src/hal/pio/common.zig:529:            // TODO: check program settings vs pin mapping
+port/raspberrypi/rp2xxx/src/hal/pwm.zig:68:/// e.g. rp2xxx.gpio.num(pin_num).set_function(.pwm)
+port/raspberrypi/rp2xxx/src/hal/rom.zig:1://! Access to functions and data in the RP2XXX bootrom.
+port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig:16:// TODO: maybe support copying the table to ram as well?
+port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig:64:    // TODO: Is the signature correct?
+port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig:66:    // TODO: Is the signature correct?
+port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig:195:    // TODO: Is the signature correct?
+port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig:197:    // TODO: Is the signature correct?
+port/raspberrypi/rp2xxx/src/hal/rtc.zig:88:    // TODO: I believe the compiler is forbidden from re-ordering these two
+port/raspberrypi/rp2xxx/src/hal/uart.zig:325:    // TODO: Will potentially be modified in a future DMA overhaul
+port/raspberrypi/rp2xxx/src/hal/usb.zig:19:pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
+port/raspberrypi/rp2xxx/src/hal/usb.zig:23:    max_endpoints_count: u8 = RP2XXX_MAX_ENDPOINTS_COUNT,
+port/raspberrypi/rp2xxx/src/hal/usb.zig:59:const rp2xxx_buffers = struct {
+port/raspberrypi/rp2xxx/src/hal/usb.zig:82:const rp2xxx_endpoints = struct {
+port/raspberrypi/rp2xxx/src/hal/usb.zig:116:        if (device_config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
+port/raspberrypi/rp2xxx/src/hal/usb.zig:117:            @compileError("RP2XXX USB endpoints number can't be grater than RP2XXX_MAX_ENDPOINTS_COUNT");
+port/raspberrypi/rp2xxx/src/hal/usb.zig:188:                    // TODO: if ((bc & (1 << 10)) == 1) return EPBError.NotAvailable;
+port/raspberrypi/rp2xxx/src/hal/usb.zig:228:                rp2xxx_endpoints.get_ep_ctrl(@enumFromInt(i), .In).?.write_raw(0);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:229:                rp2xxx_endpoints.get_ep_ctrl(@enumFromInt(i), .Out).?.write_raw(0);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:233:                rp2xxx_endpoints.get_buf_ctrl(@enumFromInt(i), .In).?.write_raw(0);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:234:                rp2xxx_endpoints.get_buf_ctrl(@enumFromInt(i), .Out).?.write_raw(0);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:280:                .data_buffer = rp2xxx_buffers.data_buffer,
+port/raspberrypi/rp2xxx/src/hal/usb.zig:311:            // TODO: assert!(buffer.len() <= 64);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:313:            // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::In);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:319:            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
+port/raspberrypi/rp2xxx/src/hal/usb.zig:358:            // TODO: assert!(len <= 64);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:360:            // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::Out);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:435:            ep_hard.buffer_control = rp2xxx_endpoints.get_buf_ctrl(ep.num, ep.dir);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:436:            ep_hard.endpoint_control = rp2xxx_endpoints.get_ep_ctrl(ep.num, ep.dir);
+port/raspberrypi/rp2xxx/src/hal/usb.zig:440:                ep_hard.data_buffer = rp2xxx_buffers.ep0_buffer0;
+port/raspberrypi/rp2xxx/src/hal/usb.zig:466:                .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep.data_buffer),
+port/raspberrypi/rp2xxx/src/hal/watchdog.zig:179:/// TODO: RP2350 SDK masks this with a ROM function:
+port/stmicro/stm32/src/boards/STM32L476DISCOVERY.zig:27:    //  .comX =  0b1111_1111_X111_11XX_XX1X_1111_XX11_X111_1XXX
+port/stmicro/stm32/src/generate.zig:253:        // TODO: Better system to detect if hal is present.
+port/stmicro/stm32/src/hals/STM32F103/drivers.zig:12:// TODO: The STM HAL still has its own I2CAddress type, since it supports 10 bit addresses. For now
+port/stmicro/stm32/src/hals/STM32F103/drivers.zig:209:        // TODO: Should be a deadline since the timeout is doubled with two calls
+port/stmicro/stm32/src/hals/STM32F103/pins.zig:54:                @panic("TODO");
+port/stmicro/stm32/src/hals/STM32F103/pins.zig:191:                // TODO: ensure only one instance of an input function exists
+port/stmicro/stm32/src/hals/STM32F103/rcc.zig:2://TODO: Add support for 105/107
+port/stmicro/stm32/src/hals/STM32F103/rcc.zig:284://TODO: Add STM32F105/7 devices peri
+port/stmicro/stm32/src/hals/STM32F103/spi.zig:28:///TODO: 3-Wire mode, Slave mode, bidirectional mode
+port/stmicro/stm32/src/hals/STM32F103/uart.zig:1://TODO: Half-Duplex (Single-Wire mode)
+port/stmicro/stm32/src/hals/STM32F103/uart.zig:2://TODO: Synchronous mode (For USART only)
+port/stmicro/stm32/src/hals/STM32F103/usb_internals/usb_ll.zig:174:const UsbErrorStatus = struct {}; //TODO
+port/stmicro/stm32/src/hals/STM32F407.zig:3://! TODO: Do something useful for other STM32F40x chips.
+port/stmicro/stm32/src/hals/STM32F407.zig:122:        const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
+port/stmicro/stm32/src/hals/STM32F407.zig:265:                // TODO: should we consider this an unsupported word size or unsupported parity?
+port/stmicro/stm32/src/hals/STM32F407.zig:268:                // TODO: should we consider this an unsupported word size or unsupported parity?
+port/stmicro/stm32/src/hals/STM32F407.zig:291:            // TODO: We assume the default OVER8=0 configuration above (i.e. 16x oversampling).
+port/stmicro/stm32/src/hals/STM32F407.zig:292:            // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
+port/stmicro/stm32/src/hals/STM32F407.zig:293:            // TODO: Do a rounding div, instead of a truncating div?
+port/stmicro/stm32/src/hals/STM32F407.zig:447:            // TODO: the stuff below will probably use the microzig gpio API in the future
+port/stmicro/stm32/src/hals/STM32F407.zig:484:                    // TODO: handle fast mode
+port/stmicro/stm32/src/hals/STM32F429.zig:21://! TODO: add more clock calculations when adding Uart
+port/stmicro/stm32/src/hals/STM32F429.zig:82:        const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
+port/stmicro/stm32/src/hals/common/gpio_v2.zig:40:    //todo
+port/stmicro/stm32/src/hals/common/i2c_v2.zig:69:        // TODO check fi max value is less the 1 and return an error
+port/stmicro/stm32/src/hals/common/i2c_v2.zig:80:        // TODO check fi max value is less the 1 and return an error
+port/stmicro/stm32/src/hals/common/i2c_v2.zig:113:    // TODO this should configure
+port/stmicro/stm32/src/hals/common/timer_v1.zig:169:///- sync and TRGI modes for synchronization with other timers (TODO).
+port/stmicro/stm32/src/hals/common/timer_v1.zig:172:///- DMA burst support for update and compare events (TODO).
+port/stmicro/stm32/src/hals/common/uart_v3.zig:80:            // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
+port/stmicro/stm32/src/hals/common/uart_v3.zig:82:            // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
+port/stmicro/stm32/src/hals/common/uart_v3.zig:85:            // TODO: We assume the default OVER8=0 configuration above.
+port/wch/ch32v/src/hals/ch32v003/gpio.zig:63:    // TODO:
+port/wch/ch32v/src/hals/ch32v003/pins.zig:32:                // TODO: set mode when configure alternative mode.
+port/wch/ch32v/src/hals/ch32v003/pins.zig:42:                @panic("TODO");
+port/wch/ch32v/src/hals/ch32v003/pins.zig:71:            // TODO: Read current output from ODR.
+port/wch/ch32v/src/hals/ch32v003/pins.zig:201:                    // TODO: GPIOD has only 3 ports. Check this.
+port/wch/ch32v/src/hals/ch32v003/pins.zig:204:                        // TODO: Remove this loop. Set at once.
+port/wch/ch32v/src/hals/ch32v003/pins.zig:218:                            // TODO: Remove this loop. Set at once.
+port/wch/ch32v/src/hals/clocks.zig:14:    // TODO: How do we know if we need to set the AFIOEN?
+port/wch/ch32v/src/hals/clocks.zig:150:    // TODO: Make this more flexible.
+port/wch/ch32v/src/hals/clocks.zig:173:            // TODO: Why is this 4, not 2? Check
+port/wch/ch32v/src/hals/gpio.zig:68:    // TODO:
+port/wch/ch32v/src/hals/gpio.zig:119:        // TODO: Cleanup!
+port/wch/ch32v/src/hals/pins.zig:40:                // TODO: set mode when configure alternative mode.
+port/wch/ch32v/src/hals/pins.zig:50:                @panic("TODO");
+port/wch/ch32v/src/hals/pins.zig:79:            // TODO: Read current output from ODR.
+port/wch/ch32v/src/hals/pins.zig:238:                    // TODO: GPIOD has only 3 ports. Check this.
+port/wch/ch32v/src/hals/pins.zig:241:                        // TODO: Remove this loop. Set at once.
+port/wch/ch32v/src/hals/pins.zig:255:                            // TODO: Remove this loop. Set at once.
+port/wch/ch32v/src/hals/usart.zig:151:            // TODO: Add support for other USARTs/UARTs
+sim/aviron/src/lib/Cpu.zig:611:    /// TODO!
+sim/aviron/src/lib/Cpu.zig:618:    /// TODO!
+sim/aviron/src/lib/Cpu.zig:625:    /// TODO!
+sim/aviron/src/lib/Cpu.zig:1445:    ///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)
+sim/aviron/src/lib/Cpu.zig:1463:    ///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)
+sim/aviron/src/lib/Cpu.zig:1556:    /// TODO! (Not necessarily required for implementation, very weird use case)
+sim/aviron/src/lib/Cpu.zig:1560:        @panic("TODO: Implement DES instruction!");
+sim/aviron/src/lib/mcu.zig:23:/// FIXME: The current io_window design doesn't properly model register file mapping for classic
+sim/aviron/src/lib/mcu.zig:108:/// FIXME: Register file (0x00-0x1F) is not mapped in data space - LD/ST to these addresses will
+sim/aviron/src/lib/mcu.zig:163:/// FIXME: Register file (0x00-0x1F) is not mapped in data space - LD/ST to these addresses will
+sim/aviron/src/main.zig:16:    // TODO: Add support for reading/writing EEPROM through IO
+tools/esp-image/src/elf2image.zig:166:    // TODO: move app desc to the start of the image. This is currently done
+tools/esp-image/src/elf2image.zig:170:    // TODO: maybe also check if sections overlap
+tools/esp-image/src/elf2image.zig:192:            // TODO: override time and date
+tools/esp-image/src/elf2image.zig:249:        .flash_pins_drive_settings = 0, // TODO: figure out what to set this to
+tools/esp-image/src/elf2image.zig:261:    // TODO: Add secure boot option (v1 or v2) and append a signature if enabled.
+tools/esp-image/src/esp_image.zig:3:// TODO: Refactor esp-image to allow reading esp images in freestanding. The
+tools/linter/src/main.zig:64:                    // TODO: check types for common abbreviations and ensure they follow coding style.
+tools/package-test/build.zig:5:    .rp2xxx = true,
+tools/package-test/build.zig:21:        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "rp2xxx" },
+tools/printer/build.zig:32:        .name = "rp2xxx_runner",
+tools/printer/build.zig:34:            .root_source_file = b.path("examples/rp2xxx_runner.zig"),
+tools/printer/src/DebugInfo.zig:238:                            // TODO: should use `ranges` attribute
+tools/printer/src/DebugInfo.zig:660:            // TODO: check the use of `readAddress`
+tools/regz/src/Database.zig:115:        // TODO:
+tools/regz/src/Database.zig:1190:// TODO: if we ever need a "get struct fields" function, refactor this to use it
+tools/regz/src/Database.zig:2069:    // TODO: create a `get_enum_id_by_name()` function
+tools/regz/src/Directory.zig:9:    TODO,
+tools/regz/src/File.zig:9:    TODO,
+tools/regz/src/arch/arm.zig:71:        log.warn("TODO: system interrupts handlers for {}", .{device.arch});
+tools/regz/src/arch/arm/nvic.zig:34:            std.log.warn("TODO: implement NVIC register generation for '{}'", .{device.arch});
+tools/regz/src/arch/arm/nvic.zig:49:    // TODO: behavior is different for cortex-m3/4/7, probably the others too
+tools/regz/src/arch/arm/nvic.zig:57:    // TODO: generate IP if any of the above fail, like nvic_prio_bits is missing
+tools/regz/src/arch/arm/nvic.zig:108:    // TODO: cpu module specific NVIC registers
+tools/regz/src/atdf.zig:50:// TODO: scratchpad datastructure for temporary string based relationships,
+tools/regz/src/atdf.zig:105:    // TODO: maybe others?
+tools/regz/src/atdf.zig:107:    // TODO:
+tools/regz/src/atdf.zig:229:    // TODO: assert that there's only one instance using this type
+tools/regz/src/atdf.zig:290:                    // TODO: assert consecutive
+tools/regz/src/atdf.zig:324:// TODO: instances use name in module
+tools/regz/src/atdf.zig:525:    // TODO: infer register group size?
+tools/regz/src/atdf.zig:528:    // TODO: check size
+tools/regz/src/atdf.zig:534:    // TODO: determine if it ever gets put in the register type
+tools/regz/src/atdf.zig:550:    // TODO: "mask": "optional",
+tools/regz/src/atdf.zig:555:// TODO: assert unique mode name
+tools/regz/src/atdf.zig:556:// TODO: modes
+tools/regz/src/atdf.zig:703:                // FIXME: field specific r/w
+tools/regz/src/atdf.zig:730:                // FIXME: struct field modes
+tools/regz/src/atdf.zig:733:                    // TODO: modes
+tools/regz/src/atdf.zig:752:        // FIXME: field based access
+tools/regz/src/atdf.zig:779:        // FIXME: struct_field modes
+tools/regz/src/atdf.zig:782:            // TODO: modes
+tools/regz/src/atdf.zig:792:        // TODO: namespace the enum to the appropriate register, register_group, or peripheral
+tools/regz/src/atdf.zig:936:        return error.Todo;
+tools/regz/src/atdf.zig:970:            return error.TodoInstanceWithMultipleRegisterGroups;
+tools/regz/src/atdf.zig:1020:    // TODO: this isn't always a set value, not sure what to do if it's left out
+tools/regz/src/atdf.zig:1058:    // TODO:
+tools/regz/src/atdf.zig:1080:    // TODO: pads
+tools/regz/src/atdf.zig:1083:// TODO: there are fields like irq-index
+tools/regz/src/atdf.zig:1097:        // TODO: probably connects module instance to interrupt
+tools/regz/src/atdf.zig:1127:// TODO: better output
+tools/regz/src/cmsis-svd.xsd:336:      <!-- V1.1: ARM processor name: Cortex-Mx / SCxxx -->
+tools/regz/src/embassy.zig:429:            // TODO
+tools/regz/src/embassy.zig:436:        // TODO: how do we want to handle multi core MCUs?
+tools/regz/src/embassy.zig:458:            // TODO: don't know what to do if registers is null, so skipping
+tools/regz/src/gen.zig:421:        // HACK: Temporary solution and very very hacky way to ensure that interrupt names and indices
+tools/regz/src/gen.zig:526:    // TODO: get description
+tools/regz/src/gen.zig:679:    // TODO: handle this instead of assert
+tools/regz/src/gen.zig:729:    // TODO: use size to print the hex value (pad with zeroes accordingly)
+tools/regz/src/gen.zig:829:        // TODO: moded nested_struct_field
+tools/regz/src/gen.zig:1069:    // TODO: if it's a struct decl then refer to it by name
+tools/regz/src/gen.zig:1071:        // TODO full reference?
+tools/regz/src/gen.zig:1152:    // TODO: named struct type
+tools/regz/src/main.zig:140:        // TODO: diagnostics
+tools/regz/src/output_tests.zig:158:    // TODO: study the types of qualifiers that come up. it's possible that
+tools/regz/src/svd.zig:167:    // TODO: derive entities here
+tools/regz/src/svd.zig:173:        // TODO: partial derivation
+tools/regz/src/svd.zig:190:                    return error.TodoDimElementsExtended;
+tools/regz/src/svd.zig:295:                return error.TodoDimElementsExtended;
+tools/regz/src/svd.zig:336:    // TODO: handle errors when implemented
+tools/regz/src/svd.zig:380:        return error.TodoDimElements;
+tools/regz/src/svd.zig:382:    // TODO: clusters always have an offset, I need to add them as a field
+tools/regz/src/svd.zig:387:        return error.TodoAlternateCluster;
+tools/regz/src/svd.zig:391:        return error.TodoClusterDerivation;
+tools/regz/src/svd.zig:395:            return error.TodoDimElementsExtended;
+tools/regz/src/svd.zig:447:    // TODO: derivision
+tools/regz/src/svd.zig:451:    // TODO:
+tools/regz/src/svd.zig:545:            return error.TodoDimElementsExtended;
+tools/regz/src/svd.zig:552:        return error.TODO_DerivedRegisterFields;
+tools/regz/src/svd.zig:560:    // TODO: field access
+tools/regz/src/svd.zig:584:    // TODO:
+tools/regz/src/svd.zig:592:        // TODO: find solution to potential name collisions for enums at the peripheral level.
+tools/regz/src/svd.zig:594:        // TODO: description?
+tools/regz/src/svd.zig:619:            // TODO:
+tools/regz/src/svd.zig:740:    // TODO: not sure what dimArrayIndexType means
+tools/regz/src/svd.zig:784:            .dim_name = node.get_value("dimName"), // TODO: use this if it exists instead "name" if available
+tools/regz/src/svd.zig:788:    // TODO: regex pattern not verified, function assumes valid node value
+tools/regz/src/svd.zig:1130:    // TODO: field access
+tools/regz/src/xml.zig:23:            // TODO: what if current node doesn't fit the bill?
+tools/sorcerer/src/main.zig:283:    // TODO: handle no schema usages
+tools/uf2/src/family_id.zig:55:    RP2XXX_ABSOLUTE = 0xe48bff57,
+tools/uf2/src/family_id.zig:56:    RP2XXX_DATA = 0xe48bff58,
+tools/uf2/src/uf2.zig:15:    // TODO: keep track of contained files
+tools/uf2/src/uf2.zig:73:        // TODO: when implemented set to true by default
+tools/uf2/src/uf2.zig:114:        // TODO: check for overlaps, assert no zero sized segments
+tools/uf2/src/uf2.zig:157:            @panic("TODO: bundle source in UF2 file");
+website/assets/style.css:154:code .text-title            { color: var(--srcery-green)          } /* TODO: bold */
+website/assets/style.css:155:code .text-todo             { color: var(--srcery-white)          } /* TODO: bold */
+website/assets/style.css:156:code .text-underline        { color: var(--srcery-blue)           } /* TODO: underline */
+website/assets/style.css:157:code .text-uri              { color: var(--srcery-blue)           } /* TODO: underline */
+website/content/devlog.smd:31:as a library to write build system tools (checkout the rp2xxx_flasher example).
+website/content/devlog.smd:107:// port/raspberrypi/rp2xxx/build.zig
+website/content/devlog.smd:129:/* port/raspberrypi/rp2xxx/ld/rp2040/sections.ld */
+website/content/docs/getting-started.smd:41:    .rp2xxx = true,
+website/content/docs/getting-started.smd:50:        .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+website/content/docs/getting-started.smd:68:const rp2xxx = microzig.hal;
+website/content/docs/getting-started.smd:69:const time = rp2xxx.time;
+website/content/docs/getting-started.smd:72:const pin_config = rp2xxx.pins.GlobalConfiguration{
+website/content/docs/internals.smd:98:// port/raspberrypi/rp2xxx/build.zig
+website/content/docs/internals.smd:120:/* port/raspberrypi/rp2xxx/ld/rp2040/sections.ld */
