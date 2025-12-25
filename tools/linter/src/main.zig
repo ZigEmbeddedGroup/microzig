@@ -2,6 +2,9 @@ const std = @import("std");
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
+const Token = std.zig.Token;
+const TokenIndex = std.zig.Ast.TokenIndex;
+
 const Issue = struct {
     file: []const u8,
     line: u32,
