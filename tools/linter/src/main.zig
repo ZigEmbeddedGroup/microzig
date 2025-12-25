@@ -2,6 +2,9 @@ const std = @import("std");
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
+const Token = std.zig.Token;
+const TokenIndex = std.zig.Ast.TokenIndex;
+
 const Issue = struct {
     file: []const u8,
     line: u32,
@@ -20,8 +23,8 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    var issues: std.array_list.Managed(Issue) = .init(allocator);
-    defer issues.deinit();
+    var issues: std.ArrayListUnmanaged(Issue) = .{};
+    defer issues.deinit(allocator);
 
     for (args[1..]) |path| {
         const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, .@"1", 0) catch |err| {
@@ -32,6 +35,8 @@ pub fn main() !void {
 
         var ast = try std.zig.Ast.parse(allocator, source, .zig);
         defer ast.deinit(allocator);
+
+        try check_todos(allocator, path, source, &issues);
         for (ast.nodes.items(.tag), ast.nodes.items(.main_token)) |node_tag, main_tok_idx| {
             switch (node_tag) {
                 .fn_proto_simple,
@@ -48,7 +53,7 @@ pub fn main() !void {
                             snake_case,
                         });
 
-                        try issues.append(.{
+                        try issues.append(allocator, .{
                             .line = @intCast(location.line + 1),
                             .message = message,
                             .file = path,
@@ -77,9 +82,6 @@ pub fn main() !void {
     try std.json.Stringify.value(issues.items, .{}, writer);
     try writer.flush();
 }
-
-const Token = std.zig.Token;
-const TokenIndex = std.zig.Ast.TokenIndex;
 
 fn find_first_token_tag(ast: std.zig.Ast, tag: Token.Tag, start_idx: TokenIndex) TokenIndex {
     return for (ast.tokens.items(.tag)[start_idx..], start_idx..) |token_tag, token_idx| {
@@ -118,24 +120,66 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
     if (str.len == 0)
         return str;
 
-    var ret = std.array_list.Managed(u8).init(arena);
-    errdefer ret.deinit();
+    var ret = std.ArrayListUnmanaged(u8){};
+    errdefer ret.deinit(arena);
 
     if (std.ascii.isUpper(str[0])) {
-        try ret.append(std.ascii.toLower(str[0]));
+        try ret.append(arena, std.ascii.toLower(str[0]));
     } else {
-        try ret.append(str[0]);
+        try ret.append(arena, str[0]);
     }
 
     for (str[1..]) |c| {
         if (std.ascii.isUpper(c)) {
             // Add underscore before uppercase letters
-            try ret.append('_');
-            try ret.append(std.ascii.toLower(c));
+            try ret.append(arena, '_');
+            try ret.append(arena, std.ascii.toLower(c));
         } else {
-            try ret.append(c);
+            try ret.append(arena, c);
         }
     }
 
-    return ret.toOwnedSlice();
+    return ret.toOwnedSlice(arena);
+}
+
+const uppercase_todo_keywords: []const []const u8 = &.{
+    "TODO",
+    "HACK",
+    "FIXME",
+    "XXX",
+    "BUG",
+    "NOTE",
+};
+
+pub fn check_todos(
+    allocator: Allocator,
+    path: []const u8,
+    source: []const u8,
+    issues: *std.ArrayListUnmanaged(Issue),
+) !void {
+    var line_num: u32 = 1;
+    var it = std.mem.splitScalar(u8, source, '\n');
+    while (it.next()) |line| : (line_num += 1) {
+        const comment_start = std.mem.indexOf(u8, line, "//") orelse continue;
+        const comment = line[comment_start..];
+        if (contains_todo_keyword(comment) and !contains_link(comment)) {
+            try issues.append(allocator, .{
+                .file = path,
+                .line = line_num,
+                .message = "TODO style comments need to have a linked microzig issue on the same line.",
+            });
+        }
+    }
+}
+
+/// Checks if a string contains a link (URL).
+fn contains_link(text: []const u8) bool {
+    return std.mem.indexOf(u8, text, "https://github.com/ZigEmbeddedGroup/microzig/issues") != null;
+}
+
+fn contains_todo_keyword(text: []const u8) bool {
+    return for (uppercase_todo_keywords) |keyword| {
+        if (std.mem.indexOf(u8, text, keyword) != null)
+            break true;
+    } else false;
 }

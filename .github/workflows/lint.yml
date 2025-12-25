@@ -36,14 +36,109 @@ jobs:
           echo "Changed files: $FILES"
 
           if [ -n "$FILES" ]; then
-            echo "$FILES" | xargs ./tools/linter/zig-out/bin/linter > lint_results.json
+            echo "$FILES" | xargs ./tools/linter/zig-out/bin/linter > lint_results_raw.json
           else
-            echo "[]" > lint_results.json
+            echo "[]" > lint_results_raw.json
           fi
 
           # Debug output
-          echo "Lint results:"
-          cat lint_results.json
+          echo "Raw lint results:"
+          cat lint_results_raw.json
+
+      - name: Filter lint results to changed lines
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            if (!fs.existsSync('lint_results_raw.json')) {
+              fs.writeFileSync('lint_results.json', '[]');
+              console.log('No raw lint results found');
+              return;
+            }
+
+            const rawIssues = JSON.parse(fs.readFileSync('lint_results_raw.json', 'utf8'));
+
+            if (rawIssues.length === 0) {
+              fs.writeFileSync('lint_results.json', '[]');
+              console.log('No lint issues found');
+              return;
+            }
+
+            console.log(`Found ${rawIssues.length} total lint issue(s)`);
+
+            // Get diff with line numbers
+            const baseSha = '${{ github.event.pull_request.base.sha }}';
+            const headSha = '${{ github.event.pull_request.head.sha }}';
+
+            // Parse diff to get changed line numbers per file
+            const changedLines = {};
+
+            for (const issue of rawIssues) {
+              const file = issue.file;
+
+              if (!changedLines[file]) {
+                try {
+                  // Get the diff for this specific file
+                  const diff = execSync(
+                    `git diff --unified=0 ${baseSha} ${headSha} -- "${file}"`,
+                    { encoding: 'utf8' }
+                  );
+
+                  // Parse the diff to extract changed line numbers
+                  const lines = new Set();
+                  const diffLines = diff.split('\n');
+
+                  for (const line of diffLines) {
+                    // Match the @@ -start,count +start,count @@ format
+                    const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+                    if (match) {
+                      const startLine = parseInt(match[1]);
+                      const count = match[2] ? parseInt(match[2]) : 1;
+
+                      // Add all changed lines in this hunk
+                      for (let i = 0; i < count; i++) {
+                        lines.add(startLine + i);
+                      }
+                    }
+                  }
+
+                  changedLines[file] = lines;
+                  console.log(`File ${file}: ${lines.size} changed line(s)`);
+                } catch (error) {
+                  console.log(`Could not get diff for ${file}: ${error.message}`);
+                  changedLines[file] = new Set();
+                }
+              }
+            }
+
+            // Filter issues to only those on changed lines
+            const filteredIssues = rawIssues.filter(issue => {
+              const fileLines = changedLines[issue.file] || new Set();
+              const isOnChangedLine = fileLines.has(issue.line);
+              if (!isOnChangedLine) {
+                console.log(`Filtered out: ${issue.file}:${issue.line} (not on changed line)`);
+              }
+              return isOnChangedLine;
+            });
+
+            // Save filtered issues
+            fs.writeFileSync('lint_results.json', JSON.stringify(filteredIssues, null, 2));
+
+            // Create summary of filtered issues
+            const filtered = rawIssues.length - filteredIssues.length;
+            if (filtered > 0) {
+              console.log(`Filtered out ${filtered} issue(s) on unchanged lines`);
+
+              const filteredOut = rawIssues.filter(issue => !filteredIssues.includes(issue));
+              const summary = filteredOut.map(i => `${i.file}:${i.line}: ${i.message}`).join('\n');
+              fs.writeFileSync('filtered_issues.txt', 
+                `The following ${filtered} issue(s) exist but are not on lines changed in this PR:\n\n${summary}`
+              );
+            }
+
+            console.log(`Kept ${filteredIssues.length} issue(s) on changed lines for inline comments`);
 
       - name: Post review with grouped comments
         uses: actions/github-script@v7
@@ -150,7 +245,11 @@ jobs:
               review.body && review.body.includes('<!-- lint-review -->')
             );
 
-            if (!content || content === '[]') {
+            // Check if there are filtered issues
+            const hasFilteredIssues = fs.existsSync('filtered_issues.txt');
+            const filteredContent = hasFilteredIssues ? fs.readFileSync('filtered_issues.txt', 'utf8') : '';
+
+            if ((!content || content === '[]') && !hasFilteredIssues) {
               console.log('No lint issues found');
 
               // Dismiss all existing bot reviews and resolve their conversations
@@ -171,11 +270,11 @@ jobs:
               return;
             }
 
-            const issues = JSON.parse(content);
+            const issues = content && content !== '[]' ? JSON.parse(content) : [];
 
             // Create hash of current issues to check if review needs updating
             const issuesHash = crypto.createHash('md5')
-              .update(JSON.stringify(issues.map(i => `${i.file}:${i.line}:${i.message}`)))
+              .update(JSON.stringify(issues.map(i => `${i.file}:${i.line}:${i.message}`)) + filteredContent)
               .digest('hex')
               .substring(0, 8);
 
@@ -204,7 +303,7 @@ jobs:
               }
             }
 
-            // Prepare review comments
+            // Prepare review comments (only for issues on changed lines)
             const reviewComments = [];
             const issuesByFile = {};
 
@@ -226,13 +325,24 @@ jobs:
             const fileCount = Object.keys(issuesByFile).length;
 
             let reviewBody = `## 🔍 Lint Results\n\n`;
-            reviewBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
 
-            for (const [file, fileIssues] of Object.entries(issuesByFile)) {
-              reviewBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
+            if (totalIssues > 0) {
+              reviewBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} on changed lines in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
+
+              for (const [file, fileIssues] of Object.entries(issuesByFile)) {
+                reviewBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
+              }
+            }
+
+            // Add filtered issues summary if exists
+            if (hasFilteredIssues) {
+              reviewBody += `\n<details>\n<summary>ℹ️ Additional issues on unchanged lines</summary>\n\n\`\`\`\n${filteredContent}\n\`\`\`\n\n</details>\n`;
             }
 
             reviewBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
+
+            // Determine review event type
+            const reviewEvent = totalIssues > 0 ? 'REQUEST_CHANGES' : 'COMMENT';
 
             try {
               const review = await github.rest.pulls.createReview({
@@ -241,11 +351,11 @@ jobs:
                 pull_number: context.issue.number,
                 commit_id: context.payload.pull_request.head.sha,
                 body: reviewBody,
-                event: 'REQUEST_CHANGES',
+                event: reviewEvent,
                 comments: reviewComments
               });
 
-              console.log(`Created review with ${reviewComments.length} comments`);
+              console.log(`Created review with ${reviewComments.length} inline comment(s)`);
             } catch (error) {
               console.error(`Failed to create review:`, error.message);
 
@@ -257,7 +367,7 @@ jobs:
                   pull_number: context.issue.number,
                   commit_id: context.payload.pull_request.head.sha,
                   body: reviewBody + '\n\n⚠️ Could not attach inline comments due to an error.',
-                  event: 'REQUEST_CHANGES'
+                  event: reviewEvent
                 });
                 console.log('Created review without inline comments as fallback');
               } catch (fallbackError) {
