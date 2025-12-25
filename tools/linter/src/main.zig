@@ -162,7 +162,7 @@ pub fn check_todos(
     issues: *std.ArrayListUnmanaged(Issue),
 ) !void {
     var line_num: u32 = 1;
-    var it = std.mem.tokenizeScalar(u8, source, '\n');
+    var it = std.mem.splitScalar(u8, source, '\n');
     while (it.next()) |line| : (line_num += 1) {
         const comment_start = std.mem.indexOf(u8, line, "//") orelse continue;
         const comment = line[comment_start..];
