@@ -36,9 +36,7 @@ pub fn main() !void {
         var ast = try std.zig.Ast.parse(allocator, source, .zig);
         defer ast.deinit(allocator);
 
-        // Check for TODO/FIXME comments without issue links
         try check_todos(allocator, path, source, &issues);
-
         for (ast.nodes.items(.tag), ast.nodes.items(.main_token)) |node_tag, main_tok_idx| {
             switch (node_tag) {
                 .fn_proto_simple,
@@ -153,8 +151,6 @@ const uppercase_todo_keywords: []const []const u8 = &.{
     "NOTE",
 };
 
-/// Checks for TODO and FIXME comments without issue links.
-/// Appends issues to the provided ArrayList.
 pub fn check_todos(
     allocator: Allocator,
     path: []const u8,
