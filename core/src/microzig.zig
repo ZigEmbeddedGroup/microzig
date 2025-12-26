@@ -6,9 +6,10 @@
 const std = @import("std");
 const root = @import("root");
 const builtin = @import("builtin");
+const start = @import("start.zig");
 
 /// The app that is currently built.
-pub const app = @import("app");
+//pub const app = @import("app");
 
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information
@@ -103,7 +104,7 @@ pub const Options = struct {
     simple_panic_if_main_errors: bool = false,
 };
 
-pub const options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
+pub const options: Options = if (@hasDecl(root, "microzig_options")) root.microzig_options else .{};
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
@@ -112,6 +113,10 @@ pub fn hang() noreturn {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
         asm volatile ("" ::: .{ .memory = true });
     }
+}
+
+comptime {
+    _ = start;
 }
 
 test {

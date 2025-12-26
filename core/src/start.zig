@@ -1,23 +1,23 @@
 const std = @import("std");
+const root = @import("root");
 const builtin = @import("builtin");
-const microzig = @import("microzig");
-const app = @import("app");
+const microzig = @import("microzig.zig");
 
 // Use microzig panic handler if not defined by an application
-pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
+//pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
 // Conditionally provide a default no-op logFn if app does not have one
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub const std_options: std.Options = .{
-    .log_level = microzig.options.log_level,
-    .log_scope_levels = microzig.options.log_scope_levels,
-    .logFn = microzig.options.logFn,
-};
-
+//pub const std_options: std.Options = .{
+//    .log_level = microzig.options.log_level,
+//    .log_scope_levels = microzig.options.log_scope_levels,
+//    .logFn = microzig.options.logFn,
+//};
 // Startup logic:
 comptime {
+    _ = root;
     // Instantiate the startup logic for the given CPU type.
     // This usually implements the `_start` symbol that will populate
     // the sections .data and .bss with the correct data.
@@ -37,10 +37,10 @@ comptime {
 /// circular dependency between the `microzig` and `chip` package. This function is also likely
 /// to be invoked from assembly, so it's also convenient in that regard.
 export fn microzig_main() noreturn {
-    if (!@hasDecl(app, "main"))
+    if (!@hasDecl(root, "main"))
         @compileError("The root source file must provide a public function main!");
 
-    const main = @field(app, "main");
+    const main = @field(root, "main");
     const info: std.builtin.Type = @typeInfo(@TypeOf(main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
@@ -56,8 +56,8 @@ export fn microzig_main() noreturn {
     // procedures like clock configuration. The user may override and customize
     // this functionality by providing their own init function.
     // function.
-    if (@hasDecl(app, "init"))
-        app.init()
+    if (@hasDecl(root, "init"))
+        root.init()
     else if (microzig.hal != void and @hasDecl(microzig.hal, "init"))
         microzig.hal.init();
 
