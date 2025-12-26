@@ -83,6 +83,7 @@ pub const Target = struct {
         hal: ?HardwareAbstractionLayer = null,
         board: ?Board = null,
         linker_script: ?LinkerScript = null,
+        stack: ?Stack = null,
         entry: ?Build.Step.Compile.Entry = null,
         patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
     };
@@ -102,6 +103,7 @@ pub const Target = struct {
             .hal = options.hal orelse from.hal,
             .board = options.board orelse from.board,
             .linker_script = options.linker_script orelse from.linker_script,
+            .stack = options.stack orelse from.stack,
             .entry = options.entry orelse from.entry,
             .patch_elf = options.patch_elf orelse from.patch_elf,
         };
