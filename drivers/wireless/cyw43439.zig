@@ -27,8 +27,8 @@ pub fn init(
     self.mac = try self.read_mac();
 }
 
-pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
-    try self.wifi.join(ssid, pwd);
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: WiFi.JoinOptions) !void {
+    try self.wifi.join(ssid, pwd, opt);
 }
 
 fn show_clm_ver(self: *Self) !void {

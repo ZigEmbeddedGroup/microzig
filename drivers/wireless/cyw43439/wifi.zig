@@ -254,7 +254,25 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
     return error.Cyw43NoResponse;
 }
 
-pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
+pub const JoinOptions = struct {
+    security: Security = .wpa_psk,
+    country: Country = .{},
+
+    pub const Security = enum {
+        open,
+        wpa_psk,
+        wpa2_psk,
+        wpa3_sae,
+    };
+
+    // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
+    pub const Country = struct {
+        code: [2]u8 = "XX".*, // Worldwide
+        revision: i32 = -1,
+    };
+};
+
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
     const bus = self.bus;
 
     // Clear pullups
@@ -278,10 +296,26 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
     }
     // Set country
     {
-        // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
-        // abbrev++rev++code in u32
-        const buf = "XX\x00\x00" ++ "\xFF\xFF\xFF\xFF" ++ "XX\x00\x00";
-        try self.set_var("country", buf);
+        const code = opt.country.code;
+        var val = extern struct {
+            abbrev: [4]u8,
+            revision: i32,
+            code: [4]u8,
+        }{
+            .abbrev = .{ code[0], code[1], 0, 0 },
+            .revision = opt.country.revision,
+            .code = .{ code[0], code[1], 0, 0 },
+        };
+        self.set_var("country", mem.asBytes(&val)) catch |err| switch (err) {
+            error.Cyw43InvalidCommandStatus => {
+                log.err(
+                    "invalid country code: {s}, revision: {}",
+                    .{ opt.country.code, opt.country.revision },
+                );
+                return error.Cyw43InvalidCountryCode;
+            },
+            else => return err,
+        };
     }
     try self.set_cmd(.set_antdiv, &.{0});
     // Data aggregation
@@ -321,35 +355,44 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8) !void {
         try self.set_var("bcn_li_dtim", &.{1});
         try self.set_var("assoc_listen", &.{0x0a});
 
-        try self.set_cmd(.set_infra, &.{1});
-        try self.set_cmd(.set_auth, &.{0});
-        try self.set_cmd(.set_wsec, &.{6}); // wpa security
+        if (opt.security == .open) {
+            try self.set_cmd(.set_wsec, &.{0});
+            try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 0, 0, 0, 0 });
+            try self.set_cmd(.set_infra, &.{1});
+            try self.set_cmd(.set_auth, &.{0});
+            try self.set_cmd(.set_wpa_auth, &.{0});
+        } else {
 
-        try self.set_var("bsscfg:sup_wpa", "\x00\x00\x00\x00\x01\x00\x00\x00");
-        try self.set_var("bsscfg:sup_wpa2_eapver", "\x00\x00\x00\x00\xFF\xFF\xFF\xFF");
-        try self.set_var("bsscfg:sup_wpa_tmo", "\x00\x00\x00\x00\xC4\x09\x00\x00");
-        self.sleep_ms(2);
+            //try self.set_cmd(.set_infra, &.{1});
+            //try self.set_cmd(.set_auth, &.{0});
+            try self.set_cmd(.set_wsec, &.{6}); // wpa security
 
-        try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
-        try self.set_cmd(.set_infra, &.{1});
-        try self.set_cmd(.set_auth, &.{0});
-        try self.set_cmd(.set_wpa_auth, &.{0x80}); // wpa
+            try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 1, 0, 0, 0 });
+            try self.set_var("bsscfg:sup_wpa2_eapver", &.{ 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff });
+            try self.set_var("bsscfg:sup_wpa_tmo", &.{ 0, 0, 0, 0, 0xc4, 0x09, 0, 0 });
+            self.sleep_ms(2);
 
+            try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
+            try self.set_cmd(.set_infra, &.{1});
+            try self.set_cmd(.set_auth, &.{0});
+            try self.set_cmd(.set_wpa_auth, &.{0x80}); // wpa
+        }
         try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
     }
 
-    try self.join_wait(30 * 1000);
+    try self.join_wait(30 * 1000, opt.security);
 }
 
-fn join_wait(self: *Self, wait_ms: u32) !void {
+fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
     var delay: u32 = 0;
     var link_up: bool = false;
-    var link_auth: bool = false;
+    var link_auth: bool = security == .open;
     var set_ssid: bool = false;
     var buytes: [512]u8 align(4) = undefined;
 
     //log.debug("wifi join", .{});
     while (delay < wait_ms) {
+        self.log_read();
         const rsp = try self.read(&buytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
@@ -358,10 +401,10 @@ fn join_wait(self: *Self, wait_ms: u32) !void {
         switch (rsp.sdp.chan) {
             .event => {
                 const evt = rsp.event().msg;
-                // log.debug(
-                //     "  event type: {s:<15}, status: {s} flags: {x}",
-                //     .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
-                // );
+                log.debug(
+                    "  event type: {s:<15}, status: {s} flags: {x}",
+                    .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
+                );
                 switch (evt.event_type) {
                     .link => {
                         if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
