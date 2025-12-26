@@ -162,9 +162,10 @@ jobs:
   build-examples:
     name: Build Examples
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         example_dir: [
             espressif/esp,
             gigadevice/gd32,
