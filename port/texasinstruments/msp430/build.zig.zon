@@ -1,10 +1,15 @@
 .{
     .name = .mz_port_texasinstruments_msp430,
-    .fingerprint = 0x21359f74fc48338b,
+    .fingerprint = 0x14af6dac35483b45,
     .version = "0.0.0",
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
+        .ti_data = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/texasinstruments-data.git#2bdd0ff770ea4070caf25e2d33e9744374c75b21",
+            .hash = "N-V-__8AAEUAg0HJNVCziuaLjHq479tsKsXb4GbNf5ye38oi",
+        },
     },
     .paths = .{
         "README.md",
