@@ -1,6 +1,8 @@
 const std = @import("std");
-const UART_V3_Type = @import("enums.zig").UART_V3_Type;
+const bdma_v1 = @import("./bdma_v1.zig");
 const microzig = @import("microzig");
+const UART_V3_Type = @import("enums.zig").UART_V3_Type;
+
 const rcc = microzig.hal.rcc;
 const usart_t = microzig.chip.types.peripherals.usart_v3.USART;
 const STOP = microzig.chip.types.peripherals.usart_v3.STOP;
@@ -35,6 +37,7 @@ pub const Config = struct {
     stop_bits: STOP = .Stop1,
     parity: Parity = .none,
     flow_control: FlowControl = .none,
+    dma: ?*bdma_v1.Channel = null,
 };
 
 pub const StopBits = STOP;
@@ -48,6 +51,8 @@ pub fn Uart(comptime index: UART_V3_Type) type {
     const regs = get_regs(index);
     return struct {
         const Self = @This();
+
+        dma: ?*bdma_v1.Channel,
 
         pub fn init(config: Config) Self {
             rcc.enable_uart(index);
@@ -86,14 +91,18 @@ pub fn Uart(comptime index: UART_V3_Type) type {
             regs.CR1.modify(.{ .TE = 1 });
             regs.CR1.modify(.{ .RE = 1 });
 
-            return Self{};
+            if (config.dma != null) {
+                regs.CR3.modify(.{ .DMAT = 1 });
+            }
+
+            return Self{ .dma = config.dma };
         }
 
         pub fn get_or_init(config: Config) !Self {
             if (regs.CR1.read().UE == 1) {
                 // UART1 already enabled, don't reinitialize and disturb things;
                 // instead read and use the actual configuration.
-                return Self{};
+                return Self{ .dma = config.dma };
             } else return init(config);
         }
 
@@ -110,9 +119,38 @@ pub fn Uart(comptime index: UART_V3_Type) type {
             };
         }
 
-        pub fn tx(self: Self, ch: u8) void {
+        fn tx_blocking(self: Self, ch: u8) void {
             while (!self.can_write()) {} // Wait for Previous transmission
             regs.TDR.modify(.{ .DR = ch });
+        }
+
+        // We assume interrupt handler is setup
+        fn tx(self: Self, buffer: []const u8) void {
+            if (self.dma) |dma| fallback: {
+                while (dma.is_in_progress()) {
+                    // We wait for the last communication to end before sendig other byte
+                    microzig.cpu.wfi();
+                }
+
+                dma.apply(.{
+                    .direction = .FromMemory,
+                    .memory_increment = true,
+                    .periph_address = @intFromPtr(&regs.TDR),
+                    .transfer_complete_interrupt = true,
+                });
+
+                dma.load_memeory_data(buffer) catch {
+                    break :fallback;
+                };
+
+                regs.ICR.modify(.{ .TC = 1 });
+                dma.start();
+                return;
+            }
+
+            for (buffer) |byte| {
+                self.tx_blocking(byte);
+            }
         }
 
         pub fn txflush(_: Self) void {
@@ -134,9 +172,7 @@ pub fn Uart(comptime index: UART_V3_Type) type {
         }
 
         fn writer_fn(self: *Self, buffer: []const u8) error{}!usize {
-            for (buffer) |byte| {
-                self.tx(byte);
-            }
+            self.tx(buffer);
             return buffer.len;
         }
     };
@@ -182,12 +218,13 @@ pub fn UARTLogger(comptime index: UART_V3_Type) type {
     return struct {
         var logger: ?UartWriter(index) = null;
         var uart: ?Uart(index) = null;
-        pub fn init_logger(config: Config) void {
+
+        pub fn init(config: Config) void {
             uart = Uart(index).init(config);
             logger = UartWriter(index).init(&uart.?, &.{});
             std.log.info("================ STARTING NEW LOGGER ================\r\n", .{});
         }
-        pub fn deinit_logger() void {
+        pub fn deinit() void {
 
             // TODO Deinit usart
             logger = null;

@@ -14,7 +14,7 @@ pub const crc = @import("./STM32F103/crc.zig");
 pub const power = @import("./STM32F103/power.zig");
 pub const backup = @import("./STM32F103/backup.zig");
 pub const rtc = @import("./STM32F103/rtc.zig");
-pub const dma = @import("./STM32F103/DMA.zig");
+pub const dma = @import("./STM32F103/dma.zig");
 pub const time = @import("./STM32F103/time.zig");
 const util = @import("./common/util.zig");
 

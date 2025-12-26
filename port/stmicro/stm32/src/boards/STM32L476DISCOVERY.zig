@@ -226,7 +226,10 @@ pub fn init_log() void {
             .PIN6 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
         },
     }).apply();
-    uart_logger.init_logger(.{ .baud_rate = 9600 });
+    uart_logger.init(.{
+        .baud_rate = 9600,
+        .dma = hal.dma.DMA1_Channel4.get_channel(),
+    });
 }
 
 pub fn init() void {}
