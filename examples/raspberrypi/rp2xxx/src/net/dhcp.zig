@@ -35,7 +35,7 @@ pub fn main() !void {
     log.debug("mac address: {x}", .{wifi.mac});
 
     // join network
-    try wifi.join(secrets.ssid, secrets.pwd);
+    try wifi.join(secrets.ssid, secrets.pwd, .{});
     log.debug("wifi joined", .{});
 
     // init lwip

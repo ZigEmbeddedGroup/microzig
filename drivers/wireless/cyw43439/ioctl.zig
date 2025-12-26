@@ -628,6 +628,12 @@ pub fn encode_pwd(buf: []u8, pwd: []const u8) []u8 {
     return buf[0 .. 4 + pwd.len];
 }
 
+pub fn encode_sae_pwd(buf: []u8, pwd: []const u8) []u8 {
+    mem.writeInt(u16, buf[0..2], @intCast(pwd.len), .little);
+    @memcpy(buf[2..][0..pwd.len], pwd);
+    return buf[0 .. 2 + pwd.len];
+}
+
 pub fn encode_ssid(buf: []u8, ssid: []const u8) []u8 {
     mem.writeInt(u32, buf[0..4], @intCast(ssid.len), .little);
     @memcpy(buf[4..][0..ssid.len], ssid);

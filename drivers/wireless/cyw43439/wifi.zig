@@ -255,7 +255,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
 }
 
 pub const JoinOptions = struct {
-    security: Security = .wpa_psk,
+    security: Security = .wpa2_psk,
     country: Country = .{},
 
     pub const Security = enum {
@@ -355,28 +355,51 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !v
         try self.set_var("bcn_li_dtim", &.{1});
         try self.set_var("assoc_listen", &.{0x0a});
 
-        if (opt.security == .open) {
-            try self.set_cmd(.set_wsec, &.{0});
-            try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 0, 0, 0, 0 });
-            try self.set_cmd(.set_infra, &.{1});
-            try self.set_cmd(.set_auth, &.{0});
-            try self.set_cmd(.set_wpa_auth, &.{0});
-        } else {
-
-            //try self.set_cmd(.set_infra, &.{1});
-            //try self.set_cmd(.set_auth, &.{0});
-            try self.set_cmd(.set_wsec, &.{6}); // wpa security
-
-            try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 1, 0, 0, 0 });
-            try self.set_var("bsscfg:sup_wpa2_eapver", &.{ 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff });
-            try self.set_var("bsscfg:sup_wpa_tmo", &.{ 0, 0, 0, 0, 0xc4, 0x09, 0, 0 });
-            self.sleep_ms(2);
-
-            try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
-            try self.set_cmd(.set_infra, &.{1});
-            try self.set_cmd(.set_auth, &.{0});
-            try self.set_cmd(.set_wpa_auth, &.{0x80}); // wpa
+        try self.set_cmd(.set_wsec, &.{switch (opt.security) {
+            .wpa_psk => 2,
+            .wpa2_psk, .wpa3_sae => 6,
+            .open => 0,
+        }});
+        switch (opt.security) {
+            .open => {
+                try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 0, 0, 0, 0 });
+            },
+            else => {
+                try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 1, 0, 0, 0 });
+                try self.set_var("bsscfg:sup_wpa2_eapver", &.{ 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff });
+                try self.set_var("bsscfg:sup_wpa_tmo", &.{ 0, 0, 0, 0, 0xc4, 0x09, 0, 0 });
+            },
         }
+        self.sleep_ms(2);
+
+        switch (opt.security) {
+            .open => {},
+            .wpa3_sae => {
+                try self.set_var("sae_password", ioctl.encode_sae_pwd(&buf, pwd));
+            },
+            else => {
+                try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
+            },
+        }
+        try self.set_cmd(.set_infra, &.{1});
+
+        try self.set_cmd(.set_auth, &.{switch (opt.security) {
+            .wpa3_sae => 3,
+            else => 0,
+        }});
+        try self.set_var("mfp", &.{switch (opt.security) {
+            .wpa_psk => 0,
+            .wpa2_psk => 1,
+            .wpa3_sae => 2,
+            .open => 0,
+        }});
+        try self.set_cmd(.set_wpa_auth, switch (opt.security) {
+            .wpa_psk => &.{ 0x04, 0, 0, 0 },
+            .wpa2_psk => &.{ 0x80, 0, 0, 0 },
+            .wpa3_sae => &.{ 0, 0, 0x04, 0 },
+            .open => &.{ 0, 0, 0, 0 },
+        });
+
         try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
     }
 
@@ -390,9 +413,8 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
     var set_ssid: bool = false;
     var buytes: [512]u8 align(4) = undefined;
 
-    //log.debug("wifi join", .{});
     while (delay < wait_ms) {
-        self.log_read();
+        // self.log_read();
         const rsp = try self.read(&buytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
@@ -401,10 +423,10 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
         switch (rsp.sdp.chan) {
             .event => {
                 const evt = rsp.event().msg;
-                log.debug(
-                    "  event type: {s:<15}, status: {s} flags: {x}",
-                    .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
-                );
+                // log.debug(
+                //     "  event type: {s:<15}, status: {s} flags: {x}",
+                //     .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
+                // );
                 switch (evt.event_type) {
                     .link => {
                         if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
@@ -485,7 +507,7 @@ fn sleep_ms(self: *Self, delay: u32) void {
 /// 1540 bytes total
 ///
 /// Layer 2 header+payload position is passed to the caller. First return
-/// argumen is start of that data in the buffer seconds is length.
+/// argument is start of that data in the buffer second is length.
 ///
 pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
     while (true) {

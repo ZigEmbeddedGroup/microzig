@@ -98,13 +98,6 @@ fn netif_linkoutput(netif_c: [*c]c.netif, pbuf_c: [*c]c.pbuf) callconv(.c) c.err
     }
 
     if (pbuf.next != null) {
-        // log.debug("concat pbufs len: {}, tot_len: {}", .{ pbuf.len, pbuf.tot_len });
-        // var p: *c.pbuf = pbuf;
-        // while (true) {
-        //     log.debug("  {} ", .{p.len});
-        //     p = p.next orelse break;
-        // }
-
         // clone chain into single packet buffer
         pbuf = c.pbuf_clone(c.PBUF_RAW, c.PBUF_POOL, pbuf) orelse return c.ERR_MEM;
     }
