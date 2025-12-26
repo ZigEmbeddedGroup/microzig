@@ -6,7 +6,7 @@ const hal = microzig.hal;
 const Digital_IO = microzig.drivers.base.Digital_IO;
 const spi_v2 = microzig.chip.types.peripherals.spi_v2;
 const spi_t = spi_v2.SPI;
-pub const Instances = hal.enums.SPIType;
+pub const Instances = hal.enums.SPI_V2_Type;
 const Error = error{
     MissingGpioPin,
 } || Digital_IO.SetDirError || Digital_IO.SetBiasError || Digital_IO.WriteError || Digital_IO.ReadError;
@@ -90,11 +90,11 @@ pub const SPI = struct {
         std.log.info("SPI status {}", .{self.spi.SR.read()});
     }
 
-    fn check_TX(self: *const SPI) bool {
+    fn check_tx(self: *const SPI) bool {
         return self.spi.SR.read().TXE != 0;
     }
 
-    fn check_RX(self: *const SPI) bool {
+    fn check_rx(self: *const SPI) bool {
         return self.spi.SR.read().RXNE != 0;
     }
 
@@ -118,12 +118,12 @@ pub const SPI = struct {
 
         for (out) |byte| {
             self.spi.DR8 = byte;
-            while (!self.check_TX()) {}
+            while (!self.check_tx()) {}
         }
         std.log.info("Status {any}", .{self.spi.SR.read()});
 
         // Empting the read fifo
-        while (self.check_RX()) {
+        while (self.check_rx()) {
             std.mem.doNotOptimizeAway(self.spi.DR8);
         }
 
@@ -152,7 +152,7 @@ pub const SPI = struct {
         var in_remain = in_len + out_len;
 
         //  Let's purge the RX fifo
-        while (self.check_RX()) {
+        while (self.check_rx()) {
             std.mem.doNotOptimizeAway(self.spi.DR8);
         }
 
@@ -160,7 +160,7 @@ pub const SPI = struct {
         //the RX value will be loaded into the shift register, and will be loaded into the DR register after the first clock cycle
         self.spi.DR8 = out[0];
         while ((out_remain > 0) or (in_remain > 0)) {
-            while (!self.check_TX()) {}
+            while (!self.check_tx()) {}
             if (out_remain > 0) {
                 self.spi.DR8 = out[out_len - out_remain];
                 out_remain -= 1;
@@ -169,7 +169,7 @@ pub const SPI = struct {
                 self.spi.DR8 = 0;
             }
 
-            while (!self.check_RX()) {}
+            while (!self.check_rx()) {}
             if (in_remain > 0) {
                 if (in_remain > in_len) {
                     // Discarding the bytes sent during transmit

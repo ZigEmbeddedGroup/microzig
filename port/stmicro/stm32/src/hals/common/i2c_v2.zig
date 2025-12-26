@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const enums = microzig.hal.enums;
 
-const I2CType = enums.I2CType;
+const I2C_V2_Type = enums.I2C_V2_Type;
 const I2C_t = microzig.chip.types.peripherals.i2c_v2.I2C;
 const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
@@ -30,7 +30,7 @@ const TimingSpec_Standard = .{
     .t_min_af = 0.05,
 };
 
-fn get_regs(comptime instance: I2CType) *volatile I2C_t {
+fn get_regs(comptime instance: I2C_V2_Type) *volatile I2C_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
@@ -198,7 +198,7 @@ const I2C = struct {
         return i2c.write_blocking_intern(address, false, data);
     }
 
-    pub fn init(comptime instance: I2CType) I2C {
+    pub fn init(comptime instance: I2C_V2_Type) I2C {
         hal.rcc.enable_i2c(instance, .SYS);
         return .{ .regs = get_regs(instance) };
     }
@@ -254,7 +254,7 @@ pub const I2C_Device = struct {
         try i2c.i2c.apply();
     }
 
-    pub fn init(comptime instance: I2CType) I2C_Device {
+    pub fn init(comptime instance: I2C_V2_Type) I2C_Device {
         return .{ .i2c = I2C.init(instance) };
     }
 

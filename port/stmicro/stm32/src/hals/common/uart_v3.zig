@@ -1,11 +1,9 @@
 const std = @import("std");
+const UART_V3_Type = @import("enums.zig").UART_V3_Type;
 const microzig = @import("microzig");
-
 const rcc = microzig.hal.rcc;
-const enums = microzig.hal.enums;
 const usart_t = microzig.chip.types.peripherals.usart_v3.USART;
 const STOP = microzig.chip.types.peripherals.usart_v3.STOP;
-const UARTType = enums.UARTType;
 
 pub const WordBits = enum {
     seven,
@@ -43,16 +41,16 @@ pub const Config = struct {
 pub const StopBits = STOP;
 pub const DataBits = WordBits;
 
-fn get_regs(comptime instance: UARTType) *volatile usart_t {
+fn get_regs(comptime instance: UART_V3_Type) *volatile usart_t {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
-pub fn Uart(comptime index: UARTType) type {
+pub fn Uart(comptime index: UART_V3_Type) type {
     const regs = get_regs(index);
     return struct {
         const Self = @This();
 
-        pub fn init(config: Config) !Self {
+        pub fn init(config: Config) Self {
             rcc.enable_uart(index);
 
             if (regs.CR1.read().UE == 1)
@@ -145,7 +143,7 @@ pub fn Uart(comptime index: UARTType) type {
     };
 }
 
-pub fn UartWriter(comptime index: UARTType) type {
+pub fn UartWriter(comptime index: UART_V3_Type) type {
     return struct {
         uart: *Uart(index),
         interface: std.Io.Writer,
@@ -181,46 +179,31 @@ pub fn UartWriter(comptime index: UARTType) type {
     };
 }
 
-pub const Logger = union(UARTType) {
-    USART1: UartWriter(.USART1),
-    USART2: UartWriter(.USART2),
-    USART3: UartWriter(.USART3),
-    UART4: UartWriter(.UART4),
-    UART5: UartWriter(.UART5),
-};
+pub fn UARTLogger(comptime index: UART_V3_Type) type {
+    return struct {
+        var logger: ?UartWriter(index) = null;
+        var uart: ?Uart(index) = null;
+        pub fn init_logger(config: Config) void {
+            uart = Uart(index).init(config);
+            logger = UartWriter(index).init(&uart.?, &.{});
+            std.log.info("================ STARTING NEW LOGGER ================\r\n", .{});
+        }
+        pub fn deinit_logger() void {
 
-var logger: ?Logger = null;
+            // TODO Deinit usart
+            logger = null;
+        }
 
-///Set a specific uart instance to be used for logging.
-///
-///Allows system logging over uart via:
-///pub const microzig_options = .{
-///    .logFn = hal.uart.log,
-///};
-pub fn init_logger(comptime T: UARTType, uart: *Uart(T)) void {
-    logger = @unionInit(Logger, @tagName(T), .init(uart, &.{}));
-    std.log.info("================ STARTING NEW LOGGER ================\r\n", .{});
-}
+        pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
+            const prefix = comptime level.asText() ++ switch (scope) {
+                .default => ": ",
+                else => " (" ++ @tagName(scope) ++ "): ",
+            };
 
-///Disables logging via the uart instance.
-pub fn deinit_logger() void {
-    logger = null;
-}
-
-pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
-    const prefix = comptime level.asText() ++ switch (scope) {
-        .default => ": ",
-        else => " (" ++ @tagName(scope) ++ "): ",
+            if (logger) |*actual_logger| {
+                var w = &actual_logger.interface;
+                w.print(prefix ++ format ++ "\r\n", args) catch {};
+            }
+        }
     };
-
-    if (logger) |*actual_logger| {
-        var w = switch (actual_logger.*) {
-            .USART1 => |*l| &l.interface,
-            .USART2 => |*l| &l.interface,
-            .USART3 => |*l| &l.interface,
-            .UART4 => |*l| &l.interface,
-            .UART5 => |*l| &l.interface,
-        };
-        w.print(prefix ++ format ++ "\r\n", args) catch {};
-    }
 }

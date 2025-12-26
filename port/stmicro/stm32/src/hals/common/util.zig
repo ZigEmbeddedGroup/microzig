@@ -39,6 +39,41 @@ pub fn create_peripheral_enum(comptime base_name: []const u8, match_type: ?[]con
     return @Type(peri_enum);
 }
 
+pub fn create_peripheral_enum_from_type(match_type: []const u8) type {
+    var names: [10]std.builtin.Type.EnumField = undefined;
+    var names_index = 0;
+
+    const peripheral = @typeInfo(peripherals);
+    switch (peripheral) {
+        .@"struct" => |data| {
+            for (data.decls) |decls| {
+                const decl_name = decls.name;
+                const type_name = @typeName(@TypeOf(@field(peripherals, decl_name)));
+
+                @setEvalBranchQuota(8000);
+                if (std.mem.indexOfPosLinear(u8, type_name, 0, match_type)) |_| {
+                    // TODO: support 2 digit peripheral number
+                    const peri_num = std.fmt.parseInt(usize, decl_name[decl_name.len - 2 ..], 10) catch names_index;
+                    names[names_index] = std.builtin.Type.EnumField{
+                        .name = decl_name,
+                        .value = peri_num,
+                    };
+                    names_index += 1;
+                }
+            }
+        },
+        else => unreachable,
+    }
+
+    const peri_enum = std.builtin.Type{ .@"enum" = .{
+        .tag_type = usize,
+        .is_exhaustive = true,
+        .decls = &[_]std.builtin.Type.Declaration{},
+        .fields = names[0..names_index],
+    } };
+    return @Type(peri_enum);
+}
+
 pub fn load_timer_interrupt(handler: *const fn () callconv(.c) void) microzig.cpu.InterruptOptions {
     var int_op: microzig.cpu.InterruptOptions = .{};
     if (@hasField(microzig.cpu.InterruptOptions, "TIM2")) {

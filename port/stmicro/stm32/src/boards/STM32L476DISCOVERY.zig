@@ -217,7 +217,7 @@ pub fn i2c1() hal.i2c.I2C_Device {
     return hal.i2c.I2C_Device.init(.I2C1);
 }
 
-var uart_log: ?hal.uart.Uart(.USART2) = null;
+pub const uart_logger = hal.uart.UARTLogger(.USART2);
 
 pub fn init_log() void {
     _ = (hal.pins.GlobalConfiguration{
@@ -226,10 +226,7 @@ pub fn init_log() void {
             .PIN6 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
         },
     }).apply();
-    uart_log = try hal.uart.Uart(.USART2).init(.{ .baud_rate = 9600 });
-    if (uart_log) |*logger| {
-        hal.uart.init_logger(.USART2, logger);
-    }
+    uart_logger.init_logger(.{ .baud_rate = 9600 });
 }
 
 pub fn init() void {}
