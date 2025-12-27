@@ -109,14 +109,18 @@ test "temp conversions C to F" {
     try std.testing.expectEqual(86, AHT30.c_to_f(30));
 }
 
-test "unit conversions to temp" {
-    try std.testing.expectEqual(0, AHT30.to_temp(0));
-    try std.testing.expectEqual(7.8125E-3, AHT30.to_temp(1));
-    try std.testing.expectEqual(-7.8125E-3, AHT30.to_temp(-1));
+test "to_temp" {
+    const tolerance = 0.01;
+
+    try std.testing.expectApproxEqRel(-50.0, AHT30.to_temp(0), tolerance);
+    try std.testing.expectApproxEqRel(50.0, AHT30.to_temp(524288), tolerance);
+    try std.testing.expectApproxEqRel(149.999, AHT30.to_temp(1048575), tolerance);
 }
 
-test "temp conversions to units" {
-    try std.testing.expectEqual(0, AHT30.to_temp_units(0));
-    try std.testing.expectEqual(32640, AHT30.to_temp_units(255));
-    try std.testing.expectEqual(-32640, AHT30.to_temp_units(-255));
+test "to_relative_humidity" {
+    const tolerance = 0.01;
+
+    try std.testing.expectApproxEqRel(0.0, AHT30.to_relative_humidity(0), tolerance);
+    try std.testing.expectApproxEqRel(50.0, AHT30.to_relative_humidity(524288), tolerance);
+    try std.testing.expectApproxEqRel(100.0, AHT30.to_relative_humidity(1048575), tolerance);
 }
