@@ -4,7 +4,8 @@ pub const microzig = @import("microzig");
 
 pub const hal = microzig.hal;
 pub const rcc = hal.rcc;
-const UART_LOG = microzig.hal.uart.Uart(.USART1);
+
+pub const uart_logger = hal.uart.UARTLogger(.USART1);
 
 pub const leds_config = (hal.pins.GlobalConfiguration{
     .GPIOE = .{
@@ -29,8 +30,6 @@ pub fn init() void {
     };
 }
 
-var uart_log: ?UART_LOG = null;
-
 // Init should come first or the baud_rate would be too fast for the default HSI.
 pub fn init_log() void {
     _ = (hal.pins.GlobalConfiguration{
@@ -39,10 +38,7 @@ pub fn init_log() void {
             .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
         },
     }).apply();
-    uart_log = try microzig.hal.uart.Uart(.USART1).init(.{ .baud_rate = 115200 });
-    if (uart_log) |*logger| {
-        microzig.hal.uart.init_logger(.USART1, logger);
-    }
+    uart_logger.init_logger(.{ .baud_rate = 115200 });
 }
 
 pub fn i2c1() hal.i2c.I2C_Device {

@@ -1,10 +1,11 @@
 const microzig = @import("microzig");
-const emus_type = @import("./enums.zig");
+const emums = @import("../common/enums.zig");
 
 const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
 const I2C1SEL = microzig.chip.types.peripherals.rcc_l4.I2C1SEL;
 const I2C2SEL = microzig.chip.types.peripherals.rcc_l4.I2C2SEL;
+const I2C3SEL = microzig.chip.types.peripherals.rcc_l4.I2C3SEL;
 
 const ICSW = enum(u2) {
     /// PCLK clock selected
@@ -41,8 +42,9 @@ pub fn enable_gpio_port(used_gpios_port: u8) void {
     });
 }
 
-pub fn enable_uart(comptime index: emus_type.UARTType) void {
+pub fn enable_uart(comptime index: emums.UART_V3_Type) void {
     switch (index) {
+        .LPUART1 => RCC.APB1ENR2.modify(.{ .LPUART1EN = 1 }),
         .USART1 => RCC.APB2ENR.modify(.{ .USART1EN = 1 }),
         .USART2 => RCC.APB1ENR1.modify(.{ .USART2EN = 1 }),
         .USART3 => RCC.APB1ENR1.modify(.{ .USART3EN = 1 }),
@@ -51,15 +53,17 @@ pub fn enable_uart(comptime index: emus_type.UARTType) void {
     }
 }
 
-pub fn enable_i2c(comptime i2cindex: emus_type.I2CType, clock: ICSW) void {
+pub fn enable_i2c(comptime i2cindex: emums.I2C_V2_Type, clock: ICSW) void {
     RCC.APB1ENR1.modify(switch (i2cindex) {
         .I2C1 => .{ .I2C1EN = 1 },
         .I2C2 => .{ .I2C2EN = 1 },
+        .I2C3 => .{ .I2C3EN = 1 },
     });
 
     RCC.CCIPR.modify(switch (i2cindex) {
         .I2C1 => .{ .I2C1SEL = @as(I2C1SEL, @enumFromInt(@intFromEnum(clock))) },
         .I2C2 => .{ .I2C2SEL = @as(I2C2SEL, @enumFromInt(@intFromEnum(clock))) },
+        .I2C3 => .{ .I2C3SEL = @as(I2C3SEL, @enumFromInt(@intFromEnum(clock))) },
     });
 }
 

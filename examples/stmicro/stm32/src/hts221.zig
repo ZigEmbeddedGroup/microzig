@@ -6,7 +6,7 @@ const board = microzig.board;
 const HTS221 = microzig.drivers.sensor.HTS221;
 
 pub const microzig_options: microzig.Options = .{
-    .logFn = microzig.hal.uart.log,
+    .logFn = microzig.board.uart_logger.log,
     .interrupts = .{
         .SysTick = .{ .c = systick.SysTick_handler },
     },
