@@ -105,7 +105,7 @@ pub fn init(self: *Self) !void {
             .f1_overflow = true,
         }));
     }
-    { // bluetooth... TODO
+    { // bluetooth...
         self.write_int(u8, .bus, bt.spi_resp_delay_f1, bt.whd_bus_spi_backplane_read_padd_size);
     }
 }
@@ -152,14 +152,6 @@ pub fn write(self: *Self, func: Cmd.Func, addr: u17, len: u11, buf: []u32) void 
 }
 
 pub fn backplane_read(self: *Self, addr: u32, data: []u8) void {
-    //log.debug("bp_read addr = 0x{X} len = {}", .{ addr, data.len });
-    // It seems the HW force-aligns the addr
-    // to 2 if data.len() >= 2
-    // to 4 if data.len() >= 4
-    // To simplify, enforce 4-align for now.
-    // TODO: fails with (cyw43_bus): bp_read addr = 0x17E7E
-    // std.debug.assert(addr % 4 == 0);
-
     var words: [backplane.max_transfer_size / 4 + 2]u32 = undefined;
     var current_addr = addr;
     var remaining_data = data;
@@ -193,14 +185,6 @@ pub fn backplane_read(self: *Self, addr: u32, data: []u8) void {
 }
 
 pub fn backplane_write(self: *Self, addr: u32, data: []const u8) void {
-    //log.debug("bp_write addr = 0x{X} len = {}", .{ addr, data.len });
-
-    // It seems the HW force-aligns the addr
-    // to 2 if data.len() >= 2
-    // to 4 if data.len() >= 4
-    // To simplify, enforce 4-align for now.
-    std.debug.assert(addr % 4 == 0);
-
     // write buffer in words, 1 word at the start for the bus cmd
     var words: [backplane.max_transfer_size / 4 + 1]u32 = undefined;
 

@@ -31,8 +31,8 @@ const SdpHeader = extern struct {
     not_len: u16,
     /// Rx/Tx sequence number
     seq: u8,
-    ///  4 MSB Channel number, 4 LSB arbitrary fla TODO: split
-    chan: Chan,
+    ///  4 MSB Channel, 4 LSB arbitrary flags
+    cf: ChanFlags,
     /// Length of next data frame, reserved for Tx
     nextlen: u8 = 0,
     /// Data offset from the start of the packet.
@@ -44,11 +44,20 @@ const SdpHeader = extern struct {
     credit: u8 = 0,
     _reserved: u16 = 0,
 
-    const Chan = enum(u8) {
+    const Chan = enum(u4) {
         control = 0,
         event = 1,
         data = 2,
     };
+
+    const ChanFlags = packed struct(u8) {
+        chan: Chan,
+        flags: u4 = 0,
+    };
+
+    pub fn channel(sdp: SdpHeader) Chan {
+        return sdp.cf.chan;
+    }
 
     pub fn validate(sdp: SdpHeader, n: u16) !void {
         if (sdp.len != n) {
@@ -145,17 +154,17 @@ pub const Response = struct {
     }
 
     pub fn cdc(self: Self) CdcHeader {
-        assert(self.sdp.chan == .control);
+        assert(self.sdp.channel() == .control);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(CdcHeader)].*);
     }
 
     pub fn bdc(self: Self) BdcHeader {
-        assert(self.sdp.chan != .control);
+        assert(self.sdp.channel() != .control);
         return @bitCast(self.buffer[self.padding()..][0..@sizeOf(BdcHeader)].*);
     }
 
     pub fn data(self: Self) []const u8 {
-        const head: usize = self.padding() + switch (self.sdp.chan) {
+        const head: usize = self.padding() + switch (self.sdp.channel()) {
             .control => @sizeOf(CdcHeader),
             .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),
         };
@@ -168,7 +177,7 @@ pub const Response = struct {
 
     // head position and length of the data in the buffer sent to init
     pub fn data_pos(self: Self) struct { usize, usize } {
-        const head: usize = self.sdp.hdrlen + switch (self.sdp.chan) {
+        const head: usize = self.sdp.hdrlen + switch (self.sdp.channel()) {
             .control => @sizeOf(CdcHeader),
             .event, .data => @sizeOf(BdcHeader) + self.bdc().padding(),
         };
@@ -176,7 +185,7 @@ pub const Response = struct {
     }
 
     pub fn event(self: Self) EventPacket {
-        assert(self.sdp.chan == .event);
+        assert(self.sdp.channel() == .event);
         const buf = self.data();
         if (buf.len < @sizeOf(EventPacket)) {
             var zero = mem.zeroes(EventPacket);
@@ -213,7 +222,10 @@ pub fn request(
         .len = txlen,
         .not_len = ~txlen,
         .seq = tx_sequence,
-        .chan = .control,
+        .cf = .{
+            .chan = .control,
+            .flags = 0,
+        },
         .hdrlen = @sizeOf(SdpHeader),
     };
     buf[0..@sizeOf(SdpHeader)].* = @bitCast(sdp);
@@ -252,7 +264,10 @@ pub const TxHeader = extern struct {
             .len = txlen,
             .not_len = ~txlen,
             .seq = tx_sequence,
-            .chan = .data,
+            .cf = .{
+                .chan = .data,
+                .flags = 0,
+            },
             .hdrlen = @sizeOf(SdpHeader) + 2,
         };
         self.bdc.flags = 0x20;
@@ -279,11 +294,11 @@ test "request" {
         var buf: [64]u8 = undefined;
         const req = request(&buf, .get_var, "cur_etheraddr", &.{}, 3, 3);
 
-        const expected = &hexToBytes("2C00D3FF0300000C00000000060100001000000000000300000000006375725F657468657261646472000000");
+        const expected = &hex_to_bytes("2C00D3FF0300000C00000000060100001000000000000300000000006375725F657468657261646472000000");
         try std.testing.expectEqualSlices(u8, expected, req);
     }
     {
-        const expected = &hexToBytes("2C00D3FF0700000C00000000070100001000000002000700000000006770696F6F7574000100000001000000");
+        const expected = &hex_to_bytes("2C00D3FF0700000C00000000070100001000000002000700000000006770696F6F7574000100000001000000");
         var data: [8]u8 = @splat(0);
         data[0] = 1;
         data[4] = 1;
@@ -294,8 +309,8 @@ test "request" {
 }
 
 test "parse response" {
-    const expected = &hexToBytes("2CCF67F3B7EA");
-    const rsp_bytes = &hexToBytes("0001FFFE040000DC0014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100001400000000000300000000002CCF67F3B7EA6865726164647200000000000000");
+    const expected = &hex_to_bytes("2CCF67F3B7EA");
+    const rsp_bytes = &hex_to_bytes("0001FFFE040000DC0014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100001400000000000300000000002CCF67F3B7EA6865726164647200000000000000");
     try testing.expectEqual(256, rsp_bytes.len);
     const rsp = try Response.init(rsp_bytes);
 
@@ -321,7 +336,7 @@ test "parse response" {
     try testing.expectEqualSlices(u8, expected, rsp_bytes[head..][0..len][0..expected.len]);
 }
 
-pub fn hexToBytes(comptime hex: []const u8) [hex.len / 2]u8 {
+pub fn hex_to_bytes(comptime hex: []const u8) [hex.len / 2]u8 {
     var res: [hex.len / 2]u8 = undefined;
     _ = std.fmt.hexToBytes(&res, hex) catch unreachable;
     return res;
@@ -611,13 +626,13 @@ test "pwd encode" {
 
     try testing.expectEqualSlices(
         u8,
-        &hexToBytes("0A0001005065726F5A6465726F31"),
+        &hex_to_bytes("0A0001005065726F5A6465726F31"),
         encode_pwd(&buf, "PeroZdero1"),
     );
 
     try testing.expectEqualSlices(
         u8,
-        &hexToBytes("080000006E696E617A617261"),
+        &hex_to_bytes("080000006E696E617A617261"),
         encode_ssid(&buf, "ninazara"),
     );
 }
@@ -659,7 +674,7 @@ pub fn bytes_to_words(bytes: []const u8) struct { []const u32, ?u32 } {
 
 test bytes_to_words {
     {
-        const hex = hexToBytes("aabbcc");
+        const hex = hex_to_bytes("aabbcc");
         var bytes: [hex.len]u8 align(4) = undefined;
         @memcpy(&bytes, &hex);
 
@@ -668,7 +683,7 @@ test bytes_to_words {
         try testing.expectEqual(0xccbbaa, padding.?);
     }
     {
-        const hex = hexToBytes("aabbccddeeff1122334455");
+        const hex = hex_to_bytes("aabbccddeeff1122334455");
         var bytes: [hex.len]u8 align(4) = undefined;
         @memcpy(&bytes, &hex);
 
@@ -679,7 +694,7 @@ test bytes_to_words {
 }
 
 test "unaligned" {
-    const hex = hexToBytes("aabbccddeeff1122334455");
+    const hex = hex_to_bytes("aabbccddeeff1122334455");
     const bytes = hex[0..5];
 
     // var bytes2: []u8 = undefined;

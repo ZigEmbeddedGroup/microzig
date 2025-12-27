@@ -16,6 +16,8 @@ tx_sequence: u8 = 0,
 status: ?Status = null,
 log_state: LogState = .{},
 
+const ioctl_request_bytes_len = 1024;
+
 pub fn init(self: *Self) !void {
     const bus = self.bus;
 
@@ -98,22 +100,24 @@ pub fn init(self: *Self) !void {
     {
         const data = @embedFile("../cyw43/firmware/43439A0_clm.bin");
 
-        var clr: extern struct {
-            name: [8]u8 = "clmload\x00".*,
+        const ClmLoadControl = extern struct {
             flag: u16 = 0,
             typ: u16 = 2,
             len: u32 = 0,
             crc: u32 = 0,
-        } = .{};
+        };
 
         var nbytes: usize = 0;
         while (nbytes < data.len) {
-            const n = @min(512 - 48, data.len - nbytes);
+            const head_len = @sizeOf(ClmLoadControl);
+            var clr: ClmLoadControl = .{};
+            var chunk: [ioctl_request_bytes_len - 64]u8 = undefined;
+            const n = @min(chunk.len - head_len, data.len - nbytes);
             clr.flag = 1 << 12 | (if (nbytes > 0) @as(u16, 0) else 2) | (if (nbytes + n >= data.len) @as(u16, 4) else 0);
             clr.len = n;
-            const cmd_name = std.mem.asBytes(&clr);
-            // HACK: remove 1 byte from name, set_var adds sentinel, works because crc is always 0
-            try self.set_var(cmd_name[0 .. cmd_name.len - 1], data[nbytes..][0..n]);
+            @memcpy(chunk[0..head_len], mem.asBytes(&clr));
+            @memcpy(chunk[head_len..][0..n], data[nbytes..][0..n]);
+            try self.set_var("clmload", chunk[0 .. head_len + n]);
             nbytes += n;
         }
     }
@@ -208,7 +212,7 @@ pub fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
 fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
     self.request_id +%= 1;
     self.tx_sequence +%= 1;
-    var words: [256]u32 = undefined;
+    var words: [ioctl_request_bytes_len / 4]u32 = undefined;
     const bytes = ioctl.request(
         mem.sliceAsBytes(words[1..]), // 1 word reserved for ioctl cmd
         cmd,
@@ -222,7 +226,7 @@ fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void
 }
 
 fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
-    var bytes: [512]u8 align(4) = undefined;
+    var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
     var delay: usize = 0;
     while (delay < ioctl.response_wait) {
         const rsp = try self.read(&bytes) orelse {
@@ -230,7 +234,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
             delay += ioctl.response_poll_interval;
             continue;
         };
-        switch (rsp.sdp.chan) {
+        switch (rsp.sdp.channel()) {
             .control => {
                 const cdc = rsp.cdc();
                 if (cdc.id == self.request_id) {
@@ -333,7 +337,7 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !v
         // ref: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L74
         // can be something like:
         // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/control.rs#L242
-        const buf = ioctl.hexToBytes("000000008B120102004000000000800100000000000000000000");
+        const buf = ioctl.hex_to_bytes("000000008B120102004000000000800100000000000000000000");
         try self.set_var("bsscfg:event_msgs", &buf);
         self.sleep_ms(50);
     }
@@ -411,16 +415,16 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
     var link_up: bool = false;
     var link_auth: bool = security == .open;
     var set_ssid: bool = false;
-    var buytes: [512]u8 align(4) = undefined;
+    var bytes: [512]u8 align(4) = undefined;
 
     while (delay < wait_ms) {
         // self.log_read();
-        const rsp = try self.read(&buytes) orelse {
+        const rsp = try self.read(&bytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
             continue;
         };
-        switch (rsp.sdp.chan) {
+        switch (rsp.sdp.channel()) {
             .event => {
                 const evt = rsp.event().msg;
                 // log.debug(
@@ -466,7 +470,7 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
 // can be assert also
 fn log_response(self: *Self, rsp: ioctl.Response) void {
     _ = self;
-    switch (rsp.sdp.chan) {
+    switch (rsp.sdp.channel()) {
         .event => {
             const evt = rsp.event().msg;
             if (evt.event_type == .none and evt.status == .success)
@@ -512,7 +516,7 @@ fn sleep_ms(self: *Self, delay: u32) void {
 pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
     while (true) {
         const rsp = try self.read(buffer) orelse return null;
-        switch (rsp.sdp.chan) {
+        switch (rsp.sdp.channel()) {
             .data => return rsp.data_pos(),
             else => self.log_response(rsp),
         }

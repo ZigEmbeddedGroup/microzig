@@ -84,10 +84,11 @@ pub fn init(config: Config) !Self {
     pins.clk.set_slew_rate(.fast);
 
     try pio.sm_load_and_start_program(sm, cyw43spi_program, .{
-        // TODO: int = 2 gives 62.5Mhz on pico, but it is too much on pico2
-        // This should depend on pico/pico2: 2/3
-        // 50MHz i recomended by datasheet
-        .clkdiv = .{ .int = 3, .frac = 0 },
+        .clkdiv = .{
+            // 50MHz is recomended by datasheet
+            .int = if (hal.compatibility.chip == .RP2040) 2 else 3,
+            .frac = 0,
+        },
         .pin_mappings = .{
             .out = .single(pins.io),
             .set = .single(pins.io),
