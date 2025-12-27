@@ -507,7 +507,6 @@ pub const CYW43_Pio_Device = struct {
     }
 };
 
-
 pub const WiFi = struct {
     const Self = @This();
     pub const Chip = mdf.wireless.Cyw43439;
