@@ -1,0 +1,2652 @@
+{
+  "total_count": 316,
+  "batches": [
+    {
+      "batch_number": 1,
+      "directory": "build.zig",
+      "item_ids": [
+        125,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84
+      ],
+      "start_id": 125,
+      "end_id": 84,
+      "count": 25
+    },
+    {
+      "batch_number": 2,
+      "directory": "drivers",
+      "item_ids": [
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        126,
+        127
+      ],
+      "start_id": 85,
+      "end_id": 127,
+      "count": 25
+    },
+    {
+      "batch_number": 3,
+      "directory": "examples",
+      "item_ids": [
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        287,
+        288,
+        289,
+        290,
+        291,
+        292,
+        293,
+        294,
+        295,
+        296,
+        297,
+        298,
+        299,
+        300,
+        301,
+        302,
+        303,
+        304
+      ],
+      "start_id": 128,
+      "end_id": 304,
+      "count": 25
+    },
+    {
+      "batch_number": 4,
+      "directory": "modules",
+      "item_ids": [
+        305,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158
+      ],
+      "start_id": 305,
+      "end_id": 158,
+      "count": 25
+    },
+    {
+      "batch_number": 5,
+      "directory": "port",
+      "item_ids": [
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180,
+        181,
+        182,
+        183
+      ],
+      "start_id": 159,
+      "end_id": 183,
+      "count": 25
+    },
+    {
+      "batch_number": 6,
+      "directory": "port",
+      "item_ids": [
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        193,
+        194,
+        195,
+        196,
+        197,
+        198,
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208
+      ],
+      "start_id": 184,
+      "end_id": 208,
+      "count": 25
+    },
+    {
+      "batch_number": 7,
+      "directory": "port",
+      "item_ids": [
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        232,
+        233
+      ],
+      "start_id": 209,
+      "end_id": 233,
+      "count": 25
+    },
+    {
+      "batch_number": 8,
+      "directory": "port",
+      "item_ids": [
+        234,
+        235,
+        236,
+        237,
+        238,
+        239,
+        240,
+        241,
+        242,
+        243,
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251,
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258
+      ],
+      "start_id": 234,
+      "end_id": 258,
+      "count": 25
+    },
+    {
+      "batch_number": 9,
+      "directory": "port",
+      "item_ids": [
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        276,
+        277,
+        278,
+        279,
+        280,
+        281,
+        282,
+        283
+      ],
+      "start_id": 259,
+      "end_id": 283,
+      "count": 25
+    },
+    {
+      "batch_number": 10,
+      "directory": "port",
+      "item_ids": [
+        284,
+        285,
+        286,
+        306,
+        307,
+        308,
+        309,
+        310,
+        311,
+        312,
+        313,
+        314,
+        315,
+        316,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "start_id": 284,
+      "end_id": 11,
+      "count": 25
+    },
+    {
+      "batch_number": 11,
+      "directory": "tools",
+      "item_ids": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36
+      ],
+      "start_id": 12,
+      "end_id": 36,
+      "count": 25
+    },
+    {
+      "batch_number": 12,
+      "directory": "tools",
+      "item_ids": [
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61
+      ],
+      "start_id": 37,
+      "end_id": 61,
+      "count": 25
+    },
+    {
+      "batch_number": 13,
+      "directory": "tools",
+      "item_ids": [
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77
+      ],
+      "start_id": 62,
+      "end_id": 77,
+      "count": 16
+    }
+  ],
+  "items": [
+    {
+      "file": "./tools/linter/src/main.zig",
+      "line": 64,
+      "type": "TODO",
+      "text": "// TODO: check types for common abbreviations and ensure they follow coding style.",
+      "id": 1
+    },
+    {
+      "file": "./tools/printer/src/DebugInfo.zig",
+      "line": 238,
+      "type": "TODO",
+      "text": "// TODO: should use `ranges` attribute",
+      "id": 2
+    },
+    {
+      "file": "./tools/printer/src/DebugInfo.zig",
+      "line": 660,
+      "type": "TODO",
+      "text": "// TODO: check the use of `readAddress`",
+      "id": 3
+    },
+    {
+      "file": "./tools/regz/src/xml.zig",
+      "line": 23,
+      "type": "TODO",
+      "text": "// TODO: what if current node doesn't fit the bill?",
+      "id": 4
+    },
+    {
+      "file": "./tools/regz/src/File.zig",
+      "line": 9,
+      "type": "TODO",
+      "text": "TODO,",
+      "id": 5
+    },
+    {
+      "file": "./tools/regz/src/Database.zig",
+      "line": 115,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 6
+    },
+    {
+      "file": "./tools/regz/src/Database.zig",
+      "line": 1190,
+      "type": "TODO",
+      "text": "// TODO: if we ever need a \"get struct fields\" function, refactor this to use it",
+      "id": 7
+    },
+    {
+      "file": "./tools/regz/src/Database.zig",
+      "line": 2069,
+      "type": "TODO",
+      "text": "// TODO: create a `get_enum_id_by_name()` function",
+      "id": 8
+    },
+    {
+      "file": "./tools/regz/src/embassy.zig",
+      "line": 429,
+      "type": "TODO",
+      "text": "// TODO",
+      "id": 9
+    },
+    {
+      "file": "./tools/regz/src/embassy.zig",
+      "line": 436,
+      "type": "TODO",
+      "text": "// TODO: how do we want to handle multi core MCUs?",
+      "id": 10
+    },
+    {
+      "file": "./tools/regz/src/embassy.zig",
+      "line": 458,
+      "type": "TODO",
+      "text": "// TODO: don't know what to do if registers is null, so skipping",
+      "id": 11
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 50,
+      "type": "TODO",
+      "text": "// TODO: scratchpad datastructure for temporary string based relationships,",
+      "id": 12
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 105,
+      "type": "TODO",
+      "text": "// TODO: maybe others?",
+      "id": 13
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 107,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 14
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 229,
+      "type": "TODO",
+      "text": "// TODO: assert that there's only one instance using this type",
+      "id": 15
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 290,
+      "type": "TODO",
+      "text": "// TODO: assert consecutive",
+      "id": 16
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 324,
+      "type": "TODO",
+      "text": "// TODO: instances use name in module",
+      "id": 17
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 525,
+      "type": "TODO",
+      "text": "// TODO: infer register group size?",
+      "id": 18
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 528,
+      "type": "TODO",
+      "text": "// TODO: check size",
+      "id": 19
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 534,
+      "type": "TODO",
+      "text": "// TODO: determine if it ever gets put in the register type",
+      "id": 20
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 550,
+      "type": "TODO",
+      "text": "// TODO: \"mask\": \"optional\",",
+      "id": 21
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 555,
+      "type": "TODO",
+      "text": "// TODO: assert unique mode name",
+      "id": 22
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 556,
+      "type": "TODO",
+      "text": "// TODO: modes",
+      "id": 23
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 703,
+      "type": "FIXME",
+      "text": "// FIXME: field specific r/w",
+      "id": 24
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 730,
+      "type": "FIXME",
+      "text": "// FIXME: struct field modes",
+      "id": 25
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 733,
+      "type": "TODO",
+      "text": "// TODO: modes",
+      "id": 26
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 752,
+      "type": "FIXME",
+      "text": "// FIXME: field based access",
+      "id": 27
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 779,
+      "type": "FIXME",
+      "text": "// FIXME: struct_field modes",
+      "id": 28
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 782,
+      "type": "TODO",
+      "text": "// TODO: modes",
+      "id": 29
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 792,
+      "type": "TODO",
+      "text": "// TODO: namespace the enum to the appropriate register, register_group, or peripheral",
+      "id": 30
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 1020,
+      "type": "TODO",
+      "text": "// TODO: this isn't always a set value, not sure what to do if it's left out",
+      "id": 31
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 1058,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 32
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 1080,
+      "type": "TODO",
+      "text": "// TODO: pads",
+      "id": 33
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 1083,
+      "type": "TODO",
+      "text": "// TODO: there are fields like irq-index",
+      "id": 34
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 1097,
+      "type": "TODO",
+      "text": "// TODO: probably connects module instance to interrupt",
+      "id": 35
+    },
+    {
+      "file": "./tools/regz/src/atdf.zig",
+      "line": 1127,
+      "type": "TODO",
+      "text": "// TODO: better output",
+      "id": 36
+    },
+    {
+      "file": "./tools/regz/src/main.zig",
+      "line": 140,
+      "type": "TODO",
+      "text": "// TODO: diagnostics",
+      "id": 37
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 167,
+      "type": "TODO",
+      "text": "// TODO: derive entities here",
+      "id": 38
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 173,
+      "type": "TODO",
+      "text": "// TODO: partial derivation",
+      "id": 39
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 336,
+      "type": "TODO",
+      "text": "// TODO: handle errors when implemented",
+      "id": 40
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 382,
+      "type": "TODO",
+      "text": "// TODO: clusters always have an offset, I need to add them as a field",
+      "id": 41
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 447,
+      "type": "TODO",
+      "text": "// TODO: derivision",
+      "id": 42
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 451,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 43
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 560,
+      "type": "TODO",
+      "text": "// TODO: field access",
+      "id": 44
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 584,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 45
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 592,
+      "type": "TODO",
+      "text": "// TODO: find solution to potential name collisions for enums at the peripheral level.",
+      "id": 46
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 594,
+      "type": "TODO",
+      "text": "// TODO: description?",
+      "id": 47
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 619,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 48
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 740,
+      "type": "TODO",
+      "text": "// TODO: not sure what dimArrayIndexType means",
+      "id": 49
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 784,
+      "type": "TODO",
+      "text": ".dim_name = node.get_value(\"dimName\"), // TODO: use this if it exists instead \"name\" if available",
+      "id": 50
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 788,
+      "type": "TODO",
+      "text": "// TODO: regex pattern not verified, function assumes valid node value",
+      "id": 51
+    },
+    {
+      "file": "./tools/regz/src/svd.zig",
+      "line": 1130,
+      "type": "TODO",
+      "text": "// TODO: field access",
+      "id": 52
+    },
+    {
+      "file": "./tools/regz/src/arch/arm.zig",
+      "line": 71,
+      "type": "TODO",
+      "text": "log.warn(\"TODO: system interrupts handlers for {}\", .{device.arch});",
+      "id": 53
+    },
+    {
+      "file": "./tools/regz/src/arch/arm/nvic.zig",
+      "line": 34,
+      "type": "TODO",
+      "text": "std.log.warn(\"TODO: implement NVIC register generation for '{}'\", .{device.arch});",
+      "id": 54
+    },
+    {
+      "file": "./tools/regz/src/arch/arm/nvic.zig",
+      "line": 49,
+      "type": "TODO",
+      "text": "// TODO: behavior is different for cortex-m3/4/7, probably the others too",
+      "id": 55
+    },
+    {
+      "file": "./tools/regz/src/arch/arm/nvic.zig",
+      "line": 57,
+      "type": "TODO",
+      "text": "// TODO: generate IP if any of the above fail, like nvic_prio_bits is missing",
+      "id": 56
+    },
+    {
+      "file": "./tools/regz/src/arch/arm/nvic.zig",
+      "line": 108,
+      "type": "TODO",
+      "text": "// TODO: cpu module specific NVIC registers",
+      "id": 57
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 526,
+      "type": "TODO",
+      "text": "// TODO: get description",
+      "id": 58
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 679,
+      "type": "TODO",
+      "text": "// TODO: handle this instead of assert",
+      "id": 59
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 729,
+      "type": "TODO",
+      "text": "// TODO: use size to print the hex value (pad with zeroes accordingly)",
+      "id": 60
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 829,
+      "type": "TODO",
+      "text": "// TODO: moded nested_struct_field",
+      "id": 61
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 1069,
+      "type": "TODO",
+      "text": "// TODO: if it's a struct decl then refer to it by name",
+      "id": 62
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 1071,
+      "type": "TODO",
+      "text": "// TODO full reference?",
+      "id": 63
+    },
+    {
+      "file": "./tools/regz/src/gen.zig",
+      "line": 1152,
+      "type": "TODO",
+      "text": "// TODO: named struct type",
+      "id": 64
+    },
+    {
+      "file": "./tools/regz/src/Directory.zig",
+      "line": 9,
+      "type": "TODO",
+      "text": "TODO,",
+      "id": 65
+    },
+    {
+      "file": "./tools/regz/src/output_tests.zig",
+      "line": 158,
+      "type": "TODO",
+      "text": "// TODO: study the types of qualifiers that come up. it's possible that",
+      "id": 66
+    },
+    {
+      "file": "./tools/esp-image/src/esp_image.zig",
+      "line": 3,
+      "type": "TODO",
+      "text": "// TODO: Refactor esp-image to allow reading esp images in freestanding. The",
+      "id": 67
+    },
+    {
+      "file": "./tools/esp-image/src/elf2image.zig",
+      "line": 166,
+      "type": "TODO",
+      "text": "// TODO: move app desc to the start of the image. This is currently done",
+      "id": 68
+    },
+    {
+      "file": "./tools/esp-image/src/elf2image.zig",
+      "line": 170,
+      "type": "TODO",
+      "text": "// TODO: maybe also check if sections overlap",
+      "id": 69
+    },
+    {
+      "file": "./tools/esp-image/src/elf2image.zig",
+      "line": 192,
+      "type": "TODO",
+      "text": "// TODO: override time and date",
+      "id": 70
+    },
+    {
+      "file": "./tools/esp-image/src/elf2image.zig",
+      "line": 249,
+      "type": "TODO",
+      "text": ".flash_pins_drive_settings = 0, // TODO: figure out what to set this to",
+      "id": 71
+    },
+    {
+      "file": "./tools/esp-image/src/elf2image.zig",
+      "line": 261,
+      "type": "TODO",
+      "text": "// TODO: Add secure boot option (v1 or v2) and append a signature if enabled.",
+      "id": 72
+    },
+    {
+      "file": "./tools/sorcerer/src/main.zig",
+      "line": 283,
+      "type": "TODO",
+      "text": "// TODO: handle no schema usages",
+      "id": 73
+    },
+    {
+      "file": "./tools/uf2/src/uf2.zig",
+      "line": 15,
+      "type": "TODO",
+      "text": "// TODO: keep track of contained files",
+      "id": 74
+    },
+    {
+      "file": "./tools/uf2/src/uf2.zig",
+      "line": 73,
+      "type": "TODO",
+      "text": "// TODO: when implemented set to true by default",
+      "id": 75
+    },
+    {
+      "file": "./tools/uf2/src/uf2.zig",
+      "line": 114,
+      "type": "TODO",
+      "text": "// TODO: check for overlaps, assert no zero sized segments",
+      "id": 76
+    },
+    {
+      "file": "./tools/uf2/src/uf2.zig",
+      "line": 157,
+      "type": "TODO",
+      "text": "@panic(\"TODO: bundle source in UF2 file\");",
+      "id": 77
+    },
+    {
+      "file": "./drivers/stepper/ULN2003.zig",
+      "line": 173,
+      "type": "TODO",
+      "text": "// TODO: respect direction",
+      "id": 78
+    },
+    {
+      "file": "./drivers/wireless/cyw43/sdpcm.zig",
+      "line": 245,
+      "type": "TODO",
+      "text": "// TODO: Make bus return error unions?",
+      "id": 79
+    },
+    {
+      "file": "./drivers/wireless/cyw43/sdpcm.zig",
+      "line": 463,
+      "type": "TODO",
+      "text": "// TODO: Events and data packets received while waiting for the control response",
+      "id": 80
+    },
+    {
+      "file": "./drivers/wireless/cyw43/runner.zig",
+      "line": 56,
+      "type": "TODO",
+      "text": "self.core_disable(.socram); // TODO: is this needed if we reset right after?",
+      "id": 81
+    },
+    {
+      "file": "./drivers/wireless/cyw43/runner.zig",
+      "line": 91,
+      "type": "TODO",
+      "text": "// TODO - bluetooth interrupts",
+      "id": 82
+    },
+    {
+      "file": "./drivers/wireless/cyw43/runner.zig",
+      "line": 117,
+      "type": "TODO",
+      "text": "// TODO: bluetooth setup",
+      "id": 83
+    },
+    {
+      "file": "./drivers/wireless/cyw43/bus.zig",
+      "line": 105,
+      "type": "TODO",
+      "text": "// TODO: Make sure error interrupt bits are clear?",
+      "id": 84
+    },
+    {
+      "file": "./drivers/wireless/cyw43/bus.zig",
+      "line": 111,
+      "type": "TODO",
+      "text": "// TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR",
+      "id": 85
+    },
+    {
+      "file": "./drivers/sensor/AS5600.zig",
+      "line": 174,
+      "type": "TODO",
+      "text": "// TODO: Write burn functions. Scary.",
+      "id": 86
+    },
+    {
+      "file": "./drivers/sensor/MPU-6050.zig",
+      "line": 19,
+      "type": "TODO",
+      "text": "//! TODO:",
+      "id": 87
+    },
+    {
+      "file": "./drivers/sensor/TLV493D.zig",
+      "line": 176,
+      "type": "TODO",
+      "text": "// TODO: Support other modes",
+      "id": 88
+    },
+    {
+      "file": "./drivers/sensor/TLV493D.zig",
+      "line": 188,
+      "type": "TODO",
+      "text": "// TODO: Figure out why when using the broadcast address, the subsequent reads seem to hang",
+      "id": 89
+    },
+    {
+      "file": "./drivers/sensor/TLV493D.zig",
+      "line": 235,
+      "type": "TODO",
+      "text": "// TODO: Figure out why this causes the device to stop responding",
+      "id": 90
+    },
+    {
+      "file": "./drivers/sensor/ICM-20948.zig",
+      "line": 27,
+      "type": "TODO",
+      "text": "//! TODO:",
+      "id": 91
+    },
+    {
+      "file": "./drivers/sensor/ICM-20948.zig",
+      "line": 200,
+      "type": "TODO",
+      "text": "// TODO: Fields to enable each part and only configure what we need. Put the rest in low power mode",
+      "id": 92
+    },
+    {
+      "file": "./drivers/sensor/ICM-20948.zig",
+      "line": 208,
+      "type": "TODO",
+      "text": "// TODO: Support converting to Gs",
+      "id": 93
+    },
+    {
+      "file": "./drivers/sensor/ICM-20948.zig",
+      "line": 230,
+      "type": "TODO",
+      "text": "// TODO: Support converting to radians",
+      "id": 94
+    },
+    {
+      "file": "./drivers/sensor/ICM-20948.zig",
+      "line": 507,
+      "type": "TODO",
+      "text": "// TODO: Support setting these individually. Could set based on if ODR fields are set (make",
+      "id": 95
+    },
+    {
+      "file": "./drivers/io_expander/pca9685.zig",
+      "line": 50,
+      "type": "TODO",
+      "text": "// TODO: this can be optimized to single Mode1 read",
+      "id": 96
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 74,
+      "type": "TODO",
+      "text": "// TODO(philippwendel) Add doc comments for functions",
+      "id": 97
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 75,
+      "type": "TODO",
+      "text": "// TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ControlByte.command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine",
+      "id": 98
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 149,
+      "type": "TODO",
+      "text": ".spi_3wire => @compileError(\"TODO\"),",
+      "id": 99
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 154,
+      "type": "TODO",
+      "text": ".spi_3wire => @compileError(\"TODO\"),",
+      "id": 100
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 346,
+      "type": "TODO",
+      "text": "// TODO(philippwendel) Make config to enum",
+      "id": 101
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 352,
+      "type": "TODO",
+      "text": "// TODO(philippwendel) Split in two funktions",
+      "id": 102
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 363,
+      "type": "TODO",
+      "text": "// TODO(philippwendel) Make level to enum",
+      "id": 103
+    },
+    {
+      "file": "./drivers/display/ssd1306.zig",
+      "line": 533,
+      "type": "TODO",
+      "text": "// TODO(philippwendel) Test more values and error",
+      "id": 104
+    },
+    {
+      "file": "./drivers/display/sh1106.zig",
+      "line": 132,
+      "type": "TODO",
+      "text": ".spi_3wire => @compileError(\"TODO\"),",
+      "id": 105
+    },
+    {
+      "file": "./drivers/display/sh1106.zig",
+      "line": 137,
+      "type": "TODO",
+      "text": ".spi_3wire => @compileError(\"TODO\"),",
+      "id": 106
+    },
+    {
+      "file": "./drivers/base/DateTime.zig",
+      "line": 278,
+      "type": "TODO",
+      "text": "// ### TODO ### Add more localizations",
+      "id": 107
+    },
+    {
+      "file": "./core/src/core/experimental/spi.zig",
+      "line": 114,
+      "type": "TODO",
+      "text": "clock.ensure(); // TODO: Wat?",
+      "id": 108
+    },
+    {
+      "file": "./core/src/core/experimental/spi.zig",
+      "line": 136,
+      "type": "TODO",
+      "text": "// TODO: add common options, like clock polarity and phase, and CS polarity",
+      "id": 109
+    },
+    {
+      "file": "./core/src/core/experimental/spi.zig",
+      "line": 140,
+      "type": "TODO",
+      "text": "// TODO: add common options",
+      "id": 110
+    },
+    {
+      "file": "./core/src/core/experimental/pin.zig",
+      "line": 15,
+      "type": "TODO",
+      "text": "// TODO: Depened on board and chip here",
+      "id": 111
+    },
+    {
+      "file": "./core/src/core/experimental/uart.zig",
+      "line": 76,
+      "type": "TODO",
+      "text": "/// TODO: Make this optional, to support STM32F303 et al. auto baud-rate detection?",
+      "id": 112
+    },
+    {
+      "file": "./core/src/core/experimental/uart.zig",
+      "line": 83,
+      "type": "TODO",
+      "text": "// TODO: comptime verify that the enums are valid",
+      "id": 113
+    },
+    {
+      "file": "./core/src/core/experimental/semihosting.zig",
+      "line": 355,
+      "type": "TODO",
+      "text": "// TODO: implement splat",
+      "id": 114
+    },
+    {
+      "file": "./core/src/core/experimental/semihosting.zig",
+      "line": 369,
+      "type": "TODO",
+      "text": "// TODO: limit",
+      "id": 115
+    },
+    {
+      "file": "./core/src/core/usb.zig",
+      "line": 321,
+      "type": "TODO",
+      "text": "// TODO: call mount callback if any",
+      "id": 116
+    },
+    {
+      "file": "./core/src/core/usb.zig",
+      "line": 323,
+      "type": "TODO",
+      "text": "// TODO: call umount callback if any",
+      "id": 117
+    },
+    {
+      "file": "./core/src/core/usb.zig",
+      "line": 338,
+      "type": "TODO",
+      "text": "// TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453",
+      "id": 118
+    },
+    {
+      "file": "./core/src/core/usb.zig",
+      "line": 393,
+      "type": "TODO",
+      "text": "// TODO: we support just one config for now so ignore config index",
+      "id": 119
+    },
+    {
+      "file": "./core/src/core/usb/drivers/hid.zig",
+      "line": 88,
+      "type": "TODO",
+      "text": "// TODO: The host is attempting to limit bandwidth by requesting that",
+      "id": 120
+    },
+    {
+      "file": "./core/src/core/usb/drivers/hid.zig",
+      "line": 98,
+      "type": "TODO",
+      "text": "// TODO: The device should switch the format of its reports from the",
+      "id": 121
+    },
+    {
+      "file": "./core/src/core/usb/drivers/hid.zig",
+      "line": 111,
+      "type": "TODO",
+      "text": "// TODO: This request sends a feature or output report to the device,",
+      "id": 122
+    },
+    {
+      "file": "./core/src/start.zig",
+      "line": 72,
+      "type": "TODO",
+      "text": "@compileError(\"TODO: Embedded event loop not supported yet. Please try again later.\");",
+      "id": 123
+    },
+    {
+      "file": "./core/src/cpus/cortex_m/m7.zig",
+      "line": 253,
+      "type": "TODO",
+      "text": "/// TODO: Reserved have values ? see armv7-m reference manual",
+      "id": 124
+    },
+    {
+      "file": "./build.zig",
+      "line": 405,
+      "type": "TODO",
+      "text": "// TODO: use unions when they are supported in the build system",
+      "id": 125
+    },
+    {
+      "file": "./examples/nordic/nrf5x/build.zig",
+      "line": 21,
+      "type": "TODO",
+      "text": "// TODO: better system for examples",
+      "id": 126
+    },
+    {
+      "file": "./examples/microchip/atsam/src/blinky.zig",
+      "line": 5,
+      "type": "TODO",
+      "text": "// TODO: Implement the blinky",
+      "id": 127
+    },
+    {
+      "file": "./examples/stmicro/stm32/build.zig",
+      "line": 18,
+      "type": "TODO",
+      "text": "// TODO: stm32.pins.GlobalConfiguration is not available on those targets",
+      "id": 128
+    },
+    {
+      "file": "./examples/stmicro/stm32/src/stm32f1xx/usb_cdc.zig",
+      "line": 210,
+      "type": "TODO",
+      "text": "//TODO port USB driver from RPxxxx USB HAL",
+      "id": 129
+    },
+    {
+      "file": "./examples/stmicro/stm32/src/stm32f1xx/usb_remote_hid.zig",
+      "line": 168,
+      "type": "TODO",
+      "text": "//TODO port USB driver from RPxxxx USB HAL",
+      "id": 130
+    },
+    {
+      "file": "./examples/stmicro/stm32/src/stm32f1xx/usb_remote_hid.zig",
+      "line": 302,
+      "type": "TODO",
+      "text": "//TODO: full HID report function",
+      "id": 131
+    },
+    {
+      "file": "./examples/stmicro/stm32/src/stm32f1xx/usb_hid.zig",
+      "line": 154,
+      "type": "TODO",
+      "text": "//TODO port USB driver from RPxxxx USB HAL",
+      "id": 132
+    },
+    {
+      "file": "./examples/stmicro/stm32/src/stm32f1xx/usb_hid.zig",
+      "line": 246,
+      "type": "TODO",
+      "text": "//TODO: full HID report function",
+      "id": 133
+    },
+    {
+      "file": "./examples/raspberrypi/rp2xxx/src/usb_hid.zig",
+      "line": 89,
+      "type": "TODO",
+      "text": "_ = drivers; // TODO",
+      "id": 134
+    },
+    {
+      "file": "./port/nordic/nrf5x/build.zig",
+      "line": 123,
+      "type": "TODO",
+      "text": "// TODO: use code ram for `.ram_text`",
+      "id": 135
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/uart.zig",
+      "line": 8,
+      "type": "TODO",
+      "text": "// TODO: UARTE0? Does DMA, just set rxd.ptr or txd.ptr. UART0 is deprecated (but still works?) on nRF52840",
+      "id": 136
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/uart.zig",
+      "line": 65,
+      "type": "TODO",
+      "text": "// TODO: On 52840 the CONFIG register has 1 bit for STOP bits",
+      "id": 137
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/uart.zig",
+      "line": 122,
+      "type": "TODO",
+      "text": "// TODO: Make these optional... could have rx only for example",
+      "id": 138
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2c.zig",
+      "line": 185,
+      "type": "TODO",
+      "text": "// TODO: Could move the check into read/write and remove this struct",
+      "id": 139
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/spim.zig",
+      "line": 79,
+      "type": "TODO",
+      "text": "// TODO: Chip-specific",
+      "id": 140
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/spim.zig",
+      "line": 113,
+      "type": "TODO",
+      "text": "// TODO: Does MOSI idle change here?",
+      "id": 141
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/spim.zig",
+      "line": 256,
+      "type": "TODO",
+      "text": "// TODO: DMA won't work if they are trying to copy from Flash (e.g. program memory). In that",
+      "id": 142
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/spim.zig",
+      "line": 285,
+      "type": "TODO",
+      "text": "// TODO: Do we have to stop the task on timeout?",
+      "id": 143
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/gpio.zig",
+      "line": 46,
+      "type": "TODO",
+      "text": "// TODO: Do we want to follow the rp2350 design where we encode the package",
+      "id": 144
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/gpio.zig",
+      "line": 50,
+      "type": "TODO",
+      "text": "// TODO: Add support for LATCH, DETECTMODE",
+      "id": 145
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2cdma.zig",
+      "line": 30,
+      "type": "TODO",
+      "text": "// TODO: Name these more nicely",
+      "id": 146
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2cdma.zig",
+      "line": 146,
+      "type": "TODO",
+      "text": "// TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on",
+      "id": 147
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2cdma.zig",
+      "line": 161,
+      "type": "TODO",
+      "text": "// TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on",
+      "id": 148
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2cdma.zig",
+      "line": 360,
+      "type": "TODO",
+      "text": "// TODO: We can handle this if for some reason we want to send a start and immediate stop?",
+      "id": 149
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2cdma.zig",
+      "line": 377,
+      "type": "TODO",
+      "text": "// TODO: We only set the stop one if this is the last transaction... we could handle writev",
+      "id": 150
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal/i2cdma.zig",
+      "line": 401,
+      "type": "TODO",
+      "text": "// TODO: We can handle this actually",
+      "id": 151
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/hal.zig",
+      "line": 12,
+      "type": "TODO",
+      "text": "// TODO: adc, timers, pwm, rng, rtc alarms, interrupts, wdt, wifi, nfc, bt, zigbee",
+      "id": 152
+    },
+    {
+      "file": "./port/nordic/nrf5x/src/boards/microbit.zig",
+      "line": 70,
+      "type": "TODO",
+      "text": "// TODO: should led matrix be a driver?",
+      "id": 153
+    },
+    {
+      "file": "./port/nxp/lpc/src/hals/LPC176x5x.zig",
+      "line": 124,
+      "type": "TODO",
+      "text": "@compileError(\"TODO: custom pins are not currently supported\");",
+      "id": 154
+    },
+    {
+      "file": "./port/nxp/lpc/src/hals/LPC176x5x.zig",
+      "line": 170,
+      "type": "TODO",
+      "text": "// TODO: UARTN_FIFOS_ARE_DISA is not available in all uarts",
+      "id": 155
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/clocks.zig",
+      "line": 14,
+      "type": "TODO",
+      "text": "// TODO: How do we know if we need to set the AFIOEN?",
+      "id": 156
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/clocks.zig",
+      "line": 150,
+      "type": "TODO",
+      "text": "// TODO: Make this more flexible.",
+      "id": 157
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/clocks.zig",
+      "line": 173,
+      "type": "TODO",
+      "text": "// TODO: Why is this 4, not 2? Check",
+      "id": 158
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/pins.zig",
+      "line": 32,
+      "type": "TODO",
+      "text": "// TODO: set mode when configure alternative mode.",
+      "id": 159
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/pins.zig",
+      "line": 42,
+      "type": "TODO",
+      "text": "@panic(\"TODO\");",
+      "id": 160
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/pins.zig",
+      "line": 71,
+      "type": "TODO",
+      "text": "// TODO: Read current output from ODR.",
+      "id": 161
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/pins.zig",
+      "line": 201,
+      "type": "TODO",
+      "text": "// TODO: GPIOD has only 3 ports. Check this.",
+      "id": 162
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/pins.zig",
+      "line": 204,
+      "type": "TODO",
+      "text": "// TODO: Remove this loop. Set at once.",
+      "id": 163
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/pins.zig",
+      "line": 218,
+      "type": "TODO",
+      "text": "// TODO: Remove this loop. Set at once.",
+      "id": 164
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/ch32v003/gpio.zig",
+      "line": 63,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 165
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/pins.zig",
+      "line": 40,
+      "type": "TODO",
+      "text": "// TODO: set mode when configure alternative mode.",
+      "id": 166
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/pins.zig",
+      "line": 50,
+      "type": "TODO",
+      "text": "@panic(\"TODO\");",
+      "id": 167
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/pins.zig",
+      "line": 79,
+      "type": "TODO",
+      "text": "// TODO: Read current output from ODR.",
+      "id": 168
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/pins.zig",
+      "line": 238,
+      "type": "TODO",
+      "text": "// TODO: GPIOD has only 3 ports. Check this.",
+      "id": 169
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/pins.zig",
+      "line": 241,
+      "type": "TODO",
+      "text": "// TODO: Remove this loop. Set at once.",
+      "id": 170
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/pins.zig",
+      "line": 255,
+      "type": "TODO",
+      "text": "// TODO: Remove this loop. Set at once.",
+      "id": 171
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/gpio.zig",
+      "line": 68,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 172
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/gpio.zig",
+      "line": 119,
+      "type": "TODO",
+      "text": "// TODO: Cleanup!",
+      "id": 173
+    },
+    {
+      "file": "./port/wch/ch32v/src/hals/usart.zig",
+      "line": 151,
+      "type": "TODO",
+      "text": "// TODO: Add support for other USARTs/UARTs",
+      "id": 174
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103.zig",
+      "line": 36,
+      "type": "TODO",
+      "text": "// TODO: check if pin is already configured as output",
+      "id": 175
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103.zig",
+      "line": 40,
+      "type": "TODO",
+      "text": "// TODO: check if pin is already configured as input",
+      "id": 176
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103.zig",
+      "line": 45,
+      "type": "TODO",
+      "text": "// TODO: check if pin is configured as input",
+      "id": 177
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103.zig",
+      "line": 52,
+      "type": "TODO",
+      "text": "// TODO: check if pin is configured as output",
+      "id": 178
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103.zig",
+      "line": 79,
+      "type": "TODO",
+      "text": "@compileError(\"TODO: custom pins are not currently supported\");",
+      "id": 179
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103/uart.zig",
+      "line": 29,
+      "type": "TODO",
+      "text": "@compileError(\"TODO: custom pins are not currently supported\");",
+      "id": 180
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103/pins.zig",
+      "line": 54,
+      "type": "TODO",
+      "text": "@panic(\"TODO\");",
+      "id": 181
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/hals/GD32VF103/pins.zig",
+      "line": 187,
+      "type": "TODO",
+      "text": "// TODO: ensure only one instance of an input function exists",
+      "id": 182
+    },
+    {
+      "file": "./port/gigadevice/gd32/src/boards/longan_nano.zig",
+      "line": 110,
+      "type": "TODO",
+      "text": "// TODO: implement",
+      "id": 183
+    },
+    {
+      "file": "./port/stmicro/stm32/src/generate.zig",
+      "line": 253,
+      "type": "TODO",
+      "text": "// TODO: Better system to detect if hal is present.",
+      "id": 184
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/usb_internals/usb_ll.zig",
+      "line": 174,
+      "type": "TODO",
+      "text": "const UsbErrorStatus = struct {}; //TODO",
+      "id": 185
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/spi.zig",
+      "line": 28,
+      "type": "TODO",
+      "text": "///TODO: 3-Wire mode, Slave mode, bidirectional mode",
+      "id": 186
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/uart.zig",
+      "line": 1,
+      "type": "TODO",
+      "text": "//TODO: Half-Duplex (Single-Wire mode)",
+      "id": 187
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/uart.zig",
+      "line": 2,
+      "type": "TODO",
+      "text": "//TODO: Synchronous mode (For USART only)",
+      "id": 188
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/drivers.zig",
+      "line": 12,
+      "type": "TODO",
+      "text": "// TODO: The STM HAL still has its own I2CAddress type, since it supports 10 bit addresses. For now",
+      "id": 189
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/drivers.zig",
+      "line": 209,
+      "type": "TODO",
+      "text": "// TODO: Should be a deadline since the timeout is doubled with two calls",
+      "id": 190
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/pins.zig",
+      "line": 54,
+      "type": "TODO",
+      "text": "@panic(\"TODO\");",
+      "id": 191
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/pins.zig",
+      "line": 191,
+      "type": "TODO",
+      "text": "// TODO: ensure only one instance of an input function exists",
+      "id": 192
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/rcc.zig",
+      "line": 2,
+      "type": "TODO",
+      "text": "//TODO: Add support for 105/107",
+      "id": 193
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F103/rcc.zig",
+      "line": 284,
+      "type": "TODO",
+      "text": "//TODO: Add STM32F105/7 devices peri",
+      "id": 194
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/timer_v1.zig",
+      "line": 169,
+      "type": "TODO",
+      "text": "///- sync and TRGI modes for synchronization with other timers (TODO).",
+      "id": 195
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/timer_v1.zig",
+      "line": 172,
+      "type": "TODO",
+      "text": "///- DMA burst support for update and compare events (TODO).",
+      "id": 196
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/i2c_v2.zig",
+      "line": 69,
+      "type": "TODO",
+      "text": "// TODO check fi max value is less the 1 and return an error",
+      "id": 197
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/i2c_v2.zig",
+      "line": 80,
+      "type": "TODO",
+      "text": "// TODO check fi max value is less the 1 and return an error",
+      "id": 198
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/i2c_v2.zig",
+      "line": 113,
+      "type": "TODO",
+      "text": "// TODO this should configure",
+      "id": 199
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/uart_v3.zig",
+      "line": 80,
+      "type": "TODO",
+      "text": "// TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency",
+      "id": 200
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/uart_v3.zig",
+      "line": 82,
+      "type": "TODO",
+      "text": "// TODO: Do some checks to see if the baud rate is too high (or perhaps too low)",
+      "id": 201
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/common/uart_v3.zig",
+      "line": 85,
+      "type": "TODO",
+      "text": "// TODO: We assume the default OVER8=0 configuration above.",
+      "id": 202
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F429.zig",
+      "line": 21,
+      "type": "TODO",
+      "text": "//! TODO: add more clock calculations when adding Uart",
+      "id": 203
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F429.zig",
+      "line": 82,
+      "type": "TODO",
+      "text": "const reg_value = @field(idr_reg.read(), \"IDR\" ++ pin.suffix); // TODO extract to getRegField()?",
+      "id": 204
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 3,
+      "type": "TODO",
+      "text": "//! TODO: Do something useful for other STM32F40x chips.",
+      "id": 205
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 122,
+      "type": "TODO",
+      "text": "const reg_value = @field(idr_reg.read(), \"IDR\" ++ pin.suffix); // TODO extract to getRegField()?",
+      "id": 206
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 265,
+      "type": "TODO",
+      "text": "// TODO: should we consider this an unsupported word size or unsupported parity?",
+      "id": 207
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 268,
+      "type": "TODO",
+      "text": "// TODO: should we consider this an unsupported word size or unsupported parity?",
+      "id": 208
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 291,
+      "type": "TODO",
+      "text": "// TODO: We assume the default OVER8=0 configuration above (i.e. 16x oversampling).",
+      "id": 209
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 292,
+      "type": "TODO",
+      "text": "// TODO: Do some checks to see if the baud rate is too high (or perhaps too low)",
+      "id": 210
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 293,
+      "type": "TODO",
+      "text": "// TODO: Do a rounding div, instead of a truncating div?",
+      "id": 211
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 447,
+      "type": "TODO",
+      "text": "// TODO: the stuff below will probably use the microzig gpio API in the future",
+      "id": 212
+    },
+    {
+      "file": "./port/stmicro/stm32/src/hals/STM32F407.zig",
+      "line": 484,
+      "type": "TODO",
+      "text": "// TODO: handle fast mode",
+      "id": 213
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/systimer.zig",
+      "line": 30,
+      "type": "TODO",
+      "text": "// TODO: Not sure how this should be called.",
+      "id": 214
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/spi.zig",
+      "line": 29,
+      "type": "TODO",
+      "text": "// TODO: add support for peripheral controlled chip select pins",
+      "id": 215
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/spi.zig",
+      "line": 51,
+      "type": "TODO",
+      "text": "// TODO: we can return directly the packed type if we add some patches",
+      "id": 216
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/spi.zig",
+      "line": 163,
+      "type": "TODO",
+      "text": "// TODO: not sure if this is the best way to do this",
+      "id": 217
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/clocks/esp32_c3.zig",
+      "line": 33,
+      "type": "TODO",
+      "text": "// TODO: add support for rc_fast_clk source",
+      "id": 218
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/usb_serial_jtag.zig",
+      "line": 86,
+      "type": "TODO",
+      "text": "// TODO: add timestamp to log message",
+      "id": 219
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/uart.zig",
+      "line": 5,
+      "type": "TODO",
+      "text": "// TODO: chip independent. currently specific to esp32c3.",
+      "id": 220
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/i2c.zig",
+      "line": 12,
+      "type": "TODO",
+      "text": "// TODO: How and why. Is this xtal? That clock is 40_000_000 according to the hal",
+      "id": 221
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/i2c.zig",
+      "line": 170,
+      "type": "TODO",
+      "text": "// TODO: Take timeout as extra arg and handle saturation?",
+      "id": 222
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/i2c.zig",
+      "line": 507,
+      "type": "TODO",
+      "text": "// TODO: Maybe we don't need 31 byte limit for reads",
+      "id": 223
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/i2c.zig",
+      "line": 580,
+      "type": "TODO",
+      "text": "// TODO: Write a new utility that does similar but that will coalesce into a specified size",
+      "id": 224
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/drivers.zig",
+      "line": 197,
+      "type": "TODO",
+      "text": "// TODO: When writev_then_readv_blocking is implemented in the HAL, use that.",
+      "id": 225
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/gpio.zig",
+      "line": 292,
+      "type": "TODO",
+      "text": "// TODO: bypass gpio matrix",
+      "id": 226
+    },
+    {
+      "file": "./port/espressif/esp/src/hal/gpio.zig",
+      "line": 309,
+      "type": "TODO",
+      "text": "// TODO: bypass gpio matrix",
+      "id": 227
+    },
+    {
+      "file": "./port/espressif/esp/src/hal.zig",
+      "line": 50,
+      "type": "TODO",
+      "text": "// TODO: disable watchdogs in a more elegant way (with a hal).",
+      "id": 228
+    },
+    {
+      "file": "./port/espressif/esp/src/cpus/esp_riscv.zig",
+      "line": 365,
+      "type": "TODO",
+      "text": "// TODO: make a better default exception handler",
+      "id": 229
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/build.zig",
+      "line": 91,
+      "type": "TODO",
+      "text": "// TODO: maybe these can be used for stacks",
+      "id": 230
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/build.zig",
+      "line": 142,
+      "type": "TODO",
+      "text": "// TODO: maybe these can be used for stacks",
+      "id": 231
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/comparison_tests/irq.pio.h",
+      "line": 3,
+      "type": "TODO",
+      "text": "// TODO: Exercise more? delays, optional sideset, etc?",
+      "id": 232
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/Expression.zig",
+      "line": 150,
+      "type": "TODO",
+      "text": "// TODO: how about if the expression is fully enveloped in parenthesis?",
+      "id": 233
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/Expression.zig",
+      "line": 381,
+      "type": "TODO",
+      "text": "// TODO: other requirement for @divExact",
+      "id": 234
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig",
+      "line": 140,
+      "type": "TODO",
+      "text": "// TODO: assert we have the code identifier and open curly bracket",
+      "id": 235
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig",
+      "line": 624,
+      "type": "TODO",
+      "text": "// TODO: I need to take a break. There is no rush to finish this. The thing",
+      "id": 236
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig",
+      "line": 1146,
+      "type": "TODO",
+      "text": "// TODO: use Value instead of numbers",
+      "id": 237
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/assembler/tokenizer.zig",
+      "line": 1150,
+      "type": "TODO",
+      "text": "// TODO: delay can look like [T1-1], so we could consider the square",
+      "id": 238
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/common.zig",
+      "line": 84,
+      "type": "TODO",
+      "text": "// TODO: determine what this does, is it just a combination of the",
+      "id": 239
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/common.zig",
+      "line": 202,
+      "type": "TODO",
+      "text": "// TODO: const lock = hw.Lock.claim()",
+      "id": 240
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/common.zig",
+      "line": 266,
+      "type": "TODO",
+      "text": "// TODO: plug in rest of the options",
+      "id": 241
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/common.zig",
+      "line": 444,
+      "type": "TODO",
+      "text": "// TODO: why does the raw interrupt register no have irq1/0?",
+      "id": 242
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/common.zig",
+      "line": 450,
+      "type": "TODO",
+      "text": "// TODO: be able to disable an interrupt",
+      "id": 243
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pio/common.zig",
+      "line": 529,
+      "type": "TODO",
+      "text": "// TODO: check program settings vs pin mapping",
+      "id": 244
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/rtc.zig",
+      "line": 88,
+      "type": "TODO",
+      "text": "// TODO: I believe the compiler is forbidden from re-ordering these two",
+      "id": 245
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/usb.zig",
+      "line": 188,
+      "type": "TODO",
+      "text": "// TODO: if ((bc & (1 << 10)) == 1) return EPBError.NotAvailable;",
+      "id": 246
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/usb.zig",
+      "line": 311,
+      "type": "TODO",
+      "text": "// TODO: assert!(buffer.len() <= 64);",
+      "id": 247
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/usb.zig",
+      "line": 313,
+      "type": "TODO",
+      "text": "// TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::In);",
+      "id": 248
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/usb.zig",
+      "line": 319,
+      "type": "TODO",
+      "text": "// TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452",
+      "id": 249
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/usb.zig",
+      "line": 358,
+      "type": "TODO",
+      "text": "// TODO: assert!(len <= 64);",
+      "id": 250
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/usb.zig",
+      "line": 360,
+      "type": "TODO",
+      "text": "// TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::Out);",
+      "id": 251
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig",
+      "line": 199,
+      "type": "TODO",
+      "text": "@compileError(\"TODO: Currently don't support fractional clock dividers due to potential clock jitter headaches\");",
+      "id": 252
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig",
+      "line": 262,
+      "type": "TODO",
+      "text": ".src_gpin0, .src_gpin1 => @panic(\"TODO: No way to know the frequency of an external clock input unless specified by user.\"),",
+      "id": 253
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig",
+      "line": 263,
+      "type": "TODO",
+      "text": ".otp_clk2fc, .pll_usb_primary_ref_opcg => @panic(\"TODO: These clocks aren't really documented and shouldn't be used with this function yet\"),",
+      "id": 254
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2350.zig",
+      "line": 321,
+      "type": "TODO",
+      "text": "///     - TODO: Could vary the PLL frequency based on sys_freq input to open up a broader range of SYS frequencies",
+      "id": 255
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2040.zig",
+      "line": 176,
+      "type": "TODO",
+      "text": "@compileError(\"TODO: Currently don't support fractional clock dividers due to potential clock jitter headaches\");",
+      "id": 256
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2040.zig",
+      "line": 242,
+      "type": "TODO",
+      "text": ".src_gpin0, .src_gpin1 => @panic(\"TODO: No way to know the frequency of an external clock input unless specified by user.\"),",
+      "id": 257
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/rp2040.zig",
+      "line": 300,
+      "type": "TODO",
+      "text": "///     - TODO: Could vary the PLL frequency based on sys_freq input to open up a broader range of SYS frequencies",
+      "id": 258
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/common.zig",
+      "line": 11,
+      "type": "TODO",
+      "text": "/// TODO: Find a way to allow this to be \"null\" as it's not explicitly required as long",
+      "id": 259
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/common.zig",
+      "line": 64,
+      "type": "TODO",
+      "text": "/// TODO: Currently we don't support non-integer division to avoid any",
+      "id": 260
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/common.zig",
+      "line": 183,
+      "type": "TODO",
+      "text": "// TODO: Currently leave all fractional bits 0 to only support integer divisors",
+      "id": 261
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/clocks/common.zig",
+      "line": 223,
+      "type": "TODO",
+      "text": "// TODO: should use `compatibility.arch` but for some reason it breaks the code.",
+      "id": 262
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/adc.zig",
+      "line": 164,
+      "type": "TODO",
+      "text": "// TODO: consider fixed-point",
+      "id": 263
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/adc.zig",
+      "line": 273,
+      "type": "TODO",
+      "text": "// TODO: what happens when DMA and IRQ are enabled?",
+      "id": 264
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/adc.zig",
+      "line": 310,
+      "type": "TODO",
+      "text": "// TODO: do we need to acknowledge an ADC interrupt?",
+      "id": 265
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/adc.zig",
+      "line": 314,
+      "type": "TODO",
+      "text": "// TODO: check if this works",
+      "id": 266
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/multicore.zig",
+      "line": 73,
+      "type": "TODO",
+      "text": "// TODO: disable SIO interrupts",
+      "id": 267
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/multicore.zig",
+      "line": 79,
+      "type": "TODO",
+      "text": "// TODO: protect stack using MPU",
+      "id": 268
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/multicore.zig",
+      "line": 98,
+      "type": "TODO",
+      "text": "// TODO: protect stack using MPU",
+      "id": 269
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/uart.zig",
+      "line": 325,
+      "type": "TODO",
+      "text": "// TODO: Will potentially be modified in a future DMA overhaul",
+      "id": 270
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/flash.zig",
+      "line": 95,
+      "type": "TODO",
+      "text": "// TODO: add sanity checks, e.g., offset + count < flash size",
+      "id": 271
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/flash.zig",
+      "line": 119,
+      "type": "TODO",
+      "text": "// TODO: add sanity checks, e.g., offset + count < flash size",
+      "id": 272
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/dma.zig",
+      "line": 120,
+      "type": "TODO",
+      "text": "// TODO:",
+      "id": 273
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig",
+      "line": 16,
+      "type": "TODO",
+      "text": "// TODO: maybe support copying the table to ram as well?",
+      "id": 274
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig",
+      "line": 64,
+      "type": "TODO",
+      "text": "// TODO: Is the signature correct?",
+      "id": 275
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig",
+      "line": 66,
+      "type": "TODO",
+      "text": "// TODO: Is the signature correct?",
+      "id": 276
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig",
+      "line": 195,
+      "type": "TODO",
+      "text": "// TODO: Is the signature correct?",
+      "id": 277
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/rom/rp2040.zig",
+      "line": 197,
+      "type": "TODO",
+      "text": "// TODO: Is the signature correct?",
+      "id": 278
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/i2c.zig",
+      "line": 286,
+      "type": "TODO",
+      "text": "// TODO: Could move the check into read/write and remove this struct",
+      "id": 279
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/i2c.zig",
+      "line": 339,
+      "type": "TODO",
+      "text": "//     TODO Could there be an abort while waiting for the STOP",
+      "id": 280
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/watchdog.zig",
+      "line": 179,
+      "type": "TODO",
+      "text": "/// TODO: RP2350 SDK masks this with a ROM function:",
+      "id": 281
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/drivers.zig",
+      "line": 478,
+      "type": "TODO",
+      "text": "// TODO: CYW43 top level struct just for testing purpose (please redesign)",
+      "id": 282
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/pins.zig",
+      "line": 875,
+      "type": "TODO",
+      "text": "// TODO: ensure only one instance of an input function exists",
+      "id": 283
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/hw.zig",
+      "line": 8,
+      "type": "TODO",
+      "text": "@panic(\"TODO\");",
+      "id": 284
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/hal/hw.zig",
+      "line": 13,
+      "type": "TODO",
+      "text": "@panic(\"TODO\");",
+      "id": 285
+    },
+    {
+      "file": "./port/raspberrypi/rp2xxx/src/boards/adafruit_metro_rp2350.zig",
+      "line": 5,
+      "type": "TODO",
+      "text": "// ### TODO ### Add automatic default pin configuration for board pins",
+      "id": 286
+    },
+    {
+      "file": "./modules/rtt/src/rtt.zig",
+      "line": 236,
+      "type": "TODO",
+      "text": "/// TODO: build.zig option that allows users to opt-in to returning WriteError on full RTT buffer?",
+      "id": 287
+    },
+    {
+      "file": "./modules/rtt/src/rtt.zig",
+      "line": 318,
+      "type": "TODO",
+      "text": "/// TODO: Does the channel's mode actually matter here?",
+      "id": 288
+    },
+    {
+      "file": "./modules/foundation-libc/include/uchar.h",
+      "line": 7,
+      "type": "TODO",
+      "text": "int dummy; // TODO: fill in internal multi-byte conversion state",
+      "id": 289
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 9,
+      "type": "TODO",
+      "text": "// TODO: memchr",
+      "id": 290
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 10,
+      "type": "TODO",
+      "text": "// TODO: memcmp",
+      "id": 291
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 11,
+      "type": "TODO",
+      "text": "// TODO: memmove",
+      "id": 292
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 12,
+      "type": "TODO",
+      "text": "// TODO: strcat",
+      "id": 293
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 13,
+      "type": "TODO",
+      "text": "// TODO: strcmp",
+      "id": 294
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 14,
+      "type": "TODO",
+      "text": "// TODO: strcpy",
+      "id": 295
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 15,
+      "type": "TODO",
+      "text": "// TODO: strcspn",
+      "id": 296
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 16,
+      "type": "TODO",
+      "text": "// TODO: strerror",
+      "id": 297
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 17,
+      "type": "TODO",
+      "text": "// TODO: strncat",
+      "id": 298
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 18,
+      "type": "TODO",
+      "text": "// TODO: strncpy",
+      "id": 299
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 19,
+      "type": "TODO",
+      "text": "// TODO: strpbrk",
+      "id": 300
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 20,
+      "type": "TODO",
+      "text": "// TODO: strrchr",
+      "id": 301
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 21,
+      "type": "TODO",
+      "text": "// TODO: strspn",
+      "id": 302
+    },
+    {
+      "file": "./modules/foundation-libc/src/modules/string.zig",
+      "line": 22,
+      "type": "TODO",
+      "text": "// TODO: strstr",
+      "id": 303
+    },
+    {
+      "file": "./modules/riscv32-common/src/riscv32_common.zig",
+      "line": 46,
+      "type": "TODO",
+      "text": "// TODO: Verbose exception handler",
+      "id": 304
+    },
+    {
+      "file": "./modules/riscv32-common/src/riscv32_common.zig",
+      "line": 130,
+      "type": "TODO",
+      "text": "// TODO: supervisor level csrs",
+      "id": 305
+    },
+    {
+      "file": "./sim/aviron/src/main.zig",
+      "line": 16,
+      "type": "TODO",
+      "text": "// TODO: Add support for reading/writing EEPROM through IO",
+      "id": 306
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 611,
+      "type": "TODO",
+      "text": "/// TODO!",
+      "id": 307
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 618,
+      "type": "TODO",
+      "text": "/// TODO!",
+      "id": 308
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 625,
+      "type": "TODO",
+      "text": "/// TODO!",
+      "id": 309
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 1445,
+      "type": "TODO",
+      "text": "///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)",
+      "id": 310
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 1463,
+      "type": "TODO",
+      "text": "///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)",
+      "id": 311
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 1556,
+      "type": "TODO",
+      "text": "/// TODO! (Not necessarily required for implementation, very weird use case)",
+      "id": 312
+    },
+    {
+      "file": "./sim/aviron/src/lib/Cpu.zig",
+      "line": 1560,
+      "type": "TODO",
+      "text": "@panic(\"TODO: Implement DES instruction!\");",
+      "id": 313
+    },
+    {
+      "file": "./sim/aviron/src/lib/mcu.zig",
+      "line": 23,
+      "type": "FIXME",
+      "text": "/// FIXME: The current io_window design doesn't properly model register file mapping for classic",
+      "id": 314
+    },
+    {
+      "file": "./sim/aviron/src/lib/mcu.zig",
+      "line": 108,
+      "type": "FIXME",
+      "text": "/// FIXME: Register file (0x00-0x1F) is not mapped in data space - LD/ST to these addresses will",
+      "id": 315
+    },
+    {
+      "file": "./sim/aviron/src/lib/mcu.zig",
+      "line": 163,
+      "type": "FIXME",
+      "text": "/// FIXME: Register file (0x00-0x1F) is not mapped in data space - LD/ST to these addresses will",
+      "id": 316
+    }
+  ]
+}
