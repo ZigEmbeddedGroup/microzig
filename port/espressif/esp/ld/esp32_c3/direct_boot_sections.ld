@@ -27,6 +27,7 @@ SECTIONS
   {
     microzig_ram_text_start = .;
     KEEP(*(.ram_text))
+    KEEP(*(.ram_vectors))
 
     *(.rwtext*)
 

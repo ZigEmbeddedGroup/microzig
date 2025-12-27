@@ -94,6 +94,3 @@ fn find_next_due(now: time.Absolute) ?*Timer {
     }
     return null;
 }
-
-// fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
-// }

@@ -1,240 +1,265 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
 const microzig = @import("microzig");
 const TrapFrame = microzig.cpu.TrapFrame;
 const SYSTEM = microzig.chip.peripherals.SYSTEM;
+const time = microzig.drivers.time;
+
+const systimer = @import("systimer.zig");
+const get_time_since_boot = @import("time.zig").get_time_since_boot;
+
+// How it works?
+// For simple task to task context switches, only necessary registers are
+// saved. But if a higher priority task becomes available during the handling
+// of an interrupt, a task switch is forced by saving the entire state of the
+// task on the stack. What is interresting is that the two context switches are
+// compatible. Voluntary yield can resume a task that was interrupted by force
+// and vice versa. Because of the forced yield, tasks are required to have a
+// minimum stack size available.
+
+const STACK_ALIGN: std.mem.Alignment = .@"16";
+const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 31 * @sizeOf(usize));
+const IDLE_STACK_SIZE = 512 + EXTRA_STACK_SIZE;
+
+const generic_interrupt: microzig.cpu.Interrupt = .interrupt30;
+const yield_interrupt: microzig.cpu.Interrupt = .interrupt31;
+const systimer_unit = systimer.unit(0);
+const systimer_alarm = systimer.alarm(0);
+
+comptime {
+    if (microzig.options.cpu.interrupt_stack_size == null)
+        @compileError("Please enable interrupt stacks to use the scheduler");
+}
 
 const Scheduler = @This();
 
-// TODO: Custom wrapper handlers for interrupts that switch to an interrupt
-// stack
+var maybe_instance: ?*Scheduler = null;
 
-allocator: std.mem.Allocator = undefined,
-ready_queue: ?*Task = null,
-main_task: Task = undefined,
-/// SAFETY: we don't need optionals because there will always be the main task
-/// running. It can't be deleted.
-current_task: *Task = undefined,
+gpa: Allocator,
 
-pub const Task = struct {
-    // NOTE: I believe this ensures an alignment for the struct, useful because
-    // some bits for instance in the mutex state are mark whether it is locked
-    // or unlocked
-    _: void align(4) = {},
-    context: Context,
-    async_closure: AsyncClosure,
-    stack: []u8,
-    queue_next: ?*Task = null,
+ready_queue: Task.ReadyPriorityQueue = .{},
+timer_queue: std.DoublyLinkedList = .{},
+suspended_list: std.DoublyLinkedList = .{},
 
-    pub fn init(function: *const fn (param: ?*anyopaque) callconv(.c) void, param: ?*anyopaque, stack: []u8) Task {
-        return .{
-            .context = .{
-                .sp = stack.ptr[stack.len..],
-                .pc = AsyncClosure.call,
-            },
-            .stack = stack,
-            .async_closure = .{
-                .entry = function,
-                .param = param,
-            },
-        };
+main_task: Task,
+
+/// The task in the .running state
+current_task: *Task,
+
+// TODO: configurable
+pub const Priority = enum(u2) {
+    idle = 0,
+    low = 1,
+    mid = 2,
+    high = 3,
+
+    pub fn is_greater(prio: Priority, other: Priority) bool {
+        return @intFromEnum(prio) > @intFromEnum(other);
     }
 };
 
-pub fn init(scheduler: *Scheduler, allocator: Allocator) void {
-    scheduler.allocator = allocator;
-    scheduler.main_task = .{
-        .context = undefined,
-        .async_closure = undefined,
-        .stack = &.{},
+pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
+    assert(maybe_instance == null);
+
+    scheduler.* = .{
+        .gpa = gpa,
+        .main_task = .{
+            .context = undefined,
+            .priority = .idle,
+            .stack = &.{},
+        },
+        .current_task = &scheduler.main_task,
     };
-    scheduler.current_task = &scheduler.main_task;
+
+    maybe_instance = scheduler;
+
+    microzig.cpu.interrupt.map(.from_cpu_intr0, yield_interrupt);
+    microzig.cpu.interrupt.set_type(yield_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(yield_interrupt, .lowest);
+    microzig.cpu.interrupt.enable(yield_interrupt);
+
+    microzig.cpu.interrupt.set_type(generic_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(generic_interrupt, .highest);
+    microzig.cpu.interrupt.map(.systimer_target0, generic_interrupt);
+    microzig.cpu.interrupt.enable(generic_interrupt);
+
+    // unit0 is already enabled as it is used by `hal.time`.
+    systimer_alarm.set_unit(systimer_unit);
+    systimer_alarm.set_mode(.target);
+    systimer_alarm.set_enabled(false);
+    systimer_alarm.set_interrupt_enabled(true);
 }
 
-// TODO: implement ziggy spawn
+fn task_entry() callconv(.naked) void {
+    asm volatile (
+        \\lw a0, -4(sp)
+        \\lw a1, -8(sp)
+        \\jr a1
+        \\
+    );
+}
 
 pub const SpawnOptions = struct {
+    name: []const u8 = "task",
     stack_size: usize = 4096,
+    priority: Priority = .low,
 };
 
 pub fn raw_alloc_spawn_with_options(
     scheduler: *Scheduler,
-    function: *const fn (param: ?*anyopaque) callconv(.c) void,
+    function: *const fn (param: ?*anyopaque) callconv(.c) noreturn,
     param: ?*anyopaque,
     options: SpawnOptions,
 ) !void {
-    // TODO: maybe find a way to only do one allocation. This is a bit tricky
-    // because we want to also support statically allocated tasks, maybe based
-    // on the not yet available @stackSize builtin
+    const alignment = comptime STACK_ALIGN.max(.of(Task));
 
-    const STACK_ALIGN: std.mem.Alignment = .@"16";
-    const stack_size = std.mem.alignForward(usize, options.stack_size, STACK_ALIGN.toByteUnits());
-    const stack = try scheduler.allocator.alignedAlloc(u8, STACK_ALIGN, stack_size);
-    errdefer scheduler.allocator.free(stack);
+    const unaligned_allocation_size = @sizeOf(Task) + options.stack_size + EXTRA_STACK_SIZE;
+    const allocation_size = std.mem.alignForward(usize, unaligned_allocation_size, alignment.toByteUnits());
+    const raw_alloc = try scheduler.gpa.alignedAlloc(u8, alignment, allocation_size);
 
-    const task = try scheduler.allocator.create(Task);
-    errdefer scheduler.allocator.destroy(task);
+    const task: *Task = @ptrCast(raw_alloc.ptr);
+    const stack: []u8 = raw_alloc[@sizeOf(Task)..];
+    const stack_top = @intFromPtr(stack[stack.len..].ptr);
 
-    task.* = .init(function, param, stack);
-    scheduler.schedule(task);
+    const startup_state: *[2]u32 = @ptrFromInt(stack_top - 2 * @sizeOf(u32));
+    startup_state[0] = @intFromPtr(function);
+    startup_state[1] = @intFromPtr(param);
+
+    task.* = .{
+        .context = .{
+            .sp = stack_top,
+            .pc = @intFromPtr(&task_entry),
+            .fp = 0,
+        },
+        .stack = stack,
+        .priority = options.priority,
+    };
+
+    scheduler.make_task_ready(task);
 }
 
-pub fn schedule(scheduler: *Scheduler, task: *Task) void {
-    const first_task = scheduler.ready_queue;
-
-}
-
-const AsyncClosure = extern struct {
-    entry: *const fn (param: ?*anyopaque) callconv(.c) void,
-    param: ?*anyopaque,
-
-    pub fn call(contexts: *const @FieldType(SwitchMessage, "contexts")) callconv(.c) noreturn {
-        const message: *const SwitchMessage = @fieldParentPtr("contexts", contexts);
-        message.handle();
-
-        const task: *Task = @fieldParentPtr("context", contexts.next);
-        task.async_closure.entry(task.async_closure.param);
-        while (true) message.scheduler.yield_with_action(.exit);
-    }
-};
-
-pub fn yield(scheduler: *Scheduler, options: struct {
-    task: ?*Task = null,
-    action: SwitchMessage.Action = .nothing,
-}) void {
+pub fn make_task_ready(scheduler: *Scheduler, task: *Task) void {
     const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
 
-    const node = options.task orelse scheduler.find_ready_task() orelse {
-        cs.leave();
-        // TODO: maybe switch to idle task if not called in isr
-        return;
-    };
-    const next_task: *Task = @fieldParentPtr("node", node);
+    scheduler.make_task_ready_from_cs(task);
+}
 
-    const message: SwitchMessage = .{
-        .scheduler = scheduler,
-        .contexts = .{
-            .prev = &scheduler.current_task.context,
-            .next = &next_task.context,
+pub fn make_task_ready_from_cs(scheduler: *Scheduler, task: *Task) void {
+    switch (task.state) {
+        .running, .none => {},
+        .ready => return,
+        .alarm_set => |_| {
+            scheduler.timer_queue.remove(&task.internal_node);
         },
-        .action = options.action,
-        .cs = cs,
-    };
-    context_switch(&message).handle();
+        .suspended => {
+            scheduler.suspended_list.remove(&task.internal_node);
+        },
+    }
+
+    // Remove the task from any external waiting list (eg: from a mutex).
+    if (task.waiting_queue) |waiting_queue| {
+        waiting_queue.inner.remove(&task.waiting_queue_node);
+        task.waiting_queue = null;
+    }
+
+    task.state = .ready;
+    scheduler.ready_queue.append(task);
 }
 
-pub fn mutex_lock(scheduler: *Scheduler, prev_state: Mutex.State, mutex: *Mutex) void {
-    scheduler.yield(.{ .action = .{ .mutex_lock = .{
-        .prev_state = prev_state,
-        .mutex = mutex,
-    } } });
+pub fn change_task_priority_from_cs(scheduler: *Scheduler, task: *Task, new_priority: Priority) void {
+    task.priority = new_priority;
+
+    switch (task.state) {
+        .ready => {
+            scheduler.ready_queue.inner.remove(task);
+            scheduler.ready_queue.inner.append(task);
+        },
+        else => {},
+    }
+
+    if (task.waiting_queue) |waiting_queue| {
+        waiting_queue.inner.remove(&task.waiting_queue_node);
+        waiting_queue.append(&task.waiting_queue_node);
+    }
 }
 
-pub fn mutex_unlock(scheduler: *Scheduler, _: Mutex.State, mutex: *Mutex) void {
-    // NOTE: only gets called if mutex is contented, very simplified
-    // implementation because single core (esp32c3 only for now)
+pub const YieldAction = union(enum) {
+    reschedule,
+    wait: ?u52,
+};
 
-    const waiting_task = blk: {
-        const cs = microzig.interrupt.enter_critical_section();
-        defer cs.leave();
-
-        const waiting_task: *Task = @ptrFromInt(@intFromEnum(mutex.state));
-        mutex.state = @enumFromInt(@intFromPtr(waiting_task.queue_next));
-        break :blk waiting_task;
-    };
-
-    scheduler.yield(.{
-        .action = .nothing,
-        .task = waiting_task,
-    });
+pub inline fn yield(scheduler: *Scheduler, action: YieldAction) void {
+    const cs = microzig.interrupt.enter_critical_section();
+    scheduler.yield_and_leave_cs(action, cs);
 }
 
-pub const SwitchMessage = struct {
+/// Must be called inside critical section. Calling leave on the critical
+/// section becomes unnecessary.
+pub inline fn yield_and_leave_cs(
     scheduler: *Scheduler,
-    contexts: extern struct {
-        prev: *Context,
-        next: *Context,
-    },
-    action: Action,
+    action: YieldAction,
     cs: microzig.interrupt.CriticalSection,
-
-    pub const Action = union(enum) {
-        nothing,
-        mutex_lock: struct {
-            prev_state: Mutex.State,
-            mutex: *Mutex,
-        },
-        exit,
-    };
-
-    pub fn handle(message: *const SwitchMessage) void {
-        defer message.cs.leave();
-
-        const scheduler = message.scheduler;
-        const prev_task: *Task = @fieldParentPtr("context", message.contexts.prev);
-        const next_task: *Task = @fieldParentPtr("context", message.contexts.next);
-
-        scheduler.current_task = next_task;
-
-        switch (message.action) {
-            .nothing => {
-                scheduler.schedule(prev_task);
-            },
-            .mutex_lock => |state| {
-                if (state.prev_state == .unlocked) {
-                    state.mutex.state = .locked_once;
-                    prev_task.queue_next = null;
-                    scheduler.schedule(prev_task);
-                } else {
-                    const maybe_first_awaiter: ?*Task = @ptrFromInt(@intFromEnum(state.mutex.state));
-                    if (maybe_first_awaiter) |first_awaiter| {
-                        var last_awaiter = first_awaiter;
-                        while (true) last_awaiter = last_awaiter.queue_next orelse break;
-                        last_awaiter.queue_next = prev_task;
-                    } else {
-                        state.mutex.state = @enumFromInt(@intFromPtr(prev_task));
-                    }
-                }
-            },
-            .exit => {
-                scheduler.allocator.free(prev_task.stack);
-                scheduler.allocator.destroy(prev_task);
-            },
-        }
+) void {
+    const prev_context, const next_context = scheduler.yield_inner(action);
+    context_switch(prev_context, next_context);
+    if (!cs.enable_on_leave) {
+        microzig.cpu.interrupt.disable_interrupts();
     }
-};
-
-fn find_ready_task(scheduler: *Scheduler) ?*Task {
-    if (scheduler.ready_queue) |next_task| {
-        scheduler.ready_queue = next_task.queue_next;
-        return next_task;
-    }
-    return null;
 }
 
-pub const Context = extern struct {
-    pc: ?*const anyopaque,
-    sp: ?*anyopaque,
-};
+fn yield_inner(scheduler: *Scheduler, action: YieldAction) struct { *Context, *Context } {
+    const prev_task = scheduler.current_task;
+    switch (action) {
+        .reschedule => {
+            scheduler.ready_queue.append(prev_task);
+            prev_task.state = .ready;
+        },
+        .wait => |maybe_timeout| {
+            if (maybe_timeout) |timeout| {
+                scheduler.schedule_wake_at(prev_task, timeout);
+            } else {
+                prev_task.state = .suspended;
+                scheduler.suspended_list.append(&prev_task.internal_node);
+            }
+        },
+    }
 
-inline fn context_switch(message: *const SwitchMessage) *const SwitchMessage {
-    return @fieldParentPtr("contexts", asm volatile (
-        \\lw t0, 0(a0)    # prev context
-        \\lw t1, 4(a0)    # next context
+    const next_task: *Task = scheduler.ready_queue.pop(null) orelse @panic("Idle task can't be waiting.");
+
+    scheduler.current_task = next_task;
+    next_task.state = .running;
+
+    return .{ &prev_task.context, &next_task.context };
+}
+
+pub fn sleep(scheduler: *Scheduler, ticks: u52) void {
+    const now_ticks = systimer_unit.read();
+    const timeout_ticks = now_ticks +% ticks;
+    scheduler.yield(.{ .wait = timeout_ticks });
+}
+
+inline fn context_switch(prev_context: *Context, next_context: *Context) void {
+    asm volatile (
+        \\la a2, 1f
+        \\sw a2, 0(a0)      # save return pc
+        \\sw sp, 4(a0)      # save prev stack pointer
+        \\sw s0, 8(a0)      # save prev frame pointer
         \\
-        \\la t2, ret
-        \\sw t2, 0(t0)    # save return pc
+        \\lw a2, 0(a1)      # load next pc
+        \\lw sp, 4(a1)      # load next stack pointer
+        \\lw s0, 8(a1)      # load next frame pointer
         \\
-        \\sw sp, 4(t0)    # save prev stack pointer
+        \\csrsi mstatus, 8  # enable interrupts
         \\
-        \\lw t2, 0(t1)    # load next pc
-        \\lw sp, 4(t1)    # load next stack pointer
-        \\jr t2           # jump to next task
-        \\ret:
+        \\jr a2             # jump to next task
+        \\1:
         \\
-        : [received_message] "={a0}" (-> *const @FieldType(SwitchMessage, "contexts")),
-        : [message_to_send] "{a0}" (&message.contexts),
+        :
+        : [prev_context] "{a0}" (prev_context),
+          [next_context] "{a1}" (next_context),
         : .{
           .x1 = true, // ra
           .x3 = true,
@@ -267,81 +292,379 @@ inline fn context_switch(message: *const SwitchMessage) *const SwitchMessage {
           .x30 = true,
           .x31 = true,
           .memory = true,
-        }));
+        });
 }
 
-pub const Mutex = struct {
-    state: State,
+pub fn yield_from_isr(scheduler: *Scheduler) void {
+    if (scheduler.ready_queue.peek_top()) |top_ready_task| {
+        if (top_ready_task.priority.is_greater(scheduler.current_task.priority)) {
+            SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
+                .CPU_INTR_FROM_CPU_0 = 1,
+            });
+        }
+    }
+}
 
-    pub const State = enum(usize) {
-        locked_once = 0b00,
-        unlocked = 0b01,
-        contended = 0b10,
-        /// contended
-        _,
+pub fn isr_yield_handler() linksection(".ram_vectors") callconv(.naked) void {
+    comptime {
+        assert(@sizeOf(Context) == 3 * @sizeOf(usize));
+    }
 
-        pub fn isUnlocked(state: State) bool {
-            return @intFromEnum(state) & @intFromEnum(State.unlocked) == @intFromEnum(State.unlocked);
+    asm volatile (
+        \\
+        \\addi sp, sp, -31*4
+        \\
+        \\sw ra, 0*4(sp)
+        \\sw t0, 1*4(sp)
+        \\sw t1, 2*4(sp)
+        \\sw t2, 3*4(sp)
+        \\sw t3, 4*4(sp)
+        \\sw t4, 5*4(sp)
+        \\sw t5, 6*4(sp)
+        \\sw t6, 7*4(sp)
+        \\sw a0, 8*4(sp)
+        \\sw a1, 9*4(sp)
+        \\sw a2, 10*4(sp)
+        \\sw a3, 11*4(sp)
+        \\sw a4, 12*4(sp)
+        \\sw a5, 13*4(sp)
+        \\sw a6, 14*4(sp)
+        \\sw a7, 15*4(sp)
+        \\sw s1, 16*4(sp)
+        \\sw s2, 17*4(sp)
+        \\sw s3, 18*4(sp)
+        \\sw s4, 19*4(sp)
+        \\sw s5, 20*4(sp)
+        \\sw s6, 21*4(sp)
+        \\sw s7, 22*4(sp)
+        \\sw s8, 23*4(sp)
+        \\sw s9, 24*4(sp)
+        \\sw s10, 25*4(sp)
+        \\sw s11, 26*4(sp)
+        \\sw gp, 27*4(sp)
+        \\sw tp, 28*4(sp)
+        \\
+        \\csrr a1, mepc
+        \\sw a1, 29*4(sp)
+        \\
+        \\csrr a1, mstatus
+        \\sw a1, 30*4(sp)
+        \\
+        // save sp for later
+        \\mv a2, sp
+        \\
+        // use the interrupt stack in this call to minimize task stack size
+        // NOTE: mscratch doesn't need to be zeroed because this can't be
+        // interrupted by a higher priority interrupt
+        \\la sp, %[interrupt_stack_top]
+        \\
+        // allocate `Context` struct and save context
+        \\addi sp, sp, -3*4
+        \\la a1, 1f
+        \\sw a1, 0(sp)
+        \\sw a2, 4(sp)
+        \\sw s0, 8(sp)
+        \\
+        // first parameter is a pointer to context
+        \\mv a0, sp
+        \\mv s1, a1
+        \\jal %[schedule_in_isr]
+        \\
+        // load next task context
+        \\lw a1, 0(sp)
+        \\lw a2, 4(sp)
+        \\lw s0, 8(sp)
+        // change sp to the new task
+        \\mv sp, a2
+        \\
+        // if the next task program counter is equal to 1f's location just jump
+        // to it (ie. the task was interrupted). Technically not required but
+        // works as an optimization.
+        \\beq a1, s1, 1f
+        \\
+        // ensure interrupts get enabled after mret
+        \\li t0, 0x80
+        \\csrs mstatus, t0
+        \\
+        // jump to new task
+        \\csrw mepc, a1
+        \\mret
+        \\
+        \\1:
+        \\
+        \\lw t1, 30*4(sp)
+        \\csrw mstatus, t1
+        \\
+        \\lw t0, 29*4(sp)
+        \\csrw mepc, t0
+        \\
+        \\lw ra, 0*4(sp)
+        \\lw t0, 1*4(sp)
+        \\lw t1, 2*4(sp)
+        \\lw t2, 3*4(sp)
+        \\lw t3, 4*4(sp)
+        \\lw t4, 5*4(sp)
+        \\lw t5, 6*4(sp)
+        \\lw t6, 7*4(sp)
+        \\lw a0, 8*4(sp)
+        \\lw a1, 9*4(sp)
+        \\lw a2, 10*4(sp)
+        \\lw a3, 11*4(sp)
+        \\lw a4, 12*4(sp)
+        \\lw a5, 13*4(sp)
+        \\lw a6, 14*4(sp)
+        \\lw a7, 15*4(sp)
+        \\lw s1, 16*4(sp)
+        \\lw s2, 17*4(sp)
+        \\lw s3, 18*4(sp)
+        \\lw s4, 19*4(sp)
+        \\lw s5, 20*4(sp)
+        \\lw s6, 21*4(sp)
+        \\lw s7, 22*4(sp)
+        \\lw s8, 23*4(sp)
+        \\lw s9, 24*4(sp)
+        \\lw s10, 25*4(sp)
+        \\lw s11, 26*4(sp)
+        \\lw gp, 27*4(sp)
+        \\lw tp, 28*4(sp)
+        \\
+        \\addi sp, sp, 31*4
+        \\mret
+        :
+        : [schedule_in_isr] "i" (&schedule_in_isr),
+          [interrupt_stack_top] "i" (microzig.cpu.interrupt_stack[microzig.cpu.interrupt_stack.len..].ptr),
+    );
+}
+
+fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) void {
+    const scheduler = maybe_instance orelse @panic("no active scheduler");
+
+    SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
+        .CPU_INTR_FROM_CPU_0 = 0,
+    });
+
+    const prev_task = scheduler.current_task;
+    const ready_task = scheduler.ready_queue.pop(scheduler.current_task.priority) orelse return;
+
+    // swap contexts
+    prev_task.context = context.*;
+    context.* = ready_task.context;
+
+    scheduler.ready_queue.append(prev_task);
+    prev_task.state = .ready;
+
+    scheduler.current_task = ready_task;
+    ready_task.state = .running;
+}
+
+/// Must be called from a critical section.
+fn schedule_wake_at(scheduler: *Scheduler, sleeping_task: *Task, timeout: u52) void {
+    sleeping_task.state = .{ .alarm_set = timeout };
+
+    var maybe_node = scheduler.timer_queue.first;
+    while (maybe_node) |node| : (maybe_node = node.next) {
+        const task: *Task = @alignCast(@fieldParentPtr("internal_node", node));
+        const wake_ticks = task.state.alarm_set;
+        if (timeout < wake_ticks or wake_ticks -% timeout < timeout) {
+            scheduler.timer_queue.insertBefore(&task.internal_node, &sleeping_task.internal_node);
+            break;
+        }
+    } else {
+        scheduler.timer_queue.append(&sleeping_task.internal_node);
+    }
+
+    // If we updated the first element of the list, it means that we have to
+    // reschedule the timer
+    if (scheduler.timer_queue.first == &sleeping_task.internal_node) {
+        systimer_alarm.set_target(timeout);
+        systimer_alarm.set_enabled(true);
+    }
+}
+
+pub fn generic_interrupt_handler(_: *TrapFrame) callconv(.c) void {
+    const scheduler = maybe_instance orelse @panic("no active scheduler");
+
+    var iter: microzig.cpu.interrupt.SourceIterator = .init();
+    while (iter.next()) |source| {
+        switch (source) {
+            .systimer_target0 => {
+                systimer_alarm.clear_interrupt();
+                systimer_alarm.set_enabled(false);
+
+                const now_ticks = systimer_unit.read();
+
+                var maybe_node = scheduler.timer_queue.first;
+                while (maybe_node) |node| : (maybe_node = node.next) {
+                    const task: *Task = @alignCast(@fieldParentPtr("internal_node", node));
+                    const wake_ticks = task.state.alarm_set;
+                    if (now_ticks < wake_ticks or wake_ticks -% now_ticks < now_ticks) {
+                        break;
+                    }
+
+                    scheduler.make_task_ready_from_cs(task);
+                }
+
+                if (scheduler.timer_queue.first) |node| {
+                    const task: *Task = @alignCast(@fieldParentPtr("internal_node", node));
+                    systimer_alarm.set_target(task.state.alarm_set);
+                    systimer_alarm.set_enabled(true);
+                }
+            },
+            else => {},
+        }
+    }
+
+    scheduler.yield_from_isr();
+}
+
+pub const Task = struct {
+    context: Context,
+    stack: []u8,
+    priority: Priority,
+
+    /// What is the deal with this task right now?
+    state: State = .none,
+
+    /// Node used for scheduler internal lists.
+    internal_node: std.DoublyLinkedList.Node = .{},
+
+    /// In which external waiting queue is this task in.
+    waiting_queue: ?*WaitingPriorityQueue = null,
+    /// Node used for external waiting queue.
+    waiting_queue_node: std.DoublyLinkedList.Node = .{},
+
+    pub const State = union(enum) {
+        none,
+        ready,
+        running,
+        alarm_set: u52,
+        suspended,
+    };
+
+    // TODO: Maybe swap with something more efficient.
+    pub const ReadyPriorityQueue = struct {
+        inner: std.DoublyLinkedList = .{},
+
+        pub fn peek_top(pq: *ReadyPriorityQueue) ?*Task {
+            if (pq.inner.first) |first_node| {
+                return @alignCast(@fieldParentPtr("internal_node", first_node));
+            } else {
+                return null;
+            }
+        }
+
+        pub fn pop(pq: *ReadyPriorityQueue, maybe_more_than_prio: ?Priority) ?*Task {
+            if (pq.peek_top()) |task| {
+                if (maybe_more_than_prio) |more_than_prio| {
+                    if (!task.priority.is_greater(more_than_prio)) {
+                        return null;
+                    }
+                }
+                pq.inner.remove(&task.internal_node);
+                return task;
+            }
+            return null;
+        }
+
+        pub fn append(pq: *ReadyPriorityQueue, new_task: *Task) void {
+            var maybe_node = pq.inner.first;
+            while (maybe_node) |node| : (maybe_node = node.next) {
+                const task: *Task = @alignCast(@fieldParentPtr("internal_node", node));
+                if (new_task.priority.is_greater(task.priority)) {
+                    pq.inner.insertBefore(node, &new_task.internal_node);
+                    break;
+                }
+            } else {
+                pq.inner.append(&new_task.internal_node);
+            }
         }
     };
 
-    pub const init: Mutex = .{ .state = .unlocked };
+    pub const WaitingPriorityQueue = struct {
+        inner: std.DoublyLinkedList = .{},
 
-    pub fn tryLock(mutex: *Mutex) bool {
-        const prev_state: State = @enumFromInt(@atomicRmw(
-            usize,
-            @as(*usize, @ptrCast(&mutex.state)),
-            .And,
-            ~@intFromEnum(State.unlocked),
-            .acquire,
-        ));
-        return prev_state.isUnlocked();
-    }
-
-    pub fn lock(mutex: *Mutex, scheduler: *Scheduler) void {
-        const prev_state: State = @enumFromInt(@atomicRmw(
-            usize,
-            @as(*usize, @ptrCast(&mutex.state)),
-            .And,
-            ~@intFromEnum(State.unlocked),
-            .acquire,
-        ));
-        if (prev_state.isUnlocked()) {
-            @branchHint(.likely);
-            return;
+        pub fn first(pq: *WaitingPriorityQueue) ?*Task {
+            if (pq.inner.first) |first_node| {
+                return @alignCast(@fieldParentPtr("waiting_queue_node", first_node));
+            } else {
+                return null;
+            }
         }
-        scheduler.mutex_lock(prev_state, mutex);
-    }
 
-    pub fn unlock(mutex: *Mutex, scheduler: *Scheduler) void {
-        const prev_state = @cmpxchgWeak(State, &mutex.state, .locked_once, .unlocked, .release, .acquire) orelse {
-            @branchHint(.likely);
-            return;
-        };
-        std.debug.assert(prev_state != .unlocked);
-        return scheduler.mutex_unlock(prev_state, mutex);
+        pub fn append(pq: *WaitingPriorityQueue, new_task: *Task) void {
+            new_task.waiting_queue = pq;
+
+            var maybe_node = pq.inner.first;
+            while (maybe_node) |node| : (maybe_node = node.next) {
+                const task: *Task = @alignCast(@fieldParentPtr("waiting_queue_node", node));
+                if (new_task.priority.is_greater(task.priority)) {
+                    pq.inner.insertBefore(node, &new_task.waiting_queue_node);
+                    break;
+                }
+            } else {
+                pq.inner.append(&new_task.waiting_queue_node);
+            }
+        }
+    };
+};
+
+pub const Context = extern struct {
+    pc: usize,
+    sp: usize,
+    fp: usize,
+
+    pub fn format(
+        self: Context,
+        writer: *std.Io.Writer,
+    ) std.Io.Writer.Error!void {
+        try writer.print(".{{ .pc = 0x{x}, .sp = 0x{x}, .fp = 0x{x} }}", .{ self.pc, self.sp, self.fp });
     }
 };
 
-pub const Condition = struct {
-    state: u64 = 0,
+// TODO: implement priority inheritance
+pub const Mutex = struct {
+    state: State = .unlocked,
+    waiting_queue: Task.WaitingPriorityQueue = .{},
 
-    pub fn wait(cond: *Condition, scheduler: *Scheduler, mutex: *Mutex) void {
-        return scheduler.condition_wait(cond, mutex);
-    }
-
-    pub fn signal(cond: *Condition, scheduler: *Scheduler) void {
-        scheduler.condition_wake(cond, .one);
-    }
-
-    pub fn broadcast(cond: *Condition, scheduler: *Scheduler) void {
-        scheduler.condition_wake(cond, .all);
-    }
-
-    pub const Wake = enum {
-        /// Wake up only one thread.
-        one,
-        /// Wake up all threads.
-        all,
+    pub const State = enum(u32) {
+        locked,
+        unlocked,
     };
+
+    pub fn lock(mutex: *Mutex, scheduler: *Scheduler) void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        while (mutex.state != .unlocked) {
+            const current_task = scheduler.current_task;
+            mutex.waiting_queue.append(current_task);
+            scheduler.yield(.{ .wait = null });
+        }
+
+        mutex.state = .locked;
+    }
+
+    pub fn unlock(mutex: *Mutex, scheduler: *Scheduler) void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer scheduler.yield_and_leave_cs(.reschedule, cs);
+
+        assert(mutex.state == .locked);
+        mutex.state = .unlocked;
+
+        if (mutex.waiting_queue.first()) |waiting_task| {
+            scheduler.make_task_ready_from_cs(waiting_task);
+        }
+    }
+};
+
+pub const Semaphore = struct {
+    value: u32,
+
+    pub fn init(initial_value: u32) Semaphore {
+        return .{
+            .count = initial_value,
+        };
+    }
+
+    // pub fn take()
 };

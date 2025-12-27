@@ -55,6 +55,7 @@ SECTIONS
   .ram.text :
   {
     KEEP(*(.ram_text))
+    KEEP(*(.ram_vectors))
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
