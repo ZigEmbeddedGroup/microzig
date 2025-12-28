@@ -274,15 +274,27 @@ jobs:
               // Dismiss all existing bot reviews and resolve their conversations
               for (const review of botReviews) {
                 if (review.state !== 'DISMISSED') {
+                  // Resolve threads first
                   await resolveReviewThreads(review.id);
-                  await github.rest.pulls.dismissReview({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    pull_number: context.issue.number,
-                    review_id: review.id,
-                    message: 'All lint issues have been resolved'
-                  });
-                  console.log(`Dismissed review ${review.id} and resolved conversations`);
+
+                  // Only dismiss reviews that can be dismissed (APPROVED or CHANGES_REQUESTED)
+                  // COMMENTED reviews cannot be dismissed via the API
+                  if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
+                    try {
+                      await github.rest.pulls.dismissReview({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        pull_number: context.issue.number,
+                        review_id: review.id,
+                        message: 'All lint issues have been resolved'
+                      });
+                      console.log(`Dismissed ${review.state} review ${review.id} and resolved conversations`);
+                    } catch (error) {
+                      console.log(`Could not dismiss review ${review.id}: ${error.message}`);
+                    }
+                  } else {
+                    console.log(`Skipped dismissing ${review.state} review ${review.id} (only threads resolved)`);
+                  }
                 }
               }
 
@@ -310,15 +322,27 @@ jobs:
             // Dismiss ALL existing bot reviews and resolve their conversations
             for (const review of botReviews) {
               if (review.state !== 'DISMISSED') {
+                // Resolve threads first
                 await resolveReviewThreads(review.id);
-                await github.rest.pulls.dismissReview({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.issue.number,
-                  review_id: review.id,
-                  message: 'Updating with new lint results'
-                });
-                console.log(`Dismissed review ${review.id} and resolved conversations`);
+
+                // Only dismiss reviews that can be dismissed (APPROVED or CHANGES_REQUESTED)
+                // COMMENTED reviews cannot be dismissed via the API
+                if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
+                  try {
+                    await github.rest.pulls.dismissReview({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_number: context.issue.number,
+                      review_id: review.id,
+                      message: 'Updating with new lint results'
+                    });
+                    console.log(`Dismissed ${review.state} review ${review.id} and resolved conversations`);
+                  } catch (error) {
+                    console.log(`Could not dismiss review ${review.id}: ${error.message}`);
+                  }
+                } else {
+                  console.log(`Skipped dismissing ${review.state} review ${review.id} (only threads resolved)`);
+                }
               }
             }
 
