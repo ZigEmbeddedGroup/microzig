@@ -961,12 +961,14 @@ pub const debug = struct {
             context.return_address,
             context.xpsr,
         });
-        logger.err("  instruction bus error           = {}", .{bfsr.instruction_bus_error});
-        logger.err("  precice data bus error          = {}", .{bfsr.precice_data_bus_error});
-        logger.err("  imprecice data bus error        = {}", .{bfsr.imprecice_data_bus_error});
-        logger.err("  unstacking exception error      = {}", .{bfsr.unstacking_exception_error});
-        logger.err("  exception stacking error        = {}", .{bfsr.exception_stacking_error});
-        logger.err("  busfault address register valid = {}", .{bfsr.busfault_address_register_valid});
+        logger.err("  instruction bus error             = {}", .{bfsr.instruction_bus_error});
+        logger.err("  precice data bus error            = {}", .{bfsr.precice_data_bus_error});
+        logger.err("  imprecice data bus error          = {}", .{bfsr.imprecice_data_bus_error});
+        logger.err("  unstacking exception error        = {}", .{bfsr.unstacking_exception_error});
+        logger.err("  exception stacking error          = {}", .{bfsr.exception_stacking_error});
+        if (has_fpu)
+            logger.err("  fpu lazy state preservation fault = {}", .{bfsr.fpu_lazy_state_preservation_fault});
+        logger.err("  busfault address register valid   = {}", .{bfsr.busfault_address_register_valid});
         if (bfsr.busfault_address_register_valid) {
             const address = peripherals.scb.BFAR;
             logger.err("    busfault address register = 0x{X:0>8}", .{address});

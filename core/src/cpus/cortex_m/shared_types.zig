@@ -158,8 +158,12 @@ pub const scb = struct {
         /// When this bit is 1, the SP is still adjusted but the values in the context area on the stack might be incorrect. The processor has not written a fault address to the MMAR.
         MSTKERR: u1, // [4], RW
 
+        /// 0: No MemManage fault occurred during floating-point lazy state preservation.
+        /// 1: A MemManage fault occurred during floating-point lazy state preservation.
+        MLSPERR: u1, // [5], RW (FPU only)
+
         /// Reserved.
-        _reserved0: u2, // [6:5], RW
+        _reserved0: u1, // [6], RW
 
         /// MemManage Fault Address Register (MMFAR) valid flag:
         ///     0 = value in MMAR is not a valid fault address
@@ -202,8 +206,12 @@ pub const scb = struct {
         /// When the processor sets this bit to 1, the SP is still adjusted but the values in the context area on the stack might be incorrect. The processor does not write a fault address to the BFAR.
         exception_stacking_error: bool, // [4], RW
 
+        /// 0: No bus fault occurred during floating-point lazy state preservation.
+        /// 1: A bus fault occurred during floating-point lazy state preservation.
+        fpu_lazy_state_preservation_fault: bool, // [5], RW (FPU only)
+
         /// Reserved.
-        _reserved0: u2, // [6:5], RW
+        _reserved0: u1, // [6], RW
 
         /// BusFault Address Register (BFAR) valid flag:
         ///     0 = value in BFAR is not a valid fault address
