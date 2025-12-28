@@ -89,17 +89,17 @@ pub const Config = union(enum) {
         ssid: []const u8,
 
         /// Whether the SSID is hidden or visible.
-        ssid_hidden: bool,
+        ssid_hidden: bool = false,
 
         /// The channel the access point will operate on. Ignored in `ap_sta`
         /// mode.
         channel: u8,
 
         /// The secondary channel configuration.
-        secondary_channel: ?u8,
+        secondary_channel: ?u8 = null,
 
         /// Authentication config to be used by the access point.
-        auth: ?Auth,
+        auth: ?Auth = null,
 
         /// The maximum number of connections allowed on the access point.
         max_connections: u8,
@@ -513,8 +513,8 @@ pub fn send_packet(iface: Interface, data: []const u8) (error{TooManyPacketsInFl
         log.warn("too many packets in flight", .{});
         return error.TooManyPacketsInFlight;
     }
-    _ = @atomicRmw(usize, &packets_in_flight, .Add, 1, .acq_rel);
-    errdefer _ = @atomicRmw(usize, &packets_in_flight, .Sub, 1, .acq_rel);
+    _ = @atomicRmw(usize, &packets_in_flight, .Add, 1, .monotonic);
+    errdefer _ = @atomicRmw(usize, &packets_in_flight, .Sub, 1, .monotonic);
 
     try c_result(c.esp_wifi_internal_tx(@intFromEnum(iface), @ptrCast(@constCast(data.ptr)), @intCast(data.len)));
 }

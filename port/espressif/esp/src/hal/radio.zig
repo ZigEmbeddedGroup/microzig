@@ -1,7 +1,7 @@
 const std = @import("std");
-const log = std.log.scoped(.esp_radio);
 const Allocator = std.mem.Allocator;
 
+const c = @import("esp-wifi-driver");
 const microzig = @import("microzig");
 const TrapFrame = microzig.cpu.TrapFrame;
 const time = microzig.drivers.time;
@@ -12,27 +12,21 @@ const SYSTEM = peripherals.SYSTEM;
 const RTC_CNTL = peripherals.RTC_CNTL;
 const APB_CTRL = peripherals.APB_CTRL;
 
-const c = @import("esp-wifi-driver");
-
-pub const wifi = @import("radio/wifi.zig");
-pub const bluetooth = @import("radio/bluetooth.zig");
-
 const efuse = @import("efuse.zig");
+pub const bluetooth = @import("radio/bluetooth.zig");
 const osi = @import("radio/osi.zig");
 const timer = @import("radio/timer.zig");
-const multitasking = @import("radio/multitasking.zig");
+pub const wifi = @import("radio/wifi.zig");
+const Scheduler = @import("Scheduler.zig");
+
+const log = std.log.scoped(.esp_radio);
 
 pub const Options = struct {
     wifi_interrupt: microzig.cpu.Interrupt,
-    timer_interrupt: microzig.cpu.Interrupt,
-    // TODO: we could probably do a context switch without this
-    yield_interrupt: microzig.cpu.Interrupt,
-    // TODO: support other timers and other systimer units
-    /// What alarm to use for preemption in systimer unit 0.
-    systimer_alarm: systimer.Alarm = .alarm0,
 
     wifi: wifi.Options = .{},
 };
+
 pub const options = microzig.options.hal.radio orelse
     @compileError("Please specify options if you want to use radio.");
 
@@ -41,7 +35,7 @@ pub const options = microzig.options.hal.radio orelse
 
 /// Radio uses the official esp drivers. You should enable interrupts
 /// after/before this.
-pub fn init(allocator: Allocator) Allocator.Error!void {
+pub fn init(allocator: Allocator, scheduler: *Scheduler) Allocator.Error!void {
     // TODO: check that clock frequency is higher or equal to 80mhz
 
     {
@@ -52,17 +46,10 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
         // phy_mem_init(); // only sets some global variable on esp32c3
 
         osi.allocator = allocator;
+        osi.scheduler = scheduler;
 
-        // TODO: errdefer deinit
-        try multitasking.init(allocator);
-
-        setup_timer_periodic_alarm();
         setup_interrupts();
     }
-
-    // multitasking.yield_task();
-
-    // try timer.init(allocator);
 
     log.debug("initialization complete", .{});
 
@@ -74,9 +61,7 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
 
 // TODO
 // should free everything
-pub fn deinit() void {
-
-}
+pub fn deinit() void {}
 
 pub fn tick() void {
     timer.tick();
@@ -153,41 +138,11 @@ fn enable_wifi_power_domain_and_init_clocks() void {
 fn setup_interrupts() void {
     // TODO: which interrupts are used should be configurable.
 
-    microzig.cpu.interrupt.set_priority_threshold(.zero);
-
     microzig.cpu.interrupt.map(.wifi_mac, options.wifi_interrupt);
     microzig.cpu.interrupt.map(.wifi_pwr, options.wifi_interrupt);
-    microzig.cpu.interrupt.map(.systimer_target0, options.timer_interrupt);
-    microzig.cpu.interrupt.map(.from_cpu_intr0, options.yield_interrupt);
 
-    inline for (&.{ options.wifi_interrupt, options.timer_interrupt, options.yield_interrupt }) |int| {
-        microzig.cpu.interrupt.set_type(int, .level);
-        microzig.cpu.interrupt.set_priority(int, .lowest);
-    }
-
-    inline for (&.{ options.timer_interrupt, options.yield_interrupt }) |int| {
-        microzig.cpu.interrupt.enable(int);
-    }
-}
-
-// TODO: config (even other timers)
-const preemt_interval: time.Duration = .from_ms(10);
-
-fn setup_timer_periodic_alarm() void {
-    const alarm = options.systimer_alarm;
-
-    // unit0 is already enabled as it is used by `hal.time`.
-    alarm.set_unit(.unit0);
-
-    // sets the period to one second.
-    alarm.set_period(@intCast(preemt_interval.to_us() * systimer.ticks_per_us()));
-
-    // to enable period mode you have to first clear the mode bit.
-    alarm.set_mode(.target);
-    alarm.set_mode(.period);
-
-    alarm.set_interrupt_enabled(true);
-    alarm.set_enabled(true);
+    microzig.cpu.interrupt.set_type(options.wifi_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(options.wifi_interrupt, .highest);
 }
 
 pub const interrupt_handlers = struct {
@@ -200,19 +155,5 @@ pub const interrupt_handlers = struct {
         });
 
         handler.f(handler.arg);
-    }
-
-    pub fn timer(trap_frame: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        options.systimer_alarm.clear_interrupt();
-        multitasking.switch_task(trap_frame);
-    }
-
-    pub fn yield(trap_frame: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        // TODO: config
-        SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
-            .CPU_INTR_FROM_CPU_0 = 0,
-        });
-
-        multitasking.switch_task(trap_frame);
     }
 };

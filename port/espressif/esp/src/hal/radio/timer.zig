@@ -5,8 +5,6 @@ const microzig = @import("microzig");
 const time = microzig.drivers.time;
 const hal = microzig.hal;
 
-const multitasking = @import("multitasking.zig");
-
 const c = @import("esp-wifi-driver");
 
 pub const CallbackFn = *const fn (?*anyopaque) callconv(.c) void;
@@ -21,11 +19,6 @@ pub const Timer = struct {
 };
 
 var timer_list: std.SinglyLinkedList = .{};
-
-// pub fn init(allocator: Allocator) !void {
-//     const task = try multitasking.Task.create(allocator, timer_task, null, 8192);
-//     multitasking.schedule_task(task);
-// }
 
 pub fn add(allocator: Allocator, ets_timer: *c.ets_timer, callback: CallbackFn, arg: ?*anyopaque) !void {
     const timer = try allocator.create(Timer);

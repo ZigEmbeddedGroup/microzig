@@ -28,14 +28,14 @@ pub fn build(b: *std.Build) void {
     };
 
     const targeted_examples: []const TargetedExample = &.{
-        // .{
-        //     .target = .esp32_c3,
-        //     .example = .{
-        //         .name = "wifi",
-        //         .file = "src/wifi.zig",
-        //         .features = .{ .lwip = true },
-        //     },
-        // },
+        .{
+            .target = .esp32_c3,
+            .example = .{
+                .name = "wifi",
+                .file = "src/wifi.zig",
+                .features = .{ .lwip = true },
+            },
+        },
     };
 
     for (examples) |example| {

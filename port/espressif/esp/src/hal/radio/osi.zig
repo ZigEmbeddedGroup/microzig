@@ -9,7 +9,8 @@ const peripherals = microzig.chip.peripherals;
 const APB_CTRL = peripherals.APB_CTRL;
 const hal = microzig.hal;
 
-const multitasking = @import("multitasking.zig");
+const systimer = @import("../systimer.zig");
+const Scheduler = @import("../Scheduler.zig");
 const timer = @import("timer.zig");
 const wifi = @import("wifi.zig");
 
@@ -19,6 +20,7 @@ const c = @import("esp-wifi-driver");
 const coex_enabled: bool = false;
 
 pub var allocator: std.mem.Allocator = undefined;
+pub var scheduler: *Scheduler = undefined;
 
 pub var wifi_interrupt_handler: struct {
     f: *const fn (?*anyopaque) callconv(.c) void,
@@ -86,10 +88,6 @@ pub fn __assert_func(
 }
 
 pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
-    // Avoid multiple allocations at the same time as it causes a panic
-    microzig.cpu.interrupt.disable_interrupts();
-    defer microzig.cpu.interrupt.enable_interrupts();
-
     log.debug("malloc {}", .{len});
 
     const buf = allocator.rawAlloc(8 + len, .@"8", @returnAddress()) orelse {
@@ -103,7 +101,7 @@ pub fn malloc(len: usize) callconv(.c) ?*anyopaque {
 }
 
 pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
-    const total_size: usize = number * size - 8;
+    const total_size: usize = number * size;
     if (malloc(total_size)) |ptr| {
         @memset(@as([*]u8, @ptrCast(ptr))[0..total_size], 0);
         return ptr;
@@ -123,9 +121,9 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
         return;
     }
 
-    const buf_ptr: [*]u8 = @ptrFromInt(@intFromPtr(ptr) - @sizeOf(usize));
+    const buf_ptr: [*]u8 = @ptrFromInt(@intFromPtr(ptr) - 8);
     const buf_len: *usize = @ptrCast(@alignCast(buf_ptr));
-    allocator.rawFree(buf_ptr[0 .. @sizeOf(usize) + buf_len.*], .@"4", @returnAddress());
+    allocator.rawFree(buf_ptr[0 .. @sizeOf(usize) + buf_len.*], .@"8", @returnAddress());
 }
 
 pub fn puts(ptr: ?*anyopaque) callconv(.c) void {
@@ -144,12 +142,12 @@ pub fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) callconv(.c) i32 {
 }
 
 pub fn sleep(time_sec: c_uint) callconv(.c) c_int {
-    task_delay(time_sec * 1_000_000);
+    scheduler.sleep(time_sec * 1_000_000 * systimer.ticks_per_us());
     return 0;
 }
 
 pub fn usleep(time_us: u32) callconv(.c) c_int {
-    task_delay(time_us);
+    scheduler.sleep(time_us * systimer.ticks_per_us());
     return 0;
 }
 
@@ -234,9 +232,6 @@ pub fn set_isr(
 
     switch (n) {
         0, 1 => {
-            // don't need critical section because we enable the interrupt
-            // bellow.
-
             wifi_interrupt_handler = .{
                 .f = @ptrCast(@alignCast(f)),
                 .arg = arg,
@@ -251,7 +246,7 @@ pub fn ints_on(mask: u32) callconv(.c) void {
     log.debug("ints_on {}", .{mask});
 
     if (mask == 2) {
-        microzig.cpu.interrupt.enable(.interrupt1);
+        microzig.cpu.interrupt.enable(.interrupt29);
     }
 }
 
@@ -260,7 +255,7 @@ pub fn ints_off(mask: u32) callconv(.c) void {
     log.debug("ints_off {}", .{mask});
 
     if (mask == 2) {
-        microzig.cpu.interrupt.disable(.interrupt1);
+        microzig.cpu.interrupt.disable(.interrupt29);
     }
 }
 
@@ -300,17 +295,17 @@ pub fn wifi_int_restore(mux_ptr: ?*anyopaque, state: u32) callconv(.c) void {
 pub fn task_yield_from_isr() callconv(.c) void {
     log.debug("task_yield_from_isr", .{});
 
-    multitasking.yield_task();
+    scheduler.yield_from_isr();
 }
 
 pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
     log.debug("semphr_create {} {}", .{ max_value, init_value });
 
-    const sem = allocator.create(u32) catch {
+    const sem = allocator.create(Scheduler.Semaphore) catch {
         log.warn("failed to allocate semaphore", .{});
         return null;
     };
-    sem.* = init_value;
+    sem.* = .init(init_value);
 
     log.debug(">>>> semaphore create: {*}", .{sem});
 
@@ -320,46 +315,17 @@ pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
 pub fn semphr_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("semphr_delete {?}", .{ptr});
 
-    allocator.destroy(@as(*u32, @ptrCast(@alignCast(ptr))));
+    allocator.destroy(@as(*Scheduler.Semaphore, @ptrCast(@alignCast(ptr))));
 }
 
 pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
     log.debug("semphr_take {?} {}", .{ ptr, tick });
 
-    const forever = tick == c.OSI_FUNCS_TIME_BLOCKING;
-    const timeout = tick;
-    const start = hal.time.get_time_since_boot();
-
-    const sem: *u32 = @ptrCast(@alignCast(ptr));
-
-    while (true) {
-        const res: bool = blk: {
-            const cs = enter_critical_section();
-            defer cs.leave();
-
-            microzig.cpu.fence();
-
-            const cnt = sem.*;
-            if (cnt > 0) {
-                sem.* = cnt - 1;
-                break :blk true;
-            } else {
-                break :blk false;
-            }
-        };
-
-        if (res) {
-            log.debug(">>>> return from semaphore take: {*}", .{sem});
-            return 1;
-        }
-
-        if (!forever and hal.time.get_time_since_boot().diff(start).to_us() > timeout) {
-            log.debug(">>>> return from semaphore take with timeout: {*}", .{sem});
-            break;
-        }
-
-        multitasking.yield_task();
-    }
+    const sem: *Scheduler.Semaphore = @ptrCast(@alignCast(ptr));
+    sem.take_with_timeout(scheduler, tick) catch {
+        log.debug(">>>> return from semaphore take with timeout: {*}", .{sem});
+        return 1;
+    };
 
     return 0;
 }
@@ -367,25 +333,14 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
 pub fn semphr_give(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("semphr_give {?}", .{ptr});
 
-    const sem: *u32 = @ptrCast(@alignCast(ptr));
-
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    const cnt = sem.*;
-    sem.* = cnt + 1;
+    const sem: *Scheduler.Semaphore = @ptrCast(@alignCast(ptr));
+    sem.give(scheduler);
     return 1;
 }
 
 pub fn wifi_thread_semphr_get() callconv(.c) ?*anyopaque {
-    return @ptrCast(&multitasking.current_task.semaphore);
+    return &scheduler.current_task.semaphore;
 }
-
-const Mutex = struct {
-    locking_task: usize,
-    count: u32,
-    recursive: bool,
-};
 
 // TODO: idk if we're gonna need to implement this
 pub fn mutex_create() callconv(.c) ?*anyopaque {
@@ -395,18 +350,11 @@ pub fn mutex_create() callconv(.c) ?*anyopaque {
 pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
     log.debug("recursive_mutex_create", .{});
 
-    const mutex = allocator.create(Mutex) catch {
+    const mutex = allocator.create(Scheduler.RecursiveMutex) catch {
         log.warn("failed to allocate recursive mutex", .{});
         return null;
     };
-
-    mutex.* = .{
-        .locking_task = 0xffff_ffff,
-        .count = 0,
-        .recursive = true,
-    };
-
-    microzig.cpu.fence();
+    mutex.* = .{};
 
     log.debug(">>>> mutex create: {*}", .{mutex});
 
@@ -416,60 +364,24 @@ pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
 pub fn mutex_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("mutex_delete {?}", .{ptr});
 
-    const mutex: *Mutex = @ptrCast(@alignCast(ptr));
+    const mutex: *Scheduler.RecursiveMutex = @ptrCast(@alignCast(ptr));
     allocator.destroy(mutex);
 }
 
 pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex lock {?}", .{ptr});
 
-    const mutex: *Mutex = @ptrCast(@alignCast(ptr));
-    const cur_task_id: usize = @intFromPtr(multitasking.current_task);
+    const mutex: *Scheduler.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    mutex.lock(scheduler);
 
-    while (true) {
-        const mutex_locked = blk: {
-            const cs = enter_critical_section();
-            defer cs.leave();
-
-            if (mutex.count == 0) {
-                mutex.locking_task = cur_task_id;
-                mutex.count += 1;
-                break :blk true;
-            } else if (mutex.locking_task == cur_task_id) {
-                mutex.count += 1;
-                break :blk true;
-            } else {
-                break :blk false;
-            }
-        };
-
-        microzig.cpu.fence();
-
-        if (mutex_locked) {
-            log.debug(">>>> return from mutex lock: {*}", .{mutex});
-            return 1;
-        }
-
-        multitasking.yield_task();
-    }
+    return 1;
 }
 
 pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex unlock {?}", .{ptr});
 
-    const mutex: *Mutex = @ptrCast(@alignCast(ptr));
-
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    microzig.cpu.fence();
-
-    if (mutex.count > 0) {
-        mutex.count -= 1;
-        return 1;
-    } else {
-        return 0;
-    }
+    const mutex: *Scheduler.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    return @intFromBool(mutex.unlock(scheduler));
 }
 
 // TODO: maybe use atomics? maybe it is spsc?
@@ -620,7 +532,7 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
             return -1;
         }
 
-        multitasking.yield_task();
+        scheduler.yield(.reschedule);
     }
 }
 
@@ -661,19 +573,19 @@ fn task_create_common(
     core_id: u32,
 ) i32 {
     _ = name; // autofix
-    _ = prio; // autofix
     _ = core_id; // autofix
 
-    const task: *multitasking.Task = multitasking.Task.create(
-        allocator,
+    const task: *Scheduler.Task = scheduler.raw_alloc_spawn_with_options(
         @ptrCast(@alignCast(task_func)),
         param,
-        stack_depth,
+        .{
+            .priority = @enumFromInt(prio),
+            .stack_size = stack_depth,
+        },
     ) catch {
         log.warn("failed to create task", .{});
         return 0;
     };
-    multitasking.schedule_task(task);
 
     @as(*usize, @ptrCast(@alignCast(task_handle))).* = @intFromPtr(task);
 
@@ -729,26 +641,19 @@ pub fn task_delete() callconv(.c) void {
 pub fn task_delay(tick: u32) callconv(.c) void {
     log.debug("task_delay {}", .{tick});
 
-    const start = hal.time.get_time_since_boot();
-    const delay: time.Duration = .from_us(tick);
-
-    while (hal.time.get_time_since_boot().diff(start).less_than(delay)) {
-        multitasking.yield_task();
-    }
+    scheduler.sleep(tick);
 }
 
-// NOTE: we could probably use milliseconds directly.
 pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
-    // NOTE: idk about bitcast here. Seems weird that it returns i32.
-    return @intCast(ms * 1_000);
+    return @intCast(ms * 1_000 * systimer.ticks_per_us());
 }
 
 pub fn task_get_current_task() callconv(.c) ?*anyopaque {
-    return multitasking.current_task;
+    return scheduler.current_task;
 }
 
 pub fn task_get_max_priority() callconv(.c) i32 {
-    return -1;
+    return @intFromEnum(Scheduler.Priority.highest);
 }
 
 pub fn get_free_heap_size() callconv(.c) void {
@@ -1078,8 +983,7 @@ pub fn wifi_rtc_disable_iso() callconv(.c) void {
 pub fn esp_timer_get_time() callconv(.c) i64 {
     log.debug("esp_timer_get_time", .{});
 
-    // TODO: or bit cast?
-    return @intCast(hal.time.get_time_since_boot().to_us());
+    return @intCast(scheduler.get_ticks());
 }
 
 pub fn nvs_set_i8() callconv(.c) void {

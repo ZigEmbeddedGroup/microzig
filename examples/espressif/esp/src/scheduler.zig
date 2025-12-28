@@ -22,35 +22,19 @@ pub const microzig_options: microzig.Options = .{
 var heap_buf: [10 * 1024]u8 = undefined;
 var scheduler: esp.Scheduler = undefined;
 var mutex: esp.Scheduler.Mutex = .{};
-// var sem: esp.Scheduler.Semaphore = .init(1);
 
 fn task1(_: ?*anyopaque) callconv(.c) noreturn {
     var i: u32 = 0;
     while (true) : (i += 1) {
-        // queue.putOneUncancelable(&scheduler, i);
-        {
-            mutex.lock(&scheduler);
-            defer mutex.unlock(&scheduler);
-            std.log.info("hello from task 1: {}", .{i});
-            scheduler.sleep(1_000_000 * systimer.ticks_per_us());
-            std.log.info("hello from task 1 still locking mutex", .{});
-        }
+        std.log.info("hello from task 1: {}", .{i});
+        // {
+        //     mutex.lock(&scheduler);
+        //     defer mutex.unlock(&scheduler);
+        //     std.log.info("hello from task 1: {}", .{i});
+        //     scheduler.sleep(1_000_000 * systimer.ticks_per_us());
+        //     std.log.info("hello from task 1 still locking mutex", .{});
+        // }
         scheduler.sleep(500_000 * systimer.ticks_per_us());
-    }
-}
-
-fn task2(_: ?*anyopaque) callconv(.c) noreturn {
-    var i: u32 = 0;
-    while (true) : (i += 1) {
-        // queue.putOneUncancelable(&scheduler, i);
-        {
-            mutex.lock(&scheduler);
-            defer mutex.unlock(&scheduler);
-            std.log.info("hello from task 2: {}", .{i});
-            scheduler.sleep(5_000_000 * systimer.ticks_per_us());
-            std.log.info("hello from task 2 still locking mutex", .{});
-        }
-        scheduler.sleep(5_000_000 * systimer.ticks_per_us());
     }
 }
 
@@ -61,27 +45,18 @@ pub fn main() !void {
 
     esp.time.sleep_ms(1000);
 
-    try scheduler.raw_alloc_spawn_with_options(task1, null, .{
+    _ = try scheduler.raw_alloc_spawn_with_options(task1, null, .{
         // .priority = .high,
     });
-
-    try scheduler.raw_alloc_spawn_with_options(task2, null, .{
-        // .priority = .high,
-    });
-
-    // try sem.take(&scheduler, 500_000 * systimer.ticks_per_us());
-    // log.info("got semaphore once", .{});
-    // try sem.take(&scheduler, 2_000_000 * systimer.ticks_per_us());
 
     while (true) {
-        scheduler.yield(.reschedule);
-        microzig.cpu.wfi();
-        // const value = queue.getOneUncancelable(&scheduler);
-        // std.log.info("received {}", .{value});
-        // {
-        //     mutex.lock(&scheduler);
-        //     defer mutex.unlock(&scheduler);
-        // scheduler.sleep(500_000 * systimer.ticks_per_us());
-        // }
+        {
+            mutex.lock(&scheduler);
+            defer mutex.unlock(&scheduler);
+            std.log.info("hello from main", .{});
+            scheduler.sleep(5_000_000 * systimer.ticks_per_us());
+            std.log.info("hello from main still locking mutex", .{});
+        }
+        scheduler.sleep(5_000_000 * systimer.ticks_per_us());
     }
 }

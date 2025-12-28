@@ -58,7 +58,11 @@ pub const Interrupt = enum(u5) {
 };
 
 pub const InterruptHandler = union(enum) {
+    /// No state is saved. Do everything yourself. Interrupts are disabled
+    /// while it is executing.
     naked: *const fn () callconv(.naked) void,
+    /// State pushed on the stack. Handler can be interrupted by higher
+    /// priority interrupts.
     c: *const fn (*TrapFrame) callconv(.c) void,
 };
 

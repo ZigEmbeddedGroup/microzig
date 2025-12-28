@@ -19,11 +19,18 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // and vice versa. Because of the forced yield, tasks are required to have a
 // minimum stack size available.
 
+// TODO: add identifier to tasks
+// TODO: stack usage report based on stack painting
+// TODO: for other esp32 chips support SMP
+// TODO: use @stackUpperBound when implemented
+
 const STACK_ALIGN: std.mem.Alignment = .@"16";
 const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 31 * @sizeOf(usize));
 const IDLE_STACK_SIZE = 512 + EXTRA_STACK_SIZE;
 
+// TODO: configurable
 const generic_interrupt: microzig.cpu.Interrupt = .interrupt30;
+// TODO: configurable
 const yield_interrupt: microzig.cpu.Interrupt = .interrupt31;
 const systimer_unit = systimer.unit(0);
 const systimer_alarm = systimer.alarm(0);
@@ -45,15 +52,19 @@ suspended_list: std.DoublyLinkedList = .{},
 
 main_task: Task,
 
-/// The task in the .running state
+idle_stack: [IDLE_STACK_SIZE]u8 = undefined,
+idle_task: Task,
+
+/// The task in .running state
 current_task: *Task,
 
 // TODO: configurable
-pub const Priority = enum(u2) {
+pub const Priority = enum(u8) {
     idle = 0,
-    low = 1,
-    mid = 2,
-    high = 3,
+    lowest = 1,
+    _,
+
+    pub const highest: Priority = @enumFromInt(std.math.maxInt(@typeInfo(Priority).@"enum".tag_type));
 
     pub fn is_greater(prio: Priority, other: Priority) bool {
         return @intFromEnum(prio) > @intFromEnum(other);
@@ -67,11 +78,22 @@ pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
         .gpa = gpa,
         .main_task = .{
             .context = undefined,
-            .priority = .idle,
+            .priority = .lowest,
             .stack = &.{},
+        },
+        .idle_task = .{
+            .context = .{
+                .pc = @intFromPtr(&idle),
+                .sp = @intFromPtr(scheduler.idle_stack[scheduler.idle_stack.len..].ptr),
+                .fp = 0,
+            },
+            .stack = &scheduler.idle_stack,
+            .priority = .idle,
         },
         .current_task = &scheduler.main_task,
     };
+
+    scheduler.make_task_ready(&scheduler.idle_task);
 
     maybe_instance = scheduler;
 
@@ -92,6 +114,14 @@ pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
     systimer_alarm.set_interrupt_enabled(true);
 }
 
+pub fn idle() callconv(.c) void {
+    const scheduler = maybe_instance orelse @panic("no active scheduler");
+    while (true) {
+        scheduler.yield(.reschedule);
+        microzig.cpu.wfi();
+    }
+}
+
 fn task_entry() callconv(.naked) void {
     asm volatile (
         \\lw a0, -4(sp)
@@ -102,9 +132,9 @@ fn task_entry() callconv(.naked) void {
 }
 
 pub const SpawnOptions = struct {
-    name: []const u8 = "task",
     stack_size: usize = 4096,
-    priority: Priority = .low,
+    // TODO: should we ban idle priority?
+    priority: Priority = .lowest,
 };
 
 pub fn raw_alloc_spawn_with_options(
@@ -112,7 +142,7 @@ pub fn raw_alloc_spawn_with_options(
     function: *const fn (param: ?*anyopaque) callconv(.c) noreturn,
     param: ?*anyopaque,
     options: SpawnOptions,
-) !void {
+) !*Task {
     const alignment = comptime STACK_ALIGN.max(.of(Task));
 
     const unaligned_allocation_size = @sizeOf(Task) + options.stack_size + EXTRA_STACK_SIZE;
@@ -138,6 +168,8 @@ pub fn raw_alloc_spawn_with_options(
     };
 
     scheduler.make_task_ready(task);
+
+    return task;
 }
 
 pub fn make_task_ready(scheduler: *Scheduler, task: *Task) void {
@@ -235,8 +267,12 @@ fn yield_inner(scheduler: *Scheduler, action: YieldAction) struct { *Context, *C
     return .{ &prev_task.context, &next_task.context };
 }
 
+pub fn get_ticks(_: *Scheduler) u52 {
+    return systimer_unit.read();
+}
+
 pub fn sleep(scheduler: *Scheduler, ticks: u52) void {
-    const now_ticks = systimer_unit.read();
+    const now_ticks = scheduler.get_ticks();
     const timeout_ticks = now_ticks +% ticks;
     scheduler.yield(.{ .wait = timeout_ticks });
 }
@@ -465,7 +501,7 @@ fn schedule_wake_at(scheduler: *Scheduler, sleeping_task: *Task, timeout: u52) v
     while (maybe_node) |node| : (maybe_node = node.next) {
         const task: *Task = @alignCast(@fieldParentPtr("internal_node", node));
         const wake_ticks = task.state.alarm_set;
-        if (timeout < wake_ticks or wake_ticks -% timeout < timeout) {
+        if (is_a_before_b(timeout, wake_ticks)) {
             scheduler.timer_queue.insertBefore(&task.internal_node, &sleeping_task.internal_node);
             break;
         }
@@ -491,13 +527,13 @@ pub fn generic_interrupt_handler(_: *TrapFrame) callconv(.c) void {
                 systimer_alarm.clear_interrupt();
                 systimer_alarm.set_enabled(false);
 
-                const now_ticks = systimer_unit.read();
+                const now_ticks = scheduler.get_ticks();
 
                 var maybe_node = scheduler.timer_queue.first;
                 while (maybe_node) |node| : (maybe_node = node.next) {
                     const task: *Task = @alignCast(@fieldParentPtr("internal_node", node));
                     const wake_ticks = task.state.alarm_set;
-                    if (now_ticks < wake_ticks or wake_ticks -% now_ticks < now_ticks) {
+                    if (is_a_before_b(now_ticks, wake_ticks)) {
                         break;
                     }
 
@@ -532,6 +568,9 @@ pub const Task = struct {
     waiting_queue: ?*WaitingPriorityQueue = null,
     /// Node used for external waiting queue.
     waiting_queue_node: std.DoublyLinkedList.Node = .{},
+
+    /// Task specific semaphore (required by the wifi driver)
+    semaphore: Semaphore = .init(0),
 
     pub const State = union(enum) {
         none,
@@ -632,13 +671,22 @@ pub const Mutex = struct {
     };
 
     pub fn lock(mutex: *Mutex, scheduler: *Scheduler) void {
+        lock_with_timeout(mutex, scheduler, null) catch unreachable;
+    }
+
+    pub fn lock_with_timeout(mutex: *Mutex, scheduler: *Scheduler, maybe_timeout: ?u52) error{Timeout}!void {
         const cs = microzig.interrupt.enter_critical_section();
         defer cs.leave();
 
         while (mutex.state != .unlocked) {
             const current_task = scheduler.current_task;
             mutex.waiting_queue.append(current_task);
-            scheduler.yield(.{ .wait = null });
+            scheduler.yield(.{ .wait = maybe_timeout });
+            if (maybe_timeout) |timeout| {
+                if (!is_a_before_b(scheduler.get_ticks(), timeout)) {
+                    return error.Timeout;
+                }
+            }
         }
 
         mutex.state = .locked;
@@ -657,14 +705,104 @@ pub const Mutex = struct {
     }
 };
 
+pub const RecursiveMutex = struct {
+    value: u32 = 0,
+    owning_task: ?*Task = null,
+    waiting_queue: Task.WaitingPriorityQueue = .{},
+
+    pub fn lock(mutex: *RecursiveMutex, scheduler: *Scheduler) void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        const current_task = scheduler.current_task;
+
+        if (mutex.owning_task == current_task) {
+            mutex.value += 1;
+            return;
+        }
+
+        while (mutex.owning_task != null) {
+            mutex.waiting_queue.append(current_task);
+            scheduler.yield(.{ .wait = null });
+        }
+
+        assert(mutex.value == 0);
+        mutex.value += 1;
+        mutex.owning_task = scheduler.current_task;
+    }
+
+    pub fn unlock(mutex: *RecursiveMutex, scheduler: *Scheduler) bool {
+        const cs = microzig.interrupt.enter_critical_section();
+
+        assert(mutex.value > 0);
+        mutex.value -= 1;
+        if (mutex.value <= 0) {
+            defer scheduler.yield_and_leave_cs(.reschedule, cs);
+
+            mutex.owning_task = null;
+
+            if (mutex.waiting_queue.first()) |waiting_task| {
+                scheduler.make_task_ready_from_cs(waiting_task);
+            }
+
+            return true;
+        } else {
+            cs.leave();
+            return false;
+        }
+    }
+};
+
 pub const Semaphore = struct {
     value: u32,
+    waiting_queue: Task.WaitingPriorityQueue = .{},
 
     pub fn init(initial_value: u32) Semaphore {
         return .{
-            .count = initial_value,
+            .value = initial_value,
         };
     }
 
-    // pub fn take()
+    pub fn take(sem: *Semaphore, scheduler: *Scheduler) void {
+        sem.take_with_timeout(scheduler, null) catch unreachable;
+    }
+
+    pub fn take_with_timeout(sem: *Semaphore, scheduler: *Scheduler, maybe_timeout: ?u52) error{Timeout}!void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        while (sem.value <= 0) {
+            if (maybe_timeout) |timeout| {
+                if (!is_a_before_b(scheduler.get_ticks(), timeout)) {
+                    return error.Timeout;
+                }
+            }
+
+            const current_task = scheduler.current_task;
+            sem.waiting_queue.append(current_task);
+            scheduler.yield(.{ .wait = maybe_timeout });
+        }
+
+        sem.value -= 1;
+    }
+
+    pub fn give(sem: *Semaphore, scheduler: *Scheduler) void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer scheduler.yield_and_leave_cs(.reschedule, cs);
+
+        sem.value += 1;
+
+        if (sem.waiting_queue.first()) |waiting_task| {
+            scheduler.make_task_ready_from_cs(waiting_task);
+        }
+    }
 };
+
+pub const TypeErasedQueue = struct {
+    buffer: []const u8,
+
+};
+
+fn is_a_before_b(a: u52, b: u52) bool {
+    return a < b or b -% a < a;
+}
