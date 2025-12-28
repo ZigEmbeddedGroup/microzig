@@ -9,8 +9,9 @@ const peripherals = microzig.chip.peripherals;
 const APB_CTRL = peripherals.APB_CTRL;
 const hal = microzig.hal;
 
-const systimer = @import("../systimer.zig");
 const Scheduler = @import("../Scheduler.zig");
+const systimer = @import("../systimer.zig");
+const get_time_since_boot = @import("../time.zig").get_time_since_boot;
 const timer = @import("timer.zig");
 const wifi = @import("wifi.zig");
 
@@ -133,7 +134,7 @@ pub fn puts(ptr: ?*anyopaque) callconv(.c) void {
 
 pub fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) callconv(.c) i32 {
     if (tv) |time_val| {
-        const usec = hal.time.get_time_since_boot().to_us();
+        const usec = get_time_since_boot().to_us();
         time_val.tv_sec = usec / 1_000_000;
         time_val.tv_usec = @intCast(usec % 1_000_000);
     }
@@ -142,12 +143,12 @@ pub fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) callconv(.c) i32 {
 }
 
 pub fn sleep(time_sec: c_uint) callconv(.c) c_int {
-    scheduler.sleep(time_sec * 1_000_000 * systimer.ticks_per_us());
+    scheduler.sleep(.from_us(time_sec * 1_000_000));
     return 0;
 }
 
 pub fn usleep(time_us: u32) callconv(.c) c_int {
-    scheduler.sleep(time_us * systimer.ticks_per_us());
+    scheduler.sleep(.from_us(time_us));
     return 0;
 }
 
@@ -295,7 +296,7 @@ pub fn wifi_int_restore(mux_ptr: ?*anyopaque, state: u32) callconv(.c) void {
 pub fn task_yield_from_isr() callconv(.c) void {
     log.debug("task_yield_from_isr", .{});
 
-    scheduler.yield_from_isr();
+    Scheduler.yield_from_isr();
 }
 
 pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
@@ -322,7 +323,11 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
     log.debug("semphr_take {?} {}", .{ ptr, tick });
 
     const sem: *Scheduler.Semaphore = @ptrCast(@alignCast(ptr));
-    sem.take_with_timeout(scheduler, tick) catch {
+    const maybe_timeout: ?time.Duration = if (tick == c.OSI_FUNCS_TIME_BLOCKING)
+        .from_us(tick)
+    else
+        null;
+    sem.take_with_timeout(scheduler, maybe_timeout) catch {
         log.debug(">>>> return from semaphore take with timeout: {*}", .{sem});
         return 1;
     };
@@ -384,61 +389,9 @@ pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     return @intFromBool(mutex.unlock(scheduler));
 }
 
-// TODO: maybe use atomics? maybe it is spsc?
-pub const Queue = struct {
-    len: usize = 0,
-    capacity: usize,
-    item_len: usize,
-    read_index: usize = 0,
-    write_index: usize = 0,
-    storage: []u8,
-
-    pub fn create(capacity: usize, item_len: usize) error{OutOfMemory}!*Queue {
-        const queue = try allocator.create(Queue);
-        errdefer allocator.destroy(queue);
-
-        queue.* = .{
-            .capacity = capacity,
-            .item_len = item_len,
-            .storage = try allocator.alloc(u8, capacity * item_len),
-        };
-
-        return queue;
-    }
-
-    pub fn destroy(self: *Queue) void {
-        allocator.free(self.storage);
-        allocator.destroy(self);
-    }
-
-    pub fn get(self: Queue, index: usize) []u8 {
-        const item_start = self.item_len * index;
-        return self.storage[item_start..][0..self.item_len];
-    }
-
-    pub fn enqueue(self: *Queue, item: [*]const u8) error{QueueFull}!void {
-        if (self.len >= self.capacity) {
-            return error.QueueFull;
-        }
-
-        const slot = self.get(self.write_index);
-        @memcpy(slot, item[0..self.item_len]);
-        log.debug(">>>> queue send: {any}", .{item[0..self.item_len]});
-        self.write_index = (self.write_index + 1) % self.capacity;
-        self.len += 1;
-    }
-
-    pub fn dequeue(self: *Queue, item: [*]u8) error{QueueEmpty}!void {
-        if (self.len == 0) {
-            return error.QueueEmpty;
-        }
-
-        const slot = self.get(self.read_index);
-        @memcpy(item[0..self.item_len], slot);
-        log.debug(">>>> queue recv: {any}", .{item[0..self.item_len]});
-        self.read_index = (self.read_index + 1) % self.capacity;
-        self.len -= 1;
-    }
+pub const QueueWrapper = struct {
+    item_len: u32,
+    inner: Scheduler.TypeErasedQueue,
 };
 
 pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
@@ -451,9 +404,20 @@ pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
         break :blk .{ 3, 8 };
     };
 
-    const queue = Queue.create(new_cap, new_item_len) catch {
-        log.warn("failed to allocate queue", .{});
+    const buf: []u8 = allocator.alloc(u8, new_cap) catch {
+        log.warn("failed to allocate queue buffer", .{});
         return null;
+    };
+
+    const queue = allocator.create(QueueWrapper) catch {
+        log.warn("failed to allocate queue", .{});
+        allocator.free(buf);
+        return null;
+    };
+
+    queue.* = .{
+        .item_len = new_item_len,
+        .inner = .init(buf),
     };
 
     log.debug(">>>> queue create: {*}", .{queue});
@@ -464,37 +428,46 @@ pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
 pub fn queue_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("queue_delete {?}", .{ptr});
 
-    const queue: *Queue = @ptrCast(@alignCast(ptr));
-    queue.destroy();
-}
-
-// NOTE: here we ignore the timeout. The rust version doesn't use it.
-fn queue_send_common(ptr: ?*anyopaque, item_ptr: ?*anyopaque) callconv(.c) i32 {
-    const queue: *Queue = @ptrCast(@alignCast(ptr));
-    const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
-
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    queue.enqueue(item) catch {
-        log.warn("failed to add item to queue", .{});
-        return 0;
-    };
-
-    return 1;
+    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
+    allocator.free(queue.inner.buffer);
+    allocator.destroy(queue);
 }
 
 pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32) callconv(.c) i32 {
     log.debug("queue_send {?} {?} {}", .{ ptr, item_ptr, block_time_tick });
 
-    return queue_send_common(ptr, item_ptr);
+    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
+    const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
+
+    const maybe_timeout: ?time.Duration = if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
+        .from_us(block_time_tick)
+    else
+        null;
+
+    return @intCast(@divExact(queue.inner.put_with_timeout(
+        scheduler,
+        item[0..queue.item_len],
+        queue.item_len,
+        maybe_timeout,
+    ) catch |err| switch (err) {
+        error.Closed => unreachable,
+        error.Timeout => return -1,
+    }, queue.item_len));
 }
 
 pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*anyopaque) callconv(.c) i32 {
     log.debug("queue_send_from_isr {?} {?} {?}", .{ ptr, item_ptr, _hptw });
 
-    @as(*u32, @ptrCast(@alignCast(_hptw))).* = 1;
-    return queue_send_common(ptr, item_ptr);
+    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
+    const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
+    const n = @divExact(queue.inner.put_from_isr(
+        scheduler,
+        item[0..queue.item_len],
+    ) catch unreachable, queue.item_len);
+
+    @as(*u32, @ptrCast(@alignCast(_hptw))).* = @intFromBool(scheduler.is_a_higher_priority_task_ready());
+
+    return @intCast(n);
 }
 
 pub fn queue_send_to_back() callconv(.c) void {
@@ -508,39 +481,30 @@ pub fn queue_send_to_front() callconv(.c) void {
 pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32) callconv(.c) i32 {
     log.debug("queue_recv {?} {?} {}", .{ ptr, item_ptr, block_time_tick });
 
-    const forever = block_time_tick == c.OSI_FUNCS_TIME_BLOCKING;
-    const timeout = block_time_tick;
-    const start = hal.time.get_time_since_boot();
-
-    const queue: *Queue = @ptrCast(@alignCast(ptr));
+    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]u8 = @ptrCast(@alignCast(item_ptr));
 
-    while (true) {
-        {
-            const cs = enter_critical_section();
-            defer cs.leave();
+    const maybe_timeout: ?time.Duration = if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
+        .from_us(block_time_tick)
+    else
+        null;
 
-            if (queue.dequeue(item)) |_| {
-                log.debug(">>>> return from queue recv: {*}", .{queue});
-
-                return 1;
-            } else |_| {}
-        }
-
-        if (!forever and hal.time.get_time_since_boot().diff(start).to_us() > timeout) {
-            log.warn(">>>> return from queue recv from timeout: {*}", .{queue});
-            return -1;
-        }
-
-        scheduler.yield(.reschedule);
-    }
+    return @intCast(@divExact(queue.inner.get_with_timeout(
+        scheduler,
+        item[0..queue.item_len],
+        queue.item_len,
+        maybe_timeout,
+    ) catch |err| switch (err) {
+        error.Closed => unreachable,
+        error.Timeout => return -1,
+    }, queue.item_len));
 }
 
 pub fn queue_msg_waiting(ptr: ?*anyopaque) callconv(.c) u32 {
     log.debug("queue_msg_waiting {?}", .{ptr});
 
-    const queue: *Queue = @ptrCast(@alignCast(ptr));
-    return queue.len;
+    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
+    return @divExact(queue.inner.len, queue.item_len);
 }
 
 pub fn event_group_create() callconv(.c) void {
@@ -641,11 +605,11 @@ pub fn task_delete() callconv(.c) void {
 pub fn task_delay(tick: u32) callconv(.c) void {
     log.debug("task_delay {}", .{tick});
 
-    scheduler.sleep(tick);
+    scheduler.sleep(.from_us(tick));
 }
 
 pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
-    return @intCast(ms * 1_000 * systimer.ticks_per_us());
+    return @intCast(ms * 1_000);
 }
 
 pub fn task_get_current_task() callconv(.c) ?*anyopaque {
@@ -946,7 +910,7 @@ pub fn timer_arm_us(ets_timer_ptr: ?*anyopaque, us: u32, repeat: bool) callconv(
 
     if (timer.find(ets_timer)) |tim| {
         const period: time.Duration = .from_us(us);
-        tim.deadline = .init_relative(hal.time.get_time_since_boot(), period);
+        tim.deadline = .init_relative(get_time_since_boot(), period);
         tim.periodic = if (repeat) period else null;
     } else {
         log.warn("timer not found based on ets_timer", .{});
@@ -983,7 +947,7 @@ pub fn wifi_rtc_disable_iso() callconv(.c) void {
 pub fn esp_timer_get_time() callconv(.c) i64 {
     log.debug("esp_timer_get_time", .{});
 
-    return @intCast(scheduler.get_ticks());
+    return @intCast(get_time_since_boot().to_us());
 }
 
 pub fn nvs_set_i8() callconv(.c) void {
@@ -1061,7 +1025,7 @@ pub fn log_writev(_: c_uint, _: [*c]const u8, fmt: [*c]const u8, va_list: c.va_l
 }
 
 pub fn log_timestamp() callconv(.c) u32 {
-    return @truncate(hal.time.get_time_since_boot().to_us() * 1_000);
+    return @truncate(get_time_since_boot().to_us() * 1_000);
 }
 
 pub const malloc_internal = malloc;
@@ -1090,18 +1054,26 @@ pub fn wifi_realloc() callconv(.c) void {
 pub const wifi_calloc = calloc;
 pub const wifi_zalloc = zalloc_internal;
 
-var wifi_queue_handle: ?*Queue = null;
+var wifi_queue_handle: ?*QueueWrapper = null;
+var wifi_queue: QueueWrapper = undefined;
 
 pub fn wifi_create_queue(capacity: c_int, item_len: c_int) callconv(.c) ?*anyopaque {
     log.debug("wifi_create_queue {} {}", .{ capacity, item_len });
 
     std.debug.assert(wifi_queue_handle == null);
-    wifi_queue_handle = Queue.create(@intCast(capacity), @intCast(item_len)) catch {
-        log.warn("failed to allocate wifi queue", .{});
+
+    const buf: []u8 = allocator.alloc(u8, @intCast(capacity)) catch {
+        log.warn("failed to allocate queue buffer", .{});
         return null;
     };
 
-    log.debug(">>>> wifi queue create: {*}", .{wifi_queue_handle});
+    wifi_queue = .{
+        .inner = .init(buf),
+        .item_len = @intCast(item_len),
+    };
+    wifi_queue_handle = &wifi_queue;
+
+    log.debug(">>>> wifi queue create: {*}", .{&wifi_queue_handle});
 
     return @ptrCast(&wifi_queue_handle);
 }
@@ -1109,12 +1081,13 @@ pub fn wifi_create_queue(capacity: c_int, item_len: c_int) callconv(.c) ?*anyopa
 pub fn wifi_delete_queue(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("wifi_delete_queue {?}", .{ptr});
 
-    std.debug.assert(ptr == @as(?*anyopaque, @ptrCast(wifi_queue_handle)));
+    std.debug.assert(ptr == @as(?*anyopaque, @ptrCast(&wifi_queue_handle)));
 
-    const queue: *Queue = @ptrCast(@alignCast(ptr));
-    queue.destroy();
+    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
+    allocator.free(queue.inner.buffer);
 
     wifi_queue_handle = null;
+    wifi_queue = undefined;
 }
 
 pub fn coex_init() callconv(.c) c_int {

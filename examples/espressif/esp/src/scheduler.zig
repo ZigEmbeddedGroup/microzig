@@ -21,20 +21,19 @@ pub const microzig_options: microzig.Options = .{
 
 var heap_buf: [10 * 1024]u8 = undefined;
 var scheduler: esp.Scheduler = undefined;
-var mutex: esp.Scheduler.Mutex = .{};
+var queue: esp.Scheduler.Queue(u32) = .init(&.{});
 
 fn task1(_: ?*anyopaque) callconv(.c) noreturn {
-    var i: u32 = 0;
-    while (true) : (i += 1) {
-        std.log.info("hello from task 1: {}", .{i});
-        // {
-        //     mutex.lock(&scheduler);
-        //     defer mutex.unlock(&scheduler);
-        //     std.log.info("hello from task 1: {}", .{i});
-        //     scheduler.sleep(1_000_000 * systimer.ticks_per_us());
-        //     std.log.info("hello from task 1 still locking mutex", .{});
-        // }
-        scheduler.sleep(500_000 * systimer.ticks_per_us());
+    for (0..5) |i| {
+        queue.put_one(&scheduler, i) catch {
+            std.log.err("failed to put item", .{});
+            continue;
+        };
+        scheduler.sleep(.from_ms(500));
+    }
+    queue.close(&scheduler);
+    while (true) {
+        microzig.cpu.wfi();
     }
 }
 
@@ -50,13 +49,7 @@ pub fn main() !void {
     });
 
     while (true) {
-        {
-            mutex.lock(&scheduler);
-            defer mutex.unlock(&scheduler);
-            std.log.info("hello from main", .{});
-            scheduler.sleep(5_000_000 * systimer.ticks_per_us());
-            std.log.info("hello from main still locking mutex", .{});
-        }
-        scheduler.sleep(5_000_000 * systimer.ticks_per_us());
+        const item = try queue.get_one(&scheduler);
+        std.log.info("got item: {}", .{item});
     }
 }

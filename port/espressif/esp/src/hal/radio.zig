@@ -142,7 +142,7 @@ fn setup_interrupts() void {
     microzig.cpu.interrupt.map(.wifi_pwr, options.wifi_interrupt);
 
     microzig.cpu.interrupt.set_type(options.wifi_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(options.wifi_interrupt, .highest);
+    microzig.cpu.interrupt.set_priority(options.wifi_interrupt, .lowest);
 }
 
 pub const interrupt_handlers = struct {
