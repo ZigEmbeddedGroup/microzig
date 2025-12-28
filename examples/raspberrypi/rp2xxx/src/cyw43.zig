@@ -9,7 +9,7 @@ const gpio = rp2xxx.gpio;
 const pio = rp2xxx.pio;
 
 const drivers = microzig.hal.drivers;
-const CYW43_Pio_Device = drivers.CYW43_Pio_Device;
+var wifi_driver: drivers.WiFi = .{};
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -19,6 +19,8 @@ pub const microzig_options = microzig.Options{
     .logFn = rp2xxx.uart.log,
 };
 
+const log = std.log.scoped(.main);
+
 pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
@@ -27,19 +29,13 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    const cyw43_config = drivers.CYW43_Pio_Device_Config{
-        .spi = .{
-            .pio = pio.num(0),
-            .cs_pin = gpio.num(25),
-            .io_pin = gpio.num(24),
-            .clk_pin = gpio.num(29),
-        },
-        .pwr_pin = gpio.num(23),
-    };
-    var cyw43: CYW43_Pio_Device = .{};
-    try cyw43.init(cyw43_config);
+    // init cyw43
+    var wifi = try wifi_driver.init(.{});
+    log.debug("mac address: {x}", .{wifi.mac});
+    var led = wifi.gpio(0);
 
-    // The driver isn't finished yet, so we're using this infinite test loop to process all internal driver events.
-    // Eventually, this will be replaced by a dedicated driver task/thread.
-    cyw43.test_loop();
+    while (true) {
+        time.sleep_ms(500);
+        led.toggle();
+    }
 }

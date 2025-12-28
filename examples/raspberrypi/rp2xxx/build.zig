@@ -84,6 +84,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },
+        .{ .name = "net-dhcp", .file = "src/net/dhcp.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
@@ -131,6 +132,28 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(example.file),
             .imports = example.imports,
         });
+
+        if (std.mem.indexOf(u8, example.name, "_net-") != null) {
+            const target = b.resolveTargetQuery(firmware.target.zig_target);
+            const foundation_dep = b.dependency("foundationlibc", .{
+                .target = target,
+                .optimize = optimize,
+            });
+            const lwip_dep = b.dependency("lwip", .{
+                .target = target,
+                .optimize = optimize,
+            });
+            const lwip_mod = lwip_dep.module("lwip");
+            // link libc
+            lwip_mod.linkLibrary(foundation_dep.artifact("foundation"));
+            // add path to the configuration, lwipopts.h
+            lwip_mod.addIncludePath(b.path("src/net/lwip/include"));
+            // add c import paths
+            for (lwip_mod.include_dirs.items) |dir| {
+                firmware.app_mod.include_dirs.append(b.allocator, dir) catch @panic("out of memory");
+            }
+            firmware.app_mod.addImport("lwip", lwip_mod);
+        }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.
