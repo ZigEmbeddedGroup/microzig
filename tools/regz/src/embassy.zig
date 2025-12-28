@@ -440,6 +440,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         // are differences between cores that's something the user will have
         // to keep track of.
 
+        var has_fpu = false;
         for (core.interrupts) |interrupt| {
             _ = try db.create_interrupt(device_id, .{
                 .name = interrupt.name,
@@ -447,12 +448,14 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
             });
 
             if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
-                try db.add_device_property(device_id, .{
-                    .key = "cpu.fpuPresent",
-                    .value = "true",
-                });
+                has_fpu = true;
             }
         }
+
+        try db.add_device_property(device_id, .{
+            .key = "cpu.fpuPresent",
+            .value = if (has_fpu) "true" else "false",
+        });
 
         for (core.peripherals) |peripheral| {
             // TODO: don't know what to do if registers is null, so skipping
