@@ -148,7 +148,6 @@ const uppercase_todo_keywords: []const []const u8 = &.{
     "FIXME",
     "XXX",
     "BUG",
-    "NOTE",
 };
 
 pub fn check_todos(
