@@ -9,6 +9,10 @@
             .url = "git+https://github.com/embassy-rs/stm32-data-generated.git#5198a6e36b24f6d79c4ac91af5e61e8d54667d88",
             .hash = "N-V-__8AAFi8WBlOh-NikHFVBjzQE0F1KixgKjVWYnlijPNm",
         },
+        .ClockHelper = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/ClockHelper#7fd073b1be9544941c15f9a63032ed06149ddb70",
+            .hash = "ClockHelper-2.0.0-RcMaOSniGQHXH_qeoZbQDG64XThqpXTVPMfJ6P7LHpYY",
+        },
     },
     .paths = .{
         "README.md",
