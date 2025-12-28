@@ -89,6 +89,9 @@ fn generate_chips_file(
     chip_files: []const std.json.Parsed(ChipFile),
 ) !void {
     try writer.writeAll(
+        \\//AUTOMATICALLY GENERATED FILE!
+        \\//For modifications, consider editing the generation script in generate.zig
+        \\
         \\const std = @import("std");
         \\const microzig = @import("microzig/build-internals");
         \\
@@ -104,7 +107,7 @@ fn generate_chips_file(
 
     try writer.writeAll(
         \\
-        \\pub fn init(dep: *std.Build.Dependency) Self {
+        \\pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) Self {
         \\    const b = dep.builder;
         \\    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
         \\    var ret: Self = undefined;
@@ -255,6 +258,7 @@ fn generate_chips_file(
             try writer.writeAll(
                 \\        .hal = .{
                 \\            .root_source_file = b.path("src/hals/STM32F103.zig"),
+                \\            .imports = hal_imports,
                 \\        },
                 \\
             );
@@ -263,6 +267,7 @@ fn generate_chips_file(
             try writer.writeAll(
                 \\        .hal = .{
                 \\            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+                \\            .imports = hal_imports,
                 \\        },
                 \\
             );

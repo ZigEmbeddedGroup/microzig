@@ -15,7 +15,17 @@ boards: struct {
 
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
-    const chips = Chips.init(dep);
+
+    const clockhelper_dep = b.dependency("ClockHelper", .{}).module("clockhelper");
+
+    const hal_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
+        .{
+            .name = "ClockTree",
+            .module = clockhelper_dep,
+        },
+    }) catch @panic("out of memory");
+
+    const chips = Chips.init(dep, hal_imports);
 
     return .{
         .chips = chips,
