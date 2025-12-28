@@ -6,7 +6,6 @@
 const std = @import("std");
 const root = @import("root");
 const builtin = @import("builtin");
-const start = @import("start.zig");
 
 /// The app that is currently built.
 //pub const app = @import("app");
@@ -106,6 +105,76 @@ pub const Options = struct {
 
 pub const options: Options = if (@hasDecl(root, "microzig_options")) root.microzig_options else .{};
 
+/// This is the logical entry point for microzig.
+/// It will invoke the main function from the root source file
+/// and provides error return handling as well as a event loop if requested.
+///
+/// Why is this function exported?
+/// This is due to the modular design of microzig to allow the "chip" dependency of microzig
+/// to call into our main function here. If we would use a normal function call, we'd have a
+/// circular dependency between the `microzig` and `chip` package. This function is also likely
+/// to be invoked from assembly, so it's also convenient in that regard.
+export fn microzig_main() noreturn {
+    if (!@hasDecl(root, "main"))
+        @compileError("The root source file must provide a public function main!");
+
+    const main = @field(root, "main");
+    const info: std.builtin.Type = @typeInfo(@TypeOf(main));
+
+    const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
+    if (info != .@"fn" or info.@"fn".params.len > 0)
+        @compileError(invalid_main_msg);
+
+    const return_type = info.@"fn".return_type orelse @compileError(invalid_main_msg);
+
+    if (info.@"fn".calling_convention == .async)
+        @compileError("TODO: Embedded event loop not supported yet. Please try again later.");
+
+    // A hal can export a default init function that runs before main for
+    // procedures like clock configuration. The user may override and customize
+    // this functionality by providing their own init function.
+    // function.
+    if (@hasDecl(root, "init"))
+        root.init()
+    else if (hal != void and @hasDecl(hal, "init"))
+        hal.init();
+
+    if (@typeInfo(return_type) == .error_union) {
+        main() catch |err| {
+            // Although here we could use @errorReturnTrace similar to
+            // `std.start` and just dump the trace (without panic), the user
+            // might not use logging and have the panic handler just blink an
+            // led.
+
+            const msg_base = "main() returned error.";
+
+            if (!options.simple_panic_if_main_errors) {
+                const max_error_size = comptime blk: {
+                    var max_error_size: usize = 0;
+                    const err_type = @typeInfo(return_type).error_union.error_set;
+                    if (@typeInfo(err_type).error_set) |err_set| {
+                        for (err_set) |current_err| {
+                            max_error_size = @max(max_error_size, current_err.name.len);
+                        }
+                    }
+                    break :blk max_error_size;
+                };
+
+                var buf: [msg_base.len + max_error_size]u8 = undefined;
+                const msg = std.fmt.bufPrint(&buf, "{s}{s}", .{ msg_base, @errorName(err) }) catch @panic(msg_base);
+                @panic(msg);
+            } else {
+                @panic(msg_base);
+            }
+        };
+    } else {
+        main();
+    }
+
+    // Main returned, just hang around here a bit.
+    hang();
+}
+
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
     cpu.interrupt.disable_interrupts();
@@ -113,10 +182,6 @@ pub fn hang() noreturn {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
         asm volatile ("" ::: .{ .memory = true });
     }
-}
-
-comptime {
-    _ = start;
 }
 
 test {

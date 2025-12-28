@@ -28,7 +28,7 @@ pub fn build(b: *std.Build) void {
         //.{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
         //.{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
 
-        //.{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
         //.{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
         //.{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_system-timer", .file = "src/system_timer.zig" },
         //.{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_system-timer", .file = "src/system_timer.zig" },
@@ -90,12 +90,12 @@ pub fn build(b: *std.Build) void {
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
-        //available_examples.append(.{
-        //    .target = raspberrypi.pico,
-        //    .name = b.fmt("pico_{s}", .{example.name}),
-        //    .file = example.file,
-        //    .imports = example.imports,
-        //}) catch @panic("out of memory");
+        available_examples.append(.{
+           .target = raspberrypi.pico,
+           .name = b.fmt("pico_{s}", .{example.name}),
+           .file = example.file,
+           .imports = example.imports,
+        }) catch @panic("out of memory");
 
         available_examples.append(.{
             .target = raspberrypi.pico2_arm,
@@ -104,14 +104,14 @@ pub fn build(b: *std.Build) void {
             .imports = example.imports,
         }) catch @panic("out of memory");
 
-        //if (example.works_with_riscv) {
-        //    available_examples.append(.{
-        //        .target = raspberrypi.pico2_riscv,
-        //        .name = b.fmt("pico2_riscv_{s}", .{example.name}),
-        //        .file = example.file,
-        //        .imports = example.imports,
-        //    }) catch @panic("out of memory");
-        //}
+        if (example.works_with_riscv) {
+           available_examples.append(.{
+               .target = raspberrypi.pico2_riscv,
+               .name = b.fmt("pico2_riscv_{s}", .{example.name}),
+               .file = example.file,
+               .imports = example.imports,
+           }) catch @panic("out of memory");
+        }
     }
 
     for (available_examples.items) |example| {

@@ -615,6 +615,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .memory_regions = target.chip.memory_regions,
                     .generate = linker_script_options.generate,
                     .ram_image = target.ram_image,
+                    .entry = fw.artifact.entry,
                 };
 
                 const args_str = std.json.Stringify.valueAlloc(

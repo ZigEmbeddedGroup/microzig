@@ -10,6 +10,7 @@ pub const Args = struct {
     memory_regions: []const MemoryRegion,
     generate: GenerateOptions,
     ram_image: bool,
+    entry: std.Build.Step.Compile.Entry,
 };
 
 var writer_buf: [1024]u8 = undefined;
@@ -233,9 +234,9 @@ pub fn main() !void {
             \\
             \\  .heap (NOLOAD) :
             \\  {{
-            \\      microzig_heap_start = .;
-            \\      . = ORIGIN({s}) + LENGTH({s});
-            \\      microzig_heap_end   = .;
+            \\    microzig_heap_start = .;
+            \\    . = ORIGIN({s}) + LENGTH({s});
+            \\    microzig_heap_end   = .;
             \\  }} > {s}
             \\
         , .{
@@ -274,6 +275,20 @@ pub fn main() !void {
         }
 
         try writer.interface.writeAll("}\n");
+    }
+
+    const assert_entry_defined = switch (parsed_args.entry) {
+        .disabled => null,
+        // TODO: What is the difference between default, disabled and enabled?
+        .default, .enabled => "_start",
+        .symbol_name => |name| name,
+    };
+
+    if (assert_entry_defined) |symbol_name| {
+        try writer.interface.print(
+            \\ASSERT(DEFINED({[name]s}), "Error: Symbol '{[name]s}' is missing. The linker cannot find the entry point.");
+            \\
+        , .{ .name = symbol_name });
     }
 
     if (parsed_args.generate != .none) {
