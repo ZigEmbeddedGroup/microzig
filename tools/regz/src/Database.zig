@@ -2115,22 +2115,12 @@ pub fn cleanup_unused_enums(db: *Database) !void {
     , .{});
 }
 
-pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
-    var list: std.ArrayList(std.json.Parsed(Patch)) = .empty;
-    defer {
-        for (list.items) |*entry| entry.deinit();
-        list.deinit(db.gpa);
-    }
+pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
+    const patches = try std.zon.parse.fromSlice([]const Patch, db.gpa, zon_text, diags, .{});
+    defer std.zon.parse.free(db.gpa, patches);
 
-    var line_it = std.mem.tokenizeScalar(u8, ndjson, '\n');
-    while (line_it.next()) |line| {
-        const p = try Patch.from_json_str(db.gpa, line);
-        errdefer p.deinit();
-        try list.append(db.gpa, p);
-    }
-
-    for (list.items) |patch| {
-        switch (patch.value) {
+    for (patches) |patch| {
+        switch (patch) {
             .override_arch => |override_arch| {
                 const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
                     return error.DeviceNotFound;

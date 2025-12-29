@@ -1,13 +1,11 @@
-const Patch = @import("microzig/build-internals").Patch;
-
-pub const patches: []const Patch = &.{
+.{
     .{
         .add_enum = .{
-            .parent = "types.peripherals.P0",
+            .parent = "types.peripherals.GPIO",
             .@"enum" = .{
                 .name = "Pull",
                 .bitsize = 2,
-                .fields = &.{
+                .fields = .{
                     .{ .value = 0x0, .name = "disabled" },
                     .{ .value = 0x1, .name = "down" },
                     .{ .value = 0x2, .name = "up" },
@@ -15,14 +13,14 @@ pub const patches: []const Patch = &.{
             },
         },
     },
-    .{ .set_enum_type = .{ .of = "types.peripherals.P0.PIN_CNF.PULL", .to = "types.peripherals.P0.Pull" } },
+    .{ .set_enum_type = .{ .of = "types.peripherals.GPIO.PIN_CNF.PULL", .to = "types.peripherals.GPIO.Pull" } },
     .{
         .add_enum = .{
-            .parent = "types.peripherals.P0",
+            .parent = "types.peripherals.GPIO",
             .@"enum" = .{
                 .name = "DriveStrength",
                 .bitsize = 3,
-                .fields = &.{
+                .fields = .{
                     .{ .value = 0x0, .name = "SOS1" },
                     .{ .value = 0x1, .name = "HOS1" },
                     .{ .value = 0x2, .name = "SOH1" },
@@ -35,5 +33,5 @@ pub const patches: []const Patch = &.{
             },
         },
     },
-    .{ .set_enum_type = .{ .of = "types.peripherals.P0.PIN_CNF.DRIVE", .to = "types.peripherals.P0.DriveStrength" } },
-};
+    .{ .set_enum_type = .{ .of = "types.peripherals.GPIO.PIN_CNF.DRIVE", .to = "types.peripherals.GPIO.DriveStrength" } },
+}

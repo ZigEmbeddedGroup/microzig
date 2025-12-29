@@ -1,2 +1,0 @@
-{"name":"properties.property","repeated":true,"attrs":{"Type":"required","id":"required","Value":"required"}}
-{"name":"properties","repeated":false,"attrs":{"XML_version":"required"}}

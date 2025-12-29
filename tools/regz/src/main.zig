@@ -24,14 +24,23 @@ const Arguments = struct {
     format: ?Database.Format = null,
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
-    patch_path: ?[]const u8 = null,
+    patch_paths: std.ArrayList([]const u8) = .{},
     dump_path: ?[:0]const u8 = null,
     help: bool = false,
+
+    fn append_patch_path(args: *Arguments, patch_path: []const u8) !void {
+        const copy = try args.allocator.dupe(u8, patch_path);
+        errdefer args.allocator.free(copy);
+
+        try args.patch_paths.append(args.allocator, copy);
+    }
 
     fn deinit(args: *Arguments) void {
         if (args.input_path) |input_path| args.allocator.free(input_path);
         if (args.output_path) |output_path| args.allocator.free(output_path);
-        if (args.patch_path) |patch_path| args.allocator.free(patch_path);
+
+        for (args.patch_paths.items) |patch_path| args.allocator.free(patch_path);
+        args.patch_paths.deinit(args.allocator);
     }
 };
 
@@ -83,7 +92,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             ret.output_path = try allocator.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--patch_path")) {
             i += 1;
-            ret.patch_path = try allocator.dupe(u8, args[i]);
+            try ret.append_patch_path(args[i]);
         } else if (std.mem.startsWith(u8, args[i], "-")) {
             std.log.err("Unknown argument '{s}'", .{args[i]});
 
@@ -133,12 +142,20 @@ fn main_impl() anyerror!void {
     var db = try Database.create_from_path(allocator, format, input_path);
     defer db.destroy();
 
-    if (args.patch_path) |patch_path| {
-        const patch = try std.fs.cwd().readFileAlloc(allocator, patch_path, 1024 * 1024);
+    for (args.patch_paths.items) |patch_path| {
+        const patch = try std.fs.cwd().readFileAllocOptions(allocator, patch_path, std.math.maxInt(u64), null, .@"1", 0);
         defer allocator.free(patch);
 
-        // TODO: diagnostics
-        try db.apply_patch(patch);
+        var diags: std.zon.parse.Diagnostics = .{};
+        defer diags.deinit(db.gpa);
+
+        db.apply_patch(patch, &diags) catch |err| {
+            if (err == error.ParseZon) {
+                std.log.err("Failed to parse zon patch file '{s}': {f}", .{ patch_path, diags });
+            }
+
+            return err;
+        };
     }
 
     // arch dependent stuff
