@@ -15,6 +15,5 @@
         "build.zig.zon",
         "patches",
         "src",
-        "test",
     },
 }
