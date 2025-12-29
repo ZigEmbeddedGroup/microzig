@@ -37,7 +37,6 @@ pub const Config = struct {
     flow_control: FlowControl = .none,
 };
 
-// Make experimental happy
 pub const StopBits = STOP;
 pub const DataBits = WordBits;
 

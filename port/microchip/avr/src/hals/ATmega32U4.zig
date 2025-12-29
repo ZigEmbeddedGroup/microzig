@@ -41,6 +41,11 @@ pub fn parse_pin(comptime spec: []const u8) type {
 }
 
 pub const gpio = struct {
+    pub const State = enum(u1) {
+        low = 0,
+        high = 1,
+    };
+
     fn regs(comptime desc: type) type {
         return struct {
             // io address
@@ -63,14 +68,14 @@ pub const gpio = struct {
         cpu.cbi(regs(pin).dir_addr, pin.pin);
     }
 
-    pub fn read(comptime pin: type) microzig.core.experimental.gpio.State {
+    pub fn read(comptime pin: type) State {
         return if ((regs(pin).pin.* & (1 << pin.pin)) != 0)
             .high
         else
             .low;
     }
 
-    pub fn write(comptime pin: type, state: microzig.core.experimental.gpio.State) void {
+    pub fn write(comptime pin: type, state: State) void {
         switch (state) {
             .high => cpu.sbi(regs(pin).port_addr, pin.pin),
             .low => cpu.cbi(regs(pin).port_addr, pin.pin),

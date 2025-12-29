@@ -104,8 +104,3 @@ pub const pin_map = .{
     // LCD_COLOR_CYAN      0x7FFF
     // LCD_COLOR_YELLOW    0xFFE0
 };
-
-pub fn debug_write(string: []const u8) void {
-    _ = string;
-    // TODO: implement
-}
