@@ -50,14 +50,18 @@ pub fn main() !void {
     };
     try net.init();
 
-    var handler: EchoHandler = .{};
-    try net.udp_connect(&handler.sender);
-    try net.udp_bind(&handler.receiver, 9988, EchoHandler.on_recv);
+    // udp init
+    var udp: Net.Udp = .{};
+    udp.init(&net);
+    // listen for udp packets on port 9988 and call on_recv for each packet
+    try udp.bind(9988, on_recv);
 
     var ts = time.get_time_since_boot();
     while (true) {
         // run lwip poller
-        try net.poll();
+        net.poll() catch |err| {
+            log.err("net pool {}", .{err});
+        };
 
         // blink
         const now = time.get_time_since_boot();
@@ -68,17 +72,21 @@ pub fn main() !void {
     }
 }
 
-const EchoHandler = struct {
-    const Self = @This();
+fn on_recv(udp: *Net.Udp, bytes: []u8, opt: Net.Udp.RecvOptions) void {
+    // show received packet
+    log.debug(
+        "received {} bytes, from: {f}, last: {}, data: {s}",
+        .{ bytes.len, opt.src, opt.last_fragment, data_head(bytes, 32) },
+    );
+    // echo same data to the source address and port 9999
+    udp.send(bytes, .{ .addr = opt.src.addr, .port = 9999 }) catch |err| {
+        log.err("udp send {}", .{err});
+    };
+}
 
-    receiver: Net.UdpReceiver = .{},
-    sender: Net.UdpSender = .{},
-
-    fn on_recv(ptr: *Net.UdpReceiver, bytes: []const u8, src: Net.Target) void {
-        const self: *Self = @fieldParentPtr("receiver", ptr);
-        log.debug("packet: {} bytes from: {f}", .{ bytes.len, src });
-        self.sender.send(bytes, .{ .addr = src.addr, .port = 9999 }) catch |err| {
-            log.err("udp send {}", .{err});
-        };
-    }
-};
+// log helper
+fn data_head(bytes: []u8, max: usize) []u8 {
+    const head: []u8 = bytes[0..@min(max, bytes.len)];
+    std.mem.replaceScalar(u8, head, '\n', ' ');
+    return head;
+}

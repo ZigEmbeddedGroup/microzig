@@ -18,6 +18,7 @@ const c = @cImport({
 });
 
 const Self = @This();
+const Net = @This();
 
 netif: c.netif = .{},
 dhcp: c.dhcp = .{},
@@ -169,67 +170,74 @@ pub fn log_stats(self: *Self) void {
     }
 }
 
-pub const UdpReceiver = struct {
-    const Callback = *const fn (*UdpReceiver, []const u8, Target) void;
+pub const Udp = struct {
+    pub const RecvOptions = struct {
+        src: Endpoint,
+        /// If udp  packet is fragmented into multiple lwip  packet buffers this
+        /// will be false for all expect last fragment.
+        last_fragment: bool,
+    };
+    const Callback = *const fn (*Udp, []u8, RecvOptions) void;
 
     pcb: c.udp_pcb = .{},
-    callback: Callback = undefined,
-};
+    callback: ?Callback = null,
 
-pub fn udp_bind(
-    self: *Self,
-    receiver: *UdpReceiver,
-    port: u16,
-    callback: UdpReceiver.Callback,
-) !void {
-    receiver.callback = callback;
-    c.udp_bind_netif(&receiver.pcb, &self.netif);
-    try c_err(c.udp_bind(&receiver.pcb, c.IP_ADDR_ANY, port));
-    c.udp_recv(&receiver.pcb, udp_recv_callback, receiver);
-}
+    pub fn init(self: *Udp, net: *Net) void {
+        c.udp_bind_netif(&self.pcb, &net.netif);
+        self.pcb.ttl = 64;
+    }
 
-fn udp_recv_callback(
-    ptr: ?*anyopaque,
-    pcb_c: [*c]c.udp_pcb,
-    pbuf_c: [*c]c.pbuf,
-    addr_c: [*c]const c.ip_addr,
-    port: u16,
-) callconv(.c) void {
-    _ = pcb_c;
-    const pbuf: *c.pbuf = pbuf_c;
-    const addr: c.ip_addr = addr_c[0];
-    const receiver: *UdpReceiver = @ptrCast(@alignCast(ptr.?));
-    receiver.callback(receiver, payload_bytes(pbuf), .{ .addr = addr, .port = port });
-}
-
-pub const UdpSender = struct {
-    pcb: c.udp_pcb = .{},
-
-    pub fn send(udp: *UdpSender, data: []const u8, target: Target) !void {
+    pub fn send(udp: *Udp, data: []const u8, target: Endpoint) !void {
         const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
         defer _ = c.pbuf_free(pbuf);
         try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
         try c_err(c.udp_sendto(&udp.pcb, pbuf, &target.addr, target.port));
     }
+
+    pub fn bind(self: *Udp, port: u16, callback: Callback) !void {
+        assert(self.callback == null);
+        self.callback = callback;
+        try c_err(c.udp_bind(&self.pcb, c.IP_ADDR_ANY, port));
+        c.udp_recv(&self.pcb, Udp.recv_callback, self);
+    }
+
+    fn recv_callback(
+        ptr: ?*anyopaque,
+        pcb_c: [*c]c.udp_pcb,
+        pbuf_c: [*c]c.pbuf,
+        addr_c: [*c]const c.ip_addr,
+        port: u16,
+    ) callconv(.c) void {
+        _ = pcb_c;
+        var pbuf: *c.pbuf = pbuf_c;
+        const addr: c.ip_addr = addr_c[0];
+        const udp: *Udp = @ptrCast(@alignCast(ptr.?));
+        defer _ = c.pbuf_free(pbuf_c);
+
+        while (true) {
+            const last_fragment = pbuf.next == null;
+            udp.callback.?(udp, payload_bytes(pbuf), .{
+                .last_fragment = last_fragment,
+                .src = .{ .addr = addr, .port = port },
+            });
+            if (last_fragment) break;
+            pbuf = pbuf.next;
+        }
+    }
 };
 
-pub fn udp_connect(self: *Self, udp: *UdpSender) !void {
-    c.udp_bind_netif(&udp.pcb, &self.netif);
-    udp.pcb.ttl = 64;
-}
-
-pub const Target = struct {
+pub const Endpoint = struct {
     addr: c.ip_addr = .{},
     port: u16 = 0,
 
-    pub fn format(self: Target, writer: anytype) !void {
+    pub fn format(self: Endpoint, writer: anytype) !void {
         try writer.writeAll(std.mem.sliceTo(c.ip4addr_ntoa(@as(*const c.ip4_addr_t, @ptrCast(&self.addr))), 0));
         var buf: [16]u8 = undefined;
         try writer.writeAll(std.fmt.bufPrint(&buf, ":{}", .{self.port}) catch "");
     }
 
-    pub fn parse(ip: []const u8, port: u16) !Target {
-        var target: Target = .{ .port = port };
+    pub fn parse(ip: []const u8, port: u16) !Endpoint {
+        var target: Endpoint = .{ .port = port };
         if (c.ipaddr_aton(ip.ptr, &target.addr) != 1) return error.IpAddrParse;
         return target;
     }
