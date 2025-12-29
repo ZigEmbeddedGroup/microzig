@@ -13,17 +13,19 @@ pub fn build(b: *std.Build) void {
         b.getInstallStep().dependOn(validation_step);
     }
 
-    const libc = b.addLibrary(.{
-        .name = "foundation",
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .root_source_file = b.path("src/libc.zig"),
-            .single_threaded = single_threaded,
-        }),
+    const mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("src/libc.zig"),
+        .single_threaded = single_threaded,
     });
 
-    libc.addIncludePath(b.path("include"));
+    const libc = b.addLibrary(.{
+        .name = "foundation",
+        .root_module = mod,
+    });
+
+    mod.addIncludePath(b.path("include"));
     for (header_files) |header_name|
         libc.installHeader(
             b.path(b.fmt("include/{s}", .{header_name})),

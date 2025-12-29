@@ -9,13 +9,15 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 pub const std_options = std.Options{
-    .log_level = .warn,
+    .log_level = .debug,
 };
 
 pub fn main() !void {
     main_impl() catch |err| switch (err) {
         error.Explained => std.process.exit(1),
-        else => return err,
+        else => {
+            return err;
+        },
     };
 }
 
@@ -49,7 +51,7 @@ fn print_usage(writer: *std.Io.Writer) !void {
     try writer.flush();
 }
 
-fn parse_args(allocator: Allocator) !Arguments {
+fn parse_args(io: std.Io, allocator: Allocator) !Arguments {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -88,7 +90,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             std.log.err("Unknown argument '{s}'", .{args[i]});
 
             var buf: [80]u8 = undefined;
-            var writer = std.fs.File.stderr().writer(&buf);
+            var writer = std.Io.File.stderr().writer(io, &buf);
             try print_usage(&writer.interface);
             return error.Explained;
         } else if (ret.input_path != null) {
@@ -112,12 +114,16 @@ fn main_impl() anyerror!void {
 
     const allocator = gpa.allocator();
 
-    var args = try parse_args(allocator);
+    var threaded: std.Io.Threaded = .init(.failing, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var args = try parse_args(io, allocator);
     defer args.deinit();
 
     if (args.help) {
         var buf: [80]u8 = undefined;
-        var writer = std.fs.File.stdout().writer(&buf);
+        var writer = std.Io.File.stdout().writer(io, &buf);
         try print_usage(&writer.interface);
         return;
     }
@@ -130,11 +136,11 @@ fn main_impl() anyerror!void {
         return error.Explained;
     };
 
-    var db = try Database.create_from_path(allocator, format, input_path);
+    var db = try Database.create_from_path(io, allocator, format, input_path);
     defer db.destroy();
 
     if (args.patch_path) |patch_path| {
-        const patch = try std.fs.cwd().readFileAlloc(allocator, patch_path, 1024 * 1024);
+        const patch = try std.Io.Dir.cwd().readFileAlloc(io, patch_path, allocator, .limited(1024 * 1024));
         defer allocator.free(patch);
 
         // TODO: diagnostics
@@ -158,9 +164,9 @@ fn main_impl() anyerror!void {
         try db.backup(dump_path);
     }
     // output_path is the directory to write files
-    var output_dir = try std.fs.cwd().makeOpenPath(output_path, .{});
-    defer output_dir.close();
+    var output_dir = try std.Io.Dir.cwd().createDirPathOpen(io, output_path, .{});
+    defer output_dir.close(io);
 
-    var fs = FS_Directory.init(output_dir);
+    var fs = FS_Directory.init(io, output_dir);
     try db.to_zig(fs.directory(), .{});
 }

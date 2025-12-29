@@ -41,11 +41,15 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
+    var threaded: std.Io.Threaded = .init(gpa.allocator(), .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
     const args = try std.process.argsAlloc(gpa.allocator());
     defer std.process.argsFree(gpa.allocator(), args);
 
     for (args) |arg| if (std.mem.eql(u8, "--help", arg)) {
-        var writer = std.fs.File.stdout().writer(&.{});
+        var writer = std.Io.File.stdout().writer(io, &.{});
         try writer.interface.writeAll(usage);
         return;
     };
@@ -77,18 +81,18 @@ pub fn main() !void {
     var archive = uf2.Archive.init(gpa.allocator());
     defer archive.deinit();
 
-    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
-    defer elf_file.close();
-    var elf_reader = elf_file.reader(&elf_reader_buf);
+    const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
+    defer elf_file.close(io);
+    var elf_reader = elf_file.reader(io, &elf_reader_buf);
 
     try archive.add_elf(&elf_reader, .{
         .family_id = family_id,
     });
 
-    const dest_file = try std.fs.cwd().createFile(output_path, .{});
-    defer dest_file.close();
+    const dest_file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer dest_file.close(io);
 
-    var writer = dest_file.writer(&output_writer_buf);
+    var writer = dest_file.writer(io, &output_writer_buf);
     try archive.write_to(&writer.interface);
     try writer.interface.flush();
 }
