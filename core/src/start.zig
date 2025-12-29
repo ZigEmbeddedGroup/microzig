@@ -16,6 +16,8 @@ pub const std_options: std.Options = .{
     .logFn = microzig.options.logFn,
 };
 
+pub const std_options_debug_io: std.Io = nop();
+
 // Startup logic:
 comptime {
     // Instantiate the startup logic for the given CPU type.
@@ -92,4 +94,143 @@ export fn microzig_main() noreturn {
 
     // Main returned, just hang around here a bit.
     microzig.hang();
+}
+
+fn nop() std.Io {
+    return .{
+        .userdata = null,
+        .vtable = &.{
+            .async = async,
+            .concurrent = concurrent,
+            .await = await,
+            .cancel = cancel,
+            .select = select,
+
+            .groupAsync = groupAsync,
+            .groupConcurrent = groupConcurrent,
+            .groupAwait = groupAwait,
+            .groupCancel = groupCancel,
+
+            .recancel = recancel,
+            .swapCancelProtection = swapCancelProtection,
+            .checkCancel = checkCancel,
+
+            .futexWait = futexWait,
+            .futexWaitUncancelable = futexWaitUncancelable,
+            .futexWake = futexWake,
+
+            .dirCreateDir = dirCreateDir,
+            .dirCreateDirPath = dirCreateDirPath,
+            .dirCreateDirPathOpen = dirCreateDirPathOpen,
+            .dirStat = dirStat,
+            .dirStatFile = dirStatFile,
+            .dirAccess = dirAccess,
+            .dirCreateFile = dirCreateFile,
+            .dirCreateFileAtomic = dirCreateFileAtomic,
+            .dirOpenFile = dirOpenFile,
+            .dirOpenDir = dirOpenDir,
+            .dirClose = dirClose,
+            .dirRead = dirRead,
+            .dirRealPath = dirRealPath,
+            .dirRealPathFile = dirRealPathFile,
+            .dirDeleteFile = dirDeleteFile,
+            .dirDeleteDir = dirDeleteDir,
+            .dirRename = dirRename,
+            .dirRenamePreserve = dirRenamePreserve,
+            .dirSymLink = dirSymLink,
+            .dirReadLink = dirReadLink,
+            .dirSetOwner = dirSetOwner,
+            .dirSetFileOwner = dirSetFileOwner,
+            .dirSetPermissions = dirSetPermissions,
+            .dirSetFilePermissions = dirSetFilePermissions,
+            .dirSetTimestamps = dirSetTimestamps,
+            .dirHardLink = dirHardLink,
+
+            .fileStat = fileStat,
+            .fileLength = fileLength,
+            .fileClose = fileClose,
+            .fileWriteStreaming = fileWriteStreaming,
+            .fileWritePositional = fileWritePositional,
+            .fileWriteFileStreaming = fileWriteFileStreaming,
+            .fileWriteFilePositional = fileWriteFilePositional,
+            .fileReadStreaming = fileReadStreaming,
+            .fileReadPositional = fileReadPositional,
+            .fileSeekBy = fileSeekBy,
+            .fileSeekTo = fileSeekTo,
+            .fileSync = fileSync,
+            .fileIsTty = fileIsTty,
+            .fileEnableAnsiEscapeCodes = fileEnableAnsiEscapeCodes,
+            .fileSupportsAnsiEscapeCodes = fileSupportsAnsiEscapeCodes,
+            .fileSetLength = fileSetLength,
+            .fileSetOwner = fileSetOwner,
+            .fileSetPermissions = fileSetPermissions,
+            .fileSetTimestamps = fileSetTimestamps,
+            .fileLock = fileLock,
+            .fileTryLock = fileTryLock,
+            .fileUnlock = fileUnlock,
+            .fileDowngradeLock = fileDowngradeLock,
+            .fileRealPath = fileRealPath,
+            .fileHardLink = fileHardLink,
+
+            .processExecutableOpen = processExecutableOpen,
+            .processExecutablePath = processExecutablePath,
+            .lockStderr = lockStderr,
+            .tryLockStderr = tryLockStderr,
+            .unlockStderr = unlockStderr,
+            .processSetCurrentDir = processSetCurrentDir,
+            .processReplace = processReplace,
+            .processReplacePath = processReplacePath,
+            .processSpawn = processSpawn,
+            .processSpawnPath = processSpawnPath,
+            .childWait = childWait,
+            .childKill = childKill,
+
+            .progressParentFile = progressParentFile,
+
+            .now = now,
+            .sleep = sleep,
+
+            .random = random,
+            .randomSecure = randomSecure,
+
+            .netListenIp = netListenIpUnavailable,
+            .netListenUnix = netListenUnixUnavailable,
+            .netAccept = netAcceptUnavailable,
+            .netBindIp = netBindIpUnavailable,
+            .netConnectIp = netConnectIpUnavailable,
+            .netConnectUnix = netConnectUnixUnavailable,
+            .netClose = netCloseUnavailable,
+            .netShutdown = netShutdownUnavailable,
+            .netRead = netReadUnavailable,
+            .netWrite = netWriteUnavailable,
+            .netWriteFile = netWriteFileUnavailable,
+            .netSend = netSendUnavailable,
+            .netReceive = netReceiveUnavailable,
+            .netInterfaceNameResolve = netInterfaceNameResolveUnavailable,
+            .netInterfaceName = netInterfaceNameUnavailable,
+            .netLookup = netLookupUnavailable,
+        },
+    };
+}
+
+fn async(
+    _: ?*anyopaque,
+    _: []u8,
+    _: std.Alignment,
+    _: []const u8,
+    _: std.Alignment,
+    _: *const fn (context: *const anyopaque, result: *anyopaque) void,
+) ?*std.Io.AnyFuture {
+    return null;
+}
+
+fn concurrent(
+    _: ?*anyopaque,
+    _: usize,
+    _: std.mem.Alignment,
+    _: []const u8,
+    _: std.mem.Alignment,
+    _: *const fn (context: *const anyopaque, result: *anyopaque) void,
+) std.Io.ConcurrentError!*std.Io.AnyFuture {
+    return error.ConcurrencyUnavailable;
 }
