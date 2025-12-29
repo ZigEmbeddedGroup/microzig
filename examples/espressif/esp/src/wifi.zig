@@ -56,7 +56,10 @@ pub fn main() !void {
     scheduler.init(allocator);
 
     try radio.init(allocator, &scheduler);
+    defer radio.deinit();
+
     try radio.wifi.init();
+    defer radio.wifi.deinit();
 
     c.lwip_init();
 
@@ -122,32 +125,6 @@ pub fn main() !void {
         }
         scheduler.sleep(.from_ms(10));
     }
-
-    // var ssid: [1:0]u8 = @splat(0);
-    // var bssid: [1:0]u8 = @splat(0);
-    //
-    // var scan_config: c.wifi_scan_config_t = .{
-    //     .ssid = &ssid,
-    //     .bssid = &bssid,
-    //     .channel = 0,
-    //     .show_hidden = true,
-    //     .scan_type = c.WIFI_SCAN_TYPE_PASSIVE,
-    //     .scan_time = .{
-    //         .active = .{ .min = 0, .max = 0 },
-    //         .passive = 2000,
-    //     },
-    //     .home_chan_dwell_time = 0,
-    //     .channel_bitmap = .{
-    //         .ghz_2_channels = 0,
-    //         .ghz_5_channels = 0,
-    //     },
-    // };
-    // try radio.wifi.c_result(c.esp_wifi_scan_start(&scan_config, true));
-    //
-    // var no: u16 = undefined;
-    // try radio.wifi.c_result(c.esp_wifi_scan_get_ap_num(&no));
-
-    // std.log.info("found {} aps", .{no});
 }
 
 fn netif_init(netif_c: [*c]c.struct_netif) callconv(.c) c.err_t {

@@ -104,19 +104,21 @@ pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
     microzig.cpu.interrupt.set_priority(yield_interrupt, .lowest);
     microzig.cpu.interrupt.enable(yield_interrupt);
 
-    microzig.cpu.interrupt.set_type(generic_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(generic_interrupt, .lowest);
-    microzig.cpu.interrupt.map(.systimer_target0, generic_interrupt);
-    microzig.cpu.interrupt.enable(generic_interrupt);
-
     // unit0 is already enabled as it is used by `hal.time`.
     systimer_alarm.set_unit(systimer_unit);
     systimer_alarm.set_mode(.target);
     systimer_alarm.set_enabled(false);
     systimer_alarm.set_interrupt_enabled(true);
+
+    microzig.cpu.interrupt.map(.systimer_target0, generic_interrupt);
+    microzig.cpu.interrupt.set_type(generic_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(generic_interrupt, .lowest);
+    microzig.cpu.interrupt.enable(generic_interrupt);
 }
 
-pub fn idle() callconv(.c) void {
+// TODO: deinit
+
+fn idle() callconv(.c) void {
     const scheduler = maybe_instance orelse @panic("no active scheduler");
     while (true) {
         scheduler.yield(.reschedule);

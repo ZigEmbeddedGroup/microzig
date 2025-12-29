@@ -25,7 +25,7 @@ high_boundary: usize,
 fallback: ?*Alloc = null,
 
 /// A mutex used to protect access to the allocator.
-mutex: microzig.interrupt.Mutex = .{},
+// mutex: microzig.interrupt.Mutex = .{},
 
 /// Return a []u8 slice that contains the memory located between the
 /// microzig_heap_start and microzig_heap_end.  This is the RAM that
@@ -114,8 +114,10 @@ pub fn allocator(self: *Alloc) std.mem.Allocator {
 
 /// Returns the total amount of free memory in the heap.
 pub fn free_heap(self: *Alloc) usize {
-    self.mutex.lock();
-    defer self.mutex.unlock();
+    // self.mutex.lock();
+    // defer self.mutex.unlock();
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
 
     var total: usize = 0;
     for (0..free_list_count) |i| {
@@ -130,8 +132,10 @@ pub fn free_heap(self: *Alloc) usize {
 
 /// Returns the largest length that can be currently allocated.
 pub fn max_alloc_size(self: *Alloc) usize {
-    self.mutex.lock();
-    defer self.mutex.unlock();
+    // self.mutex.lock();
+    // defer self.mutex.unlock();
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
 
     var maximum: usize = 0;
     for (0..free_list_count) |i| {
@@ -164,8 +168,10 @@ const vtable: std.mem.Allocator.VTable =
 fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, pc: usize) ?[*]u8 {
     const self: *Alloc = @ptrCast(@alignCast(ptr));
 
-    self.mutex.lock();
-    defer self.mutex.unlock();
+    // self.mutex.lock();
+    // defer self.mutex.unlock();
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
 
     const needed = @max(len, @sizeOf(Chunk) - Chunk.header_size);
 
@@ -268,8 +274,10 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, pc: usize) ?[*]u8
 fn do_resize(ptr: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usize) bool {
     const self: *Alloc = @ptrCast(@alignCast(ptr));
 
-    self.mutex.lock();
-    defer self.mutex.unlock();
+    // self.mutex.lock();
+    // defer self.mutex.unlock();
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
 
     var chunk = Chunk.from_data(memory, self);
 
@@ -333,8 +341,10 @@ fn do_free(ptr: *anyopaque, memory: []u8, alignment: Alignment, pc: usize) void 
         @panic("free - address is not in range");
     }
 
-    self.mutex.lock();
-    defer self.mutex.unlock();
+    // self.mutex.lock();
+    // defer self.mutex.unlock();
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
 
     Chunk.from_data(memory, self).combine_and_free(self);
 }
