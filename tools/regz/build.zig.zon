@@ -6,7 +6,6 @@
         "README.md",
         "build.zig",
         "build.zig.zon",
-        "characterized",
         "src",
     },
     .dependencies = .{
