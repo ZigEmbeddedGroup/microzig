@@ -52,7 +52,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .patch_files = &.{
                 b.path("patches/nrf51.zon"),
-            }
+            },
         },
         .hal = hal,
     };
