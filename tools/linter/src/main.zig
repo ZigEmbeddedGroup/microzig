@@ -66,8 +66,18 @@ pub fn main() !void {
                 .aligned_var_decl,
                 .simple_var_decl,
                 => {
-                    // TODO: check types for common abbreviations and ensure they follow coding style.
-
+                    const identifier_tok = find_first_token_tag(ast, .identifier, main_tok_idx);
+                    const identifier_str = ast.tokenSlice(identifier_tok);
+                    const location = ast.tokenLocation(0, identifier_tok);
+                    if (try should_transform_typename(allocator, identifier_str)) |typename| {
+                        try issues.append(allocator, .{
+                            .line = @intCast(location.line + 1),
+                            .message = try std.fmt.allocPrint(allocator, "Suggestion: Rename `{s}` to `{s}`, " ++
+                                "it _should_ be more in line with our [style guidelines](https://microzig.tech/docs/contributing/). " ++
+                                "This automation is not perfect so take it with a grain of salt.", .{ identifier_str, typename }),
+                            .file = path,
+                        });
+                    }
                 },
                 else => {},
             }
@@ -81,6 +91,418 @@ pub fn main() !void {
 
     try std.json.Stringify.value(issues.items, .{}, writer);
     try writer.flush();
+}
+
+const TypenameComponentTag = enum {
+    underscore,
+    uppercase,
+    capitalcase,
+    lowercase,
+};
+
+const TypenameComponent = union(TypenameComponentTag) {
+    underscore,
+    uppercase: []const u8,
+    capitalcase: []const u8,
+    lowercase: []const u8,
+};
+
+fn typename_components_to_string(gpa: Allocator, components: []const TypenameComponent) ![]const u8 {
+    var allocating: std.Io.Writer.Allocating = .init(gpa);
+    defer allocating.deinit();
+
+    const writer = &allocating.writer;
+    for (components) |component| switch (component) {
+        .underscore => try writer.writeByte('_'),
+        .uppercase => |uppercase| for (uppercase) |c| try writer.writeByte(std.ascii.toUpper(c)),
+        .lowercase => |lowercase| for (lowercase) |c| try writer.writeByte(std.ascii.toLower(c)),
+        .capitalcase => |capitalcase| for (capitalcase, 0..) |c, i| {
+            if (i == 0) {
+                try writer.writeByte(std.ascii.toUpper(c));
+            } else {
+                try writer.writeByte(std.ascii.toLower(c));
+            }
+        },
+    };
+
+    return allocating.toOwnedSlice();
+}
+
+test "to_string.single" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const gpa = arena.allocator();
+
+    const underscore = try typename_components_to_string(gpa, &.{.underscore});
+    const uppercase = try typename_components_to_string(gpa, &.{.{ .uppercase = "arst" }});
+    const lowercase = try typename_components_to_string(gpa, &.{.{ .lowercase = "ARST" }});
+    const capitalcase = try typename_components_to_string(gpa, &.{.{ .capitalcase = "ARST" }});
+
+    try std.testing.expectEqualStrings("_", underscore);
+    try std.testing.expectEqualStrings("ARST", uppercase);
+    try std.testing.expectEqualStrings("arst", lowercase);
+    try std.testing.expectEqualStrings("Arst", capitalcase);
+}
+
+test "to_string.mixed" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const gpa = arena.allocator();
+
+    const a = try typename_components_to_string(gpa, &.{
+        .{ .uppercase = "gpio" },
+        .underscore,
+        .{ .capitalcase = "mapper" },
+    });
+
+    const b = try typename_components_to_string(gpa, &.{
+        .{ .capitalcase = "spi" },
+        .{ .capitalcase = "bus" },
+    });
+
+    const c = try typename_components_to_string(gpa, &.{
+        .{ .capitalcase = "spi" },
+        .underscore,
+        .{ .capitalcase = "bus" },
+    });
+
+    const d = try typename_components_to_string(gpa, &.{
+        .{ .uppercase = "spi" },
+        .{ .capitalcase = "bus" },
+    });
+
+    try std.testing.expectEqualStrings("GPIO_Mapper", a);
+    try std.testing.expectEqualStrings("SpiBus", b);
+    try std.testing.expectEqualStrings("Spi_Bus", c);
+    try std.testing.expectEqualStrings("SPIBus", d);
+}
+
+const ParsingState = enum {
+    start,
+    end,
+    capitalcase,
+    lowercase,
+    uppercase,
+};
+
+fn has_lower(str: []const u8) bool {
+    for (str) |c| {
+        if (std.ascii.isLower(c))
+            return true;
+    }
+
+    return false;
+}
+
+fn from_string(gpa: Allocator, typename: []const u8) ![]const TypenameComponent {
+    var components: std.ArrayList(TypenameComponent) = .{};
+    defer components.deinit(gpa);
+
+    var buf: []const u8 = &.{};
+    var i: usize = 0;
+    state: switch (ParsingState.start) {
+        .start => {
+            if (i >= typename.len)
+                continue :state .end;
+
+            const c = typename[i];
+            buf = typename[i .. i + 1];
+            i += 1;
+
+            continue :state switch (c) {
+                '_' => blk: {
+                    try components.append(gpa, .underscore);
+                    break :blk .start;
+                },
+                'A'...'Z' => .capitalcase,
+                else => .lowercase,
+            };
+        },
+        .uppercase => {
+            if (i >= typename.len) {
+                try components.append(gpa, .{ .uppercase = buf });
+                continue :state .end;
+            }
+
+            const c = typename[i];
+            continue :state switch (c) {
+                'a'...'z' => blk: {
+                    buf.len -= 1;
+                    i -= 1;
+                    try components.append(gpa, .{ .uppercase = buf });
+                    break :blk .start;
+                },
+                '_' => blk: {
+                    try components.append(gpa, .{ .uppercase = buf });
+                    break :blk .start;
+                },
+                else => blk: {
+                    buf.len += 1;
+                    i += 1;
+
+                    break :blk .uppercase;
+                },
+            };
+        },
+        .capitalcase => {
+            if (i >= typename.len) {
+                try components.append(gpa, .{ .capitalcase = buf });
+                continue :state .end;
+            }
+
+            const c = typename[i];
+            continue :state switch (c) {
+                'A'...'Z' => if (!has_lower(buf))
+                    .uppercase
+                else blk: {
+                    try components.append(gpa, .{ .capitalcase = buf });
+                    break :blk .start;
+                },
+                '_' => blk: {
+                    try components.append(gpa, .{ .capitalcase = buf });
+                    break :blk .start;
+                },
+                else => blk: {
+                    buf.len += 1;
+                    i += 1;
+
+                    break :blk .capitalcase;
+                },
+            };
+        },
+        .lowercase => {
+            if (i >= typename.len) {
+                try components.append(gpa, .{ .lowercase = buf });
+                continue :state .end;
+            }
+
+            const c = typename[i];
+            continue :state switch (c) {
+                '_', 'A'...'Z' => blk: {
+                    try components.append(gpa, .{ .lowercase = buf });
+                    break :blk .start;
+                },
+                else => blk: {
+                    buf.len += 1;
+                    i += 1;
+
+                    break :blk .lowercase;
+                },
+            };
+        },
+        .end => {},
+    }
+
+    return components.toOwnedSlice(gpa);
+}
+
+fn should_transform_typename(gpa: Allocator, typename: []const u8) !?[]const u8 {
+    if (!is_capital_case(typename))
+        return null;
+
+    if (std.mem.eql(u8, typename, "VTable"))
+        return null;
+
+    const components = try from_string(gpa, typename);
+    defer gpa.free(components);
+
+    // special cases
+    if (components.len > 1) {
+        switch (components[components.len - 1]) {
+            .uppercase => |str| if (std.mem.eql(u8, str, "ID")) return null,
+            else => {},
+        }
+    }
+
+    var new_components: std.ArrayList(TypenameComponent) = .{};
+    defer new_components.deinit(gpa);
+
+    for (components) |component| switch (component) {
+        .underscore, .uppercase => try new_components.append(gpa, component),
+        .lowercase => |str| try new_components.append(gpa, .{
+            .capitalcase = str,
+        }),
+        .capitalcase => |str| if (is_known_abbrev(str)) {
+            try new_components.append(gpa, .{ .uppercase = str });
+        } else {
+            try new_components.append(gpa, component);
+        },
+    };
+
+    var i: usize = 1;
+    while (i < new_components.items.len) : (i += 1) {
+        // Upper case components should have underscores between them and others
+        if ((new_components.items[i] == .uppercase and new_components.items[i - 1] != .underscore) or
+            (new_components.items[i] != .underscore and new_components.items[i - 1] == .uppercase))
+        {
+            try new_components.insert(gpa, i, .underscore);
+            i += 1;
+        }
+
+        if (i > 1 and new_components.items[i] != .uppercase and
+            new_components.items[i - 1] == .underscore and new_components.items[i - 2] != .uppercase)
+        {
+            _ = new_components.orderedRemove(i - 1);
+            i -= 1;
+        }
+    }
+
+    const new_typename = try typename_components_to_string(gpa, new_components.items);
+    return if (std.mem.eql(u8, typename, new_typename)) blk: {
+        gpa.free(new_typename);
+        break :blk null;
+    } else new_typename;
+}
+
+fn is_known_abbrev(str: []const u8) bool {
+    outer: for (known_abbrevs) |known_abbrev| {
+        if (str.len != known_abbrev.len)
+            continue;
+
+        for (str, known_abbrev) |c, a| {
+            if (std.ascii.toUpper(c) != std.ascii.toUpper(a))
+                continue :outer;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+const known_abbrevs: []const []const u8 = &.{
+    "GPIO",
+    "SPI",
+    "I2C",
+    "UART",
+    "USART",
+    "USARTE",
+    "RAM",
+    "PSRAM",
+    "DRAM",
+    "CYW43",
+    "DB",
+    "ELF",
+    "IO",
+    "SQL",
+    "RCC",
+    "DMA",
+    "WP",
+    "SWD",
+    "CDC",
+    "HID",
+    "SSID",
+    "SAE",
+    "BSS",
+    "SDP",
+    "CLM",
+    "IRQ",
+    "LCD",
+    "ADC",
+    "EP",
+    "USB",
+    "IR",
+    "PIO",
+    "FS",
+    "ISR",
+    "CLI",
+    "I2S",
+    "CPU",
+    "HAL",
+};
+
+test "from_string" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const gpa = arena.allocator();
+
+    const a = try from_string(gpa, "GpioMapper");
+    try std.testing.expectEqual(2, a.len);
+
+    try std.testing.expect(a[0] == .capitalcase);
+    try std.testing.expectEqualStrings("Gpio", a[0].capitalcase);
+    try std.testing.expect(a[1] == .capitalcase);
+    try std.testing.expectEqualStrings("Mapper", a[1].capitalcase);
+
+    const b = try from_string(gpa, "GPIOMapper");
+    try std.testing.expectEqual(2, b.len);
+
+    try std.testing.expect(b[0] == .uppercase);
+    try std.testing.expectEqualStrings("GPIO", b[0].uppercase);
+    try std.testing.expect(b[1] == .capitalcase);
+    try std.testing.expectEqualStrings("Mapper", b[1].capitalcase);
+
+    const c = try from_string(gpa, "Device_Index");
+    try std.testing.expectEqual(3, c.len);
+
+    try std.testing.expect(c[0] == .capitalcase);
+    try std.testing.expectEqualStrings("Device", c[0].capitalcase);
+    try std.testing.expect(c[1] == .underscore);
+    try std.testing.expect(c[2] == .capitalcase);
+    try std.testing.expectEqualStrings("Index", c[2].capitalcase);
+}
+
+test "should_transform" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const gpa = arena.allocator();
+
+    const a = try should_transform_typename(gpa, "arst");
+    try std.testing.expectEqual(null, a);
+
+    const b = try should_transform_typename(gpa, "Arst");
+    try std.testing.expectEqual(null, b);
+
+    const c = try should_transform_typename(gpa, "ARST");
+    try std.testing.expectEqual(null, c);
+
+    const d = try should_transform_typename(gpa, "GpioMapper");
+    try std.testing.expect(d != null);
+    try std.testing.expectEqualStrings("GPIO_Mapper", d.?);
+
+    const e = try should_transform_typename(gpa, "GPIOMapper");
+    try std.testing.expect(e != null);
+    try std.testing.expectEqualStrings("GPIO_Mapper", e.?);
+
+    const f = try should_transform_typename(gpa, "Device_Index");
+    try std.testing.expect(f != null);
+    try std.testing.expectEqualStrings("DeviceIndex", f.?);
+
+    const g = try should_transform_typename(gpa, "I2cBus");
+    try std.testing.expect(g != null);
+    try std.testing.expectEqualStrings("I2C_Bus", g.?);
+
+    const h = try should_transform_typename(gpa, "I2C_Device");
+    try std.testing.expectEqual(null, h);
+
+    const i = try should_transform_typename(gpa, "VTable");
+    try std.testing.expectEqual(null, i);
+
+    const j = try should_transform_typename(gpa, "DeviceID");
+    try std.testing.expectEqual(null, j);
+}
+
+// I'm defining capital case as something that starts with an upper case letter, and has lower case somewhere in it.
+fn is_capital_case(str: []const u8) bool {
+    if (str.len == 0)
+        return false;
+
+    if (!std.ascii.isAlphabetic(str[0]))
+        return false;
+
+    if (std.ascii.isLower(str[0]))
+        return false;
+
+    for (str[1..]) |c| {
+        if (std.ascii.isLower(c))
+            return true;
+    }
+
+    return false;
 }
 
 fn find_first_token_tag(ast: std.zig.Ast, tag: Token.Tag, start_idx: TokenIndex) TokenIndex {
