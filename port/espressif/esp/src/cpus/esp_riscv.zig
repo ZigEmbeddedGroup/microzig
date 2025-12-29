@@ -537,26 +537,39 @@ fn _handle_interrupt(
     trap_frame: *TrapFrame,
     handler: *const fn (*TrapFrame) callconv(.c) void,
 ) linksection(".ram_text") callconv(.c) void {
-    const prev_priority = interrupt.get_priority_threshold();
-
     const mcause = csr.mcause.read();
+
     if (mcause.is_interrupt != 0) {
-        // this is an interrupt (can also be exception in which case we don't enable interrupts).
+        // interrupt
 
         const int: Interrupt = @enumFromInt(mcause.code);
         const priority = interrupt.get_priority(int);
 
+        // low priority interrupts can be preempted by higher priority interrupts
         if (@intFromEnum(priority) < 15) {
-            // allow higher priority interrupts to preempt this one
+            const mepc = csr.mepc.read_raw();
+            const mstatus = csr.mstatus.read_raw();
+
+            const prev_thresh = interrupt.get_priority_threshold();
             interrupt.set_priority_threshold(@enumFromInt(@intFromEnum(priority) + 1));
+
             interrupt.enable_interrupts();
+
+            handler(trap_frame);
+
+            interrupt.disable_interrupts();
+
+            interrupt.set_priority_threshold(prev_thresh);
+
+            csr.mepc.write_raw(mepc);
+            csr.mstatus.write_raw(mstatus);
+        } else {
+            handler(trap_frame);
         }
+    } else {
+        // exception
+        handler(trap_frame);
     }
-
-    handler(trap_frame);
-
-    interrupt.disable_interrupts();
-    interrupt.set_priority_threshold(prev_priority);
 }
 
 pub const csr = struct {

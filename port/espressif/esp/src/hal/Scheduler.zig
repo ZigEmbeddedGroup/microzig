@@ -26,6 +26,11 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // TODO: for other esp32 chips support SMP
 // TODO: use @stackUpperBound when implemented
 
+comptime {
+    if (microzig.options.cpu.interrupt_stack_size == null)
+        @compileError("Please enable interrupt stacks to use the scheduler");
+}
+
 const STACK_ALIGN: std.mem.Alignment = .@"16";
 const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 31 * @sizeOf(usize));
 const IDLE_STACK_SIZE = 512 + EXTRA_STACK_SIZE;
@@ -69,11 +74,6 @@ pub const Priority = enum(u8) {
 };
 
 pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
-    comptime {
-        if (microzig.options.cpu.interrupt_stack_size == null)
-            @compileError("Please enable interrupt stacks to use the scheduler");
-    }
-
     assert(maybe_instance == null);
 
     scheduler.* = .{
@@ -509,15 +509,12 @@ pub fn generic_interrupt_handler(_: *TrapFrame) callconv(.c) void {
             .systimer_target0 => {
                 systimer_alarm.clear_interrupt();
 
-                const cs = enter_critical_section();
-                defer cs.leave();
-
                 while (scheduler.timer_queue.first) |node| {
                     const task: *Task = @alignCast(@fieldParentPtr("node", node));
                     if (!task.state.alarm_set.is_reached()) {
                         break;
                     }
-                    scheduler.make_task_ready_from_cs(task, cs);
+                    scheduler.make_task_ready(task);
                 }
 
                 if (scheduler.timer_queue.first) |node| {
