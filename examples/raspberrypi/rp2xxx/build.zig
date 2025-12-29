@@ -85,6 +85,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },
         .{ .name = "net-dhcp", .file = "src/net/dhcp.zig" },
+        .{ .name = "net-udp", .file = "src/net/udp.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);

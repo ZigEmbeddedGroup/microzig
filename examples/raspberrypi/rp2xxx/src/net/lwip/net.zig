@@ -169,29 +169,71 @@ pub fn log_stats(self: *Self) void {
     }
 }
 
-pub const Udp = struct {
+pub const UdpReceiver = struct {
+    const Callback = *const fn (*UdpReceiver, []const u8, Target) void;
+
     pcb: c.udp_pcb = .{},
-    addr: c.ip_addr_t = .{},
-    port: u16 = 0,
+    callback: Callback = undefined,
+};
 
-    fn init(udp: *Udp, net: *Self, target: []const u8, port: u16) !void {
-        if (c.ipaddr_aton(target.ptr, &udp.addr) != 1) return error.IpAddrParse;
-        c.udp_bind_netif(&udp.pcb, &net.netif);
-        udp.port = port;
-        udp.pcb.ttl = 64;
-    }
+pub fn udp_bind(
+    self: *Self,
+    receiver: *UdpReceiver,
+    port: u16,
+    callback: UdpReceiver.Callback,
+) !void {
+    receiver.callback = callback;
+    c.udp_bind_netif(&receiver.pcb, &self.netif);
+    try c_err(c.udp_bind(&receiver.pcb, c.IP_ADDR_ANY, port));
+    c.udp_recv(&receiver.pcb, udp_recv_callback, receiver);
+}
 
-    pub fn send(udp: *Udp, data: []const u8) !void {
+fn udp_recv_callback(
+    ptr: ?*anyopaque,
+    pcb_c: [*c]c.udp_pcb,
+    pbuf_c: [*c]c.pbuf,
+    addr_c: [*c]const c.ip_addr,
+    port: u16,
+) callconv(.c) void {
+    _ = pcb_c;
+    const pbuf: *c.pbuf = pbuf_c;
+    const addr: c.ip_addr = addr_c[0];
+    const receiver: *UdpReceiver = @ptrCast(@alignCast(ptr.?));
+    receiver.callback(receiver, payload_bytes(pbuf), .{ .addr = addr, .port = port });
+}
+
+pub const UdpSender = struct {
+    pcb: c.udp_pcb = .{},
+
+    pub fn send(udp: *UdpSender, data: []const u8, target: Target) !void {
         const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
         defer _ = c.pbuf_free(pbuf);
         try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
-        try c_err(c.udp_sendto(&udp.pcb, pbuf, &udp.addr, udp.port));
+        try c_err(c.udp_sendto(&udp.pcb, pbuf, &target.addr, target.port));
     }
 };
 
-pub fn udp_init(self: *Self, udp: *Udp, target: []const u8, port: u16) !void {
-    try udp.init(self, target, port);
+pub fn udp_connect(self: *Self, udp: *UdpSender) !void {
+    c.udp_bind_netif(&udp.pcb, &self.netif);
+    udp.pcb.ttl = 64;
 }
+
+pub const Target = struct {
+    addr: c.ip_addr = .{},
+    port: u16 = 0,
+
+    pub fn format(self: Target, writer: anytype) !void {
+        try writer.writeAll(std.mem.sliceTo(c.ip4addr_ntoa(@as(*const c.ip4_addr_t, @ptrCast(&self.addr))), 0));
+        var buf: [16]u8 = undefined;
+        try writer.writeAll(std.fmt.bufPrint(&buf, ":{}", .{self.port}) catch "");
+    }
+
+    pub fn parse(ip: []const u8, port: u16) !Target {
+        var target: Target = .{ .port = port };
+        if (c.ipaddr_aton(ip.ptr, &target.addr) != 1) return error.IpAddrParse;
+        return target;
+    }
+};
 
 const Error = error{
     /// Out of memory error.
