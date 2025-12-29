@@ -50,7 +50,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .flash, .offset = 0x00000000, .length = 128 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 16 * 1024, .access = .rwx },
             },
-            .patches = @import("patches/nrf51.zig").patches,
+            .patch_files = &.{
+                b.path("patches/nrf51.zon"),
+            }
         },
         .hal = hal,
     };
@@ -74,7 +76,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .flash, .offset = 0x00000000, .length = 0x80000, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 0x10000, .access = .rwx },
             },
-            .patches = @import("patches/nrf528xx.zig").patches,
+            .patch_files = &.{
+                b.path("patches/nrf528xx.zon"),
+            },
         },
         .hal = hal,
     };
@@ -98,7 +102,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .flash, .offset = 0x00000000, .length = 512 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 128 * 1024, .access = .rwx },
             },
-            .patches = @import("patches/nrf528xx.zig").patches,
+            .patch_files = &.{
+                b.path("patches/nrf528xx.zon"),
+            },
         },
         .hal = hal,
     };
@@ -129,7 +135,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 // CODE_RAM
                 .{ .name = "code_ram", .offset = 0x800000, .length = 0x40000, .access = .x },
             },
-            .patches = @import("patches/nrf528xx.zig").patches,
+            .patch_files = &.{
+                b.path("patches/nrf528xx.zon"),
+            },
         },
         .hal = hal,
     };

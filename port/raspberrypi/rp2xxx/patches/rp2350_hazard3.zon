@@ -1,0 +1,3 @@
+.{
+    .{ .override_arch = .{ .device_name = "RP2350", .arch = .hazard3 } },
+}

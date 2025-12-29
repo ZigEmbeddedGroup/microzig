@@ -1,13 +1,11 @@
-const Patch = @import("microzig/build-internals").Patch;
-
-pub const patches: []const Patch = &.{
+.{
     .{
         .add_enum = .{
             .parent = "types.peripherals.PADS_BANK0",
             .@"enum" = .{
                 .name = "DriveStrength",
                 .bitsize = 2,
-                .fields = &.{
+                .fields = .{
                     .{ .value = 0x0, .name = "2mA" },
                     .{ .value = 0x1, .name = "4mA" },
                     .{ .value = 0x2, .name = "8mA" },
@@ -69,7 +67,7 @@ pub const patches: []const Patch = &.{
         .@"enum" = .{
             .name = "EndpointType",
             .bitsize = 2,
-            .fields = &.{
+            .fields = .{
                 .{ .value = 0x0, .name = "control" },
                 .{ .value = 0x1, .name = "isochronous" },
                 .{ .value = 0x2, .name = "bulk" },
@@ -113,7 +111,7 @@ pub const patches: []const Patch = &.{
             .@"enum" = .{
                 .name = "DataSize",
                 .bitsize = 2,
-                .fields = &.{
+                .fields = .{
                     .{ .value = 0x0, .name = "size_8" },
                     .{ .value = 0x1, .name = "size_16" },
                     .{ .value = 0x2, .name = "size_32" },
@@ -143,7 +141,7 @@ pub const patches: []const Patch = &.{
             .@"enum" = .{
                 .name = "Dreq",
                 .bitsize = 6,
-                .fields = &.{
+                .fields = .{
                     .{ .value = 0, .name = "pio0_tx0" },
                     .{ .value = 1, .name = "pio0_tx1" },
                     .{ .value = 2, .name = "pio0_tx2" },
@@ -269,4 +267,4 @@ pub const patches: []const Patch = &.{
         .name = "SPAREIRQ_IRQ_5",
         .description = "Spare interrupt 5 (triggered only by software)",
     } },
-};
+}

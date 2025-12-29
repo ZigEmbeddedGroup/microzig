@@ -90,13 +90,19 @@ pub const Target = struct {
 
     /// Creates a new target from an existing one.
     pub fn derive(from: *const Target, options: DeriveOptions) *Target {
+        const allocator = from.dep.builder.allocator;
+        const chip = if (options.chip) |chip|
+            chip.copy(allocator)
+        else
+            from.chip.copy(allocator);
+
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
         ret.* = .{
             .dep = from.dep,
             .preferred_binary_format = options.preferred_binary_format orelse from.preferred_binary_format,
             .zig_target = options.zig_target orelse from.zig_target,
             .cpu = options.cpu orelse from.cpu,
-            .chip = options.chip orelse from.chip,
+            .chip = chip,
             .single_threaded = options.single_threaded orelse from.single_threaded,
             .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
             .ram_image = options.ram_image orelse from.ram_image,
@@ -150,7 +156,18 @@ pub const Chip = struct {
     memory_regions: []const MemoryRegion,
 
     /// Register patches for this chip.
-    patches: []const Patch = &.{},
+    patch_files: []const LazyPath = &.{},
+
+    fn copy(from: Chip, gpa: std.mem.Allocator) Chip {
+        const patch_files_copy = gpa.dupe(LazyPath, from.patch_files) catch @panic("OOM");
+        return Chip{
+            .name = from.name,
+            .url = from.url,
+            .register_definition = from.register_definition,
+            .memory_regions = from.memory_regions,
+            .patch_files = patch_files_copy,
+        };
+    }
 };
 
 /// Defines a hardware abstraction layer.
