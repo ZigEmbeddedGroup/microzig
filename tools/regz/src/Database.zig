@@ -609,7 +609,7 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     return db;
 }
 
-pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) !*Database {
+pub fn create_from_path(io: std.Io, allocator: Allocator, format: Format, path: []const u8) !*Database {
     return switch (format) {
         .embassy => blk: {
             var db = try Database.create(allocator);
@@ -618,11 +618,11 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) 
                 db.destroy();
             }
 
-            try embassy.load_into_db(db, path);
+            try embassy.load_into_db(io, db, path);
             break :blk db;
         },
         .svd, .atdf => blk: {
-            const text = try std.fs.cwd().readFileAlloc(allocator, path, file_size_max);
+            const text = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(file_size_max));
             defer allocator.free(text);
 
             break :blk create_from_xml(allocator, format, text);

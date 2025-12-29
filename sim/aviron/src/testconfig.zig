@@ -89,9 +89,9 @@ pub const TestSuiteConfig = struct {
         }) catch @panic("oom");
     }
 
-    pub fn load(allocator: std.mem.Allocator, file: std.fs.File) !TestSuiteConfig {
+    pub fn load(io: std.Io, allocator: std.mem.Allocator, file: std.Io.File) !TestSuiteConfig {
         var buf: [4096]u8 = undefined;
-        var file_reader = file.reader(&buf);
+        var file_reader = file.reader(io, &buf);
         var json_reader = std.json.Reader.init(allocator, &file_reader.interface);
 
         return try std.json.parseFromTokenSourceLeaky(TestSuiteConfig, allocator, &json_reader, .{

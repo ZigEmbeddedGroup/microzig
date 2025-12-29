@@ -123,6 +123,7 @@ fn add_test_suite(
     args_module: *Build.Module,
     aviron_module: *Build.Module,
 ) !void {
+    const io = b.graph.io;
     const unit_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
@@ -161,13 +162,13 @@ fn add_test_suite(
     // Scan the testsuite directory for files. Based on the extension, either load or compile them.
     // Files in testsuite.avr-gcc will be compiled with avr-gcc and have the output copied to
     // this directory.
-    var walkdir = try b.build_root.handle.openDir("testsuite", .{ .iterate = true });
-    defer walkdir.close();
+    var walkdir = try b.build_root.handle.openDir(io, "testsuite", .{ .iterate = true });
+    defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
@@ -217,8 +218,8 @@ fn add_test_suite(
             .ignore => continue,
 
             .compile => blk: {
-                var file = try entry.dir.openFile(entry.basename, .{});
-                defer file.close();
+                var file = try entry.dir.openFile(io, entry.basename, .{});
+                defer file.close(io);
 
                 const config = try parse_test_suite_config(b, file);
 
@@ -254,7 +255,7 @@ fn add_test_suite(
                     }),
                     .use_llvm = true,
                 });
-                test_payload.want_lto = false; // AVR has no LTO support!
+                test_payload.lto = .none; // AVR has no LTO support!
                 test_payload.verbose_link = true;
                 test_payload.verbose_cc = true;
                 test_payload.bundle_compiler_rt = false;
@@ -262,16 +263,16 @@ fn add_test_suite(
                 test_payload.setLinkerScript(b.path("linker.ld"));
 
                 if (is_c_test or is_asm_test) {
-                    test_payload.addIncludePath(b.path("testsuite"));
+                    test_payload.root_module.addIncludePath(b.path("testsuite"));
                 }
                 if (is_c_test) {
-                    test_payload.addCSourceFile(.{
+                    test_payload.root_module.addCSourceFile(.{
                         .file = source_file,
                         .flags = &.{},
                     });
                 }
                 if (is_asm_test) {
-                    test_payload.addAssemblyFile(source_file);
+                    test_payload.root_module.addAssemblyFile(source_file);
                 }
                 if (is_zig_test) {
                     test_payload.root_module.addAnonymousImport("testsuite", .{
@@ -294,9 +295,9 @@ fn add_test_suite(
             },
             .load => blk: {
                 const config_path = b.fmt("{s}.json", .{entry.basename});
-                const config = if (entry.dir.openFile(config_path, .{})) |file| cfg: {
-                    defer file.close();
-                    break :cfg try TestSuiteConfig.load(b.allocator, file);
+                const config = if (entry.dir.openFile(io, config_path, .{})) |file| cfg: {
+                    defer file.close(io);
+                    break :cfg try TestSuiteConfig.load(io, b.allocator, file);
                 } else |_| {
                     // If JSON file doesn't exist, skip this test (likely during testsuite update)
                     std.log.warn("Skipping test {s} - JSON config file {s} not found (run 'zig build update-testsuite' first)", .{ entry.path, config_path });
@@ -336,6 +337,7 @@ fn add_test_suite_update(
     b: *Build,
     invoke_step: *Build.Step,
 ) !void {
+    const io = b.graph.io;
     const avr_gcc = if (b.findProgram(&.{"avr-gcc"}, &.{})) |path| LazyPath{
         .cwd_relative = path,
     } else |_| b.addExecutable(.{
@@ -347,13 +349,13 @@ fn add_test_suite_update(
         .use_llvm = true,
     }).getEmittedBin();
 
-    var walkdir = try b.build_root.handle.openDir("testsuite.avr-gcc", .{ .iterate = true });
-    defer walkdir.close();
+    var walkdir = try b.build_root.handle.openDir(io, "testsuite.avr-gcc", .{ .iterate = true });
+    defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
@@ -389,8 +391,8 @@ fn add_test_suite_update(
             .ignore => continue,
 
             .compile => {
-                var file = try entry.dir.openFile(entry.basename, .{});
-                defer file.close();
+                var file = try entry.dir.openFile(io, entry.basename, .{});
+                defer file.close(io);
 
                 const config = try parse_test_suite_config(b, file);
 
@@ -447,12 +449,13 @@ fn add_test_suite_update(
     }
 }
 
-fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
+fn parse_test_suite_config(b: *Build, file: std.Io.File) !TestSuiteConfig {
+    const io = b.graph.io;
     var code = std.array_list.Managed(u8).init(b.allocator);
     defer code.deinit();
 
     var read_buf: [4096]u8 = undefined;
-    var file_reader = file.reader(&read_buf);
+    var file_reader = file.reader(io, &read_buf);
     const reader = &file_reader.interface;
 
     while (true) {
