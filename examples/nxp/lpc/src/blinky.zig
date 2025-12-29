@@ -35,7 +35,7 @@ pub fn main() !void {
         for (led_mask) |mask| {
             p1.pin_clr = (all_mask & ~mask);
             p1.pin_set = mask;
-            microzig.core.experimental.debug.busy_sleep(100_000);
+            busy_sleep(100_000);
         }
     }
 }
@@ -54,3 +54,19 @@ const PatchedGpio = extern struct {
         std.debug.assert(@sizeOf(PatchedGpio) == 0x20);
     }
 };
+
+pub fn busy_sleep(comptime limit: comptime_int) void {
+    if (limit <= 0) @compileError("limit must be non-negative!");
+
+    comptime var bits = 0;
+    inline while ((1 << bits) <= limit) {
+        bits += 1;
+    }
+
+    const I = std.meta.Int(.unsigned, bits);
+
+    var i: I = 0;
+    while (i < limit) : (i += 1) {
+        @import("std").mem.doNotOptimizeAway(i);
+    }
+}

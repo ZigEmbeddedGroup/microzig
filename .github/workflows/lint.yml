@@ -359,6 +359,7 @@ jobs:
               reviewComments.push({
                 path: issue.file,
                 line: issue.line,
+                side: 'RIGHT',
                 body: issue.message
               });
             }

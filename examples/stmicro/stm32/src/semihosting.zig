@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const semihosting = microzig.core.experimental.ARM_semihosting;
+const semihosting = microzig.core.arm_semihosting;
 
 pub fn main() void {
     const path = "";
