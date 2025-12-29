@@ -226,6 +226,151 @@ pub const Udp = struct {
     }
 };
 
+pub const Tcp = struct {
+    const OnState = *const fn (*Tcp) void;
+    const OnRecv = *const fn (*Tcp, []u8) void;
+    const OnSent = *const fn (*Tcp, u16) void;
+
+    const State = enum {
+        closed,
+        connecting,
+        open,
+    };
+
+    net: *Net,
+    pcb: ?*c.tcp_pcb = null,
+    on_state: OnState,
+    on_sent: OnSent,
+    on_recv: OnRecv,
+    target: Endpoint = .{},
+    state: State = .closed,
+    err: ?Error = null,
+
+    pub fn init(
+        net: *Net,
+        on_recv: OnRecv,
+        on_sent: OnSent,
+        on_state: OnState,
+    ) Tcp {
+        return .{
+            .net = net,
+            .on_sent = on_sent,
+            .on_recv = on_recv,
+            .on_state = on_state,
+        };
+    }
+
+    pub fn connect(self: *Tcp, target: Endpoint) !void {
+        self.target = target;
+        try self.reconnect();
+    }
+
+    fn reconnect(self: *Tcp) !void {
+        assert(self.state == .closed);
+
+        const pcb: *c.tcp_pcb = c.tcp_new() orelse return error.OutOfMemory;
+        self.pcb = pcb;
+        c.tcp_bind_netif(pcb, &self.net.netif);
+        c.tcp_arg(pcb, self);
+        c.tcp_recv(pcb, c_on_recv);
+        c.tcp_sent(pcb, c_on_sent);
+        c.tcp_err(pcb, c_on_err);
+
+        const res = c.tcp_connect(pcb, &self.target.addr, self.target.port, Tcp.c_on_connect);
+        if (res != c.ERR_OK) {
+            _ = c.tcp_close(pcb);
+        } else {
+            self.state = .connecting;
+        }
+        return c_err(res);
+    }
+
+    fn c_on_err(ptr: ?*anyopaque, ce: c.err_t) callconv(.c) void {
+        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
+        // log.err("c_on_err  code: {} {any}", .{ ce, to_error(ce) });
+        const err = to_error(ce) orelse return;
+        self.err = err;
+        if (self.state == .connecting) {
+            self.state = .closed;
+            self.on_state(self);
+            return;
+        }
+        switch (err) {
+            error.ConnectionAborted,
+            error.ConnectionReset,
+            error.ConnectionClosed,
+            => {
+                if (self.state != .closed) {
+                    self.state = .closed;
+                    self.on_state(self);
+                }
+                return;
+            },
+            else => {},
+        }
+    }
+
+    fn c_on_connect(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, ce: c.err_t) callconv(.c) c.err_t {
+        if (ce != c.ERR_OK) return ce; // it is always 0
+        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
+        self.state = .open;
+        self.on_state(self);
+        return c.ERR_OK;
+    }
+
+    fn c_on_recv(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, c_pbuf: [*c]c.pbuf, ce: c.err_t) callconv(.c) c.err_t {
+        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
+        if (to_error(ce)) |err| {
+            self.err = err;
+            return c.ERR_OK;
+        }
+        if (c_pbuf == null) {
+            // clean close
+            self.on_recv(self, &.{});
+            return c.ERR_OK;
+        }
+        const pbuf: *c.pbuf = c_pbuf;
+        defer _ = c.pbuf_free(pbuf);
+        // TODO loop on pbuf.next
+        self.on_recv(self, payload_bytes(pbuf));
+        return c.ERR_OK;
+    }
+
+    fn c_on_sent(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, n: u16) callconv(.c) c.err_t {
+        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
+        self.on_sent(self, n);
+        return c.ERR_OK;
+    }
+
+    pub fn send(self: *Tcp, bytes: []const u8) !void {
+        // TODO: chunked
+        //const chunk = c.tcp_sndbuf(self.pcb);
+        // log.debug(
+        //     "tcp send chunk: {}, mss: {}, snd_buf: {}, wnd: {}, snd_queuelen: {}",
+        //     .{ chunk, c.TCP_MSS, c.TCP_SND_BUF, c.TCP_WND, c.TCP_SND_QUEUELEN },
+        // );
+
+        if (self.pcb) |pcb| {
+            try c_err(c.tcp_write(pcb, bytes.ptr, @intCast(bytes.len), c.TCP_WRITE_FLAG_COPY));
+            try c_err(c.tcp_output(pcb));
+        } else {
+            return Error.NotConnected;
+        }
+
+        //         const uint8_t *p = buf;
+        // u16_t left = len;
+
+        // while (left > 0) {
+        //     u16_t chunk = LWIP_MIN(left, tcp_sndbuf(pcb));
+        //     err = tcp_write(pcb, p, chunk, TCP_WRITE_FLAG_COPY);
+        //     if (err != ERR_OK) break;
+        //     p    += chunk;
+        //     left -= chunk;
+        // }
+        // tcp_output(pcb);
+    }
+};
+
 pub const Endpoint = struct {
     addr: c.ip_addr = .{},
     port: u16 = 0,
@@ -243,7 +388,7 @@ pub const Endpoint = struct {
     }
 };
 
-const Error = error{
+pub const Error = error{
     /// Out of memory error.
     OutOfMemory,
     /// Buffer error.
@@ -280,31 +425,32 @@ const Error = error{
     Unknown,
 };
 
+fn to_error(e: c.err_t) ?Error {
+    return switch (e) {
+        c.ERR_OK => null,
+        c.ERR_MEM => Error.OutOfMemory,
+        c.ERR_BUF => Error.BufferError,
+        c.ERR_TIMEOUT => Error.Timeout,
+        c.ERR_RTE => Error.Routing,
+        c.ERR_INPROGRESS => Error.InProgress,
+        c.ERR_VAL => Error.IllegalValue,
+        c.ERR_WOULDBLOCK => Error.WouldBlock,
+        c.ERR_USE => Error.AddressInUse,
+        c.ERR_ALREADY => Error.AlreadyConnecting,
+        c.ERR_ISCONN => Error.AlreadyConnected,
+        c.ERR_CONN => Error.NotConnected,
+        c.ERR_IF => Error.LowlevelInterfaceError,
+        c.ERR_ABRT => Error.ConnectionAborted,
+        c.ERR_RST => Error.ConnectionReset,
+        c.ERR_CLSD => Error.ConnectionClosed,
+        c.ERR_ARG => Error.IllegalArgument,
+        else => Error.Unknown,
+    };
+}
+
 fn c_err(res: anytype) Error!void {
     switch (@TypeOf(res)) {
-        c.err_t => return switch (res) {
-            c.ERR_OK => {},
-            c.ERR_MEM => Error.OutOfMemory,
-            c.ERR_BUF => Error.BufferError,
-            c.ERR_TIMEOUT => Error.Timeout,
-            c.ERR_RTE => Error.Routing,
-            c.ERR_INPROGRESS => Error.InProgress,
-            c.ERR_VAL => Error.IllegalValue,
-            c.ERR_WOULDBLOCK => Error.WouldBlock,
-            c.ERR_USE => Error.AddressInUse,
-            c.ERR_ALREADY => Error.AlreadyConnecting,
-            c.ERR_ISCONN => Error.AlreadyConnected,
-            c.ERR_CONN => Error.NotConnected,
-            c.ERR_IF => Error.LowlevelInterfaceError,
-            c.ERR_ABRT => Error.ConnectionAborted,
-            c.ERR_RST => Error.ConnectionReset,
-            c.ERR_CLSD => Error.ConnectionClosed,
-            c.ERR_ARG => Error.IllegalArgument,
-            else => {
-                log.err("error code: {}", .{res});
-                @panic("unexpected lwip error code!");
-            },
-        },
+        c.err_t => return to_error(res) orelse return,
         c.u8_t => {
             if (res != 0) {
                 return Error.Unknown;

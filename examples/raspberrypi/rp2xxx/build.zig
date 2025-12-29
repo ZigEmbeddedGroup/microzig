@@ -86,6 +86,7 @@ pub fn build(b: *std.Build) void {
         } },
         .{ .name = "net-dhcp", .file = "src/net/dhcp.zig" },
         .{ .name = "net-udp", .file = "src/net/udp.zig" },
+        .{ .name = "net-tcp", .file = "src/net/tcp.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);

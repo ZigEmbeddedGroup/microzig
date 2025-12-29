@@ -1,3 +1,6 @@
+// all available options:
+// https://github.com/lwip-tcpip/lwip/blob/STABLE-2_1_3_RELEASE/src/include/lwip/opt.h
+//
 #ifndef lwipopts_h
 #define lwipopts_h
 
