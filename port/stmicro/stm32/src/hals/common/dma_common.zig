@@ -78,7 +78,7 @@ pub const Channel = struct {
         self.reg_channel.CR.modify_one("EN", 1);
     }
 
-    pub fn stop(self: *const Self) void {
+    pub fn stop(self: *Self) void {
         self.in_progress = false;
         self.reg_channel.CR.modify_one("EN", 0);
     }
@@ -106,7 +106,7 @@ pub const Channel = struct {
         @memcpy(self.dma_buffer[0..buffer.len], buffer);
 
         self.reg_channel.NDTR.modify_one("NDT", @as(u16, @intCast(buffer.len)));
-        self.reg_channel.MAR = @intFromPtr(&self.dma_buffer);
+        self.reg_channel.MAR = @intFromPtr(self.dma_buffer.ptr);
     }
 
     /// Reads the number of remaining transfers.
