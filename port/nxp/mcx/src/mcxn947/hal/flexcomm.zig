@@ -103,6 +103,28 @@ pub const FlexComm = enum(u4) {
 		);
 	}
 
+	pub const Clock = enum(u3) {
+		none 		  = 0,
+		PLL 		  = 1,
+		FRO_12MHz 	  = 2,
+		fro_hf_div 	  = 3,
+		clk_1m 		  = 4,
+		usb_pll 	  = 5,
+		lp_oscillator = 6,
+		_ // also no clock
+	};
+	pub fn set_clock(flexcomm: FlexComm, clock: Clock, divider: u16) void {
+		assert(divider > 0 and divider <= 256);
+		const n = flexcomm.get_n();
+		chip.peripherals.SYSCON0.FLEXCOMMCLKDIV[n].write(.{
+			.DIV = @intCast(divider - 1),
+			.RESET = .RELEASED,
+			.HALT = .RUN,
+			.UNSTAB = .STABLE // read-only field
+		});
+		chip.peripherals.SYSCON0.FCCLKSEL[n].modify_one("SEL", @enumFromInt(@intFromEnum(clock)));
+	}
+
 	fn get_n(flexcomm: FlexComm) u4 {
 		return @intFromEnum(flexcomm);
 	}
@@ -193,7 +215,7 @@ pub const LPUart = enum(u4) {
 		regs.STAT.modify(stat);
 
 
-		uart.enable(config.enable_send, config.enable_receive);
+		uart.set_enabled(config.enable_send, config.enable_receive);
 
 		return uart;
 	}
@@ -226,7 +248,7 @@ pub const LPUart = enum(u4) {
 	}
 
 	/// Enables the transmitter and/or the receiver depending on the parameters.
-	pub fn enable(uart: LPUart, transmitter_enabled: bool, receiver_enabled: bool) void {
+	pub fn set_enabled(uart: LPUart, transmitter_enabled: bool, receiver_enabled: bool) void {
 		const regs = uart.get_regs();
 
 		var ctrl = regs.CTRL.read();
@@ -254,7 +276,7 @@ pub const LPUart = enum(u4) {
 		if(baudrate == 0) {
 			// both the receiver and transmitter must be disabled while changing the baudrate
 			const te, const re = uart.disable();
-			defer uart.enable(te, re);
+			defer uart.set_enabled(te, re);
             
 			var baud = regs.BAUD.read();
 			baud.SBR = 0;
@@ -286,7 +308,7 @@ pub const LPUart = enum(u4) {
 
 		// both the receiver and transmitter must be disabled while changing the baudrate
 		const te, const re = uart.disable();
-		defer uart.enable(te, re);
+		defer uart.set_enabled(te, re);
         
 		var baud = regs.BAUD.read();
 		baud.SBR = best_sbr;
