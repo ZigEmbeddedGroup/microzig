@@ -3,8 +3,8 @@ const microzig = @import("microzig");
 const systick = microzig.cpu.peripherals.systick;
 const hal = microzig.hal;
 
-var tick_per_us: u64 = 0;
-var period: u32 = 0;
+var ns_per_ticks: u64 = 0;
+var accumulated_ticks: u32 = 0;
 
 const SystickError = error{
     ClkOverflow,
@@ -13,10 +13,8 @@ const SystickError = error{
 
 const MAX_COUNTER = 0xFFFFFF;
 
-// For now we need a clock source that is less than 16Mhz so
-// the counter could hold value for an interupt every second.
-// We will choose the best clock source for that.
-// HAL should provide both value.
+// HAL should provide clock source for systick as well as ahb.
+// We will choose from the fastest clock source.
 // See: https://developer.arm.com/documentation/dui0497/a/cortex-m0-peripherals/optional-system-timer--systick/systick-control-and-status-register
 pub fn init() SystickError!void {
     if (microzig.cpu.using_ram_vector_table) {
@@ -27,27 +25,22 @@ pub fn init() SystickError!void {
         std.debug.assert(vector_table.SysTick.* == @intFromPtr(&SysTick_handler));
     }
 
-    const use_processor_clk = if (hal.get_sys_clk() > MAX_COUNTER) false else true;
+    const use_processor_clk = if (hal.get_sys_clk() > hal.get_systick_clk()) false else true;
     const sys_freq = if (use_processor_clk) hal.get_sys_clk() else hal.get_systick_clk();
 
-    if (sys_freq > MAX_COUNTER) {
-        return SystickError.ClkOverflow;
-    }
+    ns_per_ticks = 1_024_000_000 / sys_freq;
+    accumulated_ticks = 0;
 
-    tick_per_us = sys_freq / 1_000_000;
-    period = 0;
-
-    if (tick_per_us == 0) {
+    if (ns_per_ticks > 1024) {
         // We need a clock source that is at least capable of us resolution (>1Mhz)
         return SystickError.ClkUnderflow;
     }
 
     systick.LOAD.modify(.{
-        // Let's fire the handler every second.
-        .RELOAD = @as(u24, @intCast(sys_freq)),
+        .RELOAD = 0xFFFFFF,
     });
     systick.VAL.modify(.{
-        .CURRENT = @as(u24, @intCast(sys_freq)),
+        .CURRENT = 0xFFFFFF,
     });
     if (use_processor_clk) {
         systick.CTRL.modify(.{
@@ -71,23 +64,23 @@ pub fn deinit() void {
     systick.VAL.modify(.{
         .CURRENT = 0,
     });
-    tick_per_us = 0;
-    period = 0;
+    ns_per_ticks = 0;
+    accumulated_ticks = 0;
 }
 
 pub fn is_initialized() bool {
-    return tick_per_us > 0;
+    return ns_per_ticks > 0;
 }
 
 // Low level function to build clock device from it.
 pub fn get_time_since_boot() u64 {
     const reload = systick.LOAD.read().RELOAD;
-    const ticks = reload - systick.VAL.read().CURRENT;
-    const p = microzig.cpu.atomic.load(u32, &period, .acquire);
-    const us = (@as(u64, p) * 1_000_000) + @as(u64, ticks / tick_per_us);
-    return us;
+    const ticks = @as(u64, @intCast(reload - systick.VAL.read().CURRENT));
+    const all_ticks = @as(u64, @intCast(microzig.cpu.atomic.load(u32, &accumulated_ticks, .acquire))) << 24 | ticks;
+    const ns = all_ticks * ns_per_ticks;
+    return ns >> 10;
 }
 
 pub fn SysTick_handler() callconv(.c) void {
-    _ = microzig.cpu.atomic.add(u32, &period, 1);
+    _ = microzig.cpu.atomic.add(u32, &accumulated_ticks, 1);
 }
