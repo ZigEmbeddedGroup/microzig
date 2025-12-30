@@ -45,7 +45,7 @@ pub const LPUart = enum(u4) {
 		};
 	};
 
-	pub fn init(interface: u4, config: Config, clk: u32) !LPUart {
+	pub fn init(interface: u4, config: Config) !LPUart {
 		FlexComm.num(interface).init(.UART);
 
 		const uart: LPUart = @enumFromInt(interface);
@@ -53,7 +53,7 @@ pub const LPUart = enum(u4) {
 		uart.reset();
 		_ = uart.disable();
 
-		try uart.set_baudrate(config.baudrate, clk);
+		try uart.set_baudrate(config.baudrate);
 		if(config.data_mode == .@"10bit") regs.BAUD.modify_one("M10", .ENABLED);
 		if(config.stop_bits_count == .two) regs.BAUD.modify_one("SBNS", .TWO);
 
@@ -138,8 +138,8 @@ pub const LPUart = enum(u4) {
 	// TODO: remove `clk` parameter by fetching the clock
 	// TODO: check if there is a risk of losing data since we disable then enable the receiver
 	// TODO: tests with baudrate (see raspberry uart tests)
-	pub fn set_baudrate(uart: LPUart, baudrate: u32, clk: u32) error { BaudrateUnavailable }!void {
-
+	pub fn set_baudrate(uart: LPUart, baudrate: u32) error { BaudrateUnavailable }!void {
+		const clk = uart.get_flexcomm().get_clock();
 		const regs = uart.get_regs();
 		var best_osr: u5 = 0;
 		var best_sbr: u13 = 0;
@@ -190,7 +190,8 @@ pub const LPUart = enum(u4) {
 	}
 
 	/// Return the current, real baudrate of the interface (see `set_baudrate` for more details).
-	pub fn get_actual_baudrate(uart: LPUart, clk: u32) f32 {
+	pub fn get_actual_baudrate(uart: LPUart) f32 {
+		const clk = uart.get_flexcomm().get_clock();
 		const regs = uart.get_regs();
 		const baud = regs.BAUD.read();
 
@@ -207,6 +208,10 @@ pub const LPUart = enum(u4) {
 
 	pub fn get_regs(uart: LPUart) LPUartTy {
 		return LPUart.Registers[uart.get_n()];
+	}
+
+	pub fn get_flexcomm(uart: LPUart) FlexComm {
+		return @enumFromInt(@intFromEnum(uart));
 	}
 
 	fn can_write(uart: LPUart) bool {
