@@ -34,75 +34,59 @@ pub fn peripheral_reset_release(peripheral: Peripheral) void {
 }
 
 pub const Peripheral = enum(u7) {
-    FMU,
-    FLEXSPI,
-    MUX,
-    PORT0,
-    PORT1,
-    PORT2,
-    PORT3,
-    PORT4,
-    GPIO0,
-    GPIO1,
-    GPIO2,
-    GPIO3,
-    GPIO4,
-    PINT,
-    DMA0,
-    CRC,
-    MAILBOX,
+	FMU 		=  9 | 0 << 5,
+	FLEXSPI		= 11 | 0 << 5,
+	MUX 		= 12 | 0 << 5,
+	PORT0		= 13 | 0 << 5,
+	PORT1		= 14 | 0 << 5,
+	PORT2		= 15 | 0 << 5,
+	PORT3		= 16 | 0 << 5,
+	PORT4		= 17 | 0 << 5,
+	GPIO0		= 19 | 0 << 5,
+	GPIO1		= 20 | 0 << 5,
+	GPIO2		= 21 | 0 << 5,
+	GPIO3		= 22 | 0 << 5,
+	GPIO4		= 23 | 0 << 5,
+	PINT		= 25 | 0 << 5,
+	DMA0		= 26 | 0 << 5,
+	CRC 		= 27 | 0 << 5,
+	MAILBOX		= 31 | 0 << 5,
 
-	MRT = 1 << 5,
-	OSTIMER,
-	SCT,
-	ADC0,
-	ADC1,
-	DAC0,
-	RTC,
-	EVSIM0,
-	EVSIM1,
-	UTICK,
-	FC0,
-	FC1,
-	FC2,
-	FC3,
-	FC4,
-	FC5,
-	FC6,
-	FC7,
-	FC8,
-	FC9,
-	MICFIL,
-	TIMER2,
-	USB0_FS_DCD,
-	USB0_FS,
-	TIMER0,
-	TIMER1,
-	SmartDMA,
+	MRT 		=  0 | 1 << 5,
+	OSTIMER		=  1 | 1 << 5,
+	SCT 		=  2 | 1 << 5,
+	ADC0		=  3 | 1 << 5,
+	ADC1		=  4 | 1 << 5,
+	DAC0		=  5 | 1 << 5,
+	RTC 		=  6 | 1 << 5,
+	EVSIM0		=  8 | 1 << 5,
+	EVSIM1		=  9 | 1 << 5,
+	UTICK		= 10 | 1 << 5,
+	FC0 		= 11 | 1 << 5,
+	FC1 		= 12 | 1 << 5,
+	FC2 		= 13 | 1 << 5,
+	FC3 		= 14 | 1 << 5,
+	FC4 		= 15 | 1 << 5,
+	FC5 		= 16 | 1 << 5,
+	FC6 		= 17 | 1 << 5,
+	FC7 		= 18 | 1 << 5,
+	FC8 		= 19 | 1 << 5,
+	FC9 		= 20 | 1 << 5,
+	MICFIL		= 21 | 1 << 5,
+	TIMER2		= 22 | 1 << 5,
+	USB0_FS_DCD	= 24 | 1 << 5,
+	USB0_FS		= 25 | 1 << 5,
+	TIMER0		= 26 | 1 << 5,
+	TIMER1		= 27 | 1 << 5,
+	SmartDMA	= 31 | 1 << 5,
 
     pub fn cc(self: Peripheral) u2 {
 		return @intCast(@intFromEnum(self) >> 5);
-        // return switch(@intFromEnum(self)) {
-        //     @intFromEnum(Peripheral.FMU)...@intFromEnum(Peripheral.MAILBOX) => 0,
-        //     @intFromEnum(Peripheral.MRT)...@intFromEnum(Peripheral.SmartDMA) => 1,
-        //     else => unreachable
-        // };
     }
 
 	// TODO: optimize that if necessary
     pub fn offset(self: Peripheral) u5 {
-        return switch(self) {
-            inline else => |module| @intCast(get_field_offset(module.control_register_ty(), @tagName(module) ++ "_RST"))
-        };
-    }
-
-    fn control_register_ty(self: Peripheral) type {
-        return switch(self.cc()) {
-            0 => @TypeOf(chip.peripherals.SYSCON0.PRESETCTRL0),
-            1 => @TypeOf(chip.peripherals.SYSCON0.PRESETCTRL1),
-            2 => @TypeOf(chip.peripherals.SYSCON0.PRESETCTRL2),
-            3 => @TypeOf(chip.peripherals.SYSCON0.PRESETCTRL3),
-        }.underlying_type;
+		return @truncate(@intFromEnum(self));
     }
 };
 
@@ -174,27 +158,10 @@ pub const Module = enum(u8) {
 	// uses u3 because zig sucks at optimizing u7
     pub fn cc(self: Module) u3 {
 		return @intCast(@intFromEnum(self) >> 5);
-        // return switch(@intFromEnum(self)) {
-        //     @intFromEnum(Module.ROM)...@intFromEnum(Module.MAILBOX) => 0,
-        //     @intFromEnum(Module.MRT)...@intFromEnum(Module.SmartDMA) => 1,
-        //     else => unreachable
-        // };
     }
 
     pub fn offset(self: Module) u5 {
 		return @truncate(@intFromEnum(self));
-        // return switch(self) {
-        //     inline else => |module| @intCast(get_field_offset(module.control_register_ty(), @tagName(module)))
-        // };
-    }
-
-    fn control_register_ty(self: Module) type {
-        return switch(self.cc()) {
-            0 => @TypeOf(chip.peripherals.SYSCON0.AHBCLKCTRL0),
-            1 => @TypeOf(chip.peripherals.SYSCON0.AHBCLKCTRL1),
-            2 => @TypeOf(chip.peripherals.SYSCON0.AHBCLKCTRL2),
-            3 => @TypeOf(chip.peripherals.SYSCON0.AHBCLKCTRL3),
-        }.underlying_type;
     }
 };
 
