@@ -441,6 +441,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         // to keep track of.
 
         var has_fpu = false;
+        var dma_channel_count: u32 = 0;
         for (core.interrupts) |interrupt| {
             _ = try db.create_interrupt(device_id, .{
                 .name = interrupt.name,
@@ -450,11 +451,20 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
             if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
                 has_fpu = true;
             }
+
+            if (std.mem.indexOf(u8, interrupt.name, "DMA")) |_| {
+                dma_channel_count += 1;
+            }
         }
 
         try db.add_device_property(device_id, .{
             .key = "cpu.fpuPresent",
             .value = if (has_fpu) "true" else "false",
+        });
+
+        try db.add_device_property(device_id, .{
+            .key = "cpu.dmaChannelCount",
+            .value = try std.fmt.allocPrint(allocator, "{d}", .{dma_channel_count}),
         });
 
         for (core.peripherals) |peripheral| {

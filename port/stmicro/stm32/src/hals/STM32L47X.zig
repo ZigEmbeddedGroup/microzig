@@ -6,6 +6,7 @@ pub const uart = @import("./STM32L47X/uart.zig");
 pub const pins = @import("./STM32L47X/pins.zig");
 pub const rcc = @import("./STM32L47X/rcc.zig");
 pub const i2c = @import("./STM32L47X/i2c.zig");
+pub const dma = @import("./STM32L47X/dma.zig");
 
 pub fn get_sys_clk() u32 {
     return rcc.current_clock.h_clk;

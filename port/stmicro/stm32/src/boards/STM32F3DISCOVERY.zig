@@ -38,7 +38,10 @@ pub fn init_log() void {
             .PIN5 = .{ .mode = .{ .alternate_function = .{ .afr = .AF7 } } },
         },
     }).apply();
-    uart_logger.init_logger(.{ .baud_rate = 115200 });
+    uart_logger.init(.{
+        .baud_rate = 115200,
+        .dma = hal.dma.DMA1_Channel4.get_channel(),
+    });
 }
 
 pub fn i2c1() hal.i2c.I2C_Device {

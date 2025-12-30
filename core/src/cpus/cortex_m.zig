@@ -789,7 +789,7 @@ pub const startup_logic = struct {
         @compileError("`_vector_table` is not available in a RAM image. Use `ram_vector_table` instead.");
     } else if (using_ram_vector_table)
         .{
-            .initial_stack_pointer = microzig.config.end_of_stack,
+            .initial_stack_pointer = microzig.config.end_of_stack.address orelse @panic("EndOfStack is not define"),
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         }
     else
@@ -1003,7 +1003,7 @@ pub const debug = struct {
 };
 
 const is_ram_image = microzig.config.ram_image;
-const using_ram_vector_table = @hasField(CPU_Options, "ram_vector_table") and microzig.options.cpu.ram_vector_table;
+pub const using_ram_vector_table = @hasField(CPU_Options, "ram_vector_table") and microzig.options.cpu.ram_vector_table;
 
 pub fn export_startup_logic() void {
     if (is_ram_image) {

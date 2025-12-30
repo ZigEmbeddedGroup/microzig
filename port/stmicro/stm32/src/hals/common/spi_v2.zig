@@ -49,8 +49,6 @@ pub const SPI = struct {
             else => .Div256,
         };
 
-        std.log.info("Select devider {}", .{br});
-
         self.spi.CR1.raw = 0; // Disable SPI end clear configs before configuration
         self.spi.CR1.modify(.{
             .CPOL = config.polarity,
@@ -86,8 +84,6 @@ pub const SPI = struct {
         }
 
         self.spi.CR1.modify(.{ .SPE = 1 }); // Enable SPI
-
-        std.log.info("SPI status {}", .{self.spi.SR.read()});
     }
 
     fn check_tx(self: *const SPI) bool {

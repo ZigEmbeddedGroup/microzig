@@ -1414,6 +1414,17 @@ fn process_properties(raw_props: []const Database.DeviceProperty) Properties {
                 log.warn("`has_fpu` property candidate detected but it has no value", .{});
             }
         }
+
+        if (std.mem.eql(u8, prop.key, "cpu.dmaChannelCount")) {
+            if (prop.value) |value| {
+                properties.dma_channel_count = std.fmt.parseInt(u8, value, 10) catch blk: {
+                    log.warn("failed to parse `dma_channel_count` property value: expected integer, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`dma_channel_count` property candidate detected but it has no value", .{});
+            }
+        }
     }
 
     return properties;
@@ -1737,6 +1748,7 @@ test "gen.peripheral instantiation" {
             \\    has_mpu: ?bool = null,
             \\    has_fpu: ?bool = null,
             \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
             \\};
             \\
             \\pub const Interrupt = struct {
@@ -1750,6 +1762,7 @@ test "gen.peripheral instantiation" {
             \\    .has_mpu = null,
             \\    .has_fpu = null,
             \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
             \\};
             \\
             \\pub const peripherals = struct {
@@ -1818,6 +1831,7 @@ test "gen.peripherals with a shared type" {
             \\    has_mpu: ?bool = null,
             \\    has_fpu: ?bool = null,
             \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
             \\};
             \\
             \\pub const Interrupt = struct {
@@ -1831,6 +1845,7 @@ test "gen.peripherals with a shared type" {
             \\    .has_mpu = null,
             \\    .has_fpu = null,
             \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
             \\};
             \\
             \\pub const peripherals = struct {

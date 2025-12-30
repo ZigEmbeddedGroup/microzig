@@ -44,6 +44,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .hal = microzig.HardwareAbstractionLayer{
                     .root_source_file = b.path("src/hals/STM32F303.zig"),
                 },
+                .stack = .{ .ram_region_name = "CCMRAM" },
             }),
             .stm32f4discovery = chips.STM32F407VG.derive(.{
                 .board = .{

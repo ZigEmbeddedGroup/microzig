@@ -340,6 +340,17 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         }
                     } else @panic("no ram memory region found for setting the end-of-stack address");
                 },
+                .ram_region_name => |name| blk: {
+                    for (target.chip.memory_regions) |region| {
+                        if (region.name) |region_name| {
+                            if (std.mem.eql(u8, region_name, name)) {
+                                if (region.tag == .ram) {
+                                    break :blk .{ .address = region.offset + region.length };
+                                } else @panic("Named region found is not a ram region");
+                            }
+                        }
+                    } else @panic("no ram memory named region found for setting the end-of-stack address");
+                },
                 .symbol_name => |name| .{ .symbol_name = name },
             };
 

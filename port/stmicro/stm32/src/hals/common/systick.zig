@@ -19,6 +19,14 @@ const MAX_COUNTER = 0xFFFFFF;
 // HAL should provide both value.
 // See: https://developer.arm.com/documentation/dui0497/a/cortex-m0-peripherals/optional-system-timer--systick/systick-control-and-status-register
 pub fn init() SystickError!void {
+    if (microzig.cpu.using_ram_vector_table) {
+        microzig.cpu.ram_vector_table.SysTick = .{ .c = SysTick_handler };
+    } else {
+        const vector_table: *microzig.cpu.VectorTable = @ptrFromInt(0x0);
+        // SysTick_Handler need to be setup in the interrupt table
+        std.debug.assert(vector_table.SysTick.* == @intFromPtr(&SysTick_handler));
+    }
+
     const use_processor_clk = if (hal.get_sys_clk() > MAX_COUNTER) false else true;
     const sys_freq = if (use_processor_clk) hal.get_sys_clk() else hal.get_systick_clk();
 

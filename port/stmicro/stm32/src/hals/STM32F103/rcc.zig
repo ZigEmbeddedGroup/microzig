@@ -1,10 +1,10 @@
 //NOTE: this file is only valid for densities: Low, Medium and High. Connectivity/XL line devices are not supported in this version.
 //TODO: Add support for 105/107
-
 const std = @import("std");
 const ClockTree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
 const microzig = @import("microzig");
 const power = @import("power.zig");
+const enums = @import("../common/enums.zig");
 
 //expose only the configuration structs
 pub const Config = ClockTree.Config;
@@ -630,4 +630,10 @@ inline fn calc_wait_ticks(val: usize) usize {
     const corrent_clock: usize = @intFromFloat(current_clocks.SysCLKOutput);
     const ms_per_tick = corrent_clock / 1000;
     return ms_per_tick * val;
+}
+
+pub fn enable_dma(index: enums.DMA_V1_Type) void {
+    switch (index) {
+        .DMA1 => rcc.AHBENR.modify(.{ .DMA1EN = 1 }),
+    }
 }

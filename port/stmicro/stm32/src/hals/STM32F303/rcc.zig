@@ -5,7 +5,7 @@ const FLASH = microzig.chip.peripherals.FLASH;
 const PREDIV = microzig.chip.types.peripherals.rcc_f3v1.PREDIV;
 const PLLMUL = microzig.chip.types.peripherals.rcc_f3v1.PLLMUL;
 const ICSW = microzig.chip.types.peripherals.rcc_f3v1.ICSW;
-const enums = @import("../common//enums.zig");
+const enums = @import("../common/enums.zig");
 
 pub const ClockName = enum {
     HSE,
@@ -101,6 +101,13 @@ pub fn enable_hse(speed: u32) void {
         asm volatile ("" ::: .{ .memory = true });
     }
     current_clock.hse = speed;
+}
+
+pub fn enable_dma(index: enums.DMA_V1_Type) void {
+    switch (index) {
+        .DMA1 => RCC.AHBENR.modify(.{ .DMA1EN = 1 }),
+        .DMA2 => RCC.AHBENR.modify(.{ .DMA2EN = 1 }),
+    }
 }
 
 pub fn select_pll_for_sysclk() RccErrorConfig!void {
