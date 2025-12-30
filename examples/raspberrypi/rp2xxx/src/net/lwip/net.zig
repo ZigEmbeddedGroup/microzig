@@ -17,191 +17,198 @@ const c = @cImport({
     @cInclude("lwip/timeouts.h");
 });
 
-const Self = @This();
-const Net = @This();
+pub const Interface = struct {
+    const Self = @This();
 
-netif: c.netif = .{},
-dhcp: c.dhcp = .{},
+    netif: c.netif = .{},
+    dhcp: c.dhcp = .{},
 
-mac: [6]u8,
-link: struct {
-    ptr: *anyopaque,
-    recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
-    send: *const fn (*anyopaque, []u8) anyerror!void,
-    ready: *const fn (*anyopaque) bool,
-},
+    mac: [6]u8,
+    link: struct {
+        ptr: *anyopaque,
+        recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
+        send: *const fn (*anyopaque, []u8) anyerror!void,
+        ready: *const fn (*anyopaque) bool,
+    },
 
-pub fn init(self: *Self) !void {
-    c.lwip_init();
-    const netif: *c.netif = &self.netif;
+    pub fn init(self: *Self) !void {
+        c.lwip_init();
+        const netif: *c.netif = &self.netif;
 
-    _ = c.netif_add(
-        netif,
-        @as(*c.ip4_addr_t, @ptrCast(@constCast(c.IP4_ADDR_ANY))), // ipaddr
-        @as(*c.ip4_addr_t, @ptrCast(@constCast(c.IP4_ADDR_ANY))), // netmask
-        @as(*c.ip4_addr_t, @ptrCast(@constCast(c.IP4_ADDR_ANY))), // gw
-        null,
-        netif_init,
-        c.netif_input,
-    ) orelse return error.OutOfMemory;
+        _ = c.netif_add(
+            netif,
+            @as(*c.ip4_addr_t, @ptrCast(@constCast(c.IP4_ADDR_ANY))), // ipaddr
+            @as(*c.ip4_addr_t, @ptrCast(@constCast(c.IP4_ADDR_ANY))), // netmask
+            @as(*c.ip4_addr_t, @ptrCast(@constCast(c.IP4_ADDR_ANY))), // gw
+            null,
+            netif_init,
+            c.netif_input,
+        ) orelse return error.OutOfMemory;
 
-    c.netif_create_ip6_linklocal_address(netif, 1);
-    netif.ip6_autoconfig_enabled = 1;
-    c.netif_set_status_callback(netif, netif_status_callback);
-    c.netif_set_default(netif);
+        c.netif_create_ip6_linklocal_address(netif, 1);
+        netif.ip6_autoconfig_enabled = 1;
+        c.netif_set_status_callback(netif, netif_status_callback);
+        c.netif_set_default(netif);
 
-    c.dhcp_set_struct(netif, &self.dhcp);
-    c.netif_set_up(netif);
-    try c_err(c.dhcp_start(netif));
-    c.netif_set_link_up(netif);
-}
-
-fn netif_init(netif_c: [*c]c.netif) callconv(.c) c.err_t {
-    const netif: *c.netif = netif_c;
-    const self: *Self = @fieldParentPtr("netif", netif);
-
-    netif.linkoutput = netif_linkoutput;
-    netif.output = c.etharp_output;
-    netif.output_ip6 = c.ethip6_output;
-    netif.mtu = sz.mtu;
-    netif.flags = c.NETIF_FLAG_BROADCAST | c.NETIF_FLAG_ETHARP | c.NETIF_FLAG_ETHERNET | c.NETIF_FLAG_IGMP | c.NETIF_FLAG_MLD6;
-    std.mem.copyForwards(u8, &netif.hwaddr, &self.mac);
-    netif.hwaddr_len = c.ETH_HWADDR_LEN;
-    return c.ERR_OK;
-}
-
-fn netif_status_callback(netif_c: [*c]c.netif) callconv(.c) void {
-    const netif: *c.netif = netif_c;
-    const self: *Self = @fieldParentPtr("netif", netif);
-    log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}", .{
-        netif.flags & c.NETIF_FLAG_LINK_UP > 0,
-        netif.flags & c.NETIF_FLAG_UP > 0,
-        self.ready(),
-        IPFormatter.new(netif.ip_addr),
-    });
-}
-
-/// Called by lwip when there is packet to send.
-/// pbuf chain total_len is <= netif.mtu + ethernet header
-fn netif_linkoutput(netif_c: [*c]c.netif, pbuf_c: [*c]c.pbuf) callconv(.c) c.err_t {
-    const netif: *c.netif = netif_c;
-    var pbuf: *c.pbuf = pbuf_c;
-    const self: *Self = @fieldParentPtr("netif", netif);
-
-    if (!self.link.ready(self.link.ptr)) {
-        log.err("linkouput link not ready", .{});
-        return c.ERR_MEM; // lwip will try later
+        c.dhcp_set_struct(netif, &self.dhcp);
+        c.netif_set_up(netif);
+        try c_err(c.dhcp_start(netif));
+        c.netif_set_link_up(netif);
     }
 
-    if (c.pbuf_header(pbuf, sz.link_head) != 0) {
-        log.err("can't get pbuf headroom len: {}, tot_len: {} ", .{ pbuf.len, pbuf.tot_len });
-        return c.ERR_ARG;
+    fn netif_init(netif_c: [*c]c.netif) callconv(.c) c.err_t {
+        const netif: *c.netif = netif_c;
+        const self: *Self = @fieldParentPtr("netif", netif);
+
+        netif.linkoutput = netif_linkoutput;
+        netif.output = c.etharp_output;
+        netif.output_ip6 = c.ethip6_output;
+        netif.mtu = sz.mtu;
+        netif.flags = c.NETIF_FLAG_BROADCAST | c.NETIF_FLAG_ETHARP | c.NETIF_FLAG_ETHERNET | c.NETIF_FLAG_IGMP | c.NETIF_FLAG_MLD6;
+        std.mem.copyForwards(u8, &netif.hwaddr, &self.mac);
+        netif.hwaddr_len = c.ETH_HWADDR_LEN;
+        return c.ERR_OK;
     }
 
-    if (pbuf.next != null) {
-        // clone chain into single packet buffer
-        pbuf = c.pbuf_clone(c.PBUF_RAW, c.PBUF_POOL, pbuf) orelse return c.ERR_MEM;
-    }
-    defer {
-        // free local clone is clone was made
-        if (pbuf_c.*.next != null) _ = c.pbuf_free(pbuf);
+    fn netif_status_callback(netif_c: [*c]c.netif) callconv(.c) void {
+        const netif: *c.netif = netif_c;
+        const self: *Self = @fieldParentPtr("netif", netif);
+        log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}", .{
+            netif.flags & c.NETIF_FLAG_LINK_UP > 0,
+            netif.flags & c.NETIF_FLAG_UP > 0,
+            self.ready(),
+            IPFormatter.new(netif.ip_addr),
+        });
     }
 
-    self.link.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
-        log.err("link send {}", .{err});
-        return c.ERR_ARG;
-    };
-    return c.ERR_OK;
-}
+    /// Called by lwip when there is packet to send.
+    /// pbuf chain total_len is <= netif.mtu + ethernet header
+    fn netif_linkoutput(netif_c: [*c]c.netif, pbuf_c: [*c]c.pbuf) callconv(.c) c.err_t {
+        const netif: *c.netif = netif_c;
+        var pbuf: *c.pbuf = pbuf_c;
+        const self: *Self = @fieldParentPtr("netif", netif);
+
+        if (!self.link.ready(self.link.ptr)) {
+            log.err("linkouput link not ready", .{});
+            return c.ERR_MEM; // lwip will try later
+        }
+
+        if (c.pbuf_header(pbuf, sz.link_head) != 0) {
+            log.err("can't get pbuf headroom len: {}, tot_len: {} ", .{ pbuf.len, pbuf.tot_len });
+            return c.ERR_ARG;
+        }
+
+        if (pbuf.next != null) {
+            // clone chain into single packet buffer
+            pbuf = c.pbuf_clone(c.PBUF_RAW, c.PBUF_POOL, pbuf) orelse return c.ERR_MEM;
+        }
+        defer {
+            // free local clone is clone was made
+            if (pbuf_c.*.next != null) _ = c.pbuf_free(pbuf);
+        }
+
+        self.link.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
+            log.err("link send {}", .{err});
+            return c.ERR_ARG;
+        };
+        return c.ERR_OK;
+    }
+
+    pub fn ready(self: *Self) bool {
+        const netif = &self.netif;
+        return (netif.flags & c.NETIF_FLAG_UP > 0) and
+            (netif.flags & c.NETIF_FLAG_LINK_UP > 0) and
+            (netif.ip_addr.u_addr.ip4.addr != 0 or netif.ip_addr.u_addr.ip6.addr[0] != 0);
+    }
+
+    pub fn poll(self: *Self) !void {
+        var mem_err_count: usize = 0;
+        while (true) {
+            // get packet buffer of the max size
+            const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_RAW, sz.pbuf_pool, c.PBUF_POOL) orelse {
+                if (mem_err_count > 2) {
+                    self.log_stats();
+                    return error.OutOfMemory;
+                }
+                mem_err_count += 1;
+                c.sys_check_timeouts();
+                continue;
+            };
+            mem_err_count = 0;
+            assert(pbuf.next == null);
+            assert(pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool);
+
+            // receive into that buffer
+            const head, const len = try self.link.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
+                // no data release packet buffer and exit loop
+                _ = c.pbuf_free(pbuf);
+                break;
+            };
+            errdefer _ = c.pbuf_free(pbuf); // netif.input: transfers ownership of pbuf on success
+            // set payload header and len
+            if (c.pbuf_header(pbuf, -@as(c.s16_t, @intCast(head))) != 0) return error.InvalidPbufHead;
+            pbuf.len = @intCast(len);
+            pbuf.tot_len = @intCast(len);
+            // pass data to the lwip input function
+            try c_err(self.netif.input.?(pbuf, &self.netif));
+        }
+        c.sys_check_timeouts();
+    }
+
+    pub fn log_stats(self: *Self) void {
+        _ = self;
+        const stats = c.lwip_stats;
+        log.debug("stats ip_frag: {}", .{stats.ip_frag});
+        log.debug("stats icpmp: {}", .{stats.icmp});
+        log.debug("stats mem: {} ", .{stats.mem});
+        for (stats.memp, 0..) |s, i| {
+            log.debug("stats memp {}: {}", .{ i, s.* });
+        }
+    }
+};
 
 fn payload_bytes(pbuf: *c.pbuf) []u8 {
     return @as([*]u8, @ptrCast(pbuf.payload.?))[0..pbuf.len];
 }
 
-pub fn ready(self: *Self) bool {
-    const netif = &self.netif;
-    return (netif.flags & c.NETIF_FLAG_UP > 0) and
-        (netif.flags & c.NETIF_FLAG_LINK_UP > 0) and
-        (netif.ip_addr.u_addr.ip4.addr != 0 or netif.ip_addr.u_addr.ip6.addr[0] != 0);
-}
-
-pub fn poll(self: *Self) !void {
-    var mem_err_count: usize = 0;
-    while (true) {
-        // get packet buffer of the max size
-        const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_RAW, sz.pbuf_pool, c.PBUF_POOL) orelse {
-            if (mem_err_count > 2) {
-                self.log_stats();
-                return error.OutOfMemory;
-            }
-            mem_err_count += 1;
-            c.sys_check_timeouts();
-            continue;
-        };
-        mem_err_count = 0;
-        assert(pbuf.next == null);
-        assert(pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool);
-
-        // receive into that buffer
-        const head, const len = try self.link.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
-            // no data release packet buffer and exit loop
-            _ = c.pbuf_free(pbuf);
-            break;
-        };
-        errdefer _ = c.pbuf_free(pbuf); // netif.input: transfers ownership of pbuf on success
-        // set payload header and len
-        if (c.pbuf_header(pbuf, -@as(c.s16_t, @intCast(head))) != 0) return error.InvalidPbufHead;
-        pbuf.len = @intCast(len);
-        pbuf.tot_len = @intCast(len);
-        // pass data to the lwip input function
-        try c_err(self.netif.input.?(pbuf, &self.netif));
-    }
-    c.sys_check_timeouts();
-}
-
-pub fn log_stats(self: *Self) void {
-    _ = self;
-    const stats = c.lwip_stats;
-    log.debug("stats ip_frag: {}", .{stats.ip_frag});
-    log.debug("stats icpmp: {}", .{stats.icmp});
-    log.debug("stats mem: {} ", .{stats.mem});
-    for (stats.memp, 0..) |s, i| {
-        log.debug("stats memp {}: {}", .{ i, s.* });
-    }
-}
-
 pub const Udp = struct {
+    const Self = @This();
+
     pub const RecvOptions = struct {
         src: Endpoint,
-        /// If udp  packet is fragmented into multiple lwip  packet buffers this
-        /// will be false for all expect last fragment.
+        /// If udp packet is fragmented into multiple lwip packet buffers (pbuf)
+        /// this will be false for all expect the last fragment.
         last_fragment: bool,
     };
-    const Callback = *const fn (*Udp, []u8, RecvOptions) void;
+    const OnRecv = *const fn (*Self, []u8, RecvOptions) void;
 
-    pcb: c.udp_pcb = .{},
-    callback: ?Callback = null,
+    pcb: *c.udp_pcb,
+    on_recv: ?OnRecv = null,
 
-    pub fn init(self: *Udp, net: *Net) void {
-        c.udp_bind_netif(&self.pcb, &net.netif);
-        self.pcb.ttl = 64;
+    pub fn init(nic: *Interface) !Self {
+        const pcb: *c.udp_pcb = c.udp_new() orelse return error.OutOfMemory;
+        c.udp_bind_netif(pcb, &nic.netif);
+        pcb.ttl = 64;
+        return .{
+            .pcb = pcb,
+        };
     }
 
-    pub fn send(udp: *Udp, data: []const u8, target: Endpoint) !void {
+    pub fn send(self: *Self, data: []const u8, target: Endpoint) !void {
         const pbuf: *c.pbuf = c.pbuf_alloc(c.PBUF_TRANSPORT, @intCast(data.len), c.PBUF_POOL) orelse return error.OutOfMemory;
         defer _ = c.pbuf_free(pbuf);
         try c_err(c.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
-        try c_err(c.udp_sendto(&udp.pcb, pbuf, &target.addr, target.port));
+        try c_err(c.udp_sendto(self.pcb, pbuf, &target.addr, target.port));
     }
 
-    pub fn bind(self: *Udp, port: u16, callback: Callback) !void {
-        assert(self.callback == null);
-        self.callback = callback;
-        try c_err(c.udp_bind(&self.pcb, c.IP_ADDR_ANY, port));
-        c.udp_recv(&self.pcb, Udp.recv_callback, self);
+    pub fn bind(self: *Self, port: u16, on_recv: OnRecv) !void {
+        assert(self.on_recv == null);
+        self.on_recv = on_recv;
+        try c_err(c.udp_bind(self.pcb, c.IP_ADDR_ANY, port));
+        c.udp_recv(self.pcb, Self.c_on_recv, self);
     }
 
-    fn recv_callback(
+    fn c_on_recv(
         ptr: ?*anyopaque,
         pcb_c: [*c]c.udp_pcb,
         pbuf_c: [*c]c.pbuf,
@@ -211,12 +218,12 @@ pub const Udp = struct {
         _ = pcb_c;
         var pbuf: *c.pbuf = pbuf_c;
         const addr: c.ip_addr = addr_c[0];
-        const udp: *Udp = @ptrCast(@alignCast(ptr.?));
+        const self: *Self = @ptrCast(@alignCast(ptr.?));
         defer _ = c.pbuf_free(pbuf_c);
 
         while (true) {
             const last_fragment = pbuf.next == null;
-            udp.callback.?(udp, payload_bytes(pbuf), .{
+            self.on_recv.?(self, payload_bytes(pbuf), .{
                 .last_fragment = last_fragment,
                 .src = .{ .addr = addr, .port = port },
             });
@@ -226,149 +233,155 @@ pub const Udp = struct {
     }
 };
 
-pub const Tcp = struct {
-    const OnState = *const fn (*Tcp) void;
-    const OnRecv = *const fn (*Tcp, []u8) void;
-    const OnSent = *const fn (*Tcp, u16) void;
+pub const tcp = struct {
+    pub const Client = struct {
+        const Self = @This();
 
-    const State = enum {
-        closed,
-        connecting,
-        open,
-    };
+        const OnState = *const fn (*Self) void;
+        const OnRecv = *const fn (*Self, []u8) void;
+        const OnSent = *const fn (*Self, u16) void;
 
-    net: *Net,
-    pcb: ?*c.tcp_pcb = null,
-    on_state: OnState,
-    on_sent: OnSent,
-    on_recv: OnRecv,
-    target: Endpoint = .{},
-    state: State = .closed,
-    err: ?Error = null,
-
-    pub fn init(
-        net: *Net,
-        on_recv: OnRecv,
-        on_sent: OnSent,
-        on_state: OnState,
-    ) Tcp {
-        return .{
-            .net = net,
-            .on_sent = on_sent,
-            .on_recv = on_recv,
-            .on_state = on_state,
+        const State = enum {
+            closed,
+            connecting,
+            open,
         };
-    }
 
-    pub fn connect(self: *Tcp, target: Endpoint) !void {
-        self.target = target;
-        try self.reconnect();
-    }
+        nic: *Interface,
+        pcb: ?*c.tcp_pcb = null,
+        on_state: OnState,
+        on_sent: OnSent,
+        on_recv: OnRecv,
+        target: Endpoint,
+        state: State = .closed,
+        err: ?Error = null,
 
-    fn reconnect(self: *Tcp) !void {
-        assert(self.state == .closed);
-
-        const pcb: *c.tcp_pcb = c.tcp_new() orelse return error.OutOfMemory;
-        self.pcb = pcb;
-        c.tcp_bind_netif(pcb, &self.net.netif);
-        c.tcp_arg(pcb, self);
-        c.tcp_recv(pcb, c_on_recv);
-        c.tcp_sent(pcb, c_on_sent);
-        c.tcp_err(pcb, c_on_err);
-
-        const res = c.tcp_connect(pcb, &self.target.addr, self.target.port, Tcp.c_on_connect);
-        if (res != c.ERR_OK) {
-            _ = c.tcp_close(pcb);
-        } else {
-            self.state = .connecting;
+        pub fn init(
+            nic: *Interface,
+            target: Endpoint,
+            on_recv: OnRecv,
+            on_sent: OnSent,
+            on_state: OnState,
+        ) Self {
+            return .{
+                .nic = nic,
+                .target = target,
+                .on_sent = on_sent,
+                .on_recv = on_recv,
+                .on_state = on_state,
+            };
         }
-        return c_err(res);
-    }
 
-    fn c_on_err(ptr: ?*anyopaque, ce: c.err_t) callconv(.c) void {
-        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
-        // log.err("c_on_err  code: {} {any}", .{ ce, to_error(ce) });
-        const err = to_error(ce) orelse return;
-        self.err = err;
-        if (self.state == .connecting) {
-            self.state = .closed;
-            self.on_state(self);
-            return;
+        pub fn connect(self: *Self) !void {
+            try self.reconnect();
         }
-        switch (err) {
-            error.ConnectionAborted,
-            error.ConnectionReset,
-            error.ConnectionClosed,
-            => {
-                if (self.state != .closed) {
-                    self.state = .closed;
-                    self.on_state(self);
-                }
-                return;
-            },
-            else => {},
+
+        fn reconnect(self: *Self) !void {
+            assert(self.state == .closed);
+
+            const pcb: *c.tcp_pcb = c.tcp_new() orelse return error.OutOfMemory;
+            self.pcb = pcb;
+            c.tcp_bind_netif(pcb, &self.nic.netif);
+            c.tcp_arg(pcb, self);
+            c.tcp_recv(pcb, c_on_recv);
+            c.tcp_sent(pcb, c_on_sent);
+            c.tcp_err(pcb, c_on_err);
+
+            const res = c.tcp_connect(pcb, &self.target.addr, self.target.port, Self.c_on_connect);
+            if (res != c.ERR_OK) {
+                _ = c.tcp_close(pcb);
+            } else {
+                self.state = .connecting;
+            }
+            return c_err(res);
         }
-    }
 
-    fn c_on_connect(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, ce: c.err_t) callconv(.c) c.err_t {
-        if (ce != c.ERR_OK) return ce; // it is always 0
-        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
-        self.state = .open;
-        self.on_state(self);
-        return c.ERR_OK;
-    }
-
-    fn c_on_recv(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, c_pbuf: [*c]c.pbuf, ce: c.err_t) callconv(.c) c.err_t {
-        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
-        if (to_error(ce)) |err| {
+        fn c_on_err(ptr: ?*anyopaque, ce: c.err_t) callconv(.c) void {
+            const self: *Self = @ptrCast(@alignCast(ptr.?));
+            // log.err("c_on_err  code: {} {any}", .{ ce, to_error(ce) });
+            const err = to_error(ce) orelse return;
             self.err = err;
+            if (self.state == .connecting) {
+                self.state = .closed;
+                self.on_state(self);
+                return;
+            }
+            switch (err) {
+                error.ConnectionAborted,
+                error.ConnectionReset,
+                error.ConnectionClosed,
+                => {
+                    if (self.state != .closed) {
+                        self.state = .closed;
+                        self.on_state(self);
+                    }
+                    return;
+                },
+                else => {},
+            }
+        }
+
+        fn c_on_connect(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, ce: c.err_t) callconv(.c) c.err_t {
+            if (ce != c.ERR_OK) return ce; // it is always 0
+            const self: *Self = @ptrCast(@alignCast(ptr.?));
+            self.state = .open;
+            self.on_state(self);
             return c.ERR_OK;
         }
-        if (c_pbuf == null) {
-            // clean close
-            self.on_recv(self, &.{});
+
+        fn c_on_recv(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, c_pbuf: [*c]c.pbuf, ce: c.err_t) callconv(.c) c.err_t {
+            const self: *Self = @ptrCast(@alignCast(ptr.?));
+            if (to_error(ce)) |err| {
+                self.err = err;
+                return c.ERR_OK;
+            }
+            if (c_pbuf == null) {
+                // clean close
+                self.on_recv(self, &.{});
+                return c.ERR_OK;
+            }
+            const pbuf: *c.pbuf = c_pbuf;
+            defer _ = c.pbuf_free(pbuf);
+            // TODO loop on pbuf.next
+            self.on_recv(self, payload_bytes(pbuf));
             return c.ERR_OK;
         }
-        const pbuf: *c.pbuf = c_pbuf;
-        defer _ = c.pbuf_free(pbuf);
-        // TODO loop on pbuf.next
-        self.on_recv(self, payload_bytes(pbuf));
-        return c.ERR_OK;
-    }
 
-    fn c_on_sent(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, n: u16) callconv(.c) c.err_t {
-        const self: *Tcp = @ptrCast(@alignCast(ptr.?));
-        self.on_sent(self, n);
-        return c.ERR_OK;
-    }
-
-    pub fn send(self: *Tcp, bytes: []const u8) !void {
-        // TODO: chunked
-        //const chunk = c.tcp_sndbuf(self.pcb);
-        // log.debug(
-        //     "tcp send chunk: {}, mss: {}, snd_buf: {}, wnd: {}, snd_queuelen: {}",
-        //     .{ chunk, c.TCP_MSS, c.TCP_SND_BUF, c.TCP_WND, c.TCP_SND_QUEUELEN },
-        // );
-
-        if (self.pcb) |pcb| {
-            try c_err(c.tcp_write(pcb, bytes.ptr, @intCast(bytes.len), c.TCP_WRITE_FLAG_COPY));
-            try c_err(c.tcp_output(pcb));
-        } else {
-            return Error.NotConnected;
+        fn c_on_sent(ptr: ?*anyopaque, _: [*c]c.tcp_pcb, n: u16) callconv(.c) c.err_t {
+            const self: *Self = @ptrCast(@alignCast(ptr.?));
+            self.on_sent(self, n);
+            return c.ERR_OK;
         }
 
-        //         const uint8_t *p = buf;
-        // u16_t left = len;
+        pub fn send(self: *Self, bytes: []const u8) !void {
 
-        // while (left > 0) {
-        //     u16_t chunk = LWIP_MIN(left, tcp_sndbuf(pcb));
-        //     err = tcp_write(pcb, p, chunk, TCP_WRITE_FLAG_COPY);
-        //     if (err != ERR_OK) break;
-        //     p    += chunk;
-        //     left -= chunk;
-        // }
-        // tcp_output(pcb);
-    }
+            //const chunk = c.tcp_sndbuf(self.pcb);
+            // log.debug(
+            //     "tcp send chunk: {}, mss: {}, snd_buf: {}, wnd: {}, snd_queuelen: {}",
+            //     .{ chunk, c.TCP_MSS, c.TCP_SND_BUF, c.TCP_WND, c.TCP_SND_QUEUELEN },
+            // );
+
+            if (self.pcb) |pcb| {
+                try c_err(c.tcp_write(pcb, bytes.ptr, @intCast(bytes.len), c.TCP_WRITE_FLAG_COPY));
+                try c_err(c.tcp_output(pcb));
+            } else {
+                return Error.NotConnected;
+            }
+
+            // TODO: chunked
+            // const uint8_t *p = buf;
+            // u16_t left = len;
+
+            // while (left > 0) {
+            //     u16_t chunk = LWIP_MIN(left, tcp_sndbuf(pcb));
+            //     err = tcp_write(pcb, p, chunk, TCP_WRITE_FLAG_COPY);
+            //     if (err != ERR_OK) break;
+            //     p    += chunk;
+            //     left -= chunk;
+            // }
+            // tcp_output(pcb);
+        }
+    };
 };
 
 pub const Endpoint = struct {

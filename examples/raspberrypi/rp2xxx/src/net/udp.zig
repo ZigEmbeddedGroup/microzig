@@ -14,7 +14,7 @@ pub const microzig_options = microzig.Options{
 };
 const log = std.log.scoped(.main);
 
-const Net = @import("lwip/net.zig");
+const net = @import("lwip/net.zig");
 comptime {
     _ = @import("lwip/exports.zig");
 }
@@ -39,7 +39,7 @@ pub fn main() !void {
     log.debug("wifi joined", .{});
 
     // init lwip
-    var net: Net = .{
+    var nic: net.Interface = .{
         .mac = wifi.mac,
         .link = .{
             .ptr = wifi,
@@ -48,18 +48,17 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try net.init();
+    try nic.init();
 
     // udp init
-    var udp: Net.Udp = .{};
-    udp.init(&net);
+    var udp: net.Udp = try .init(&nic);
     // listen for udp packets on port 9988 and call on_recv for each packet
     try udp.bind(9988, on_recv);
 
     var ts = time.get_time_since_boot();
     while (true) {
         // run lwip poller
-        net.poll() catch |err| {
+        nic.poll() catch |err| {
             log.err("net pool {}", .{err});
         };
 
@@ -72,7 +71,7 @@ pub fn main() !void {
     }
 }
 
-fn on_recv(udp: *Net.Udp, bytes: []u8, opt: Net.Udp.RecvOptions) void {
+fn on_recv(udp: *net.Udp, bytes: []u8, opt: net.Udp.RecvOptions) void {
     // show received packet
     log.debug(
         "received {} bytes, from: {f}, last: {}, data: {s}",

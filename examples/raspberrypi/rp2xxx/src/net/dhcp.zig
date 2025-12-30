@@ -14,7 +14,7 @@ pub const microzig_options = microzig.Options{
 };
 const log = std.log.scoped(.main);
 
-const Net = @import("lwip/net.zig");
+const net = @import("lwip/net.zig");
 comptime {
     _ = @import("lwip/exports.zig");
 }
@@ -39,7 +39,7 @@ pub fn main() !void {
     log.debug("wifi joined", .{});
 
     // init lwip
-    var net: Net = .{
+    var nic: net.Interface = .{
         .mac = wifi.mac,
         .link = .{
             .ptr = wifi,
@@ -48,12 +48,12 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try net.init();
+    try nic.init();
 
     var ts = time.get_time_since_boot();
     while (true) {
         // run lwip poller
-        try net.poll();
+        try nic.poll();
 
         // blink
         const now = time.get_time_since_boot();

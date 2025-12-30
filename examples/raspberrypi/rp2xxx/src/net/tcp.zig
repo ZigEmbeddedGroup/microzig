@@ -14,7 +14,7 @@ pub const microzig_options = microzig.Options{
 };
 const log = std.log.scoped(.main);
 
-const Net = @import("lwip/net.zig");
+const net = @import("lwip/net.zig");
 comptime {
     _ = @import("lwip/exports.zig");
 }
@@ -39,7 +39,7 @@ pub fn main() !void {
     log.debug("wifi joined", .{});
 
     // init lwip
-    var net: Net = .{
+    var nic: net.Interface = .{
         .mac = wifi.mac,
         .link = .{
             .ptr = wifi,
@@ -48,17 +48,23 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try net.init();
+    try nic.init();
 
-    var socket: Socket = .{
-        .tcp = Net.Tcp.init(&net, Socket.on_recv, Socket.on_sent, Socket.on_state_changed),
-        .target = try Net.Endpoint.parse("192.168.190.235", 9998),
+    const target = try net.Endpoint.parse("192.168.190.235", 9998);
+    var cli: Client = .{
+        .tcp = .init(
+            &nic,
+            target,
+            Client.on_recv,
+            Client.on_sent,
+            Client.on_state_changed,
+        ),
     };
 
     var ts = time.get_time_since_boot();
     while (true) {
         // run lwip poller
-        net.poll() catch |err| {
+        nic.poll() catch |err| {
             log.err("net pool {}", .{err});
         };
 
@@ -68,31 +74,30 @@ pub fn main() !void {
             ts = now;
             led.toggle();
 
-            try socket.tick();
+            try cli.tick();
         }
     }
 }
 
-const Socket = struct {
+const Client = struct {
     const Self = @This();
 
-    tcp: Net.Tcp,
-    target: Net.Endpoint,
+    tcp: net.tcp.Client,
     bytes_sent: usize = 0,
     send_count: usize = 0,
 
-    fn on_state_changed(tcp: *Net.Tcp) void {
+    fn on_state_changed(tcp: *net.tcp.Client) void {
         const self: *Self = @fieldParentPtr("tcp", tcp);
         log.debug("state {} {any}", .{ self.tcp.state, self.tcp.err });
     }
 
-    fn on_recv(tcp: *Net.Tcp, bytes: []u8) void {
+    fn on_recv(tcp: *net.tcp.Client, bytes: []u8) void {
         const self: *Self = @fieldParentPtr("tcp", tcp);
         _ = self;
         log.debug("recv {} bytes: {s}", .{ bytes.len, data_head(bytes, 64) });
     }
 
-    fn on_sent(tcp: *Net.Tcp, n: u16) void {
+    fn on_sent(tcp: *net.tcp.Client, n: u16) void {
         const self: *Self = @fieldParentPtr("tcp", tcp);
         self.bytes_sent += n;
         log.debug("sent {} bytes, total {}", .{ n, self.bytes_sent });
@@ -101,7 +106,7 @@ const Socket = struct {
     fn tick(self: *Self) !void {
         switch (self.tcp.state) {
             .closed => {
-                try self.tcp.connect(self.target);
+                try self.tcp.connect();
             },
             .open => {
                 self.send_count += 1;
