@@ -103,6 +103,7 @@ pub const FlexComm = enum(u4) {
 		);
 	}
 
+	// TODO: maybe patch ?
 	pub const Clock = enum(u3) {
 		none 		  = 0,
 		PLL 		  = 1,
@@ -111,7 +112,17 @@ pub const FlexComm = enum(u4) {
 		clk_1m 		  = 4,
 		usb_pll 	  = 5,
 		lp_oscillator = 6,
-		_ // also no clock
+		_,// also no clock
+
+		const ClockTy = @FieldType(@TypeOf(chip.peripherals.SYSCON0.FCCLKSEL[0]).underlying_type, "SEL");
+
+		pub fn from(clk: ClockTy) Clock {
+			return @enumFromInt(@intFromEnum(clk));
+		}
+
+		pub fn to(clk: Clock) ClockTy {
+			return @enumFromInt(@intFromEnum(clk));
+		}
 	};
 	pub fn set_clock(flexcomm: FlexComm, clock: Clock, divider: u16) void {
 		assert(divider > 0 and divider <= 256);
@@ -122,7 +133,28 @@ pub const FlexComm = enum(u4) {
 			.HALT = .RUN,
 			.UNSTAB = .STABLE // read-only field
 		});
-		chip.peripherals.SYSCON0.FCCLKSEL[n].modify_one("SEL", @enumFromInt(@intFromEnum(clock)));
+		chip.peripherals.SYSCON0.FCCLKSEL[n].modify_one("SEL", clock.to());
+	}
+
+	pub fn get_clock(flexcomm: FlexComm) u32 {
+		const n = flexcomm.get_n();
+		const div = chip.peripherals.SYSCON0.FLEXCOMMCLKDIV[n].read();
+		if(div.HALT == .HALT) return 0;
+
+		const clock = Clock.from(chip.peripherals.SYSCON0.FCCLKSEL[n].read().SEL);
+		const freq: u32 = switch(clock) {
+			// .PLL   => 1,
+			.FRO_12MHz 	   => 12_000_000,
+			// .fro_hf_div    => 3,
+			.clk_1m 	   =>  1_000_000,
+			// .usb_pll=> 5,
+			// .lp_oscillator => 6,
+			else => @panic("TODO")
+			// else => 0
+		};
+		// TODO: check if clock is on
+
+		return freq / (@as(u32, div.DIV) + 1);
 	}
 
 	fn get_n(flexcomm: FlexComm) u4 {
