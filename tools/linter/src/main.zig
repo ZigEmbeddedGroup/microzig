@@ -107,6 +107,20 @@ const TypenameComponent = union(TypenameComponentTag) {
     lowercase: []const u8,
 };
 
+const TypenameComponents = struct {
+    list: std.ArrayList(TypenameComponent) = .{},
+
+    pub fn format(components: *const TypenameComponents, writer: *std.Io.Writer) !void {
+        try writer.print("Components:\n", .{});
+        for (components.list.items) |entry| switch (entry) {
+            .underscore => try writer.print("  _\n", .{}),
+            .uppercase => |str| try writer.print("  uppercase: '{s}'\n", .{str}),
+            .capitalcase => |str| try writer.print("  capitalcase: '{s}'\n", .{str}),
+            .lowercase => |str| try writer.print("  lowercase: '{s}'\n", .{str}),
+        };
+    }
+};
+
 fn typename_components_to_string(gpa: Allocator, components: []const TypenameComponent) ![]const u8 {
     var allocating: std.Io.Writer.Allocating = .init(gpa);
     defer allocating.deinit();
@@ -196,9 +210,9 @@ fn has_lower(str: []const u8) bool {
     return false;
 }
 
-fn from_string(gpa: Allocator, typename: []const u8) ![]const TypenameComponent {
+fn from_string(gpa: Allocator, typename: []const u8) !TypenameComponents {
     var components: std.ArrayList(TypenameComponent) = .{};
-    defer components.deinit(gpa);
+    errdefer components.deinit(gpa);
 
     var buf: []const u8 = &.{};
     var i: usize = 0;
@@ -248,7 +262,10 @@ fn from_string(gpa: Allocator, typename: []const u8) ![]const TypenameComponent 
         },
         .capitalcase => {
             if (i >= typename.len) {
-                try components.append(gpa, .{ .capitalcase = buf });
+                try components.append(gpa, if (has_lower(buf))
+                    .{ .capitalcase = buf }
+                else
+                    .{ .uppercase = buf });
                 continue :state .end;
             }
 
@@ -257,11 +274,18 @@ fn from_string(gpa: Allocator, typename: []const u8) ![]const TypenameComponent 
                 'A'...'Z' => if (!has_lower(buf))
                     .uppercase
                 else blk: {
-                    try components.append(gpa, .{ .capitalcase = buf });
+                    try components.append(gpa, if (has_lower(buf))
+                        .{ .capitalcase = buf }
+                    else
+                        .{ .uppercase = buf });
                     break :blk .start;
                 },
+
                 '_' => blk: {
-                    try components.append(gpa, .{ .capitalcase = buf });
+                    try components.append(gpa, if (has_lower(buf))
+                        .{ .capitalcase = buf }
+                    else
+                        .{ .uppercase = buf });
                     break :blk .start;
                 },
                 else => blk: {
@@ -295,7 +319,7 @@ fn from_string(gpa: Allocator, typename: []const u8) ![]const TypenameComponent 
         .end => {},
     }
 
-    return components.toOwnedSlice(gpa);
+    return .{ .list = components };
 }
 
 fn should_transform_typename(gpa: Allocator, typename: []const u8) !?[]const u8 {
@@ -305,13 +329,20 @@ fn should_transform_typename(gpa: Allocator, typename: []const u8) !?[]const u8 
     if (std.mem.eql(u8, typename, "VTable"))
         return null;
 
-    const components = try from_string(gpa, typename);
-    defer gpa.free(components);
+    var components = try from_string(gpa, typename);
+    defer components.list.deinit(gpa);
 
     // special cases
-    if (components.len > 1) {
-        switch (components[components.len - 1]) {
+    if (components.list.items.len > 1) {
+        switch (components.list.items[components.list.items.len - 1]) {
+            // ID is fine
             .uppercase => |str| if (std.mem.eql(u8, str, "ID")) return null,
+            .lowercase => |str| if (std.mem.eql(u8, str, "t") and components.list.items[components.list.items.len - 2] == .underscore) {
+                components.list.orderedRemoveMany(&.{
+                    components.list.items.len - 2,
+                    components.list.items.len - 1,
+                });
+            },
             else => {},
         }
     }
@@ -319,7 +350,7 @@ fn should_transform_typename(gpa: Allocator, typename: []const u8) !?[]const u8 
     var new_components: std.ArrayList(TypenameComponent) = .{};
     defer new_components.deinit(gpa);
 
-    for (components) |component| switch (component) {
+    for (components.list.items) |component| switch (component) {
         .underscore, .uppercase => try new_components.append(gpa, component),
         .lowercase => |str| try new_components.append(gpa, .{
             .capitalcase = str,
@@ -420,70 +451,55 @@ test "from_string" {
     const gpa = arena.allocator();
 
     const a = try from_string(gpa, "GpioMapper");
-    try std.testing.expectEqual(2, a.len);
+    try std.testing.expectEqual(2, a.list.items.len);
 
-    try std.testing.expect(a[0] == .capitalcase);
-    try std.testing.expectEqualStrings("Gpio", a[0].capitalcase);
-    try std.testing.expect(a[1] == .capitalcase);
-    try std.testing.expectEqualStrings("Mapper", a[1].capitalcase);
+    try std.testing.expect(a.list.items[0] == .capitalcase);
+    try std.testing.expectEqualStrings("Gpio", a.list.items[0].capitalcase);
+    try std.testing.expect(a.list.items[1] == .capitalcase);
+    try std.testing.expectEqualStrings("Mapper", a.list.items[1].capitalcase);
 
     const b = try from_string(gpa, "GPIOMapper");
-    try std.testing.expectEqual(2, b.len);
+    try std.testing.expectEqual(2, b.list.items.len);
 
-    try std.testing.expect(b[0] == .uppercase);
-    try std.testing.expectEqualStrings("GPIO", b[0].uppercase);
-    try std.testing.expect(b[1] == .capitalcase);
-    try std.testing.expectEqualStrings("Mapper", b[1].capitalcase);
+    try std.testing.expect(b.list.items[0] == .uppercase);
+    try std.testing.expectEqualStrings("GPIO", b.list.items[0].uppercase);
+    try std.testing.expect(b.list.items[1] == .capitalcase);
+    try std.testing.expectEqualStrings("Mapper", b.list.items[1].capitalcase);
 
     const c = try from_string(gpa, "Device_Index");
-    try std.testing.expectEqual(3, c.len);
+    try std.testing.expectEqual(3, c.list.items.len);
 
-    try std.testing.expect(c[0] == .capitalcase);
-    try std.testing.expectEqualStrings("Device", c[0].capitalcase);
-    try std.testing.expect(c[1] == .underscore);
-    try std.testing.expect(c[2] == .capitalcase);
-    try std.testing.expectEqualStrings("Index", c[2].capitalcase);
+    try std.testing.expect(c.list.items[0] == .capitalcase);
+    try std.testing.expectEqualStrings("Device", c.list.items[0].capitalcase);
+    try std.testing.expect(c.list.items[1] == .underscore);
+    try std.testing.expect(c.list.items[2] == .capitalcase);
+    try std.testing.expectEqualStrings("Index", c.list.items[2].capitalcase);
+}
+
+fn expect_transform(expected: ?[]const u8, input: []const u8) !void {
+    const typename = try should_transform_typename(std.testing.allocator, input);
+    defer if (typename) |str| std.testing.allocator.free(str);
+
+    if (expected) |expect| {
+        try std.testing.expect(typename != null);
+        try std.testing.expectEqualStrings(expect, typename.?);
+    } else {
+        try std.testing.expectEqual(null, typename);
+    }
 }
 
 test "should_transform" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-
-    const gpa = arena.allocator();
-
-    const a = try should_transform_typename(gpa, "arst");
-    try std.testing.expectEqual(null, a);
-
-    const b = try should_transform_typename(gpa, "Arst");
-    try std.testing.expectEqual(null, b);
-
-    const c = try should_transform_typename(gpa, "ARST");
-    try std.testing.expectEqual(null, c);
-
-    const d = try should_transform_typename(gpa, "GpioMapper");
-    try std.testing.expect(d != null);
-    try std.testing.expectEqualStrings("GPIO_Mapper", d.?);
-
-    const e = try should_transform_typename(gpa, "GPIOMapper");
-    try std.testing.expect(e != null);
-    try std.testing.expectEqualStrings("GPIO_Mapper", e.?);
-
-    const f = try should_transform_typename(gpa, "Device_Index");
-    try std.testing.expect(f != null);
-    try std.testing.expectEqualStrings("DeviceIndex", f.?);
-
-    const g = try should_transform_typename(gpa, "I2cBus");
-    try std.testing.expect(g != null);
-    try std.testing.expectEqualStrings("I2C_Bus", g.?);
-
-    const h = try should_transform_typename(gpa, "I2C_Device");
-    try std.testing.expectEqual(null, h);
-
-    const i = try should_transform_typename(gpa, "VTable");
-    try std.testing.expectEqual(null, i);
-
-    const j = try should_transform_typename(gpa, "DeviceID");
-    try std.testing.expectEqual(null, j);
+    try expect_transform(null, "arst");
+    try expect_transform(null, "Arst");
+    try expect_transform("GPIO_Mapper", "GpioMapper");
+    try expect_transform("GPIO_Mapper", "GPIOMapper");
+    try expect_transform("DeviceIndex", "Device_Index");
+    try expect_transform("I2C_Bus", "I2cBus");
+    try expect_transform(null, "I2C_Device");
+    try expect_transform(null, "VTable");
+    try expect_transform(null, "DeviceID");
+    try expect_transform("Channel", "Channel_t");
+    try expect_transform(null, "DMA_V1_Type");
 }
 
 // I'm defining capital case as something that starts with an upper case letter, and has lower case somewhere in it.
