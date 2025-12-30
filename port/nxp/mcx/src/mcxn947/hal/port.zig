@@ -3,12 +3,12 @@ const syscon = @import("./syscon.zig");
 const gpio = @import("./gpio.zig");
 const chip = microzig.chip;
 
-pub fn num(comptime n: u3) Port {
-    return @enumFromInt(n);
-}
-
 pub const Port = enum(u3) {
     _,
+
+	pub fn num(comptime n: u3) Port {
+		return @enumFromInt(n);
+	}
 
     pub fn init(comptime port: Port) void {
         const tag = switch (@intFromEnum(port)) {
@@ -23,9 +23,36 @@ pub const Port = enum(u3) {
         };
 
         syscon.peripheral_reset_release(tag);
-		// TODO: check why it is said "module has no clocking consideration" put it is possible to enable clock
         syscon.module_enable_clock(tag);
     }
+
+	pub fn deinit(comptime port: Port) void {
+        const tag = switch (@intFromEnum(port)) {
+            0 => .PORT0,
+            1 => .PORT1,
+            2 => .PORT2,
+            3 => .PORT3,
+            4 => .PORT4,
+			// TODO
+            // 5 => .PORT5,
+            else => unreachable
+        };
+		syscon.module_disable_clock(tag);
+		syscon.peripheral_reset_assert(tag);
+	}
+
+	pub fn disable_clock(comptime port: Port) void {
+		syscon.module_disable_clock(switch (@intFromEnum(port)) {
+            0 => .PORT0,
+            1 => .PORT1,
+            2 => .PORT2,
+            3 => .PORT3,
+            4 => .PORT4,
+			// TODO
+            // 5 => .PORT5,
+            else => unreachable
+        });
+	}
 
     pub fn get_gpio(comptime port: Port, comptime pin: u5) gpio.GPIO {
 		// TODO: check unavailable pins

@@ -1,15 +1,14 @@
 const microzig = @import("microzig");
 const syscon = @import("./syscon.zig");
-
 const chip = microzig.chip;
-
-pub fn num(comptime n: u3, comptime pin: u5) GPIO {
-	// TODO: check unavailable pins
-    return @enumFromInt(@as(u8, n) << 5 | pin);
-}
 
 pub const GPIO = enum(u8) {
     _,
+
+	pub fn num(comptime n: u3, comptime pin: u5) GPIO {
+		// TODO: check unavailable pins
+		return @enumFromInt(@as(u8, n) << 5 | pin);
+	}
 
     pub fn init(comptime gpio: GPIO) void {
         const tag = switch (gpio.get_n()) {
