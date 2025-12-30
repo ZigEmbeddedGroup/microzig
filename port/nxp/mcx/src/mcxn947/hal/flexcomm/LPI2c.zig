@@ -1,10 +1,19 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const FlexComm = @import("../flexcomm.zig").FlexComm;
+const SliceVector = microzig.utilities.SliceVector;
 
+const I2C_Device = microzig.drivers.base.I2C_Device;
+
+const assert = std.debug.assert;
 const chip = microzig.chip;
 const peripherals = chip.peripherals;
 
+// Controller (master) only
+// TODO: target (slave)
+// TODO: 10 bit addressing
+// TODO: better receive (with matching)
+// TODO: SMBus
 pub const LPI2c = enum(u4) {
 	_,
 
@@ -24,8 +33,11 @@ pub const LPI2c = enum(u4) {
 
 	pub const Config = struct {
 		baudrate: u32 = 100_000,
-		enabled: bool = true,
 		mode: OperatingMode = .standard,
+		enabled: bool = true,
+		debug: bool = false,
+		ignore_ack: bool,
+
 
 		pub const OperatingMode = enum { standard, fast, fastplus, highspeed, ultrafast };
 	};
@@ -39,24 +51,42 @@ pub const LPI2c = enum(u4) {
 	};
 
 	// controller only
-	pub fn init(interface: u4, config: Config, clk: u32) !LPI2c {
+	pub fn init(interface: u4, config: Config) !LPI2c {
 		FlexComm.num(interface).init(.I2C);
 
 		const i2c: LPI2c = @enumFromInt(interface);
 		const regs = i2c.get_regs();
 		i2c.reset();
 
-		try i2c.set_baudrate(config.mode, config.baudrate, clk);
+		try i2c.set_baudrate(config.mode, config.baudrate);
 
 		regs.MCFGR1.modify_one("PINCFG", .OPEN_DRAIN_2_PIN);
-		// TODO: clear flags
 
 		if(config.enabled) i2c.set_enabled(true);
 
 		return i2c;
 	}
 
-	fn is_bus_busy(i2c: LPI2c) bool {
+	/// Resets the Uart interface and deinit the corresponding FlexComm interface.
+	pub fn deinit(i2c: LPI2c) void {
+		i2c.reset();
+		FlexComm.num(i2c.get_n()).deinit();
+	}
+
+	/// Resets the I2C interface.
+	pub fn reset(i2c: LPI2c) void {
+		i2c.get_regs().MCR.write(.{
+			.RST = .RESET,
+			.MEN = .DISABLED,
+			.DBGEN = .DISABLED,
+			.DOZEN = .DISABLED,
+			.RRF = .RESET,
+			.RTF = .RESET
+		});
+		i2c.get_regs().MCR.modify_one("RST", .NOT_RESET);
+	}
+
+	pub fn is_bus_busy(i2c: LPI2c) bool {
 		return i2c.get_regs().MSR.read().BBF == .BUSY;
 	}
 
@@ -87,97 +117,9 @@ pub const LPI2c = enum(u4) {
 
 	fn reset_fifos(i2c: LPI2c) void {
 		i2c.get_regs().MCR.modify(.{
-			.RRF = .RESET,
-			.RTF = .RESET
+			.RRF = .NOW_EMPTY,
+			.RTF = .NOW_EMPTY
 		});
-	}
-
-	pub fn send_start(i2c: LPI2c, address: u7, mode: enum(u2) { write = 0, read = 1}) Error!void {
-		if(i2c.is_bus_busy()) return Error.BusBusy;
-
-		i2c.get_regs().MTDR.write(.{
-			.DATA = (@as(u8, address) << 1) | @intFromEnum(mode),
-			.CMD = .GENERATE_START_AND_TRANSMIT_ADDRESS_IN_DATA_7_THROUGH_0
-		});
-	}
-
-	pub fn send_stop(i2c: LPI2c) !void {
-		// wait for space in tx fifo
-		while(!i2c.can_write()) try i2c.check_flags();
-		i2c.get_regs().MTDR.write(.{
-			.DATA = 0,
-			.CMD = .GENERATE_STOP_CONDITION
-		});
-	}
-
-	// TODO: multiple sends
-	pub fn send_blocking(i2c: LPI2c, address: u7, data: []const u8) Error!void {
-		const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
-
-		if(i2c.is_bus_busy()) return error.BusBusy;
-		i2c.clear_flags();
-
-		try i2c.send_start(address, .write);
-
-		for(data) |c| {
-			while(!i2c.can_write()) try i2c.check_flags();
-			MTDR.* = c;
-		}
-		try i2c.send_stop();
-		var flags = i2c.get_regs().MSR.read();
-		try i2c.check_flags();
-		while(flags.SDF != .INT_YES and flags.TDF != .ENABLED) {
-			flags = i2c.get_regs().MSR.read();
-			try i2c.check_flags();
-		}
-		i2c.get_regs().MSR.write_raw(1 << 9);
-	}
-
-	pub fn recv_blocking(i2c: LPI2c, address: u7, buffer: []u8) Error!void {
-		const MRDR: *volatile u8 = @ptrCast(&i2c.get_regs().MRDR);
-
-		i2c.send_start(address, .read);
-		for(buffer) |*c| {
-			// could be made more optimal by reading `RXEMPTY` from `MRDR`
-			while(!i2c.can_read()) try i2c.check_flags();
-			c.* = MRDR.*;
-		}
-		i2c.send_stop();
-	}
-
-	fn can_read(i2c: LPI2c) bool {
-		return i2c.get_fifo_counts().rx > 0;
-	}
-
-	pub fn can_write(i2c: LPI2c) bool {
-		return i2c.get_fifo_counts().tx < i2c.get_fifo_sizes().tx;
-	}
-
-	// The `PARAM` register is readonly with default value of 3
-	// for `MTXFIFO` and `MRXFIFO`
-	pub fn get_fifo_sizes(i2c: LPI2c) struct { tx: u16, rx: u16 } {
-		_ = i2c;
-		// const param = i2c.get_regs().PARAM.read();
-		// return .{ @as(u16, 1) << param.MTXFIFO, @as(u16, 1) << param.MRXFIFO };
-		return .{ .tx = 8, .rx = 8 };
-	}
-
-	pub fn get_fifo_counts(i2c: LPI2c) struct { tx: u8, rx: u8 } {
-		const MFSR  = i2c.get_regs().MFSR.read();
-		return .{ .tx = MFSR.TXCOUNT, .rx = MFSR.RXCOUNT };
-	}
-
-	/// Resets the Uart interface and deinit the corresponding FlexComm interface.
-	pub fn deinit(i2c: LPI2c) void {
-		i2c.reset();
-		FlexComm.num(i2c.get_n()).deinit();
-	}
-
-	/// Resets the I2C interface.
-	pub fn reset(i2c: LPI2c) void {
-		i2c.get_regs().SCR.modify_one("RST", .RESET);
-		i2c.get_regs().SCR.modify_one("RST", .NOT_RESET);
-		// TODO: reset the SCR register
 	}
 
 	fn get_n(i2c: LPI2c) u4 {
@@ -188,9 +130,19 @@ pub const LPI2c = enum(u4) {
 		return LPI2c.Registers[i2c.get_n()];
 	}
 
+	fn get_flexcomm(i2c: LPI2c) FlexComm {
+		return FlexComm.num(i2c.get_n());
+	}
+
+
+	//
+	// Configuration functions
+	//
+
 	/// `lpi2c_clk` in Hz
 	/// controller (master) mode only
-	pub fn set_baudrate(i2c: LPI2c, mode: Config.OperatingMode, baudrate: u32, lpi2c_clk_f: u32) error { BaudrateUnavailable }!void {
+	pub fn set_baudrate(i2c: LPI2c, mode: Config.OperatingMode, baudrate: u32) error { BaudrateUnavailable }!void {
+		const lpi2c_clk_f = i2c.get_flexcomm().get_clock();
 		const regs = i2c.get_regs();
 		// We currently assume these are negligible, but it could be useful
 		// to make them configurable
@@ -229,6 +181,7 @@ pub const LPI2c = enum(u4) {
 		// 1/baudrate >= 1/limits[0]
 		// clk_hi + clk_lo + 2 + scl_latency >= (lpi2c_clk_f / 2^prescale) / limits[0] >= 1 / limits[0] 
 
+		// TODO: maybe use the config provided by the user so the remaining has the chance to be done at comptime ?
 		const filt_scl, const filt_sda = blk: {
 			const mcfgr2 = regs.MCFGR2.read();
 			break :blk .{ mcfgr2.FILTSCL, mcfgr2.FILTSDA };
@@ -279,8 +232,8 @@ pub const LPI2c = enum(u4) {
 		}
 		const clk_hi: u6 = @intCast(@"best clk_hi + clk_lo" - clk_lo);
 
-		std.debug.assert(((clk_hi + 1 + scl_latency) << prescale) >= @as(u64, min_clk_high) * lpi2c_clk_f / conv_factor);
-		std.debug.assert(((clk_lo + 1 			   ) << prescale) >= @as(u64, min_clk_low ) * lpi2c_clk_f / conv_factor);
+		assert(((clk_hi + 1 + scl_latency) << prescale) >= @as(u64, min_clk_high) * lpi2c_clk_f / conv_factor);
+		assert(((clk_lo + 1 			   ) << prescale) >= @as(u64, min_clk_low ) * lpi2c_clk_f / conv_factor);
 
 		// corresponds somewhat to t_HD;STA, t_SU;STA and t_SU;STO
 		// per I2C spec, we must have
@@ -314,11 +267,15 @@ pub const LPI2c = enum(u4) {
 		regs.MCFGR1.modify_one("PRESCALE", @enumFromInt(prescale));
 	}
 
-	pub fn get_actual_baudrate(i2c: LPI2c, clk: u32) f32 {
+	/// Computes the current baudrate.
+	/// Depends on the flexcomm's interface clock.
+	/// Changing the clock will change the baudrate.
+	pub fn get_actual_baudrate(i2c: LPI2c) f32 {
 		const regs = i2c.get_regs();
 		const MCCR0 = regs.MCCR0.read();
 		const MCFGR1 = regs.MCFGR1.read();
 		const prescale = @intFromEnum(MCFGR1.PRESCALE);
+		const clk = i2c.get_flexcomm().get_clock();
 
 		const filt_scl: u8 = regs.MCFGR2.read().FILTSCL;
 		const scl_risetime = 0;
@@ -343,6 +300,254 @@ pub const LPI2c = enum(u4) {
 	pub fn set_enabled(i2c: LPI2c, enabled: bool) void {
 		i2c.get_regs().MCR.modify_one("MEN", if(enabled) .ENABLED else .DISABLED);
 	}
+
+
+	//
+	// Read / Write functions
+	//
+
+	fn can_read(i2c: LPI2c) bool {
+		return i2c.get_fifo_counts().rx > 0;
+	}
+
+	pub fn can_write(i2c: LPI2c) bool {
+		return i2c.get_fifo_counts().tx < i2c.get_fifo_sizes().tx;
+	}
+
+	// The `PARAM` register is readonly with default value of 3
+	// for `MTXFIFO` and `MRXFIFO`
+	pub fn get_fifo_sizes(i2c: LPI2c) struct { tx: u16, rx: u16 } {
+		_ = i2c;
+		// const param = i2c.get_regs().PARAM.read();
+		// return .{ @as(u16, 1) << param.MTXFIFO, @as(u16, 1) << param.MRXFIFO };
+		return .{ .tx = 8, .rx = 8 };
+	}
+
+	pub fn get_fifo_counts(i2c: LPI2c) struct { tx: u8, rx: u8 } {
+		const MFSR  = i2c.get_regs().MFSR.read();
+		return .{ .tx = MFSR.TXCOUNT, .rx = MFSR.RXCOUNT };
+	}
+
+	pub fn send_start_blocking(i2c: LPI2c, address: u7, mode: enum(u2) { write = 0, read = 1 }) Error!void {
+		try i2c.wait_for_tx_space();
+
+		i2c.get_regs().MTDR.write(.{
+			.DATA = (@as(u8, address) << 1) | @intFromEnum(mode),
+			.CMD = .GENERATE_START_AND_TRANSMIT_ADDRESS_IN_DATA_7_THROUGH_0
+		});
+	}
+
+	pub fn send_stop_blocking(i2c: LPI2c) Error!void {
+		try i2c.wait_for_tx_space();
+
+		i2c.get_regs().MTDR.write(.{
+			.DATA = 0,
+			.CMD = .GENERATE_STOP_CONDITION
+		});
+
+		// wait for the tx fifo to be empty and stop be sent
+		var flags = i2c.get_regs().MSR.read();
+		try i2c.check_flags();
+		while(flags.SDF != .INT_YES and flags.TDF != .ENABLED) {
+			flags = i2c.get_regs().MSR.read();
+			try i2c.check_flags();
+		}
+		i2c.get_regs().MSR.write_raw(1 << 9);
+	}
+
+	fn wait_for_tx_space(i2c: LPI2c) Error!void {
+		while(!i2c.can_write()) try i2c.check_flags();
+	}
+
+	pub fn send_blocking(i2c: LPI2c, address: u7, data: []const u8) Error!void {
+		const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
+
+		if(i2c.is_bus_busy()) return error.BusBusy;
+		i2c.clear_flags();
+
+		try i2c.send_start_blocking(address, .write);
+
+		for(data) |c| {
+			try i2c.wait_for_tx_space();
+			MTDR.* = c;
+		}
+		try i2c.send_stop_blocking();
+	}
+
+
+	// Follows the linux kernel's approach
+	pub const I2cMsg = struct {
+		flags: packed struct {
+			direction: enum(u1) { write = 0, read = 1 },
+			// ten_bit: bool = false
+		},
+		address: u16,
+		chunks: union {
+			read: []const []u8,
+			write: []const []const u8
+		}
+	};
+
+	pub fn transfer_blocking(i2c: LPI2c, messages: []const I2cMsg) Error!void {
+		// TODO: retries
+		if(i2c.is_bus_busy()) return error.BusBusy;
+		i2c.clear_flags();
+
+		for(messages) |message| {
+			// note: for better codegen, using direction as a enum(u8) might be better
+			switch(message.flags.direction) {
+				.read => try i2c.readv_blocking(message),
+				.write => try i2c.writev_blocking(message),
+			}
+		}
+
+		try i2c.send_stop_blocking();
+	}
+
+	/// Sends `START` and the bytes to the given address.
+	/// Skips empty datagrams.
+	/// Does not send `STOP` afterwards.
+	/// Does not check if the bus is busy and does not clear flags beforehand.
+	pub fn writev_blocking(i2c: LPI2c, msg: I2cMsg) Error!void {
+		assert(msg.flags.direction == .write);
+		const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
+
+		const write_vec = SliceVector([]const u8).init(msg.chunks.write);
+		if(write_vec.size() == 0) return; // other impls return error.NoData
+
+		// TODO: 10 bit addresses support
+		try i2c.send_start_blocking(@truncate(msg.address), .write);
+
+		var iter = write_vec.iterator();
+		while(iter.next_element()) |element| {
+			try i2c.wait_for_tx_space();
+			MTDR.* = element.value;
+		}
+	}
+
+	/// Sends `START` and the bytes to the give address
+	/// Does not send `STOP` afterwards.
+	/// Does not check if the bus is busy and does not clear flags beforehand.
+	///
+	/// Currently, msg.buffer must be less than `8 × 256`.
+	pub fn readv_blocking(i2c: LPI2c, msg: I2cMsg) Error!void {
+		assert(msg.flags.direction == .read);
+
+		const read_vec = SliceVector([]u8).init(msg.chunks.read);
+		var len = read_vec.size();
+		if(len == 0) return; // other impls return error.NoData
+		assert(len <= i2c.get_fifo_sizes().tx * 256); // see comments above the loop below
+
+		// TODO: 10 bit addresses support
+		try i2c.send_start_blocking(@truncate(msg.address), .read);
+
+		// Because the tx fifo has a size of 8
+		// we can issue at most eight 256 bytes read at once.
+		// It is possible to issue other read commands after we started reading, but
+		// note that the controller will send a NACK after the last read command
+		// if it is not followed by an other read.
+		// Reading more than 8 × 256 bytes is therefore currently unimplemented.
+		while(len > 0) {
+			const chunk_len = @min(256, len);
+			len -= chunk_len;
+
+			try i2c.wait_for_tx_space();
+			i2c.get_regs().MTDR.write(.{
+				.DATA = @intCast(chunk_len - 1),
+				.CMD = .RECEIVE_DATA_7_THROUGH_0_PLUS_ONE
+			});
+		}
+		
+		var iter = read_vec.iterator();
+		while(iter.next_element_ptr()) |element| {
+			try i2c.check_flags();
+			var mrdr = i2c.get_regs().MRDR.read();
+			while(mrdr.RXEMPTY == .EMPTY) {
+				try i2c.check_flags();
+				mrdr = i2c.get_regs().MRDR.read();
+			}
+			element.value_ptr.* = mrdr.DATA;
+		}
+	}
+
+	pub fn i2c_device(i2c: LPI2c) I2C_Device {
+		return .{
+			.ptr = @ptrFromInt(@intFromEnum(i2c)),
+			.vtable = &.{
+				.readv_fn = readv,
+				.writev_fn = writev,
+				.writev_then_readv_fn = writev_then_readv
+			}
+		};
+	}
 };
+
+// TODO: check for reserved addresses
+fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8) I2C_Device.Error!void {
+	const dev: LPI2c = @enumFromInt(@intFromPtr(d));
+	const message: LPI2c.I2cMsg = .{
+		.address = @intFromEnum(addr),
+		.flags = .{ .direction = .write },
+		.chunks = .{ .write = datagrams }
+	};
+	dev.transfer_blocking(&.{message}) catch |err| switch(err) {
+		LPI2c.Error.UnexpectedNack,
+		LPI2c.Error.FifoError,
+		LPI2c.Error.BusBusy,
+		LPI2c.Error.ArbitrationLost => {
+			std.log.debug("ew: {}\n", .{err});
+			return I2C_Device.Error.UnknownAbort;},
+		LPI2c.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
+	};
+}
+fn readv(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []u8) I2C_Device.Error!usize {
+	const dev: LPI2c = @enumFromInt(@intFromPtr(d));
+	const message: LPI2c.I2cMsg = .{
+		.address = @intFromEnum(addr),
+		.flags = .{ .direction = .write },
+		.chunks = .{ .write = datagrams }
+	};
+	dev.transfer_blocking(&.{message}) catch |err| switch(err) {
+		LPI2c.Error.UnexpectedNack,
+		LPI2c.Error.FifoError,
+		LPI2c.Error.BusBusy,
+		LPI2c.Error.ArbitrationLost => {
+			std.log.debug("er: {}\n", .{err});
+			return I2C_Device.Error.UnknownAbort;},
+		LPI2c.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
+	};
+
+	return SliceVector([]u8).init(datagrams).size();
+}
+
+fn writev_then_readv(
+	d: *anyopaque,
+	addr: I2C_Device.Address,
+	write_chunks: []const []const u8,
+	read_chunks: []const []u8,
+) I2C_Device.Error!void {
+	const dev: LPI2c = @enumFromInt(@intFromPtr(d));
+	const messages: []const LPI2c.I2cMsg = &.{
+		.{
+			.address = @intFromEnum(addr),
+			.flags = .{ .direction = .write },
+			.chunks = .{ .write = write_chunks }
+		},
+		.{
+			.address = @intFromEnum(addr),
+			.flags = .{ .direction = .read },
+			.chunks = .{ .read = read_chunks }
+		}
+	};
+	dev.transfer_blocking(messages) catch |err| switch(err) {
+		LPI2c.Error.UnexpectedNack,
+		LPI2c.Error.FifoError,
+		LPI2c.Error.BusBusy,
+		LPI2c.Error.ArbitrationLost => {
+			std.log.debug("erw: {}\n", .{err});
+			return I2C_Device.Error.UnknownAbort;},
+		LPI2c.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
+	};
+}
 
 // TODO: use the register VERID to check the presence of controller mode
