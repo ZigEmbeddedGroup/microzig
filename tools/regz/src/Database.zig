@@ -6,9 +6,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const c = @cImport(@cInclude("sqlite3.h"));
-
 const zqlite = @import("zqlite");
+const c = zqlite.c;
+
 const xml = @import("xml.zig");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");

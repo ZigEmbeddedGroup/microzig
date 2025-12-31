@@ -57,35 +57,6 @@ pub fn build(b: *Build) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const contextualize_fields = b.addExecutable(.{
-        .name = "contextualize-fields",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/contextualize-fields.zig"),
-            .target = b.graph.host,
-        }),
-        .use_llvm = true,
-    });
-    contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
-    const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
-    if (b.args) |args| {
-        contextualize_fields_run.addArgs(args);
-    }
-    const contextualize_fields_step = b.step("contextualize-fields", "Create ndjson of all the fields with the context of parent fields");
-    contextualize_fields_step.dependOn(&contextualize_fields_run.step);
-
-    const characterize = b.addExecutable(.{
-        .name = "characterize",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/characterize.zig"),
-            .target = b.graph.host,
-        }),
-        .use_llvm = true,
-    });
-    characterize.linkLibrary(libxml2_dep.artifact("xml2"));
-    const characterize_run = b.addRunArtifact(characterize);
-    const characterize_step = b.step("characterize", "Characterize a number of xml files whose paths are piped into stdin, results are ndjson");
-    characterize_step.dependOn(&characterize_run.step);
-
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/Database.zig"),
