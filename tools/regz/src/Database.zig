@@ -799,7 +799,10 @@ fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
     var entry: T = undefined;
     inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
         if (@typeInfo(field.type) == .@"enum") {
-            @field(entry, field.name) = @enumFromInt(row.int(i));
+            if (@hasDecl(field.type, "to_string"))
+                @field(entry, field.name) = std.meta.stringToEnum(field.type, row.text(i)) orelse return error.Unknown
+            else
+                @field(entry, field.name) = @enumFromInt(row.int(i));
         } else if (@typeInfo(field.type) == .int) {
             @field(entry, field.name) = @intCast(row.int(i));
         } else switch (field.type) {
@@ -1178,7 +1181,8 @@ pub fn get_interrupts(db: *Database, allocator: Allocator, device_id: DeviceID) 
         comptime gen_field_list(Interrupt, .{}),
     });
 
-    return try db.all(Interrupt, query, allocator, .{@intFromEnum(device_id)});
+    const interrupts = try db.all(Interrupt, query, allocator, .{@intFromEnum(device_id)});
+    return interrupts;
 }
 
 pub fn backup(db: *Database, path: [:0]const u8) !void {
