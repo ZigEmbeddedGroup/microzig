@@ -424,14 +424,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
     for (chip_files.items) |chip_file| {
         const core = chip_file.value.cores[0];
+        const arch = std.meta.stringToEnum(Arch, core_to_cpu.get(core.name).?).?;
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
-            // TODO
-            .arch = std.meta.stringToEnum(Arch, core_to_cpu.get(core.name).?).?,
+            .arch = arch,
         });
 
-        const device = try db.get_device_by_name(arena.allocator(), chip_file.value.name);
-        try arm.load_system_interrupts(db, &device);
+        try arm.load_system_interrupts(db, device_id, arch);
 
         // TODO: how do we want to handle multi core MCUs?
         //

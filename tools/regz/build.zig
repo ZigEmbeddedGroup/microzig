@@ -12,13 +12,13 @@ pub fn build(b: *Build) !void {
 
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseSafe,
         .iconv = false,
     });
 
     const sqlite3_dep = b.dependency("sqlite3", .{
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseSafe,
     });
     const sqlite3_lib = sqlite3_dep.artifact("sqlite3");
 

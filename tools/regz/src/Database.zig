@@ -670,20 +670,13 @@ pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
     return @enumFromInt(row.int(0));
 }
 
-fn get_id_by_name(db: *Database, comptime T: type, name: []const u8) !?T {
-    errdefer std.log.info("{s}", .{db.conn.lastError()});
-
-    const row = try db.conn.row(
-        std.fmt.comptimePrint("SELECT id FROM {s} WHERE name = ?", .{T.table}),
-        .{name},
-    ) orelse return null;
+pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
+    const row = try db.conn.row("SELECT id FROM peripherals WHERE name = ?", .{
+        name,
+    }) orelse return null;
     defer row.deinit();
 
     return @enumFromInt(row.int(0));
-}
-
-pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
-    return db.get_id_by_name(PeripheralID, name);
 }
 
 /// Get the struct ID for a struct decl with `name` in parent struct
@@ -713,7 +706,6 @@ pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: Stru
 }
 
 pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?Peripheral {
-    log.debug("get_peripheral_by_struct_id: strut_id={f}", .{struct_id});
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
         \\FROM peripherals
@@ -728,7 +720,6 @@ pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_i
 }
 
 pub fn get_struct_decl_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
-    log.debug("get_struct_decl_by_struct_id: struct_id={f}", .{struct_id});
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
         \\FROM struct_decls
@@ -767,32 +758,6 @@ pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
     defer row.deinit();
 
     return @enumFromInt(row.int(0));
-}
-
-pub fn get_device_by_name(db: *Database, allocator: Allocator, name: []const u8) !Device {
-    const query = std.fmt.comptimePrint(
-        \\SELECT {s}
-        \\FROM devices
-        \\WHERE name = ?
-    , .{
-        comptime gen_field_list(Device, .{}),
-    });
-
-    return db.one_alloc(Device, allocator, query, .{name});
-}
-
-fn get_name_for_id(db: *Database, allocator: Allocator, id: anytype) ![]const u8 {
-    const query = std.fmt.comptimePrint("SELECT name FROM {s} WHERE id = ?", .{
-        @TypeOf(id).table,
-    });
-
-    return db.one_alloc([]const u8, allocator, query, .{
-        .id = id,
-    });
-}
-
-pub fn get_peripheral_name(db: *Database, allocator: Allocator, peripheral_id: PeripheralID) ![]const u8 {
-    return db.get_name_for_id(allocator, peripheral_id);
 }
 
 fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
@@ -914,7 +879,7 @@ pub fn get_struct_registers(
 // Way beyond anything reasonable
 const max_recursion_depth = 32;
 
-pub fn get_nested_struct_fields(
+fn get_nested_struct_fields(
     db: *Database,
     allocator: Allocator,
     struct_id: StructID,
@@ -1293,13 +1258,6 @@ pub fn get_interrupt_name(db: *Database, allocator: Allocator, interrupt_id: Int
     });
 }
 
-pub fn get_interrupt_description(db: *Database, allocator: Allocator, interrupt_id: InterruptID) !?[]const u8 {
-    const query = "SELECT description FROM interrupts WHERE id = ?";
-    return db.get_one_alloc([]const u8, allocator, query, .{
-        @intFromEnum(interrupt_id),
-    });
-}
-
 pub fn get_struct_decl(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
@@ -1461,22 +1419,6 @@ fn get_one_alloc(
     defer row.deinit();
 
     return try scan_row(T, allocator, row);
-}
-
-pub fn get_enum_description(
-    db: *Database,
-    allocator: Allocator,
-    enum_id: EnumID,
-) !?[]const u8 {
-    const row = try db.conn.row("SELECT description FROM enums WHERE id = ?", .{
-        @intFromEnum(enum_id),
-    }) orelse return error.MissingEntity;
-    defer row.deinit();
-
-    return if (row.nullableText(0)) |text|
-        try allocator.dupe(u8, text)
-    else
-        null;
 }
 
 pub fn get_interrupt_idx(db: *Database, interrupt_id: InterruptID) !i32 {
@@ -1869,7 +1811,7 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
     try db.conn.commit();
 }
 
-pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
+fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
     try db.conn.exec(
         \\INSERT INTO struct_fields
         \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
@@ -2006,7 +1948,7 @@ fn strip_ref_prefix(expected_prefix: []const u8, ref: []const u8) ![]const u8 {
     return ref[index..];
 }
 
-pub fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
+fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
 
@@ -2038,7 +1980,7 @@ pub fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
     };
 }
 
-pub fn get_enum_ref(db: *Database, ref: []const u8) !EnumID {
+fn get_enum_ref(db: *Database, ref: []const u8) !EnumID {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
 
@@ -2051,7 +1993,7 @@ pub fn get_enum_ref(db: *Database, ref: []const u8) !EnumID {
     return e.id;
 }
 
-pub fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
+fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
 
@@ -2061,7 +2003,7 @@ pub fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
     return register.id;
 }
 
-pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name: []const u8, enum_id: ?EnumID) !void {
+fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name: []const u8, enum_id: ?EnumID) !void {
     try db.conn.exec(
         \\UPDATE struct_fields
         \\SET enum_id = ?
@@ -2084,7 +2026,7 @@ pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_
     });
 }
 
-pub fn cleanup_unused_enums(db: *Database) !void {
+fn cleanup_unused_enums(db: *Database) !void {
     try db.conn.exec(
         \\DELETE FROM enums
         \\WHERE id NOT IN (

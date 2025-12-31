@@ -166,7 +166,7 @@ fn main_impl() anyerror!void {
         for (try db.get_devices(arena.allocator())) |device| {
             if (device.arch.is_arm()) {
                 const arm = @import("arch/arm.zig");
-                try arm.load_system_interrupts(db, &device);
+                try arm.load_system_interrupts(db, device.id, device.arch);
             }
         }
     }
