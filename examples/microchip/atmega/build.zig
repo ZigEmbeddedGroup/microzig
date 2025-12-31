@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const MicroBuild = microzig.MicroBuild(.{
-    .atsam = true,
+    .avr = true,
 });
 
 pub fn build(b: *std.Build) void {
@@ -13,7 +13,8 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const available_examples = [_]Example{
-        .{ .target = mb.ports.atsam.chips.atsamd51j19, .name = "atsamd51j19-blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.atmega.boards.arduino.nano, .name = "arduino-nano_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.atmega.boards.arduino.uno_rev3, .name = "arduino-uno_blinky", .file = "src/blinky.zig" },
     };
 
     for (available_examples) |example| {
