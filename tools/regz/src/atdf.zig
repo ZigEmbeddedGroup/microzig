@@ -692,13 +692,6 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
                     .description = node.get_attribute("caption"),
                     .size_bits = 1,
                     .offset_bits = i,
-                    .enum_id = if (node.get_attribute("values")) |values| blk: {
-                        const e = db.get_enum_by_name(arena, peripheral_struct_id, values) catch |err| {
-                            log.warn("{s} failed to get_enum_by_name: {s}", .{ name, values });
-                            return err;
-                        };
-                        break :blk e.id;
-                    } else null,
                 });
 
                 // FIXME: struct field modes
@@ -1149,8 +1142,6 @@ test "atdf.register with bitfields and enum" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    try db.backup("atdf_register_with_bitfields_and_enum.regz");
-
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
 
@@ -1272,8 +1263,6 @@ test "atdf.register with mode" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    try db.backup("register_with_mode.regz");
-
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
 
@@ -1387,8 +1376,6 @@ test "atdf.instance of register group" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    try db.backup("instance_of_register_group.regz");
-
     const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
 
     const portb_instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "PORTB");
@@ -1490,4 +1477,86 @@ test "atdf.interrupts with interrupt-groups" {
 
     const portb_int1_id = try db.get_interrupt_by_name(device_id, "PORTB_INT1") orelse return error.NoInterrupt;
     try expectEqual(@as(i32, 2), try db.get_interrupt_idx(portb_int1_id));
+}
+
+test "atdf.non-consecutive bitfield with enum" {
+    // In this example, WDP is a bitfield with non-consecutive bits. We break
+    // up the field into individual bits, and do not associate the fields with the enum.
+    //
+    // As a future improvement, we could create a comptime remapping of the
+    // bits, but it's hardly worth the effor for such a small edge case at this
+    // moment.
+    const text =
+        \\<avr-tools-device-file>
+        \\  <modules>
+        \\    <module caption="Watchdog Timer" name="WDT">
+        \\      <register-group caption="Watchdog Timer" name="WDT">
+        \\        <register caption="Watchdog Timer Control Register" name="WDTCSR" offset="0x60" size="1" ocd-rw="R">
+        \\          <bitfield caption="Watchdog Timeout Interrupt Flag" mask="0x80" name="WDIF"/>
+        \\          <bitfield caption="Watchdog Timeout Interrupt Enable" mask="0x40" name="WDIE"/>
+        \\          <bitfield caption="Watchdog Timer Prescaler Bits" mask="0x27" name="WDP" values="WDOG_TIMER_PRESCALE_4BITS"/>
+        \\          <bitfield caption="Watchdog Change Enable" mask="0x10" name="WDCE"/>
+        \\          <bitfield caption="Watch Dog Enable" mask="0x08" name="WDE"/>
+        \\        </register>
+        \\      </register-group>
+        \\      <value-group name="WDOG_TIMER_PRESCALE_4BITS">
+        \\        <value caption="Oscillator Cycles 2K" name="OSCILLATOR_CYCLES_2K" value="0x00"/>
+        \\        <value caption="Oscillator Cycles 4K" name="OSCILLATOR_CYCLES_4K" value="0x01"/>
+        \\        <value caption="Oscillator Cycles 8K" name="OSCILLATOR_CYCLES_8K" value="0x02"/>
+        \\        <value caption="Oscillator Cycles 16K" name="OSCILLATOR_CYCLES_16K" value="0x03"/>
+        \\        <value caption="Oscillator Cycles 32K" name="OSCILLATOR_CYCLES_32K" value="0x04"/>
+        \\        <value caption="Oscillator Cycles 64K" name="OSCILLATOR_CYCLES_64K" value="0x05"/>
+        \\        <value caption="Oscillator Cycles 128K" name="OSCILLATOR_CYCLES_128K" value="0x06"/>
+        \\        <value caption="Oscillator Cycles 256K" name="OSCILLATOR_CYCLES_256K" value="0x07"/>
+        \\        <value caption="Oscillator Cycles 512K" name="OSCILLATOR_CYCLES_512K" value="0x08"/>
+        \\        <value caption="Oscillator Cycles 1024K" name="OSCILLATOR_CYCLES_1024K" value="0x09"/>
+        \\      </value-group>
+        \\    </module>
+        \\  </modules>
+        \\</avr-tools-device-file>
+    ;
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
+    defer db.destroy();
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    const peripheral_id = try db.get_peripheral_by_name("WDT") orelse return error.NoPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // Check for enum existence
+    _ = try db.get_enum_by_name(allocator, struct_id, "WDOG_TIMER_PRESCALE_4BITS");
+
+    const wdtcsr = try db.get_register_by_name(allocator, struct_id, "WDTCSR");
+
+    // There will 5 registers total, but one will be split into 4, totalling in 8.
+    const fields = try db.get_register_fields(allocator, wdtcsr.id, .{ .distinct = false });
+    try expectEqual(@as(usize, 8), fields.len);
+
+    // WDP_bit0 field checks
+    // ============
+    const wdp_bit0 = fields[0];
+    try expectEqualStrings("WDP_bit0", wdp_bit0.name);
+    try expectEqual(null, wdp_bit0.enum_id);
+
+    // WDP_bit1 field checks
+    // ============
+    const wdp_bit1 = fields[1];
+    try expectEqualStrings("WDP_bit1", wdp_bit1.name);
+    try expectEqual(null, wdp_bit1.enum_id);
+
+    // WDP_bit2 field checks
+    // ============
+    const wdp_bit2 = fields[2];
+    try expectEqualStrings("WDP_bit2", wdp_bit2.name);
+    try expectEqual(null, wdp_bit2.enum_id);
+
+    // WDP_bit3 field checks
+    // ============
+    const wdp_bit3 = fields[5]; // notice the field index
+    try expectEqualStrings("WDP_bit3", wdp_bit3.name);
+    try expectEqual(null, wdp_bit3.enum_id);
 }
