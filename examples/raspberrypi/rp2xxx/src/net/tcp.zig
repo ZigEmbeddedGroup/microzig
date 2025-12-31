@@ -57,7 +57,7 @@ pub fn main() !void {
             target,
             Client.on_recv,
             Client.on_sent,
-            Client.on_state_changed,
+            Client.on_connect,
         ),
     };
 
@@ -74,7 +74,9 @@ pub fn main() !void {
             ts = now;
             led.toggle();
 
-            try cli.tick();
+            if (nic.ready()) {
+                try cli.tick();
+            }
         }
     }
 }
@@ -84,17 +86,26 @@ const Client = struct {
 
     tcp: net.tcp.Client,
     bytes_sent: usize = 0,
+    bytes_received: usize = 0,
     send_count: usize = 0,
 
-    fn on_state_changed(tcp: *net.tcp.Client) void {
+    fn on_connect(tcp: *net.tcp.Client, maybe_err: ?net.Error) void {
         const self: *Self = @fieldParentPtr("tcp", tcp);
-        log.debug("state {} {any}", .{ self.tcp.state, self.tcp.err });
+        _ = self;
+        if (maybe_err) |err| {
+            log.debug("connection closed {}", .{err});
+        } else {
+            log.debug("connection open", .{});
+        }
     }
 
     fn on_recv(tcp: *net.tcp.Client, bytes: []u8) void {
         const self: *Self = @fieldParentPtr("tcp", tcp);
-        _ = self;
-        log.debug("recv {} bytes: {s}", .{ bytes.len, data_head(bytes, 64) });
+        self.bytes_received += bytes.len;
+        log.debug(
+            "recv {} bytes, total {} data: {s}",
+            .{ bytes.len, self.bytes_received, bytes[0..@min(64, bytes.len)] },
+        );
     }
 
     fn on_sent(tcp: *net.tcp.Client, n: u16) void {
@@ -110,24 +121,39 @@ const Client = struct {
             },
             .open => {
                 self.send_count += 1;
-                var buf: [64]u8 = undefined;
-                const bytes = try std.fmt.bufPrint(
+                // close
+                if (self.send_count % 16 == 0) {
+                    try self.tcp.close();
+                    return;
+                }
+                // TCP_SND_BUF is maximum send buffer size, default is 536 * 2 = 1072 bytes
+                // ref: https://github.com/lwip-tcpip/lwip/blob/6ca936f6b588cee702c638eee75c2436e6cf75de/src/include/lwip/opt.h#L1310
+                var buf: [net.lwip.TCP_SND_BUF + 128]u8 = @splat('-');
+                // add some header to the buf
+                _ = try std.fmt.bufPrint(
                     &buf,
-                    "hello from rpi pi pico {}\n",
+                    "hello from rpi pi pico {}",
                     .{self.send_count},
                 );
-                self.tcp.send(bytes) catch |err| {
-                    log.err("send {}", .{err});
+                // change len on each send
+                const chunk_len = (self.send_count * 64) % buf.len;
+                // try to send if buf.len is greater than self.tcp.send_buffer()
+                // it will fail with OutOfMemory while trying to fill copy to
+                // tcp send buffer
+                self.tcp.send(buf[0..chunk_len]) catch |err| {
+                    log.err("send {} bytes {}", .{ chunk_len, err });
+                    self.tcp.limits();
+                    return;
                 };
+                log.debug("send {} bytes", .{chunk_len});
             },
-            else => {},
+            .connecting => {},
         }
     }
 };
 
-// log helper
-fn data_head(bytes: []u8, max: usize) []u8 {
-    const head: []u8 = bytes[0..@min(max, bytes.len)];
-    std.mem.replaceScalar(u8, head, '\n', ' ');
-    return head;
-}
+// on the host listen for tcp connections on port 9988:
+// $ nc  -l -v -p 9998
+//
+// or run simple tcp echo:
+// $ socat -d2 TCP-LISTEN:9998,fork EXEC:"cat"
