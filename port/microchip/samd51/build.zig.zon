@@ -1,6 +1,6 @@
 .{
     .name = .mz_port_microchip_samd51,
-    .fingerprint = 0x65a32a718f744d72,
+    .fingerprint = 0x86ca834ef1f1aa26,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
