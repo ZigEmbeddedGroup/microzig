@@ -774,9 +774,7 @@ pub fn get_device_by_name(db: *Database, allocator: Allocator, name: []const u8)
         comptime gen_field_list(Device, .{}),
     });
 
-    return db.one_alloc(Device, allocator, query, .{
-        .name = name,
-    });
+    return db.one_alloc(Device, allocator, query, .{name});
 }
 
 fn get_name_for_id(db: *Database, allocator: Allocator, id: anytype) ![]const u8 {
@@ -1590,22 +1588,19 @@ pub fn add_device_property(db: *Database, device_id: DeviceID, opts: AddDevicePr
     });
 }
 
-pub fn get_device_property(db: *Database, allocator: Allocator, device_id: DeviceID, key: []const u8) !?[]const u8 {
-    var stmt = try db.sql.prepare(
-        \\SELECT
-        \\  value
-        \\FROM
-        \\  device_properties
-        \\WHERE
-        \\  device_id = ? AND
-        \\  key = ?
-    );
-    defer stmt.deinit();
+pub fn get_device_property(
+    db: *Database,
+    allocator: Allocator,
+    device_id: DeviceID,
+    key: []const u8,
+) !?[]const u8 {
+    const row = try db.conn.row("SELECT value FROM device_properties WHERE device_id = ? AND key = ?", .{
+        @intFromEnum(device_id),
+        key,
+    }) orelse return null;
+    defer row.deinit();
 
-    return try stmt.oneAlloc([]const u8, allocator, .{}, .{
-        .device_id = @intFromEnum(device_id),
-        .key = key,
-    });
+    return if (row.nullableText(0)) |text| try allocator.dupe(u8, text) else null;
 }
 
 const CreateInterruptOptions = struct {
@@ -2073,7 +2068,7 @@ pub fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
 }
 
 pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name: []const u8, enum_id: ?EnumID) !void {
-    try db.exec(
+    try db.conn.exec(
         \\UPDATE struct_fields
         \\SET enum_id = ?
         \\WHERE struct_id = (
@@ -2083,9 +2078,9 @@ pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_
         \\)
         \\AND name = ?;
     , .{
-        .enum_id = enum_id,
-        .register_id = register_id,
-        .name = field_name,
+        if (enum_id) |eid| @intFromEnum(eid) else null,
+        @intFromEnum(register_id),
+        field_name,
     });
 
     log.debug("set_register_field_enum_id: register_id={} field_name={s} enum_id={?}", .{
@@ -2096,7 +2091,7 @@ pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_
 }
 
 pub fn cleanup_unused_enums(db: *Database) !void {
-    try db.exec(
+    try db.conn.exec(
         \\DELETE FROM enums
         \\WHERE id NOT IN (
         \\    SELECT DISTINCT enum_id
@@ -2117,13 +2112,13 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     return error.DeviceNotFound;
                 };
 
-                try db.exec(
+                try db.conn.exec(
                     \\UPDATE devices
                     \\SET arch = ?
                     \\WHERE id = ?;
                 , .{
-                    .arch = override_arch.arch,
-                    .device_id = device_id,
+                    override_arch.arch.to_string(),
+                    @intFromEnum(device_id),
                 });
             },
             .set_device_property => |set_prop| {
@@ -2131,7 +2126,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     return error.DeviceNotFound;
                 };
 
-                try db.exec(
+                try db.conn.exec(
                     \\INSERT INTO device_properties
                     \\  (device_id, key, value, description)
                     \\VALUES
@@ -2141,10 +2136,10 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     \\  value = excluded.value,
                     \\  description = excluded.description;
                 , .{
-                    .device_id = @intFromEnum(device_id),
-                    .key = set_prop.key,
-                    .value = set_prop.value,
-                    .description = set_prop.description,
+                    @intFromEnum(device_id),
+                    set_prop.key,
+                    set_prop.value,
+                    set_prop.description,
                 });
             },
             .add_enum => |add_enum| {

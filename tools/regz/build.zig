@@ -96,6 +96,7 @@ pub fn build(b: *Build) !void {
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
     tests.root_module.addImport("zqlite", zqlite);
+    tests.step.dependOn(&regz.step);
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
