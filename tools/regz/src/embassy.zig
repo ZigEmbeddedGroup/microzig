@@ -467,7 +467,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         });
 
         for (core.peripherals) |peripheral| {
-            // TODO: don't know what to do if registers is null, so skipping
+            // Don't know what to do if registers is null, so skipping
             const registers = peripheral.registers orelse continue;
 
             const periph_name = try std.fmt.allocPrint(allocator, "{s}_{s}", .{ registers.kind, registers.version });

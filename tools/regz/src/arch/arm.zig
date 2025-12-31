@@ -68,7 +68,8 @@ pub fn load_system_interrupts(db: *Database, device_id: DeviceID, arch: Arch) !v
             break;
         }
     } else {
-        log.warn("TODO: system interrupts handlers for {}", .{arch});
+        log.warn(", system interrupts handlers are not implemented for {}. " ++
+            "Please cut a ticket: https://github.com/ZigEmbeddedGroup/microzig/issues", .{arch});
     }
 
     const vendor_systick_config = if (try db.get_device_property(db.gpa, device_id, "cpu.vendorSystickConfig")) |str| blk: {
