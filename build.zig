@@ -77,8 +77,8 @@ pub fn build(b: *Build) void {
 pub const PortSelect = struct {
     esp: bool = false,
     gd32: bool = false,
-    atsam: bool = false,
-    avr: bool = false,
+    samd51: bool = false,
+    atmega: bool = false,
     nrf5x: bool = false,
     lpc: bool = false,
     mcx: bool = false,
