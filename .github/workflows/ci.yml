@@ -199,6 +199,7 @@ jobs:
             stmicro/stm32,
             raspberrypi/rp2xxx,
             wch/ch32v,
+            no_hal/stm32_l032,
           ]
     steps:
       - name: Checkout
