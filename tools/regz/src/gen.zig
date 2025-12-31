@@ -3002,6 +3002,16 @@ test "gen.interrupts.avr" {
             \\    .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
             \\};
             \\
+            \\pub const VectorTable = extern struct {
+            \\    const Handler = microzig.interrupt.Handler;
+            \\    const unhandled = microzig.interrupt.unhandled;
+            \\
+            \\    RESET: Handler,
+            \\    TEST_VECTOR1: Handler = unhandled,
+            \\    reserved2: [1]u16 = undefined,
+            \\    TEST_VECTOR2: Handler = unhandled,
+            \\};
+            \\
             ,
         },
         .{
