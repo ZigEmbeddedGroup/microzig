@@ -973,6 +973,8 @@ test "svd.device register properties" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
+    try db.backup("device_register_properties.regz");
+
     const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;

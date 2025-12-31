@@ -1,13 +1,15 @@
 gpa: Allocator,
-sql: sqlite.Db,
-diags: sqlite.Diagnostics = .{},
+conn: zqlite.Conn,
+//diags: zqlite.Diagnostics = .{},
 
 const Database = @This();
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const sqlite = @import("sqlite");
+const c = @cImport(@cInclude("sqlite3.h"));
+
+const zqlite = @import("zqlite");
 const xml = @import("xml.zig");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
@@ -143,6 +145,23 @@ pub const Register = struct {
             .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
         },
     };
+
+    pub fn from_row(allocator: Allocator, row: zqlite.Row) !Register {
+        const name = try allocator.dupe(u8, row.text(2));
+        const description: ?[]const u8 = if (row.nullableText(3)) |text| try allocator.dupe(u8, text) else null;
+        return Register{
+            .id = @enumFromInt(row.int(0)),
+            .struct_id = if (row.nullableInt(1)) |value| @enumFromInt(value) else null,
+            .name = name,
+            .description = description,
+            .size_bits = @intCast(row.int(4)),
+            .offset_bytes = @intCast(row.int(5)),
+            .count = if (row.nullableInt(6)) |value| @intCast(value) else null,
+            .access = std.meta.stringToEnum(Access, row.text(7)) orelse return error.InvalidAccess,
+            .reset_mask = if (row.nullableInt(8)) |value| @intCast(value) else null,
+            .reset_value = if (row.nullableInt(9)) |value| @intCast(value) else null,
+        };
+    }
 
     pub fn get_size_bytes(register: *const Register) u32 {
         const single_size_bytes = register.size_bits / 8;
@@ -342,6 +361,13 @@ pub const Access = enum {
 
     pub const BaseType = []const u8;
     pub const default = .read_write;
+
+    pub fn to_string(access: Access) []const u8 {
+        return inline for (@typeInfo(Access).@"enum".fields) |field| {
+            if (@field(Access, field.name) == access)
+                break field.name;
+        } else unreachable;
+    }
 };
 
 pub const StructLayout = enum {
@@ -384,11 +410,11 @@ fn zig_type_to_sql_type(comptime T: type) []const u8 {
     };
 }
 
-fn gen_sql_table(comptime name: []const u8, comptime T: type) []const u8 {
+fn gen_sql_table(comptime name: []const u8, comptime T: type) [:0]const u8 {
     return gen_sql_table_impl(name, T) catch unreachable;
 }
 
-fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
+fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8 {
     var buf: [4096]u8 = undefined;
     var fbs: std.Io.Writer = .fixed(&buf);
 
@@ -466,12 +492,13 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     // foreign keys
 
     try fbs.writeAll(");\n");
+    try fbs.writeByte(0);
 
     const buf_copy = buf;
-    return buf_copy[0..fbs.buffered().len];
+    return @ptrCast(buf_copy[0 .. fbs.buffered().len - 1]);
 }
 
-const schema: []const []const u8 = &.{
+const schema: []const [:0]const u8 = &.{
     gen_sql_table("registers", Register),
     gen_sql_table("modes", Mode),
     gen_sql_table("register_modes", RegisterMode),
@@ -529,28 +556,23 @@ fn ID(comptime T: type, comptime table_name: []const u8) type {
 }
 
 fn init(db: *Database, allocator: Allocator) !void {
-    const sql = try sqlite.Db.init(.{
-        .diags = &db.diags,
-        .open_flags = .{
-            .write = true,
-        },
-    });
-
+    const flags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
+    const conn = try zqlite.open(":memory:", flags);
     db.* = Database{
         .gpa = allocator,
-        .sql = sql,
+        .conn = conn,
     };
     errdefer db.deinit();
 
     // Good starting point to improve SQLite's poor defaults
-    _ = try db.sql.pragma(void, .{}, "journal_mode", "WAL");
-    _ = try db.sql.pragma(void, .{}, "synchronous", "NORMAL");
-    _ = try db.sql.pragma(void, .{}, "foreign_keys", "true");
+    try db.conn.execNoArgs("PRAGMA journal_mode=WAL");
+    try db.conn.execNoArgs("PRAGMA synchronous=NORMAL");
+    try db.conn.execNoArgs("PRAGMA foreign_keys=true");
 
     // Create tables and indexes
     inline for (schema) |query| {
         log.debug("query: {s}", .{query});
-        try db.exec(query, .{});
+        try db.conn.execNoArgs(query);
     }
 
     log.debug("finished loading schema", .{});
@@ -565,7 +587,7 @@ pub fn create(allocator: Allocator) !*Database {
 }
 
 fn deinit(db: *Database) void {
-    db.sql.deinit();
+    db.conn.close();
 }
 
 pub fn destroy(db: *Database) void {
@@ -577,6 +599,7 @@ pub fn destroy(db: *Database) void {
 pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Database {
     var db = try Database.create(allocator);
     errdefer db.destroy();
+    errdefer std.log.err("{s}", .{db.conn.lastError()});
 
     switch (format) {
         .svd => try svd.load_into_db(db, doc),
@@ -619,16 +642,6 @@ pub const CreateDeviceOptions = struct {
     arch: Arch,
 };
 
-fn exec(db: *Database, comptime query: []const u8, args: anytype) !void {
-    db.sql.execDynamic(query, .{ .diags = &db.diags }, args) catch |err| {
-        std.log.err("Failed Query:\n{s}", .{query});
-        if (err == error.SQLiteError)
-            std.log.err("{f}", .{db.diags});
-
-        return err;
-    };
-}
-
 pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
     log.debug("create_device: name={s} arch={} desc={?s}", .{
         opts.name,
@@ -636,32 +649,33 @@ pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
         opts.description,
     });
 
-    var savepoint = try db.sql.savepoint("create_device");
-    defer savepoint.rollback();
-
-    try db.exec(
+    const row = try db.conn.row(
         \\INSERT INTO devices
         \\  (name, description, arch)
         \\VALUES
         \\  (?, ?, ?)
+        \\RETURNING id
+        \\
     , .{
-        .name = opts.name,
-        .description = opts.description,
-        .arch = opts.arch,
-    });
+        opts.name,
+        opts.description,
+        opts.arch.to_string(),
+    }) orelse unreachable;
+    defer row.deinit();
 
-    const row_id = db.sql.getLastInsertRowID();
-    savepoint.commit();
-    return @enumFromInt(row_id);
+    return @enumFromInt(row.int(0));
 }
 
 fn get_id_by_name(db: *Database, comptime T: type, name: []const u8) !?T {
-    var stmt = try db.sql.prepare(
-        std.fmt.comptimePrint("SELECT id FROM {s} WHERE name = ?", .{T.table}),
-    );
-    defer stmt.deinit();
+    errdefer std.log.info("{s}", .{db.conn.lastError()});
 
-    return try stmt.one(T, .{}, .{ .name = name });
+    const row = try db.conn.row(
+        std.fmt.comptimePrint("SELECT id FROM {s} WHERE name = ?", .{T.table}),
+        .{name},
+    ) orelse return null;
+    defer row.deinit();
+
+    return @enumFromInt(row.int(0));
 }
 
 pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
@@ -670,16 +684,13 @@ pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
 
 /// Get the struct ID for a struct decl with `name` in parent struct
 pub fn get_struct_decl_id_by_name(db: *Database, parent: StructID, name: []const u8) !StructID {
-    const query =
-        \\SELECT struct_id
-        \\FROM struct_decls
-        \\WHERE parent_id = ? AND name = ?
-    ;
+    const row = try db.conn.row("SELECT struct_id FROM struct_decls WHERE parent_id = ? and name = ?", .{
+        @intFromEnum(parent),
+        name,
+    }) orelse return error.MissingEntity;
+    defer row.deinit();
 
-    return db.one(StructID, query, .{
-        .parent_id = parent,
-        .name = name,
-    });
+    return @enumFromInt(row.int(0));
 }
 
 pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: StructID, name: []const u8) !StructDecl {
@@ -692,8 +703,8 @@ pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: Stru
     });
 
     return db.one_alloc(StructDecl, allocator, query, .{
-        .parent_id = parent,
-        .name = name,
+        @intFromEnum(parent),
+        name,
     });
 }
 
@@ -708,7 +719,7 @@ pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_i
     });
 
     return try db.get_one_alloc(Peripheral, allocator, query, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
@@ -723,43 +734,35 @@ pub fn get_struct_decl_by_struct_id(db: *Database, allocator: Allocator, struct_
     });
 
     return try db.get_one_alloc(StructDecl, allocator, query, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
-}
-
-fn get_one(db: *Database, comptime T: type, comptime query: []const u8, args: anytype) !?T {
-    return db.sql.one(T, query, .{ .diags = &db.diags }, args) catch |err| {
-        std.log.err("Failed Query:\n{s}", .{query});
-        if (err == error.SQLiteError)
-            std.log.err("{f}", .{db.diags});
-
-        return err;
-    };
-}
-
-fn one(db: *Database, comptime T: type, comptime query: []const u8, args: anytype) !T {
-    return try db.get_one(T, query, args) orelse return error.MissingEntity;
 }
 
 pub fn get_peripheral_struct(db: *Database, peripheral: PeripheralID) !StructID {
-    const query = "SELECT struct_id FROM peripherals WHERE id = ?";
-    return db.one(StructID, query, .{
-        .id = peripheral,
-    });
+    const row = try db.conn.row("SELECT struct_id FROM peripherals WHERE id = ? LIMIT 1", .{
+        @intFromEnum(peripheral),
+    }) orelse return error.MissingEntity;
+    defer row.deinit();
+
+    return @enumFromInt(row.int(0));
 }
 
 pub fn get_register_struct(db: *Database, register: RegisterID) !?StructID {
-    const query = "SELECT struct_id FROM registers WHERE id = ?";
-    const row = try db.one(struct { struct_id: ?StructID }, query, .{
-        .id = register,
-    });
+    const row = try db.conn.row("SELECT struct_id FROM registers WHERE id = ?", .{
+        @intFromEnum(register),
+    }) orelse return null;
+    defer row.deinit();
 
-    return row.struct_id;
+    return if (row.nullableInt(0)) |int| @enumFromInt(int) else null;
 }
 
 pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
-    const query = "SELECT id FROM devices WHERE name = ?";
-    return db.sql.one(DeviceID, query, .{}, .{ .name = name });
+    const row = try db.conn.row("SELECT id FROM devices WHERE name = ?", .{
+        name,
+    }) orelse return null;
+    defer row.deinit();
+
+    return @enumFromInt(row.int(0));
 }
 
 pub fn get_device_by_name(db: *Database, allocator: Allocator, name: []const u8) !Device {
@@ -790,29 +793,47 @@ pub fn get_peripheral_name(db: *Database, allocator: Allocator, peripheral_id: P
     return db.get_name_for_id(allocator, peripheral_id);
 }
 
+fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
+    var entry: T = undefined;
+    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
+        if (@typeInfo(field.type) == .@"enum") {
+            @field(entry, field.name) = @enumFromInt(row.int(i));
+        } else if (@typeInfo(field.type) == .int) {
+            @field(entry, field.name) = @intCast(row.int(i));
+        } else switch (field.type) {
+            []const u8 => {
+                @field(entry, field.name) = try allocator.dupe(u8, row.text(i));
+            },
+            ?[]const u8 => {
+                @field(entry, field.name) = if (row.nullableText(i)) |text| try allocator.dupe(u8, text) else null;
+            },
+            ?u64, ?u16, ?u8 => {
+                @field(entry, field.name) = if (row.nullableInt(i)) |value| @intCast(value) else null;
+            },
+            ?StructID, ?EnumID => {
+                @field(entry, field.name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
+            },
+            else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field.type)})),
+        }
+    }
+
+    return entry;
+}
+
 fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: Allocator, args: anytype) ![]T {
-    var stmt = db.sql.prepareWithDiags(query, .{
-        .diags = &db.diags,
-    }) catch |err| {
-        if (err == error.SQLiteError) {
-            log.err("query failed: {s}", .{query});
-            log.err("{f}", .{db.diags});
-        }
+    var rows = try db.conn.rows(query, args);
+    defer rows.deinit();
 
+    var list: std.ArrayList(T) = .{};
+    while (rows.next()) |row| {
+        try list.append(allocator, try scan_row(T, allocator, row));
+    }
+
+    if (rows.err) |err| {
         return err;
-    };
-    defer stmt.deinit();
+    }
 
-    return stmt.all(T, allocator, .{
-        .diags = &db.diags,
-    }, args) catch |err| {
-        if (err == error.SQLiteError) {
-            log.err("query failed: {s}", .{query});
-            log.err("{f}", .{db.diags});
-        }
-
-        return err;
-    };
+    return list.toOwnedSlice(allocator);
 }
 
 pub fn get_devices(db: *Database, allocator: Allocator) ![]Device {
@@ -833,7 +854,7 @@ pub fn get_struct_decls(db: *Database, allocator: Allocator, parent: StructID) !
     });
 
     return db.all(StructDecl, query, allocator, .{
-        .parent_id = parent,
+        @intFromEnum(parent),
     });
 }
 
@@ -859,8 +880,8 @@ pub fn get_registers_with_mode(
     });
 
     return db.all(Register, query, allocator, .{
-        .struct_id = struct_id,
-        .mode_id = mode_id,
+        @intFromEnum(struct_id),
+        @intFromEnum(mode_id),
     });
 }
 
@@ -881,7 +902,7 @@ pub fn get_struct_registers(
     });
 
     return db.all(Register, query, allocator, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
@@ -904,7 +925,7 @@ pub fn get_nested_struct_fields(
     });
 
     return db.all(NestedStructField, query, allocator, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
@@ -999,7 +1020,7 @@ pub fn get_struct_modes(
     });
 
     return db.all(Mode, query, allocator, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
@@ -1040,12 +1061,12 @@ pub fn get_enums(
         });
 
     return db.all(Enum, query, allocator, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
 pub fn enum_has_name_collision(db: *Database, enum_id: EnumID) !bool {
-    const query =
+    const row = try db.conn.row(
         \\SELECT e2.id
         \\FROM enums AS e1
         \\JOIN enums AS e2
@@ -1053,8 +1074,10 @@ pub fn enum_has_name_collision(db: *Database, enum_id: EnumID) !bool {
         \\  AND e1.name = e2.name
         \\  AND e1.id != e2.id
         \\WHERE e1.id = ?;
-    ;
-    return null != (try db.get_one(EnumID, query, .{ .enum_id = enum_id }));
+    , .{@intFromEnum(enum_id)}) orelse return false;
+    defer row.deinit();
+
+    return true;
 }
 
 pub fn get_enum(
@@ -1068,7 +1091,7 @@ pub fn get_enum(
     });
 
     return db.one_alloc(Enum, allocator, query, .{
-        .id = id,
+        @intFromEnum(id),
     });
 }
 
@@ -1124,7 +1147,7 @@ pub fn get_enum_fields(
         });
 
     return db.all(EnumField, query, allocator, .{
-        .enum_id = enum_id,
+        @intFromEnum(enum_id),
     });
 }
 
@@ -1143,8 +1166,8 @@ pub fn get_enum_field_by_name(
     });
 
     return db.one_alloc(EnumField, allocator, query, .{
-        .enum_id = enum_id,
-        .name = name,
+        @intFromEnum(enum_id),
+        name,
     });
 }
 
@@ -1152,29 +1175,16 @@ pub fn get_interrupts(db: *Database, allocator: Allocator, device_id: DeviceID) 
     const query = std.fmt.comptimePrint("SELECT {s} FROM interrupts WHERE device_id = ? ORDER BY idx ASC", .{
         comptime gen_field_list(Interrupt, .{}),
     });
-    var stmt = try db.sql.prepare(query);
-    defer stmt.deinit();
 
-    return stmt.all(Interrupt, allocator, .{}, .{
-        .device_id = device_id,
-    });
+    return try db.all(Interrupt, query, allocator, .{@intFromEnum(device_id)});
 }
 
-const c = sqlite.c;
-
 pub fn backup(db: *Database, path: [:0]const u8) !void {
-    var backup_db = try sqlite.Db.init(.{
-        .mode = .{
-            .File = path,
-        },
-        .open_flags = .{
-            .write = true,
-            .create = true,
-        },
-    });
-    defer backup_db.deinit();
+    const flags = zqlite.OpenFlags.Create;
+    const backup_db = try zqlite.open(path, flags);
+    defer backup_db.close();
 
-    const backup_step = c.sqlite3_backup_init(backup_db.db, "main", db.sql.db, "main");
+    const backup_step = c.sqlite3_backup_init(@ptrCast(backup_db.conn), "main", @ptrCast(db.conn.conn), "main");
     if (backup_step != null) {
         _ = c.sqlite3_backup_step(backup_step, -1);
         _ = c.sqlite3_backup_finish(backup_step);
@@ -1245,7 +1255,7 @@ pub fn get_register_fields(
             comptime gen_field_list(StructField, .{ .prefix = "sf" }),
         });
     return db.all(StructField, query, allocator, .{
-        .register_id = register_id,
+        @intFromEnum(register_id),
     });
 }
 
@@ -1265,22 +1275,22 @@ pub fn get_register_field_by_name(
             comptime gen_field_list(StructField, .{ .prefix = "sf" }),
         });
     return db.one_alloc(StructField, allocator, query, .{
-        .register_id = register_id,
-        .name = name,
+        @intFromEnum(register_id),
+        name,
     });
 }
 
 pub fn get_interrupt_name(db: *Database, allocator: Allocator, interrupt_id: InterruptID) ![]const u8 {
     const query = "SELECT name FROM interrupts WHERE id = ?";
     return db.one_alloc([]const u8, allocator, query, .{
-        .id = interrupt_id,
+        @intFromEnum(interrupt_id),
     });
 }
 
 pub fn get_interrupt_description(db: *Database, allocator: Allocator, interrupt_id: InterruptID) !?[]const u8 {
     const query = "SELECT description FROM interrupts WHERE id = ?";
     return db.get_one_alloc([]const u8, allocator, query, .{
-        .id = interrupt_id,
+        @intFromEnum(interrupt_id),
     });
 }
 
@@ -1294,7 +1304,7 @@ pub fn get_struct(db: *Database, struct_id: StructID) !Struct {
     });
 
     return try db.one(Struct, query, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
@@ -1308,7 +1318,7 @@ pub fn get_struct_decl(db: *Database, allocator: Allocator, struct_id: StructID)
     });
 
     return try db.get_one_alloc(StructDecl, allocator, query, .{
-        .struct_id = struct_id,
+        @intFromEnum(struct_id),
     });
 }
 
@@ -1328,7 +1338,7 @@ pub fn get_peripheral(db: *Database, allocator: Allocator, peripheral_id: Periph
         comptime gen_field_list(Peripheral, .{}),
     });
     return db.one_alloc(Peripheral, allocator, query, .{
-        .id = peripheral_id,
+        @intFromEnum(peripheral_id),
     });
 }
 
@@ -1336,12 +1346,8 @@ pub fn get_device_properties(db: *Database, allocator: Allocator, device_id: Dev
     const query = std.fmt.comptimePrint("SELECT {s} FROM device_properties WHERE device_id = ? ORDER BY key ASC", .{
         comptime gen_field_list(DeviceProperty, .{}),
     });
-    var stmt = try db.sql.prepare(query);
-    defer stmt.deinit();
 
-    return stmt.all(DeviceProperty, allocator, .{}, .{
-        .device_id = device_id,
-    });
+    return db.all(DeviceProperty, query, allocator, .{@intFromEnum(device_id)});
 }
 
 pub fn get_device_peripherals(db: *Database, allocator: Allocator, device_id: DeviceID) ![]DevicePeripheral {
@@ -1355,7 +1361,7 @@ pub fn get_device_peripherals(db: *Database, allocator: Allocator, device_id: De
     });
 
     return db.all(DevicePeripheral, query, allocator, .{
-        .device_id = device_id,
+        @intFromEnum(device_id),
     });
 }
 
@@ -1369,8 +1375,8 @@ pub fn get_device_peripheral_by_name(db: *Database, allocator: Allocator, device
     });
 
     return db.one_alloc(DevicePeripheral, allocator, query, .{
-        .device_id = device_id,
-        .name = name,
+        @intFromEnum(device_id),
+        name,
     });
 }
 
@@ -1379,11 +1385,13 @@ pub fn get_interrupt_by_name(
     device_id: DeviceID,
     name: []const u8,
 ) !?InterruptID {
-    const query = "SELECT id FROM interrupts WHERE device_id = ? AND name = ?";
-    return db.sql.one(InterruptID, query, .{}, .{
-        .device_id = device_id,
-        .name = name,
-    });
+    const row = try db.conn.row("SELECT id FROM interrupts WHERE device_id = ? AND name = ?", .{
+        @intFromEnum(device_id),
+        name,
+    }) orelse return null;
+    defer row.deinit();
+
+    return @enumFromInt(row.int(0));
 }
 
 pub fn get_enum_by_name(
@@ -1402,8 +1410,8 @@ pub fn get_enum_by_name(
     });
 
     return db.one_alloc(Enum, allocator, query, .{
-        .struct_id = struct_id,
-        .name = name,
+        @intFromEnum(struct_id),
+        name,
     }) catch |err| switch (err) {
         error.MissingEntity => {
             // lookup the enum among the parents
@@ -1417,8 +1425,8 @@ pub fn get_enum_by_name(
 
                 log.debug("get_enum_by_name: parent_id={f} name='{s}'", .{ parent_id, name });
                 return db.one_alloc(Enum, allocator, query, .{
-                    .struct_id = parent_id,
-                    .name = name,
+                    @intFromEnum(parent_id),
+                    name,
                 }) catch {
                     continue;
                 };
@@ -1432,14 +1440,12 @@ pub fn get_enum_by_name(
 }
 
 fn get_parent_struct_id(db: *Database, struct_id: StructID) !StructID {
-    var stmt = try db.sql.prepare("SELECT parent_id FROM struct_decls WHERE struct_id = ?");
-    defer stmt.deinit();
+    const row = try db.conn.row("SELECT parent_id FROM struct_decls WHERE struct_id = ?", .{
+        @intFromEnum(struct_id),
+    }) orelse return error.MissingEntity;
+    defer row.deinit();
 
-    const row = try stmt.one(StructID, .{}, .{
-        .struct_id = struct_id,
-    });
-
-    return if (row) |parent_id| parent_id else error.MissingEntity;
+    return @enumFromInt(row.int(0));
 }
 
 fn one_alloc(
@@ -1459,14 +1465,10 @@ fn get_one_alloc(
     comptime query: []const u8,
     args: anytype,
 ) !?T {
-    return db.sql.oneAlloc(T, allocator, query, .{ .diags = &db.diags }, args) catch |err| {
-        log.err("Failed query:\n{s}", .{query});
-        if (err == error.SQLiteError) {
-            log.err("{f}", .{db.diags});
-        }
+    const row = try db.conn.row(query, args) orelse return null;
+    defer row.deinit();
 
-        return err;
-    };
+    return try scan_row(T, allocator, row);
 }
 
 pub fn get_enum_description(
@@ -1474,19 +1476,24 @@ pub fn get_enum_description(
     allocator: Allocator,
     enum_id: EnumID,
 ) !?[]const u8 {
-    const query = "SELECT description FROM enums WHERE id = ?";
-    return db.get_one_alloc([]const u8, allocator, query, .{ .id = enum_id });
+    const row = try db.conn.row("SELECT description FROM enums WHERE id = ?", .{
+        @intFromEnum(enum_id),
+    }) orelse return error.MissingEntity;
+    defer row.deinit();
+
+    return if (row.nullableText(0)) |text|
+        try allocator.dupe(u8, text)
+    else
+        null;
 }
 
 pub fn get_interrupt_idx(db: *Database, interrupt_id: InterruptID) !i32 {
-    var stmt = try db.sql.prepare("SELECT idx FROM interrupts WHERE id = ?");
-    defer stmt.deinit();
+    const row = try db.conn.row("SELECT idx FROM interrupts WHERE id = ?", .{
+        @intFromEnum(interrupt_id),
+    }) orelse return error.MissingEntity;
+    defer row.deinit();
 
-    const row = try stmt.one(i32, .{}, .{
-        .id = interrupt_id,
-    });
-
-    return if (row) |idx| idx else error.NoInterruptForID;
+    return @intCast(row.int(0));
 }
 
 pub const AddNestedStructFieldOptions = struct {
@@ -1503,19 +1510,19 @@ pub fn add_nested_struct_field(
     parent: StructID,
     opts: AddNestedStructFieldOptions,
 ) !void {
-    try db.exec(
+    try db.conn.exec(
         \\INSERT INTO nested_struct_fields
         \\  (parent_id, struct_id, name, description, offset_bytes, size_bytes, count)
         \\VALUES
         \\  (?, ?, ?, ?, ?, ?, ?)
     , .{
-        .parent_id = parent,
-        .struct_id = opts.struct_id,
-        .name = opts.name,
-        .description = opts.description,
-        .offset_bytes = opts.offset_bytes,
-        .size_bytes = opts.size_bytes,
-        .count = opts.count,
+        @intFromEnum(parent),
+        @intFromEnum(opts.struct_id),
+        opts.name,
+        opts.description,
+        opts.offset_bytes,
+        opts.size_bytes,
+        opts.count,
     });
 
     log.debug("add_nested_struct_field: parent={f} name='{s}' struct_id={f} offset_bytes={} size_bytes={?} count={?}", .{
@@ -1539,24 +1546,20 @@ pub fn create_nested_struct(
     parent: StructID,
     opts: CreateNestedStructOptions,
 ) !StructID {
-    var savepoint = try db.sql.savepoint("create_nested_struct");
-    defer savepoint.rollback();
-
     const struct_id = try db.create_struct(.{});
-    try db.exec(
+    try db.conn.exec(
         \\INSERT INTO struct_decls
         \\  (parent_id, struct_id, name, description, size_bytes)
         \\VALUES
         \\  (?, ?, ?, ?, ?)
     , .{
-        .parent_id = parent,
-        .struct_id = struct_id,
-        .name = opts.name,
-        .description = opts.description,
-        .size_bytes = opts.size_bytes,
+        @intFromEnum(parent),
+        @intFromEnum(struct_id),
+        opts.name,
+        opts.description,
+        opts.size_bytes,
     });
 
-    savepoint.commit();
     log.debug("created struct_decl: parent={f} struct_id={f} name='{s}' description='{?s}' size_bytes={?}", .{
         parent,
         struct_id,
@@ -1574,16 +1577,16 @@ pub const AddDevicePropertyOptions = struct {
 };
 
 pub fn add_device_property(db: *Database, device_id: DeviceID, opts: AddDevicePropertyOptions) !void {
-    try db.exec(
+    try db.conn.exec(
         \\INSERT INTO device_properties
         \\  (device_id, key, value, description)
         \\VALUES
         \\  (?, ?, ?, ?)
     , .{
-        .device_id = @intFromEnum(device_id),
-        .key = opts.key,
-        .value = opts.value,
-        .description = opts.description,
+        @intFromEnum(device_id),
+        opts.key,
+        opts.value,
+        opts.description,
     });
 }
 
@@ -1619,24 +1622,21 @@ pub fn create_interrupt(db: *Database, device_id: DeviceID, opts: CreateInterrup
         opts.description,
     });
 
-    var savepoint = try db.sql.savepoint("create_interrupt");
-    defer savepoint.rollback();
-
-    try db.exec(
+    const row = try db.conn.row(
         \\INSERT INTO interrupts
         \\  (device_id, name, description, idx)
         \\VALUES
         \\  (?, ?, ?, ?)
+        \\RETURNING id
     , .{
-        .device_id = @intFromEnum(device_id),
-        .name = opts.name,
-        .description = opts.description,
-        .idx = opts.idx,
-    });
+        @intFromEnum(device_id),
+        opts.name,
+        opts.description,
+        opts.idx,
+    }) orelse unreachable;
+    defer row.deinit();
 
-    const row_id = db.sql.getLastInsertRowID();
-    savepoint.commit();
-    return @enumFromInt(row_id);
+    return @enumFromInt(row.int(0));
 }
 
 pub const CreatePeripheralOptions = struct {
@@ -1651,21 +1651,26 @@ pub const CreatePeripheralOptions = struct {
 /// The code generated for a peripheral can be a struct itself, or a namespace
 /// containing structs. In the latter case, a peripheral
 pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !PeripheralID {
-    var savepoint = try db.sql.savepoint("create_peripheral");
-    defer savepoint.rollback();
+    errdefer std.log.err("sqlite: {s}", .{db.conn.lastError()});
+
+    try db.conn.transaction();
+    errdefer db.conn.rollback();
 
     const struct_id = opts.struct_id orelse try db.create_struct(.{});
 
-    try db.exec("INSERT INTO peripherals (struct_id, name, description, size_bytes) VALUES (?, ?, ?, ?)", .{
-        .struct_id = struct_id,
-        .name = opts.name,
-        .description = opts.description,
-        .size_bytes = opts.size_bytes,
-    });
+    const peripheral_id: PeripheralID = blk: {
+        const row = try db.conn.row("INSERT INTO peripherals (struct_id, name, description, size_bytes) VALUES (?, ?, ?, ?) RETURNING id", .{
+            @intFromEnum(struct_id),
+            opts.name,
+            opts.description,
+            opts.size_bytes,
+        }) orelse unreachable;
+        defer row.deinit();
 
-    const peripheral_id: PeripheralID = @enumFromInt(db.sql.getLastInsertRowID());
-    savepoint.commit();
+        break :blk @enumFromInt(row.int(0));
+    };
 
+    try db.conn.commit();
     log.debug("created {f}: struct_id={f} name={s} size_bytes={?} desc={?s}", .{
         peripheral_id,
         struct_id,
@@ -1673,6 +1678,7 @@ pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !Peripher
         opts.size_bytes,
         opts.description,
     });
+
     return peripheral_id;
 }
 
@@ -1697,26 +1703,23 @@ pub fn create_device_peripheral(
         opts.description,
     });
 
-    var savepoint = try db.sql.savepoint("create_perip_inst");
-    defer savepoint.rollback();
-
-    try db.exec(
+    const row = try db.conn.row(
         \\INSERT INTO device_peripherals
         \\  (device_id, struct_id, name, description, offset_bytes, count)
         \\VALUES
         \\  (?, ?, ?, ?, ?, ?)
+        \\RETURNING id
     , .{
-        .device_id = @intFromEnum(device_id),
-        .struct_id = opts.struct_id,
-        .name = opts.name,
-        .description = opts.description,
-        .offset_bytes = opts.offset_bytes,
-        .count = opts.count,
-    });
+        @intFromEnum(device_id),
+        @intFromEnum(opts.struct_id),
+        opts.name,
+        opts.description,
+        opts.offset_bytes,
+        opts.count,
+    }) orelse unreachable;
+    defer row.deinit();
 
-    const row_id = db.sql.getLastInsertRowID();
-    savepoint.commit();
-    return @enumFromInt(row_id);
+    return @enumFromInt(row.int(0));
 }
 
 pub const CreateModeOptions = struct {
@@ -1727,26 +1730,23 @@ pub const CreateModeOptions = struct {
 };
 
 pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !ModeID {
-    var savepoint = try db.sql.savepoint("create_mode");
-    defer savepoint.rollback();
     log.debug("create_mode: name={s} parent={f}", .{ opts.name, parent });
-
-    try db.exec(
+    const row = try db.conn.row(
         \\INSERT INTO modes
         \\  (name, struct_id, description, value, qualifier)
         \\VALUES
         \\  (?, ?, ?, ?, ?)
+        \\RETURNING id
     , .{
-        .name = opts.name,
-        .struct_id = parent,
-        .description = opts.description,
-        .value = opts.value,
-        .qualifier = opts.qualifier,
-    });
+        opts.name,
+        @intFromEnum(parent),
+        opts.description,
+        opts.value,
+        opts.qualifier,
+    }) orelse unreachable;
+    defer row.deinit();
 
-    const mode_id: ModeID = @enumFromInt(db.sql.getLastInsertRowID());
-    savepoint.commit();
-
+    const mode_id: ModeID = @enumFromInt(row.int(0));
     log.debug(
         "created {f}: struct_id={f} name='{s}' value='{s}' qualifier='{s}'",
         .{ mode_id, parent, opts.name, opts.value, opts.qualifier },
@@ -1772,50 +1772,48 @@ pub const CreateRegisterOptions = struct {
 
 pub fn add_register_mode(db: *Database, register_id: RegisterID, mode_id: ModeID) !void {
     log.debug("add_register_mode: mode_id={f} register_id={f}", .{ mode_id, register_id });
-    try db.exec(
+    try db.conn.exec(
         \\INSERT INTO register_modes
         \\  (register_id, mode_id)
         \\VALUES
         \\  (?, ?)
     , .{
-        .register_id = register_id,
-        .mode_id = mode_id,
+        @intFromEnum(register_id),
+        @intFromEnum(mode_id),
     });
 }
 
 pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOptions) !RegisterID {
-    var savepoint = try db.sql.savepoint("create_register");
-    defer savepoint.rollback();
+    try db.conn.transaction();
+    errdefer db.conn.rollback();
 
-    try db.exec(
-        \\INSERT INTO registers
-        \\  (name, description, offset_bytes, size_bits, count, access, reset_mask, reset_value)
-        \\VALUES
-        \\  (?, ?, ?, ?, ?, ?, ?, ?)
-    , .{
-        .name = opts.name,
-        .description = opts.description,
-        .offset_bytes = opts.offset_bytes,
-        .size_bits = opts.size_bits,
-        .count = opts.count,
-        .access = opts.access,
-        .reset_mask = opts.reset_mask,
-        .reset_value = opts.reset_value,
+    const register_id: RegisterID = blk: {
+        const row = try db.conn.row(
+            \\INSERT INTO registers
+            \\  (name, description, offset_bytes, size_bits, count, access, reset_mask, reset_value)
+            \\VALUES
+            \\  (?, ?, ?, ?, ?, ?, ?, ?)
+            \\RETURNING id
+        , .{
+            opts.name,
+            opts.description,
+            opts.offset_bytes,
+            opts.size_bits,
+            opts.count,
+            opts.access.to_string(),
+            opts.reset_mask,
+            opts.reset_value,
+        }) orelse unreachable;
+        defer row.deinit();
+        break :blk @enumFromInt(row.int(0));
+    };
+
+    try db.conn.exec("INSERT INTO struct_registers (struct_id, register_id) VALUES (?, ?)", .{
+        @intFromEnum(parent),
+        @intFromEnum(register_id),
     });
 
-    const register_id: RegisterID = @enumFromInt(db.sql.getLastInsertRowID());
-    try db.exec(
-        \\INSERT INTO struct_registers
-        \\  (struct_id, register_id)
-        \\VALUES
-        \\  (?, ?)
-    , .{
-        .struct_id = parent,
-        .register_id = register_id,
-    });
-
-    savepoint.commit();
-
+    try db.conn.commit();
     log.debug("created {f}: name='{s}' parent_id={f} offset_bytes={} size_bits={}", .{
         register_id,
         opts.name,
@@ -1842,10 +1840,13 @@ pub fn get_register_by_name(
         comptime gen_field_list(Register, .{ .prefix = "r" }),
     });
 
-    return try db.one_alloc(Register, allocator, query, .{
-        .struct_id = struct_id,
-        .name = name,
-    });
+    const row = try db.conn.row(query, .{
+        @intFromEnum(struct_id),
+        name,
+    }) orelse return error.MissingEntity;
+    defer row.deinit();
+
+    return Register.from_row(allocator, row);
 }
 
 pub const AddStructFieldOptions = struct {
@@ -1860,15 +1861,15 @@ pub const AddStructFieldOptions = struct {
 
 pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFieldOptions) !void {
     // if there's no struct for a register then we need to create one
-    var savepoint = try db.sql.savepoint("add_register_field");
-    defer savepoint.rollback();
+    try db.conn.transaction();
+    errdefer db.conn.rollback();
 
     const struct_id = try db.get_register_struct(parent) orelse blk: {
         const struct_id = try db.create_struct(.{});
 
-        try db.exec("UPDATE registers SET struct_id = ? WHERE id = ?", .{
-            .struct_id = struct_id,
-            .id = parent,
+        try db.conn.exec("UPDATE registers SET struct_id = ? WHERE id = ?", .{
+            @intFromEnum(struct_id),
+            @intFromEnum(parent),
         });
 
         log.debug("{f} now has {f}", .{ parent, struct_id });
@@ -1876,30 +1877,25 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
     };
 
     try db.add_struct_field(struct_id, opts);
-    savepoint.commit();
+    try db.conn.commit();
 }
 
 pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
-    var savepoint = try db.sql.savepoint("add_struct_field");
-    defer savepoint.rollback();
-
-    try db.exec(
+    try db.conn.exec(
         \\INSERT INTO struct_fields
         \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
         \\VALUES
         \\  (?, ?, ?, ?, ?, ?, ?, ?)
     , .{
-        .struct_id = parent,
-        .name = opts.name,
-        .description = opts.description,
-        .size_bits = opts.size_bits,
-        .offset_bits = opts.offset_bits,
-        .enum_id = opts.enum_id,
-        .count = opts.count,
-        .stride = opts.stride,
+        @intFromEnum(parent),
+        opts.name,
+        opts.description,
+        opts.size_bits,
+        opts.offset_bits,
+        if (opts.enum_id) |enum_id| @intFromEnum(enum_id) else null,
+        opts.count,
+        opts.stride,
     });
-
-    savepoint.commit();
 
     log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?}", .{
         parent,
@@ -1919,24 +1915,21 @@ pub const CreateEnumOptions = struct {
 };
 
 pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions) !EnumID {
-    var savepoint = try db.sql.savepoint("create_enum");
-    defer savepoint.rollback();
-
-    try db.exec(
+    const row = try db.conn.row(
         \\INSERT INTO enums
         \\  (struct_id, name, description, size_bits)
         \\VALUES
         \\  (?, ?, ?, ?)
+        \\RETURNING id
     , .{
-        .struct_id = struct_id,
-        .name = opts.name,
-        .description = opts.description,
-        .size_bits = opts.size_bits,
-    });
+        if (struct_id) |si| @intFromEnum(si) else null,
+        opts.name,
+        opts.description,
+        opts.size_bits,
+    }) orelse unreachable;
+    defer row.deinit();
 
-    const enum_id: EnumID = @enumFromInt(db.sql.getLastInsertRowID());
-    savepoint.commit();
-
+    const enum_id: EnumID = @enumFromInt(row.int(0));
     log.debug("created {f}: struct_id={?f} name='{?s}' description='{?s}' size_bits={}", .{
         enum_id,
         struct_id,
@@ -1944,6 +1937,7 @@ pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions)
         opts.description,
         opts.size_bits,
     });
+
     return enum_id;
 }
 
@@ -1954,16 +1948,16 @@ pub const CreateEnumFieldOptions = struct {
 };
 
 pub fn add_enum_field(db: *Database, enum_id: EnumID, opts: CreateEnumFieldOptions) !void {
-    try db.exec(
+    try db.conn.exec(
         \\INSERT INTO enum_fields
         \\  (enum_id, name, description, value)
         \\VALUES
         \\  (?, ?, ?, ?)
     , .{
-        .enum_id = enum_id,
-        .name = opts.name,
-        .description = opts.description,
-        .value = opts.value,
+        @intFromEnum(enum_id),
+        opts.name,
+        opts.description,
+        opts.value,
     });
 }
 
@@ -1971,14 +1965,11 @@ pub const CreateStructOptions = struct {};
 
 pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     _ = opts;
-    var savepoint = try db.sql.savepoint("create_struct");
-    defer savepoint.rollback();
 
-    try db.exec("INSERT INTO structs DEFAULT VALUES", .{});
+    const row = try db.conn.row("INSERT INTO structs DEFAULT VALUES RETURNING id", .{}) orelse unreachable;
+    defer row.deinit();
 
-    const struct_id: StructID = @enumFromInt(db.sql.getLastInsertRowID());
-    savepoint.commit();
-
+    const struct_id: StructID = @enumFromInt(row.int(0));
     log.debug("created {f}", .{struct_id});
     return struct_id;
 }

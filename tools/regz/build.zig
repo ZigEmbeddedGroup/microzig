@@ -16,11 +16,19 @@ pub fn build(b: *Build) !void {
         .iconv = false,
     });
 
-    const sqlite_dep = b.dependency("sqlite", .{
+    const sqlite3_dep = b.dependency("sqlite3", .{
         .target = target,
         .optimize = optimize,
     });
-    const sqlite = sqlite_dep.module("sqlite");
+    const sqlite3_lib = sqlite3_dep.artifact("sqlite3");
+
+    const zqlite_dep = b.dependency("zqlite", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const zqlite = zqlite_dep.module("zqlite");
+    zqlite.linkLibrary(sqlite3_lib);
 
     const regz = b.addExecutable(.{
         .name = "regz",
@@ -31,14 +39,14 @@ pub fn build(b: *Build) !void {
         }),
     });
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
-    regz.root_module.addImport("sqlite", sqlite);
+    regz.root_module.addImport("zqlite", zqlite);
     b.installArtifact(regz);
 
     const exported_module = b.addModule("regz", .{
         .root_source_file = b.path("src/module.zig"),
     });
     exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
-    exported_module.addImport("sqlite", sqlite);
+    exported_module.addImport("zqlite", zqlite);
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -87,7 +95,7 @@ pub fn build(b: *Build) !void {
         .use_llvm = true,
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
-    tests.root_module.addImport("sqlite", sqlite);
+    tests.root_module.addImport("zqlite", zqlite);
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
