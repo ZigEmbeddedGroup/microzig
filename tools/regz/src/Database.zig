@@ -1,6 +1,5 @@
 gpa: Allocator,
 conn: zqlite.Conn,
-//diags: zqlite.Diagnostics = .{},
 
 const Database = @This();
 const std = @import("std");
@@ -1289,20 +1288,6 @@ pub fn get_interrupt_description(db: *Database, allocator: Allocator, interrupt_
     const query = "SELECT description FROM interrupts WHERE id = ?";
     return db.get_one_alloc([]const u8, allocator, query, .{
         @intFromEnum(interrupt_id),
-    });
-}
-
-pub fn get_struct(db: *Database, struct_id: StructID) !Struct {
-    const query = std.fmt.comptimePrint(
-        \\SELECT {s}
-        \\FROM structs
-        \\WHERE struct_id = ?
-    , .{
-        comptime gen_field_list(Struct, .{}),
-    });
-
-    return try db.one(Struct, query, .{
-        @intFromEnum(struct_id),
     });
 }
 
