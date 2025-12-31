@@ -902,6 +902,8 @@ fn parse_access(str: []const u8) !Access {
         Access.read_only
     else if (std.ascii.eqlIgnoreCase("write-only", str))
         Access.write_only
+    else if (std.ascii.eqlIgnoreCase("write", str))
+        Access.write_only
     else if (std.ascii.eqlIgnoreCase("read-write", str))
         Access.read_write
     else if (std.ascii.eqlIgnoreCase("writeOnce", str))
