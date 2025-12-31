@@ -597,8 +597,10 @@ pub fn destroy(db: *Database) void {
 
 pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Database {
     var db = try Database.create(allocator);
-    errdefer db.destroy();
-    errdefer std.log.err("{s}", .{db.conn.lastError()});
+    errdefer {
+        std.log.err("sqlite: {s}", .{db.conn.lastError()});
+        db.destroy();
+    }
 
     switch (format) {
         .svd => try svd.load_into_db(db, doc),
@@ -613,7 +615,10 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) 
     return switch (format) {
         .embassy => blk: {
             var db = try Database.create(allocator);
-            errdefer db.destroy();
+            errdefer {
+                std.log.err("sqlite: {s}", .{db.conn.lastError()});
+                db.destroy();
+            }
 
             try embassy.load_into_db(db, path);
             break :blk db;
