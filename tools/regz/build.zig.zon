@@ -13,9 +13,13 @@
             .url = "git+https://github.com/mattnite/zig-build-libxml2.git#5474281ad4d173ed298ee789c7dce4f5edb78e10",
             .hash = "libxml2-0.0.0-Kr0Y1Ac4ngAiRuFTS2qMO9j-KZsD0PKFKKXoZjynTHLq",
         },
-        .sqlite = .{
-            .url = "git+https://github.com/vrischmann/zig-sqlite.git#812e0b51a11812c8ed712462e13c3743fb85f7e9",
-            .hash = "sqlite-3.48.0-F2R_a52ODgBD8xSs3fcLI3I3Axy3eZ2HmT2V3Giy9ETV",
+        .sqlite3 = .{
+            .url = "git+https://github.com/allyourcodebase/sqlite3#8f840560eae88ab66668c6827c64ffbd0d74ef37",
+            .hash = "sqlite3-3.51.0-DMxLWssOAABZ8cAvU_LfBIbp0kZjm824PU8sSLXpEDdr",
+        },
+        .zqlite = .{
+            .url = "git+https://github.com/karlseguin/zqlite.zig#b44ed5cdc64859b08446c246f307e65ebe2b2d9c",
+            .hash = "zqlite-0.0.0-RWLaY_y_mADh2LdbDrG_2HT2dBAcsAR8Jig_7-dOJd0B",
         },
     },
 }

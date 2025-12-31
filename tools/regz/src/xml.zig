@@ -20,7 +20,6 @@ pub const Node = struct {
         filter: []const []const u8,
 
         pub fn next(it: *Iterator) ?Node {
-            // TODO: what if current node doesn't fit the bill?
             while (it.node != null) : (it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null) {
                 if (it.node.?.impl.type != 1)
                     continue;

@@ -164,13 +164,11 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
         load_peripheral(&ctx, peripheral_node, device_id) catch |err|
             log.warn("failed to load peripheral: {}", .{err});
 
-    // TODO: derive entities here
     try derive_peripherals(&ctx, device_id);
 }
 
 fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
     for (ctx.derived_peripherals.keys(), ctx.derived_peripherals.values()) |node, derived_from| {
-        // TODO: partial derivation
         if (node.get_value("registers") != null)
             continue;
 
@@ -333,7 +331,6 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
             log.warn("failed to load register: {s}.{s}: {}", .{ periph_name, reg_name, err });
         };
 
-    // TODO: handle errors when implemented
     var cluster_it = node.iterate(&.{"registers"}, &.{"cluster"});
     while (cluster_it.next()) |cluster_node|
         load_cluster(ctx, cluster_node, struct_id) catch |err|
@@ -379,7 +376,6 @@ fn load_cluster(
     if (dim_elements != null)
         return error.TodoDimElements;
 
-    // TODO: clusters always have an offset, I need to add them as a field
     const address_offset_str = node.get_value("addressOffset") orelse return error.MissingClusterOffset;
 
     const alternate_cluster = node.get_value("alternateCluster");
@@ -444,20 +440,8 @@ fn load_register(
         try load_single_register(ctx, node, parent);
     }
 
-    // TODO: derivision
-    //if (node.get_attribute("derivedFrom")) |derived_from|
-    //    try ctx.add_derived_entity(id, derived_from);
-
-    // TODO:
-    // dimName
-    // displayName
-    // alternateGroup
-    // alternateRegister
-    // dataType
-    // modifiedWriteValues
-    // writeConstraint
-    // readAction
-    // }
+    if (node.get_attribute("derivedFrom")) |_|
+        return error.TODO_DerivedRegister;
 }
 
 fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: StructID, dim_elements: DimElements) !void {
@@ -557,9 +541,8 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     else
         null;
 
-    // TODO: field access
-    //if (node.get_value("access")) |access_str|
-    //    try db.add_access(id, try parse_access(access_str));
+    //if (node.get_value("access")) |_|
+    //    return error.TODO_FieldAccess;
 
     for (0..count orelse 1) |i| {
         try db.add_register_field(register_id, .{
@@ -580,18 +563,11 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
             .enum_id = enum_id,
         });
     }
-
-    // TODO:
-    // modifiedWriteValues
-    // writeConstraint
-    // readAction
 }
 
 fn load_enumerated_values(ctx: *Context, node: xml.Node, enum_size_bits: u8) !EnumID {
     const enum_id = try ctx.db.create_enum(null, .{
-        // TODO: find solution to potential name collisions for enums at the peripheral level.
         .name = node.get_value("name"),
-        // TODO: description?
         .size_bits = enum_size_bits,
     });
 
@@ -616,10 +592,6 @@ fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
                 break :v try std.fmt.parseInt(u32, value_str, 0);
             }
         } else if (node.get_value("isDefault")) |is_default_str| {
-            // TODO:
-            // - Enumerated values are allowed to have an enumeratedValue element with isDefault: true and NO value field to allow
-            //   setting a name and description for "all other" unused possible values for the bitfield
-            // - Ultimately, this "name" and "description" belongs in a comment over the non-exhaustive enum "_" field, but unsure how to make that happen
             if (is_default_str.len == 0) return error.EnumFieldMalformed;
             if (try parse_bool(is_default_str)) return else return error.EnumFieldMalformed;
         } else {
@@ -781,11 +753,10 @@ const DimElements = struct {
             .dim = dim.?,
             .dim_increment = dim_increment.?,
             .dim_index = dim_index,
-            .dim_name = node.get_value("dimName"), // TODO: use this if it exists instead "name" if available
+            .dim_name = node.get_value("dimName"),
         };
     }
 
-    // TODO: regex pattern not verified, function assumes valid node value
     fn dim_index_value(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
         if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, '-')) {
             return try self.dim_index_value_range(ctx, index);
@@ -973,6 +944,8 @@ test "svd.device register properties" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
+    try db.backup("device_register_properties.regz");
+
     const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
@@ -1126,8 +1099,6 @@ test "svd.register with fields" {
     const field = try db.get_register_field_by_name(arena.allocator(), register.id, "TEST_FIELD");
     try expectEqual(8, field.size_bits);
     try expectEqual(0, field.offset_bits);
-
-    // TODO: field access
 }
 
 test "svd.field with enum value" {

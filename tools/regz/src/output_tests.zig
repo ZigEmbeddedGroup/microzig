@@ -155,16 +155,6 @@ pub fn peripheral_with_modes(allocator: Allocator) !*Database {
     try db.add_register_mode(register1_id, mode1_id);
     try db.add_register_mode(register2_id, mode2_id);
 
-    // TODO: study the types of qualifiers that come up. it's possible that
-    // we'll have to read different registers or read registers without fields.
-    //
-    // might also have registers with enum values
-    // naive implementation goes throuDatabase each mode and follows the qualifier,
-    // next level will determine if they're reading the same address even if
-    // different modes will use different union members
-
-    try db.backup("with_modes.regz");
-
     return db;
 }
 
@@ -804,8 +794,6 @@ pub fn nested_struct_field_in_a_peripheral(allocator: Allocator, offset_bytes: u
     var db = try Database.create(allocator);
     errdefer db.destroy();
 
-    defer db.backup("nested_struct_field_in_a_peripheral.regz") catch {};
-
     const peripheral_id = try db.create_peripheral(.{
         .name = "TEST_PERIPHERAL",
         .description = "test peripheral",
@@ -841,8 +829,6 @@ pub fn nested_struct_field_in_a_peripheral(allocator: Allocator, offset_bytes: u
 pub fn nested_struct_field_in_a_peripheral_that_has_a_named_type(allocator: Allocator, offset_bytes: u64) !*Database {
     var db = try Database.create(allocator);
     errdefer db.destroy();
-
-    defer db.backup("nested_struct_field_in_a_peripheral_that_has_a_named_type.regz") catch {};
 
     const peripheral_id = try db.create_peripheral(.{
         .name = "TEST_PERIPHERAL",

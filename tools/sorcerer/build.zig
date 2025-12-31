@@ -25,7 +25,11 @@ pub fn build(b: *std.Build) void {
 
     const regz_dep = mz_dep.builder.dependency("tools/regz", .{
         .target = target,
-        .optimize = optimize,
+        // Setting to release safe because on debug builds its what slows
+        // things down. It _should_ be solid for the most part once you're
+        // developing Sorcerer, if that's not the case then you can change this
+        // manually.
+        .optimize = .ReleaseSafe,
     });
 
     const serial_dep = b.dependency("serial", .{

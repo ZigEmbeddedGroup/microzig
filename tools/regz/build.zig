@@ -12,15 +12,23 @@ pub fn build(b: *Build) !void {
 
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseSafe,
         .iconv = false,
     });
 
-    const sqlite_dep = b.dependency("sqlite", .{
+    const sqlite3_dep = b.dependency("sqlite3", .{
+        .target = target,
+        .optimize = .ReleaseSafe,
+    });
+    const sqlite3_lib = sqlite3_dep.artifact("sqlite3");
+
+    const zqlite_dep = b.dependency("zqlite", .{
         .target = target,
         .optimize = optimize,
     });
-    const sqlite = sqlite_dep.module("sqlite");
+
+    const zqlite = zqlite_dep.module("zqlite");
+    zqlite.linkLibrary(sqlite3_lib);
 
     const regz = b.addExecutable(.{
         .name = "regz",
@@ -31,14 +39,14 @@ pub fn build(b: *Build) !void {
         }),
     });
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
-    regz.root_module.addImport("sqlite", sqlite);
+    regz.root_module.addImport("zqlite", zqlite);
     b.installArtifact(regz);
 
     const exported_module = b.addModule("regz", .{
         .root_source_file = b.path("src/module.zig"),
     });
     exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
-    exported_module.addImport("sqlite", sqlite);
+    exported_module.addImport("zqlite", zqlite);
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -49,35 +57,6 @@ pub fn build(b: *Build) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const contextualize_fields = b.addExecutable(.{
-        .name = "contextualize-fields",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/contextualize-fields.zig"),
-            .target = b.graph.host,
-        }),
-        .use_llvm = true,
-    });
-    contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
-    const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
-    if (b.args) |args| {
-        contextualize_fields_run.addArgs(args);
-    }
-    const contextualize_fields_step = b.step("contextualize-fields", "Create ndjson of all the fields with the context of parent fields");
-    contextualize_fields_step.dependOn(&contextualize_fields_run.step);
-
-    const characterize = b.addExecutable(.{
-        .name = "characterize",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/characterize.zig"),
-            .target = b.graph.host,
-        }),
-        .use_llvm = true,
-    });
-    characterize.linkLibrary(libxml2_dep.artifact("xml2"));
-    const characterize_run = b.addRunArtifact(characterize);
-    const characterize_step = b.step("characterize", "Characterize a number of xml files whose paths are piped into stdin, results are ndjson");
-    characterize_step.dependOn(&characterize_run.step);
-
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/Database.zig"),
@@ -87,7 +66,8 @@ pub fn build(b: *Build) !void {
         .use_llvm = true,
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
-    tests.root_module.addImport("sqlite", sqlite);
+    tests.root_module.addImport("zqlite", zqlite);
+    tests.step.dependOn(&regz.step);
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");

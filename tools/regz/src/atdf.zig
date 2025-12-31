@@ -47,8 +47,6 @@ const Context = struct {
     }
 };
 
-// TODO: scratchpad datastructure for temporary string based relationships,
-// then stitch it all together in the end
 pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     var ctx = Context.init(db);
     defer ctx.deinit();
@@ -99,18 +97,6 @@ fn load_device(ctx: *Context, node: xml.Node) !void {
     var param_it = node.iterate(&.{"parameters"}, &.{"param"});
     while (param_it.next()) |param_node|
         try load_param(ctx, param_node, device_id);
-
-    //try infer_peripheral_offsets(ctx);
-
-    // TODO: maybe others?
-
-    // TODO:
-    // address-space.memory-segment
-    // events.generators.generator
-    // events.users.user
-    // interfaces.interface.parameters.param
-
-    // property-groups.property-group.property
 }
 
 fn load_param(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
@@ -226,7 +212,6 @@ fn infer_peripheral_offsets(ctx: *Context) !void {
 
 fn infer_peripheral_offset(ctx: *Context, type_id: PeripheralID, instance_id: DevicePeripheralID) !void {
     const db = ctx.db;
-    // TODO: assert that there's only one instance using this type
 
     var min_offset: ?u64 = null;
     var max_size: u64 = 8;
@@ -287,7 +272,6 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
                     const mask_str = bitfield_node.get_attribute("mask") orelse continue;
                     const mask = try std.fmt.parseInt(u64, mask_str, 0);
                     try field_sizes.append(allocator, @popCount(mask));
-                    // TODO: assert consecutive
                 }
             }
         }
@@ -321,7 +305,6 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
     };
 }
 
-// TODO: instances use name in module
 fn get_inlined_register_group(parent_node: xml.Node, parent_name: []const u8) ?xml.Node {
     var register_group_it = parent_node.iterate(&.{}, &.{"register-group"});
     const rg_node = register_group_it.next() orelse return null;
@@ -522,16 +505,11 @@ fn load_register_group(ctx: *Context, node: xml.Node, parent: PeripheralID) !voi
 
     try infer_register_group_offset(ctx, node, struct_id);
     try load_register_group_children(ctx, node, parent, struct_id);
-    // TODO: infer register group size?
-    // Do register groups ever operate as just namespaces?
-
-    // TODO: check size
 }
 
 fn load_mode(ctx: *Context, node: xml.Node, parent: StructID) !void {
     const db = ctx.db;
 
-    // TODO: determine if it ever gets put in the register type
     validate_attrs(node, &.{
         "value",
         "mask",
@@ -546,14 +524,10 @@ fn load_mode(ctx: *Context, node: xml.Node, parent: StructID) !void {
         .value = node.get_attribute("value") orelse return error.MissingModeValue,
         .qualifier = node.get_attribute("qualifier") orelse return error.MissingModeQualifier,
     });
-
-    // TODO: "mask": "optional",
 }
 
-// search for modes that the parent entity owns, and if the name matches,
-// then we have our entry. If not found then the input is malformed.
-// TODO: assert unique mode name
-// TODO: modes
+// Search for modes that the parent entity owns, and if the name matches, then
+// we have our entry. If not found then the input is malformed.
 fn assign_modes_to_register(
     ctx: *Context,
     register_id: RegisterID,
@@ -1017,7 +991,6 @@ fn load_register_group_instance(
 
     log.debug("{}: creating register group instance", .{id});
     const name = node.get_attribute("name") orelse return error.MissingInstanceName;
-    // TODO: this isn't always a set value, not sure what to do if it's left out
     const name_in_module = node.get_attribute("name-in-module") orelse {
         log.warn("no 'name-in-module' for register group '{s}'", .{
             name,
@@ -1054,11 +1027,6 @@ fn load_register_group_instance(
     }
 
     try db.add_child("instance.register_group", peripheral_id, id);
-
-    // TODO:
-    // "address-space": "optional",
-    // "version": "optional",
-    // "id": "optional",
 }
 
 fn load_signal(
@@ -1076,11 +1044,8 @@ fn load_signal(
         "field",
         "ioset",
     });
-
-    // TODO: pads
 }
 
-// TODO: there are fields like irq-index
 fn load_interrupt(
     ctx: *Context,
     node: xml.Node,
@@ -1094,7 +1059,6 @@ fn load_interrupt(
         "alternate-name",
         "irq-index",
         "caption",
-        // TODO: probably connects module instance to interrupt
         "module-instance",
         "irq-name",
         "alternate-caption",
@@ -1123,8 +1087,7 @@ fn load_interrupt(
     });
 }
 
-// for now just emit warning logs when the input has attributes that it shouldn't have
-// TODO: better output
+// For now just emit warning logs when the input has attributes that it shouldn't have
 fn validate_attrs(node: xml.Node, attrs: []const []const u8) void {
     var it = node.iterate_attrs();
     while (it.next()) |attr| {

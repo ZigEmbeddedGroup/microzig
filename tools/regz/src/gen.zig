@@ -523,10 +523,6 @@ fn write_device_peripheral(
     if (try get_device_peripheral_description(db, arena, instance)) |description|
         try write_doc_comment(arena, description, writer);
 
-    // TODO: get description
-    //else if (s.description) |desc|
-    //    try write_doc_comment(arena, desc, writer);
-
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix = if (instance.count) |count|
         try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
@@ -676,9 +672,6 @@ fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: *std.
     var buf: std.Io.Writer.Allocating = .init(arena);
     const writer = &buf.writer;
 
-    // TODO: handle this instead of assert
-    // assert(std.math.ceilPowerOfTwo(field_set.count()) <= size);
-
     if (e.description) |description|
         try write_doc_comment(arena, description, writer);
 
@@ -726,7 +719,6 @@ fn write_enum_field(
     size: u64,
     writer: *std.Io.Writer,
 ) !void {
-    // TODO: use size to print the hex value (pad with zeroes accordingly)
     _ = size;
     if (enum_field.description) |description|
         try write_doc_comment(arena, description, writer);
@@ -825,8 +817,6 @@ fn write_registers_with_modes(
         try writer.print("{f}: extern struct {{\n", .{
             std.zig.fmtId(mode.name),
         });
-
-        // TODO: moded nested_struct_field
 
         try write_registers_and_nested_structs_base(db, arena, block_size_bytes, registers, &.{}, writer);
         try writer.writeAll("},\n");
@@ -1066,9 +1056,7 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
         "";
     try writer.print("{s}", .{array_prefix});
 
-    // TODO: if it's a struct decl then refer to it by name
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
-        // TODO full reference?
         try writer.print("{f},\n", .{std.zig.fmtId(struct_decl.name)});
     } else {
         try write_struct(db, arena, null, nsf.struct_id, writer);
@@ -1149,7 +1137,6 @@ fn write_register(
         .value = register.reset_value.?,
     } else null;
 
-    // TODO: named struct type
     const fields = try db.get_register_fields(arena, register.id, .{});
     if (fields.len > 0) {
         try writer.print("{f}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{

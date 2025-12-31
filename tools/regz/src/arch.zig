@@ -50,7 +50,7 @@ pub const Arch = enum {
     pub const default = .unknown;
 
     pub fn to_string(arch: Arch) []const u8 {
-        return inline for (@typeInfo(Arch).Enum.fields) |field| {
+        return inline for (@typeInfo(Arch).@"enum".fields) |field| {
             if (@field(Arch, field.name) == arch)
                 break field.name;
         } else unreachable;
