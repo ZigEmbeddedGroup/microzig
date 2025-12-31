@@ -112,9 +112,6 @@ pub const Enum = struct {
         .foreign_keys = &.{
             .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
         },
-
-        // TODO:
-        //  CHECK ((struct_id IS NULL AND name IS NULL) OR (struct_id IS NOT NULL AND name IS NOT NULL)),
     };
 
     pub fn deinit(e: *const Enum, allocator: Allocator) void {
@@ -1168,7 +1165,6 @@ pub const GetRegisterFieldsOptions = struct {
     distinct: bool = true,
 };
 
-// TODO: if we ever need a "get struct fields" function, refactor this to use it
 pub fn get_register_fields(
     db: *Database,
     allocator: Allocator,
@@ -1988,7 +1984,6 @@ fn get_enum_ref(db: *Database, ref: []const u8) !EnumID {
     const enum_name, const struct_ref = try get_ref_last_component(ref);
     const struct_id = try db.get_struct_ref(struct_ref orelse return error.InvalidRef);
 
-    // TODO: create a `get_enum_id_by_name()` function
     const e = try db.get_enum_by_name(arena.allocator(), struct_id, enum_name);
     return e.id;
 }
