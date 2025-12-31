@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const MicroBuild = microzig.MicroBuild(.{
-    .atsam = true,
+    .samd51 = true,
 });
 
 pub fn build(b: *std.Build) void {
