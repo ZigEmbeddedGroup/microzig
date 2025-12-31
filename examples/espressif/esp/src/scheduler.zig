@@ -20,18 +20,16 @@ pub const microzig_options: microzig.Options = .{
 };
 
 var heap_buf: [10 * 1024]u8 = undefined;
-var scheduler: esp.Scheduler = undefined;
-var queue: esp.Scheduler.Queue(u32) = .init(&.{});
 
-fn task1(_: ?*anyopaque) callconv(.c) noreturn {
+fn task1(scheduler: *esp.Scheduler, q: *esp.Scheduler.Queue(u32)) noreturn {
     for (0..5) |i| {
-        queue.put_one(&scheduler, i) catch {
+        q.put_one(scheduler, i) catch {
             std.log.err("failed to put item", .{});
             continue;
         };
         scheduler.sleep(.from_ms(500));
     }
-    queue.close(&scheduler);
+    q.close(scheduler);
     while (true) {
         microzig.cpu.wfi();
     }
@@ -40,13 +38,14 @@ fn task1(_: ?*anyopaque) callconv(.c) noreturn {
 pub fn main() !void {
     var heap = microzig.Allocator.init_with_buffer(&heap_buf);
     const allocator = heap.allocator();
+
+    var scheduler: esp.Scheduler = undefined;
     scheduler.init(allocator);
 
     esp.time.sleep_ms(1000);
 
-    _ = try scheduler.raw_alloc_spawn_with_options(task1, null, .{
-        // .priority = .high,
-    });
+    var queue: esp.Scheduler.Queue(u32) = .init(&.{});
+    _ = try scheduler.spawn(task1, .{&scheduler, &queue}, .{});
 
     while (true) {
         const item = try queue.get_one(&scheduler);

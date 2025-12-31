@@ -539,7 +539,7 @@ fn task_create_common(
     _ = name; // autofix
     _ = core_id; // autofix
 
-    const task: *Scheduler.Task = scheduler.raw_alloc_spawn_with_options(
+    const task: *Scheduler.Task = scheduler.raw_spawn_with_options(
         @ptrCast(@alignCast(task_func)),
         param,
         .{

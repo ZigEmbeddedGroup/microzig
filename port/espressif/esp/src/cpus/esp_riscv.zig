@@ -243,6 +243,8 @@ pub const interrupt = struct {
         return @ptrFromInt(base + @sizeOf(u32) * @as(usize, @intFromEnum(source)));
     }
 
+    // TODO: implement some sort of masking so as to only check sources you
+    // care about
     pub const SourceIterator = struct {
         index: usize,
         status_reg: u32,
@@ -395,7 +397,7 @@ pub const TrapFrame = extern struct {
 };
 
 const interrupt_stack_size = microzig.options.cpu.interrupt_stack_size;
-pub var interrupt_stack: [interrupt_stack_size orelse 0]u8 align(16) = undefined;
+pub var interrupt_stack: [std.mem.alignForward(usize, interrupt_stack_size orelse 0, 16)]u8 align(16) = undefined;
 
 fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void {
     const interrupt_jump_asm, const interrupt_c_stubs_asm = comptime blk: {
