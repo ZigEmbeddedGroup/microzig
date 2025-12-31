@@ -1,7 +1,3 @@
-# microchip-atsam
+# microchip/samd51
 
-HALs and register definitions for Microchip ATSAM devices
-
-## What version of Zig to use
-
-0.11.0
+HALs and register definitions for Microchip SAMD51 devices
