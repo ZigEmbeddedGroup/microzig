@@ -284,7 +284,7 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
     // assign it the smallest value possible
     const natural_enum_size = if (max_value > 0) std.math.log2_int(u64, max_value) + 1 else 1;
     return if (field_sizes.items.len == 0)
-            natural_enum_size
+        natural_enum_size
     else blk: {
         var ret: ?u64 = null;
         for (field_sizes.items) |field_size| {
