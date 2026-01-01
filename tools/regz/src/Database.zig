@@ -637,7 +637,11 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     return db;
 }
 
-pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) !*Database {
+pub const CreateOptions = struct {
+    device: ?[]const u8 = null,
+};
+
+pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, opts: CreateOptions) !*Database {
     return switch (format) {
         .embassy => blk: {
             var db = try Database.create(allocator);
@@ -646,7 +650,7 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) 
                 db.destroy();
             }
 
-            try embassy.load_into_db(db, path);
+            try embassy.load_into_db(db, path, opts.device);
             break :blk db;
         },
         .svd, .atdf => blk: {

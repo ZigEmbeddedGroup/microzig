@@ -22,6 +22,7 @@ pub fn main() !void {
 const Arguments = struct {
     allocator: Allocator,
     format: ?Database.Format = null,
+    device: ?[]const u8 = null,
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
     patch_paths: std.ArrayList([]const u8) = .{},
@@ -50,6 +51,7 @@ fn print_usage(writer: *std.Io.Writer) !void {
         \\  --help                Display this help and exit
         \\  --db_dump_path <str>  Dump SQLite file
         \\  --format <str>        Explicitly set format type, one of: svd, atdf, json, embassy
+        \\  --device <str>        Filter for device for embassy
         \\  --output_path <str>   Write to a file
         \\  --patch_path <str>    After reading format, apply NDJSON based patch file
         \\<str>
@@ -87,6 +89,9 @@ fn parse_args(allocator: Allocator) !Arguments {
                 });
                 return error.Explained;
             };
+        } else if (std.mem.eql(u8, args[i], "--device")) {
+            i += 1;
+            ret.device = try allocator.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--output_path")) {
             i += 1;
             ret.output_path = try allocator.dupeZ(u8, args[i]);
@@ -139,7 +144,9 @@ fn main_impl() anyerror!void {
         return error.Explained;
     };
 
-    var db = try Database.create_from_path(allocator, format, input_path);
+    var db = try Database.create_from_path(allocator, format, input_path, .{
+        .device = args.device,
+    });
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {

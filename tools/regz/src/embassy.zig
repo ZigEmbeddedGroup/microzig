@@ -151,7 +151,7 @@ pub const ChipFile = struct {
     }
 };
 
-pub fn load_into_db(db: *Database, path: []const u8) !void {
+pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void {
     var package_dir = try std.fs.cwd().openDir(path, .{});
     defer package_dir.close();
 
@@ -207,6 +207,11 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
             .allocate = .alloc_always,
         });
         errdefer chips_file.deinit();
+
+        if (device) |d| {
+            if (!std.mem.eql(u8, d, chips_file.value.name))
+                continue;
+        }
 
         for (chips_file.value.cores) |core| {
             for (core.peripherals) |peripheral| {
@@ -441,7 +446,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                                 _ = try db.create_register(group_id, .{
                                     .name = single_register_name,
                                     .description = description,
-                                    .offset_bytes = @intCast(byte_offset),
+                                    .offset_bytes = @as(usize, @intCast(byte_offset)) + (idx * @as(usize, @intCast(stride))),
                                     .size_bits = item_bit_size,
                                     .struct_id = register_struct_id,
                                 });
