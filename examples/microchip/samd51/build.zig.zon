@@ -1,6 +1,6 @@
 .{
-    .name = .examples_microchip_atsam,
-    .fingerprint = 0x43dbad7fe1a6b6e2,
+    .name = .examples_microchip_samd51,
+    .fingerprint = 0x6154d6ce6c8ef439,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

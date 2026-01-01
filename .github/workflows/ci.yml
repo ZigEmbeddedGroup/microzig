@@ -191,8 +191,8 @@ jobs:
         example_dir: [
             espressif/esp,
             gigadevice/gd32,
-            #microchip/avr,
-            microchip/atsam,
+            #microchip/atmega,
+            microchip/samd51,
             nordic/nrf5x,
             nxp/lpc,
             nxp/mcx,

@@ -4,8 +4,8 @@ const microzig = @import("microzig");
 const MicroBuild = microzig.MicroBuild(.{
     .rp2xxx = true,
     .gd32 = true,
-    .atsam = true,
-    //.avr = true,
+    .samd51 = true,
+    //.atmega = true,
     .nrf5x = true,
     .lpc = true,
     .stm32 = true,
@@ -20,8 +20,8 @@ pub fn build(b: *std.Build) void {
     const examples: []const Example = &.{
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "rp2xxx" },
         .{ .target = mb.ports.gd32.boards.sipeed.longan_nano, .name = "gd32" },
-        .{ .target = mb.ports.atsam.chips.atsamd51j19, .name = "atsam" },
-        //.{ .target = mb.ports.avr.boards.arduino.nano, .name = "avr" },
+        .{ .target = mb.ports.samd51.chips.atsamd51j19, .name = "atsam" },
+        //.{ .target = mb.ports.atmega.boards.arduino.nano, .name = "avr" },
         .{ .target = mb.ports.nrf5x.boards.nordic.nrf52840_dongle, .name = "nrf5x" },
         .{ .target = mb.ports.lpc.boards.mbed.lpc1768, .name = "lpc" },
         .{ .target = mb.ports.stm32.boards.stm32f3discovery, .name = "stm32" },
