@@ -1,3 +1,10 @@
+const std = @import("std");
+const Database = @import("Database.zig");
+const Arch = @import("arch.zig").Arch;
+const arm = @import("arch/arm.zig");
+const FS_Directory = @import("FS_Directory.zig");
+const StructID = Database.StructID;
+
 pub const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm0", "cortex_m0" },
     .{ "cm0p", "cortex_m0plus" },
@@ -163,6 +170,9 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         chip_files.deinit(allocator);
     }
 
+    var used_register_files = std.StringArrayHashMap(void).init(allocator);
+    defer used_register_files.deinit();
+
     var register_files = std.StringArrayHashMap(std.json.Parsed(std.json.Value)).init(allocator);
     defer {
         for (register_files.values()) |*value|
@@ -197,6 +207,15 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
             .allocate = .alloc_always,
         });
         errdefer chips_file.deinit();
+
+        for (chips_file.value.cores) |core| {
+            for (core.peripherals) |peripheral| {
+                if (peripheral.registers) |registers| {
+                    const file_name = try std.fmt.allocPrint(allocator, "{s}_{s}.json", .{ registers.kind, registers.version });
+                    try used_register_files.put(file_name, {});
+                }
+            }
+        }
 
         try chip_files.append(allocator, chips_file);
     }
@@ -236,6 +255,10 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         try handle_extends(allocator, extends_list_allocator, &register_file.value);
 
         const register_name = try allocator.dupe(u8, entry.name[0 .. entry.name.len - std.fs.path.extension(entry.name).len]);
+
+        if (!used_register_files.contains(entry.name))
+            continue;
+
         try register_files.put(register_name, register_file);
     }
 
@@ -296,33 +319,12 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                 const register_name = item.object.get("name").?.string;
                 const description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
                 const byte_offset = item.object.get("byte_offset").?.integer;
-                const item_bit_size = if (item.object.get("bit_size")) |v| v.integer else 32;
+                const item_bit_size: usize = @intCast(if (item.object.get("bit_size")) |v| v.integer else 32);
 
-                const register_id = try db.create_register(group_id, .{
-                    .name = register_name,
-                    .description = description,
-                    .offset_bytes = @intCast(byte_offset),
-                    .size_bits = @intCast(item_bit_size),
-                    .count = if (item.object.get("array")) |array| blk: {
-                        if (array.object.get("len")) |count| {
-                            // ensure stride is always 4 for now, assuming that
-                            // it's in bytes
-                            const stride = array.object.get("stride").?.integer;
-                            if (stride != 4) {
-                                std.log.warn("ignoring register array with unsupported stride: {} != 4 for register {s} in {s} in {s}", .{ stride, register_name, key["block/".len..], name });
-                                break :blk null;
-                            }
-
-                            break :blk @intCast(count.integer);
-                        }
-
-                        break :blk null;
-                    } else null,
-                });
-
-                if (item.object.get("fieldset")) |fieldset| blk: {
+                const register_struct_id: ?StructID = if (item.object.get("fieldset")) |fieldset| blk: {
+                    const register_struct_id = try db.create_struct(.{});
                     const fieldset_key = try std.fmt.allocPrint(allocator, "fieldset/{s}", .{fieldset.string});
-                    const fieldset_value = (register_file.value.object.get(fieldset_key) orelse break :blk).object;
+                    const fieldset_value = (register_file.value.object.get(fieldset_key) orelse break :blk null).object;
                     next_field: for (fieldset_value.get("fields").?.array.items) |field| {
                         const field_name = field.object.get("name").?.string;
                         const field_description: ?[]const u8 = if (field.object.get("description")) |desc| desc.string else null;
@@ -353,7 +355,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                                         for (positions.array.items, 0..) |position, idx| {
                                             const field_name_irregular_stride = try std.fmt.allocPrint(allocator, "{s}[{}]", .{ field_name, idx });
 
-                                            try db.add_register_field(register_id, .{
+                                            try db.add_struct_field(register_struct_id, .{
                                                 .name = field_name_irregular_stride,
                                                 .description = field_description,
                                                 .offset_bits = @intCast(position.integer + bit_offset),
@@ -367,7 +369,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                                     }
                                 }
 
-                                try db.add_register_field(register_id, .{
+                                try db.add_struct_field(register_struct_id, .{
                                     .name = field_name,
                                     .description = field_description,
                                     .offset_bits = @intCast(bit_offset),
@@ -401,7 +403,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                                         array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
                                     }
 
-                                    try db.add_register_field(register_id, .{
+                                    try db.add_struct_field(register_struct_id, .{
                                         .name = non_contiguous_field_name,
                                         .description = field_description,
                                         .offset_bits = @intCast(bit_offset),
@@ -417,6 +419,58 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                             },
                         }
                     }
+
+                    break :blk register_struct_id;
+                } else null;
+
+                if (item.object.get("array")) |array| {
+                    if (array.object.get("len")) |count| {
+                        const stride = array.object.get("stride").?.integer;
+                        if (stride == (item_bit_size / 8)) {
+                            _ = try db.create_register(group_id, .{
+                                .name = register_name,
+                                .description = description,
+                                .offset_bytes = @intCast(byte_offset),
+                                .size_bits = item_bit_size,
+                                .count = @intCast(count.integer),
+                                .struct_id = register_struct_id,
+                            });
+                        } else if (stride > (item_bit_size / 8)) {
+                            for (0..@intCast(count.integer)) |idx| {
+                                const single_register_name = try std.fmt.allocPrint(allocator, "{s}{}", .{ register_name, idx });
+                                _ = try db.create_register(group_id, .{
+                                    .name = single_register_name,
+                                    .description = description,
+                                    .offset_bytes = @intCast(byte_offset),
+                                    .size_bits = item_bit_size,
+                                    .struct_id = register_struct_id,
+                                });
+
+                                // First we give the struct the same name as the register
+                                if (register_struct_id) |rs_id| if (!(try db.struct_decl_name_exists(struct_id, register_name))) {
+                                    try db.create_struct_decl(struct_id, rs_id, register_name, .{});
+                                };
+                            }
+                        } else {
+                            std.log.warn("stride ({}) is smaller than item bit size ({}) count={}", .{ stride, item_bit_size, count.integer });
+                        }
+                    } else {
+                        _ = try db.create_register(group_id, .{
+                            .name = register_name,
+                            .description = description,
+                            .offset_bytes = @intCast(byte_offset),
+                            .size_bits = item_bit_size,
+                            .struct_id = register_struct_id,
+                        });
+                    }
+                } else {
+                    _ = try db.create_register(group_id, .{
+                        .name = register_name,
+                        .description = description,
+                        .offset_bytes = @intCast(byte_offset),
+                        .size_bits = item_bit_size,
+                        .struct_id = register_struct_id,
+                    });
                 }
             }
         }
@@ -585,9 +639,3 @@ fn get_section(child_full_name: []const u8) []const u8 {
     }
     @panic("Unhandled extends Type");
 }
-
-const std = @import("std");
-const Database = @import("Database.zig");
-const Arch = @import("arch.zig").Arch;
-const arm = @import("arch/arm.zig");
-const FS_Directory = @import("FS_Directory.zig");

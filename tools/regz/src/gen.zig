@@ -13,6 +13,8 @@ const DevicePeripheral = Database.DevicePeripheral;
 const EnumID = Database.EnumID;
 const StructID = Database.StructID;
 const NestedStructField = Database.NestedStructField;
+const StructField = Database.StructField;
+const RegisterDecl = Database.RegisterDecl;
 
 const Properties = @import("properties.zig").Properties;
 const Directory = @import("Directory.zig");
@@ -587,6 +589,17 @@ fn write_struct_body(
         try write_enum(db, arena, &e, writer);
     }
 
+    const register_decls = try db.get_register_decls(arena, struct_id);
+    for (register_decls) |rd| {
+        try write_newline_if_written(writer, &written);
+        try write_register_decl(
+            db,
+            arena,
+            rd,
+            writer,
+        );
+    }
+
     const struct_decls = try db.get_struct_decls(arena, struct_id);
     for (struct_decls) |sd| {
         try write_newline_if_written(writer, &written);
@@ -628,6 +641,37 @@ fn write_struct_decl(
     });
 
     try write_struct(db, arena, block_size_bytes, struct_id, writer);
+    try writer.writeAll(";\n");
+
+    try out_writer.writeAll(buf.written());
+}
+
+fn write_register_decl(
+    db: *Database,
+    arena: Allocator,
+    decl: RegisterDecl,
+    out_writer: *std.Io.Writer,
+) !void {
+    log.debug("writing register decl: name='{s}'", .{decl.name});
+
+    var buf: std.Io.Writer.Allocating = .init(arena);
+    const writer = &buf.writer;
+
+    try writer.writeByte('\n');
+    if (decl.description) |d|
+        try write_doc_comment(arena, d, writer);
+
+    try writer.print("pub const {f} = ", .{
+        std.zig.fmtId(decl.name),
+    });
+
+    const register = try db.get_register(arena, decl.register_id);
+    const fields = try db.get_register_fields(arena, register.id, .{});
+    const register_reset: ?RegisterReset = if (register.reset_mask != null and register.reset_value != null) .{
+        .mask = register.reset_mask.?,
+        .value = register.reset_value.?,
+    } else null;
+    try write_register_struct(db, arena, fields, register.size_bits, register_reset, writer);
     try writer.writeAll(";\n");
 
     try out_writer.writeAll(buf.written());
@@ -1139,14 +1183,13 @@ fn write_register(
 
     const fields = try db.get_register_fields(arena, register.id, .{});
     if (fields.len > 0) {
-        try writer.print("{f}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
-            std.zig.fmtId(register.name),
-            array_prefix,
-            register.size_bits,
-        });
-
-        try write_fields(db, arena, fields, register.size_bits, register_reset, writer);
-        try writer.writeAll("}),\n");
+        try writer.print("{f}: {s}", .{ std.zig.fmtId(register.name), array_prefix });
+        if (try db.get_register_decl_name(arena, register.id)) |register_decl_name| {
+            try writer.print("{f}", .{std.zig.fmtId(register_decl_name)});
+        } else {
+            try write_register_struct(db, arena, fields, register.size_bits, register_reset, writer);
+        }
+        try writer.writeAll(",\n");
     } else if (array_prefix.len != 0) {
         try writer.print("{f}: {s}u{},\n", .{
             std.zig.fmtId(register.name),
@@ -1169,6 +1212,22 @@ fn write_register(
     }
 
     try out_writer.writeAll(buf.written());
+}
+
+fn write_register_struct(
+    db: *Database,
+    arena: Allocator,
+    fields: []StructField,
+    size_bits: u64,
+    register_reset: ?RegisterReset,
+    writer: *std.Io.Writer,
+) !void {
+    try writer.print("mmio.Mmio(packed struct(u{}) {{\n", .{
+        size_bits,
+    });
+
+    try write_fields(db, arena, fields, size_bits, register_reset, writer);
+    try writer.writeAll("})");
 }
 
 /// Determine if a field comes before another, i.e. has a lower bit offset in the register
@@ -3550,6 +3609,55 @@ test "gen.nested struct field next to register" {
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
             \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.register with decl" {
+    var db = try tests.register_with_decl(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const REGISTER_DECL = mmio.Mmio(packed struct(u32) {
+            \\        TEST_FIELD: u1,
+            \\        padding: u31 = 0,
+            \\    });
+            \\
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: REGISTER_DECL,
             \\};
             \\
             ,

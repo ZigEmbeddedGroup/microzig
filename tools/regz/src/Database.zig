@@ -269,6 +269,31 @@ pub const StructDecl = struct {
     }
 };
 
+pub const RegisterDecl = struct {
+    parent_id: StructID,
+    register_id: RegisterID,
+    name: []const u8,
+    description: ?[]const u8,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "parent_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "register_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+        .unique_constraints = &.{
+            &.{ "parent_id", "name" },
+            &.{"register_id"},
+        },
+    };
+
+    pub fn deinit(decl: *const RegisterDecl, allocator: Allocator) void {
+        if (decl.description) |desc|
+            allocator.free(desc);
+
+        allocator.free(decl.name);
+    }
+};
+
 pub const StructRegister = struct {
     struct_id: StructID,
     register_id: RegisterID,
@@ -510,6 +535,7 @@ const schema: []const [:0]const u8 = &.{
     gen_sql_table("device_properties", DeviceProperty),
     gen_sql_table("interrupts", Interrupt),
     gen_sql_table("device_peripherals", DevicePeripheral),
+    gen_sql_table("register_decls", RegisterDecl),
     // indexes
     "CREATE INDEX idx_struct_fields_struct_id_offset_bits ON struct_fields(struct_id, offset_bits);",
     "CREATE INDEX idx_interrupts_device_id_idx ON interrupts(device_id, idx)",
@@ -558,7 +584,10 @@ fn init(db: *Database, allocator: Allocator) !void {
         .gpa = allocator,
         .conn = conn,
     };
-    errdefer db.deinit();
+    errdefer {
+        std.log.err("sqlite: {s}", .{conn.lastError()});
+        db.deinit();
+    }
 
     // Good starting point to improve SQLite's poor defaults
     try db.conn.execNoArgs("PRAGMA journal_mode=WAL");
@@ -1254,6 +1283,36 @@ pub fn get_interrupt_name(db: *Database, allocator: Allocator, interrupt_id: Int
     });
 }
 
+pub const CreateStructDeclOptions = struct {
+    description: ?[]const u8 = null,
+};
+
+pub fn create_struct_decl(
+    db: *Database,
+    parent_id: StructID,
+    struct_id: StructID,
+    name: []const u8,
+    opts: CreateStructDeclOptions,
+) !void {
+    log.debug("create_struct_decl: parent_id={f} struct_id={f} name={s}", .{ parent_id, struct_id, name });
+    try db.conn.exec(
+        \\INSERT INTO struct_decls
+        \\  (parent_id, struct_id, name, description)
+        \\VALUES
+        \\  (?, ?, ?, ?)
+    , .{ @intFromEnum(parent_id), @intFromEnum(struct_id), name, opts.description });
+}
+
+pub fn struct_decl_name_exists(db: *Database, parent_id: StructID, name: []const u8) !bool {
+    const row = try db.conn.row("SELECT struct_id FROM struct_decls WHERE parent_id = ? AND name = ?", .{
+        @intFromEnum(parent_id),
+        name,
+    }) orelse return false;
+    defer row.deinit();
+
+    return true;
+}
+
 pub fn get_struct_decl(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
     const query = std.fmt.comptimePrint(
         \\SELECT {s}
@@ -1265,6 +1324,71 @@ pub fn get_struct_decl(db: *Database, allocator: Allocator, struct_id: StructID)
 
     return try db.get_one_alloc(StructDecl, allocator, query, .{
         @intFromEnum(struct_id),
+    });
+}
+
+pub const CreateRegisterDeclOptions = struct {
+    description: ?[]const u8 = null,
+};
+
+pub fn create_register_decl(
+    db: *Database,
+    parent_id: StructID,
+    register_id: RegisterID,
+    name: []const u8,
+    opts: CreateRegisterDeclOptions,
+) !void {
+    try db.conn.exec(
+        \\INSERT INTO register_decls
+        \\  (parent_id, register_id, name, description)
+        \\VALUES
+        \\  (?, ?, ?, ?)
+    , .{ @intFromEnum(parent_id), @intFromEnum(register_id), name, opts.description });
+}
+
+pub fn get_register_decls(
+    db: *Database,
+    allocator: Allocator,
+    parent_id: StructID,
+) ![]RegisterDecl {
+    errdefer log.err("sqlite: {s}", .{db.conn.lastError()});
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM register_decls
+        \\WHERE parent_id = ?
+    , .{
+        comptime gen_field_list(RegisterDecl, .{}),
+    });
+    return db.all(RegisterDecl, query, allocator, .{@intFromEnum(parent_id)});
+}
+
+pub fn get_register_decl_name(db: *Database, allocator: Allocator, register_id: RegisterID) !?[]const u8 {
+    errdefer log.err("sqlite: {s}", .{db.conn.lastError()});
+    const row = try db.conn.row(
+        \\SELECT
+        \\  rd.name
+        \\FROM
+        \\  registers r
+        \\  INNER JOIN register_decls rd ON r.id = rd.register_id
+        \\WHERE
+        \\  register_id = ?
+    , .{@intFromEnum(register_id)}) orelse return null;
+    defer row.deinit();
+
+    return try allocator.dupe(u8, row.text(0));
+}
+
+pub fn get_register(
+    db: *Database,
+    allocator: Allocator,
+    register_id: RegisterID,
+) !Register {
+    const query = std.fmt.comptimePrint("SELECT {s} FROM registers WHERE id = ?", .{
+        comptime gen_field_list(Register, .{}),
+    });
+
+    return db.one_alloc(Register, allocator, query, .{
+        @intFromEnum(register_id),
     });
 }
 
@@ -1686,6 +1810,7 @@ pub const CreateRegisterOptions = struct {
     // make name required for now
     name: []const u8,
     description: ?[]const u8 = null,
+    struct_id: ?StructID = null,
     /// offset is in bytes
     offset_bytes: u64,
     /// size is in bits
@@ -1717,13 +1842,14 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
     const register_id: RegisterID = blk: {
         const row = try db.conn.row(
             \\INSERT INTO registers
-            \\  (name, description, offset_bytes, size_bits, count, access, reset_mask, reset_value)
+            \\  (name, description, struct_id, offset_bytes, size_bits, count, access, reset_mask, reset_value)
             \\VALUES
-            \\  (?, ?, ?, ?, ?, ?, ?, ?)
+            \\  (?, ?, ?, ?, ?, ?, ?, ?, ?)
             \\RETURNING id
         , .{
             opts.name,
             opts.description,
+            if (opts.struct_id) |struct_id| @intFromEnum(struct_id) else null,
             opts.offset_bytes,
             opts.size_bits,
             opts.count,
@@ -1807,7 +1933,7 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
     try db.conn.commit();
 }
 
-fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
+pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
     try db.conn.exec(
         \\INSERT INTO struct_fields
         \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
@@ -1899,6 +2025,10 @@ pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     const struct_id: StructID = @enumFromInt(row.int(0));
     log.debug("created {f}", .{struct_id});
     return struct_id;
+}
+
+pub fn set_struct_name(db: *Database, struct_id: StructID, name: []const u8) !void {
+    try db.conn.exec("UPDATE structs SET name = ? WHERE struct_id = ?", .{ name, @intFromEnum(struct_id) });
 }
 
 pub fn struct_is_zero_sized(db: *Database, allocator: Allocator, struct_id: StructID) !bool {

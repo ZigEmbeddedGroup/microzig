@@ -21,6 +21,7 @@ pub fn build(b: *Build) !void {
         .optimize = .ReleaseSafe,
     });
     const sqlite3_lib = sqlite3_dep.artifact("sqlite3");
+    sqlite3_lib.linkage = .dynamic;
 
     const zqlite_dep = b.dependency("zqlite", .{
         .target = target,

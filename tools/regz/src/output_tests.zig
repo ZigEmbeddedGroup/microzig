@@ -958,3 +958,27 @@ pub fn nested_struct_field_next_to_register(allocator: Allocator) !*Database {
 
     return db;
 }
+
+pub fn register_with_decl(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{ .name = "TEST_PERIPHERAL" });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.create_register_decl(struct_id, register_id, "REGISTER_DECL", .{});
+
+    return db;
+}

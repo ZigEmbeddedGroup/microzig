@@ -412,6 +412,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 },
                 .embassy => |path| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
+                    regz_run.stdio_limit = .unlimited;
 
                     regz_run.addArg("--format");
                     regz_run.addArg(@tagName(target.chip.register_definition));
