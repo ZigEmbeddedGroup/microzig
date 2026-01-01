@@ -9,7 +9,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 pub const std_options = std.Options{
-    .log_level = .warn,
+    .log_level = .debug,
 };
 
 pub fn main() !void {
