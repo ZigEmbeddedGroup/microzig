@@ -550,8 +550,8 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     else
         null;
 
-    //if (node.get_value("access")) |_|
-    //    return error.TODO_FieldAccess;
+    if (node.get_value("access")) |_|
+        log.warn("TODO: field access", .{});
 
     for (0..count orelse 1) |i| {
         try db.add_register_field(register_id, .{
