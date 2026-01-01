@@ -282,11 +282,8 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
     // if all the field sizes are the same, and the max value can fit in there,
     // then set the size of the enum. If there are no usages of an enum, then
     // assign it the smallest value possible
-    const natural_enum_size = std.math.log2_int(u64, max_value) + 1;
+    const natural_enum_size = if (max_value > 0) std.math.log2_int(u64, max_value) + 1 else 1;
     return if (field_sizes.items.len == 0)
-        if (max_value == 0)
-            1
-        else
             natural_enum_size
     else blk: {
         var ret: ?u64 = null;
