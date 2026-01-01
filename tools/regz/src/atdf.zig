@@ -282,26 +282,23 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
     // if all the field sizes are the same, and the max value can fit in there,
     // then set the size of the enum. If there are no usages of an enum, then
     // assign it the smallest value possible
+    const natural_enum_size = if (max_value > 0) std.math.log2_int(u64, max_value) + 1 else 1;
     return if (field_sizes.items.len == 0)
-        if (max_value == 0)
-            1
-        else
-            std.math.log2_int(u64, max_value) + 1
+        natural_enum_size
     else blk: {
         var ret: ?u64 = null;
         for (field_sizes.items) |field_size| {
             if (ret == null)
                 ret = field_size
             else if (ret.? != field_size)
-                return error.InconsistentEnumSizes;
+                // as soon as there are inconsistencies, we'll just give it a sane size
+                break :blk natural_enum_size;
         }
 
-        if (max_value > 0 and (std.math.log2_int(u64, max_value) + 1) > ret.?) {
-            log.warn("Uses of this enum are smaller than the calculated size", .{});
-            return std.math.log2_int(u64, max_value);
-        }
-
-        break :blk @intCast(ret.?);
+        break :blk if (natural_enum_size > ret.?)
+            natural_enum_size
+        else
+            @intCast(ret.?);
     };
 }
 
@@ -739,7 +736,9 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
                     log.warn("{s} failed to get_enum_by_name: {s}", .{ name, values });
                     return err;
                 };
-                break :blk e.id;
+
+                // ensure that the enum and the field are the same size
+                break :blk if (width == e.size_bits) e.id else null;
             } else null,
         });
 
@@ -1559,4 +1558,75 @@ test "atdf.non-consecutive bitfield with enum" {
     const wdp_bit3 = fields[5]; // notice the field index
     try expectEqualStrings("WDP_bit3", wdp_bit3.name);
     try expectEqual(null, wdp_bit3.enum_id);
+}
+
+test "atdf.enum too big" {
+    // In the scenario below, COMM_SCK_RATE_3BIT is actually split across the
+    // SPR and SPI2X fields which are in different registers. In this case,
+    // it's similar to non-consecutive bitfields, we'll have the raw fields
+    // around, and the enum, but we won't associate them.
+    const text =
+        \\<avr-tools-device-file>
+        \\  <modules>
+        \\    <module caption="Serial Peripheral Interface" name="SPI">
+        \\      <register-group caption="Serial Peripheral Interface" name="SPI">
+        \\        <register caption="SPI Control Register" name="SPCR" offset="0x4C" size="1">
+        \\          <bitfield caption="SPI Interrupt Enable" mask="0x80" name="SPIE"/>
+        \\          <bitfield caption="SPI Enable" mask="0x40" name="SPE"/>
+        \\          <bitfield caption="Data Order" mask="0x20" name="DORD"/>
+        \\          <bitfield caption="Master/Slave Select" mask="0x10" name="MSTR"/>
+        \\          <bitfield caption="Clock polarity" mask="0x08" name="CPOL"/>
+        \\          <bitfield caption="Clock Phase" mask="0x04" name="CPHA"/>
+        \\          <bitfield caption="SPI Clock Rate Selects" mask="0x03" name="SPR" values="COMM_SCK_RATE_3BIT"/>
+        \\        </register>
+        \\        <register caption="SPI Status Register" name="SPSR" offset="0x4D" size="1" ocd-rw="R">
+        \\          <bitfield caption="SPI Interrupt Flag" mask="0x80" name="SPIF"/>
+        \\          <bitfield caption="Write Collision Flag" mask="0x40" name="WCOL"/>
+        \\          <bitfield caption="Double SPI Speed Bit" mask="0x01" name="SPI2X"/>
+        \\        </register>
+        \\        <register caption="SPI Data Register" name="SPDR" offset="0x4E" size="1" mask="0xFF" ocd-rw=""/>
+        \\      </register-group>
+        \\      <value-group name="COMM_SCK_RATE_3BIT">
+        \\        <value caption="fosc/4" name="FOSC_4" value="0x00"/>
+        \\        <value caption="fosc/16" name="FOSC_16" value="0x01"/>
+        \\        <value caption="fosc/64" name="FOSC_64" value="0x02"/>
+        \\        <value caption="fosc/128" name="FOSC_128" value="0x03"/>
+        \\        <value caption="fosc/2" name="FOSC_2" value="0x04"/>
+        \\        <value caption="fosc/8" name="FOSC_8" value="0x05"/>
+        \\        <value caption="fosc/32" name="FOSC_32" value="0x06"/>
+        \\        <value caption="fosc/64" name="FOSC_64" value="0x07"/>
+        \\      </value-group>
+        \\    </module>
+        \\  </modules>
+        \\</avr-tools-device-file>
+    ;
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
+    defer db.destroy();
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    const peripheral_id = try db.get_peripheral_by_name("SPI") orelse return error.NoPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // Check for enum existence
+    _ = try db.get_enum_by_name(allocator, struct_id, "COMM_SCK_RATE_3BIT");
+
+    const spcr = try db.get_register_by_name(allocator, struct_id, "SPCR");
+    const spsr = try db.get_register_by_name(allocator, struct_id, "SPSR");
+
+    // There will 5 registers total, but one will be split into 4, totalling in 8.
+    const spcr_fields = try db.get_register_fields(allocator, spcr.id, .{ .distinct = false });
+    const spsr_fields = try db.get_register_fields(allocator, spsr.id, .{ .distinct = false });
+
+    const spr = spcr_fields[0];
+    try expectEqualStrings("SPR", spr.name);
+    try expectEqual(null, spr.enum_id);
+
+    const spi2x = spsr_fields[0];
+    try expectEqualStrings("SPI2X", spi2x.name);
+    try expectEqual(null, spi2x.enum_id);
 }

@@ -2014,7 +2014,7 @@ fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name
         field_name,
     });
 
-    log.debug("set_register_field_enum_id: register_id={} field_name={s} enum_id={?}", .{
+    log.debug("set_register_field_enum_id: register_id={f} field_name={s} enum_id={?f}", .{
         register_id,
         field_name,
         enum_id,
