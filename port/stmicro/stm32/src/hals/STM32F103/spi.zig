@@ -1,9 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const util = @import("../common/util.zig");
+const enums = @import("../common/enums.zig");
 
 const spi_f1 = microzig.chip.types.peripherals.spi_f1;
-const spi_t = spi_f1.SPI;
+const SPI_Peripheral = spi_f1.SPI;
 
 const ChipSelect = enum {
     NSS, //hardware slave management using NSS pin
@@ -20,14 +20,11 @@ const Config = struct {
     prescaler: spi_f1.BR = .Div2,
 };
 
-pub const Instances = util.create_peripheral_enum("SPI", "spi_f1");
-fn get_regs(comptime instance: Instances) *volatile spi_t {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
+pub const Instances = enums.SPI_Type;
 
 ///TODO: 3-Wire mode, Slave mode, bidirectional mode
 pub const SPI = struct {
-    spi: *volatile spi_t,
+    spi: *volatile SPI_Peripheral,
 
     pub fn apply(self: *const SPI, config: Config) void {
         self.spi.CR1.raw = 0; // Disable SPI end clear configs before configuration
@@ -135,6 +132,6 @@ pub const SPI = struct {
     }
 
     pub fn init(comptime spi_inst: Instances) SPI {
-        return .{ .spi = get_regs(spi_inst) };
+        return .{ .spi = enums.get_regs(SPI_Peripheral, spi_inst) };
     }
 };

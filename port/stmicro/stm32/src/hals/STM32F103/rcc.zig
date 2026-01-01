@@ -632,7 +632,7 @@ inline fn calc_wait_ticks(val: usize) usize {
     return ms_per_tick * val;
 }
 
-pub fn enable_dma(index: enums.DMA_V1_Type) void {
+pub fn enable_dma(index: enums.DMA_Type) void {
     switch (index) {
         .DMA1 => rcc.AHBENR.modify(.{ .DMA1EN = 1 }),
     }

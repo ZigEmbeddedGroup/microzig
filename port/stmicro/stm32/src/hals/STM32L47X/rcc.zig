@@ -42,7 +42,7 @@ pub fn enable_gpio_port(used_gpios_port: u8) void {
     });
 }
 
-pub fn enable_uart(comptime index: enums.UART_V3_Type) void {
+pub fn enable_uart(comptime index: enums.UART_Type) void {
     switch (index) {
         .LPUART1 => RCC.APB1ENR2.modify(.{ .LPUART1EN = 1 }),
         .USART1 => RCC.APB2ENR.modify(.{ .USART1EN = 1 }),
@@ -53,7 +53,7 @@ pub fn enable_uart(comptime index: enums.UART_V3_Type) void {
     }
 }
 
-pub fn enable_i2c(comptime i2cindex: enums.I2C_V2_Type, clock: ICSW) void {
+pub fn enable_i2c(comptime i2cindex: enums.I2C_Type, clock: ICSW) void {
     RCC.APB1ENR1.modify(switch (i2cindex) {
         .I2C1 => .{ .I2C1EN = 1 },
         .I2C2 => .{ .I2C2EN = 1 },
@@ -95,7 +95,7 @@ pub fn enable_rtc_lcd() void {
     });
 }
 
-pub fn enable_dma(index: enums.DMA_V2_Type) void {
+pub fn enable_dma(index: enums.DMA_Type) void {
     switch (index) {
         .DMA1 => RCC.AHB1ENR.modify(.{ .DMA1EN = 1 }),
         .DMA2 => RCC.AHB1ENR.modify(.{ .DMA2EN = 1 }),

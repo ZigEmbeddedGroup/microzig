@@ -1,10 +1,11 @@
 const std = @import("std");
 const bdma_v1 = @import("./bdma_v1.zig");
 const microzig = @import("microzig");
-const UART_V3_Type = @import("enums.zig").UART_V3_Type;
+const enums = @import("enums.zig");
+const UART_Type = enums.UART_Type;
 
 const rcc = microzig.hal.rcc;
-const usart_t = microzig.chip.types.peripherals.usart_v3.USART;
+const USART_Periipheral = microzig.chip.types.peripherals.usart_v3.USART;
 const STOP = microzig.chip.types.peripherals.usart_v3.STOP;
 
 pub const WordBits = enum {
@@ -43,12 +44,8 @@ pub const Config = struct {
 pub const StopBits = STOP;
 pub const DataBits = WordBits;
 
-fn get_regs(comptime instance: UART_V3_Type) *volatile usart_t {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
-
-pub fn Uart(comptime index: UART_V3_Type) type {
-    const regs = get_regs(index);
+pub fn Uart(comptime index: UART_Type) type {
+    const regs = enums.get_regs(USART_Periipheral, index);
     return struct {
         const Self = @This();
 
@@ -178,7 +175,7 @@ pub fn Uart(comptime index: UART_V3_Type) type {
     };
 }
 
-pub fn UartWriter(comptime index: UART_V3_Type) type {
+pub fn UartWriter(comptime index: UART_Type) type {
     return struct {
         uart: *Uart(index),
         interface: std.Io.Writer,
@@ -214,7 +211,7 @@ pub fn UartWriter(comptime index: UART_V3_Type) type {
     };
 }
 
-pub fn UARTLogger(comptime index: UART_V3_Type) type {
+pub fn UARTLogger(comptime index: UART_Type) type {
     return struct {
         var logger: ?UartWriter(index) = null;
         var uart: ?Uart(index) = null;

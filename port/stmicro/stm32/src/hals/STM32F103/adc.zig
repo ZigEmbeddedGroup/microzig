@@ -1,12 +1,12 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const utils = @import("../common/util.zig");
+const enums = @import("../common/enums.zig");
 const periferals = microzig.chip.peripherals;
-const adc_regs = microzig.chip.types.peripherals.adc_f1.ADC;
+const ADC_Perihperal = microzig.chip.types.peripherals.adc_f1.ADC;
 const DUALMOD = microzig.chip.types.peripherals.adc_f1.DUALMOD;
 const time = @import("time.zig");
 
-const ADC_inst = utils.create_peripheral_enum("ADC", "adc_f1");
+const Instance = enums.ADC_Type;
 
 pub const SampleRate = enum(u3) {
     @"1.5" = 0,
@@ -28,10 +28,6 @@ pub const ReadError = error{
     ADCNotEnabled,
 };
 
-fn get_regs(comptime adc: ADC_inst) *volatile adc_regs {
-    return @field(microzig.chip.peripherals, @tagName(adc));
-}
-
 ///1ms, the actual stabilization time is in microseconds, but we use 1ms to be safe with all microcontrollers
 pub var STAB_TIME: u32 = 1000; //1ms in microseconds
 
@@ -39,7 +35,7 @@ pub var STAB_TIME: u32 = 1000; //1ms in microseconds
 pub var STAB_VREFE_TIME: u32 = 1000;
 
 pub const ADC = struct {
-    regs: *volatile adc_regs,
+    regs: *volatile ADC_Perihperal,
 
     pub fn enable(self: *const ADC) void {
         const regs = self.regs;
@@ -170,9 +166,9 @@ pub const ADC = struct {
         return to_read;
     }
 
-    pub fn init(comptime adc: ADC_inst) ADC {
+    pub fn init(comptime adc: Instance) ADC {
         return .{
-            .regs = get_regs(adc),
+            .regs = enums.get_regs(ADC_Perihperal, adc),
         };
     }
 };
@@ -372,7 +368,7 @@ pub const Watchdog = struct {
 //NOTE: before making any write to the CR2 bit, it is necessary to check if the write will change the current value of the register
 //otherwise, it will result in an accidental trigger
 pub const AdvancedADC = struct {
-    regs: *volatile adc_regs,
+    regs: *volatile ADC_Perihperal,
     adc_num: usize,
 
     //==========ADC init functions===========
@@ -1116,9 +1112,9 @@ pub const AdvancedADC = struct {
         regs.LTR.modify(.{ .LT = config.low_treshold });
     }
 
-    pub fn init(comptime adc: ADC_inst) AdvancedADC {
+    pub fn init(comptime adc: Instance) AdvancedADC {
         return .{
-            .regs = get_regs(adc),
+            .regs = enums.get_regs(ADC_Perihperal, adc),
             .adc_num = @intFromEnum(adc),
         };
     }
