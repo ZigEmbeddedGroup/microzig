@@ -292,7 +292,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
             if (elements.dim_name != null)
                 return error.TodoDimElementsExtended;
 
-            if (elements.type != DimType.array) {
+            if (elements.resolve() != .array) {
                 return error.InvalidPeripheralDimType;
             }
 
@@ -332,9 +332,10 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
         };
 
     var cluster_it = node.iterate(&.{"registers"}, &.{"cluster"});
-    while (cluster_it.next()) |cluster_node|
+    while (cluster_it.next()) |cluster_node| {
         load_cluster(ctx, cluster_node, struct_id) catch |err|
             log.warn("failed to load cluster: {}", .{err});
+    }
 
     // alternatePeripheral
     // groupName
@@ -371,13 +372,7 @@ fn load_cluster(
     // Note that dimable identifier type means that it can include a %s in the name, it's a copy of a previous identifier
     const name = node.get_value("name") orelse return error.MissingClusterName;
     const description = node.get_value("description");
-
-    const dim_elements = try DimElements.parse(ctx, node);
-    if (dim_elements != null)
-        return error.TodoDimElements;
-
     const address_offset_str = node.get_value("addressOffset") orelse return error.MissingClusterOffset;
-
     const alternate_cluster = node.get_value("alternateCluster");
     if (alternate_cluster != null)
         return error.TodoAlternateCluster;
@@ -386,22 +381,36 @@ fn load_cluster(
     if (derived_from != null)
         return error.TodoClusterDerivation;
 
-    const count: ?u64, const size: ?u64 = if (try DimElements.parse(ctx, node)) |elements| count: {
-        if (elements.dim_index != null or elements.dim_name != null)
-            return error.TodoDimElementsExtended;
-
-        break :count .{ elements.dim, elements.dim_increment };
-    } else .{ null, null };
-
     const struct_id = try ctx.db.create_struct(.{});
-    try ctx.db.add_nested_struct_field(parent, .{
-        .name = name,
-        .struct_id = struct_id,
-        .description = description,
-        .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
-        .count = count,
-        .size_bytes = size,
-    });
+    if (try DimElements.parse(ctx, node)) |elements| switch (elements.resolve()) {
+        .array => |array| try ctx.db.add_nested_struct_field(parent, .{
+            .name = name[0 .. name.len - "[%s]".len],
+            .struct_id = struct_id,
+            .description = description,
+            .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+            .count = array.count,
+            .size_bytes = array.increment,
+        }),
+        .list => |list| {
+            const expanded = try list.expand(ctx.arena.allocator());
+            for (expanded, 0..) |identifier, i| {
+                const formatted_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", identifier);
+                try ctx.db.add_nested_struct_field(parent, .{
+                    .name = formatted_name,
+                    .struct_id = struct_id,
+                    .description = description,
+                    .offset_bytes = i * list.increment,
+                });
+            }
+        },
+    } else {
+        try ctx.db.add_nested_struct_field(parent, .{
+            .name = name,
+            .struct_id = struct_id,
+            .description = description,
+            .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+        });
+    }
 
     const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
     try ctx.register_props.put(ctx.db.gpa, .{ .@"struct" = struct_id }, register_props);
@@ -453,25 +462,25 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
     const address_offset = try std.fmt.parseUnsigned(usize, address_offset_string, 0);
 
     // Array type needs only one entry in db with set count, list type should be each register as a separate entry
-    const count = if (dim_elements.type == DimType.list) dim_elements.dim else 1;
+    const count = if (dim_elements.resolve() == .list) dim_elements.dim else 1;
 
     for (0..count) |i| {
         const register_id = try db.create_register(parent, .{
-            .name = switch (dim_elements.type) {
-                DimType.array => name[0 .. name.len - 4],
-                DimType.list => blk: {
+            .name = switch (dim_elements.resolve()) {
+                .array => name[0 .. name.len - 4],
+                .list => blk: {
                     const replacement = try dim_elements.dim_index_value(ctx, i);
                     const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", replacement);
                     break :blk try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{s}", .{new_name}, 0);
                 },
             },
             .description = node.get_value("description"),
-            .offset_bytes = switch (dim_elements.type) {
-                DimType.array => address_offset,
-                DimType.list => (address_offset + (i * dim_elements.dim_increment)),
+            .offset_bytes = switch (dim_elements.resolve()) {
+                .array => address_offset,
+                .list => (address_offset + (i * dim_elements.dim_increment)),
             },
             .size_bits = size,
-            .count = if (dim_elements.type == DimType.array) dim_elements.dim else null,
+            .count = if (dim_elements.resolve() == .array) dim_elements.dim else null,
             .access = register_props.access orelse .read_write,
             .reset_mask = register_props.reset_mask,
             .reset_value = register_props.reset_value,
@@ -541,16 +550,16 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     else
         null;
 
-    //if (node.get_value("access")) |_|
-    //    return error.TODO_FieldAccess;
+    if (node.get_value("access")) |_|
+        log.warn("TODO: field access", .{});
 
     for (0..count orelse 1) |i| {
         try db.add_register_field(register_id, .{
             .name = if (dim_elements) |elements| blk: {
-                break :blk switch (elements.type) {
+                break :blk switch (elements.resolve()) {
                     // A bit-field has a name that is unique within the register, cannot use array for fields
-                    DimType.array => return error.FieldDimMalformed,
-                    DimType.list => listblk: {
+                    .array => return error.FieldDimMalformed,
+                    .list => listblk: {
                         const replacement = try elements.dim_index_value(ctx, i);
                         const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), node.get_value("name").?, "%s", replacement);
                         break :listblk try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{s}", .{new_name}, 0);
@@ -699,18 +708,101 @@ test "svd.Revision.parse" {
 // seperated list of strings being used for identifying each element in
 // the array -->
 const DimElements = struct {
-    /// Define the number of elements in an array of registers. If "dimIncrement" is specified, this element becomes mandatory.
-    type: DimType,
     dim: u64,
     /// Specify the address increment, in Bytes, between two registers.
     dim_increment: u64,
 
     /// dimIndexType specifies the subset and sequence of characters used for specifying the sequence of indices in register arrays -->
     /// pattern: [0-9]+\-[0-9]+|[A-Z]-[A-Z]|[_0-9a-zA-Z]+(,\s*[_0-9a-zA-Z]+)+
+    /// - [0-9]+\-[0-9]+
+    /// - [A-Z]-[A-Z]
+    /// - [_0-9a-zA-Z]+(,\s*[_0-9a-zA-Z]+)+
     dim_index: ?[]const u8 = null,
     dim_name: ?[]const u8 = null,
-    // TODO: not sure what dimArrayIndexType means
-    //dim_array_index: ?u64 = null,
+
+    pub fn format(elements: DimElements, writer: *std.Io.Writer) !void {
+        try writer.print("type={} dim={} dim_increment={} dim_index={?s} dim_name={?s}", .{
+            elements.type,
+            elements.dim,
+            elements.dim_increment,
+            elements.dim_index,
+            elements.dim_name,
+        });
+    }
+
+    const Array = struct {
+        count: u64,
+        increment: u64,
+    };
+
+    const List = struct {
+        count: u64,
+        increment: u64,
+        pattern: []const u8,
+
+        fn expand(list: *const List, gpa: Allocator) ![]const []const u8 {
+            var ret: std.ArrayList([]const u8) = .{};
+            defer ret.deinit(gpa);
+
+            if (std.mem.indexOf(u8, list.pattern, "-")) |dash_idx| {
+                const begin_str = list.pattern[0..dash_idx];
+                const end_str = list.pattern[dash_idx + 1 ..];
+
+                if (begin_str.len == 1 and std.ascii.isUpper(begin_str[0])) {
+                    if (end_str.len != 1 or !std.ascii.isUpper(end_str[0]))
+                        return error.InvalidRange;
+
+                    const begin = begin_str[0];
+                    const end = end_str[0];
+                    if (end < begin)
+                        return error.InvalidRange;
+
+                    for (begin..end + 1) |c| {
+                        const identifier = try std.fmt.allocPrint(gpa, "{c}", .{@as(u8, @intCast(c))});
+                        try ret.append(gpa, identifier);
+                    }
+                } else {
+                    const begin = try std.fmt.parseInt(u32, begin_str, 0);
+                    const end = try std.fmt.parseInt(u32, end_str, 0);
+                    if (end < begin)
+                        return error.InvalidRange;
+
+                    for (begin..end + 1) |n| {
+                        const identifier = try std.fmt.allocPrint(gpa, "{}", .{n});
+                        try ret.append(gpa, identifier);
+                    }
+                }
+            } else {
+                var it = std.mem.tokenizeAny(u8, list.pattern, ", \t\r\n");
+                while (it.next()) |identifier| {
+                    const copy = try gpa.dupe(u8, identifier);
+                    try ret.append(gpa, copy);
+                }
+            }
+
+            return ret.toOwnedSlice(gpa);
+        }
+    };
+
+    const Resolved = union(enum) {
+        array: Array,
+        list: List,
+    };
+
+    fn resolve(elements: *const DimElements) Resolved {
+        return if (elements.dim_index) |dim_index| .{
+            .list = .{
+                .count = elements.dim,
+                .increment = elements.dim_increment,
+                .pattern = dim_index,
+            },
+        } else .{
+            .array = .{
+                .count = elements.dim,
+                .increment = elements.dim_increment,
+            },
+        };
+    }
 
     fn parse(ctx: *Context, node: xml.Node) !?DimElements {
         const dim_increment = if (node.get_value("dimIncrement")) |dim_increment_str|
@@ -748,8 +840,11 @@ const DimElements = struct {
             dim_index = try std.fmt.bufPrintZ(buf, "0-{d}", .{dim.? - 1});
         }
 
+        if (node.get_value("dimArrayIndex") != null) {
+            std.log.warn("TODO: dimArrayIndex", .{});
+        }
+
         return DimElements{
-            .type = if (is_array_type) DimType.array else DimType.list,
             .dim = dim.?,
             .dim_increment = dim_increment.?,
             .dim_index = dim_index,
@@ -1785,4 +1880,104 @@ test "svd.DimElements.parse invalid name without %s or [%s]" {
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
     const peripheral_node = iterator.next() orelse unreachable;
     try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
+}
+
+test "svd.dimElements to array" {
+    const elements: DimElements = .{
+        .dim = 4,
+        .dim_increment = 4,
+    };
+
+    const resolved = elements.resolve();
+    try expectEqual(4, resolved.array.count);
+    try expectEqual(4, resolved.array.increment);
+}
+
+test "svd.dimElements list explicit" {
+    const text =
+        \\<register>
+        \\<dim>6</dim>
+        \\<dimIncrement>4</dimIncrement>
+        \\<dimIndex>A,B,C, Darst ,E,Z</dimIndex>
+        \\<name>GPIO_%s_CTRL</name>
+        \\</register>
+    ;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var ctx = Context{
+        .db = undefined,
+        .arena = arena,
+    };
+
+    const doc = try xml.Doc.from_memory(text);
+    const root = try doc.get_root_element();
+    const elements = try DimElements.parse(&ctx, root) orelse return error.MissingElements;
+    const expanded = try elements.resolve().list.expand(arena.allocator());
+
+    try expectEqual(6, expanded.len);
+    try expectEqualStrings("A", expanded[0]);
+    try expectEqualStrings("B", expanded[1]);
+    try expectEqualStrings("C", expanded[2]);
+    try expectEqualStrings("Darst", expanded[3]);
+    try expectEqualStrings("E", expanded[4]);
+    try expectEqualStrings("Z", expanded[5]);
+}
+
+test "svd.dimElements integer list range" {
+    const text =
+        \\<register>
+        \\    <dim>4</dim>
+        \\    <dimIncrement>4</dimIncrement>
+        \\    <dimIndex>3-6</dimIndex>
+        \\    <name>IRQ%s</name>
+        \\</register>
+    ;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var ctx = Context{
+        .db = undefined,
+        .arena = arena,
+    };
+
+    const doc = try xml.Doc.from_memory(text);
+    const root = try doc.get_root_element();
+    const elements = try DimElements.parse(&ctx, root) orelse return error.MissingElements;
+    const expanded = try elements.resolve().list.expand(arena.allocator());
+
+    try expectEqual(4, expanded.len);
+    try expectEqualStrings("3", expanded[0]);
+    try expectEqualStrings("4", expanded[1]);
+    try expectEqualStrings("5", expanded[2]);
+    try expectEqualStrings("6", expanded[3]);
+}
+
+test "svd.dimElements letter list range" {
+    const text =
+        \\<register>
+        \\    <dim>4</dim>
+        \\    <dimIncrement>4</dimIncrement>
+        \\    <dimIndex>E-H</dimIndex>
+        \\    <name>IRQ%s</name>
+        \\</register>
+    ;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var ctx = Context{
+        .db = undefined,
+        .arena = arena,
+    };
+
+    const doc = try xml.Doc.from_memory(text);
+    const root = try doc.get_root_element();
+    const elements = try DimElements.parse(&ctx, root) orelse return error.MissingElements;
+    const expanded = try elements.resolve().list.expand(arena.allocator());
+
+    try expectEqual(4, expanded.len);
+    try expectEqualStrings("E", expanded[0]);
+    try expectEqualStrings("F", expanded[1]);
+    try expectEqualStrings("G", expanded[2]);
+    try expectEqualStrings("H", expanded[3]);
 }
