@@ -1,5 +1,6 @@
 const microzig = @import("microzig");
 
+pub const drivers = @import("drivers.zig");
 pub const pins = @import("pins.zig");
 pub const gpio = @import("gpio.zig");
 pub const clocks = @import("clocks.zig");
