@@ -55,7 +55,7 @@ pub fn init_timer(comptime tim: timer.Instances) void {
         const tim_id = tim_n[3] - '0';
         if (tim_id > 5) @compileError("Only timer 2-5 are supported for now");
     }
-    const tim_id = @field(rcc.RccPeriferals, @tagName(tim));
+    const tim_id = @field(rcc.Peripherals, @tagName(tim));
     const clk = rcc.get_clock(tim_id);
     rcc.enable_clock(tim_id);
 

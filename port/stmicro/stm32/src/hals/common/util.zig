@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 
-fn match_name(heystack: []const u8, needles: []const []const u8) bool {
+pub fn match_name(heystack: []const u8, needles: []const []const u8) bool {
     for (needles) |needle| {
         if (std.mem.indexOf(u8, heystack, needle)) |_| {
             return true;

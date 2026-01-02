@@ -195,7 +195,7 @@ const I2C = struct {
     }
 
     pub fn init(comptime instance: I2C_Type) I2C {
-        hal.rcc.enable_i2c(instance, .SYS);
+        hal.rcc.enable_clock(enums.to_peripheral(instance));
         return .{ .regs = enums.get_regs(I2C_Peripherals, instance) };
     }
 };
