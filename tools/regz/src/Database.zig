@@ -219,6 +219,7 @@ pub const StructField = struct {
     enum_id: ?EnumID,
     count: ?u16,
     stride: ?u8,
+    access: ?Access,
 
     pub const sql_opts = SQL_Options{
         .foreign_keys = &.{
@@ -779,6 +780,9 @@ fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
             },
             ?StructID, ?EnumID => {
                 @field(entry, field.name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
+            },
+            ?Access => {
+                @field(entry, field.name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
             },
             else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field.type)})),
         }
@@ -1784,6 +1788,7 @@ pub const AddStructFieldOptions = struct {
     enum_id: ?EnumID = null,
     count: ?u16 = null,
     stride: ?u8 = null,
+    access: ?Access = null,
 };
 
 pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFieldOptions) !void {
