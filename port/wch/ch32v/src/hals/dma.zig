@@ -80,16 +80,20 @@ pub const Regs = extern struct {
 //   the channel is switched off. If TEIE is set in the DMA_CCRx register, an
 //   interrupt is generated.
 
+/// Represents a peripheral register for DMA transfers
+/// Use this when transferring to/from a peripheral register
+pub const PeripheralTarget = struct {
+    addr: u32,
+};
+
 pub const TransferConfig = struct {
-    direction: enum { Mem2Mem, Mem2Periph, Periph2Mem },
-    priority: enum(u2) { Low = 0, Medium = 1, High = 2, VeryHigh = 3 },
-    memory_increment: bool = true,
-    peripheral_increment: bool = false,
-    memory_data_size: DataSize = .Byte,
-    peripheral_data_size: DataSize = .Byte,
+    priority: enum(u2) { Low = 0, Medium = 1, High = 2, VeryHigh = 3 } = .Medium,
+    // AKA cycle mode. NOTE: When set, the transfer will never complete and will need to be stopped
+    // manually.
+    // Also note that this mode is not supported in Mem2Mem mode
     circular_mode: bool = false,
 };
-const DataSize = enum { Byte, HalfWord, Word };
+pub const DataSize = enum(u2) { Byte = 0, HalfWord = 1, Word = 2 };
 
 // TODO: CH32V30x has DMA2 with 11 channels - will need refactoring to support
 // For now, CH32V203 only has DMA1 with 7 channels
@@ -120,12 +124,141 @@ pub const Channel = enum(u3) {
         };
     }
 
+    /// Setup a DMA transfer with automatic type detection
+    /// - write: destination (can be slice, array pointer, single pointer, or PeripheralTarget)
+    /// - read: source (can be slice, array pointer, single pointer, or PeripheralTarget)
     pub fn setup_transfer(
         comptime chan: Channel,
+        write: anytype,
+        read: anytype,
         comptime config: TransferConfig,
-        write: []u8,
-        read: []u8,
     ) void {
+        // Helper functions for type introspection
+        const H = struct {
+            fn is_peripheral(Type: type) bool {
+                return Type == PeripheralTarget;
+            }
+
+            fn validate_type(Type: type) void {
+                const Info = @typeInfo(Type);
+                switch (Info) {
+                    .@"struct" => {
+                        if (!is_peripheral(Type))
+                            @compileError("only PeripheralTarget and pointers are supported");
+                    },
+                    .pointer => {
+                        if (get_data_size(Type) == null)
+                            @compileError("only pointers/slices/arrays of u8/u16/u32 are supported");
+                    },
+                    else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
+                }
+            }
+
+            inline fn get_addr(value: anytype) u32 {
+                const Type = @TypeOf(value);
+                const Info = @typeInfo(Type);
+                switch (Info) {
+                    .@"struct" => return value.addr,
+                    .pointer => return @intFromPtr(value),
+                    else => comptime unreachable,
+                }
+            }
+
+            inline fn get_count(value: anytype) u32 {
+                const Type = @TypeOf(value);
+                const Info = @typeInfo(Type);
+                switch (Info) {
+                    .pointer => |ptr| {
+                        switch (ptr.size) {
+                            .one => switch (@typeInfo(ptr.child)) {
+                                .array => |array| return array.len,
+                                else => return 1,
+                            },
+                            .many, .slice => return value.len,
+                            .c => unreachable,
+                        }
+                    },
+                    .@"struct" => return 1, // Peripheral is single register
+                    else => unreachable,
+                }
+            }
+
+            inline fn get_increment(Type: type) bool {
+                const Info = @typeInfo(Type);
+                return switch (Info) {
+                    .pointer => |ptr| switch (ptr.size) {
+                        .one => switch (@typeInfo(ptr.child)) {
+                            .array => true,
+                            else => false,
+                        },
+                        .many, .slice => true,
+                        .c => unreachable,
+                    },
+                    .@"struct" => false, // Peripheral doesn't increment
+                    else => unreachable,
+                };
+            }
+
+            fn type_to_data_size(Type: type) ?DataSize {
+                return switch (Type) {
+                    u8, i8 => .Byte,
+                    u16, i16 => .HalfWord,
+                    u32, i32 => .Word,
+                    else => null,
+                };
+            }
+
+            fn get_data_size(Type: type) ?DataSize {
+                const Info = @typeInfo(Type);
+                const ChildType = Info.pointer.child;
+                return switch (@typeInfo(ChildType)) {
+                    .array => |array| type_to_data_size(array.child),
+                    .int => type_to_data_size(ChildType),
+                    else => null,
+                };
+            }
+        };
+
+        const WriteType = @TypeOf(write);
+        const ReadType = @TypeOf(read);
+
+        comptime H.validate_type(WriteType);
+        comptime H.validate_type(ReadType);
+
+        const write_addr = H.get_addr(write);
+        const read_addr = H.get_addr(read);
+
+        comptime if (H.is_peripheral(ReadType) and H.is_peripheral(WriteType))
+            @compileError("peripheral-to-peripheral DMA is unsupported");
+
+        const data_size = comptime if (H.is_peripheral(WriteType))
+            H.get_data_size(ReadType).?
+        else
+            H.get_data_size(WriteType).?;
+
+        const count = blk: {
+            if (comptime H.is_peripheral(WriteType))
+                break :blk H.get_count(read)
+            else
+                break :blk H.get_count(write);
+        };
+
+        const direction: enum { Mem2Mem, Mem2Periph, Periph2Mem } = comptime blk: {
+            if (H.is_peripheral(WriteType)) break :blk .Mem2Periph;
+            if (H.is_peripheral(ReadType)) break :blk .Periph2Mem;
+            break :blk .Mem2Mem;
+        };
+
+        const memory_increment = comptime if (H.is_peripheral(WriteType))
+            H.get_increment(ReadType)
+        else
+            H.get_increment(WriteType);
+
+        const peripheral_increment = comptime if (H.is_peripheral(WriteType))
+            H.get_increment(WriteType)
+        else
+            H.get_increment(ReadType);
+
         const regs = chan.get_regs();
 
         // Enable DMA1 clock
@@ -144,23 +277,23 @@ pub const Channel = enum(u3) {
         //   DIR=0: PADDR→MADDR (peripheral/source to memory/destination)
         //   DIR=1: MADDR→PADDR (memory/source to peripheral/destination)
         // For typical memory copy with DIR=1: MADDR=source, PADDR=destination
-        regs.MADDR.write_raw(@intFromPtr(read.ptr)); // source
-        regs.PADDR.write_raw(@intFromPtr(write.ptr)); // destination
-        // Set the amount of data to write
-        regs.CNTR.write_raw(read.len);
+        regs.MADDR.write_raw(read_addr); // source
+        regs.PADDR.write_raw(write_addr); // destination
+        // Set the amount of data to transfer
+        regs.CNTR.write_raw(count);
         // Set the priority
         regs.CFGR.modify(.{ .PL = @intFromEnum(config.priority) });
         // Set the rest of the config
         regs.CFGR.modify(.{
-            .MEM2MEM = @intFromBool(config.direction == .Mem2Mem),
-            .MSIZE = @intFromEnum(config.memory_data_size),
-            .MINC = @intFromBool(config.memory_increment),
-            .PSIZE = @intFromEnum(config.peripheral_data_size),
-            .PINC = @intFromBool(config.peripheral_increment),
+            .MEM2MEM = @intFromBool(direction == .Mem2Mem),
+            .MSIZE = @intFromEnum(data_size),
+            .MINC = @intFromBool(memory_increment),
+            .PSIZE = @intFromEnum(data_size),
+            .PINC = @intFromBool(peripheral_increment),
             .CIRC = @intFromBool(config.circular_mode),
             // DIR affects transfer direction even in MEM2MEM mode (undocumented)
             // DIR=1: MADDR→PADDR, DIR=0: PADDR→MADDR
-            .DIR = if (config.direction == .Periph2Mem) 0 else 1,
+            .DIR = if (direction == .Periph2Mem) 0 else 1,
             // TODO: Add (optional?) support for interrupts
             // Transfer error interrupt
             .TEIE = 0,
@@ -175,16 +308,22 @@ pub const Channel = enum(u3) {
 
     pub fn is_busy(comptime chan: Channel) bool {
         const regs = chan.get_regs();
+        const cfg = regs.CFGR.read();
 
-        // Each channel has 4 flag bits: GIF, TCIF, HTIF, TEIF
-        // TCIF (Transfer Complete) is bit 1 of each 4-bit group
-        // Channel is 1-indexed, so subtract 1 for bit position
+        // Channel must be enabled to be busy
+        if (cfg.EN == 0) return false;
+
+        // In circular mode, channel is always busy while enabled
+        if (cfg.CIRC == 1) return true;
+
+        // In normal mode, check if transfer is complete
         const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
         const tcif_bit: u5 = flag_shift + 1;
         const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
+        const tcif = (regs.INTFR.raw & tcif_mask) != 0;
 
-        // Busy if transfer NOT complete (TCIF == 0)
-        return (regs.INTFR.raw & tcif_mask) == 0;
+        // Not busy if transfer complete flag is set
+        return !tcif;
     }
 
     pub fn wait_for_finish_blocking(comptime chan: Channel) void {
@@ -198,18 +337,31 @@ pub const Channel = enum(u3) {
         regs.CFGR.modify(.{ .EN = 0 });
     }
 
+    /// Check if transfer is complete (for non-circular mode)
+    /// In circular mode, use has_completed_cycle() instead
     pub fn is_complete(comptime chan: Channel) bool {
-        const regs = chan.get_regs();
-        return regs.CNTR.read().NDT == 0;
+        return chan.get_remaining_count() == 0;
     }
 
-    // Other methods that might be nice:
-    // get_remaining_count
-    // get_flags
-    // clear_flags
-    // wait_for_finish_timeout
-    // set_memory_address
-    // set_preipheral_address
-    // set_count
-    // deinit
+    /// Check if a transfer cycle has completed (useful for circular mode)
+    /// This flag is set after each cycle in circular mode, or once in normal mode
+    pub fn has_completed_cycle(comptime chan: Channel) bool {
+        const regs = chan.get_regs();
+        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        const tcif_bit: u5 = flag_shift + 1;
+        const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
+        return (regs.INTFR.raw & tcif_mask) != 0;
+    }
+
+    /// Clear the transfer complete flag (useful in circular mode to detect next cycle)
+    pub fn clear_complete_flag(comptime chan: Channel) void {
+        const regs = chan.get_regs();
+        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        regs.INTFCR.write_raw(@as(u32, 0b0010) << flag_shift); // Clear only TCIF
+    }
+
+    pub fn get_remaining_count(comptime chan: Channel) u16 {
+        const regs = chan.get_regs();
+        return regs.CNTR.read().NDT;
+    }
 };
