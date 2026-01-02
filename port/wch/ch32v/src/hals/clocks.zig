@@ -33,6 +33,10 @@ pub fn enable_gpio_clock(block: gpioBlock) void {
 }
 
 const peripheral = enum {
+    // AHB peripherals
+    DMA1,
+    DMA2,
+
     // APB2 peripherals
     USART1,
     SPI1,
@@ -53,6 +57,10 @@ const peripheral = enum {
 
 pub fn enable_peripheral_clock(p: peripheral) void {
     switch (p) {
+        // AHB peripherals
+        .DMA1 => RCC.AHBPCENR.modify(.{ .DMA1EN = 1 }),
+        .DMA2 => RCC.AHBPCENR.modify(.{ .DMA2EN = 1 }),
+
         // APB2 peripherals (high-speed bus)
         .USART1 => RCC.APB2PCENR.modify(.{ .USART1EN = 1 }),
         .SPI1 => RCC.APB2PCENR.modify(.{ .SPI1EN = 1 }),
