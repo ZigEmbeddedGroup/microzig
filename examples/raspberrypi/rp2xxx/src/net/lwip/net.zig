@@ -31,10 +31,10 @@ pub const Interface = struct {
         ready: *const fn (*anyopaque) bool,
     },
 
-    pub const InitOptions = struct {
+    pub const Options = struct {
         fixed: ?Fixed = null,
 
-        const Fixed = struct {
+        pub const Fixed = struct {
             ip: lwip.ip4_addr,
             netmask: lwip.ip4_addr,
             gw: lwip.ip4_addr,
@@ -50,7 +50,7 @@ pub const Interface = struct {
         };
     };
 
-    pub fn init(self: *Self, opt: InitOptions) !void {
+    pub fn init(self: *Self, opt: Options) !void {
         lwip.lwip_init();
         const netif: *lwip.netif = &self.netif;
 
@@ -78,7 +78,6 @@ pub const Interface = struct {
         lwip.netif_set_status_callback(netif, netif_status_callback);
         lwip.netif_set_default(netif);
         lwip.netif_set_up(netif);
-
         if (opt.fixed == null) {
             lwip.dhcp_set_struct(netif, &self.dhcp);
             try c_err(lwip.dhcp_start(netif));
