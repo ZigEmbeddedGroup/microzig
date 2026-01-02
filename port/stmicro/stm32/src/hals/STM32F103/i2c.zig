@@ -1,7 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = @import("time.zig");
-const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
+const create_peripheral_enum = @import("../common/util.zig").create_peripheral_enum;
 
 const I2C_t = microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;

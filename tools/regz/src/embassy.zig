@@ -296,12 +296,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
                 const register_name = item.object.get("name").?.string;
                 const description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
                 const byte_offset = item.object.get("byte_offset").?.integer;
+                const item_bit_size = if (item.object.get("bit_size")) |v| v.integer else 32;
 
                 const register_id = try db.create_register(group_id, .{
                     .name = register_name,
                     .description = description,
                     .offset_bytes = @intCast(byte_offset),
-                    .size_bits = 32,
+                    .size_bits = @intCast(item_bit_size),
                     .count = if (item.object.get("array")) |array| blk: {
                         if (array.object.get("len")) |count| {
                             // ensure stride is always 4 for now, assuming that
@@ -423,14 +424,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
     for (chip_files.items) |chip_file| {
         const core = chip_file.value.cores[0];
+        const arch = std.meta.stringToEnum(Arch, core_to_cpu.get(core.name).?).?;
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
-            // TODO
-            .arch = std.meta.stringToEnum(Arch, core_to_cpu.get(core.name).?).?,
+            .arch = arch,
         });
 
-        const device = try db.get_device_by_name(arena.allocator(), chip_file.value.name);
-        try arm.load_system_interrupts(db, &device);
+        try arm.load_system_interrupts(db, device_id, arch);
 
         // TODO: how do we want to handle multi core MCUs?
         //
@@ -439,15 +439,35 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         // are differences between cores that's something the user will have
         // to keep track of.
 
+        var has_fpu = false;
+        var dma_channel_count: u32 = 0;
         for (core.interrupts) |interrupt| {
             _ = try db.create_interrupt(device_id, .{
                 .name = interrupt.name,
                 .idx = interrupt.number,
             });
+
+            if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
+                has_fpu = true;
+            }
+
+            if (std.mem.indexOf(u8, interrupt.name, "DMA")) |_| {
+                dma_channel_count += 1;
+            }
         }
 
+        try db.add_device_property(device_id, .{
+            .key = "cpu.fpuPresent",
+            .value = if (has_fpu) "true" else "false",
+        });
+
+        try db.add_device_property(device_id, .{
+            .key = "cpu.dmaChannelCount",
+            .value = try std.fmt.allocPrint(allocator, "{d}", .{dma_channel_count}),
+        });
+
         for (core.peripherals) |peripheral| {
-            // TODO: don't know what to do if registers is null, so skipping
+            // Don't know what to do if registers is null, so skipping
             const registers = peripheral.registers orelse continue;
 
             const periph_name = try std.fmt.allocPrint(allocator, "{s}_{s}", .{ registers.kind, registers.version });

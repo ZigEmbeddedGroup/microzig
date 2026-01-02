@@ -57,8 +57,10 @@ pub fn fence() void {
     asm volatile ("fence");
 }
 
-// NOTE: Contains all csrs from the riscv manual and should follow their spec. Cpu implementations can
-// reexport what they need from here.
+// NOTE: Contains all CSRs (Control Status Registers) from the riscv manual and should follow their
+// spec. Cpu implementations can reexport what they need from here.
+// See https://docs.riscv.org/reference/isa/priv/priv-csrs.html
+>>>>>>> main
 pub const csr = struct {
     pub const fflags = Csr(0x001, u32);
     pub const frm = Csr(0x002, u32);
@@ -162,7 +164,7 @@ pub const csr = struct {
 
     pub const mscratch = Csr(0x340, u32);
     pub const mepc = Csr(0x341, u32);
-    pub const mcause = Csr(0x342, packed struct {
+    pub const mcause = Csr(0x342, packed struct(u32) {
         code: u31,
         is_interrupt: u1,
     });

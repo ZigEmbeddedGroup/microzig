@@ -14,16 +14,16 @@ const EnumID = Database.EnumID;
 const StructID = Database.StructID;
 const NestedStructField = Database.NestedStructField;
 
+const Properties = @import("properties.zig").Properties;
 const Directory = @import("Directory.zig");
+const VirtualFilesystem = @import("VirtualFilesystem.zig");
 const arm = @import("arch/arm.zig");
 const avr = @import("arch/avr.zig");
 const riscv = @import("arch/riscv.zig");
 
 const log = std.log.scoped(.gen);
 
-pub const ToZigOptions = struct {
-    for_microzig: bool = false,
-};
+pub const ToZigOptions = struct {};
 
 pub fn to_zig(db: *Database, dir: Directory, opts: ToZigOptions) !void {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
@@ -48,24 +48,16 @@ fn write_device_files(
 }
 
 fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8, writer: *std.Io.Writer) !void {
+    _ = opts;
     const public: []const u8 = if (types_public) "pub" else "";
-    if (opts.for_microzig) {
-        try writer.print(
-            \\const microzig = @import("microzig");
-            \\const mmio = microzig.mmio;
-            \\
-            \\{s} const types = @import("{s}");
-            \\
-            \\
-        , .{ public, types_path });
-    } else {
-        try writer.print(
-            \\const mmio = @import("mmio");
-            \\{s} const types = @import("{s}");
-            \\
-            \\
-        , .{ public, types_path });
-    }
+    try writer.print(
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
+        \\
+        \\{s} const types = @import("{s}");
+        \\
+        \\
+    , .{ public, types_path });
 }
 
 fn write_device_file(
@@ -84,20 +76,26 @@ fn write_device_file(
 
     try write_imports(opts, true, "types.zig", writer);
 
-    try writer.writeAll(
+    try writer.writeAll(@embedFile("properties.zig") ++
+        \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
         \\    index: i16,
         \\    description: ?[:0]const u8,
         \\};
         \\
-        \\
     );
 
-    const properties = try db.get_device_properties(arena, device.id);
-    if (properties.len > 0) {
-        try writer.writeAll("pub const properties = struct {\n");
-        for (properties) |prop| {
+    const raw_properties = try db.get_device_properties(arena, device.id);
+    const properties = process_properties(raw_properties);
+
+    try writer.writeAll("\npub const properties: Properties = ");
+    try std.zon.stringify.serialize(properties, .{}, writer);
+    try writer.writeAll(";\n");
+
+    if (raw_properties.len > 0) {
+        try writer.writeAll("\npub const raw_properties = struct {\n");
+        for (raw_properties) |prop| {
             try writer.print("pub const {f} = ", .{
                 std.zig.fmtId(prop.key),
             });
@@ -118,7 +116,7 @@ fn write_device_file(
     const device_peripherals = try db.get_device_peripherals(arena, device.id);
     log.debug("peripheral instances: {}", .{device_peripherals.len});
     if (device_peripherals.len > 0) {
-        try writer.writeAll("pub const peripherals = struct {\n");
+        try writer.writeAll("\npub const peripherals = struct {\n");
         for (device_peripherals) |instance| {
             write_device_peripheral(db, arena, &instance, writer) catch |err| {
                 log.warn("failed to serialize peripheral instance: {}", .{err});
@@ -134,7 +132,6 @@ fn write_device_file(
 
     if (ast.errors.len > 0) {
         log.err("Failed to parse:\n{s}", .{buf.written()});
-        //try out_writer.writeAll(buffer.items);
         for (ast.errors) |err| {
             std.log.err("err: {}", .{err});
             var err_msg: std.Io.Writer.Allocating = .init(arena);
@@ -148,6 +145,7 @@ fn write_device_file(
 
     var rendered_buffer: std.Io.Writer.Allocating = .init(arena);
     const fixups: std.zig.Ast.Render.Fixups = .{};
+
     try ast.render(arena, &rendered_buffer.writer, fixups);
 
     const filename = try std.fmt.allocPrint(arena, "{s}.zig", .{device.name});
@@ -189,6 +187,19 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
         try writer.writeByte(0);
         var ast = try std.zig.Ast.parse(arena, to_zero_sentinel(periph_content.written()), .zig);
         defer ast.deinit(arena);
+
+        if (ast.errors.len > 0) {
+            log.err("Failed to parse:\n{s}", .{periph_content.written()});
+            for (ast.errors) |err| {
+                std.log.err("err: {}", .{err});
+                var err_msg: std.Io.Writer.Allocating = .init(arena);
+                defer err_msg.deinit();
+
+                try ast.renderError(err, &err_msg.writer);
+                std.log.err("  {s}", .{err_msg.written()});
+            }
+            return error.FailedToParse;
+        }
 
         var rendered_buffer: std.Io.Writer.Allocating = .init(arena);
         const fixups: std.zig.Ast.Render.Fixups = .{};
@@ -512,10 +523,6 @@ fn write_device_peripheral(
     if (try get_device_peripheral_description(db, arena, instance)) |description|
         try write_doc_comment(arena, description, writer);
 
-    // TODO: get description
-    //else if (s.description) |desc|
-    //    try write_doc_comment(arena, desc, writer);
-
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix = if (instance.count) |count|
         try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
@@ -665,9 +672,6 @@ fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: *std.
     var buf: std.Io.Writer.Allocating = .init(arena);
     const writer = &buf.writer;
 
-    // TODO: handle this instead of assert
-    // assert(std.math.ceilPowerOfTwo(field_set.count()) <= size);
-
     if (e.description) |description|
         try write_doc_comment(arena, description, writer);
 
@@ -679,6 +683,18 @@ fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: *std.
     try writer.writeAll("};\n");
 
     try out_writer.writeAll(buf.written());
+}
+
+fn write_default_enum_value(db: *Database, arena: Allocator, e: *const Enum, default: u64, writer: *std.Io.Writer) !void {
+    const enum_fields = try db.get_enum_fields(arena, e.id, .{ .distinct = true });
+    for (enum_fields) |enum_field| {
+        if (enum_field.value == default) {
+            try writer.print(".{f}", .{std.zig.fmtId(enum_field.name)});
+            return;
+        }
+    }
+
+    try writer.print("@enumFromInt(0x{X})", .{default});
 }
 
 fn write_enum_fields(db: *Database, arena: Allocator, e: *const Enum, out_writer: *std.Io.Writer) !void {
@@ -703,7 +719,6 @@ fn write_enum_field(
     size: u64,
     writer: *std.Io.Writer,
 ) !void {
-    // TODO: use size to print the hex value (pad with zeroes accordingly)
     _ = size;
     if (enum_field.description) |description|
         try write_doc_comment(arena, description, writer);
@@ -802,8 +817,6 @@ fn write_registers_with_modes(
         try writer.print("{f}: extern struct {{\n", .{
             std.zig.fmtId(mode.name),
         });
-
-        // TODO: moded nested_struct_field
 
         try write_registers_and_nested_structs_base(db, arena, block_size_bytes, registers, &.{}, writer);
         try writer.writeAll("},\n");
@@ -1043,9 +1056,7 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
         "";
     try writer.print("{s}", .{array_prefix});
 
-    // TODO: if it's a struct decl then refer to it by name
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
-        // TODO full reference?
         try writer.print("{f},\n", .{std.zig.fmtId(struct_decl.name)});
     } else {
         try write_struct(db, arena, null, nsf.struct_id, writer);
@@ -1101,7 +1112,7 @@ fn write_register(
     register: *const Register,
     out_writer: *std.Io.Writer,
 ) !void {
-    log.debug("write_register: {}", .{register.*});
+    log.debug("write_register: {f}", .{register.*});
 
     var buf: std.Io.Writer.Allocating = .init(arena);
     const writer = &buf.writer;
@@ -1121,7 +1132,11 @@ fn write_register(
     else
         "";
 
-    // TODO: named struct type
+    const register_reset: ?RegisterReset = if (register.reset_mask != null and register.reset_value != null) .{
+        .mask = register.reset_mask.?,
+        .value = register.reset_value.?,
+    } else null;
+
     const fields = try db.get_register_fields(arena, register.id, .{});
     if (fields.len > 0) {
         try writer.print("{f}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
@@ -1130,14 +1145,27 @@ fn write_register(
             register.size_bits,
         });
 
-        try write_fields(db, arena, fields, register.size_bits, writer);
+        try write_fields(db, arena, fields, register.size_bits, register_reset, writer);
         try writer.writeAll("}),\n");
-    } else {
+    } else if (array_prefix.len != 0) {
         try writer.print("{f}: {s}u{},\n", .{
             std.zig.fmtId(register.name),
             array_prefix,
             register.size_bits,
         });
+    } else {
+        try writer.print("{f}: u{}", .{
+            std.zig.fmtId(register.name),
+            register.size_bits,
+        });
+
+        // Just assume non-masked areas are zero I guess
+        if (register_reset) |rr| {
+            const mask = (@as(u64, 1) << @intCast(register.size_bits)) - 1;
+            try writer.print(" = 0x{X}", .{rr.value & mask});
+        }
+
+        try writer.writeAll(",\n");
     }
 
     try out_writer.writeAll(buf.written());
@@ -1149,11 +1177,26 @@ fn field_comes_before(_: void, a: Database.StructField, b: Database.StructField)
     return a.offset_bits < b.offset_bits or (a.offset_bits == b.offset_bits and a.size_bits < b.size_bits);
 }
 
+const RegisterReset = struct {
+    mask: u64,
+    value: u64,
+};
+
+fn get_field_default(field: Database.StructField, maybe_register_reset: ?RegisterReset) ?u64 {
+    const register_reset = maybe_register_reset orelse return null;
+    const field_mask: u64 = ((@as(u64, 1) << @intCast(field.size_bits)) - 1) << @intCast(field.offset_bits);
+    if (@popCount(field_mask & register_reset.mask) != field.size_bits)
+        return null;
+
+    return (register_reset.value & field_mask) >> @intCast(field.offset_bits);
+}
+
 fn write_fields(
     db: *Database,
     arena: Allocator,
     fields: []const Database.StructField,
     register_size_bits: u64,
+    register_reset: ?RegisterReset,
     out_writer: *std.Io.Writer,
 ) !void {
     // We first expand every 'array field' into its consituent fields,
@@ -1239,16 +1282,22 @@ fn write_fields(
                     });
 
                     try write_enum_fields(db, arena, &e, writer);
-                    try writer.writeAll("},\n");
+                    try writer.writeAll("}");
                 } else {
                     try writer.print(
-                        \\{f}:  {f},
-                        \\
+                        \\{f}:  {f}
                     , .{
                         std.zig.fmtId(field.name),
                         std.zig.fmtId(enum_name),
                     });
                 }
+
+                if (get_field_default(field, register_reset)) |default| {
+                    try writer.writeAll(" = ");
+                    try write_default_enum_value(db, arena, &e, default, writer);
+                }
+
+                try writer.writeAll(",\n");
             } else {
                 try writer.print(
                     \\{f}: enum(u{}) {{
@@ -1259,10 +1308,22 @@ fn write_fields(
                 });
 
                 try write_enum_fields(db, arena, &e, writer);
-                try writer.writeAll("},\n");
+                try writer.writeAll("}");
+                if (get_field_default(field, register_reset)) |default| {
+                    try writer.writeAll(" = ");
+                    try write_default_enum_value(db, arena, &e, default, writer);
+                }
+
+                try writer.writeAll(",\n");
             }
         } else {
-            try writer.print("{f}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
+            try writer.print("{f}: u{}", .{ std.zig.fmtId(field.name), field.size_bits });
+
+            if (get_field_default(field, register_reset)) |default| {
+                try writer.print(" = 0x{X}", .{default});
+            }
+
+            try writer.print(",\n", .{});
         }
 
         log.debug("adding size bits to offset: offset={} field.size_bits={}", .{ offset, field.size_bits });
@@ -1283,6 +1344,94 @@ fn write_fields(
 
 fn to_zero_sentinel(buf: []const u8) [:0]const u8 {
     return buf[0 .. buf.len - 1 :0];
+}
+
+fn process_properties(raw_props: []const Database.DeviceProperty) Properties {
+    var properties: Properties = .{};
+
+    for (raw_props) |prop| {
+        if (std.mem.eql(u8, prop.key, "cpu.nvicPrioBits") or
+            std.mem.eql(u8, prop.key, "__NVIC_PRIO_BITS"))
+        {
+            if (prop.value) |value| {
+                properties.interrupt_priority_bits = std.fmt.parseInt(u8, value, 10) catch blk: {
+                    log.warn("failed to parse `interrupt_priority_bits` property value: expected integer, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`interrupt_priority_bits` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.vtorPresent") or
+            std.mem.eql(u8, prop.key, "__VTOR_PRESENT"))
+        {
+            if (prop.value) |value| {
+                properties.has_vtor = raw_property_value_to_bool(value) catch blk: {
+                    log.warn("failed to parse `has_vtor` property value: expected boolean, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`has_vtor` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.mpuPresent") or
+            std.mem.eql(u8, prop.key, "__MPU_PRESENT"))
+        {
+            if (prop.value) |value| {
+                properties.has_mpu = raw_property_value_to_bool(value) catch blk: {
+                    log.warn("failed to interpret `has_mpu` property value: expected boolean, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`has_mpu` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.fpuPresent") or
+            std.mem.eql(u8, prop.key, "__FPU_PRESENT"))
+        {
+            if (prop.value) |value| {
+                properties.has_fpu = raw_property_value_to_bool(value) catch blk: {
+                    log.warn("failed to interpret `has_fpu` property value: expected boolean, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`has_fpu` property candidate detected but it has no value", .{});
+            }
+        }
+
+        if (std.mem.eql(u8, prop.key, "cpu.dmaChannelCount")) {
+            if (prop.value) |value| {
+                properties.dma_channel_count = std.fmt.parseInt(u8, value, 10) catch blk: {
+                    log.warn("failed to parse `dma_channel_count` property value: expected integer, got `{s}`", .{value});
+                    break :blk null;
+                };
+            } else {
+                log.warn("`dma_channel_count` property candidate detected but it has no value", .{});
+            }
+        }
+    }
+
+    return properties;
+}
+
+fn raw_property_value_to_bool(value: []const u8) !bool {
+    inline for (&.{ "false", "true" }, 0..) |str, i| {
+        if (std.mem.eql(u8, value, str)) {
+            return i == 1;
+        }
+    }
+
+    inline for (&.{ "0", "1" }, 0..) |str, i| {
+        if (std.mem.eql(u8, value, str)) {
+            return i == 1;
+        }
+    }
+
+    log.warn("failed to interpret `{s}` as bool", .{value});
+    return error.BadValue;
 }
 
 const tests = @import("output_tests.zig");
@@ -1548,1090 +1697,1862 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
     try std.testing.expect(it.next() == null);
 }
 
-//test "gen.peripheral instantiation" {
-//    var db = try tests.peripheral_instantiation(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const TEST_DEVICE = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                TEST_FIELD: u1,
-//        \\                padding: u31 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripherals with a shared type" {
-//    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const TEST_DEVICE = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
-//        \\            pub const TEST1: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x2000);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                TEST_FIELD: u1,
-//        \\                padding: u31 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral with modes" {
-//    var db = try tests.peripheral_with_modes(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern union {
-//        \\            pub const Mode = enum {
-//        \\                TEST_MODE1,
-//        \\                TEST_MODE2,
-//        \\            };
-//        \\
-//        \\            pub fn get_mode(self: *volatile @This()) Mode {
-//        \\                {
-//        \\                    const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
-//        \\                    switch (value) {
-//        \\                        0,
-//        \\                        => return .TEST_MODE1,
-//        \\                        else => {},
-//        \\                    }
-//        \\                }
-//        \\                {
-//        \\                    const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
-//        \\                    switch (value) {
-//        \\                        1,
-//        \\                        => return .TEST_MODE2,
-//        \\                        else => {},
-//        \\                    }
-//        \\                }
-//        \\
-//        \\                unreachable;
-//        \\            }
-//        \\
-//        \\            TEST_MODE1: extern struct {
-//        \\                /// offset: 0x00
-//        \\                TEST_REGISTER1: u32,
-//        \\                /// offset: 0x04
-//        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                    TEST_FIELD: u1,
-//        \\                    padding: u31 = 0,
-//        \\                }),
-//        \\            },
-//        \\            TEST_MODE2: extern struct {
-//        \\                /// offset: 0x00
-//        \\                TEST_REGISTER2: u32,
-//        \\                /// offset: 0x04
-//        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                    TEST_FIELD: u1,
-//        \\                    padding: u31 = 0,
-//        \\                }),
-//        \\            },
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral with enum" {
-//    var db = try tests.peripheral_with_enum(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            pub const TEST_ENUM = enum(u4) {
-//        \\                TEST_ENUM_FIELD1 = 0x0,
-//        \\                TEST_ENUM_FIELD2 = 0x1,
-//        \\                _,
-//        \\            };
-//        \\
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: u8,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral with enum, enum is exhausted of values" {
-//    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            pub const TEST_ENUM = enum(u1) {
-//        \\                TEST_ENUM_FIELD1 = 0x0,
-//        \\                TEST_ENUM_FIELD2 = 0x1,
-//        \\            };
-//        \\
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: u8,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.field with named enum" {
-//    var db = try tests.field_with_named_enum(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            pub const TEST_ENUM = enum(u4) {
-//        \\                TEST_ENUM_FIELD1 = 0x0,
-//        \\                TEST_ENUM_FIELD2 = 0x1,
-//        \\                _,
-//        \\            };
-//        \\
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-//        \\                TEST_FIELD: TEST_ENUM,
-//        \\                padding: u4 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.field with anonymous enum" {
-//    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-//        \\                TEST_FIELD: enum(u4) {
-//        \\                    TEST_ENUM_FIELD1 = 0x0,
-//        \\                    TEST_ENUM_FIELD2 = 0x1,
-//        \\                    _,
-//        \\                },
-//        \\                padding: u4 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.namespaced register groups" {
-//    var db = try tests.namespaced_register_groups(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const PORTB: *volatile types.peripherals.PORT.PORTB = @ptrFromInt(0x23);
-//        \\            pub const PORTC: *volatile types.peripherals.PORT.PORTC = @ptrFromInt(0x26);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORT = struct {
-//        \\            pub const PORTB = extern struct {
-//        \\                /// offset: 0x00
-//        \\                PORTB: u8,
-//        \\                /// offset: 0x01
-//        \\                DDRB: u8,
-//        \\                /// offset: 0x02
-//        \\                PINB: u8,
-//        \\            };
-//        \\
-//        \\            pub const PORTC = extern struct {
-//        \\                /// offset: 0x00
-//        \\                PORTC: u8,
-//        \\                /// offset: 0x01
-//        \\                DDRC: u8,
-//        \\                /// offset: 0x02
-//        \\                PINC: u8,
-//        \\            };
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral with reserved register" {
-//    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: u32,
-//        \\            /// offset: 0x04
-//        \\            reserved4: [4]u8,
-//        \\            /// offset: 0x08
-//        \\            PINB: u32,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral with count" {
-//    var db = try tests.peripheral_with_count(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: u8,
-//        \\            /// offset: 0x01
-//        \\            DDRB: u8,
-//        \\            /// offset: 0x02
-//        \\            PINB: u8,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral with count, padding required" {
-//    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: u8,
-//        \\            /// offset: 0x01
-//        \\            DDRB: u8,
-//        \\            /// offset: 0x02
-//        \\            PINB: u8,
-//        \\            padding: [1]u8,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.register with count" {
-//    var db = try tests.register_with_count(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: [4]u8,
-//        \\            /// offset: 0x04
-//        \\            DDRB: u8,
-//        \\            /// offset: 0x05
-//        \\            PINB: u8,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.register with count and fields" {
-//    var db = try tests.register_with_count_and_fields(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const peripherals = struct {
-//        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: [4]mmio.Mmio(packed struct(u8) {
-//        \\                TEST_FIELD: u4,
-//        \\                padding: u4 = 0,
-//        \\            }),
-//        \\            /// offset: 0x04
-//        \\            DDRB: u8,
-//        \\            /// offset: 0x05
-//        \\            PINB: u8,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.field with count, width of one, offset, and padding" {
-//    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: mmio.Mmio(packed struct(u8) {
-//        \\                reserved2: u2 = 0,
-//        \\                TEST_FIELD0: u1,
-//        \\                TEST_FIELD1: u1,
-//        \\                TEST_FIELD2: u1,
-//        \\                TEST_FIELD3: u1,
-//        \\                TEST_FIELD4: u1,
-//        \\                padding: u1 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.field with count, multi-bit width, offset, and padding" {
-//    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const PORTB = extern struct {
-//        \\            /// offset: 0x00
-//        \\            PORTB: mmio.Mmio(packed struct(u8) {
-//        \\                reserved2: u2 = 0,
-//        \\                TEST_FIELD0: u2,
-//        \\                TEST_FIELD1: u2,
-//        \\                padding: u2 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.interrupts.avr" {
-//    var db = try tests.interrupts_avr(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const devices = struct {
-//        \\    pub const ATmega328P = struct {
-//        \\        pub const interrupts: []const Interrupt = &.{
-//        \\            .{ .name = "TEST_VECTOR1", .index = 1, .description = null },
-//        \\            .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
-//        \\        };
-//        \\
-//        \\        pub const VectorTable = extern struct {
-//        \\            const Handler = microzig.interrupt.Handler;
-//        \\            const unhandled = microzig.interrupt.unhandled;
-//        \\
-//        \\            RESET: Handler,
-//        \\            TEST_VECTOR1: Handler = unhandled,
-//        \\            reserved2: [1]u16 = undefined,
-//        \\            TEST_VECTOR2: Handler = unhandled,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.peripheral type with register and field" {
-//    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// test register
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                /// test field
-//        \\                TEST_FIELD: u1,
-//        \\                padding: u31 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.name collisions in enum name cause them to be anonymous" {
-//    var db = try tests.enums_with_name_collision(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-//        \\                TEST_FIELD1: enum(u4) {
-//        \\                    TEST_ENUM_FIELD1 = 0x0,
-//        \\                    TEST_ENUM_FIELD2 = 0x1,
-//        \\                    _,
-//        \\                },
-//        \\                TEST_FIELD2: enum(u4) {
-//        \\                    TEST_ENUM_FIELD1 = 0x0,
-//        \\                    TEST_ENUM_FIELD2 = 0x1,
-//        \\                    _,
-//        \\                },
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.pick one enum field in value collisions" {
-//    var db = try tests.enum_with_value_collision(std.testing.allocator);
-//    defer db.destroy();
-//
-//    try db.backup("value_collision.regz");
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-//        \\                TEST_FIELD: enum(u4) {
-//        \\                    TEST_ENUM_FIELD1 = 0x0,
-//        \\                    _,
-//        \\                },
-//        \\                padding: u4 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
+const ExpectedOutput = struct {
+    path: []const u8,
+    content: []const u8,
+};
+
+fn expect_output(expected_outputs: []const ExpectedOutput, vfs: *VirtualFilesystem) !void {
+    try std.testing.expectEqual(expected_outputs.len, vfs.files.count());
+    for (expected_outputs) |eo| {
+        const file_id = try vfs.get_file(eo.path) orelse unreachable;
+        try std.testing.expectEqualStrings(eo.content, vfs.get_content(file_id));
+    }
+}
+
+test "gen.peripheral instantiation" {
+    var db = try tests.peripheral_instantiation(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "TEST_DEVICE.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\        TEST_FIELD: u1 = 0x1,
+            \\        padding: u31 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripherals with a shared type" {
+    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "TEST_DEVICE.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
+            \\    pub const TEST1: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x2000);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\        TEST_FIELD: u1,
+            \\        padding: u31 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral with modes" {
+    var db = try tests.peripheral_with_modes(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern union {
+            \\    pub const Mode = enum {
+            \\        TEST_MODE1,
+            \\        TEST_MODE2,
+            \\    };
+            \\
+            \\    pub fn get_mode(self: *volatile @This()) Mode {
+            \\        {
+            \\            const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
+            \\            switch (value) {
+            \\                0,
+            \\                => return .TEST_MODE1,
+            \\                else => {},
+            \\            }
+            \\        }
+            \\        {
+            \\            const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
+            \\            switch (value) {
+            \\                1,
+            \\                => return .TEST_MODE2,
+            \\                else => {},
+            \\            }
+            \\        }
+            \\
+            \\        unreachable;
+            \\    }
+            \\
+            \\    TEST_MODE1: extern struct {
+            \\        /// offset: 0x00
+            \\        TEST_REGISTER1: u32,
+            \\        /// offset: 0x04
+            \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\            TEST_FIELD: u1,
+            \\            padding: u31 = 0,
+            \\        }),
+            \\    },
+            \\    TEST_MODE2: extern struct {
+            \\        /// offset: 0x00
+            \\        TEST_REGISTER2: u32,
+            \\        /// offset: 0x04
+            \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\            TEST_FIELD: u1,
+            \\            padding: u31 = 0,
+            \\        }),
+            \\    },
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral with enum" {
+    var db = try tests.peripheral_with_enum(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_ENUM = enum(u4) {
+            \\        TEST_ENUM_FIELD1 = 0x0,
+            \\        TEST_ENUM_FIELD2 = 0x1,
+            \\        _,
+            \\    };
+            \\
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral with enum, enum is exhausted of values" {
+    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_ENUM = enum(u1) {
+            \\        TEST_ENUM_FIELD1 = 0x0,
+            \\        TEST_ENUM_FIELD2 = 0x1,
+            \\    };
+            \\
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with named enum" {
+    var db = try tests.field_with_named_enum(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_ENUM = enum(u4) {
+            \\        TEST_ENUM_FIELD1 = 0x0,
+            \\        TEST_ENUM_FIELD2 = 0x1,
+            \\        _,
+            \\    };
+            \\
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: TEST_ENUM,
+            \\        padding: u4 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with named enum and named default" {
+    var db = try tests.field_with_named_enum_and_named_default(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_ENUM = enum(u4) {
+            \\        TEST_ENUM_FIELD1 = 0x0,
+            \\        TEST_ENUM_FIELD2 = 0x1,
+            \\        _,
+            \\    };
+            \\
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: TEST_ENUM = .TEST_ENUM_FIELD2,
+            \\        padding: u4 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with named enum and unnamed default" {
+    var db = try tests.field_with_named_enum_and_unnamed_default(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_ENUM = enum(u4) {
+            \\        TEST_ENUM_FIELD1 = 0x0,
+            \\        TEST_ENUM_FIELD2 = 0x1,
+            \\        _,
+            \\    };
+            \\
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: TEST_ENUM = @enumFromInt(0xA),
+            \\        padding: u4 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with anonymous enum" {
+    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: enum(u4) {
+            \\            TEST_ENUM_FIELD1 = 0x0,
+            \\            TEST_ENUM_FIELD2 = 0x1,
+            \\            _,
+            \\        },
+            \\        padding: u4 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with anonymous enum and default" {
+    var db = try tests.field_with_anonymous_enum_and_default(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: enum(u4) {
+            \\            TEST_ENUM_FIELD1 = 0x0,
+            \\            TEST_ENUM_FIELD2 = 0x1,
+            \\            _,
+            \\        } = .TEST_ENUM_FIELD2,
+            \\        padding: u4 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.namespaced register groups" {
+    var db = try tests.namespaced_register_groups(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const PORTB: *volatile types.peripherals.PORT.PORTB = @ptrFromInt(0x23);
+            \\    pub const PORTC: *volatile types.peripherals.PORT.PORTC = @ptrFromInt(0x26);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORT = @import("peripherals/PORT.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORT.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: u8,
+            \\    /// offset: 0x01
+            \\    DDRB: u8,
+            \\    /// offset: 0x02
+            \\    PINB: u8,
+            \\};
+            \\
+            \\pub const PORTC = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTC: u8,
+            \\    /// offset: 0x01
+            \\    DDRC: u8,
+            \\    /// offset: 0x02
+            \\    PINC: u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral with reserved register" {
+    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: u32,
+            \\    /// offset: 0x04
+            \\    reserved4: [4]u8,
+            \\    /// offset: 0x08
+            \\    PINB: u32,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral with count" {
+    var db = try tests.peripheral_with_count(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: u8,
+            \\    /// offset: 0x01
+            \\    DDRB: u8,
+            \\    /// offset: 0x02
+            \\    PINB: u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral with count, padding required" {
+    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: u8,
+            \\    /// offset: 0x01
+            \\    DDRB: u8,
+            \\    /// offset: 0x02
+            \\    PINB: u8,
+            \\    padding: [1]u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.register with count" {
+    var db = try tests.register_with_count(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: [4]u8,
+            \\    /// offset: 0x04
+            \\    DDRB: u8,
+            \\    /// offset: 0x05
+            \\    PINB: u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.register with count and fields" {
+    var db = try tests.register_with_count_and_fields(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const peripherals = struct {
+            \\    pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: [4]mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: u4,
+            \\        padding: u4 = 0,
+            \\    }),
+            \\    /// offset: 0x04
+            \\    DDRB: u8,
+            \\    /// offset: 0x05
+            \\    PINB: u8,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with count, width of one, offset, and padding" {
+    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: mmio.Mmio(packed struct(u8) {
+            \\        reserved2: u2 = 0,
+            \\        TEST_FIELD0: u1,
+            \\        TEST_FIELD1: u1,
+            \\        TEST_FIELD2: u1,
+            \\        TEST_FIELD3: u1,
+            \\        TEST_FIELD4: u1,
+            \\        padding: u1 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.field with count, multi-bit width, offset, and padding" {
+    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/PORTB.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const PORTB = extern struct {
+            \\    /// offset: 0x00
+            \\    PORTB: mmio.Mmio(packed struct(u8) {
+            \\        reserved2: u2 = 0,
+            \\        TEST_FIELD0: u2,
+            \\        TEST_FIELD1: u2,
+            \\        padding: u2 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.interrupts.avr" {
+    var db = try tests.interrupts_avr(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "ATmega328P.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\pub const types = @import("types.zig");
+            \\
+            \\pub const Properties = struct {
+            \\    has_vtor: ?bool = null,
+            \\    has_mpu: ?bool = null,
+            \\    has_fpu: ?bool = null,
+            \\    interrupt_priority_bits: ?u8 = null,
+            \\    dma_channel_count: ?u32 = null,
+            \\};
+            \\
+            \\pub const Interrupt = struct {
+            \\    name: [:0]const u8,
+            \\    index: i16,
+            \\    description: ?[:0]const u8,
+            \\};
+            \\
+            \\pub const properties: Properties = .{
+            \\    .has_vtor = null,
+            \\    .has_mpu = null,
+            \\    .has_fpu = null,
+            \\    .interrupt_priority_bits = null,
+            \\    .dma_channel_count = null,
+            \\};
+            \\
+            \\pub const interrupts: []const Interrupt = &.{
+            \\    .{ .name = "TEST_VECTOR1", .index = 1, .description = null },
+            \\    .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
+            \\};
+            \\
+            \\pub const VectorTable = extern struct {
+            \\    const Handler = microzig.interrupt.Handler;
+            \\    const unhandled = microzig.interrupt.unhandled;
+            \\
+            \\    RESET: Handler,
+            \\    TEST_VECTOR1: Handler = unhandled,
+            \\    reserved2: [1]u16 = undefined,
+            \\    TEST_VECTOR2: Handler = unhandled,
+            \\};
+            \\
+            ,
+        },
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.peripheral type with register and field" {
+    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\/// test peripheral
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// test register
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\        /// test field
+            \\        TEST_FIELD: u1,
+            \\        padding: u31 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.name collisions in enum name cause them to be anonymous" {
+    var db = try tests.enums_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD1: enum(u4) {
+            \\            TEST_ENUM_FIELD1 = 0x0,
+            \\            TEST_ENUM_FIELD2 = 0x1,
+            \\            _,
+            \\        },
+            \\        TEST_FIELD2: enum(u4) {
+            \\            TEST_ENUM_FIELD1 = 0x0,
+            \\            TEST_ENUM_FIELD2 = 0x1,
+            \\            _,
+            \\        },
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.pick one enum field in value collisions" {
+    var db = try tests.enum_with_value_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+            \\        TEST_FIELD: enum(u4) {
+            \\            TEST_ENUM_FIELD1 = 0x0,
+            \\            _,
+            \\        },
+            \\        padding: u4 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
 //test "gen.pick one enum field in name collisions" {
 //    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
+//    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
 //    defer buffer.deinit();
 //
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-//        \\                TEST_FIELD: enum(u4) {
-//        \\                    TEST_ENUM_FIELD1 = 0x0,
-//        \\                    _,
-//        \\                },
-//        \\                padding: u4 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
+//    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+//    defer vfs.deinit();
 //
+//    try db.to_zig(vfs.dir(), .{});
+//    try expect_output(&.{
+//        .{
+//            .path = "types.zig",
+//            .content =
+//            \\pub const peripherals = @import("types/peripherals.zig");
+//            \\
+//            ,
+//        },
+//        .{
+//            .path = "peripherals.zig",
+//            .content =
+//            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+//            \\
+//            ,
+//        },
+//        .{
+//            .path = "peripherals/TEST_PERIPHERAL.zig",
+//            .content =
+//            \\const microzig = @import("microzig");
+//            \\const mmio = microzig.mmio;
+//            \\
+//            \\const types = @import("../../types.zig");
+//            \\
+//            \\pub const TEST_PERIPHERAL = extern struct {
+//            \\    /// offset: 0x00
+//            \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+//            \\        TEST_FIELD: enum(u4) {
+//            \\            TEST_ENUM_FIELD1 = 0x0,
+//            \\            _,
+//            \\        },
+//            \\        padding: u4 = 0,
+//            \\    }),
+//            \\};
+//            \\
+//            ,
+//        },
+//    }, &vfs);
+//}
+
 //test "gen.register fields with name collision" {
 //    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
 //    defer db.destroy();
 //
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
+//    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
 //    defer buffer.deinit();
 //
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// test register
-//        \\            /// offset: 0x00
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                /// test field 1
-//        \\                TEST_FIELD: u1,
-//        \\                padding: u31 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
+//    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+//    defer vfs.deinit();
+//
+//    try db.to_zig(vfs.dir(), .{});
+//    try expect_output(&.{
+//        .{
+//            .path = "types.zig",
+//            .content =
+//            \\pub const peripherals = @import("types/peripherals.zig");
+//            \\
+//            ,
+//        },
+//        .{
+//            .path = "peripherals.zig",
+//            .content =
+//            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+//            \\
+//            ,
+//        },
+//        .{
+//            .path = "peripherals/TEST_PERIPHERAL.zig",
+//            .content =
+//            \\const microzig = @import("microzig");
+//            \\const mmio = microzig.mmio;
+//            \\
+//            \\const types = @import("../../types.zig");
+//            \\
+//            \\pub const TEST_PERIPHERAL = extern struct {
+//            \\    /// test register
+//            \\    /// offset: 0x00
+//            \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//            \\        /// test field 1
+//            \\        TEST_FIELD: u1,
+//            \\        padding: u31 = 0,
+//            \\    }),
+//            \\};
+//            \\
+//            ,
+//        },
+//    }, &vfs);
 //}
-//
-//test "gen.nested struct field in a peripheral" {
-//    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 0);
-//    defer db.destroy();
-//
-//    try db.backup("nested_struct_field_in_a_peripheral.regz");
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// test nested struct
-//        \\            /// offset: 0x00
-//        \\            TEST_NESTED: extern struct {
-//        \\                /// test register
-//        \\                /// offset: 0x00
-//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                    /// test field 1
-//        \\                    TEST_FIELD: u1,
-//        \\                    padding: u31 = 0,
-//        \\                }),
-//        \\            },
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.nested struct field in a peripheral that has a named type" {
-//    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            pub const TEST_NESTED_TYPE = extern struct {
-//        \\                /// test register
-//        \\                /// offset: 0x00
-//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                    /// test field 1
-//        \\                    TEST_FIELD: u1,
-//        \\                    padding: u31 = 0,
-//        \\                }),
-//        \\            };
-//        \\
-//        \\            /// test nested struct
-//        \\            /// offset: 0x00
-//        \\            TEST_NESTED: TEST_NESTED_TYPE,
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.nested struct field in a peripheral with offset" {
-//    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// offset: 0x00
-//        \\            reserved0: [4]u8,
-//        \\            /// test nested struct
-//        \\            /// offset: 0x04
-//        \\            TEST_NESTED: extern struct {
-//        \\                /// test register
-//        \\                /// offset: 0x00
-//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                    /// test field 1
-//        \\                    TEST_FIELD: u1,
-//        \\                    padding: u31 = 0,
-//        \\                }),
-//        \\            },
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.nested struct field in nested struct field" {
-//    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            /// test nested struct
-//        \\            /// offset: 0x00
-//        \\            TEST_NESTED: extern struct {
-//        \\                /// offset: 0x00
-//        \\                TEST_NESTED_NESTED: extern struct {
-//        \\                    /// test register
-//        \\                    /// offset: 0x00
-//        \\                    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                        /// test field 1
-//        \\                        TEST_FIELD: u1,
-//        \\                        padding: u31 = 0,
-//        \\                    }),
-//        \\                },
-//        \\            },
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
-//
-//test "gen.nested struct field next to register" {
-//    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
-//    defer db.destroy();
-//
-//    var buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-//    defer buffer.deinit();
-//
-//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-//    try std.testing.expectEqualStrings(
-//        \\const microzig = @import("microzig");
-//        \\const mmio = microzig.mmio;
-//        \\
-//        \\pub const Interrupt = struct {
-//        \\    name: [:0]const u8,
-//        \\    index: i16,
-//        \\    description: ?[:0]const u8,
-//        \\};
-//        \\
-//        \\pub const types = struct {
-//        \\    pub const peripherals = struct {
-//        \\        /// test peripheral
-//        \\        pub const TEST_PERIPHERAL = extern struct {
-//        \\            pub const TEST_NESTED_TYPE = extern struct {
-//        \\                /// test register
-//        \\                /// offset: 0x00
-//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                    /// test field 1
-//        \\                    TEST_FIELD: u1,
-//        \\                    padding: u31 = 0,
-//        \\                }),
-//        \\            };
-//        \\
-//        \\            /// test nested struct
-//        \\            /// offset: 0x00
-//        \\            TEST_NESTED: TEST_NESTED_TYPE,
-//        \\            /// test register
-//        \\            /// offset: 0x04
-//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-//        \\                /// test field 1
-//        \\                TEST_FIELD: u1,
-//        \\                padding: u31 = 0,
-//        \\            }),
-//        \\        };
-//        \\    };
-//        \\};
-//        \\
-//    , buffer.items);
-//}
+
+test "gen.nested struct field in a peripheral" {
+    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 0);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\/// test peripheral
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// test nested struct
+            \\    /// offset: 0x00
+            \\    TEST_NESTED: extern struct {
+            \\        /// test register
+            \\        /// offset: 0x00
+            \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\            /// test field 1
+            \\            TEST_FIELD: u1,
+            \\            padding: u31 = 0,
+            \\        }),
+            \\    },
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.nested struct field in a peripheral that has a named type" {
+    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\/// test peripheral
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_NESTED_TYPE = extern struct {
+            \\        /// test register
+            \\        /// offset: 0x00
+            \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\            /// test field 1
+            \\            TEST_FIELD: u1,
+            \\            padding: u31 = 0,
+            \\        }),
+            \\    };
+            \\
+            \\    /// test nested struct
+            \\    /// offset: 0x00
+            \\    TEST_NESTED: TEST_NESTED_TYPE,
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.nested struct field in a peripheral with offset" {
+    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\/// test peripheral
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// offset: 0x00
+            \\    reserved0: [4]u8,
+            \\    /// test nested struct
+            \\    /// offset: 0x04
+            \\    TEST_NESTED: extern struct {
+            \\        /// test register
+            \\        /// offset: 0x00
+            \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\            /// test field 1
+            \\            TEST_FIELD: u1,
+            \\            padding: u31 = 0,
+            \\        }),
+            \\    },
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.nested struct field in nested struct field" {
+    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\/// test peripheral
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    /// test nested struct
+            \\    /// offset: 0x00
+            \\    TEST_NESTED: extern struct {
+            \\        /// offset: 0x00
+            \\        TEST_NESTED_NESTED: extern struct {
+            \\            /// test register
+            \\            /// offset: 0x00
+            \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\                /// test field 1
+            \\                TEST_FIELD: u1,
+            \\                padding: u31 = 0,
+            \\            }),
+            \\        },
+            \\    },
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}
+
+test "gen.nested struct field next to register" {
+    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer buffer.deinit();
+
+    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    defer vfs.deinit();
+
+    try db.to_zig(vfs.dir(), .{});
+    try expect_output(&.{
+        .{
+            .path = "types.zig",
+            .content =
+            \\pub const peripherals = @import("types/peripherals.zig");
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals.zig",
+            .content =
+            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
+            \\
+            ,
+        },
+        .{
+            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .content =
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
+            \\
+            \\const types = @import("../../types.zig");
+            \\
+            \\/// test peripheral
+            \\pub const TEST_PERIPHERAL = extern struct {
+            \\    pub const TEST_NESTED_TYPE = extern struct {
+            \\        /// test register
+            \\        /// offset: 0x00
+            \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\            /// test field 1
+            \\            TEST_FIELD: u1,
+            \\            padding: u31 = 0,
+            \\        }),
+            \\    };
+            \\
+            \\    /// test nested struct
+            \\    /// offset: 0x00
+            \\    TEST_NESTED: TEST_NESTED_TYPE,
+            \\    /// test register
+            \\    /// offset: 0x04
+            \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+            \\        /// test field 1
+            \\        TEST_FIELD: u1,
+            \\        padding: u31 = 0,
+            \\    }),
+            \\};
+            \\
+            ,
+        },
+    }, &vfs);
+}

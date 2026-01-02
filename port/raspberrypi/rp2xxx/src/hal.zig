@@ -7,6 +7,7 @@ pub const adc = @import("hal/adc.zig");
 pub const bootmeta = @import("hal/bootmeta.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
+pub const cyw43 = @import("hal/cyw43.zig");
 pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
 pub const dcp = switch (compatibility.chip) {
     .RP2040 => @compileError("RP2040 doesn't support DCP"),
@@ -43,10 +44,6 @@ comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test and compatibility.chip == .RP2350) {
         _ = bootmeta;
-
-        if (compatibility.arch == .arm and microzig.options.hal.use_dcp) {
-            _ = dcp;
-        }
     }
 
     // On the RP2040, we need to import the `atomic.zig` file to export some global
@@ -69,12 +66,6 @@ pub const HAL_Options = switch (compatibility.chip) {
             next_block: ?*const anyopaque = null,
         } = .{},
 
-        /// Enable the FPU and lazy state preservation. Leads to much faster
-        /// single precision floating point arithmetic. If you want a custom
-        /// setup set this to false and configure the fpu yourself. Ignored on
-        /// riscv.
-        enable_fpu: bool = is_fpu_used,
-
         /// Enable the DCP and export intrinsics. Leads to faster double
         /// precision floating point arithmetic. Ignored on riscv.
         use_dcp: bool = true,
@@ -94,12 +85,17 @@ pub inline fn init() void {
     init_sequence(clock_config);
 }
 
-const is_fpu_used: bool = builtin.abi.float() == .hard;
-
 /// Allows user to easily swap in their own clock config while still
 /// using the recommended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
-    maybe_enable_fpu_and_dcp();
+    if (compatibility.chip == .RP2350 and compatibility.arch == .arm and
+        microzig.options.hal.use_dcp)
+    {
+        // Export double floating point intrinsics
+        _ = dcp;
+
+        enable_dcp();
+    }
 
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
@@ -129,38 +125,19 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     resets.unreset_block_wait(resets.masks.all);
 }
 
-/// Enables fpu and/or dcp on RP2350 arm if requested in HAL options. On RP2350
-/// riscv and RP2040 this is a noop. Called in init_sequence and on core1
+/// Enables dcp on RP2350 arm.
+///
+/// NOTE: Called automatically in the hal startup sequence and in core1
 /// startup.
-pub fn maybe_enable_fpu_and_dcp() void {
-    if (compatibility.chip == .RP2350 and
-        compatibility.arch == .arm)
-    {
-        if (microzig.options.hal.enable_fpu) {
-            if (is_fpu_used) {
-                // enable lazy state preservation
-                microzig.cpu.peripherals.fpu.FPCCR.modify(.{
-                    .ASPEN = 1,
-                    .LSPEN = 1,
-                });
-
-                // enable the FPU for the current core
-                microzig.cpu.peripherals.scb.CPACR.modify(.{
-                    .CP10 = .full_access,
-                    .CP11 = .full_access,
-                });
-            } else {
-                @compileError("target doesn't have FPU features enabled");
-            }
-        }
-
-        if (microzig.options.hal.use_dcp) {
-            // enable the DCP for the current core
-            microzig.cpu.peripherals.scb.CPACR.modify(.{
-                .CP4 = .full_access,
-            });
-        }
+pub inline fn enable_dcp() void {
+    if (!(compatibility.chip == .RP2350 and compatibility.arch == .arm)) {
+        @compileError("DCP is only available on RP2350 arm");
     }
+
+    // enable the DCP for the current core
+    microzig.cpu.peripherals.scb.CPACR.modify(.{
+        .CP4 = .full_access,
+    });
 }
 
 pub fn get_cpu_id() u32 {

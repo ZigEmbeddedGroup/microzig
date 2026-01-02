@@ -1,10 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const CPU_Options = struct {
-    /// When true, the vector table lives in RAM.
-    ram_vector_table: bool = false,
-};
+const shared = @import("shared_types.zig");
 
 pub const scb_base_offset = 0x0d00;
 
@@ -65,18 +62,18 @@ pub const SystemControlBlock = extern struct {
     /// System Handlers Priority Registers.
     SHP: [12]u8,
     /// System Handler Contol and State Register.
-    SHCSR: u32,
+    SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
         /// MemManage Fault Register.
-        MMFSR: u8,
+        MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
-        BFSR: u8,
+        BFSR: shared.scb.BFSR,
         /// Usage Fault Status Register.
-        UFSR: u16,
+        UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: u32,
+    HFSR: mmio.Mmio(shared.scb.HFSR),
     /// Debug Fault Status Register.
     DFSR: u32,
     /// MemManage Fault Address Register.
@@ -85,6 +82,23 @@ pub const SystemControlBlock = extern struct {
     BFAR: u32,
     /// Auxilary Feature Register.
     AFSR: u32,
+    reserved0: [18]u32,
+    CPACR: mmio.Mmio(packed struct(u32) {
+        reserved0: u20,
+        CP10: Privilege,
+        CP11: Privilege,
+        reserved1: u8,
+
+        pub const Privilege = enum(u2) {
+            /// Access denied. Any attempted access generates a NOCP UsageFault.
+            access_denied = 0b00,
+            /// Privileged access only. An unprivileged access generates a NOCP UsageFault.
+            priviledged_access_only = 0b01,
+            reserved = 0b10,
+            /// Full access.
+            full_access = 0b11,
+        };
+    }),
 };
 
 pub const NestedVectorInterruptController = extern struct {
@@ -187,4 +201,40 @@ pub const MemoryProtectionUnit = extern struct {
         XN: u1,
         reserved2: u3 = 0,
     });
+};
+
+pub const FloatingPointUnit = extern struct {
+    FPCCR: mmio.Mmio(packed struct(u32) {
+        LSPACT: u1,
+        USER: u1,
+        reserved0: u1 = 0,
+        THREAD: u1,
+        HFRDY: u1,
+        MMRDY: u1,
+        BFRDY: u1,
+        reserved1: u1 = 0,
+        MONRDY: u1,
+        reserved2: u21 = 0,
+        /// Automatic state preservation enable. Enables lazy context save of
+        /// floating-point state. The possible values of this bit are:
+        /// 0 = Disable automatic lazy context save.
+        /// 1 = Enable automatic lazy state preservation for floating-point
+        /// context.
+        ///
+        /// Writes to this bit from Non-secure state are ignored if LSPENS is
+        /// set to one.
+        LSPEN: u1,
+        /// Automatic state preservation enable. Enables CONTROL.FPCA setting
+        /// on execution of a floating-point instruction. This results in
+        /// automatic hardware state preservation and restoration, for
+        /// floating-point context, on exception entry and exit. The possible
+        /// values of this bit are:
+        /// 1 = Enable CONTROL.FPCA setting on execution of a floating-point
+        /// instruction.
+        /// 0 = Disable CONTROL.FPCA setting on execution of a
+        /// floating-point instruction.
+        ASPEN: u1,
+    }),
+    FPCAR: u32,
+    FPDSCR: u32,
 };

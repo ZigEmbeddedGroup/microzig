@@ -1,0 +1,18 @@
+.{
+    .name = .mz_port_microchip_atmega,
+    .fingerprint = 0x82f03c394b9525d0,
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .atpack = .{
+            .url = "https://atpack.microzig.tech/Atmel.ATmega_DFP.2.2.509.atpack",
+            .hash = "N-V-__8AALMZ6AaqwABfnUqEWoZX1Ocb7LqjGVZNKB1fJNon",
+        },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

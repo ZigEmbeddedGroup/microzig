@@ -44,11 +44,14 @@ pub const led = struct {
 
 pub const sensor = struct {
     pub const AS5600 = @import("sensor/AS5600.zig").AS5600;
+    pub const HTS221 = @import("sensor/HTS221.zig").HTS221;
+    pub const DS18B20 = @import("sensor/DS18B20.zig").DS18B20;
     pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
     pub const MLX90640 = @import("sensor/MLX90640.zig").MLX90640;
     pub const MPU_6050 = @import("sensor/MPU-6050.zig").MPU_6050;
     pub const TLV493D = @import("sensor/TLV493D.zig").TLV493D;
     pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
+    pub const AHT30 = @import("sensor/AHT30.zig").AHT30;
 };
 
 pub const stepper = struct {
@@ -67,12 +70,15 @@ pub const IO_expander = struct {
 };
 
 pub const wireless = struct {
+    pub const cyw43 = @import("wireless/cyw43/cyw43.zig");
     pub const cyw43_bus = @import("wireless/cyw43/bus.zig");
     pub const cyw43_runner = @import("wireless/cyw43/runner.zig");
     pub const Cyw43_Spi = cyw43_bus.Cyw43_Spi;
     pub const Cyw43_Bus = cyw43_bus.Cyw43_Bus;
     pub const Cyw43_Runner = cyw43_runner.Cyw43_Runner;
     // pub const sx1278 = @import("wireless/sx1278.zig");
+
+    pub const Cyw43439 = @import("wireless/cyw43439.zig");
 };
 
 pub const time = struct {
@@ -148,6 +154,8 @@ pub const time = struct {
     ///       would ever reach an uptime of over 500.000 years.
     ///
     pub const Deadline = struct {
+        pub const no_deadline: Deadline = .init_absolute(null);
+
         const disabled_sentinel = Absolute.from_us(std.math.maxInt(u64));
 
         timeout: Absolute,
@@ -203,6 +211,7 @@ pub const base = struct {
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
     pub const Clock_Device = @import("base/Clock_Device.zig");
+    pub const Block_Memory = @import("base/Block_Memory.zig");
     pub const I2C_Device = @import("base/I2C_Device.zig");
 };
 
@@ -221,6 +230,7 @@ test {
     _ = sensor.MPU_6050;
     _ = sensor.TLV493D;
     _ = sensor.TMP117;
+    _ = sensor.AHT30;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;
@@ -235,6 +245,7 @@ test {
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
     _ = base.Digital_IO;
+    _ = base.Block_Memory;
     _ = base.Clock_Device;
     _ = base.I2C_Device;
 }

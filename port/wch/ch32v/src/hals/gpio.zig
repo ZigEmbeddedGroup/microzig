@@ -1,7 +1,6 @@
-// const std = @import("std");
-
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
+const clocks = microzig.hal.clocks;
 
 const GPIOA = peripherals.GPIOA;
 const GPIOB = peripherals.GPIOB;
@@ -44,6 +43,11 @@ pub const Speed = enum(u2) {
 pub const Pull = enum {
     up,
     down,
+};
+
+pub const AlternateFunctionMode = enum {
+    push_pull,
+    open_drain,
 };
 
 // NOTE: With this current setup, every time we want to do anythting we go through a switch
@@ -109,6 +113,31 @@ pub const Pin = packed struct(u8) {
         const m_mode = @as(u32, @intFromEnum(mode));
         const config: u32 = s_speed + (m_mode << 2);
         gpio.write_pin_config(config);
+    }
+
+    pub inline fn enable_clock(gpio: Pin) void {
+        // TODO: Cleanup!
+        clocks.enable_gpio_clock(switch (gpio.get_port()) {
+            GPIOA => .A,
+            GPIOB => .B,
+            GPIOC => .C,
+            GPIOD => .D,
+            else => unreachable,
+        });
+    }
+
+    /// Configure pin for alternate function use (e.g., USART, I2C, SPI)
+    /// Combines enable_clock + set_output_mode for convenience
+    pub inline fn configure_alternate_function(
+        gpio: Pin,
+        mode: AlternateFunctionMode,
+        speed: Speed,
+    ) void {
+        gpio.enable_clock();
+        switch (mode) {
+            .push_pull => gpio.set_output_mode(.alternate_function_push_pull, speed),
+            .open_drain => gpio.set_output_mode(.alternate_function_open_drain, speed),
+        }
     }
 
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {

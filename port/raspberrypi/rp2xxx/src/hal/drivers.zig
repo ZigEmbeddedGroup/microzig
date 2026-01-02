@@ -257,33 +257,34 @@ pub const SPI_Device = struct {
     pub const ConnectError = Datagram_Device.ConnectError;
     pub const WriteError = Datagram_Device.WriteError;
     pub const ReadError = Datagram_Device.ReadError;
-    pub const ChipSelect = struct {
-        pin: hal.gpio.Pin,
-        active_level: Digital_IO.State = .low,
-    };
 
     bus: hal.spi.SPI,
     chip_select: ?ChipSelect = null,
     rx_dummy_data: u8,
 
     pub const InitOptions = struct {
-        /// The active level for the chip select pin
-        active_level: Digital_IO.State = .low,
+        /// Chip select options
+        chip_select: ?ChipSelect = null,
 
         /// Which dummy byte should be sent during reads
         rx_dummy_data: u8 = 0x00,
     };
 
-    pub fn init(bus: hal.spi.SPI, chip_select: ChipSelect, rx_dummy_data: u8) SPI_Device {
-        if (chip_select) |cs| {
+    pub const ChipSelect = struct {
+        pin: hal.gpio.Pin,
+        active_level: Digital_IO.State = .low,
+    };
+
+    pub fn init(bus: hal.spi.SPI, options: InitOptions) SPI_Device {
+        if (options.chip_select) |cs| {
             cs.pin.set_function(.sio);
             cs.pin.set_direction(.out);
         }
 
         var dev: SPI_Device = .{
             .bus = bus,
-            .chip_select = chip_select,
-            .rx_dummy_data = rx_dummy_data,
+            .chip_select = options.chip_select,
+            .rx_dummy_data = options.rx_dummy_data,
         };
         // set the chip select to "deselect" the device
         dev.disconnect();
@@ -483,25 +484,54 @@ pub const CYW43_Pio_Device = struct {
     cyw43_bus: Cyw43_Bus = undefined,
     cyw43_runner: Cyw43_Runner = undefined,
 
-    pub fn init(this: *Self, config: CYW43_Pio_Device_Config) !void {
+    pub fn init(self: *Self, config: CYW43_Pio_Device_Config) !void {
         std.log.info("before gpio init", .{});
 
-        this.cyw43_pio_spi = try hal.cyw49_pio_spi.init(config.spi);
-        this.cyw43_spi = this.cyw43_pio_spi.cyw43_spi();
+        self.cyw43_pio_spi = try hal.cyw49_pio_spi.init(config.spi);
+        self.cyw43_spi = self.cyw43_pio_spi.cyw43_spi();
 
         config.pwr_pin.set_function(.sio);
         config.pwr_pin.set_direction(.out);
         var pwr_gpio = GPIO_Device.init(config.pwr_pin);
 
-        this.cyw43_bus = .{ .pwr_pin = pwr_gpio.digital_io(), .spi = &this.cyw43_spi, .internal_delay_ms = hal.time.sleep_ms };
-        this.cyw43_runner = .{ .bus = &this.cyw43_bus, .internal_delay_ms = hal.time.sleep_ms };
+        self.cyw43_bus = .{ .pwr_pin = pwr_gpio.digital_io(), .spi = &self.cyw43_spi, .internal_delay_ms = hal.time.sleep_ms };
+        self.cyw43_runner = .{ .bus = &self.cyw43_bus, .internal_delay_ms = hal.time.sleep_ms };
 
-        try this.cyw43_runner.init();
+        try self.cyw43_runner.init();
     }
 
-    pub fn test_loop(this: *Self) void {
+    pub fn test_loop(self: *Self) void {
         while (true) {
-            this.cyw43_runner.run();
+            _ = self.cyw43_runner.run();
         }
+    }
+};
+
+pub const WiFi = struct {
+    const Self = @This();
+    pub const Chip = mdf.wireless.Cyw43439;
+    pub const recv = Chip.recv_zc;
+    pub const send = Chip.send_zc;
+    pub const ready = Chip.ready;
+
+    const Spi = @import("cyw43439_pio_spi.zig");
+    pub const Config = Spi.Config;
+
+    spi: Spi = undefined,
+    chip: Chip = .{}, // cyw43 chip interface
+
+    pub fn init(self: *Self, config: Config) !*Chip {
+        self.spi = try Spi.init(config);
+        try self.chip.init(
+            .{
+                .ptr = &self.spi,
+                .vtable = &.{
+                    .read = Spi.read,
+                    .write = Spi.write,
+                },
+            },
+            hal.time.sleep_ms,
+        );
+        return &self.chip;
     }
 };

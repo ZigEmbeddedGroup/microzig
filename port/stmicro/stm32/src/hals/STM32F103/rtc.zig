@@ -5,7 +5,7 @@ const rtc = microzig.chip.peripherals.RTC;
 ///enable the RTC clock.
 ///this function is the same as `hal.rcc.enable_RTC()`.
 ///it is here for convenience.
-pub const enable = rcc.enable_RTC;
+pub const enable = rcc.enable_rtc;
 pub const is_running = rcc.rtc_running;
 
 ///RTC clock source is selected in the clock configs

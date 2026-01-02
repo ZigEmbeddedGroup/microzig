@@ -2,6 +2,7 @@ const std = @import("std");
 const bus = @import("bus.zig");
 const consts = @import("consts.zig");
 const nvram = @import("nvram.zig");
+const wifi_mod = @import("wifi.zig");
 
 /// Callback for microsecond delays
 pub const delayus_callback = fn (delay: u32) void;
@@ -14,6 +15,17 @@ pub const Cyw43_Runner = struct {
 
     bus: *bus.Cyw43_Bus,
     internal_delay_ms: *const delayus_callback,
+
+    // WiFi instance (initialized in init())
+    wifi_instance: wifi_mod.CYW43_Wifi = undefined,
+
+    // RX frame buffer (valid until next run() call)
+    // NOTE: Single-frame buffer. If get_rx_frame() is not called before the next
+    // run() receives data, the previous frame is lost. For high-throughput or
+    // bursty traffic, we may want to replace with a ring buffer.
+    rx_frame_buf: [1600]u8 = undefined,
+    rx_frame_len: usize = 0,
+    has_rx_frame: bool = false,
 
     pub fn init(self: *Self) !void {
         try self.bus.init_bus();
@@ -98,6 +110,9 @@ pub const Cyw43_Runner = struct {
         log.debug("clock ok", .{});
 
         self.log_init();
+
+        // Initialize WiFi layer
+        self.wifi_instance = wifi_mod.CYW43_Wifi.init(self.bus);
 
         // TODO: bluetooth setup
 
@@ -208,10 +223,37 @@ pub const Cyw43_Runner = struct {
         }
     }
 
-    pub fn run(self: *Self) void {
-        while (true) {
-            self.log_read();
+    /// Run one poll cycle. Returns true if there was activity.
+    /// Received data frames are buffered and can be retrieved via get_rx_frame().
+    pub fn run(self: *Self) bool {
+        // Clear previous frame
+        self.has_rx_frame = false;
+
+        // Poll WiFi - processes events, may return data
+        if (try self.wifi_instance.poll()) |frame| {
+            // Buffer the received frame
+            const copy_len = @min(frame.len, self.rx_frame_buf.len);
+            @memcpy(self.rx_frame_buf[0..copy_len], frame[0..copy_len]);
+            self.rx_frame_len = copy_len;
+            self.has_rx_frame = true;
+            return true;
         }
+
+        return false;
+    }
+
+    /// Get the last received ethernet frame, if any.
+    /// Returns null if no frame was received in the last run() call.
+    pub fn get_rx_frame(self: *Self) ?[]const u8 {
+        if (self.has_rx_frame) {
+            return self.rx_frame_buf[0..self.rx_frame_len];
+        }
+        return null;
+    }
+
+    /// Get pointer to WiFi instance for configuration (enable, join, etc.)
+    pub fn wifi(self: *Self) *wifi_mod.CYW43_Wifi {
+        return &self.wifi_instance;
     }
 };
 

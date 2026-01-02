@@ -46,6 +46,7 @@ SECTIONS
     microzig_ram_text_end = .;
   } > IRAM
 
+  . = ALIGN(4);
   _iram_size = . - microzig_ram_text_start;
 
   _dram_start = ORIGIN(DRAM) + _iram_size;

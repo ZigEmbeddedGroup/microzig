@@ -4,7 +4,7 @@
 const std = @import("std");
 const time = @import("time.zig");
 const microzig = @import("microzig");
-const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
+const create_peripheral_enum = @import("../common/util.zig").create_peripheral_enum;
 
 const mdf = microzig.drivers;
 const drivers = mdf.base;

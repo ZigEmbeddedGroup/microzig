@@ -62,7 +62,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
             },
-            .patches = @import("patches/rp2040.zig").patches,
+            .patch_files = &.{b.path("patches/rp2040.zon")},
         },
         .hal = hal,
         .linker_script = .{
@@ -80,7 +80,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
             .os_tag = .freestanding,
             .abi = .eabihf,
-            .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+            .cpu_features_add = std.Target.arm.featureSet(&.{ .fp_armv8d16sp, .dsp }),
         },
         .chip = .{
             .name = "RP2350",
@@ -92,7 +92,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
             },
-            .patches = @import("patches/rp2350.zig").patches,
+            .patch_files = &.{b.path("patches/rp2350.zon")},
         },
         .hal = hal,
         .linker_script = .{
@@ -143,13 +143,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
                 .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
             },
-            .patches = @import("patches/rp2350.zig").patches ++ [_]microzig.Patch{
-                .{
-                    .override_arch = .{
-                        .device_name = "RP2350",
-                        .arch = .hazard3,
-                    },
-                },
+            .patch_files = &.{
+                b.path("patches/rp2350.zon"),
+                b.path("patches/rp2350_hazard3.zon"),
             },
         },
         .hal = hal,

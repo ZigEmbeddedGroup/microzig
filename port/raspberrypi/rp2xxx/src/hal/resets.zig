@@ -9,6 +9,12 @@ const hw = @import("hw.zig");
 pub const Mask =
     switch (chip) {
         .RP2040 => packed struct(u32) {
+            pub inline fn only(tag: std.meta.FieldEnum(Mask)) Mask {
+                var empty = std.mem.zeroes(Mask);
+                @field(empty, @tagName(tag)) = true;
+                return empty;
+            }
+
             adc: bool = true,
             busctrl: bool = true,
             dma: bool = true,
@@ -37,6 +43,12 @@ pub const Mask =
             padding: u7 = 0,
         },
         .RP2350 => packed struct(u32) {
+            pub inline fn only(tag: std.meta.FieldEnum(Mask)) Mask {
+                var empty = std.mem.zeroes(Mask);
+                @field(empty, @tagName(tag)) = true;
+                return empty;
+            }
+
             adc: bool = true,
             busctrl: bool = true,
             dma: bool = true,

@@ -47,8 +47,6 @@ const Context = struct {
     }
 };
 
-// TODO: scratchpad datastructure for temporary string based relationships,
-// then stitch it all together in the end
 pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     var ctx = Context.init(db);
     defer ctx.deinit();
@@ -99,18 +97,6 @@ fn load_device(ctx: *Context, node: xml.Node) !void {
     var param_it = node.iterate(&.{"parameters"}, &.{"param"});
     while (param_it.next()) |param_node|
         try load_param(ctx, param_node, device_id);
-
-    //try infer_peripheral_offsets(ctx);
-
-    // TODO: maybe others?
-
-    // TODO:
-    // address-space.memory-segment
-    // events.generators.generator
-    // events.users.user
-    // interfaces.interface.parameters.param
-
-    // property-groups.property-group.property
 }
 
 fn load_param(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
@@ -125,7 +111,11 @@ fn load_param(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
     const value = node.get_attribute("value") orelse return error.MissingParamName;
     const desc = node.get_attribute("caption");
 
-    try db.add_device_property(device_id, .{ .key = name, .value = value, .description = desc });
+    try db.add_device_property(device_id, .{
+        .key = name,
+        .value = value,
+        .description = desc,
+    });
 }
 
 fn load_interrupts(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
@@ -222,7 +212,6 @@ fn infer_peripheral_offsets(ctx: *Context) !void {
 
 fn infer_peripheral_offset(ctx: *Context, type_id: PeripheralID, instance_id: DevicePeripheralID) !void {
     const db = ctx.db;
-    // TODO: assert that there's only one instance using this type
 
     var min_offset: ?u64 = null;
     var max_size: u64 = 8;
@@ -283,7 +272,6 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
                     const mask_str = bitfield_node.get_attribute("mask") orelse continue;
                     const mask = try std.fmt.parseInt(u64, mask_str, 0);
                     try field_sizes.append(allocator, @popCount(mask));
-                    // TODO: assert consecutive
                 }
             }
         }
@@ -294,30 +282,26 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
     // if all the field sizes are the same, and the max value can fit in there,
     // then set the size of the enum. If there are no usages of an enum, then
     // assign it the smallest value possible
+    const natural_enum_size = if (max_value > 0) std.math.log2_int(u64, max_value) + 1 else 1;
     return if (field_sizes.items.len == 0)
-        if (max_value == 0)
-            1
-        else
-            std.math.log2_int(u64, max_value) + 1
+        natural_enum_size
     else blk: {
         var ret: ?u64 = null;
         for (field_sizes.items) |field_size| {
             if (ret == null)
                 ret = field_size
             else if (ret.? != field_size)
-                return error.InconsistentEnumSizes;
+                // as soon as there are inconsistencies, we'll just give it a sane size
+                break :blk natural_enum_size;
         }
 
-        if (max_value > 0 and (std.math.log2_int(u64, max_value) + 1) > ret.?) {
-            log.warn("Uses of this enum are smaller than the calculated size", .{});
-            return std.math.log2_int(u64, max_value);
-        }
-
-        break :blk @intCast(ret.?);
+        break :blk if (natural_enum_size > ret.?)
+            natural_enum_size
+        else
+            @intCast(ret.?);
     };
 }
 
-// TODO: instances use name in module
 fn get_inlined_register_group(parent_node: xml.Node, parent_name: []const u8) ?xml.Node {
     var register_group_it = parent_node.iterate(&.{}, &.{"register-group"});
     const rg_node = register_group_it.next() orelse return null;
@@ -518,16 +502,11 @@ fn load_register_group(ctx: *Context, node: xml.Node, parent: PeripheralID) !voi
 
     try infer_register_group_offset(ctx, node, struct_id);
     try load_register_group_children(ctx, node, parent, struct_id);
-    // TODO: infer register group size?
-    // Do register groups ever operate as just namespaces?
-
-    // TODO: check size
 }
 
 fn load_mode(ctx: *Context, node: xml.Node, parent: StructID) !void {
     const db = ctx.db;
 
-    // TODO: determine if it ever gets put in the register type
     validate_attrs(node, &.{
         "value",
         "mask",
@@ -542,14 +521,10 @@ fn load_mode(ctx: *Context, node: xml.Node, parent: StructID) !void {
         .value = node.get_attribute("value") orelse return error.MissingModeValue,
         .qualifier = node.get_attribute("qualifier") orelse return error.MissingModeQualifier,
     });
-
-    // TODO: "mask": "optional",
 }
 
-// search for modes that the parent entity owns, and if the name matches,
-// then we have our entry. If not found then the input is malformed.
-// TODO: assert unique mode name
-// TODO: modes
+// Search for modes that the parent entity owns, and if the name matches, then
+// we have our entry. If not found then the input is malformed.
 fn assign_modes_to_register(
     ctx: *Context,
     register_id: RegisterID,
@@ -714,13 +689,6 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
                     .description = node.get_attribute("caption"),
                     .size_bits = 1,
                     .offset_bits = i,
-                    .enum_id = if (node.get_attribute("values")) |values| blk: {
-                        const e = db.get_enum_by_name(arena, peripheral_struct_id, values) catch |err| {
-                            log.warn("{s} failed to get_enum_by_name: {s}", .{ name, values });
-                            return err;
-                        };
-                        break :blk e.id;
-                    } else null,
                 });
 
                 // FIXME: struct field modes
@@ -768,7 +736,9 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
                     log.warn("{s} failed to get_enum_by_name: {s}", .{ name, values });
                     return err;
                 };
-                break :blk e.id;
+
+                // ensure that the enum and the field are the same size
+                break :blk if (width == e.size_bits) e.id else null;
             } else null,
         });
 
@@ -1013,7 +983,6 @@ fn load_register_group_instance(
 
     log.debug("{}: creating register group instance", .{id});
     const name = node.get_attribute("name") orelse return error.MissingInstanceName;
-    // TODO: this isn't always a set value, not sure what to do if it's left out
     const name_in_module = node.get_attribute("name-in-module") orelse {
         log.warn("no 'name-in-module' for register group '{s}'", .{
             name,
@@ -1050,11 +1019,6 @@ fn load_register_group_instance(
     }
 
     try db.add_child("instance.register_group", peripheral_id, id);
-
-    // TODO:
-    // "address-space": "optional",
-    // "version": "optional",
-    // "id": "optional",
 }
 
 fn load_signal(
@@ -1072,11 +1036,8 @@ fn load_signal(
         "field",
         "ioset",
     });
-
-    // TODO: pads
 }
 
-// TODO: there are fields like irq-index
 fn load_interrupt(
     ctx: *Context,
     node: xml.Node,
@@ -1090,7 +1051,6 @@ fn load_interrupt(
         "alternate-name",
         "irq-index",
         "caption",
-        // TODO: probably connects module instance to interrupt
         "module-instance",
         "irq-name",
         "alternate-caption",
@@ -1119,8 +1079,7 @@ fn load_interrupt(
     });
 }
 
-// for now just emit warning logs when the input has attributes that it shouldn't have
-// TODO: better output
+// For now just emit warning logs when the input has attributes that it shouldn't have
 fn validate_attrs(node: xml.Node, attrs: []const []const u8) void {
     var it = node.iterate_attrs();
     while (it.next()) |attr| {
@@ -1181,8 +1140,6 @@ test "atdf.register with bitfields and enum" {
     const doc = try xml.Doc.from_memory(text);
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
-
-    try db.backup("atdf_register_with_bitfields_and_enum.regz");
 
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -1305,8 +1262,6 @@ test "atdf.register with mode" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    try db.backup("register_with_mode.regz");
-
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
 
@@ -1420,8 +1375,6 @@ test "atdf.instance of register group" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    try db.backup("instance_of_register_group.regz");
-
     const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
 
     const portb_instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "PORTB");
@@ -1523,4 +1476,157 @@ test "atdf.interrupts with interrupt-groups" {
 
     const portb_int1_id = try db.get_interrupt_by_name(device_id, "PORTB_INT1") orelse return error.NoInterrupt;
     try expectEqual(@as(i32, 2), try db.get_interrupt_idx(portb_int1_id));
+}
+
+test "atdf.non-consecutive bitfield with enum" {
+    // In this example, WDP is a bitfield with non-consecutive bits. We break
+    // up the field into individual bits, and do not associate the fields with the enum.
+    //
+    // As a future improvement, we could create a comptime remapping of the
+    // bits, but it's hardly worth the effor for such a small edge case at this
+    // moment.
+    const text =
+        \\<avr-tools-device-file>
+        \\  <modules>
+        \\    <module caption="Watchdog Timer" name="WDT">
+        \\      <register-group caption="Watchdog Timer" name="WDT">
+        \\        <register caption="Watchdog Timer Control Register" name="WDTCSR" offset="0x60" size="1" ocd-rw="R">
+        \\          <bitfield caption="Watchdog Timeout Interrupt Flag" mask="0x80" name="WDIF"/>
+        \\          <bitfield caption="Watchdog Timeout Interrupt Enable" mask="0x40" name="WDIE"/>
+        \\          <bitfield caption="Watchdog Timer Prescaler Bits" mask="0x27" name="WDP" values="WDOG_TIMER_PRESCALE_4BITS"/>
+        \\          <bitfield caption="Watchdog Change Enable" mask="0x10" name="WDCE"/>
+        \\          <bitfield caption="Watch Dog Enable" mask="0x08" name="WDE"/>
+        \\        </register>
+        \\      </register-group>
+        \\      <value-group name="WDOG_TIMER_PRESCALE_4BITS">
+        \\        <value caption="Oscillator Cycles 2K" name="OSCILLATOR_CYCLES_2K" value="0x00"/>
+        \\        <value caption="Oscillator Cycles 4K" name="OSCILLATOR_CYCLES_4K" value="0x01"/>
+        \\        <value caption="Oscillator Cycles 8K" name="OSCILLATOR_CYCLES_8K" value="0x02"/>
+        \\        <value caption="Oscillator Cycles 16K" name="OSCILLATOR_CYCLES_16K" value="0x03"/>
+        \\        <value caption="Oscillator Cycles 32K" name="OSCILLATOR_CYCLES_32K" value="0x04"/>
+        \\        <value caption="Oscillator Cycles 64K" name="OSCILLATOR_CYCLES_64K" value="0x05"/>
+        \\        <value caption="Oscillator Cycles 128K" name="OSCILLATOR_CYCLES_128K" value="0x06"/>
+        \\        <value caption="Oscillator Cycles 256K" name="OSCILLATOR_CYCLES_256K" value="0x07"/>
+        \\        <value caption="Oscillator Cycles 512K" name="OSCILLATOR_CYCLES_512K" value="0x08"/>
+        \\        <value caption="Oscillator Cycles 1024K" name="OSCILLATOR_CYCLES_1024K" value="0x09"/>
+        \\      </value-group>
+        \\    </module>
+        \\  </modules>
+        \\</avr-tools-device-file>
+    ;
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
+    defer db.destroy();
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    const peripheral_id = try db.get_peripheral_by_name("WDT") orelse return error.NoPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // Check for enum existence
+    _ = try db.get_enum_by_name(allocator, struct_id, "WDOG_TIMER_PRESCALE_4BITS");
+
+    const wdtcsr = try db.get_register_by_name(allocator, struct_id, "WDTCSR");
+
+    // There will 5 registers total, but one will be split into 4, totalling in 8.
+    const fields = try db.get_register_fields(allocator, wdtcsr.id, .{ .distinct = false });
+    try expectEqual(@as(usize, 8), fields.len);
+
+    // WDP_bit0 field checks
+    // ============
+    const wdp_bit0 = fields[0];
+    try expectEqualStrings("WDP_bit0", wdp_bit0.name);
+    try expectEqual(null, wdp_bit0.enum_id);
+
+    // WDP_bit1 field checks
+    // ============
+    const wdp_bit1 = fields[1];
+    try expectEqualStrings("WDP_bit1", wdp_bit1.name);
+    try expectEqual(null, wdp_bit1.enum_id);
+
+    // WDP_bit2 field checks
+    // ============
+    const wdp_bit2 = fields[2];
+    try expectEqualStrings("WDP_bit2", wdp_bit2.name);
+    try expectEqual(null, wdp_bit2.enum_id);
+
+    // WDP_bit3 field checks
+    // ============
+    const wdp_bit3 = fields[5]; // notice the field index
+    try expectEqualStrings("WDP_bit3", wdp_bit3.name);
+    try expectEqual(null, wdp_bit3.enum_id);
+}
+
+test "atdf.enum too big" {
+    // In the scenario below, COMM_SCK_RATE_3BIT is actually split across the
+    // SPR and SPI2X fields which are in different registers. In this case,
+    // it's similar to non-consecutive bitfields, we'll have the raw fields
+    // around, and the enum, but we won't associate them.
+    const text =
+        \\<avr-tools-device-file>
+        \\  <modules>
+        \\    <module caption="Serial Peripheral Interface" name="SPI">
+        \\      <register-group caption="Serial Peripheral Interface" name="SPI">
+        \\        <register caption="SPI Control Register" name="SPCR" offset="0x4C" size="1">
+        \\          <bitfield caption="SPI Interrupt Enable" mask="0x80" name="SPIE"/>
+        \\          <bitfield caption="SPI Enable" mask="0x40" name="SPE"/>
+        \\          <bitfield caption="Data Order" mask="0x20" name="DORD"/>
+        \\          <bitfield caption="Master/Slave Select" mask="0x10" name="MSTR"/>
+        \\          <bitfield caption="Clock polarity" mask="0x08" name="CPOL"/>
+        \\          <bitfield caption="Clock Phase" mask="0x04" name="CPHA"/>
+        \\          <bitfield caption="SPI Clock Rate Selects" mask="0x03" name="SPR" values="COMM_SCK_RATE_3BIT"/>
+        \\        </register>
+        \\        <register caption="SPI Status Register" name="SPSR" offset="0x4D" size="1" ocd-rw="R">
+        \\          <bitfield caption="SPI Interrupt Flag" mask="0x80" name="SPIF"/>
+        \\          <bitfield caption="Write Collision Flag" mask="0x40" name="WCOL"/>
+        \\          <bitfield caption="Double SPI Speed Bit" mask="0x01" name="SPI2X"/>
+        \\        </register>
+        \\        <register caption="SPI Data Register" name="SPDR" offset="0x4E" size="1" mask="0xFF" ocd-rw=""/>
+        \\      </register-group>
+        \\      <value-group name="COMM_SCK_RATE_3BIT">
+        \\        <value caption="fosc/4" name="FOSC_4" value="0x00"/>
+        \\        <value caption="fosc/16" name="FOSC_16" value="0x01"/>
+        \\        <value caption="fosc/64" name="FOSC_64" value="0x02"/>
+        \\        <value caption="fosc/128" name="FOSC_128" value="0x03"/>
+        \\        <value caption="fosc/2" name="FOSC_2" value="0x04"/>
+        \\        <value caption="fosc/8" name="FOSC_8" value="0x05"/>
+        \\        <value caption="fosc/32" name="FOSC_32" value="0x06"/>
+        \\        <value caption="fosc/64" name="FOSC_64" value="0x07"/>
+        \\      </value-group>
+        \\    </module>
+        \\  </modules>
+        \\</avr-tools-device-file>
+    ;
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
+    defer db.destroy();
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    const peripheral_id = try db.get_peripheral_by_name("SPI") orelse return error.NoPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // Check for enum existence
+    _ = try db.get_enum_by_name(allocator, struct_id, "COMM_SCK_RATE_3BIT");
+
+    const spcr = try db.get_register_by_name(allocator, struct_id, "SPCR");
+    const spsr = try db.get_register_by_name(allocator, struct_id, "SPSR");
+
+    // There will 5 registers total, but one will be split into 4, totalling in 8.
+    const spcr_fields = try db.get_register_fields(allocator, spcr.id, .{ .distinct = false });
+    const spsr_fields = try db.get_register_fields(allocator, spsr.id, .{ .distinct = false });
+
+    const spr = spcr_fields[0];
+    try expectEqualStrings("SPR", spr.name);
+    try expectEqual(null, spr.enum_id);
+
+    const spi2x = spsr_fields[0];
+    try expectEqualStrings("SPI2X", spi2x.name);
+    try expectEqual(null, spi2x.enum_id);
 }

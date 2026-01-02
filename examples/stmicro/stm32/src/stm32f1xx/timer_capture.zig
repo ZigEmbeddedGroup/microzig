@@ -23,6 +23,7 @@ const TX = gpio.Pin.from_port(.A, 9);
 pub const microzig_options = microzig.Options{
     .logFn = stm32.uart.log,
     .interrupts = .{ .TIM2 = .{ .c = isr_tim2 } },
+    .overwrite_hal_interrupts = true,
 };
 
 const comp = GPTimer.init(.TIM2);
@@ -64,7 +65,10 @@ pub fn main() !void {
     //first we need to enable the clocks for the GPIO and TIM peripherals
 
     //use HSE as system clock source, more stable than HSI
-    try rcc.apply_clock(.{ .SysClkSource = .RCC_SYSCLKSOURCE_HSE });
+    _ = try rcc.apply(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_HSE,
+        .flags = .{ .HSEOscillator = true },
+    });
 
     //enable GPIOA and TIM2, TIM3, AFIO clocks
     //AFIO is needed for alternate function remapping, not used in this example but eneble for easy remapping

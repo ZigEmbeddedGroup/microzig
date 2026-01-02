@@ -24,8 +24,8 @@ const port_list: []const struct {
 } = &.{
     .{ .name = "esp", .dep_name = "port/espressif/esp" },
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
-    .{ .name = "atsam", .dep_name = "port/microchip/atsam" },
-    .{ .name = "avr", .dep_name = "port/microchip/avr" },
+    .{ .name = "samd51", .dep_name = "port/microchip/samd51" },
+    .{ .name = "atmega", .dep_name = "port/microchip/atmega" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
     .{ .name = "mcx", .dep_name = "port/nxp/mcx" },
@@ -72,78 +72,13 @@ pub fn build(b: *Build) void {
 
     const package_step = b.step("package", "Package monorepo using boxzer");
     package_step.dependOn(&boxzer_run.step);
-
-    generate_release_steps(b);
-}
-
-fn generate_release_steps(b: *Build) void {
-    const release_regz_step = b.step("release-regz", "Generate the release binaries for regz");
-    const release_uf2_step = b.step("release-uf2", "Generate the release binaries for uf2");
-    const release_esp_image_step = b.step("release-esp-image", "Generate the release binaries for esp image");
-
-    for (exe_targets) |t| {
-        const release_target = b.resolveTargetQuery(t);
-
-        const regz_dep = b.dependency("tools/regz", .{
-            .optimize = .ReleaseSafe,
-            .target = release_target,
-        });
-
-        const regz_artifact = regz_dep.artifact("regz");
-        const regz_target_output = b.addInstallArtifact(regz_artifact, .{
-            .dest_dir = .{
-                .override = .{
-                    .custom = t.zigTriple(b.allocator) catch unreachable,
-                },
-            },
-        });
-        release_regz_step.dependOn(&regz_target_output.step);
-    }
-
-    for (exe_targets) |t| {
-        const release_target = b.resolveTargetQuery(t);
-
-        const uf2_dep = b.dependency("tools/uf2", .{
-            .optimize = .ReleaseSafe,
-            .target = release_target,
-        });
-
-        const uf2_artifact = uf2_dep.artifact("elf2uf2");
-        const uf2_target_output = b.addInstallArtifact(uf2_artifact, .{
-            .dest_dir = .{
-                .override = .{
-                    .custom = t.zigTriple(b.allocator) catch unreachable,
-                },
-            },
-        });
-        release_uf2_step.dependOn(&uf2_target_output.step);
-    }
-
-    for (exe_targets) |t| {
-        const release_target = b.resolveTargetQuery(t);
-
-        const esp_image_dep = b.dependency("tools/esp-image", .{
-            .optimize = .ReleaseSafe,
-            .target = release_target,
-        });
-
-        const elf2image_artifact = esp_image_dep.artifact("elf2image");
-        const elf2image_target_output = b.addInstallArtifact(elf2image_artifact, .{
-            .dest_dir = .{
-                .override = .{
-                    .custom = t.zigTriple(b.allocator) catch unreachable,
-                },
-            },
-        });
-        release_esp_image_step.dependOn(&elf2image_target_output.step);
-    }
 }
 
 pub const PortSelect = struct {
     esp: bool = false,
     gd32: bool = false,
-    atsam: bool = false,
-    avr: bool = false,
+    samd51: bool = false,
+    atmega: bool = false,
     nrf5x: bool = false,
     lpc: bool = false,
     mcx: bool = false,
@@ -374,22 +309,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Dwarf format option for the firmware executable.
             dwarf_format: ?std.dwarf.Format = null,
-
-            /// Additional patches the user may apply to the generated register
-            /// code. This does not override the chip's existing patches.
-            patches: []const regz.patch.Patch = &.{},
         };
-
-        fn serialize_patches(b: *Build, patches: []const regz.patch.Patch) []const u8 {
-            var buf: std.Io.Writer.Allocating = .init(b.allocator);
-
-            for (patches) |patch| {
-                buf.writer.print("{f}", .{std.json.fmt(patch, .{})}) catch @panic("OOM");
-                buf.writer.writeByte('\n') catch @panic("OOM");
-            }
-
-            return buf.toOwnedSlice() catch @panic("OOM");
-        }
 
         /// Creates a new firmware for a given target.
         pub fn add_firmware(mb: *Self, options: CreateFirmwareOptions) *Firmware {
@@ -419,6 +339,17 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             i += 1;
                         }
                     } else @panic("no ram memory region found for setting the end-of-stack address");
+                },
+                .ram_region_name => |name| blk: {
+                    for (target.chip.memory_regions) |region| {
+                        if (region.name) |region_name| {
+                            if (std.mem.eql(u8, region_name, name)) {
+                                if (region.tag == .ram) {
+                                    break :blk .{ .address = region.offset + region.length };
+                                } else @panic("Named region found is not a ram region");
+                            }
+                        }
+                    } else @panic("no ram memory named region found for setting the end-of-stack address");
                 },
                 .symbol_name => |name| .{ .symbol_name = name },
             };
@@ -465,27 +396,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
-                    regz_run.addArg("--microzig");
                     regz_run.addArg("--format");
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file
-
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
-                    // From chip definition
-                    patches.appendSlice(target.chip.patches) catch @panic("OOM");
-
-                    // From user invoking `add_firmware`
-                    patches.appendSlice(options.patches) catch @panic("OOM");
-
-                    if (patches.items.len > 0) {
-                        // write patches to file
-                        const patch_ndjson = serialize_patches(b, patches.items);
-                        const write_file_step = b.addWriteFiles();
-                        const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
-
+                    for (target.chip.patch_files) |patch_file| {
                         regz_run.addArg("--patch_path");
                         regz_run.addFileArg(patch_file);
                     }
@@ -496,27 +413,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .embassy => |path| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
-                    regz_run.addArg("--microzig");
                     regz_run.addArg("--format");
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file
-
                     const chips_dir = regz_run.addOutputDirectoryArg("chips");
-                    var patches: std.array_list.Managed(regz.patch.Patch) = .init(b.allocator);
 
-                    // From chip definition
-                    patches.appendSlice(target.chip.patches) catch @panic("OOM");
-
-                    // From user invoking `add_firmware`
-                    patches.appendSlice(options.patches) catch @panic("OOM");
-
-                    if (patches.items.len > 0) {
-                        // write patches to file
-                        const patch_ndjson = serialize_patches(b, patches.items);
-                        const write_file_step = b.addWriteFiles();
-                        const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
-
+                    for (target.chip.patch_files) |patch_file| {
                         regz_run.addArg("--patch_path");
                         regz_run.addFileArg(patch_file);
                     }

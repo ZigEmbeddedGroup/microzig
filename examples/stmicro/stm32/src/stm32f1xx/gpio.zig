@@ -7,12 +7,16 @@ const gpio = stm32.gpio;
 const time = stm32.time;
 
 pub fn main() !void {
-    try rcc.apply_clock(.{
-        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
+    _ = try rcc.apply(.{
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
         .PLLSource = .RCC_PLLSOURCE_HSE,
         .PLLMUL = .RCC_PLL_MUL9,
-        .APB1Prescaler = .RCC_HCLK_DIV2,
-        .RTCClkSource = .RCC_RTCCLKSOURCE_LSI,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
+        .RTCClockSelection = .RCC_RTCCLKSOURCE_LSI,
+        .flags = .{
+            .RTCUsed_ForRCC = true,
+            .HSEOscillator = true,
+        },
     });
     rcc.enable_clock(.GPIOC);
 

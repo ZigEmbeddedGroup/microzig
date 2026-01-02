@@ -19,7 +19,12 @@ pub const Define = struct {
 pub const Program = struct {
     name: []const u8,
     defines: []const Define,
+
+    /// Stores the raw instruction stream.
     instructions: []const u16,
+    /// For each instruction, stores the kind of relocation required on load.
+    relocations: []const Relocation,
+
     origin: ?u5,
     side_set: ?encoder.SideSet,
     wrap_target: ?u5,
@@ -28,6 +33,14 @@ pub const Program = struct {
     pub fn get_mask(program: Program) u32 {
         return (@as(u32, 1) << @as(u5, @intCast(program.instructions.len))) - 1;
     }
+};
+
+pub const Relocation = union(enum) {
+    /// Keep the instruction as-is.
+    none,
+
+    /// Add the program origin to the lower 5 bit of the instruction.
+    jmpslot,
 };
 
 pub const Output = struct {

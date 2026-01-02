@@ -6,6 +6,7 @@ const Self = @This();
 
 chips: Chips,
 boards: struct {
+    stm32l476discovery: *const microzig.Target,
     stm32f3discovery: *const microzig.Target,
     stm32f4discovery: *const microzig.Target,
     stm3240geval: *const microzig.Target,
@@ -14,11 +15,27 @@ boards: struct {
 
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
-    const chips = Chips.init(dep);
+
+    const clockhelper_dep = b.dependency("ClockHelper", .{}).module("clockhelper");
+
+    const hal_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
+        .{
+            .name = "ClockTree",
+            .module = clockhelper_dep,
+        },
+    }) catch @panic("out of memory");
+
+    const chips = Chips.init(dep, hal_imports);
 
     return .{
         .chips = chips,
         .boards = .{
+            .stm32l476discovery = chips.STM32L476VG.derive(.{
+                .board = .{
+                    .name = "STM32L476DISCOVERY",
+                    .root_source_file = b.path("src/boards/STM32L476DISCOVERY.zig"),
+                },
+            }),
             .stm32f3discovery = chips.STM32F303VC.derive(.{
                 .board = .{
                     .name = "STM32F3DISCOVERY",
@@ -27,6 +44,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .hal = microzig.HardwareAbstractionLayer{
                     .root_source_file = b.path("src/hals/STM32F303.zig"),
                 },
+                .stack = .{ .ram_region_name = "CCMRAM" },
             }),
             .stm32f4discovery = chips.STM32F407VG.derive(.{
                 .board = .{

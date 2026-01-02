@@ -24,15 +24,23 @@ const Arguments = struct {
     format: ?Database.Format = null,
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
-    patch_path: ?[]const u8 = null,
-    dump: bool = false,
-    microzig: bool = false,
+    patch_paths: std.ArrayList([]const u8) = .{},
+    dump_path: ?[:0]const u8 = null,
     help: bool = false,
+
+    fn append_patch_path(args: *Arguments, patch_path: []const u8) !void {
+        const copy = try args.allocator.dupe(u8, patch_path);
+        errdefer args.allocator.free(copy);
+
+        try args.patch_paths.append(args.allocator, copy);
+    }
 
     fn deinit(args: *Arguments) void {
         if (args.input_path) |input_path| args.allocator.free(input_path);
         if (args.output_path) |output_path| args.allocator.free(output_path);
-        if (args.patch_path) |patch_path| args.allocator.free(patch_path);
+
+        for (args.patch_paths.items) |patch_path| args.allocator.free(patch_path);
+        args.patch_paths.deinit(args.allocator);
     }
 };
 
@@ -40,9 +48,8 @@ fn print_usage(writer: *std.Io.Writer) !void {
     try writer.writeAll(
         \\regz
         \\  --help                Display this help and exit
-        \\  --dump                Dump SQLite file instead of generate code
-        \\  --microzig            Generate for microzig instead of a standalone file
-        \\  --format <str>        Explicitly set format type, one of: svd, atdf, json
+        \\  --db_dump_path <str>  Dump SQLite file
+        \\  --format <str>        Explicitly set format type, one of: svd, atdf, json, embassy
         \\  --output_path <str>   Write to a file
         \\  --patch_path <str>    After reading format, apply NDJSON based patch file
         \\<str>
@@ -64,10 +71,9 @@ fn parse_args(allocator: Allocator) !Arguments {
     while (i < args.len) : (i += 1)
         if (std.mem.eql(u8, args[i], "--help")) {
             ret.help = true;
-        } else if (std.mem.eql(u8, args[i], "--dump")) {
-            ret.dump = true;
-        } else if (std.mem.eql(u8, args[i], "--microzig")) {
-            ret.microzig = true;
+        } else if (std.mem.eql(u8, args[i], "--db_dump_path")) {
+            i += 1;
+            ret.dump_path = try allocator.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--format")) {
             i += 1;
             if (i >= args.len)
@@ -76,7 +82,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             const format_str = args[i];
 
             ret.format = std.meta.stringToEnum(Database.Format, format_str) orelse {
-                std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{
+                std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json, embassy", .{
                     format_str,
                 });
                 return error.Explained;
@@ -86,7 +92,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             ret.output_path = try allocator.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--patch_path")) {
             i += 1;
-            ret.patch_path = try allocator.dupe(u8, args[i]);
+            try ret.append_patch_path(args[i]);
         } else if (std.mem.startsWith(u8, args[i], "-")) {
             std.log.err("Unknown argument '{s}'", .{args[i]});
 
@@ -136,12 +142,20 @@ fn main_impl() anyerror!void {
     var db = try Database.create_from_path(allocator, format, input_path);
     defer db.destroy();
 
-    if (args.patch_path) |patch_path| {
-        const patch = try std.fs.cwd().readFileAlloc(allocator, patch_path, 1024 * 1024);
+    for (args.patch_paths.items) |patch_path| {
+        const patch = try std.fs.cwd().readFileAllocOptions(allocator, patch_path, std.math.maxInt(u64), null, .@"1", 0);
         defer allocator.free(patch);
 
-        // TODO: diagnostics
-        try db.apply_patch(patch);
+        var diags: std.zon.parse.Diagnostics = .{};
+        defer diags.deinit(db.gpa);
+
+        db.apply_patch(patch, &diags) catch |err| {
+            if (err == error.ParseZon) {
+                std.log.err("Failed to parse zon patch file '{s}': {f}", .{ patch_path, diags });
+            }
+
+            return err;
+        };
     }
 
     // arch dependent stuff
@@ -152,20 +166,18 @@ fn main_impl() anyerror!void {
         for (try db.get_devices(arena.allocator())) |device| {
             if (device.arch.is_arm()) {
                 const arm = @import("arch/arm.zig");
-                try arm.load_system_interrupts(db, &device);
+                try arm.load_system_interrupts(db, device.id, device.arch);
             }
         }
     }
 
-    if (args.dump) {
-        try db.backup(output_path);
-        return;
+    if (args.dump_path) |dump_path| {
+        try db.backup(dump_path);
     }
-
     // output_path is the directory to write files
-    var output_dir = try std.fs.cwd().makeOpenPath(args.output_path.?, .{});
+    var output_dir = try std.fs.cwd().makeOpenPath(output_path, .{});
     defer output_dir.close();
 
     var fs = FS_Directory.init(output_dir);
-    try db.to_zig(fs.directory(), .{ .for_microzig = args.microzig });
+    try db.to_zig(fs.directory(), .{});
 }

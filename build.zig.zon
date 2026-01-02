@@ -25,8 +25,8 @@
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
-        .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam", .lazy = true },
-        .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
+        .@"port/microchip/samd51" = .{ .path = "port/microchip/samd51", .lazy = true },
+        .@"port/microchip/atmega" = .{ .path = "port/microchip/atmega", .lazy = true },
         .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
         .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
         .@"port/nxp/mcx" = .{ .path = "port/nxp/mcx", .lazy = true },

@@ -1,10 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const CPU_Options = struct {
-    /// When true, the vector table lives in RAM.
-    ram_vector_table: bool = false,
-};
+const shared = @import("shared_types.zig");
 
 pub const scb_base_offset = 0x0d00;
 

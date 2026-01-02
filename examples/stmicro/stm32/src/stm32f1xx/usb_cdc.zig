@@ -10,7 +10,7 @@ const gpio = stm32.gpio;
 const time = stm32.time;
 const Duration = microzig.drivers.time.Duration;
 const usb_ll = stm32.usb.usb_ll;
-const usb_utils = stm32.usb.usb_utils;
+const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
@@ -38,10 +38,11 @@ const DeviceDescriptor = [_]u8{
     0x03, // iSerialNumber
     0x01, // bNumConfigurations
 };
-const langID = [_]u8{ 0x04, 0x03, 0x09, 0x04 };
-const prod_id = usb_utils.string_to_descriptor("STM32 CDC example");
-const manu_id = usb_utils.string_to_descriptor("MicroZig");
-const serial_id = usb_utils.string_to_descriptor("12345");
+
+const lang_id: descriptor.String = .from_lang(.English);
+const prod_id: descriptor.String = .from_str("STM32 CDC example");
+const manu_id: descriptor.String = .from_str("MicroZig");
+const serial_id: descriptor.String = .from_str("12345");
 
 // USB Configuration Descriptor
 const ConfigDescriptor = [_]u8{
@@ -198,10 +199,10 @@ var line_pkg: [7]u8 = .{ 0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08 };
 //=============== USB FUNC =================
 fn get_string(index: usize) []const u8 {
     return switch (index) {
-        0 => &langID,
-        1 => &manu_id,
-        2 => &prod_id,
-        3 => &serial_id,
+        0 => lang_id.data,
+        1 => manu_id.data,
+        2 => prod_id.data,
+        3 => serial_id.data,
         else => &[_]u8{},
     };
 }
@@ -411,12 +412,16 @@ fn CDC_read(buf: []u8, timeout: ?Duration) ![]const u8 {
 }
 
 pub fn main() !void {
-    try rcc.apply_clock(.{
+    _ = try rcc.apply(.{
         .PLLSource = .RCC_PLLSOURCE_HSE,
         .PLLMUL = .RCC_PLL_MUL9,
-        .SysClkSource = .RCC_SYSCLKSOURCE_PLLCLK,
-        .APB1Prescaler = .RCC_HCLK_DIV2,
+        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+        .APB1CLKDivider = .RCC_HCLK_DIV2,
         .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+        .flags = .{
+            .HSEOscillator = true,
+            .USBUsed_ForRCC = true,
+        },
     });
 
     rcc.enable_clock(.GPIOA);

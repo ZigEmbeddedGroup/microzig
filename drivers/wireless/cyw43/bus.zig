@@ -39,6 +39,10 @@ pub const Cyw43_Bus = struct {
     internal_delay_ms: *const delayus_callback,
     backplane_window: u32 = 0xAAAA_AAAA,
 
+    // WLAN packet buffers (u32 aligned for SPI)
+    wlan_tx_buf: [512]u32 = undefined, // 2048 bytes
+    wlan_rx_buf: [512]u32 = undefined, // 2048 bytes
+
     pub fn init_bus(self: *Self) !void {
         // Init sequence
         try self.pwr_pin.write(.low);
@@ -327,6 +331,45 @@ pub const Cyw43_Bus = struct {
 
     inline fn swap16(x: u32) u32 {
         return x << 16 | x >> 16;
+    }
+
+    /// Get buffer for building WLAN TX packets.
+    /// Returns byte slice starting after the command word (which wlan_send will fill).
+    pub fn get_wlan_tx_buffer(self: *Self) []u8 {
+        return std.mem.sliceAsBytes(self.wlan_tx_buf[1..]);
+    }
+
+    /// Send WLAN packet. Caller should have written packet data to get_wlan_tx_buffer().
+    /// Builds command word and performs SPI transaction.
+    pub fn wlan_send(self: *Self, len: usize) void {
+        const aligned_len = (len + 3) & ~@as(usize, 3);
+        const cmd = Cyw43Cmd{
+            .cmd = .write,
+            .incr = .incremental,
+            .func = .wlan,
+            .addr = 0,
+            .len = @intCast(aligned_len),
+        };
+        self.wlan_tx_buf[0] = @bitCast(cmd);
+
+        const words = (aligned_len + 3) / 4;
+        // spi_write_blocking returns chip status register, not byte count
+        _ = self.spi.spi_write_blocking(self.wlan_tx_buf[0 .. words + 1]);
+    }
+
+    /// Receive WLAN packet. Returns slice of received data.
+    pub fn wlan_recv(self: *Self, len: usize) []const u8 {
+        const words = (len + 3) / 4;
+        const cmd = Cyw43Cmd{
+            .cmd = .read,
+            .incr = .incremental,
+            .func = .wlan,
+            .addr = 0,
+            .len = @intCast(len),
+        };
+        // spi_read_blocking returns chip status register, not byte count
+        _ = self.spi.spi_read_blocking(@bitCast(cmd), self.wlan_rx_buf[0..words]);
+        return std.mem.sliceAsBytes(self.wlan_rx_buf[0..words])[0..len];
     }
 };
 

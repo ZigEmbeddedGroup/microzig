@@ -17,3 +17,11 @@ pub fn sleep_us(time_us: u64) void {
     const end_time = time.make_timeout_us(get_time_since_boot(), time_us);
     while (!end_time.is_reached_by(get_time_since_boot())) {}
 }
+
+pub fn deadline_in_ms(time_ms: u32) microzig.drivers.time.Deadline {
+    return .init_relative(get_time_since_boot(), .from_ms(time_ms));
+}
+
+pub fn deadline_in_us(time_us: u64) microzig.drivers.time.Deadline {
+    return .init_relative(get_time_since_boot(), .from_us(time_us));
+}

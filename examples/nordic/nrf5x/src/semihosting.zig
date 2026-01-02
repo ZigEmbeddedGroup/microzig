@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const board = microzig.board;
 const nrf = microzig.hal;
 
-const semihosting = microzig.core.experimental.ARM_semihosting;
+const semihosting = microzig.core.arm_semihosting;
 
 pub fn main() void {
     board.init();

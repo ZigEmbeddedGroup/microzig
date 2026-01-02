@@ -20,7 +20,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
@@ -47,6 +46,8 @@ pub fn build(b: *std.Build) void {
         // .{ .target = "board:waveshare/rp2040_plus_16m", .name = "rp2040-plus-16m" },
     };
 
+    const font8x8_dep = b.dependency("font8x8", .{});
+
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
         .{ .name = "i2c-accel", .file = "src/i2c_accel.zig" },
@@ -62,6 +63,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "squarewave", .file = "src/squarewave.zig" },
         .{ .name = "ws2812", .file = "src/ws2812.zig" },
         .{ .name = "blinky", .file = "src/blinky.zig" },
+        .{ .name = "ds18b20", .file = "src/ds18b20.zig" },
         .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
         .{ .name = "gpio-interrupts", .file = "src/gpio_irq.zig" },
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
@@ -70,33 +72,44 @@ pub fn build(b: *std.Build) void {
         .{ .name = "system_timer", .file = "src/system_timer.zig" },
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
+        .{ .name = "usb-hid", .file = "src/usb_hid.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
         .{ .name = "dma", .file = "src/dma.zig" },
         .{ .name = "cyw43", .file = "src/cyw43.zig" },
+        .{ .name = "cyw43-blinky", .file = "src/cyw43/blinky.zig" },
+        .{ .name = "cyw43-wifi-scan", .file = "src/cyw43/wifi_scan.zig" },
+        .{ .name = "cyw43-wifi-connect", .file = "src/cyw43/wifi_connect.zig" },
         .{ .name = "allocator", .file = "src/allocator.zig" },
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
+        .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
+            .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
+        } },
+        .{ .name = "net-dhcp", .file = "src/net/dhcp.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
     available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         available_examples.append(.{
-            .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+            .target = raspberrypi.pico,
             .name = b.fmt("pico_{s}", .{example.name}),
             .file = example.file,
+            .imports = example.imports,
         }) catch @panic("out of memory");
 
         available_examples.append(.{
-            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+            .target = raspberrypi.pico2_arm,
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
+            .imports = example.imports,
         }) catch @panic("out of memory");
 
         if (example.works_with_riscv) {
             available_examples.append(.{
-                .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
+                .target = raspberrypi.pico2_riscv,
                 .name = b.fmt("pico2_riscv_{s}", .{example.name}),
                 .file = example.file,
+                .imports = example.imports,
             }) catch @panic("out of memory");
         }
     }
@@ -117,7 +130,30 @@ pub fn build(b: *std.Build) void {
             .target = example.target,
             .optimize = optimize,
             .root_source_file = b.path(example.file),
+            .imports = example.imports,
         });
+
+        if (std.mem.indexOf(u8, example.name, "_net-") != null) {
+            const target = b.resolveTargetQuery(firmware.target.zig_target);
+            const foundation_dep = b.dependency("foundationlibc", .{
+                .target = target,
+                .optimize = optimize,
+            });
+            const lwip_dep = b.dependency("lwip", .{
+                .target = target,
+                .optimize = optimize,
+            });
+            const lwip_mod = lwip_dep.module("lwip");
+            // link libc
+            lwip_mod.linkLibrary(foundation_dep.artifact("foundation"));
+            // add path to the configuration, lwipopts.h
+            lwip_mod.addIncludePath(b.path("src/net/lwip/include"));
+            // add c import paths
+            for (lwip_mod.include_dirs.items) |dir| {
+                firmware.app_mod.include_dirs.append(b.allocator, dir) catch @panic("out of memory");
+            }
+            firmware.app_mod.addImport("lwip", lwip_mod);
+        }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.
@@ -134,10 +170,12 @@ const Example = struct {
     target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
+    imports: []const std.Build.Module.Import = &.{},
 };
 
 const ChipAgnosticExample = struct {
     name: []const u8,
     file: []const u8,
     works_with_riscv: bool = true,
+    imports: []const std.Build.Module.Import = &.{},
 };

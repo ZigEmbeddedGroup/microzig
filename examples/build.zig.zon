@@ -6,8 +6,8 @@
         // examples
         .@"espressif/esp" = .{ .path = "espressif/esp" },
         .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
-        .@"microchip/atsam" = .{ .path = "microchip/atsam" },
-        .@"microchip/avr" = .{ .path = "microchip/avr" },
+        .@"microchip/samd51" = .{ .path = "microchip/samd51" },
+        .@"microchip/atmega" = .{ .path = "microchip/atmega" },
         .@"nordic/nrf5x" = .{ .path = "nordic/nrf5x" },
         .@"nxp/lpc" = .{ .path = "nxp/lpc" },
         .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },

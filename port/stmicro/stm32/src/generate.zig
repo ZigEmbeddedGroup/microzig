@@ -71,6 +71,7 @@ pub fn main() !void {
     std.sort.insertion(std.json.Parsed(ChipFile), chip_files.items, {}, ChipFile.less_than);
 
     const chips_file = try std.fs.cwd().createFile("src/Chips.zig", .{});
+
     defer chips_file.close();
 
     var buf: [4096]u8 = undefined;
@@ -89,6 +90,9 @@ fn generate_chips_file(
     chip_files: []const std.json.Parsed(ChipFile),
 ) !void {
     try writer.writeAll(
+        \\//AUTOMATICALLY GENERATED FILE!
+        \\//For modifications, consider editing the generation script in generate.zig
+        \\
         \\const std = @import("std");
         \\const microzig = @import("microzig/build-internals");
         \\
@@ -104,7 +108,7 @@ fn generate_chips_file(
 
     try writer.writeAll(
         \\
-        \\pub fn init(dep: *std.Build.Dependency) Self {
+        \\pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) Self {
         \\    const b = dep.builder;
         \\    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
         \\    var ret: Self = undefined;
@@ -163,6 +167,8 @@ fn generate_chips_file(
             );
         }
 
+        var has_sram = false;
+
         try writer.print(
             \\        .chip = .{{
             \\            .name = "{s}",
@@ -186,6 +192,10 @@ fn generate_chips_file(
 
             var flash_bank: ?ChipFile.Memory = null;
             for (chip_file.memory) |memory| {
+                if (std.mem.eql(u8, memory.name, "SRAM")) {
+                    has_sram = true;
+                }
+
                 if (memory.kind == .flash) {
                     var part_iter = std.mem.splitBackwardsScalar(u8, memory.name, '_');
 
@@ -232,9 +242,9 @@ fn generate_chips_file(
 
             for (chip_memory.items) |memory| {
                 try writer.print(
-                    \\                .{{ .tag = .{s}, .offset = 0x{X}, .length = 0x{X}, .access = .{s} }},
+                    \\                .{{ .name = "{s}", .tag = .{s}, .offset = 0x{X}, .length = 0x{X}, .access = .{s} }},
                     \\
-                , .{ switch (memory.kind) {
+                , .{ memory.name, switch (memory.kind) {
                     .flash => "flash",
                     .ram => "ram",
                 }, memory.address, memory.size, switch (memory.kind) {
@@ -250,11 +260,30 @@ fn generate_chips_file(
             \\
         );
 
+        if (has_sram) {
+            try writer.writeAll(
+                \\        .linker_script = .{
+                \\            .file = b.path("ld/dma_sram.ld"),
+                \\        },
+                \\
+            );
+        }
+
         // TODO: Better system to detect if hal is present.
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
                 \\        .hal = .{
-                \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
+                \\            .root_source_file = b.path("src/hals/STM32F103.zig"),
+                \\            .imports = hal_imports,
+                \\        },
+                \\
+            );
+        }
+        if (std.mem.startsWith(u8, chip_file.name, "STM32L47")) {
+            try writer.writeAll(
+                \\        .hal = .{
+                \\            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+                \\            .imports = hal_imports,
                 \\        },
                 \\
             );

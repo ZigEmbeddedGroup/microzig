@@ -98,6 +98,29 @@ jobs:
         run: zig build test
         working-directory: tools/printer
 
+  build-sorcerer:
+    name: Build Sorcerer
+    continue-on-error: true
+    strategy:
+      matrix:
+        # Skip Ubuntu - sorcerer is a GUI tool with complex dependencies (SDL3, dvui)
+        # that are difficult to satisfy in headless CI environments
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build Sorcerer
+        run: zig build
+        working-directory: tools/sorcerer
+      - name: Test Sorcerer
+        run: zig build test
+        working-directory: tools/sorcerer
+
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
     continue-on-error: true
@@ -168,14 +191,15 @@ jobs:
         example_dir: [
             espressif/esp,
             gigadevice/gd32,
-            #microchip/avr,
-            microchip/atsam,
+            microchip/atmega,
+            microchip/samd51,
             nordic/nrf5x,
             nxp/lpc,
             nxp/mcx,
             stmicro/stm32,
             raspberrypi/rp2xxx,
             wch/ch32v,
+            no_hal/stm32_l031,
           ]
     steps:
       - name: Checkout

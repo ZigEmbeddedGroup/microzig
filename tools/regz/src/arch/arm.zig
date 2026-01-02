@@ -50,14 +50,14 @@ const system_interrupts = struct {
     pub const cortex_m55 = cortex_m33;
 };
 
-pub fn load_system_interrupts(db: *Database, device: *const Database.Device) !void {
-    assert(device.arch.is_arm());
+pub fn load_system_interrupts(db: *Database, device_id: DeviceID, arch: Arch) !void {
+    assert(arch.is_arm());
 
     inline for (@typeInfo(Arch).@"enum".fields) |field| {
-        if (device.arch == @field(Arch, field.name)) {
+        if (arch == @field(Arch, field.name)) {
             if (@hasDecl(system_interrupts, field.name)) {
                 for (@field(system_interrupts, field.name)) |interrupt| {
-                    _ = try db.create_interrupt(device.id, .{
+                    _ = try db.create_interrupt(device_id, .{
                         .name = interrupt.name,
                         .idx = interrupt.index,
                         .description = interrupt.description,
@@ -68,17 +68,18 @@ pub fn load_system_interrupts(db: *Database, device: *const Database.Device) !vo
             break;
         }
     } else {
-        log.warn("TODO: system interrupts handlers for {}", .{device.arch});
+        log.warn(", system interrupts handlers are not implemented for {}. " ++
+            "Please cut a ticket: https://github.com/ZigEmbeddedGroup/microzig/issues", .{arch});
     }
 
-    const vendor_systick_config = if (try db.get_device_property(db.gpa, device.id, "cpu.vendorSystickConfig")) |str| blk: {
+    const vendor_systick_config = if (try db.get_device_property(db.gpa, device_id, "cpu.vendorSystickConfig")) |str| blk: {
         defer db.gpa.free(str);
 
         break :blk try svd.parse_bool(str);
     } else false;
 
     if (!vendor_systick_config) {
-        _ = try db.create_interrupt(device.id, .{
+        _ = try db.create_interrupt(device_id, .{
             .name = system_interrupts.systick.name,
             .idx = system_interrupts.systick.index,
         });

@@ -83,25 +83,33 @@ pub const Target = struct {
         hal: ?HardwareAbstractionLayer = null,
         board: ?Board = null,
         linker_script: ?LinkerScript = null,
+        stack: ?Stack = null,
         entry: ?Build.Step.Compile.Entry = null,
         patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
     };
 
     /// Creates a new target from an existing one.
     pub fn derive(from: *const Target, options: DeriveOptions) *Target {
+        const allocator = from.dep.builder.allocator;
+        const chip = if (options.chip) |chip|
+            chip.copy(allocator)
+        else
+            from.chip.copy(allocator);
+
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
         ret.* = .{
             .dep = from.dep,
             .preferred_binary_format = options.preferred_binary_format orelse from.preferred_binary_format,
             .zig_target = options.zig_target orelse from.zig_target,
             .cpu = options.cpu orelse from.cpu,
-            .chip = options.chip orelse from.chip,
+            .chip = chip,
             .single_threaded = options.single_threaded orelse from.single_threaded,
             .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
             .ram_image = options.ram_image orelse from.ram_image,
             .hal = options.hal orelse from.hal,
             .board = options.board orelse from.board,
             .linker_script = options.linker_script orelse from.linker_script,
+            .stack = options.stack orelse from.stack,
             .entry = options.entry orelse from.entry,
             .patch_elf = options.patch_elf orelse from.patch_elf,
         };
@@ -148,7 +156,18 @@ pub const Chip = struct {
     memory_regions: []const MemoryRegion,
 
     /// Register patches for this chip.
-    patches: []const Patch = &.{},
+    patch_files: []const LazyPath = &.{},
+
+    fn copy(from: Chip, gpa: std.mem.Allocator) Chip {
+        const patch_files_copy = gpa.dupe(LazyPath, from.patch_files) catch @panic("OOM");
+        return Chip{
+            .name = from.name,
+            .url = from.url,
+            .register_definition = from.register_definition,
+            .memory_regions = from.memory_regions,
+            .patch_files = patch_files_copy,
+        };
+    }
 };
 
 /// Defines a hardware abstraction layer.
@@ -256,6 +275,8 @@ pub const Stack = union(enum) {
     address: usize,
     /// Place the stack at the end of the n-th ram memory region.
     ram_region_index: usize,
+    /// Place the stack at the end of the named ram memory region.
+    ram_region_name: []const u8,
     /// Place the stack at a symbol's address.
     symbol_name: []const u8,
 };
