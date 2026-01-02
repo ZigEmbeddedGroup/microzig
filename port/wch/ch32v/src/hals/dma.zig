@@ -151,11 +151,19 @@ pub const Channel = enum(u3) {
             .DMA1 => .DMA1,
             .DMA2 => .DMA2,
         });
+
+        // Disable channel before reconfiguration
+        regs.CFGR.modify(.{ .EN = 0 });
+
+        // Clear all interrupt flags for this channel. There are four
+        // interrupts per channel, so we shift by 4* the channel number.
+        regs.INTFCR.write_raw(@as(u32, 0b1111) << ((@intFromEnum(chan) % 7) * 4));
+
         // TODO: Figure out the type of the read and write
         // Set peripheral address (memory address when in mem-2-mem mode)
-        regs.PADDR.write_raw(@intFromPtr(&write));
+        regs.PADDR.write_raw(@intFromPtr(write.ptr));
         // Set memory address
-        regs.MADDR.write_raw(@intFromPtr(&read));
+        regs.MADDR.write_raw(@intFromPtr(read.ptr));
         // TODO: Set the amount of data to write
         regs.CNTR.write_raw(read.len);
         // TODO: Set the priority
@@ -184,7 +192,7 @@ pub const Channel = enum(u3) {
     pub fn is_busy(chan: Channel) bool {
         // TODO: Need the channel
         const regs = get_regs(.DMA1, chan);
-        return regs.INTFR.read().TCIF4 == 1;
+        return regs.INTFR.read().TCIF4 == 0;
     }
 
     pub fn wait_for_finish_blocking(chan: Channel) void {
