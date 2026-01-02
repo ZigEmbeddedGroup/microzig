@@ -1819,7 +1819,7 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         \\INSERT INTO struct_fields
         \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride, access)
         \\VALUES
-        \\  (?, ?, ?, ?, ?, ?, ?, ?)
+        \\  (?, ?, ?, ?, ?, ?, ?, ?, ?)
     , .{
         @intFromEnum(parent),
         opts.name,
@@ -1832,7 +1832,7 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         if (opts.access) |access| access.to_string() else null,
     });
 
-    log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?}", .{
+    log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?} access={?}", .{
         parent,
         opts.name,
         opts.offset_bits,
