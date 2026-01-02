@@ -13,40 +13,19 @@ const drivers = mdf.base;
 const hal = microzig.hal;
 
 const DMA1 = microzig.chip.peripherals.DMA1;
-const DMA2 = microzig.chip.peripherals.DMA2;
 const DmaRegs = microzig.chip.types.peripherals.DMA1;
 
 // TODO: There are two DMA peripherals and a different number of channels
 // available. Further, some registers are shared between channels e.g. INTR and
 // INTFR.
 pub const Regs = extern struct {
-    // TODO: Use microzig.chip.types instead of TypeOf
-    INTFR: *volatile @TypeOf(DMA1.INTFR),
-    INTFCR: *volatile @TypeOf(DMA1.INTFCR),
-    CFGR: *volatile @TypeOf(DMA1.CFGR1),
-    CNTR: *volatile @TypeOf(DMA1.CNTR1),
-    PADDR: *volatile @TypeOf(DMA1.PADDR1),
-    MADDR: *volatile @TypeOf(DMA1.MADDR1),
+    INTFR: *volatile @FieldType(DmaRegs, "INTFR"),
+    INTFCR: *volatile @FieldType(DmaRegs, "INTFCR"),
+    CFGR: *volatile @FieldType(DmaRegs, "CFGR1"),
+    CNTR: *volatile @FieldType(DmaRegs, "CNTR1"),
+    PADDR: *volatile @FieldType(DmaRegs, "PADDR1"),
+    MADDR: *volatile @FieldType(DmaRegs, "MADDR1"),
 };
-
-/// Get the register pointers for a specific DMA channel
-/// Currently supports DMA1 channels 1-7 only (CH32V203)
-pub inline fn get_regs(comptime chan: Channel) Regs {
-    const chan_num = @intFromEnum(chan);
-    const cfgr_name = std.fmt.comptimePrint("CFGR{d}", .{chan_num});
-    const cntr_name = std.fmt.comptimePrint("CNTR{d}", .{chan_num});
-    const paddr_name = std.fmt.comptimePrint("PADDR{d}", .{chan_num});
-    const maddr_name = std.fmt.comptimePrint("MADDR{d}", .{chan_num});
-
-    return .{
-        .INTFR = &DMA1.INTFR, // Shared across all channels
-        .INTFCR = &DMA1.INTFCR, // Shared across all channels
-        .CFGR = @ptrCast(&@field(DMA1, cfgr_name)),
-        .CNTR = @ptrCast(&@field(DMA1, cntr_name)),
-        .PADDR = @ptrCast(&@field(DMA1, paddr_name)),
-        .MADDR = @ptrCast(&@field(DMA1, maddr_name)),
-    };
-}
 
 // Max transfer: 65535 bytes
 // Each channel has 3 DMA data transfer modes:
@@ -101,11 +80,9 @@ pub inline fn get_regs(comptime chan: Channel) Regs {
 //   the channel is switched off. If TEIE is set in the DMA_CCRx register, an
 //   interrupt is generated.
 
-// TODO: Maybe rename to TransferConfig
-pub const Config = struct {
+pub const TransferConfig = struct {
     direction: enum { Mem2Mem, Mem2Periph, Periph2Mem },
     priority: enum(u2) { Low = 0, Medium = 1, High = 2, VeryHigh = 3 },
-    // TODO: Better type? anypointer?
     memory_increment: bool = true,
     peripheral_increment: bool = false,
     memory_data_size: DataSize = .Byte,
@@ -124,51 +101,72 @@ pub const Channel = enum(u3) {
     Ch5 = 5,
     Ch6 = 6,
     Ch7 = 7,
+    /// Get the register pointers for a specific DMA channel
+    /// Currently supports DMA1 channels 1-7 only (CH32V203)
+    pub inline fn get_regs(comptime chan: Channel) Regs {
+        const chan_num = @intFromEnum(chan);
+        const cfgr_name = std.fmt.comptimePrint("CFGR{d}", .{chan_num});
+        const cntr_name = std.fmt.comptimePrint("CNTR{d}", .{chan_num});
+        const paddr_name = std.fmt.comptimePrint("PADDR{d}", .{chan_num});
+        const maddr_name = std.fmt.comptimePrint("MADDR{d}", .{chan_num});
+
+        return .{
+            .INTFR = &DMA1.INTFR, // Shared across all channels
+            .INTFCR = &DMA1.INTFCR, // Shared across all channels
+            .CFGR = @ptrCast(&@field(DMA1, cfgr_name)),
+            .CNTR = @ptrCast(&@field(DMA1, cntr_name)),
+            .PADDR = @ptrCast(&@field(DMA1, paddr_name)),
+            .MADDR = @ptrCast(&@field(DMA1, maddr_name)),
+        };
+    }
+
     pub fn setup_transfer(
         comptime chan: Channel,
-        comptime config: Config,
+        comptime config: TransferConfig,
         write: []u8,
         read: []u8,
     ) void {
-        const regs = get_regs(chan);
+        const regs = chan.get_regs();
 
         // Enable DMA1 clock
-        // TODO: Maybe this should be done explicitly by the client, outside of this hal?
+        // NOTE: Maybe this should be done explicitly by the client, outside of this hal?
         hal.clocks.enable_peripheral_clock(.DMA1);
 
         // Disable channel before reconfiguration
         regs.CFGR.modify(.{ .EN = 0 });
 
-        // Clear all interrupt flags for this channel. There are four
-        // interrupts per channel, so we shift by 4 * (channel - 1).
-        // Channel enum is 1-indexed, so subtract 1 for bit position.
+        // Clear all interrupt flags for this channel. There are four interrupts per channel, so we
+        // shift by 4 * (channel - 1). Channel enum is 1-indexed, so subtract 1 for bit position.
         const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
         regs.INTFCR.write_raw(@as(u32, 0b1111) << flag_shift);
 
-        // TODO: Figure out the type of the read and write
-        // Set peripheral address (memory address when in mem-2-mem mode)
-        regs.PADDR.write_raw(@intFromPtr(write.ptr));
-        // Set memory address
-        regs.MADDR.write_raw(@intFromPtr(read.ptr));
-        // TODO: Set the amount of data to write
+        // NOTE: DIR bit affects transfer direction even in MEM2MEM mode (undocumented behavior):
+        //   DIR=0: PADDR→MADDR (peripheral/source to memory/destination)
+        //   DIR=1: MADDR→PADDR (memory/source to peripheral/destination)
+        // For typical memory copy with DIR=1: MADDR=source, PADDR=destination
+        regs.MADDR.write_raw(@intFromPtr(read.ptr)); // source
+        regs.PADDR.write_raw(@intFromPtr(write.ptr)); // destination
+        // Set the amount of data to write
         regs.CNTR.write_raw(read.len);
-        // TODO: Set the priority
+        // Set the priority
         regs.CFGR.modify(.{ .PL = @intFromEnum(config.priority) });
-        // TODO: Set the rest of the config
+        // Set the rest of the config
         regs.CFGR.modify(.{
             .MEM2MEM = @intFromBool(config.direction == .Mem2Mem),
             .MSIZE = @intFromEnum(config.memory_data_size),
-            // TODO: Config
-            .MINC = 1,
+            .MINC = @intFromBool(config.memory_increment),
             .PSIZE = @intFromEnum(config.peripheral_data_size),
-            // TODO: Config
-            .PINC = 1,
-            .CIRC = 0,
-            // Memory to peripheral or peripheral to memory
-            .DIR = 1,
-            // TODO: Interrupts
+            .PINC = @intFromBool(config.peripheral_increment),
+            .CIRC = @intFromBool(config.circular_mode),
+            // DIR affects transfer direction even in MEM2MEM mode (undocumented)
+            // DIR=1: MADDR→PADDR, DIR=0: PADDR→MADDR
+            .DIR = if (config.direction == .Periph2Mem) 0 else 1,
+            // TODO: Add (optional?) support for interrupts
+            // Transfer error interrupt
             .TEIE = 0,
+            // Half transfer interrupt
             .HTIE = 0,
+            // Transfer complete interrupt
             .TCIE = 0,
         });
         // Set enable to initiate transfer
@@ -176,7 +174,7 @@ pub const Channel = enum(u3) {
     }
 
     pub fn is_busy(comptime chan: Channel) bool {
-        const regs = get_regs(chan);
+        const regs = chan.get_regs();
 
         // Each channel has 4 flag bits: GIF, TCIF, HTIF, TEIF
         // TCIF (Transfer Complete) is bit 1 of each 4-bit group
@@ -195,8 +193,17 @@ pub const Channel = enum(u3) {
         }
     }
 
+    pub fn stop(comptime chan: Channel) void {
+        const regs = chan.get_regs();
+        regs.CFGR.modify(.{ .EN = 0 });
+    }
+
+    pub fn is_complete(comptime chan: Channel) bool {
+        const regs = chan.get_regs();
+        return regs.CNTR.read().NDT == 0;
+    }
+
     // Other methods that might be nice:
-    // is_complete
     // get_remaining_count
     // get_flags
     // clear_flags
@@ -204,6 +211,5 @@ pub const Channel = enum(u3) {
     // set_memory_address
     // set_preipheral_address
     // set_count
-    // stop
     // deinit
 };
