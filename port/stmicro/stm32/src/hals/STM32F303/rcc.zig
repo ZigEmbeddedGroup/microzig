@@ -84,7 +84,7 @@ pub fn enable_gpio_port(used_gpios_port: u8) void {
     });
 }
 
-pub fn enable_uart(index: enums.UART_V3_Type) void {
+pub fn enable_uart(index: enums.UART_Type) void {
     switch (index) {
         .USART1 => RCC.APB2ENR.modify(.{ .USART1EN = 1 }),
         .USART2 => RCC.APB1ENR.modify(.{ .USART2EN = 1 }),
@@ -103,7 +103,7 @@ pub fn enable_hse(speed: u32) void {
     current_clock.hse = speed;
 }
 
-pub fn enable_dma(index: enums.DMA_V1_Type) void {
+pub fn enable_dma(index: enums.DMA_Type) void {
     switch (index) {
         .DMA1 => RCC.AHBENR.modify(.{ .DMA1EN = 1 }),
         .DMA2 => RCC.AHBENR.modify(.{ .DMA2EN = 1 }),
@@ -129,7 +129,7 @@ pub fn select_pll_for_sysclk() RccErrorConfig!void {
     current_clock.usart1_clk = current_clock.pllout;
 }
 
-pub fn enable_i2c(comptime i2cindex: enums.I2C_V2_Type, clock: ICSW) void {
+pub fn enable_i2c(comptime i2cindex: enums.I2C_Type, clock: ICSW) void {
     RCC.APB1ENR.modify(switch (i2cindex) {
         .I2C1 => .{ .I2C1EN = 1 },
         .I2C2 => .{ .I2C2EN = 1 },
@@ -141,7 +141,7 @@ pub fn enable_i2c(comptime i2cindex: enums.I2C_V2_Type, clock: ICSW) void {
     });
 }
 
-pub fn enable_spi(comptime spiindex: enums.SPI_V2_Type) void {
+pub fn enable_spi(comptime spiindex: enums.SPI_Type) void {
     switch (spiindex) {
         .SPI1 => RCC.APB2ENR.modify(.{ .SPI1EN = 1 }),
 
@@ -150,7 +150,7 @@ pub fn enable_spi(comptime spiindex: enums.SPI_V2_Type) void {
     }
 }
 
-pub fn get_spi_clk(spiindex: enums.SPI_V2_Type) u32 {
+pub fn get_spi_clk(spiindex: enums.SPI_Type) u32 {
     return switch (spiindex) {
         .SPI1 => current_clock.p2_clk,
         .SPI2, .SPI3 => current_clock.p1_clk,

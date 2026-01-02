@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
-
+const enums = @import("enums.zig");
 const periferals = microzig.chip.peripherals;
 
 const TIM_GP16 = microzig.chip.types.peripherals.timer_v1.TIM_GP16;
@@ -19,7 +18,7 @@ const MSM = microzig.chip.types.peripherals.timer_v1.MSM;
 const MMS = microzig.chip.types.peripherals.timer_v1.MMS;
 const OCM = microzig.chip.types.peripherals.timer_v1.OCM; //OCM stands for Output Compare Mode
 
-pub const Instances = create_peripheral_enum("TIM", "TIM_GP16");
+pub const Instances = enums.TIMGP16_Type;
 
 pub const ARRModes = enum(u1) {
     immediate, //ARR is not buffered, counter will update ARR immediately
@@ -153,10 +152,6 @@ pub const TimerGenealConfig = struct {
     sync_config: ?SyncModeConfig = null,
 };
 
-fn get_regs(comptime instance: Instances) *volatile TIM_GP16 {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
-
 ///General Purpose Timer (GPTimer) driver for STM32F1xx series,
 ///
 ///This driver provides a low-level interface for the  16bits general-purpose timers.
@@ -174,7 +169,7 @@ pub const GPTimer = struct {
     regs: *volatile TIM_GP16,
     //=============== Modes ================
     pub fn init(comptime instance: Instances) GPTimer {
-        return .{ .regs = get_regs(instance) };
+        return .{ .regs = enums.get_regs(TIM_GP16, instance) };
     }
 
     ///Get high-level timer API for the Basic counter mode.

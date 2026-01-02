@@ -1,19 +1,16 @@
 const std = @import("std");
-
 const microzig = @import("microzig");
-const utils = @import("util.zig");
+const enums = @import("enums.zig");
+
 const hal = microzig.hal;
 const Digital_IO = microzig.drivers.base.Digital_IO;
 const spi_v2 = microzig.chip.types.peripherals.spi_v2;
-const spi_t = spi_v2.SPI;
-pub const Instances = hal.enums.SPI_V2_Type;
+const SPI_Peripheral = spi_v2.SPI;
+pub const Instances = enums.SPI_Type;
 const Error = error{
     MissingGpioPin,
 } || Digital_IO.SetDirError || Digital_IO.SetBiasError || Digital_IO.WriteError || Digital_IO.ReadError;
 
-fn get_regs(comptime instance: Instances) *volatile spi_t {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
 const ChipSelect = enum {
     NSS, //hardware slave management using NSS pin
     GPIO, //software slave management using external GPIO
@@ -30,7 +27,7 @@ pub const Config = struct {
 
 pub const SPI = struct {
     instance: Instances,
-    spi: *volatile spi_t,
+    spi: *volatile SPI_Peripheral,
     nss: ?*Digital_IO,
 
     pub fn apply(self: *const SPI, config: Config) Error!void {
@@ -183,6 +180,6 @@ pub const SPI = struct {
 
     pub fn init(comptime spi_inst: Instances, nss: ?*Digital_IO) SPI {
         hal.rcc.enable_spi(spi_inst);
-        return .{ .spi = get_regs(spi_inst), .instance = spi_inst, .nss = nss };
+        return .{ .spi = enums.get_regs(SPI_Peripheral, spi_inst), .instance = spi_inst, .nss = nss };
     }
 };
