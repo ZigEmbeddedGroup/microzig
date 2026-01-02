@@ -178,13 +178,3 @@ pub fn delay_us(us: u32) void {
         asm volatile ("" ::: .{ .memory = true });
     }
 }
-
-/// Create a deadline that expires in the specified number of milliseconds.
-pub fn deadline_in_ms(time_ms: u32) time.Deadline {
-    return time.Deadline.init_relative(get_time_since_boot(), time.Duration.from_ms(time_ms));
-}
-
-/// Create a deadline that expires in the specified number of microseconds.
-pub fn deadline_in_us(time_us: u64) time.Deadline {
-    return time.Deadline.init_relative(get_time_since_boot(), time.Duration.from_us(time_us));
-}
