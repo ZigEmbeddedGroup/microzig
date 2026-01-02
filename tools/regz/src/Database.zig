@@ -1187,6 +1187,7 @@ pub fn get_register_fields(
             \\        sf.enum_id,
             \\        sf.count,
             \\        sf.stride,
+            \\        sf.access,
             \\        ROW_NUMBER() OVER (
             \\            PARTITION BY sf.struct_id, sf.offset_bits
             \\            ORDER BY sf.offset_bits ASC, sf.size_bits ASC
@@ -1204,7 +1205,8 @@ pub fn get_register_fields(
             \\        offset_bits,
             \\        enum_id,
             \\        count,
-            \\        stride
+            \\        stride,
+            \\        access
             \\    FROM OrderedFields
             \\    WHERE row_num = 1
             \\)
@@ -1815,7 +1817,7 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
 fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
     try db.conn.exec(
         \\INSERT INTO struct_fields
-        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
+        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride, access)
         \\VALUES
         \\  (?, ?, ?, ?, ?, ?, ?, ?)
     , .{
@@ -1827,6 +1829,7 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         if (opts.enum_id) |enum_id| @intFromEnum(enum_id) else null,
         opts.count,
         opts.stride,
+        if (opts.access) |access| access.to_string() else null,
     });
 
     log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?}", .{
@@ -1837,6 +1840,7 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         opts.enum_id,
         opts.count,
         opts.stride,
+        opts.access,
     });
 }
 
