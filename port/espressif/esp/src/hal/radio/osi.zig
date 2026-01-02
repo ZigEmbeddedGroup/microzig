@@ -23,7 +23,7 @@ const coex_enabled: bool = false;
 pub var allocator: std.mem.Allocator = undefined;
 pub var scheduler: *Scheduler = undefined;
 
-pub var wifi_interrupt_handler: struct {
+pub var wifi_interrupt_handler: ?struct {
     f: *const fn (?*anyopaque) callconv(.c) void,
     arg: ?*anyopaque,
 } = undefined;
@@ -233,30 +233,32 @@ pub fn set_isr(
 
     switch (n) {
         0, 1 => {
-            wifi_interrupt_handler = .{
-                .f = @ptrCast(@alignCast(f)),
+            wifi_interrupt_handler = if (f) |handler| .{
+                .f = @ptrCast(@alignCast(handler)),
                 .arg = arg,
-            };
+            } else null;
         },
         else => @panic("invalid interrupt number"),
     }
 }
 
-// TODO
 pub fn ints_on(mask: u32) callconv(.c) void {
     log.debug("ints_on {}", .{mask});
 
     if (mask == 2) {
         microzig.cpu.interrupt.enable(.interrupt29);
+    } else {
+        @panic("ints_on: not implemented");
     }
 }
 
-// TODO
 pub fn ints_off(mask: u32) callconv(.c) void {
     log.debug("ints_off {}", .{mask});
 
     if (mask == 2) {
         microzig.cpu.interrupt.disable(.interrupt29);
+    } else {
+        @panic("ints_off: not implemented");
     }
 }
 
@@ -347,7 +349,6 @@ pub fn wifi_thread_semphr_get() callconv(.c) ?*anyopaque {
     return &scheduler.current_task.semaphore;
 }
 
-// TODO: idk if we're gonna need to implement this
 pub fn mutex_create() callconv(.c) ?*anyopaque {
     @panic("mutex_create: not implemented");
 }
@@ -404,7 +405,7 @@ pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
         break :blk .{ 3, 8 };
     };
 
-    const buf: []u8 = allocator.alloc(u8, new_cap) catch {
+    const buf: []u8 = allocator.alloc(u8, new_cap * item_len) catch {
         log.warn("failed to allocate queue buffer", .{});
         return null;
     };
@@ -439,20 +440,20 @@ pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
 
-    const maybe_timeout: ?time.Duration = if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
-        .from_us(block_time_tick)
-    else
-        null;
-
-    return @intCast(@divExact(queue.inner.put_with_timeout(
-        scheduler,
-        item[0..queue.item_len],
-        queue.item_len,
-        maybe_timeout,
-    ) catch |err| switch (err) {
-        error.Closed => unreachable,
-        error.Timeout => return -1,
-    }, queue.item_len));
+    const size = switch (block_time_tick) {
+        0 => queue.inner.put_non_blocking(scheduler, item[0..queue.item_len]),
+        else => queue.inner.put(
+            scheduler,
+            item[0..queue.item_len],
+            1,
+            if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
+                .from_us(block_time_tick)
+            else
+                null,
+        ),
+    };
+    if (size == 0) return -1;
+    return 1;
 }
 
 pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*anyopaque) callconv(.c) i32 {
@@ -460,10 +461,7 @@ pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*any
 
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
-    const n = @divExact(queue.inner.put_from_isr(
-        scheduler,
-        item[0..queue.item_len],
-    ) catch unreachable, queue.item_len);
+    const n = @divExact(queue.inner.put_non_blocking(scheduler, item[0..queue.item_len]), queue.item_len);
 
     @as(*u32, @ptrCast(@alignCast(_hptw))).* = @intFromBool(scheduler.is_a_higher_priority_task_ready());
 
@@ -484,20 +482,23 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]u8 = @ptrCast(@alignCast(item_ptr));
 
-    const maybe_timeout: ?time.Duration = if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
-        .from_us(block_time_tick)
-    else
-        null;
-
-    return @intCast(@divExact(queue.inner.get_with_timeout(
-        scheduler,
-        item[0..queue.item_len],
-        queue.item_len,
-        maybe_timeout,
-    ) catch |err| switch (err) {
-        error.Closed => unreachable,
-        error.Timeout => return -1,
-    }, queue.item_len));
+    const size = switch (block_time_tick) {
+        0 => queue.inner.get_non_blocking(
+            scheduler,
+            item[0..queue.item_len],
+        ),
+        else => queue.inner.get(
+            scheduler,
+            item[0..queue.item_len],
+            queue.item_len,
+            if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
+                .from_us(block_time_tick)
+            else
+                null,
+        ),
+    };
+    if (size == 0) return -1;
+    return 1;
 }
 
 pub fn queue_msg_waiting(ptr: ?*anyopaque) callconv(.c) u32 {
@@ -598,8 +599,12 @@ pub fn task_create(
     return task_create_common(task_func, name, stack_depth, param, prio, task_handle, 0);
 }
 
-pub fn task_delete() callconv(.c) void {
-    @panic("task_delete: not implemented");
+pub fn task_delete(handle: ?*anyopaque) callconv(.c) void {
+    log.debug("task_delete {?}", .{handle});
+    if (handle != null) {
+        @panic("task_delete(non-null): not implemented");
+    }
+    scheduler.yield(.delete);
 }
 
 pub fn task_delay(tick: u32) callconv(.c) void {
@@ -1062,7 +1067,7 @@ pub fn wifi_create_queue(capacity: c_int, item_len: c_int) callconv(.c) ?*anyopa
 
     std.debug.assert(wifi_queue_handle == null);
 
-    const buf: []u8 = allocator.alloc(u8, @intCast(capacity)) catch {
+    const buf: []u8 = allocator.alloc(u8, @intCast(capacity * item_len)) catch {
         log.warn("failed to allocate queue buffer", .{});
         return null;
     };
@@ -1083,8 +1088,8 @@ pub fn wifi_delete_queue(ptr: ?*anyopaque) callconv(.c) void {
 
     std.debug.assert(ptr == @as(?*anyopaque, @ptrCast(&wifi_queue_handle)));
 
-    const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
-    allocator.free(queue.inner.buffer);
+    const queue: *?*QueueWrapper = @ptrCast(@alignCast(ptr));
+    allocator.free(queue.*.?.inner.buffer);
 
     wifi_queue_handle = null;
     wifi_queue = undefined;

@@ -147,13 +147,15 @@ fn setup_interrupts() void {
 
 pub const interrupt_handlers = struct {
     pub fn wifi_xxx(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        const handler = osi.wifi_interrupt_handler;
+        if (osi.wifi_interrupt_handler) |handler| {
+            log.debug("interrupt WIFI_xxx {} {?}", .{
+                handler.f,
+                handler.arg,
+            });
 
-        log.debug("interrupt WIFI_xxx {} {?}", .{
-            handler.f,
-            handler.arg,
-        });
-
-        handler.f(handler.arg);
+            handler.f(handler.arg);
+        } else {
+            // should be unreachable
+        }
     }
 };

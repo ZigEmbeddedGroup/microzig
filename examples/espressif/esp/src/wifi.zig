@@ -123,7 +123,6 @@ pub fn main() !void {
             std.log.info("used memory: {}K ({})", .{ used_mem / 1024, used_mem });
             last_mem_show = now;
         }
-        scheduler.sleep(.from_ms(10));
     }
 }
 
