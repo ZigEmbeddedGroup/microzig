@@ -29,25 +29,22 @@ pub const Regs = extern struct {
     MADDR: *volatile @TypeOf(DMA1.MADDR1),
 };
 
-// TODO: Maybe this should return a struct of volatile pointers, rather than a
-// pointer to a struct.
-// If so, we could statically allocate all of them and just return a pointer to
-// the appropriate one and ensure that the unused ones don't make it into the
-// binary.
-pub inline fn get_regs(dma: DMA, chan: Channel) Regs {
-    // TODO: Maybe get the name of the decl from the dma and channel for each
-    // register and then get the address of each. This would force this to be
-    // done at comptime probably.
-    // NOTE: Just hardcoding for experimentation at the moment.
-    _ = dma;
-    _ = chan;
+/// Get the register pointers for a specific DMA channel
+/// Currently supports DMA1 channels 1-7 only (CH32V203)
+pub inline fn get_regs(comptime chan: Channel) Regs {
+    const chan_num = @intFromEnum(chan);
+    const cfgr_name = std.fmt.comptimePrint("CFGR{d}", .{chan_num});
+    const cntr_name = std.fmt.comptimePrint("CNTR{d}", .{chan_num});
+    const paddr_name = std.fmt.comptimePrint("PADDR{d}", .{chan_num});
+    const maddr_name = std.fmt.comptimePrint("MADDR{d}", .{chan_num});
+
     return .{
-        .INTFR = &DMA1.INTFR,
-        .INTFCR = &DMA1.INTFCR,
-        .CFGR = @ptrCast(&DMA1.CFGR4),
-        .CNTR = @ptrCast(&DMA1.CNTR4),
-        .PADDR = @ptrCast(&DMA1.PADDR4),
-        .MADDR = @ptrCast(&DMA1.MADDR4),
+        .INTFR = &DMA1.INTFR, // Shared across all channels
+        .INTFCR = &DMA1.INTFCR, // Shared across all channels
+        .CFGR = @ptrCast(&@field(DMA1, cfgr_name)),
+        .CNTR = @ptrCast(&@field(DMA1, cntr_name)),
+        .PADDR = @ptrCast(&@field(DMA1, paddr_name)),
+        .MADDR = @ptrCast(&@field(DMA1, maddr_name)),
     };
 }
 
@@ -117,47 +114,36 @@ pub const Config = struct {
 };
 const DataSize = enum { Byte, HalfWord, Word };
 
-pub const DMA = enum(u1) {
-    DMA1 = 0,
-    DMA2 = 1,
-    pub fn channel(comptime dma: DMA, n: u4) Channel {
-        const num_channels = switch (dma) {
-            .DMA1 => 7,
-            .DMA2 => 11,
-        };
-        assert(n < num_channels);
-
-        return @enumFromInt(n);
-    }
-};
-
-// TODO: Chip support. ch32v20x only has one DMA?
-// TODO: Different DMAs have different numbers of channels
+// TODO: CH32V30x has DMA2 with 11 channels - will need refactoring to support
+// For now, CH32V203 only has DMA1 with 7 channels
 pub const Channel = enum(u3) {
-    // TODO: Maybe have the channel know which dma it belongs to.
-    _,
+    Ch1 = 1,
+    Ch2 = 2,
+    Ch3 = 3,
+    Ch4 = 4,
+    Ch5 = 5,
+    Ch6 = 6,
+    Ch7 = 7,
     pub fn setup_transfer(
-        chan: Channel,
-        comptime dma: DMA,
+        comptime chan: Channel,
         comptime config: Config,
         write: []u8,
         read: []u8,
     ) void {
-        // TODO: Fancy get regs that selects the appropriate set of regs for the CHANNEL?
-        const regs = get_regs(dma, chan);
-        // Enable clocks
-        // Maybe this should be done explicitly by the client, outside of this hal?
-        hal.clocks.enable_peripheral_clock(switch (dma) {
-            .DMA1 => .DMA1,
-            .DMA2 => .DMA2,
-        });
+        const regs = get_regs(chan);
+
+        // Enable DMA1 clock
+        // TODO: Maybe this should be done explicitly by the client, outside of this hal?
+        hal.clocks.enable_peripheral_clock(.DMA1);
 
         // Disable channel before reconfiguration
         regs.CFGR.modify(.{ .EN = 0 });
 
         // Clear all interrupt flags for this channel. There are four
-        // interrupts per channel, so we shift by 4* the channel number.
-        regs.INTFCR.write_raw(@as(u32, 0b1111) << ((@intFromEnum(chan) % 7) * 4));
+        // interrupts per channel, so we shift by 4 * (channel - 1).
+        // Channel enum is 1-indexed, so subtract 1 for bit position.
+        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        regs.INTFCR.write_raw(@as(u32, 0b1111) << flag_shift);
 
         // TODO: Figure out the type of the read and write
         // Set peripheral address (memory address when in mem-2-mem mode)
@@ -189,13 +175,21 @@ pub const Channel = enum(u3) {
         regs.CFGR.modify(.{ .EN = 1 });
     }
 
-    pub fn is_busy(chan: Channel) bool {
-        // TODO: Need the channel
-        const regs = get_regs(.DMA1, chan);
-        return regs.INTFR.read().TCIF4 == 0;
+    pub fn is_busy(comptime chan: Channel) bool {
+        const regs = get_regs(chan);
+
+        // Each channel has 4 flag bits: GIF, TCIF, HTIF, TEIF
+        // TCIF (Transfer Complete) is bit 1 of each 4-bit group
+        // Channel is 1-indexed, so subtract 1 for bit position
+        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        const tcif_bit: u5 = flag_shift + 1;
+        const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
+
+        // Busy if transfer NOT complete (TCIF == 0)
+        return (regs.INTFR.raw & tcif_mask) == 0;
     }
 
-    pub fn wait_for_finish_blocking(chan: Channel) void {
+    pub fn wait_for_finish_blocking(comptime chan: Channel) void {
         while (chan.is_busy()) {
             asm volatile ("" ::: .{ .memory = true });
         }
