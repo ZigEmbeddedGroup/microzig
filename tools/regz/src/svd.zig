@@ -488,7 +488,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
 
         var field_it = node.iterate(&.{"fields"}, &.{"field"});
         while (field_it.next()) |field_node|
-            load_field(ctx, field_node, register_id) catch |err| {
+            load_field(ctx, field_node, register_id, &register_props) catch |err| {
                 const reg_name = node.get_value("name") orelse "EMPTY";
                 const field_name = field_node.get_value("name") orelse "EMPTY";
                 log.warn("failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
@@ -521,16 +521,15 @@ fn load_single_register(ctx: *Context, node: xml.Node, parent: StructID) !void {
 
     var field_it = node.iterate(&.{"fields"}, &.{"field"});
     while (field_it.next()) |field_node|
-        load_field(ctx, field_node, register_id) catch |err| {
+        load_field(ctx, field_node, register_id, &register_props) catch |err| {
             const reg_name = node.get_value("name") orelse "EMPTY";
             const field_name = field_node.get_value("name") orelse "EMPTY";
             log.warn("failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
         };
 }
 
-fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
+fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *const RegisterProperties) !void {
     const db = ctx.db;
-
     const bit_range = try BitRange.parse(node);
     const dim_elements = try DimElements.parse(ctx, node);
     const count: ?u16 = if (dim_elements) |elements| count: {
@@ -550,8 +549,13 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     else
         null;
 
-    if (node.get_value("access")) |_|
-        log.warn("TODO: field access", .{});
+    const access = if (node.get_value("access")) |access_str|
+        parse_access(access_str) catch blk: {
+            log.warn("Failed to parse access string '{s}', it must be one of 'read-value', 'write-only', 'read-write', 'writeOnce', or 'read-writeOnce', defaulting to 'read-write'", .{access_str});
+            break :blk .read_write;
+        }
+    else
+        props.access;
 
     for (0..count orelse 1) |i| {
         try db.add_register_field(register_id, .{
@@ -570,6 +574,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
             .size_bits = @intCast(bit_range.width),
             .offset_bits = @intCast(bit_range.offset),
             .enum_id = enum_id,
+            .access = access,
         });
     }
 }

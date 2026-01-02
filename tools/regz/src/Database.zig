@@ -219,6 +219,7 @@ pub const StructField = struct {
     enum_id: ?EnumID,
     count: ?u16,
     stride: ?u8,
+    access: ?Access,
 
     pub const sql_opts = SQL_Options{
         .foreign_keys = &.{
@@ -780,6 +781,9 @@ fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
             ?StructID, ?EnumID => {
                 @field(entry, field.name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
             },
+            ?Access => {
+                @field(entry, field.name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
+            },
             else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field.type)})),
         }
     }
@@ -1183,6 +1187,7 @@ pub fn get_register_fields(
             \\        sf.enum_id,
             \\        sf.count,
             \\        sf.stride,
+            \\        sf.access,
             \\        ROW_NUMBER() OVER (
             \\            PARTITION BY sf.struct_id, sf.offset_bits
             \\            ORDER BY sf.offset_bits ASC, sf.size_bits ASC
@@ -1200,7 +1205,8 @@ pub fn get_register_fields(
             \\        offset_bits,
             \\        enum_id,
             \\        count,
-            \\        stride
+            \\        stride,
+            \\        access
             \\    FROM OrderedFields
             \\    WHERE row_num = 1
             \\)
@@ -1784,6 +1790,7 @@ pub const AddStructFieldOptions = struct {
     enum_id: ?EnumID = null,
     count: ?u16 = null,
     stride: ?u8 = null,
+    access: ?Access = null,
 };
 
 pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFieldOptions) !void {
@@ -1810,9 +1817,9 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
 fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
     try db.conn.exec(
         \\INSERT INTO struct_fields
-        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
+        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride, access)
         \\VALUES
-        \\  (?, ?, ?, ?, ?, ?, ?, ?)
+        \\  (?, ?, ?, ?, ?, ?, ?, ?, ?)
     , .{
         @intFromEnum(parent),
         opts.name,
@@ -1822,9 +1829,10 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         if (opts.enum_id) |enum_id| @intFromEnum(enum_id) else null,
         opts.count,
         opts.stride,
+        if (opts.access) |access| access.to_string() else null,
     });
 
-    log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?}", .{
+    log.debug("add_struct_field: parent={f} name='{s}' offset_bits={} size_bits={} enum_id={?f} count={?} stride={?} access={?}", .{
         parent,
         opts.name,
         opts.offset_bits,
@@ -1832,6 +1840,7 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         opts.enum_id,
         opts.count,
         opts.stride,
+        opts.access,
     });
 }
 
