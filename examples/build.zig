@@ -4,7 +4,7 @@ const example_dep_names: []const []const u8 = &.{
     "espressif/esp",
     "gigadevice/gd32",
     "microchip/samd51",
-    // "microchip/atmega",
+    "microchip/atmega",
     "nordic/nrf5x",
     "nxp/lpc",
     "raspberrypi/rp2xxx",

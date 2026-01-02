@@ -37,6 +37,7 @@ pub fn build(b: *Build) !void {
             .target = target,
             .optimize = optimize,
         }),
+        .use_llvm = true,
     });
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     regz.root_module.addImport("zqlite", zqlite);

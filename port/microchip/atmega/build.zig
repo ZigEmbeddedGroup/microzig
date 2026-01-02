@@ -48,6 +48,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = .{
             .root_source_file = b.path("src/hals/ATmega328P.zig"),
         },
+        .bundle_compiler_rt = false,
     };
 
     const chip_atmega32u4: microzig.Target = .{
@@ -65,9 +66,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x800100, .length = 2560, .access = .rw },
             },
         },
-        .hal = .{
-            .root_source_file = b.path("src/hals/ATmega32U4.zig"),
-        },
+        .bundle_compiler_rt = false,
     };
 
     return .{
