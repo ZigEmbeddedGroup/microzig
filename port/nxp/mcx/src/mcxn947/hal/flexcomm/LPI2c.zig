@@ -34,9 +34,18 @@ pub const LPI2c = enum(u4) {
 	pub const Config = struct {
 		baudrate: u32 = 100_000,
 		mode: OperatingMode = .standard,
+		relaxed: bool = false,
 		enabled: bool = true,
 		debug: bool = false,
-		ignore_ack: bool,
+		enable_doze: bool = false,
+		ignore_nack: bool = false,
+		pin_config: void = {},
+		// TODO: is u32 overkill ?
+		bus_idle_timeout: ?u32 = null, // in ns
+		pin_low_timeout: ?u32 = null,
+		sda_glitch_filter: ?u32 = null, // in ns
+		scl_glitch_filter: ?u32 = null, // in ns
+		// TODO: host request
 
 
 		pub const OperatingMode = enum { standard, fast, fastplus, highspeed, ultrafast };
@@ -58,9 +67,45 @@ pub const LPI2c = enum(u4) {
 		const regs = i2c.get_regs();
 		i2c.reset();
 
-		try i2c.set_baudrate(config.mode, config.baudrate);
 
-		regs.MCFGR1.modify_one("PINCFG", .OPEN_DRAIN_2_PIN);
+		regs.MCFGR0.write(.{
+			.HREN = .DISABLED, // TODO: host request
+			.HRPOL = .ACTIVE_LOW,
+			.HRSEL = .DISABLED,
+			.HRDIR = .INPUT,
+
+			.CIRFIFO = .DISABLED,
+			.RDMO = .DISABLED, // TODO: address match
+			.RELAX = @enumFromInt(@intFromBool(config.relaxed)),
+			.ABORT = .DISABLED
+		});
+		regs.MCFGR1.write(.{
+			.PRESCALE = .DIVIDE_BY_1,
+			.AUTOSTOP = .DISABLED,
+			.IGNACK = @enumFromInt(@intFromBool(config.ignore_nack)),
+			.TIMECFG = .IF_SCL_LOW,
+			.STARTCFG = .BOTH_I2C_AND_LPI2C_IDLE,
+			.STOPCFG = .ANY_STOP,
+			.MATCFG = .DISABLED, // TODO
+			.PINCFG = .OPEN_DRAIN_2_PIN, // TODO
+		});
+		const ns_per_cycle = 1_000_000_000 / i2c.get_flexcomm().get_clock();
+		regs.MCFGR2.write(.{
+			.BUSIDLE = 0, // set later since it depends on `prescale`
+			.FILTSCL = if(config.scl_glitch_filter) |t| @intCast(t / ns_per_cycle) else 0,
+			.FILTSDA = if(config.sda_glitch_filter) |t| @intCast(t / ns_per_cycle) else 0,
+		});
+
+		if(config.pin_low_timeout != null) @panic("TODO");
+		// regs.MCFGR3.write(.{
+		// .PINLOW = 
+		// });
+
+		try i2c.set_baudrate(config.mode, config.baudrate);
+		if(config.bus_idle_timeout) |t| {
+			const prescaler: u8 = @as(u8, 1) << @intFromEnum(regs.MCFGR1.read().PRESCALE);
+			regs.MCFGR2.modify_one("BUSIDLE", @intCast(t / ns_per_cycle / prescaler));
+		}
 
 		if(config.enabled) i2c.set_enabled(true);
 
@@ -179,7 +224,7 @@ pub const LPI2c = enum(u4) {
 		//
 		//
 		// 1/baudrate >= 1/limits[0]
-		// clk_hi + clk_lo + 2 + scl_latency >= (lpi2c_clk_f / 2^prescale) / limits[0] >= 1 / limits[0] 
+		// clk_hi + clk_lo + 2 + scl_latency >= (lpi2c_clk_f / 2^prescale) / limits[0] >= 1 / limits[0]
 
 		// TODO: maybe use the config provided by the user so the remaining has the chance to be done at comptime ?
 		const filt_scl, const filt_sda = blk: {
@@ -199,7 +244,7 @@ pub const LPI2c = enum(u4) {
 			const @"clk_hi + clk_lo": u32 = ((lpi2c_clk_f / baudrate) >> prescale) - 2 - scl_latency;
 			// the max available for clk_hi and clk_lo is both 63
 			if(@"clk_hi + clk_lo" > 126) continue; // we need a bigger prescaler
-			
+
 			const computed_baudrate = lpi2c_clk_f / (@"clk_hi + clk_lo" + 2 + scl_latency) << prescale;
 			const err = if(computed_baudrate > baudrate) computed_baudrate - baudrate else baudrate - computed_baudrate;
 			if(computed_baudrate > max_baudrate) continue;
@@ -457,7 +502,7 @@ pub const LPI2c = enum(u4) {
 				.CMD = .RECEIVE_DATA_7_THROUGH_0_PLUS_ONE
 			});
 		}
-		
+
 		var iter = read_vec.iterator();
 		while(iter.next_element_ptr()) |element| {
 			try i2c.check_flags();
