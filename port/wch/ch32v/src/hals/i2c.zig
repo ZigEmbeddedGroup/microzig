@@ -368,13 +368,9 @@ pub const I2C = enum(u1) {
             while (iter.next_element_ptr()) |element| {
                 bytes_remaining -= 1;
 
-                // For the second-to-last byte, disable ACK
-                if (bytes_remaining == 1) {
-                    i2c.set_ack(false);
-                }
-
-                // For the last byte, generate STOP
+                // For the last byte, disable ACK and generate STOP before reading
                 if (bytes_remaining == 0) {
+                    i2c.set_ack(false);
                     i2c.generate_stop();
                 }
 
