@@ -31,28 +31,58 @@ pub const Interface = struct {
         ready: *const fn (*anyopaque) bool,
     },
 
-    pub fn init(self: *Self) !void {
+    pub const InitOptions = struct {
+        fixed: ?Fixed = null,
+
+        const Fixed = struct {
+            ip: lwip.ip4_addr,
+            netmask: lwip.ip4_addr,
+            gw: lwip.ip4_addr,
+
+            pub fn init(ip: []const u8, netmask: []const u8, gw: []const u8) !Fixed {
+                var f: Fixed = undefined;
+                if (lwip.ip4addr_aton(ip.ptr, &f.ip) != 1 or
+                    lwip.ip4addr_aton(netmask.ptr, &f.netmask) != 1 or
+                    lwip.ip4addr_aton(gw.ptr, &f.gw) != 1)
+                    return error.IpAddrParse;
+                return f;
+            }
+        };
+    };
+
+    pub fn init(self: *Self, opt: InitOptions) !void {
         lwip.lwip_init();
         const netif: *lwip.netif = &self.netif;
 
-        _ = lwip.netif_add(
-            netif,
-            @as(*lwip.ip4_addr_t, @ptrCast(@constCast(lwip.IP4_ADDR_ANY))), // ipaddr
-            @as(*lwip.ip4_addr_t, @ptrCast(@constCast(lwip.IP4_ADDR_ANY))), // netmask
-            @as(*lwip.ip4_addr_t, @ptrCast(@constCast(lwip.IP4_ADDR_ANY))), // gw
-            null,
-            netif_init,
-            lwip.netif_input,
-        ) orelse return error.OutOfMemory;
+        if (opt.fixed) |fixed| {
+            _ = lwip.netif_add(
+                netif,
+                &fixed.ip,
+                &fixed.netmask,
+                &fixed.gw,
+                null,
+                netif_init,
+                lwip.netif_input,
+            ) orelse return error.OutOfMemory;
+        } else {
+            _ = lwip.netif_add_noaddr(
+                netif,
+                null,
+                netif_init,
+                lwip.netif_input,
+            ) orelse return error.OutOfMemory;
+        }
 
         lwip.netif_create_ip6_linklocal_address(netif, 1);
         netif.ip6_autoconfig_enabled = 1;
         lwip.netif_set_status_callback(netif, netif_status_callback);
         lwip.netif_set_default(netif);
-
-        lwip.dhcp_set_struct(netif, &self.dhcp);
         lwip.netif_set_up(netif);
-        try c_err(lwip.dhcp_start(netif));
+
+        if (opt.fixed == null) {
+            lwip.dhcp_set_struct(netif, &self.dhcp);
+            try c_err(lwip.dhcp_start(netif));
+        }
         lwip.netif_set_link_up(netif);
     }
 
@@ -233,56 +263,51 @@ pub const Udp = struct {
 };
 
 pub const tcp = struct {
-    pub const Client = struct {
+    pub fn connect(nic: *Interface, conn: *Connection, target: *Endpoint) !void {
+        if (conn.pcb != null or conn.state == .open) return Error.AlreadyConnected;
+        if (conn.state != .closed) return Error.AlreadyConnecting;
+        conn.nic = nic;
+
+        const pcb: *lwip.tcp_pcb = lwip.tcp_new() orelse return Error.OutOfMemory;
+        lwip.tcp_arg(pcb, conn);
+        lwip.tcp_err(pcb, Connection.c_on_err);
+
+        errdefer _ = lwip.tcp_close(pcb);
+        try c_err(lwip.tcp_connect(pcb, &target.addr, target.port, Connection.c_on_connect));
+    }
+
+    pub const Connection = struct {
         const Self = @This();
 
-        const OnConnect = *const fn (*Self, ?Error) void;
-        const OnRecv = *const fn (*Self, []u8) void;
-        const OnSent = *const fn (*Self, u16) void;
         const State = enum {
             closed,
             connecting,
             open,
         };
 
-        nic: *Interface,
+        const OnClose = *const fn (*Self, Error) void;
+        const OnRecv = *const fn (*Self, []u8) void;
+        const OnSent = *const fn (*Self, u16) void;
+        const OnConnect = *const fn (*Self) void;
+
+        nic: ?*Interface = null,
         pcb: ?*lwip.tcp_pcb = null,
         state: State = .closed,
-        target: Endpoint,
-        on_connect: OnConnect,
-        on_sent: OnSent,
-        on_recv: OnRecv,
+        on_close: ?OnClose = null,
+        on_recv: ?OnRecv = null,
+        on_sent: ?OnSent = null,
+        on_connect: ?OnConnect = null,
 
-        pub fn init(
-            nic: *Interface,
-            target: Endpoint,
-            on_recv: OnRecv,
-            on_sent: OnSent,
-            on_connect: OnConnect,
-        ) Self {
-            return .{
-                .nic = nic,
-                .target = target,
-                .on_sent = on_sent,
-                .on_recv = on_recv,
-                .on_connect = on_connect,
-            };
-        }
-
-        pub fn is_open(self: *Self) bool {
-            return self.pcb != null;
-        }
-
-        pub fn connect(self: *Self) !void {
-            if (self.pcb != null or self.state == .open) return Error.AlreadyConnected;
-            if (self.state != .closed) return Error.AlreadyConnecting;
-
-            const pcb: *lwip.tcp_pcb = lwip.tcp_new() orelse return Error.OutOfMemory;
+        fn open(self: *Self, pcb: *lwip.tcp_pcb) void {
+            assert(self.nic != null);
+            lwip.tcp_bind_netif(pcb, &self.nic.?.netif);
             lwip.tcp_arg(pcb, self);
+            lwip.tcp_recv(pcb, c_on_recv);
+            lwip.tcp_sent(pcb, c_on_sent);
             lwip.tcp_err(pcb, c_on_err);
-
-            errdefer _ = lwip.tcp_close(pcb);
-            try c_err(lwip.tcp_connect(pcb, &self.target.addr, self.target.port, c_on_connect));
+            self.pcb = pcb;
+            self.state = .open;
+            if (self.on_connect) |cb| cb(self);
         }
 
         fn c_on_err(ptr: ?*anyopaque, ce: lwip.err_t) callconv(.c) void {
@@ -291,7 +316,7 @@ pub const tcp = struct {
             // https://www.nongnu.org/lwip/2_1_x/group__tcp__raw.html#gae1346c4e34d3bc7c01e1b47142ab3121
             self.pcb = null;
             self.state = .closed;
-            self.on_connect(self, to_error(ce) orelse return);
+            if (self.on_close) |cb| cb(self, to_error(ce) orelse return);
         }
 
         fn c_on_connect(ptr: ?*anyopaque, c_pcb: [*c]lwip.tcp_pcb, ce: lwip.err_t) callconv(.c) lwip.err_t {
@@ -299,42 +324,30 @@ pub const tcp = struct {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             assert(self.pcb == null);
             assert(self.state == .closed);
-            // bind to pcb
-            const pcb: *lwip.tcp_pcb = c_pcb;
-            lwip.tcp_bind_netif(pcb, &self.nic.netif);
-            lwip.tcp_arg(pcb, self);
-            lwip.tcp_recv(pcb, c_on_recv);
-            lwip.tcp_sent(pcb, c_on_sent);
-            lwip.tcp_err(pcb, c_on_err);
-            self.pcb = pcb;
-            self.state = .open;
-            // send notification
-            self.on_connect(self, null);
+            self.open(c_pcb);
             return lwip.ERR_OK;
         }
 
         fn c_on_recv(ptr: ?*anyopaque, _: [*c]lwip.tcp_pcb, c_pbuf: [*c]lwip.pbuf, ce: lwip.err_t) callconv(.c) lwip.err_t {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (c_pbuf == null) {
-                // close was called by this side, no need for callback
-                if (self.state == .closed) return lwip.ERR_OK;
                 // peer clean close received
-                self.on_connect(self, Error.EndOfStream);
-                if (self.pcb != null) {
-                    self.close() catch {};
+                if (self.pcb) |pcb| {
+                    _ = lwip.tcp_close(pcb);
+                    if (self.on_close) |cb| cb(self, Error.EndOfStream);
                 }
                 return lwip.ERR_OK;
             }
             defer _ = lwip.pbuf_free(c_pbuf);
 
             if (to_error(ce)) |err| {
-                self.on_connect(self, err);
+                if (self.on_close) |cb| cb(self, err);
                 return lwip.ERR_OK;
             }
 
             var pbuf: *lwip.pbuf = c_pbuf;
             while (true) {
-                self.on_recv(self, payload_bytes(pbuf));
+                if (self.on_recv) |cb| cb(self, payload_bytes(pbuf));
                 if (pbuf.next == null) break;
                 pbuf = pbuf.next;
             }
@@ -346,7 +359,7 @@ pub const tcp = struct {
 
         fn c_on_sent(ptr: ?*anyopaque, _: [*c]lwip.tcp_pcb, n: u16) callconv(.c) lwip.err_t {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
-            self.on_sent(self, n);
+            if (self.on_sent) |cb| cb(self, n);
             return lwip.ERR_OK;
         }
 
@@ -375,6 +388,41 @@ pub const tcp = struct {
                 "tcp limits current snd_buf: {}, max snd_buf: {}, mss: {}, wnd: {}, snd_queuelen: {}",
                 .{ self.send_buffer(), lwip.TCP_SND_BUF, lwip.TCP_MSS, lwip.TCP_WND, lwip.TCP_SND_QUEUELEN },
             );
+        }
+    };
+
+    pub const Server = struct {
+        const Self = @This();
+
+        const OnAccept = *const fn () ?*Connection;
+
+        nic: *Interface,
+        on_accept: OnAccept,
+        pcb: ?*lwip.tcp_pcb = null,
+
+        pub fn bind(self: *Self, port: u16) !void {
+            const pcb: *lwip.tcp_pcb = lwip.tcp_new() orelse return Error.OutOfMemory;
+
+            errdefer _ = lwip.tcp_close(pcb);
+            try c_err(lwip.tcp_bind(pcb, lwip.IP_ADDR_ANY, port));
+            self.pcb = lwip.tcp_listen(pcb);
+            lwip.tcp_arg(self.pcb, self);
+            lwip.tcp_accept(self.pcb, c_on_accept);
+        }
+
+        fn c_on_accept(ptr: ?*anyopaque, pcb: [*c]lwip.tcp_pcb, ce: lwip.err_t) callconv(.c) lwip.err_t {
+            const self: *Self = @ptrCast(@alignCast(ptr.?));
+            if (to_error(ce)) |err| {
+                log.err("c_on_accept {}", .{err});
+                return lwip.ERR_OK;
+            }
+            var conn = self.on_accept() orelse {
+                lwip.tcp_abort(pcb);
+                return lwip.ERR_ABRT;
+            };
+            conn.nic = self.nic;
+            conn.open(pcb);
+            return lwip.ERR_OK;
         }
     };
 };

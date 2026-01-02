@@ -48,7 +48,9 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try nic.init();
+    try nic.init(.{});
+    // or use fixed ip, for example:
+    // try nic.init(.{ .fixed = try .init("192.168.190.50", "255.255.255.0", "192.168.190.1") });
 
     var ts = time.get_time_since_boot();
     while (true) {

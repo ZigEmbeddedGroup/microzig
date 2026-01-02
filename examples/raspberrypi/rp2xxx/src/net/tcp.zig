@@ -38,7 +38,7 @@ pub fn main() !void {
     try wifi.join(secrets.ssid, secrets.pwd, .{});
     log.debug("wifi joined", .{});
 
-    // init lwip
+    // init lwip network interface
     var nic: net.Interface = .{
         .mac = wifi.mac,
         .link = .{
@@ -48,17 +48,18 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try nic.init();
+    try nic.init(.{});
 
     const target = try net.Endpoint.parse("192.168.190.235", 9998);
     var cli: Client = .{
-        .tcp = .init(
-            &nic,
-            target,
-            Client.on_recv,
-            Client.on_sent,
-            Client.on_connect,
-        ),
+        .target = target,
+        .nic = &nic,
+        .conn = .{
+            .on_recv = Client.on_recv,
+            .on_sent = Client.on_sent,
+            .on_close = Client.on_close,
+            .on_connect = Client.on_connect,
+        },
     };
 
     var ts = time.get_time_since_boot();
@@ -84,23 +85,23 @@ pub fn main() !void {
 const Client = struct {
     const Self = @This();
 
-    tcp: net.tcp.Client,
+    nic: *net.Interface,
+    target: net.Endpoint,
+    conn: net.tcp.Connection,
     bytes_sent: usize = 0,
     bytes_received: usize = 0,
     send_count: usize = 0,
 
-    fn on_connect(tcp: *net.tcp.Client, maybe_err: ?net.Error) void {
-        const self: *Self = @fieldParentPtr("tcp", tcp);
-        _ = self;
-        if (maybe_err) |err| {
-            log.debug("connection closed {}", .{err});
-        } else {
-            log.debug("connection open", .{});
-        }
+    fn on_connect(_: *net.tcp.Connection) void {
+        log.debug("connection open", .{});
     }
 
-    fn on_recv(tcp: *net.tcp.Client, bytes: []u8) void {
-        const self: *Self = @fieldParentPtr("tcp", tcp);
+    fn on_close(_: *net.tcp.Connection, err: net.Error) void {
+        log.debug("connection closed {}", .{err});
+    }
+
+    fn on_recv(tcp: *net.tcp.Connection, bytes: []u8) void {
+        const self: *Self = @fieldParentPtr("conn", tcp);
         self.bytes_received += bytes.len;
         log.debug(
             "recv {} bytes, total {} data: {s}",
@@ -108,22 +109,22 @@ const Client = struct {
         );
     }
 
-    fn on_sent(tcp: *net.tcp.Client, n: u16) void {
-        const self: *Self = @fieldParentPtr("tcp", tcp);
+    fn on_sent(tcp: *net.tcp.Connection, n: u16) void {
+        const self: *Self = @fieldParentPtr("conn", tcp);
         self.bytes_sent += n;
         log.debug("sent {} bytes, total {}", .{ n, self.bytes_sent });
     }
 
     fn tick(self: *Self) !void {
-        switch (self.tcp.state) {
+        switch (self.conn.state) {
             .closed => {
-                try self.tcp.connect();
+                try net.tcp.connect(self.nic, &self.conn, &self.target);
             },
             .open => {
                 self.send_count += 1;
                 // close
                 if (self.send_count % 16 == 0) {
-                    try self.tcp.close();
+                    try self.conn.close();
                     return;
                 }
                 // TCP_SND_BUF is maximum send buffer size, default is 536 * 2 = 1072 bytes
@@ -140,9 +141,9 @@ const Client = struct {
                 // try to send if buf.len is greater than self.tcp.send_buffer()
                 // it will fail with OutOfMemory while trying to fill copy to
                 // tcp send buffer
-                self.tcp.send(buf[0..chunk_len]) catch |err| {
+                self.conn.send(buf[0..chunk_len]) catch |err| {
                     log.err("send {} bytes {}", .{ chunk_len, err });
-                    self.tcp.limits();
+                    self.conn.limits();
                     return;
                 };
                 log.debug("send {} bytes", .{chunk_len});
