@@ -103,7 +103,7 @@ pub const Interface = struct {
             pbuf = lwip.pbuf_clone(lwip.PBUF_RAW, lwip.PBUF_POOL, pbuf) orelse return lwip.ERR_MEM;
         }
         defer {
-            // free local clone is clone was made
+            // free local pbuf clone (if clone was made)
             if (pbuf_c.*.next != null) _ = lwip.pbuf_free(pbuf);
         }
 
@@ -210,12 +210,11 @@ pub const Udp = struct {
 
     fn c_on_recv(
         ptr: ?*anyopaque,
-        pcb_c: [*c]lwip.udp_pcb,
+        _: [*c]lwip.udp_pcb,
         pbuf_c: [*c]lwip.pbuf,
         addr_c: [*c]const lwip.ip_addr,
         port: u16,
     ) callconv(.c) void {
-        _ = pcb_c;
         var pbuf: *lwip.pbuf = pbuf_c;
         const addr: lwip.ip_addr = addr_c[0];
         const self: *Self = @ptrCast(@alignCast(ptr.?));
@@ -259,14 +258,14 @@ pub const tcp = struct {
             target: Endpoint,
             on_recv: OnRecv,
             on_sent: OnSent,
-            on_state: OnConnect,
+            on_connect: OnConnect,
         ) Self {
             return .{
                 .nic = nic,
                 .target = target,
                 .on_sent = on_sent,
                 .on_recv = on_recv,
-                .on_connect = on_state,
+                .on_connect = on_connect,
             };
         }
 

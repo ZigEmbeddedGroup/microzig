@@ -152,8 +152,12 @@ const Client = struct {
     }
 };
 
-// on the host listen for tcp connections on port 9988:
+// on the host listen for tcp connections on port 9998:
 // $ nc  -l -v -p 9998
 //
 // or run simple tcp echo:
 // $ socat -d2 TCP-LISTEN:9998,fork EXEC:"cat"
+//
+// This example will send various data payload size. When the payload is too big
+// for the tcp send buffer out of memory error will be raised on send. Every few
+// messages connection will be closed and connected again.

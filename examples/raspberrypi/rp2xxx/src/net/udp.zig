@@ -52,8 +52,8 @@ pub fn main() !void {
 
     // udp init
     var udp: net.Udp = try .init(&nic);
-    // listen for udp packets on port 9988 and call on_recv for each packet
-    try udp.bind(9988, on_recv);
+    // listen for udp packets on port 9999 and call on_recv for each received packet
+    try udp.bind(9999, on_recv);
 
     var ts = time.get_time_since_boot();
     while (true) {
@@ -89,3 +89,16 @@ fn data_head(bytes: []u8, max: usize) []u8 {
     std.mem.replaceScalar(u8, head, '\n', ' ');
     return head;
 }
+
+// when you run this example pico ip will be displayed in log:
+// debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
+//
+// on host listen for udp packets on port 9999
+// $ nc -ulp 9999
+//
+// then send something to the pico:
+// $ nc -u 192.168.190.206 9999 -c < LICENSE
+//
+// pico will show recived bytes and echo that to the sender ip and port 9999
+// debug (main): received 867 bytes, from: 192.168.190.235:47205, last: true, data: Copyright (c) Zig Embedded Group
+//
