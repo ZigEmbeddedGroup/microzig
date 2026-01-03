@@ -332,50 +332,41 @@ pub const ICM_20948 = struct {
     }
 
     pub fn setup(self: *Self) Error!void {
-        self.reset() catch |err| {
-            log.err("Failed to reset device: {}", .{err});
+        self.reset() catch {
             return Error.ResetFailed;
         };
 
         // Verify device identity
-        const id = self.read_byte(.{ .bank0 = .who_am_i }) catch |err| {
-            log.err("Failed to read device ID: {}", .{err});
+        const id = self.read_byte(.{ .bank0 = .who_am_i }) catch {
             return Error.DeviceNotFound;
         };
 
         if (id != WHOAMI) {
-            log.err("Unexpected device ID: expected 0x{X:02}, got 0x{X:02}", .{ WHOAMI, id });
             return Error.UnexpectedDeviceId;
         }
 
-        self.set_clocks() catch |err| {
-            log.err("Failed to set clocks: {}", .{err});
+        self.set_clocks() catch {
             return Error.SetupFailed;
         };
 
-        self.low_power(false) catch |err| {
-            log.err("Failed to configure low power mode: {}", .{err});
+        self.low_power(false) catch {
             return Error.SetupFailed;
         };
 
         // This sets DLPF as well as full scale and enables the devices
-        self.configure_accelerometer(self.config) catch |err| {
-            log.err("Failed to configure accelerometer: {}", .{err});
+        self.configure_accelerometer(self.config) catch {
             return Error.SetupFailed;
         };
 
-        self.configure_gyroscope(self.config) catch |err| {
-            log.err("Failed to configure gyroscope: {}", .{err});
+        self.configure_gyroscope(self.config) catch {
             return Error.SetupFailed;
         };
 
-        self.configure_magnetometer(self.config) catch |err| {
-            log.err("Failed to configure magnetometer: {}", .{err});
+        self.configure_magnetometer(self.config) catch {
             return Error.SetupFailed;
         };
 
-        self.set_sample_mode() catch |err| {
-            log.err("Failed to set sample mode: {}", .{err});
+        self.set_sample_mode() catch {
             return Error.SetupFailed;
         };
     }
@@ -393,12 +384,9 @@ pub const ICM_20948 = struct {
             return Error.DeviceNotFound;
 
         // Try reading some basic registers to ensure communication is working
-        _ = self.read_byte(.{ .bank0 = .pwr_mgmt_1 }) catch |err| {
-            log.err("Health check failed: cannot read power management register: {}", .{err});
+        _ = self.read_byte(.{ .bank0 = .pwr_mgmt_1 }) catch {
             return Error.DeviceNotReady;
         };
-
-        log.debug("Device health check passed", .{});
     }
 
     pub inline fn read_reg(self: *Self, reg: Self.Register, buf: []u8) Error!void {
@@ -406,6 +394,7 @@ pub const ICM_20948 = struct {
 
         try self.set_bank(reg.bank());
 
+        // log.err("Reading {} bytes", .{buf.len});
         self.dev.writev_then_readv(self.address, &.{&.{reg.value()}}, &.{buf}) catch |err| {
             log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
             return Error.ReadError;
@@ -423,8 +412,8 @@ pub const ICM_20948 = struct {
     pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) Error!void {
         try self.set_bank(reg.bank());
 
-        self.dev.write(self.address, &.{ reg.value(), val }) catch |err| {
-            log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
+        self.dev.write(self.address, &.{ reg.value(), val }) catch {
+            // log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
             return Error.WriteError;
         };
 
@@ -435,7 +424,7 @@ pub const ICM_20948 = struct {
     pub inline fn modify_reg(self: *Self, reg: Self.Register, T: type, fields: anytype) Error!void {
         // Read the current value
         const current_val = self.read_byte(reg) catch |err| {
-            log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
+            // log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
             return err;
         };
 
@@ -447,7 +436,6 @@ pub const ICM_20948 = struct {
 
         // Write back the modified value
         self.write_byte(reg, @bitCast(val)) catch |err| {
-            log.err("Failed to write modified register 0x{X:02}: {}", .{ reg.value(), err });
             return err;
         };
     }
@@ -459,8 +447,8 @@ pub const ICM_20948 = struct {
         if (bank == self.current_bank) return;
 
         // Bits 5:4 - directly write to bank0 register without recursion
-        self.dev.write(self.address, &.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
-            log.err("Failed to switch to bank {}: {}", .{ bank, err });
+        self.dev.write(self.address, &.{ 0x7F, @as(u8, bank) << 4 }) catch {
+            // log.err("Failed to switch to bank {}: {}", .{ bank, err });
             return Error.BankSwitchFailed;
         };
 
@@ -469,7 +457,6 @@ pub const ICM_20948 = struct {
     }
 
     pub fn reset(self: *Self) Error!void {
-        log.debug("Resetting ICM-20948", .{});
 
         // Reset the current bank cache since we're resetting the device
         self.current_bank = null;
@@ -768,7 +755,7 @@ pub const ICM_20948 = struct {
         // Ensure we can read from the magnetometer
         const mag_id = try self.mag_read_byte(.device_id);
         if (mag_id != MAG_WHOAMI) {
-            log.err("Unexpected magnetometer device ID: expected 0x{X:02}, got 0x{X:02}", .{ MAG_WHOAMI, mag_id });
+            // log.err("Unexpected magnetometer device ID: expected 0x{X:02}, got 0x{X:02}", .{ MAG_WHOAMI, mag_id });
             return error.SetupFailed;
         }
     }
