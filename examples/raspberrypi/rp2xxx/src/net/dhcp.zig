@@ -38,7 +38,7 @@ pub fn main() !void {
     try wifi.join(secrets.ssid, secrets.pwd, .{});
     log.debug("wifi joined", .{});
 
-    // init lwip
+    // init lwip network interface
     var nic: net.Interface = .{
         .mac = wifi.mac,
         .link = .{
@@ -48,9 +48,7 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try nic.init(.{});
-    // or use fixed ip, for example:
-    // try nic.init(.{ .fixed = try .init("192.168.190.50", "255.255.255.0", "192.168.190.1") });
+    try nic.init(try secrets.nic_options());
 
     var ts = time.get_time_since_boot();
     while (true) {

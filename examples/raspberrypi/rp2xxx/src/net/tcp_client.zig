@@ -32,11 +32,8 @@ pub fn main() !void {
     var wifi_driver: drivers.WiFi = .{};
     var wifi = try wifi_driver.init(.{});
     var led = wifi.gpio(0);
-    log.debug("mac address: {x}", .{wifi.mac});
-
     // join network
     try wifi.join(secrets.ssid, secrets.pwd, .{});
-    log.debug("wifi joined", .{});
 
     // init lwip network interface
     var nic: net.Interface = .{
@@ -48,9 +45,10 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try nic.init(.{});
+    try nic.init(try secrets.nic_options());
 
-    const target = try net.Endpoint.parse("192.168.190.235", 9998);
+    // init handler
+    const target = try net.Endpoint.parse(secrets.host_ip, 9998);
     var cli: Client = .{
         .target = target,
         .nic = &nic,
@@ -138,12 +136,14 @@ const Client = struct {
                 );
                 // change len on each send
                 const chunk_len = (self.send_count * 64) % buf.len;
-                // try to send if buf.len is greater than self.tcp.send_buffer()
-                // it will fail with OutOfMemory while trying to fill copy to
-                // tcp send buffer
+                // Try to send. If buf.len is greater than
+                // self.tcp.send_buffer() it will fail with OutOfMemory while
+                // trying to copy to tcp send buffer.
                 self.conn.send(buf[0..chunk_len]) catch |err| {
                     log.err("send {} bytes {}", .{ chunk_len, err });
-                    self.conn.limits();
+                    if (err == error.OutOfMemory) {
+                        self.conn.limits();
+                    }
                     return;
                 };
                 log.debug("send {} bytes", .{chunk_len});
@@ -153,8 +153,8 @@ const Client = struct {
     }
 };
 
-// on the host listen for tcp connections on port 9998:
-// $ nc  -l -v -p 9998
+// On the host listen for tcp connections on port 9998:
+// $ ncat  -lkv -p 9998
 //
 // or run simple tcp echo:
 // $ socat -d2 TCP-LISTEN:9998,fork EXEC:"cat"

@@ -151,19 +151,11 @@ pub const Interface = struct {
     }
 
     pub fn poll(self: *Self) !void {
-        var mem_err_count: usize = 0;
-        while (true) {
+        lwip.sys_check_timeouts();
+        var packets: usize = 0;
+        while (true) : (packets += 1) {
             // get packet buffer of the max size
-            const pbuf: *lwip.pbuf = lwip.pbuf_alloc(lwip.PBUF_RAW, sz.pbuf_pool, lwip.PBUF_POOL) orelse {
-                if (mem_err_count > 2) {
-                    self.log_stats();
-                    return error.OutOfMemory;
-                }
-                mem_err_count += 1;
-                lwip.sys_check_timeouts();
-                continue;
-            };
-            mem_err_count = 0;
+            const pbuf: *lwip.pbuf = lwip.pbuf_alloc(lwip.PBUF_RAW, sz.pbuf_pool, lwip.PBUF_POOL) orelse return error.OutOfMemory;
             assert(pbuf.next == null);
             assert(pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool);
 
@@ -181,7 +173,9 @@ pub const Interface = struct {
             // pass data to the lwip input function
             try c_err(self.netif.input.?(pbuf, &self.netif));
         }
-        lwip.sys_check_timeouts();
+        if (packets > 0) {
+            lwip.sys_check_timeouts();
+        }
     }
 
     pub fn log_stats(self: *Self) void {
@@ -314,8 +308,10 @@ pub const tcp = struct {
             // The corresponding pcb is already freed when this callback is called!
             // https://www.nongnu.org/lwip/2_1_x/group__tcp__raw.html#gae1346c4e34d3bc7c01e1b47142ab3121
             self.pcb = null;
-            self.state = .closed;
-            if (self.on_close) |cb| cb(self, to_error(ce) orelse return);
+            if (self.state != .closed) {
+                self.state = .closed;
+                if (self.on_close) |cb| cb(self, to_error(ce) orelse return);
+            }
         }
 
         fn c_on_connect(ptr: ?*anyopaque, c_pcb: [*c]lwip.tcp_pcb, ce: lwip.err_t) callconv(.c) lwip.err_t {
@@ -331,11 +327,15 @@ pub const tcp = struct {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (c_pbuf == null) {
                 // peer clean close received
-                if (self.pcb) |pcb| {
-                    _ = lwip.tcp_close(pcb);
+                var ret: lwip.err_t = lwip.ERR_OK;
+                if (self.pcb != null) {
+                    self.close() catch |err| {
+                        log.err("c_on_recv close unexpected {}", .{err});
+                        ret = lwip.ERR_ABRT;
+                    };
                     if (self.on_close) |cb| cb(self, Error.EndOfStream);
                 }
-                return lwip.ERR_OK;
+                return ret;
             }
             defer _ = lwip.pbuf_free(c_pbuf);
 
@@ -370,9 +370,12 @@ pub const tcp = struct {
 
         pub fn close(self: *Self) !void {
             const pcb = self.pcb orelse return Error.NotConnected;
-            try c_err(lwip.tcp_close(pcb));
             self.pcb = null;
             self.state = .closed;
+            c_err(lwip.tcp_close(pcb)) catch |err| {
+                lwip.tcp_abort(pcb);
+                return err;
+            };
         }
 
         /// Number of bytes currently available in the TCP send buffer for a

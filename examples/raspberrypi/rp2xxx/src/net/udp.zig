@@ -32,13 +32,10 @@ pub fn main() !void {
     var wifi_driver: drivers.WiFi = .{};
     var wifi = try wifi_driver.init(.{});
     var led = wifi.gpio(0);
-    log.debug("mac address: {x}", .{wifi.mac});
-
     // join network
     try wifi.join(secrets.ssid, secrets.pwd, .{});
-    log.debug("wifi joined", .{});
 
-    // init lwip
+    // init lwip network interface
     var nic: net.Interface = .{
         .mac = wifi.mac,
         .link = .{
@@ -48,8 +45,7 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try nic.init(.{});
-
+    try nic.init(try secrets.nic_options());
     // udp init
     var udp: net.Udp = try .init(&nic);
     // listen for udp packets on port 9999 and call on_recv for each received packet
