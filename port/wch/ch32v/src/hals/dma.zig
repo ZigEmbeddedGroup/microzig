@@ -355,10 +355,10 @@ pub const Peripheral = enum {
     // USART6_TX,
     // USART6_RX,
 
-    // SPI (uncomment when SPI HAL gets DMA support)
-    // SPI1_RX,
-    // SPI1_TX,
-    // SPI2_TX,
+    // SPI
+    SPI1_RX,
+    SPI1_TX,
+    SPI2_TX,
     // SPI3_RX,
     // SPI3_TX,
 
@@ -391,6 +391,11 @@ pub const Peripheral = enum {
             .I2C1_RX => &[_]Channel{.Ch7},
             .I2C2_TX => &[_]Channel{.Ch4},
             .I2C2_RX => &[_]Channel{.Ch5},
+
+            // SPI mappings from CH32V203 TRM Table 11-1
+            .SPI1_TX => &[_]Channel{.Ch3},
+            .SPI1_RX => &[_]Channel{.Ch2},
+            .SPI2_TX => &[_]Channel{.Ch5},
 
             // NOTE: Add mappings here when adding support for new peripherals and uncommenting
             // enums above
