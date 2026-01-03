@@ -14,9 +14,7 @@ pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
 };
 
-// Reduced buffer size for testing - 4096 bytes takes ~350ms at 115200 baud
-var rbuf = [_]u8{0x41} ** 32;
-var wbuf: [32]u8 = undefined;
+var rbuf = [_]u8{0x41} ** 128;
 
 pub fn main() !void {
     // Board brings up clocks and time
@@ -32,7 +30,6 @@ pub fn main() !void {
     });
 
     hal.usart.init_logger(usart);
-    std.log.info("Hello", .{});
 
     // USART2_TX uses DMA1 Channel 7
     const chan = dma.Channel.Ch7;
@@ -44,7 +41,6 @@ pub fn main() !void {
 
     while (true) {
         // Clear the target buffer
-        @memset(&wbuf, 0);
         std.log.info("Starting DMA transfer of {} bytes", .{rbuf.len});
         const start = time.get_time_since_boot();
 
@@ -63,22 +59,14 @@ pub fn main() !void {
         USART2.CTLR3.modify(.{ .DMAT = 0 });
         chan.stop();
 
-        const comp = chan.is_complete();
-        const cnt = chan.get_remaining_count();
         const end = time.get_time_since_boot();
-        std.log.info("DMA took {} complete={} remaining={}", .{
-            end.diff(start),
-            comp,
-            cnt,
-        });
-        std.log.info("DMA test buffer: {x}", .{wbuf[0..rbuf.len]});
+        std.log.info("DMA took {}", .{end.diff(start)});
 
         // Compare
         // Clear the target buffer
-        @memset(&wbuf, 0);
-        std.log.info("Starting CPU copy", .{});
+        std.log.info("Starting CPU transfer of {} bytes", .{rbuf.len});
         const startc = time.get_time_since_boot();
-        @memcpy(&wbuf, &rbuf);
+        try usart.write_blocking(&rbuf, .no_deadline);
         const endc = time.get_time_since_boot();
         std.log.info("memcpy took {}", .{endc.diff(startc)});
         hal.time.sleep_ms(1000);

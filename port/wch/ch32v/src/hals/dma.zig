@@ -27,59 +27,6 @@ pub const Regs = extern struct {
     MADDR: *volatile @FieldType(DmaRegs, "MADDR1"),
 };
 
-// Max transfer: 65535 bytes
-// Each channel has 3 DMA data transfer modes:
-// Peripheral to memory (MEM2MEM=0, DIR=0)
-// Memory to peripheral (MEM2MEM=0, DIR=1)
-// Memory to memory (MEM2MEM=1)
-// The configuration process is as follows:
-// 1. Set the initial address of the peripheral register or the memory data
-//    address in the memory-to-memory mode (MEM2MEM=1) in the DMA_PADDRx
-//    register. When a DMA request occurs, this address will be the source or
-//    destination address of the data transmission.
-// 2. Set the memory data address in the DMA_MADDRx register. When a DMA
-//    request occurs, the transmitted data will be read from or written to this
-//    address.
-// 3. Set the number of data to be transmitted in the DMA_CNTRx register. After
-//    each data transmission, this value will decrease progressively.
-// 4. Set the channel priority through the PL[1:0] bits in the DMA_CFGRx
-//    register.
-// 5. In the DMA_CFGRx register, set the direction of data transmission, cycle
-//    mode, incremental mode of peripheral and memory, data width of peripheral
-//    and memory, DMA Half Transfer, DMA Transfer complete, and tDMA Transfer
-//    Error interrupt enable bit,
-// 6. Set the ENABLE bit in the DMA_CCRx register to enable channel x.
-//
-// When the application program queries the status of the DMA channel, it
-// firstly accesses the GIFx bit in the DMA_INTFR register to determine which
-// channel currently has a DMA event, and then process the specific DMA event
-// content of the channel.
-//
-// Certain channels can write to certain peripherals
-//
-// Registers: (Format: DMAy_REGx, where y is the DMA and x is the channel)
-// - DMAy_INTFR - Interrupt flag register
-// - DMAy_INTFCR - Interrupt flag clear register (WO)
-// - DMAy_CFGRx - Configuration register
-// - DMAy_CNTRx - Transferred data register
-// - DMAy_PADDRx - Peripheral address register
-// - DMAy_MADDRx - Memory address register
-//
-// Extra features or modes we could support:
-// - Cycle mode: Set DMA_CFGRx's CIRC bit to 1
-// - Interrupts
-// - Half transfer: Set the HTIFx bit in DMA_INTFR. If HTIE is set in the
-//   DMA_CCRx register, an interrupt is generated
-// - Transfer complete: Set TCIFx bit in the corresponding DMA_INTFR. If TCIE
-//   is set in the DMA_CCRx register, an interrupt is generated.
-// - Set the TEIFx bit in the corresponding DMA_INTFR register by the hardware.
-//   Reading and writing a reserved address area results in a DMA transmission
-//   error. Meanwhile, the module address/data Target: address/data Transfer
-//   operation hardware automatically clears the EN bit in the DMA_CCRx
-//   register corresponding to the channel where the error is generated, and
-//   the channel is switched off. If TEIE is set in the DMA_CCRx register, an
-//   interrupt is generated.
-
 /// Represents a peripheral register for DMA transfers
 /// Use this when transferring to/from a peripheral register
 pub const PeripheralTarget = struct {
@@ -105,6 +52,7 @@ pub const Channel = enum(u3) {
     Ch5 = 5,
     Ch6 = 6,
     Ch7 = 7,
+
     /// Get the register pointers for a specific DMA channel
     /// Currently supports DMA1 channels 1-7 only (CH32V203)
     pub inline fn get_regs(comptime chan: Channel) Regs {
