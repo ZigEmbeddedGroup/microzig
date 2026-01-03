@@ -243,5 +243,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) void {
-    _ = b.step("test", "Run platform agnostic unit tests");
+    const test_step = b.step("test", "Run platform agnostic unit tests");
+
+    // Test DMA HAL
+    const dma_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hals/dma.zig"),
+            .target = b.graph.host,
+        }),
+    });
+    const run_dma_tests = b.addRunArtifact(dma_tests);
+    test_step.dependOn(&run_dma_tests.step);
 }
