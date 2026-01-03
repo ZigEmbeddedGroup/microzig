@@ -23,6 +23,7 @@ pub const Peripherals = util.create_peripheral_enum(&.{
     "PWR",
     "DAC",
     "RTC",
+    "USB",
     "LPUART",
 });
 

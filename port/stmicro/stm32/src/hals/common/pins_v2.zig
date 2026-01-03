@@ -4,6 +4,7 @@ const comptimePrint = std.fmt.comptimePrint;
 const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
+const enums = @import("../common/enums.zig");
 
 const Digital_IO = microzig.drivers.base.Digital_IO;
 const Direction = Digital_IO.Direction;
@@ -239,18 +240,10 @@ pub const GlobalConfiguration = struct {
     pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
         var ret: Pins(config) = undefined;
 
-        comptime var used_gpios_port: u8 = 0;
-
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |port_config| {
-                _ = port_config;
-                const port = @intFromEnum(@field(Port, port_field.name));
-                used_gpios_port |= 1 << port;
+            if (@field(config, port_field.name)) |_| {
+                rcc.enable_clock(@field(enums.Peripherals, port_field.name));
             }
-        }
-
-        if (used_gpios_port != 0) {
-            rcc.enable_gpio_port(used_gpios_port);
         }
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
