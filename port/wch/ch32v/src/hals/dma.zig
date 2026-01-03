@@ -159,7 +159,13 @@ pub const Channel = enum(u3) {
                 const Info = @typeInfo(Type);
                 switch (Info) {
                     .@"struct" => return value.addr,
-                    .pointer => return @intFromPtr(value),
+                    .pointer => |ptr| {
+                        switch (ptr.size) {
+                            .slice, .many => return @intFromPtr(value.ptr),
+                            .one => return @intFromPtr(value),
+                            else => comptime unreachable,
+                        }
+                    },
                     else => comptime unreachable,
                 }
             }

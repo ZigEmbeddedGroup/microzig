@@ -196,8 +196,12 @@ pub const Channel = enum(u4) {
                     .@"struct" => {
                         return value.addr;
                     },
-                    .pointer => {
-                        return @intFromPtr(value);
+                    .pointer => |ptr| {
+                        switch (ptr.size) {
+                            .slice, .many => return @intFromPtr(value.ptr),
+                            .one => return @intFromPtr(value),
+                            else => comptime unreachable,
+                        }
                     },
                     else => comptime unreachable,
                 }
