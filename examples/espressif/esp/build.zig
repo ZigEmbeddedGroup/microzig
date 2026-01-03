@@ -25,17 +25,10 @@ pub fn build(b: *std.Build) void {
         .{ .name = "systimer", .file = "src/systimer.zig" },
         .{ .name = "ws2812_blinky", .file = "src/ws2812_blinky.zig" },
         .{ .name = "scheduler", .file = "src/scheduler.zig" },
-    };
-
-    const targeted_examples: []const TargetedExample = &.{
-        .{
-            .target = .esp32_c3,
-            .example = .{
-                .name = "wifi",
-                .file = "src/wifi.zig",
-                .features = .{ .lwip = true },
-            },
-        },
+        .{ .name = "wifi", .file = "src/wifi.zig", .features = .{
+            .flashless = false,
+            .lwip = true,
+        } },
     };
 
     for (examples) |example| {
@@ -45,6 +38,9 @@ pub fn build(b: *std.Build) void {
                 continue;
 
         for (std.enums.values(TargetEnum)) |target_enum| {
+            if (!example.features.flashless and std.mem.containsAtLeast(u8, @tagName(target_enum), 1, "flashless"))
+                continue;
+
             const target_desc = target_enum.get_target_desc(mb);
 
             // `add_firmware` basically works like addExecutable, but takes a
@@ -59,6 +55,50 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path(example.file),
             });
 
+            if (example.features.lwip) {
+                const resolved_zig_target = b.resolveTargetQuery(firmware.target.zig_target);
+
+                const foundation_libc_dep = b.dependency("foundation_libc", .{
+                    .optimize = optimize,
+                    .target = resolved_zig_target,
+                });
+                const lwip_dep = b.dependency("lwip", .{});
+
+                const lwip_lib = b.addLibrary(.{
+                    .name = "lwip",
+                    .root_module = b.createModule(.{
+                        .optimize = optimize,
+                        .target = resolved_zig_target,
+                        .link_libc = false,
+                    }),
+                    .linkage = .static,
+                });
+
+                lwip_lib.addCSourceFiles(.{
+                    .root = lwip_dep.path("src"),
+                    .files = &lwip_files,
+                    .flags = &lwip_flags,
+                });
+
+                lwip_lib.linkLibrary(foundation_libc_dep.artifact("foundation"));
+
+                lwip_lib.addIncludePath(b.path("src/include"));
+                lwip_lib.addIncludePath(lwip_dep.path("src/include"));
+
+                firmware.app_mod.linkLibrary(lwip_lib);
+
+                const lwip_translate_c = b.addTranslateC(.{
+                    .root_source_file = b.path("src/include/lwip.h"),
+                    .target = resolved_zig_target,
+                    .optimize = optimize,
+                    .link_libc = false,
+                });
+                lwip_translate_c.addIncludePath(b.path("src/include"));
+                lwip_translate_c.addIncludePath(lwip_dep.path("src/include"));
+
+                firmware.app_mod.addImport("lwip", lwip_translate_c.createModule());
+            }
+
             // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`
             // and allows installing the firmware as a typical firmware file.
             //
@@ -69,90 +109,9 @@ pub fn build(b: *std.Build) void {
             mb.install_firmware(firmware, .{ .format = .elf });
         }
     }
-
-    for (targeted_examples) |targeted_example| {
-        // If we specify example, only select the ones that match
-        if (maybe_example) |selected_example|
-            if (!std.mem.containsAtLeast(u8, targeted_example.example.name, 1, selected_example))
-                continue;
-
-        const target_desc = targeted_example.target.get_target_desc(mb);
-        const example = targeted_example.example;
-
-        // `add_firmware` basically works like addExecutable, but takes a
-        // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
-        //
-        // The target will convey all necessary information on the chip,
-        // cpu and potentially the board as well.
-        const firmware = mb.add_firmware(.{
-            .name = b.fmt("{s}_{s}", .{ target_desc.prefix, example.name }),
-            .target = target_desc.target,
-            .optimize = optimize,
-            .root_source_file = b.path(example.file),
-        });
-
-        if (example.features.lwip) {
-            const resolved_zig_target = b.resolveTargetQuery(firmware.target.zig_target);
-
-            const foundation_libc_dep = b.dependency("foundation_libc", .{
-                .optimize = optimize,
-                .target = resolved_zig_target,
-            });
-            const lwip_dep = b.dependency("lwip", .{});
-
-            const lwip_lib = b.addLibrary(.{
-                .name = "lwip",
-                .root_module = b.createModule(.{
-                    .optimize = optimize,
-                    .target = resolved_zig_target,
-                    .link_libc = false,
-                }),
-                .linkage = .static,
-            });
-
-            lwip_lib.addCSourceFiles(.{
-                .root = lwip_dep.path("src"),
-                .files = &lwip_files,
-                .flags = &lwip_flags,
-            });
-
-            lwip_lib.linkLibrary(foundation_libc_dep.artifact("foundation"));
-
-            lwip_lib.addIncludePath(b.path("src/include"));
-            lwip_lib.addIncludePath(lwip_dep.path("src/include"));
-
-            firmware.app_mod.linkLibrary(lwip_lib);
-
-            const lwip_translate_c = b.addTranslateC(.{
-                .root_source_file = b.path("src/include/lwip.h"),
-                .target = resolved_zig_target,
-                .optimize = optimize,
-                .link_libc = false,
-            });
-            lwip_translate_c.addIncludePath(b.path("src/include"));
-            lwip_translate_c.addIncludePath(lwip_dep.path("src/include"));
-
-            firmware.app_mod.addImport("lwip", lwip_translate_c.createModule());
-        }
-
-        // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`
-        // and allows installing the firmware as a typical firmware file.
-        //
-        // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        mb.install_firmware(firmware, .{});
-
-        // For debugging, we also always install the firmware as an ELF file
-        mb.install_firmware(firmware, .{ .format = .elf });
-    }
 }
 
 const TargetEnum = enum {
-    const all: []TargetEnum = &.{
-        .esp32_c3,
-        .esp32_c3_direct_boot,
-        .esp32_c3_flashless,
-    };
-
     esp32_c3,
     esp32_c3_direct_boot,
     esp32_c3_flashless,
@@ -182,17 +141,13 @@ const TargetDescription = struct {
 
 const Example = struct {
     const Features = packed struct {
+        flashless: bool = true,
         lwip: bool = false,
     };
 
     name: []const u8,
     file: []const u8,
     features: Features = .{},
-};
-
-const TargetedExample = struct {
-    target: TargetEnum,
-    example: Example,
 };
 
 const lwip_flags = [_][]const u8{ "-std=c99", "-fno-sanitize=undefined" };

@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const SPSC_Queue = microzig.concurrency.SPSC_Queue;
 const interrupt = microzig.cpu.interrupt;
 const hal = microzig.hal;
-const Scheduler = hal.Scheduler;
+const RTOS = hal.RTOS;
 const radio = hal.radio;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
@@ -31,31 +31,24 @@ pub const microzig_options: microzig.Options = .{
     },
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
-        .interrupt29 = .{ .c = radio.interrupt_handlers.wifi_xxx },
-        .interrupt30 = .{ .c = Scheduler.generic_interrupt_handler },
-        .interrupt31 = .{ .naked = Scheduler.isr_yield_handler },
+        .interrupt29 = .{ .c = radio.interrupt_handler },
+        .interrupt30 = .{ .c = RTOS.general_purpose_interrupt_handler },
+        .interrupt31 = .{ .naked = RTOS.yield_handler },
     },
     .cpu = .{
         .interrupt_stack_size = 4096,
     },
-    .hal = .{
-        .radio = .{
-            .wifi_interrupt = .interrupt29,
-        },
-    },
 };
 
 var buffer: [50 * 1024]u8 = undefined;
-var scheduler: Scheduler = undefined;
+var rtos: RTOS = undefined;
 
 pub fn main() !void {
-    // var fba: std.heap.FixedBufferAllocator = .init(&buffer);
-    // const allocator = fba.threadSafeAllocator();
-    var alloc = microzig.Allocator.init_with_buffer(&buffer);
-    const allocator = alloc.allocator();
-    scheduler.init(allocator);
+    var heap_allocator: microzig.Allocator = .init_with_buffer(&buffer);
+    const gpa = heap_allocator.allocator();
+    rtos.init(gpa);
 
-    try radio.init(allocator, &scheduler);
+    try radio.init(gpa, &rtos);
     defer radio.deinit();
 
     try radio.wifi.init();
@@ -102,8 +95,6 @@ pub fn main() !void {
         while (radio.wifi.recv_packet(.sta)) |packet| {
             defer packet.deinit();
 
-            std.log.info("packet received", .{});
-
             const maybe_pbuf: ?*c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(packet.data.len), c.PBUF_POOL);
             if (maybe_pbuf) |pbuf| {
                 _ = c.pbuf_take(pbuf, packet.data.ptr, @intCast(packet.data.len));
@@ -119,8 +110,8 @@ pub fn main() !void {
 
         const now = hal.time.get_time_since_boot();
         if (!now.diff(last_mem_show).less_than(.from_ms(1000))) {
-            const used_mem = 50 * 1024 - alloc.free_heap();
-            std.log.info("used memory: {}K ({})", .{ used_mem / 1024, used_mem });
+            const free_heap = heap_allocator.free_heap();
+            std.log.info("free memory: {}K ({})", .{ free_heap / 1024, free_heap });
             last_mem_show = now;
         }
     }

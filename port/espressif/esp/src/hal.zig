@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 
 pub const esp_image = @import("esp_image");
 
-pub const Scheduler = @import("hal/Scheduler.zig");
+pub const RTOS = @import("hal/RTOS.zig");
 pub const cache = @import("hal/cache.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
@@ -25,8 +25,6 @@ pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 comptime {
     // export atomic intrinsics
     _ = @import("hal/atomic.zig");
-
-    _ = esp_app_desc;
 }
 
 pub const HAL_Options = struct {
@@ -35,11 +33,12 @@ pub const HAL_Options = struct {
         secure_version: u32 = 0,
         version: []const u8 = "0.0.0",
     } = .{},
-    radio: ?radio.Options = null,
+    rtos: RTOS.Options = .{},
+    radio: radio.Options = .{},
 };
 
 /// Clock config applied by the default `init()` function of the hal.
-pub const clock_config: clocks.Config = .init_comptime(160_000_000);
+pub const clock_config: clocks.Config = .init_comptime(80_000_000);
 
 pub fn init() void {
     init_sequence(clock_config);

@@ -5,7 +5,7 @@ const microzig = @import("microzig");
 const SPSC_Queue = microzig.concurrency.SPSC_Queue;
 
 const radio = @import("../radio.zig");
-const options = radio.options.wifi;
+const wifi_options = microzig.options.hal.radio.wifi;
 const osi = @import("osi.zig");
 
 pub const c = @import("esp-wifi-driver");
@@ -509,7 +509,7 @@ var packets_in_flight: usize = 0;
 
 pub fn send_packet(iface: Interface, data: []const u8) (error{TooManyPacketsInFlight} || InternalError)!void {
     const pkts_in_flight = @atomicLoad(usize, &packets_in_flight, .acquire);
-    if (pkts_in_flight >= options.tx_queue_len) {
+    if (pkts_in_flight >= wifi_options.tx_queue_len) {
         log.warn("too many packets in flight", .{});
         return error.TooManyPacketsInFlight;
     }
@@ -545,8 +545,8 @@ pub const ReceivedPacket = struct {
     }
 };
 
-var ap_rx_queue: SPSC_Queue(ReceivedPacket, options.rx_queue_len) = .empty;
-var sta_rx_queue: SPSC_Queue(ReceivedPacket, options.rx_queue_len) = .empty;
+var ap_rx_queue: SPSC_Queue(ReceivedPacket, wifi_options.rx_queue_len) = .empty;
+var sta_rx_queue: SPSC_Queue(ReceivedPacket, wifi_options.rx_queue_len) = .empty;
 
 pub fn recv_packet(comptime iface: Interface) ?ReceivedPacket {
     return switch (iface) {

@@ -17,25 +17,16 @@ pub const bluetooth = @import("radio/bluetooth.zig");
 const osi = @import("radio/osi.zig");
 const timer = @import("radio/timer.zig");
 pub const wifi = @import("radio/wifi.zig");
-const Scheduler = @import("Scheduler.zig");
+const RTOS = @import("RTOS.zig");
 
 const log = std.log.scoped(.esp_radio);
 
 pub const Options = struct {
-    wifi_interrupt: microzig.cpu.Interrupt,
-
+    interrupt: microzig.cpu.Interrupt = .interrupt29,
     wifi: wifi.Options = .{},
 };
 
-pub const options = microzig.options.hal.radio orelse
-    @compileError("Please specify options if you want to use radio.");
-
-// TODO: We should allow the user to select the scheduling algorithm. Maybe at
-// compile time?
-
-/// Radio uses the official esp drivers. You should enable interrupts
-/// after/before this.
-pub fn init(allocator: Allocator, scheduler: *Scheduler) Allocator.Error!void {
+pub fn init(allocator: Allocator, rtos: *RTOS) Allocator.Error!void {
     // TODO: check that clock frequency is higher or equal to 80mhz
 
     {
@@ -46,7 +37,7 @@ pub fn init(allocator: Allocator, scheduler: *Scheduler) Allocator.Error!void {
         // phy_mem_init(); // only sets some global variable on esp32c3
 
         osi.allocator = allocator;
-        osi.scheduler = scheduler;
+        osi.rtos = rtos;
 
         setup_interrupts();
     }
@@ -136,26 +127,17 @@ fn enable_wifi_power_domain_and_init_clocks() void {
 }
 
 fn setup_interrupts() void {
-    // TODO: which interrupts are used should be configurable.
-
-    microzig.cpu.interrupt.map(.wifi_mac, options.wifi_interrupt);
-    microzig.cpu.interrupt.map(.wifi_pwr, options.wifi_interrupt);
-
-    microzig.cpu.interrupt.set_type(options.wifi_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(options.wifi_interrupt, .highest);
+    const radio_interrupt = microzig.options.hal.radio.interrupt;
+    microzig.cpu.interrupt.map(.wifi_mac, radio_interrupt);
+    microzig.cpu.interrupt.map(.wifi_pwr, radio_interrupt);
+    microzig.cpu.interrupt.set_type(radio_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(radio_interrupt, .highest);
 }
 
-pub const interrupt_handlers = struct {
-    pub fn wifi_xxx(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        if (osi.wifi_interrupt_handler) |handler| {
-            log.debug("interrupt WIFI_xxx {} {?}", .{
-                handler.f,
-                handler.arg,
-            });
-
-            handler.f(handler.arg);
-        } else {
-            // should be unreachable
-        }
+pub fn interrupt_handler(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
+    if (osi.wifi_interrupt_handler) |handler| {
+        handler.f(handler.arg);
+    } else {
+        // should be unreachable
     }
-};
+}

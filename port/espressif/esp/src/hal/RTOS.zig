@@ -9,8 +9,11 @@ const TrapFrame = microzig.cpu.TrapFrame;
 const SYSTEM = microzig.chip.peripherals.SYSTEM;
 const time = microzig.drivers.time;
 
+const system = @import("system.zig");
 const systimer = @import("systimer.zig");
 const get_time_since_boot = @import("time.zig").get_time_since_boot;
+
+const rtos_options = microzig.options.hal.rtos;
 
 // How it works?
 // For simple task to task context switches, only necessary registers are
@@ -33,24 +36,12 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // NOTE: don't use anonymous structs for reinitializing state unions with
 // previous union state to avoid compiler bug (0.15.2)
 
-comptime {
-    if (microzig.options.cpu.interrupt_stack_size == null)
-        @compileError("Please enable interrupt stacks to use the scheduler");
-}
-
 const STACK_ALIGN: std.mem.Alignment = .@"16";
 const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 31 * @sizeOf(usize));
 
-// TODO: configurable
-const generic_interrupt: microzig.cpu.Interrupt = .interrupt30;
-// TODO: configurable
-const yield_interrupt: microzig.cpu.Interrupt = .interrupt31;
-const systimer_unit = systimer.unit(0);
-const systimer_alarm = systimer.alarm(0);
+const RTOS = @This();
 
-const Scheduler = @This();
-
-var maybe_instance: ?*Scheduler = null;
+var maybe_instance: ?*RTOS = null;
 
 gpa: Allocator,
 
@@ -80,10 +71,23 @@ pub const Priority = enum(u8) {
     }
 };
 
-pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
+pub const Options = struct {
+    general_purpose_interrupt: microzig.cpu.Interrupt = .interrupt30,
+    systimer_unit: systimer.Unit = .unit0,
+    systimer_alarm: systimer.Alarm = .alarm0,
+    cpu_interrupt: system.CpuInterrupt = .cpu_interrupt_0,
+    yield_interrupt: microzig.cpu.Interrupt = .interrupt31,
+};
+
+pub fn init(rtos: *RTOS, gpa: Allocator) void {
+    comptime {
+        if (microzig.options.cpu.interrupt_stack_size == null)
+            @compileError("Please enable interrupt stacks to use the rtos");
+    }
+
     assert(maybe_instance == null);
 
-    scheduler.* = .{
+    rtos.* = .{
         .gpa = gpa,
         .main_task = .{
             .context = undefined,
@@ -93,34 +97,37 @@ pub fn init(scheduler: *Scheduler, gpa: Allocator) void {
         .idle_task = .{
             .context = .{
                 .pc = @intFromPtr(&idle),
-                .sp = @intFromPtr(scheduler.idle_stack[scheduler.idle_stack.len..].ptr),
+                .sp = @intFromPtr(rtos.idle_stack[rtos.idle_stack.len..].ptr),
                 .fp = 0,
             },
-            .stack = &scheduler.idle_stack,
+            .stack = &rtos.idle_stack,
             .priority = .idle,
         },
-        .current_task = &scheduler.main_task,
+        .current_task = &rtos.main_task,
     };
 
-    scheduler.ready(&scheduler.idle_task, .{});
+    rtos.ready(&rtos.idle_task, .{});
 
-    maybe_instance = scheduler;
+    maybe_instance = rtos;
 
-    microzig.cpu.interrupt.map(.from_cpu_intr0, yield_interrupt);
-    microzig.cpu.interrupt.set_type(yield_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(yield_interrupt, .lowest);
-    microzig.cpu.interrupt.enable(yield_interrupt);
+    microzig.cpu.interrupt.map(rtos_options.cpu_interrupt.source(), rtos_options.yield_interrupt);
+    microzig.cpu.interrupt.set_type(rtos_options.yield_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(rtos_options.yield_interrupt, .lowest);
+    microzig.cpu.interrupt.enable(rtos_options.yield_interrupt);
 
     // unit0 is already enabled as it is used by `hal.time`.
-    systimer_alarm.set_unit(systimer_unit);
-    systimer_alarm.set_mode(.target);
-    systimer_alarm.set_enabled(false);
-    systimer_alarm.set_interrupt_enabled(true);
+    if (rtos_options.systimer_unit != .unit0) {
+        rtos_options.systimer_unit.apply(.enabled);
+    }
+    rtos_options.systimer_alarm.set_unit(rtos_options.systimer_unit);
+    rtos_options.systimer_alarm.set_mode(.target);
+    rtos_options.systimer_alarm.set_enabled(false);
+    rtos_options.systimer_alarm.set_interrupt_enabled(true);
 
-    microzig.cpu.interrupt.map(.systimer_target0, generic_interrupt);
-    microzig.cpu.interrupt.set_type(generic_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(generic_interrupt, .lowest);
-    microzig.cpu.interrupt.enable(generic_interrupt);
+    microzig.cpu.interrupt.map(.systimer_target0, rtos_options.general_purpose_interrupt);
+    microzig.cpu.interrupt.set_type(rtos_options.general_purpose_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(rtos_options.general_purpose_interrupt, .lowest);
+    microzig.cpu.interrupt.enable(rtos_options.general_purpose_interrupt);
 }
 
 // TODO: deinit
@@ -140,7 +147,7 @@ pub const SpawnOptions = struct {
 };
 
 pub fn spawn(
-    scheduler: *Scheduler,
+    rtos: *RTOS,
     comptime function: anytype,
     args: std.meta.ArgsTuple(@TypeOf(function)),
     options: SpawnOptions,
@@ -150,7 +157,7 @@ pub fn spawn(
 
     const TypeErased = struct {
         fn call() callconv(.c) void {
-            const sched = maybe_instance orelse @panic("no active scheduler");
+            const sched = maybe_instance orelse @panic("no active rtos");
 
             const context_ptr: *const Args =
                 @ptrFromInt(args_align.forward(@intFromPtr(sched.current_task) + @sizeOf(Task)));
@@ -170,11 +177,11 @@ pub fn spawn(
     const stack_end = STACK_ALIGN.forward(stack_start + options.stack_size + EXTRA_STACK_SIZE);
 
     const alloc_size = stack_end;
-    const raw_alloc = try scheduler.gpa.alignedAlloc(u8, alloc_align, alloc_size);
+    const raw_alloc = try rtos.gpa.alignedAlloc(u8, alloc_align, alloc_size);
 
     const task: *Task = @ptrCast(@alignCast(raw_alloc));
 
-    const task_args: *Args = @alignCast(@ptrCast(raw_alloc[args_start..][0..@sizeOf(Args)]));
+    const task_args: *Args = @ptrCast(@alignCast(raw_alloc[args_start..][0..@sizeOf(Args)]));
     task_args.* = args;
 
     const stack: []u8 = raw_alloc[stack_start..stack_end];
@@ -192,7 +199,7 @@ pub fn spawn(
     const cs = enter_critical_section();
     defer cs.leave();
 
-    scheduler.ready(task, .{});
+    rtos.ready(task, .{});
 
     return task;
 }
@@ -206,30 +213,30 @@ pub const YieldAction = union(enum) {
     delete,
 };
 
-pub inline fn yield(scheduler: *Scheduler, action: YieldAction) void {
+pub inline fn yield(rtos: *RTOS, action: YieldAction) void {
     const cs = enter_critical_section();
-    scheduler.yield_and_leave_cs(action, cs);
+    rtos.yield_and_leave_cs(action, cs);
 }
 
 /// Must be called inside critical section. Calling leave on the critical
 /// section becomes unnecessary.
-pub inline fn yield_and_leave_cs(scheduler: *Scheduler, action: YieldAction, cs: CriticalSection) void {
+pub inline fn yield_and_leave_cs(rtos: *RTOS, action: YieldAction, cs: CriticalSection) void {
     defer if (!cs.enable_on_leave) {
         microzig.cpu.interrupt.disable_interrupts();
     };
-    const current_task, const next_task = scheduler.yield_inner(action);
+    const current_task, const next_task = rtos.yield_inner(action);
     context_switch(&current_task.context, &next_task.context);
 }
 
-fn yield_inner(scheduler: *Scheduler, action: YieldAction) struct { *Task, *Task } {
-    const current_task = scheduler.current_task;
+fn yield_inner(rtos: *RTOS, action: YieldAction) struct { *Task, *Task } {
+    const current_task = rtos.current_task;
     switch (action) {
         .reschedule => {
             current_task.state = .{ .ready = .{} };
-            scheduler.ready_queue.put(current_task);
+            rtos.ready_queue.put(current_task);
         },
         .wait => |wait_action| {
-            assert(current_task != &scheduler.idle_task);
+            assert(current_task != &rtos.idle_task);
 
             if (wait_action.wait_queue) |wait_queue| {
                 assert(current_task.wait_queue == null);
@@ -238,28 +245,28 @@ fn yield_inner(scheduler: *Scheduler, action: YieldAction) struct { *Task, *Task
             }
 
             if (wait_action.timeout) |timeout| {
-                scheduler.schedule_wake_at(current_task, timeout);
+                rtos.schedule_wake_at(current_task, timeout);
             } else {
                 current_task.state = .suspended;
             }
         },
         .delete => {
-            assert(current_task != &scheduler.idle_task and current_task != &scheduler.main_task);
+            assert(current_task != &rtos.idle_task and current_task != &rtos.main_task);
 
             current_task.state = .scheduled_for_deletion;
-            scheduler.scheduled_for_deletion_list.append(&current_task.node);
+            rtos.scheduled_for_deletion_list.append(&current_task.node);
         },
     }
 
-    const next_task: *Task = scheduler.ready_queue.pop(null) orelse @panic("No task ready to run!");
+    const next_task: *Task = rtos.ready_queue.pop(null) orelse @panic("No task ready to run!");
 
     next_task.state = Task.State{ .running = next_task.state.ready };
-    scheduler.current_task = next_task;
+    rtos.current_task = next_task;
 
     return .{ current_task, next_task };
 }
 
-pub fn wake_from_wait_queue(scheduler: *Scheduler, wait_queue: *PriorityWaitQueue, how_many: enum(usize) {
+pub fn wake_from_wait_queue(rtos: *RTOS, wait_queue: *PriorityWaitQueue, how_many: enum(usize) {
     one = 1,
     all = std.math.maxInt(usize),
     _,
@@ -273,20 +280,20 @@ pub fn wake_from_wait_queue(scheduler: *Scheduler, wait_queue: *PriorityWaitQueu
         task.wait_queue = null;
 
         switch (task.state) {
-            .alarm_set => |_| scheduler.timer_queue.remove(&task.node),
+            .alarm_set => |_| rtos.timer_queue.remove(&task.node),
             .suspended => {},
             else => @panic("invalid state for waiting task"),
         }
 
-        scheduler.ready(task, .{});
+        rtos.ready(task, .{});
     }
 }
 
-pub fn sleep(scheduler: *Scheduler, duration: time.Duration) void {
-    scheduler.yield(.{ .wait = .{
+pub fn sleep(rtos: *RTOS, duration: time.Duration) void {
+    rtos.yield(.{ .wait = .{
         .timeout = .after(duration),
     } });
-    assert(scheduler.current_task.state.running.timeout);
+    assert(rtos.current_task.state.running.timeout);
 }
 
 inline fn context_switch(prev_context: *Context, next_context: *Context) void {
@@ -344,19 +351,17 @@ inline fn context_switch(prev_context: *Context, next_context: *Context) void {
 }
 
 pub fn yield_from_isr() void {
-    SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
-        .CPU_INTR_FROM_CPU_0 = 1,
-    });
+    rtos_options.cpu_interrupt.set_pending(true);
 }
 
-pub fn is_a_higher_priority_task_ready(scheduler: *Scheduler) bool {
-    return if (scheduler.ready_queue.peek_top()) |top_ready_task|
-        top_ready_task.priority.is_greater(scheduler.current_task.priority)
+pub fn is_a_higher_priority_task_ready(rtos: *RTOS) bool {
+    return if (rtos.ready_queue.peek_top()) |top_ready_task|
+        top_ready_task.priority.is_greater(rtos.current_task.priority)
     else
         false;
 }
 
-pub fn isr_yield_handler() linksection(".ram_vectors") callconv(.naked) void {
+pub fn yield_handler() linksection(".ram_vectors") callconv(.naked) void {
     comptime {
         assert(@sizeOf(Context) == 3 * @sizeOf(usize));
     }
@@ -488,14 +493,12 @@ pub fn isr_yield_handler() linksection(".ram_vectors") callconv(.naked) void {
 }
 
 fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) void {
-    const scheduler = maybe_instance orelse @panic("no active scheduler");
+    const rtos = maybe_instance orelse @panic("no active rtos");
 
-    SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
-        .CPU_INTR_FROM_CPU_0 = 0,
-    });
+    rtos_options.cpu_interrupt.set_pending(false);
 
-    const current_task = scheduler.current_task;
-    const ready_task = scheduler.ready_queue.pop(scheduler.current_task.priority) orelse return;
+    const current_task = rtos.current_task;
+    const ready_task = rtos.ready_queue.pop(rtos.current_task.priority) orelse return;
 
     // swap contexts
     current_task.context = context.*;
@@ -503,40 +506,40 @@ fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) v
 
     // keep the state until the next yield
     current_task.state = Task.State{ .ready = current_task.state.running };
-    scheduler.ready_queue.put(current_task);
+    rtos.ready_queue.put(current_task);
 
     ready_task.state = Task.State{ .running = ready_task.state.ready };
-    scheduler.current_task = ready_task;
+    rtos.current_task = ready_task;
 }
 
 /// Must be called from a critical section.
-fn schedule_wake_at(scheduler: *Scheduler, sleeping_task: *Task, ticks: TimerTicks) void {
+fn schedule_wake_at(rtos: *RTOS, sleeping_task: *Task, ticks: TimerTicks) void {
     sleeping_task.state = .{ .alarm_set = ticks };
 
-    var maybe_node = scheduler.timer_queue.first;
+    var maybe_node = rtos.timer_queue.first;
     while (maybe_node) |node| : (maybe_node = node.next) {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
         if (ticks.is_before(task.state.alarm_set)) {
-            scheduler.timer_queue.insertBefore(&task.node, &sleeping_task.node);
+            rtos.timer_queue.insertBefore(&task.node, &sleeping_task.node);
             break;
         }
     } else {
-        scheduler.timer_queue.append(&sleeping_task.node);
+        rtos.timer_queue.append(&sleeping_task.node);
     }
 
     // If we updated the first element of the list, it means that we have to
     // reschedule the timer
-    if (scheduler.timer_queue.first == &sleeping_task.node) {
-        systimer_alarm.set_target(@intFromEnum(ticks));
-        systimer_alarm.set_enabled(true);
+    if (rtos.timer_queue.first == &sleeping_task.node) {
+        rtos_options.systimer_alarm.set_target(@intFromEnum(ticks));
+        rtos_options.systimer_alarm.set_enabled(true);
 
         if (ticks.is_reached())
-            scheduler.sweep_timer_queue_for_timeouts();
+            rtos.sweep_timer_queue_for_timeouts();
     }
 }
 
-pub fn generic_interrupt_handler(_: *TrapFrame) callconv(.c) void {
-    const scheduler = maybe_instance orelse @panic("no active scheduler");
+pub fn general_purpose_interrupt_handler(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
+    const rtos = maybe_instance orelse @panic("no active rtos");
 
     var iter: microzig.cpu.interrupt.SourceIterator = .init();
     while (iter.next()) |source| {
@@ -545,24 +548,24 @@ pub fn generic_interrupt_handler(_: *TrapFrame) callconv(.c) void {
                 const cs = enter_critical_section();
                 defer cs.leave();
 
-                systimer_alarm.clear_interrupt();
+                rtos_options.systimer_alarm.clear_interrupt();
 
-                scheduler.sweep_timer_queue_for_timeouts();
+                rtos.sweep_timer_queue_for_timeouts();
             },
             else => {},
         }
     }
 
-    if (scheduler.is_a_higher_priority_task_ready()) {
+    if (rtos.is_a_higher_priority_task_ready()) {
         yield_from_isr();
     }
 }
 
-fn sweep_timer_queue_for_timeouts(scheduler: *Scheduler) void {
-    while (scheduler.timer_queue.popFirst()) |node| {
+fn sweep_timer_queue_for_timeouts(rtos: *RTOS) void {
+    while (rtos.timer_queue.popFirst()) |node| {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
         if (!task.state.alarm_set.is_reached()) {
-            scheduler.timer_queue.prepend(&task.node);
+            rtos.timer_queue.prepend(&task.node);
             break;
         }
 
@@ -571,22 +574,22 @@ fn sweep_timer_queue_for_timeouts(scheduler: *Scheduler) void {
             task.wait_queue = null;
         }
 
-        scheduler.ready(task, .{ .timeout = true });
+        rtos.ready(task, .{ .timeout = true });
     }
 
-    if (scheduler.timer_queue.first) |node| {
+    if (rtos.timer_queue.first) |node| {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
-        systimer_alarm.set_enabled(true);
+        rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
+        rtos_options.systimer_alarm.set_enabled(true);
     } else {
-        systimer_alarm.set_enabled(false);
+        rtos_options.systimer_alarm.set_enabled(false);
     }
 }
 
-fn ready(scheduler: *Scheduler, task: *Task, flags: Task.ReadyFlags) void {
+fn ready(rtos: *RTOS, task: *Task, flags: Task.ReadyFlags) void {
     assert(task.state != .ready);
     task.state = .{ .ready = flags };
-    scheduler.ready_queue.put(task);
+    rtos.ready_queue.put(task);
 }
 
 pub const Task = struct {
@@ -597,7 +600,7 @@ pub const Task = struct {
     /// What is the deal with this task right now?
     state: State = .none,
 
-    /// Node used for scheduler internal lists.
+    /// Node used for rtos internal lists.
     node: std.DoublyLinkedList.Node = .{},
 
     /// Task specific semaphore (required by the wifi driver)
@@ -725,11 +728,11 @@ pub const Mutex = struct {
         unlocked,
     };
 
-    pub fn lock(mutex: *Mutex, scheduler: *Scheduler) void {
-        lock_with_timeout(mutex, scheduler, null) catch unreachable;
+    pub fn lock(mutex: *Mutex, rtos: *RTOS) void {
+        lock_with_timeout(mutex, rtos, null) catch unreachable;
     }
 
-    pub fn lock_with_timeout(mutex: *Mutex, scheduler: *Scheduler, maybe_timeout: ?time.Duration) TimeoutError!void {
+    pub fn lock_with_timeout(mutex: *Mutex, rtos: *RTOS, maybe_timeout: ?time.Duration) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
@@ -739,25 +742,25 @@ pub const Mutex = struct {
             null;
 
         while (mutex.state != .unlocked) {
-            scheduler.yield(.{ .wait = .{
+            rtos.yield(.{ .wait = .{
                 .timeout = maybe_timeout_ticks,
                 .wait_queue = &mutex.wait_queue,
             } });
-            if (scheduler.current_task.state.running.timeout)
+            if (rtos.current_task.state.running.timeout)
                 return error.Timeout;
         }
 
         mutex.state = .locked;
     }
 
-    pub fn unlock(mutex: *Mutex, scheduler: *Scheduler) void {
+    pub fn unlock(mutex: *Mutex, rtos: *RTOS) void {
         const cs = enter_critical_section();
-        defer scheduler.yield_and_leave_cs(.reschedule, cs);
+        defer rtos.yield_and_leave_cs(.reschedule, cs);
 
         assert(mutex.state == .locked);
         mutex.state = .unlocked;
 
-        scheduler.wake_from_wait_queue(&mutex.wait_queue, .one);
+        rtos.wake_from_wait_queue(&mutex.wait_queue, .one);
     }
 };
 
@@ -768,11 +771,11 @@ pub const RecursiveMutex = struct {
     owning_task: ?*Task = null,
     wait_queue: PriorityWaitQueue = .{},
 
-    pub fn lock(mutex: *RecursiveMutex, scheduler: *Scheduler) void {
+    pub fn lock(mutex: *RecursiveMutex, rtos: *RTOS) void {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        const current_task = scheduler.current_task;
+        const current_task = rtos.current_task;
 
         if (mutex.owning_task == current_task) {
             assert(mutex.recursive);
@@ -782,11 +785,11 @@ pub const RecursiveMutex = struct {
 
         // if (mutex.owning_task) |owning_task| {
         //     // if (current_task.priority.is_greater(owning_task.priority)) {
-        //     //     scheduler.change_task_priority_from_cs(owning_task, current_task.priority, cs);
+        //     //     rtos.change_task_priority_from_cs(owning_task, current_task.priority, cs);
         //     // }
         //
         while (mutex.owning_task != null) {
-            scheduler.yield(.{ .wait = .{
+            rtos.yield(.{ .wait = .{
                 .wait_queue = &mutex.wait_queue,
             } });
         }
@@ -797,16 +800,16 @@ pub const RecursiveMutex = struct {
         mutex.owning_task = current_task;
     }
 
-    pub fn unlock(mutex: *RecursiveMutex, scheduler: *Scheduler) bool {
+    pub fn unlock(mutex: *RecursiveMutex, rtos: *RTOS) bool {
         const cs = enter_critical_section();
 
         assert(mutex.value > 0);
         mutex.value -= 1;
         if (mutex.value <= 0) {
-            defer scheduler.yield_and_leave_cs(.reschedule, cs);
+            defer rtos.yield_and_leave_cs(.reschedule, cs);
 
             mutex.owning_task = null;
-            scheduler.wake_from_wait_queue(&mutex.wait_queue, .one);
+            rtos.wake_from_wait_queue(&mutex.wait_queue, .one);
 
             return true;
         } else {
@@ -826,11 +829,11 @@ pub const Semaphore = struct {
         };
     }
 
-    pub fn take(sem: *Semaphore, scheduler: *Scheduler) void {
-        sem.take_with_timeout(scheduler, null) catch unreachable;
+    pub fn take(sem: *Semaphore, rtos: *RTOS) void {
+        sem.take_with_timeout(rtos, null) catch unreachable;
     }
 
-    pub fn take_with_timeout(sem: *Semaphore, scheduler: *Scheduler, maybe_timeout: ?time.Duration) TimeoutError!void {
+    pub fn take_with_timeout(sem: *Semaphore, rtos: *RTOS, maybe_timeout: ?time.Duration) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
@@ -840,24 +843,24 @@ pub const Semaphore = struct {
             null;
 
         while (sem.value <= 0) {
-            scheduler.yield(.{ .wait = .{
+            rtos.yield(.{ .wait = .{
                 .timeout = maybe_timeout_ticks,
                 .wait_queue = &sem.wait_queue,
             } });
-            if (scheduler.current_task.state.running.timeout)
+            if (rtos.current_task.state.running.timeout)
                 return error.Timeout;
         }
 
         sem.value -= 1;
     }
 
-    pub fn give(sem: *Semaphore, scheduler: *Scheduler) void {
+    pub fn give(sem: *Semaphore, rtos: *RTOS) void {
         const cs = enter_critical_section();
-        defer scheduler.yield_and_leave_cs(.reschedule, cs);
+        defer rtos.yield_and_leave_cs(.reschedule, cs);
 
         sem.value += 1;
 
-        scheduler.wake_from_wait_queue(&sem.wait_queue, .one);
+        rtos.wake_from_wait_queue(&sem.wait_queue, .one);
     }
 };
 
@@ -882,7 +885,7 @@ pub const TypeErasedQueue = struct {
 
     pub fn put(
         q: *TypeErasedQueue,
-        scheduler: *Scheduler,
+        rtos: *RTOS,
         elements: []const u8,
         min: usize,
         maybe_timeout: ?time.Duration,
@@ -891,7 +894,7 @@ pub const TypeErasedQueue = struct {
         if (elements.len == 0) return 0;
 
         const cs = enter_critical_section();
-        defer scheduler.yield_and_leave_cs(.reschedule, cs);
+        defer rtos.yield_and_leave_cs(.reschedule, cs);
 
         const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
             .after(timeout)
@@ -901,26 +904,26 @@ pub const TypeErasedQueue = struct {
         var n: usize = 0;
 
         while (true) {
-            n += q.put_non_blocking_from_cs(scheduler, elements[n..]);
+            n += q.put_non_blocking_from_cs(rtos, elements[n..]);
             if (n >= min) return n;
 
-            scheduler.yield(.{ .wait = .{
+            rtos.yield(.{ .wait = .{
                 .timeout = maybe_timeout_ticks,
                 .wait_queue = &q.putters,
             } });
-            if (scheduler.current_task.state.running.timeout)
+            if (rtos.current_task.state.running.timeout)
                 return n;
         }
     }
 
-    pub fn put_non_blocking(q: *TypeErasedQueue, scheduler: *Scheduler, elements: []const u8) usize {
+    pub fn put_non_blocking(q: *TypeErasedQueue, rtos: *RTOS, elements: []const u8) usize {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        return q.put_non_blocking_from_cs(scheduler, elements);
+        return q.put_non_blocking_from_cs(rtos, elements);
     }
 
-    fn put_non_blocking_from_cs(q: *TypeErasedQueue, scheduler: *Scheduler, elements: []const u8) usize {
+    fn put_non_blocking_from_cs(q: *TypeErasedQueue, rtos: *RTOS, elements: []const u8) usize {
         var n: usize = 0;
         while (q.puttable_slice()) |slice| {
             const copy_len = @min(slice.len, elements.len - n);
@@ -930,7 +933,7 @@ pub const TypeErasedQueue = struct {
             n += copy_len;
             if (n == elements.len) break;
         }
-        if (n > 0) scheduler.wake_from_wait_queue(&q.getters, .one);
+        if (n > 0) rtos.wake_from_wait_queue(&q.getters, .one);
         return n;
     }
 
@@ -946,7 +949,7 @@ pub const TypeErasedQueue = struct {
 
     pub fn get(
         q: *TypeErasedQueue,
-        scheduler: *Scheduler,
+        rtos: *RTOS,
         buffer: []u8,
         min: usize,
         maybe_timeout: ?time.Duration,
@@ -955,7 +958,7 @@ pub const TypeErasedQueue = struct {
         if (buffer.len == 0) return 0;
 
         const cs = enter_critical_section();
-        defer scheduler.yield_and_leave_cs(.reschedule, cs);
+        defer rtos.yield_and_leave_cs(.reschedule, cs);
 
         const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
             .after(timeout)
@@ -965,26 +968,26 @@ pub const TypeErasedQueue = struct {
         var n: usize = 0;
 
         while (true) {
-            n += q.get_non_blocking_from_cs(scheduler, buffer[n..]);
+            n += q.get_non_blocking_from_cs(rtos, buffer[n..]);
             if (n >= min) return n;
 
-            scheduler.yield(.{ .wait = .{
+            rtos.yield(.{ .wait = .{
                 .timeout = maybe_timeout_ticks,
                 .wait_queue = &q.getters,
             } });
-            if (scheduler.current_task.state.running.timeout)
+            if (rtos.current_task.state.running.timeout)
                 return n;
         }
     }
 
-    pub fn get_non_blocking(q: *TypeErasedQueue, scheduler: *Scheduler, buffer: []u8) usize {
+    pub fn get_non_blocking(q: *TypeErasedQueue, rtos: *RTOS, buffer: []u8) usize {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        return q.get_non_blocking_from_cs(scheduler, buffer);
+        return q.get_non_blocking_from_cs(rtos, buffer);
     }
 
-    fn get_non_blocking_from_cs(q: *TypeErasedQueue, scheduler: *Scheduler, buffer: []u8) usize {
+    fn get_non_blocking_from_cs(q: *TypeErasedQueue, rtos: *RTOS, buffer: []u8) usize {
         var n: usize = 0;
         while (q.gettable_slice()) |slice| {
             const copy_len = @min(slice.len, buffer.len - n);
@@ -996,7 +999,7 @@ pub const TypeErasedQueue = struct {
             n += copy_len;
             if (n == buffer.len) break;
         }
-        if (n > 0) scheduler.wake_from_wait_queue(&q.putters, .one);
+        if (n > 0) rtos.wake_from_wait_queue(&q.putters, .one);
         return n;
     }
 
@@ -1017,39 +1020,39 @@ pub fn Queue(Elem: type) type {
             return .{ .type_erased = .init(@ptrCast(buffer)) };
         }
 
-        pub fn close(q: *Self, scheduler: *Scheduler) void {
-            q.type_erased.close(scheduler);
+        pub fn close(q: *Self, rtos: *RTOS) void {
+            q.type_erased.close(rtos);
         }
 
-        pub fn put(q: *Self, scheduler: *Scheduler, elements: []const Elem, min: usize, timeout: ?time.Duration) usize {
-            return @divExact(q.type_erased.put(scheduler, @ptrCast(elements), min * @sizeOf(Elem), timeout), @sizeOf(Elem));
+        pub fn put(q: *Self, rtos: *RTOS, elements: []const Elem, min: usize, timeout: ?time.Duration) usize {
+            return @divExact(q.type_erased.put(rtos, @ptrCast(elements), min * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn put_all(q: *Self, scheduler: *Scheduler, elements: []const Elem, timeout: ?time.Duration) TimeoutError!void {
-            if (q.put(scheduler, elements, elements.len, timeout) != elements.len)
+        pub fn put_all(q: *Self, rtos: *RTOS, elements: []const Elem, timeout: ?time.Duration) TimeoutError!void {
+            if (q.put(rtos, elements, elements.len, timeout) != elements.len)
                 return error.Timeout;
         }
 
-        pub fn put_one(q: *Self, scheduler: *Scheduler, item: Elem) TimeoutError!void {
-            if (q.put(scheduler, &.{item}, 1, null) != 1)
+        pub fn put_one(q: *Self, rtos: *RTOS, item: Elem) TimeoutError!void {
+            if (q.put(rtos, &.{item}, 1, null) != 1)
                 return error.Timeout;
         }
 
-        pub fn put_non_blocking(q: *Self, scheduler: *Scheduler, elements: []const Elem) usize {
-            return @divExact(q.type_erased.put_non_blocking(scheduler, @ptrCast(elements)), @sizeOf(Elem));
+        pub fn put_non_blocking(q: *Self, rtos: *RTOS, elements: []const Elem) usize {
+            return @divExact(q.type_erased.put_non_blocking(rtos, @ptrCast(elements)), @sizeOf(Elem));
         }
 
-        pub fn put_one_non_blocking(q: *Self, scheduler: *Scheduler, item: Elem) bool {
-            return q.put_non_blocking(scheduler, @ptrCast(&item)) == 1;
+        pub fn put_one_non_blocking(q: *Self, rtos: *RTOS, item: Elem) bool {
+            return q.put_non_blocking(rtos, @ptrCast(&item)) == 1;
         }
 
-        pub fn get(q: *Self, scheduler: *Scheduler, buffer: []Elem, target: usize, timeout: ?time.Duration) usize {
-            return @divExact(q.type_erased.get(scheduler, @ptrCast(buffer), target * @sizeOf(Elem), timeout), @sizeOf(Elem));
+        pub fn get(q: *Self, rtos: *RTOS, buffer: []Elem, target: usize, timeout: ?time.Duration) usize {
+            return @divExact(q.type_erased.get(rtos, @ptrCast(buffer), target * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn get_one(q: *Self, scheduler: *Scheduler, timeout: ?time.Duration) TimeoutError!Elem {
+        pub fn get_one(q: *Self, rtos: *RTOS, timeout: ?time.Duration) TimeoutError!Elem {
             var buf: [1]Elem = undefined;
-            if (q.get(scheduler, &buf, 1, timeout) != 1)
+            if (q.get(rtos, &buf, 1, timeout) != 1)
                 return error.Timeout;
             return buf[0];
         }
@@ -1064,7 +1067,7 @@ pub const TimerTicks = enum(u52) {
     _,
 
     pub fn now() TimerTicks {
-        return @enumFromInt(systimer_unit.read());
+        return @enumFromInt(rtos_options.systimer_unit.read());
     }
 
     pub fn after(duration: time.Duration) TimerTicks {

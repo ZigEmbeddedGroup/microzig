@@ -9,7 +9,8 @@ const peripherals = microzig.chip.peripherals;
 const APB_CTRL = peripherals.APB_CTRL;
 const hal = microzig.hal;
 
-const Scheduler = @import("../Scheduler.zig");
+const radio = @import("../radio.zig");
+const RTOS = @import("../RTOS.zig");
 const systimer = @import("../systimer.zig");
 const get_time_since_boot = @import("../time.zig").get_time_since_boot;
 const timer = @import("timer.zig");
@@ -21,12 +22,14 @@ const c = @import("esp-wifi-driver");
 const coex_enabled: bool = false;
 
 pub var allocator: std.mem.Allocator = undefined;
-pub var scheduler: *Scheduler = undefined;
+pub var rtos: *RTOS = undefined;
 
 pub var wifi_interrupt_handler: ?struct {
     f: *const fn (?*anyopaque) callconv(.c) void,
     arg: ?*anyopaque,
 } = undefined;
+
+const radio_interrupt = microzig.options.hal.radio.interrupt;
 
 extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void;
 
@@ -143,17 +146,17 @@ pub fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) callconv(.c) i32 {
 }
 
 pub fn sleep(time_sec: c_uint) callconv(.c) c_int {
-    scheduler.sleep(.from_us(time_sec * 1_000_000));
+    rtos.sleep(.from_us(time_sec * 1_000_000));
     return 0;
 }
 
 pub fn usleep(time_us: u32) callconv(.c) c_int {
-    scheduler.sleep(.from_us(time_us));
+    rtos.sleep(.from_us(time_us));
     return 0;
 }
 
 pub fn vTaskDelay(ticks: u32) callconv(.c) void {
-    scheduler.sleep(.from_us(ticks));
+    rtos.sleep(.from_us(ticks));
 }
 
 comptime {
@@ -251,7 +254,7 @@ pub fn ints_on(mask: u32) callconv(.c) void {
     log.debug("ints_on {}", .{mask});
 
     if (mask == 2) {
-        microzig.cpu.interrupt.enable(.interrupt29);
+        microzig.cpu.interrupt.enable(radio_interrupt);
     } else {
         @panic("ints_on: not implemented");
     }
@@ -261,7 +264,7 @@ pub fn ints_off(mask: u32) callconv(.c) void {
     log.debug("ints_off {}", .{mask});
 
     if (mask == 2) {
-        microzig.cpu.interrupt.disable(.interrupt29);
+        microzig.cpu.interrupt.disable(radio_interrupt);
     } else {
         @panic("ints_off: not implemented");
     }
@@ -303,13 +306,13 @@ pub fn wifi_int_restore(mux_ptr: ?*anyopaque, state: u32) callconv(.c) void {
 pub fn task_yield_from_isr() callconv(.c) void {
     log.debug("task_yield_from_isr", .{});
 
-    Scheduler.yield_from_isr();
+    RTOS.yield_from_isr();
 }
 
 pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
     log.debug("semphr_create {} {}", .{ max_value, init_value });
 
-    const sem = allocator.create(Scheduler.Semaphore) catch {
+    const sem = allocator.create(RTOS.Semaphore) catch {
         log.warn("failed to allocate semaphore", .{});
         return null;
     };
@@ -323,18 +326,18 @@ pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
 pub fn semphr_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("semphr_delete {?}", .{ptr});
 
-    allocator.destroy(@as(*Scheduler.Semaphore, @ptrCast(@alignCast(ptr))));
+    allocator.destroy(@as(*RTOS.Semaphore, @ptrCast(@alignCast(ptr))));
 }
 
 pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
     log.debug("semphr_take {?} {}", .{ ptr, tick });
 
-    const sem: *Scheduler.Semaphore = @ptrCast(@alignCast(ptr));
+    const sem: *RTOS.Semaphore = @ptrCast(@alignCast(ptr));
     const maybe_timeout: ?time.Duration = if (tick == c.OSI_FUNCS_TIME_BLOCKING)
         .from_us(tick)
     else
         null;
-    sem.take_with_timeout(scheduler, maybe_timeout) catch {
+    sem.take_with_timeout(rtos, maybe_timeout) catch {
         log.debug(">>>> return from semaphore take with timeout: {*}", .{sem});
         return 1;
     };
@@ -345,19 +348,19 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
 pub fn semphr_give(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("semphr_give {?}", .{ptr});
 
-    const sem: *Scheduler.Semaphore = @ptrCast(@alignCast(ptr));
-    sem.give(scheduler);
+    const sem: *RTOS.Semaphore = @ptrCast(@alignCast(ptr));
+    sem.give(rtos);
     return 1;
 }
 
 pub fn wifi_thread_semphr_get() callconv(.c) ?*anyopaque {
-    return &scheduler.current_task.semaphore;
+    return &rtos.current_task.semaphore;
 }
 
 pub fn mutex_create() callconv(.c) ?*anyopaque {
     log.debug("mutex_create", .{});
 
-    const mutex = allocator.create(Scheduler.RecursiveMutex) catch {
+    const mutex = allocator.create(RTOS.RecursiveMutex) catch {
         log.warn("failed to allocate recursive mutex", .{});
         return null;
     };
@@ -373,7 +376,7 @@ pub fn mutex_create() callconv(.c) ?*anyopaque {
 pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
     log.debug("recursive_mutex_create", .{});
 
-    const mutex = allocator.create(Scheduler.RecursiveMutex) catch {
+    const mutex = allocator.create(RTOS.RecursiveMutex) catch {
         log.warn("failed to allocate recursive mutex", .{});
         return null;
     };
@@ -389,15 +392,15 @@ pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
 pub fn mutex_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("mutex_delete {?}", .{ptr});
 
-    const mutex: *Scheduler.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    const mutex: *RTOS.RecursiveMutex = @ptrCast(@alignCast(ptr));
     allocator.destroy(mutex);
 }
 
 pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex lock {?}", .{ptr});
 
-    const mutex: *Scheduler.RecursiveMutex = @ptrCast(@alignCast(ptr));
-    mutex.lock(scheduler);
+    const mutex: *RTOS.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    mutex.lock(rtos);
 
     return 1;
 }
@@ -405,13 +408,13 @@ pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
 pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex unlock {?}", .{ptr});
 
-    const mutex: *Scheduler.RecursiveMutex = @ptrCast(@alignCast(ptr));
-    return @intFromBool(mutex.unlock(scheduler));
+    const mutex: *RTOS.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    return @intFromBool(mutex.unlock(rtos));
 }
 
 pub const QueueWrapper = struct {
     item_len: u32,
-    inner: Scheduler.TypeErasedQueue,
+    inner: RTOS.TypeErasedQueue,
 };
 
 pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
@@ -460,9 +463,9 @@ pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
 
     const size = switch (block_time_tick) {
-        0 => queue.inner.put_non_blocking(scheduler, item[0..queue.item_len]),
+        0 => queue.inner.put_non_blocking(rtos, item[0..queue.item_len]),
         else => queue.inner.put(
-            scheduler,
+            rtos,
             item[0..queue.item_len],
             1,
             if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
@@ -480,9 +483,9 @@ pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*any
 
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
-    const n = @divExact(queue.inner.put_non_blocking(scheduler, item[0..queue.item_len]), queue.item_len);
+    const n = @divExact(queue.inner.put_non_blocking(rtos, item[0..queue.item_len]), queue.item_len);
 
-    @as(*u32, @ptrCast(@alignCast(_hptw))).* = @intFromBool(scheduler.is_a_higher_priority_task_ready());
+    @as(*u32, @ptrCast(@alignCast(_hptw))).* = @intFromBool(rtos.is_a_higher_priority_task_ready());
 
     return @intCast(n);
 }
@@ -503,11 +506,11 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
 
     const size = switch (block_time_tick) {
         0 => queue.inner.get_non_blocking(
-            scheduler,
+            rtos,
             item[0..queue.item_len],
         ),
         else => queue.inner.get(
-            scheduler,
+            rtos,
             item[0..queue.item_len],
             queue.item_len,
             if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
@@ -568,7 +571,7 @@ fn task_create_common(
 
     const task_entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn = @ptrCast(@alignCast(task_func));
 
-    const task: *Scheduler.Task = scheduler.spawn(task_wrapper, .{task_entry, param}, .{
+    const task: *RTOS.Task = rtos.spawn(task_wrapper, .{ task_entry, param }, .{
         .priority = @enumFromInt(prio),
         .stack_size = stack_depth,
     }) catch {
@@ -628,13 +631,13 @@ pub fn task_delete(handle: ?*anyopaque) callconv(.c) void {
     if (handle != null) {
         @panic("task_delete(non-null): not implemented");
     }
-    scheduler.yield(.delete);
+    rtos.yield(.delete);
 }
 
 pub fn task_delay(tick: u32) callconv(.c) void {
     log.debug("task_delay {}", .{tick});
 
-    scheduler.sleep(.from_us(tick));
+    rtos.sleep(.from_us(tick));
 }
 
 pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
@@ -642,11 +645,11 @@ pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
 }
 
 pub fn task_get_current_task() callconv(.c) ?*anyopaque {
-    return scheduler.current_task;
+    return rtos.current_task;
 }
 
 pub fn task_get_max_priority() callconv(.c) i32 {
-    return @intFromEnum(Scheduler.Priority.highest);
+    return @intFromEnum(RTOS.Priority.highest);
 }
 
 pub fn get_free_heap_size() callconv(.c) void {

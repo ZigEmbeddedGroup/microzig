@@ -29,8 +29,6 @@ SECTIONS
     KEEP(*(.ram_text))
     KEEP(*(.ram_vectors))
 
-    *(.rwtext*)
-
     /* wifi rwtext */
     *(.wifi0iram  .wifi0iram.*)
     *(.wifirxiram  .wifirxiram.*)
@@ -65,9 +63,14 @@ SECTIONS
   .bss (NOLOAD) :
   {
     microzig_bss_start = .;
-    *(.bss*)
     *(.sbss*)
+    *(.bss*)
     microzig_bss_end = .;
+  } > DRAM
+
+  .tbss (NOLOAD) :
+  {
+    *(.tbss*)
   } > DRAM
 
   .heap (NOLOAD) :
