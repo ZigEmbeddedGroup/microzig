@@ -20,30 +20,33 @@ pub const microzig_options: microzig.Options = .{
 };
 
 var heap_buf: [10 * 1024]u8 = undefined;
-var scheduler: esp.Scheduler = undefined;
-var buffer: [1]u32 = undefined;
-var queue: esp.Scheduler.Queue(u32) = .init(&buffer);
 
-fn task1() void {
+fn task1(scheduler: *esp.Scheduler, queue: *esp.Scheduler.Queue(u32)) void {
     for (0..5) |i| {
-        queue.put_one(&scheduler, i) catch {
+        queue.put_one(scheduler, i) catch {
             std.log.err("failed to put item", .{});
             continue;
         };
         scheduler.sleep(.from_ms(500));
     }
-    scheduler.yield(.delete);
 }
 
 pub fn main() !void {
     var heap = microzig.Allocator.init_with_buffer(&heap_buf);
     const allocator = heap.allocator();
 
+    var scheduler: esp.Scheduler = undefined;
+    var buffer: [1]u32 = undefined;
+    var queue: esp.Scheduler.Queue(u32) = .init(&buffer);
+
     scheduler.init(allocator);
 
     esp.time.sleep_ms(1000);
 
-    _ = try scheduler.spawn(task1, .{}, .{
+    _ = try scheduler.spawn(task1, .{
+        &scheduler,
+        &queue,
+    }, .{
         .stack_size = 8000,
     });
 

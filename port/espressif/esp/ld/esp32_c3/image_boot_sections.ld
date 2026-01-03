@@ -90,7 +90,7 @@ SECTIONS
   .data.wifi :
   {
     *(.dram1*)
-  }
+  } > DRAM
 
   .bss (NOLOAD) :
   {
@@ -99,6 +99,11 @@ SECTIONS
     *(.bss*)
     microzig_bss_end = .;
   } > DRAM
+
+  .tbss (NOLOAD) :
+  {
+    *(.tbss*)
+  }
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
 }

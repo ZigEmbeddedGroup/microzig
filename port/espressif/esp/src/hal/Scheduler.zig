@@ -19,13 +19,13 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // task on the stack. What is interresting is that the two context switches are
 // compatible. Voluntary yield can resume a task that was interrupted by force
 // and vice versa. Because of the forced yield, tasks are required to have a
-// minimum stack size available.
+// minimum stack size available at all times.
 
 // TODO: add identifier names to tasks
 // TODO: stack usage report based on stack painting
-// TODO: implement task garbage collection
+// TODO: idle improvements
+//         - implement task garbage collection
 // TODO: for other esp32 chips with multicore support SMP
-// TODO: make a cancelation system
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
 // TODO: implement priority inheritance for respective sync primitives
@@ -61,7 +61,7 @@ scheduled_for_deletion_list: std.DoublyLinkedList = .{},
 main_task: Task,
 
 // Idle only requires the stack space used by the yield interrupt
-idle_stack: [std.mem.alignForward(usize, EXTRA_STACK_SIZE, STACK_ALIGN.toByteUnits())]u8 align(STACK_ALIGN.toByteUnits()) = undefined,
+idle_stack: [STACK_ALIGN.forward(EXTRA_STACK_SIZE)]u8 align(STACK_ALIGN.toByteUnits()) = undefined,
 idle_task: Task,
 
 /// The task in .running state
@@ -133,68 +133,56 @@ fn idle() callconv(.naked) void {
     );
 }
 
-fn task_entry() callconv(.naked) void {
-    asm volatile (
-        \\lw a0, -4(sp)
-        \\lw a1, -8(sp)
-        \\jr a1
-        \\
-    );
-}
-
-pub fn spawn(
-    scheduler: *Scheduler,
-    function: anytype,
-    args: std.meta.ArgsTuple(@TypeOf(function)),
-    options: SpawnOptions,
-) !*Task {
-    const Args = @TypeOf(args);
-    const TypeErased = struct {
-        fn start(context: ?*anyopaque) callconv(.c) noreturn {
-            const args_casted: *const Args = @ptrCast(@alignCast(context));
-
-            @call(.auto, function, args_casted.*);
-
-            const sched = maybe_instance orelse @panic("no active scheduler");
-            sched.yield(.delete);
-            unreachable;
-        }
-    };
-
-    // SAFETY: @constCast is safe to use since the task entry only dereferences the ptr
-    return scheduler.raw_spawn_with_options(TypeErased.start, @ptrCast(@constCast(&args)), options);
-}
-
 pub const SpawnOptions = struct {
     stack_size: usize = 4096,
     // TODO: should we ban idle priority?
     priority: Priority = .lowest,
 };
 
-pub fn raw_spawn_with_options(
+pub fn spawn(
     scheduler: *Scheduler,
-    function: *const fn (param: ?*anyopaque) callconv(.c) noreturn,
-    param: ?*anyopaque,
+    comptime function: anytype,
+    args: std.meta.ArgsTuple(@TypeOf(function)),
     options: SpawnOptions,
 ) !*Task {
-    const alignment = comptime STACK_ALIGN.max(.of(Task));
+    const Args = @TypeOf(args);
+    const args_align: std.mem.Alignment = comptime .fromByteUnits(@alignOf(Args));
 
-    const unaligned_allocation_size = @sizeOf(Task) + options.stack_size + EXTRA_STACK_SIZE;
-    const allocation_size = std.mem.alignForward(usize, unaligned_allocation_size, alignment.toByteUnits());
-    const raw_alloc = try scheduler.gpa.alignedAlloc(u8, alignment, allocation_size);
+    const TypeErased = struct {
+        fn call() callconv(.c) void {
+            const sched = maybe_instance orelse @panic("no active scheduler");
 
-    const task: *Task = @ptrCast(raw_alloc.ptr);
-    const stack: []u8 = raw_alloc[@sizeOf(Task)..];
-    const stack_top = @intFromPtr(stack[stack.len..].ptr);
+            const context_ptr: *const Args =
+                @ptrFromInt(args_align.forward(@intFromPtr(sched.current_task) + @sizeOf(Task)));
+            @call(.auto, function, context_ptr.*);
 
-    const startup_state: *[2]u32 = @ptrFromInt(stack_top - 2 * @sizeOf(u32));
-    startup_state[0] = @intFromPtr(function);
-    startup_state[1] = @intFromPtr(param);
+            if (@typeInfo(@TypeOf(function)).@"fn".return_type.? != noreturn) {
+                sched.yield(.delete);
+                unreachable;
+            }
+        }
+    };
+
+    const alloc_align = comptime STACK_ALIGN.max(.of(Task)).max(args_align);
+
+    const args_start = args_align.forward(@sizeOf(Task));
+    const stack_start = STACK_ALIGN.forward(args_start + @sizeOf(Args));
+    const stack_end = STACK_ALIGN.forward(stack_start + options.stack_size + EXTRA_STACK_SIZE);
+
+    const alloc_size = stack_end;
+    const raw_alloc = try scheduler.gpa.alignedAlloc(u8, alloc_align, alloc_size);
+
+    const task: *Task = @ptrCast(@alignCast(raw_alloc));
+
+    const task_args: *Args = @alignCast(@ptrCast(raw_alloc[args_start..][0..@sizeOf(Args)]));
+    task_args.* = args;
+
+    const stack: []u8 = raw_alloc[stack_start..stack_end];
 
     task.* = .{
         .context = .{
-            .sp = stack_top,
-            .pc = @intFromPtr(&task_entry),
+            .sp = @intFromPtr(stack[stack.len..].ptr),
+            .pc = @intFromPtr(&TypeErased.call),
             .fp = 0,
         },
         .stack = stack,
@@ -293,8 +281,6 @@ pub fn wake_from_wait_queue(scheduler: *Scheduler, wait_queue: *PriorityWaitQueu
         scheduler.ready(task, .{});
     }
 }
-
-pub const TimeoutError = error{Timeout};
 
 pub fn sleep(scheduler: *Scheduler, duration: time.Duration) void {
     scheduler.yield(.{ .wait = .{
@@ -603,24 +589,6 @@ fn ready(scheduler: *Scheduler, task: *Task, flags: Task.ReadyFlags) void {
     scheduler.ready_queue.put(task);
 }
 
-// fn maybe_inherit_priority_section(scheduler: *Scheduler, task: *Task, priority: Priority) void {
-//     if (!priority.is_greater(task.priority)) return;
-//
-//     task.priority = priority;
-//
-//     switch (task.state) {
-//         .ready => {
-//             scheduler.ready_queue.inner.remove(task);
-//             scheduler.ready_queue.put(task);
-//         },
-//         else => {},
-//     }
-//
-//     if (task.active_wait_list) |wait_list| {
-//         wait_list.list.update_priority(wait_list.awaiter);
-//     }
-// }
-
 pub const Task = struct {
     context: Context,
     stack: []u8,
@@ -746,6 +714,8 @@ pub const Context = extern struct {
     }
 };
 
+pub const TimeoutError = error{Timeout};
+
 pub const Mutex = struct {
     state: State = .unlocked,
     wait_queue: PriorityWaitQueue = .{},
@@ -791,7 +761,9 @@ pub const Mutex = struct {
     }
 };
 
+// TODO: maybe move inside osi.zig since it is made specifically for it
 pub const RecursiveMutex = struct {
+    recursive: bool,
     value: u32 = 0,
     owning_task: ?*Task = null,
     wait_queue: PriorityWaitQueue = .{},
@@ -803,6 +775,7 @@ pub const RecursiveMutex = struct {
         const current_task = scheduler.current_task;
 
         if (mutex.owning_task == current_task) {
+            assert(mutex.recursive);
             mutex.value += 1;
             return;
         }

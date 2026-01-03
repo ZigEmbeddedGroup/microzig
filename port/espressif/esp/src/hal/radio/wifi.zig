@@ -335,11 +335,11 @@ pub fn stop() InternalError!void {
 
 /// Non-blocking.
 pub fn connect() InternalError!void {
-    try c_result(c.esp_wifi_connect());
+    try c_result(c.esp_wifi_connect_internal());
 }
 
 pub fn disconnect() InternalError!void {
-    try c_result(c.esp_wifi_disconnect());
+    try c_result(c.esp_wifi_disconnect_internal());
 }
 
 pub const Event = enum(i32) {
@@ -445,7 +445,7 @@ pub const Event = enum(i32) {
     StaNeighborRep,
 };
 
-fn event_post(
+export fn esp_event_post(
     base: [*c]const u8,
     id: i32,
     data: ?*anyopaque,
@@ -673,7 +673,7 @@ export var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
     ._task_get_max_priority = osi.task_get_max_priority,
     ._malloc = osi.malloc,
     ._free = osi.free,
-    ._event_post = event_post,
+    ._event_post = esp_event_post,
     ._get_free_heap_size = @ptrCast(&osi.get_free_heap_size),
     ._rand = osi.rand,
     ._dport_access_stall_other_cpu_start_wrap = osi.dport_access_stall_other_cpu_start_wrap,

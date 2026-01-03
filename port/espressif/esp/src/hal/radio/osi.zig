@@ -152,6 +152,10 @@ pub fn usleep(time_us: u32) callconv(.c) c_int {
     return 0;
 }
 
+pub fn vTaskDelay(ticks: u32) callconv(.c) void {
+    scheduler.sleep(.from_us(ticks));
+}
+
 comptime {
     // provide some weak links so they can be overriten
 
@@ -169,6 +173,7 @@ comptime {
     @export(&gettimeofday, .{ .name = "gettimeofday", .linkage = .weak });
     @export(&sleep, .{ .name = "sleep", .linkage = .weak });
     @export(&usleep, .{ .name = "usleep", .linkage = .weak });
+    @export(&vTaskDelay, .{ .name = "vTaskDelay", .linkage = .weak });
 }
 
 pub export var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
@@ -350,7 +355,19 @@ pub fn wifi_thread_semphr_get() callconv(.c) ?*anyopaque {
 }
 
 pub fn mutex_create() callconv(.c) ?*anyopaque {
-    @panic("mutex_create: not implemented");
+    log.debug("mutex_create", .{});
+
+    const mutex = allocator.create(Scheduler.RecursiveMutex) catch {
+        log.warn("failed to allocate recursive mutex", .{});
+        return null;
+    };
+    mutex.* = .{
+        .recursive = false,
+    };
+
+    log.debug(">>>> mutex create: {*}", .{mutex});
+
+    return mutex;
 }
 
 pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
@@ -360,7 +377,9 @@ pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
         log.warn("failed to allocate recursive mutex", .{});
         return null;
     };
-    mutex.* = .{};
+    mutex.* = .{
+        .recursive = true,
+    };
 
     log.debug(">>>> mutex create: {*}", .{mutex});
 
@@ -528,6 +547,13 @@ pub fn event_group_wait_bits() callconv(.c) void {
     @panic("event_group_wait_bits: not implemented");
 }
 
+fn task_wrapper(
+    task_entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn,
+    param: ?*anyopaque,
+) noreturn {
+    task_entry(param);
+}
+
 fn task_create_common(
     task_func: ?*anyopaque,
     name: [*c]const u8,
@@ -540,14 +566,12 @@ fn task_create_common(
     _ = name; // autofix
     _ = core_id; // autofix
 
-    const task: *Scheduler.Task = scheduler.raw_spawn_with_options(
-        @ptrCast(@alignCast(task_func)),
-        param,
-        .{
-            .priority = @enumFromInt(prio),
-            .stack_size = stack_depth,
-        },
-    ) catch {
+    const task_entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn = @ptrCast(@alignCast(task_func));
+
+    const task: *Scheduler.Task = scheduler.spawn(task_wrapper, .{task_entry, param}, .{
+        .priority = @enumFromInt(prio),
+        .stack_size = stack_depth,
+    }) catch {
         log.warn("failed to create task", .{});
         return 0;
     };

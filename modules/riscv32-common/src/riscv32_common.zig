@@ -60,7 +60,6 @@ pub fn fence() void {
 // NOTE: Contains all CSRs (Control Status Registers) from the riscv manual and should follow their
 // spec. Cpu implementations can reexport what they need from here.
 // See https://docs.riscv.org/reference/isa/priv/priv-csrs.html
->>>>>>> main
 pub const csr = struct {
     pub const fflags = Csr(0x001, u32);
     pub const frm = Csr(0x002, u32);
