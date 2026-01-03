@@ -23,7 +23,6 @@ pub const Interface = struct {
     netif: lwip.netif = .{},
     dhcp: lwip.dhcp = .{},
 
-    mac: [6]u8,
     link: struct {
         ptr: *anyopaque,
         recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
@@ -50,7 +49,7 @@ pub const Interface = struct {
         };
     };
 
-    pub fn init(self: *Self, opt: Options) !void {
+    pub fn init(self: *Self, mac: [6]u8, opt: Options) !void {
         lwip.lwip_init();
         const netif: *lwip.netif = &self.netif;
 
@@ -61,21 +60,22 @@ pub const Interface = struct {
                 &fixed.netmask,
                 &fixed.gw,
                 null,
-                netif_init,
+                c_netif_init,
                 lwip.netif_input,
             ) orelse return error.OutOfMemory;
         } else {
             _ = lwip.netif_add_noaddr(
                 netif,
                 null,
-                netif_init,
+                c_netif_init,
                 lwip.netif_input,
             ) orelse return error.OutOfMemory;
         }
 
+        std.mem.copyForwards(u8, &netif.hwaddr, &mac);
         lwip.netif_create_ip6_linklocal_address(netif, 1);
         netif.ip6_autoconfig_enabled = 1;
-        lwip.netif_set_status_callback(netif, netif_status_callback);
+        lwip.netif_set_status_callback(netif, c_on_netif_status);
         lwip.netif_set_default(netif);
         lwip.netif_set_up(netif);
         if (opt.fixed == null) {
@@ -85,21 +85,18 @@ pub const Interface = struct {
         lwip.netif_set_link_up(netif);
     }
 
-    fn netif_init(netif_c: [*c]lwip.netif) callconv(.c) lwip.err_t {
+    fn c_netif_init(netif_c: [*c]lwip.netif) callconv(.c) lwip.err_t {
         const netif: *lwip.netif = netif_c;
-        const self: *Self = @fieldParentPtr("netif", netif);
-
-        netif.linkoutput = netif_linkoutput;
+        netif.linkoutput = c_netif_linkoutput;
         netif.output = lwip.etharp_output;
         netif.output_ip6 = lwip.ethip6_output;
         netif.mtu = sz.mtu;
         netif.flags = lwip.NETIF_FLAG_BROADCAST | lwip.NETIF_FLAG_ETHARP | lwip.NETIF_FLAG_ETHERNET | lwip.NETIF_FLAG_IGMP | lwip.NETIF_FLAG_MLD6;
-        std.mem.copyForwards(u8, &netif.hwaddr, &self.mac);
         netif.hwaddr_len = lwip.ETH_HWADDR_LEN;
         return lwip.ERR_OK;
     }
 
-    fn netif_status_callback(netif_c: [*c]lwip.netif) callconv(.c) void {
+    fn c_on_netif_status(netif_c: [*c]lwip.netif) callconv(.c) void {
         const netif: *lwip.netif = netif_c;
         const self: *Self = @fieldParentPtr("netif", netif);
         log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}", .{
@@ -112,7 +109,7 @@ pub const Interface = struct {
 
     /// Called by lwip when there is packet to send.
     /// pbuf chain total_len is <= netif.mtu + ethernet header
-    fn netif_linkoutput(netif_c: [*c]lwip.netif, pbuf_c: [*c]lwip.pbuf) callconv(.c) lwip.err_t {
+    fn c_netif_linkoutput(netif_c: [*c]lwip.netif, pbuf_c: [*c]lwip.pbuf) callconv(.c) lwip.err_t {
         const netif: *lwip.netif = netif_c;
         var pbuf: *lwip.pbuf = pbuf_c;
         const self: *Self = @fieldParentPtr("netif", netif);

@@ -37,7 +37,6 @@ pub fn main() !void {
 
     // init lwip network interface
     var nic: net.Interface = .{
-        .mac = wifi.mac,
         .link = .{
             .ptr = wifi,
             .recv = drivers.WiFi.recv,
@@ -45,7 +44,7 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try nic.init(try secrets.nic_options());
+    try nic.init(wifi.mac, try secrets.nic_options());
     // udp init
     var udp: net.Udp = try .init(&nic);
     // listen for udp packets on port 9999 and call on_recv for each received packet
