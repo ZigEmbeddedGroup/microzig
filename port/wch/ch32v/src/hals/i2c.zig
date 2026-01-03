@@ -9,6 +9,7 @@ const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const drivers = mdf.base;
 const hal = microzig.hal;
+const dma = hal.dma;
 
 const I2C1 = microzig.chip.peripherals.I2C1;
 const I2C2 = microzig.chip.peripherals.I2C2;
@@ -39,10 +40,23 @@ pub const Remap = enum(u1) {
 };
 
 pub const Config = struct {
+    /// DMA configuration for I2C transfers (optional)
+    /// When configured, enables DMA for transfers >= 16 bytes
+    /// Smaller transfers automatically use polling mode
+    pub const DmaConfig = struct {
+        tx_channel: dma.Channel,
+        rx_channel: dma.Channel,
+        priority: dma.Priority = .Medium,
+    };
+
     repeated_start: bool = true,
     baud_rate: u32 = 100_000,
     duty_cycle: DutyCycle = .duty_2,
     remap: Remap = .default,
+
+    /// Optional DMA configuration - null means polling-only mode
+    /// Example: .dma = .{ .tx_channel = .Ch6, .rx_channel = .Ch7 }
+    dma: ?DmaConfig = null,
 };
 
 pub const DutyCycle = enum {
@@ -84,6 +98,22 @@ pub const I2C = enum(u1) {
     /// Initializes the I2C HW block per the Config provided
     pub fn apply(comptime i2c: I2C, comptime config: Config) void {
         const regs = i2c.get_regs();
+
+        // Compile-time DMA validation
+        if (comptime config.dma) |dma_cfg| {
+            const tx_peripheral = comptime if (@intFromEnum(i2c) == 0)
+                dma.ChannelMapping.Peripheral.I2C1_TX
+            else
+                dma.ChannelMapping.Peripheral.I2C2_TX;
+            const rx_peripheral = comptime if (@intFromEnum(i2c) == 0)
+                dma.ChannelMapping.Peripheral.I2C1_RX
+            else
+                dma.ChannelMapping.Peripheral.I2C2_RX;
+
+            // Validate channels (compile error if invalid)
+            comptime dma.ChannelMapping.validate(tx_peripheral, dma_cfg.tx_channel);
+            comptime dma.ChannelMapping.validate(rx_peripheral, dma_cfg.rx_channel);
+        }
 
         // Enable peripheral clock
         hal.clocks.enable_peripheral_clock(switch (@intFromEnum(i2c)) {
@@ -138,7 +168,7 @@ pub const I2C = enum(u1) {
             ccr = result | 0x8000; // Set F/S bit for fast mode
 
             // Rise time register: ((freqrange * 300) / 1000) + 1
-            const trise: u6 = @intCast(((freqrange * 300) / 1000) + 1);
+            const trise: u6 = @intCast(((@as(u32, freqrange) * 300) / 1000) + 1);
             regs.RTR.write(.{ .TRISE = trise });
         }
 
@@ -156,6 +186,11 @@ pub const I2C = enum(u1) {
             .ACK = 1, // Enable ACK
             .ENGC = 0, // Disable general call
         });
+
+        // Enable DMA mode in I2C peripheral if configured
+        if (comptime config.dma != null) {
+            regs.CTLR2.modify(.{ .DMAEN = 1 });
+        }
     }
 
     /// Disables I2C, returns peripheral registers to reset state.
@@ -406,5 +441,172 @@ pub const I2C = enum(u1) {
         // The repeated start would require more complex state machine
         try i2c.writev_blocking(addr, write_chunks, timeout);
         try i2c.readv_blocking(addr, read_chunks, timeout);
+    }
+
+    /// Write using DMA (only available if DMA configured)
+    /// For transfers >= 16 bytes, DMA is more efficient than polling
+    pub fn write_dma(
+        comptime i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        data: []const u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        comptime {
+            if (config.dma == null) {
+                @compileError("write_dma() requires DMA configuration in I2C config");
+            }
+        }
+
+        const dma_cfg = comptime config.dma.?;
+        const regs = i2c.get_regs();
+        const deadline = mdf.time.Deadline.init_relative(hal.time.get_time_since_boot(), timeout);
+
+        if (data.len == 0) return Error.NoData;
+
+        // Generate START condition
+        i2c.generate_start();
+        errdefer i2c.cleanup_stop();
+
+        // Wait for SB (Start Bit) flag
+        try i2c.wait_flag_star1("SB", 1, deadline);
+
+        // Send address with write bit
+        i2c.send_address(addr, .write);
+
+        // Wait for ADDR flag
+        try i2c.wait_flag_star1("ADDR", 1, deadline);
+
+        // Clear ADDR by reading SR2
+        _ = regs.STAR2.read();
+
+        // Setup DMA transfer from memory to I2C DATAR
+        const peripheral_target = dma.PeripheralTarget{
+            .addr = @intFromPtr(&regs.DATAR),
+        };
+
+        dma_cfg.tx_channel.setup_transfer(
+            peripheral_target, // destination (I2C DATAR)
+            data, // source (memory buffer)
+            .{
+                .priority = dma_cfg.priority,
+                .circular_mode = false,
+            },
+        );
+
+        // Wait for DMA transfer completion
+        dma_cfg.tx_channel.wait_for_finish_blocking();
+
+        // Wait for BTF (Byte Transfer Finished) - ensures last byte transmitted
+        try i2c.wait_flag_star1("BTF", 1, deadline);
+
+        // Generate STOP condition
+        i2c.generate_stop();
+
+        // Wait for BUSY flag to clear
+        try i2c.wait_flag_star2("BUSY", 0, deadline);
+    }
+
+    /// Read using DMA (only available if DMA configured)
+    /// For transfers >= 16 bytes, DMA is more efficient than polling
+    pub fn read_dma(
+        comptime i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        dst: []u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        comptime {
+            if (config.dma == null) {
+                @compileError("read_dma() requires DMA configuration in I2C config");
+            }
+        }
+
+        const dma_cfg = comptime config.dma.?;
+        const regs = i2c.get_regs();
+        const deadline = mdf.time.Deadline.init_relative(hal.time.get_time_since_boot(), timeout);
+
+        if (dst.len == 0) return Error.NoData;
+
+        // Enable ACK
+        i2c.set_ack(true);
+
+        // Generate START condition
+        i2c.generate_start();
+        errdefer i2c.cleanup_stop();
+
+        // Wait for SB flag
+        try i2c.wait_flag_star1("SB", 1, deadline);
+
+        // Send address with read bit
+        i2c.send_address(addr, .read);
+
+        // Wait for ADDR flag
+        try i2c.wait_flag_star1("ADDR", 1, deadline);
+
+        // Setup DMA transfer from I2C DATAR to memory BEFORE clearing ADDR
+        const peripheral_target = dma.PeripheralTarget{
+            .addr = @intFromPtr(&regs.DATAR),
+        };
+
+        dma_cfg.rx_channel.setup_transfer(
+            dst, // destination (memory buffer)
+            peripheral_target, // source (I2C DATAR)
+            .{
+                .priority = dma_cfg.priority,
+                .circular_mode = false,
+            },
+        );
+
+        // Clear ADDR by reading SR2 (starts DMA transfer)
+        _ = regs.STAR2.read();
+
+        // Wait for DMA transfer completion
+        dma_cfg.rx_channel.wait_for_finish_blocking();
+
+        // Disable ACK and generate STOP
+        i2c.set_ack(false);
+        i2c.generate_stop();
+
+        // Wait for BUSY flag to clear
+        try i2c.wait_flag_star2("BUSY", 0, deadline);
+    }
+
+    /// Automatic write - uses DMA if configured and transfer is large enough
+    /// Uses DMA for transfers >= 16 bytes, polling for smaller transfers
+    pub fn write_auto(
+        comptime i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        data: []const u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        const DMA_THRESHOLD = 16;
+
+        if (comptime config.dma != null) {
+            if (data.len >= DMA_THRESHOLD) {
+                return i2c.write_dma(config, addr, data, timeout);
+            }
+        }
+        return i2c.write_blocking(addr, data, timeout);
+    }
+
+    /// Automatic read - uses DMA if configured and transfer is large enough
+    /// Uses DMA for transfers >= 16 bytes, polling for smaller transfers
+    pub fn read_auto(
+        comptime i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        dst: []u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        const DMA_THRESHOLD = 16;
+
+        if (comptime config.dma != null) {
+            if (dst.len >= DMA_THRESHOLD) {
+                return i2c.read_dma(config, addr, dst, timeout);
+            }
+        }
+        return i2c.read_blocking(addr, dst, timeout);
     }
 };
