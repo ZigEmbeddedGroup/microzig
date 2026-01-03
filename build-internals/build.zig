@@ -150,6 +150,12 @@ pub const Chip = struct {
 
         /// Path to embassy stm32-data directory
         embassy: LazyPath,
+
+        /// Single device from TI targetdb
+        targetdb: struct {
+            path: LazyPath,
+            device: ?[]const u8 = null,
+        },
     },
 
     /// The memory regions that are present in this chip.

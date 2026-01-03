@@ -1,8 +1,19 @@
 const std = @import("std");
-
 const Chips = @import("src/Chips.zig");
 
+const Self = @This();
+
 chips: Chips,
+
+// Boards:
+// - MSP-EXP430F5529LP
+// - MSP-EXP430G2ET
+
+pub fn init(dep: *std.Build.Dependency) Self {
+    return .{
+        .chips = Chips.init(dep),
+    };
+}
 
 pub fn build(b: *std.Build) void {
     const ti_data = b.dependency("ti_data", .{});
