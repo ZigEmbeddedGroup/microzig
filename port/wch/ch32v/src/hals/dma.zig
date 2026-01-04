@@ -1,7 +1,7 @@
 //!
-//! This file implements the I²C driver for the CH32V chip family
+//! DMA HAL for the CH32V chip family (CH32V20x)
 //!
-//! Reference: CH32V20x Reference Manual Section on DMA (Chapter 11)
+//! Reference: CH32V20x Reference Manual, DMA (Chapter 11)
 //!
 //!
 const std = @import("std");
@@ -26,59 +26,6 @@ pub const Regs = extern struct {
     PADDR: *volatile @FieldType(DmaRegs, "PADDR1"),
     MADDR: *volatile @FieldType(DmaRegs, "MADDR1"),
 };
-
-// Max transfer: 65535 bytes
-// Each channel has 3 DMA data transfer modes:
-// Peripheral to memory (MEM2MEM=0, DIR=0)
-// Memory to peripheral (MEM2MEM=0, DIR=1)
-// Memory to memory (MEM2MEM=1)
-// The configuration process is as follows:
-// 1. Set the initial address of the peripheral register or the memory data
-//    address in the memory-to-memory mode (MEM2MEM=1) in the DMA_PADDRx
-//    register. When a DMA request occurs, this address will be the source or
-//    destination address of the data transmission.
-// 2. Set the memory data address in the DMA_MADDRx register. When a DMA
-//    request occurs, the transmitted data will be read from or written to this
-//    address.
-// 3. Set the number of data to be transmitted in the DMA_CNTRx register. After
-//    each data transmission, this value will decrease progressively.
-// 4. Set the channel priority through the PL[1:0] bits in the DMA_CFGRx
-//    register.
-// 5. In the DMA_CFGRx register, set the direction of data transmission, cycle
-//    mode, incremental mode of peripheral and memory, data width of peripheral
-//    and memory, DMA Half Transfer, DMA Transfer complete, and tDMA Transfer
-//    Error interrupt enable bit,
-// 6. Set the ENABLE bit in the DMA_CCRx register to enable channel x.
-//
-// When the application program queries the status of the DMA channel, it
-// firstly accesses the GIFx bit in the DMA_INTFR register to determine which
-// channel currently has a DMA event, and then process the specific DMA event
-// content of the channel.
-//
-// Certain channels can write to certain peripherals
-//
-// Registers: (Format: DMAy_REGx, where y is the DMA and x is the channel)
-// - DMAy_INTFR - Interrupt flag register
-// - DMAy_INTFCR - Interrupt flag clear register (WO)
-// - DMAy_CFGRx - Configuration register
-// - DMAy_CNTRx - Transferred data register
-// - DMAy_PADDRx - Peripheral address register
-// - DMAy_MADDRx - Memory address register
-//
-// Extra features or modes we could support:
-// - Cycle mode: Set DMA_CFGRx's CIRC bit to 1
-// - Interrupts
-// - Half transfer: Set the HTIFx bit in DMA_INTFR. If HTIE is set in the
-//   DMA_CCRx register, an interrupt is generated
-// - Transfer complete: Set TCIFx bit in the corresponding DMA_INTFR. If TCIE
-//   is set in the DMA_CCRx register, an interrupt is generated.
-// - Set the TEIFx bit in the corresponding DMA_INTFR register by the hardware.
-//   Reading and writing a reserved address area results in a DMA transmission
-//   error. Meanwhile, the module address/data Target: address/data Transfer
-//   operation hardware automatically clears the EN bit in the DMA_CCRx
-//   register corresponding to the channel where the error is generated, and
-//   the channel is switched off. If TEIE is set in the DMA_CCRx register, an
-//   interrupt is generated.
 
 /// Represents a peripheral register for DMA transfers
 /// Use this when transferring to/from a peripheral register
@@ -105,6 +52,7 @@ pub const Channel = enum(u3) {
     Ch5 = 5,
     Ch6 = 6,
     Ch7 = 7,
+
     /// Get the register pointers for a specific DMA channel
     /// Currently supports DMA1 channels 1-7 only (CH32V203)
     pub inline fn get_regs(comptime chan: Channel) Regs {
@@ -280,11 +228,21 @@ pub const Channel = enum(u3) {
         regs.INTFCR.write_raw(@as(u32, 0b1111) << flag_shift);
 
         // NOTE: DIR bit affects transfer direction even in MEM2MEM mode (undocumented behavior):
-        //   DIR=0: PADDR→MADDR (peripheral/source to memory/destination)
-        //   DIR=1: MADDR→PADDR (memory/source to peripheral/destination)
-        // For typical memory copy with DIR=1: MADDR=source, PADDR=destination
-        regs.MADDR.write_raw(read_addr); // source
-        regs.PADDR.write_raw(write_addr); // destination
+        // - Always place the peripheral address in PADDR when a peripheral is involved.
+        // - DIR selects the data flow between registers:
+        //     DIR=0: PADDR → MADDR (source=PADDR, dest=MADDR)
+        //     DIR=1: MADDR → PADDR (source=MADDR, dest=PADDR)
+        // - We choose the following mapping for clarity/alignment of increments:
+        //     Mem→Periph:  MADDR=read (memory),  PADDR=write (periph), DIR=1
+        //     Periph→Mem:  PADDR=read (periph),  MADDR=write (memory), DIR=0
+        //     Mem→Mem:     PADDR=read (source),  MADDR=write (dest),   DIR=0
+        if (H.is_peripheral(WriteType)) {
+            regs.MADDR.write_raw(read_addr);
+            regs.PADDR.write_raw(write_addr);
+        } else {
+            regs.MADDR.write_raw(write_addr);
+            regs.PADDR.write_raw(read_addr);
+        }
         // Set the amount of data to transfer
         regs.CNTR.write_raw(count);
         // Set the priority
@@ -297,9 +255,9 @@ pub const Channel = enum(u3) {
             .PSIZE = @intFromEnum(data_size),
             .PINC = @intFromBool(peripheral_increment),
             .CIRC = @intFromBool(config.circular_mode),
-            // DIR affects transfer direction even in MEM2MEM mode (undocumented)
-            // DIR=1: MADDR→PADDR, DIR=0: PADDR→MADDR
-            .DIR = if (direction == .Periph2Mem) 0 else 1,
+            // DIR applies in all modes. Set DIR=1 only for Mem→Periph (MADDR→PADDR);
+            // use DIR=0 for Periph→Mem and Mem→Mem (PADDR→MADDR).
+            .DIR = if (direction == .Mem2Periph) 1 else 0,
             // TODO: Add (optional?) support for interrupts
             // Transfer error interrupt
             .TEIE = 0,
