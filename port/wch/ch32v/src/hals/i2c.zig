@@ -41,12 +41,17 @@ pub const Remap = enum(u1) {
 
 pub const Config = struct {
     /// DMA configuration for I2C transfers (optional)
-    /// When configured, enables DMA for transfers >= 16 bytes
+    /// When configured, enables DMA for transfers >= threshold bytes
     /// Smaller transfers automatically use polling mode
     pub const DmaConfig = struct {
         tx_channel: dma.Channel,
         rx_channel: dma.Channel,
         priority: dma.Priority = .Medium,
+        /// Minimum transfer size in bytes to use DMA (smaller uses polling)
+        /// Default: 16 bytes (conservative heuristic, not benchmarked)
+        /// Lower this for testing or small-transfer optimization
+        /// Increase this to reduce DMA overhead for small transfers
+        threshold: usize = 16,
     };
 
     repeated_start: bool = true,
@@ -214,7 +219,7 @@ pub const I2C = enum(u1) {
     fn cleanup_stop(i2c: I2C) void {
         i2c.generate_stop();
 
-        // Wait for BUSY to clear (with simple iteration timeout, ignore deadline)
+        // Wait for BUSY to clear
         i2c.wait_flag_star2("BUSY", 0, .no_deadline) catch {};
     }
 
@@ -444,9 +449,8 @@ pub const I2C = enum(u1) {
     }
 
     /// Write using DMA (only available if DMA configured)
-    /// For transfers >= 16 bytes, DMA is more efficient than polling
     pub fn write_dma(
-        comptime i2c: I2C,
+        i2c: I2C,
         comptime config: Config,
         addr: Address,
         data: []const u8,
@@ -477,9 +481,6 @@ pub const I2C = enum(u1) {
         // Wait for ADDR flag
         try i2c.wait_flag_star1("ADDR", 1, deadline);
 
-        // Clear ADDR by reading SR2
-        _ = regs.STAR2.read();
-
         // Setup DMA transfer from memory to I2C DATAR
         const peripheral_target = dma.PeripheralTarget{
             .addr = @intFromPtr(&regs.DATAR),
@@ -493,6 +494,9 @@ pub const I2C = enum(u1) {
                 .circular_mode = false,
             },
         );
+
+        // Clear ADDR by reading SR2 (starts I2C and DMA transfer)
+        _ = regs.STAR2.read();
 
         // Wait for DMA transfer completion
         dma_cfg.tx_channel.wait_for_finish_blocking();
@@ -508,9 +512,8 @@ pub const I2C = enum(u1) {
     }
 
     /// Read using DMA (only available if DMA configured)
-    /// For transfers >= 16 bytes, DMA is more efficient than polling
     pub fn read_dma(
-        comptime i2c: I2C,
+        i2c: I2C,
         comptime config: Config,
         addr: Address,
         dst: []u8,
@@ -544,21 +547,26 @@ pub const I2C = enum(u1) {
         // Wait for ADDR flag
         try i2c.wait_flag_star1("ADDR", 1, deadline);
 
-        // Setup DMA transfer from I2C DATAR to memory BEFORE clearing ADDR
+        // CRITICAL: LAST tells I2C peripheral to NACK the final byte when DMA counter reaches 1
+        // (DMAEN is already set globally in apply() method)
+        // This doesn't affect writes, so we can keep it set.
+        regs.CTLR2.modify(.{ .LAST = 1 });
+
+        // Setup DMA transfer from I2C DATAR to memory
         const peripheral_target = dma.PeripheralTarget{
             .addr = @intFromPtr(&regs.DATAR),
         };
 
         dma_cfg.rx_channel.setup_transfer(
-            dst, // destination (memory buffer)
-            peripheral_target, // source (I2C DATAR)
+            dst, // write: destination (memory buffer)
+            peripheral_target, // read: source (I2C DATAR)
             .{
                 .priority = dma_cfg.priority,
                 .circular_mode = false,
             },
         );
 
-        // Clear ADDR by reading SR2 (starts DMA transfer)
+        // Clear ADDR by reading SR2 (starts I2C and DMA transfer)
         _ = regs.STAR2.read();
 
         // Wait for DMA transfer completion
@@ -573,18 +581,22 @@ pub const I2C = enum(u1) {
     }
 
     /// Automatic write - uses DMA if configured and transfer is large enough
-    /// Uses DMA for transfers >= 16 bytes, polling for smaller transfers
+    ///
+    /// Automatically selects between DMA and polling based on transfer size. DMA is used for
+    /// transfers over configured threshold, polling for smaller transfers.
+    ///
+    /// NOTE: The 16-byte default threshold is a heuristic based on typical DMA setup overhead vs
+    /// polling cost. It has not been benchmarked specifically for CH32V and may not be optimal for
+    /// all use cases. For explicit control, use write_dma() or write_blocking() directly.
     pub fn write_auto(
-        comptime i2c: I2C,
+        i2c: I2C,
         comptime config: Config,
         addr: Address,
         data: []const u8,
         timeout: ?mdf.time.Duration,
     ) Error!void {
-        const DMA_THRESHOLD = 16;
-
-        if (comptime config.dma != null) {
-            if (data.len >= DMA_THRESHOLD) {
+        if (comptime config.dma) |dma_cfg| {
+            if (data.len >= dma_cfg.threshold) {
                 return i2c.write_dma(config, addr, data, timeout);
             }
         }
@@ -592,21 +604,99 @@ pub const I2C = enum(u1) {
     }
 
     /// Automatic read - uses DMA if configured and transfer is large enough
-    /// Uses DMA for transfers >= 16 bytes, polling for smaller transfers
+    ///
+    /// Automatically selects between DMA and polling based on transfer size. DMA is used for
+    /// transfers over configured threshold, polling for smaller transfers.
+    ///
+    /// NOTE: The 16-byte default threshold is a heuristic based on typical DMA setup overhead vs
+    /// polling cost. It has not been benchmarked specifically for CH32V and may not be optimal for
+    /// all use cases. For explicit control, use read_dma() or read_blocking() directly.
     pub fn read_auto(
-        comptime i2c: I2C,
+        i2c: I2C,
         comptime config: Config,
         addr: Address,
         dst: []u8,
         timeout: ?mdf.time.Duration,
     ) Error!void {
-        const DMA_THRESHOLD = 16;
-
-        if (comptime config.dma != null) {
-            if (dst.len >= DMA_THRESHOLD) {
+        if (comptime config.dma) |dma_cfg| {
+            if (dst.len >= dma_cfg.threshold) {
                 return i2c.read_dma(config, addr, dst, timeout);
             }
         }
         return i2c.read_blocking(addr, dst, timeout);
+    }
+
+    /// Automatic vectored write - uses DMA per-chunk based on threshold
+    ///
+    /// For each chunk in the write operation:
+    /// - If chunk size >= DMA threshold: uses write_dma()
+    /// - If chunk size < DMA threshold: uses write_blocking()
+    ///
+    /// This approach maximizes DMA utilization without requiring buffer allocation.
+    /// When DMA is not configured, falls back to writev_blocking().
+    pub fn writev_auto(
+        i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        chunks: []const []const u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        if (comptime config.dma) |dma_cfg| {
+            // Process each chunk individually, using DMA for chunks >= threshold
+            for (chunks) |chunk| {
+                if (chunk.len >= dma_cfg.threshold) {
+                    try i2c.write_dma(config, addr, chunk, timeout);
+                } else {
+                    try i2c.write_blocking(addr, chunk, timeout);
+                }
+            }
+            return;
+        }
+        return i2c.writev_blocking(addr, chunks, timeout);
+    }
+
+    /// Automatic vectored read - uses DMA per-chunk based on threshold
+    ///
+    /// For each chunk in the read operation:
+    /// - If chunk size >= DMA threshold: uses read_dma()
+    /// - If chunk size < DMA threshold: uses read_blocking()
+    ///
+    /// This approach maximizes DMA utilization without requiring buffer allocation.
+    /// When DMA is not configured, falls back to readv_blocking().
+    pub fn readv_auto(
+        i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        chunks: []const []u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        if (comptime config.dma) |dma_cfg| {
+            // Process each chunk individually, using DMA for chunks >= threshold
+            for (chunks) |chunk| {
+                if (chunk.len >= dma_cfg.threshold) {
+                    try i2c.read_dma(config, addr, chunk, timeout);
+                } else {
+                    try i2c.read_blocking(addr, chunk, timeout);
+                }
+            }
+            return;
+        }
+        return i2c.readv_blocking(addr, chunks, timeout);
+    }
+
+    /// Automatic write-then-read operation
+    ///
+    /// Combines writev_auto() and readv_auto() to enable DMA for both operations.
+    /// Each operation independently selects DMA or polling based on chunk sizes.
+    pub fn writev_then_readv_auto(
+        i2c: I2C,
+        comptime config: Config,
+        addr: Address,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        try i2c.writev_auto(config, addr, write_chunks, timeout);
+        try i2c.readv_auto(config, addr, read_chunks, timeout);
     }
 };

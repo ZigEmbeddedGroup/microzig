@@ -27,6 +27,7 @@ pub fn main() !void {
         byte.* = @intCast(i);
     }
 
+    // TODO: Get address of EEPROM device, maybe write driver?
     const device_addr: i2c.Address = @enumFromInt(0x50);
 
     // Explicit DMA write
@@ -46,7 +47,6 @@ pub fn main() !void {
     try i2c1.read_dma(i2c_config, device_addr, &rx_buffer, null);
 
     while (true) {
-        // Success - blink LED or continue operation
         hal.time.sleep_ms(1000);
     }
 }
