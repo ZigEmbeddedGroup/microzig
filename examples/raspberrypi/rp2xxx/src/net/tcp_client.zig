@@ -73,7 +73,7 @@ pub fn main() !void {
             led.toggle();
 
             if (nic.ready()) {
-                try cli.tick();
+                cli.tick();
             }
         }
     }
@@ -112,27 +112,32 @@ const Client = struct {
         log.debug("sent {} bytes, total {}", .{ n, self.bytes_sent });
     }
 
-    fn tick(self: *Self) !void {
+    fn tick(self: *Self) void {
         switch (self.conn.state) {
             .closed => {
-                try net.tcp.connect(self.nic, &self.conn, &self.target);
+                net.tcp.connect(self.nic, &self.conn, &self.target) catch |err| {
+                    log.err("tcp connect {}", .{err});
+                    return;
+                };
             },
             .open => {
                 self.send_count += 1;
                 // close
                 if (self.send_count % 16 == 0) {
-                    try self.conn.close();
+                    self.conn.close() catch |err| {
+                        log.err("tcp close {}", .{err});
+                    };
                     return;
                 }
                 // TCP_SND_BUF is maximum send buffer size, default is 536 * 2 = 1072 bytes
                 // ref: https://github.com/lwip-tcpip/lwip/blob/6ca936f6b588cee702c638eee75c2436e6cf75de/src/include/lwip/opt.h#L1310
                 var buf: [net.lwip.TCP_SND_BUF + 128]u8 = @splat('-');
                 // add some header to the buf
-                _ = try std.fmt.bufPrint(
+                _ = std.fmt.bufPrint(
                     &buf,
                     "hello from rpi pi pico {}",
                     .{self.send_count},
-                );
+                ) catch unreachable;
                 // change len on each send
                 const chunk_len = (self.send_count * 64) % buf.len;
                 // Try to send. If buf.len is greater than

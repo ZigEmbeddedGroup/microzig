@@ -1,7 +1,11 @@
 /// Platform independent network library. Connects lwip with underlying network
 /// link interface.
 const std = @import("std");
+
 const assert = std.debug.assert;
+fn assert_panic(ok: bool, msg: []const u8) void {
+    if (!ok) @panic(msg);
+}
 
 pub const lwip = @cImport({
     @cInclude("lwip/init.h");
@@ -153,16 +157,17 @@ pub const Interface = struct {
         while (true) : (packets += 1) {
             // get packet buffer of the max size
             const pbuf: *lwip.pbuf = lwip.pbuf_alloc(lwip.PBUF_RAW, sz.pbuf_pool, lwip.PBUF_POOL) orelse return error.OutOfMemory;
-            assert(pbuf.next == null);
-            assert(pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool);
-
+            assert_panic(
+                pbuf.next == null and pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool,
+                "net.Interface.pool invalid pbuf allocation",
+            );
             // receive into that buffer
             const head, const len = try self.link.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
                 // no data release packet buffer and exit loop
                 _ = lwip.pbuf_free(pbuf);
                 break;
             };
-            errdefer _ = lwip.pbuf_free(pbuf); // netif.input: transfers ownership of pbuf on success
+            errdefer _ = lwip.pbuf_free(pbuf); // netif.input: takes ownership of pbuf on success
             // set payload header and len
             if (lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) return error.InvalidPbufHead;
             pbuf.len = @intCast(len);
@@ -222,7 +227,10 @@ pub const Udp = struct {
     }
 
     pub fn bind(self: *Self, port: u16, on_recv: OnRecv) !void {
-        assert(self.on_recv == null);
+        assert_panic(
+            self.on_recv == null,
+            "net.Udp.bind already bind",
+        );
         self.on_recv = on_recv;
         try c_err(lwip.udp_bind(self.pcb, lwip.IP_ADDR_ANY, port));
         lwip.udp_recv(self.pcb, Self.c_on_recv, self);
@@ -264,6 +272,7 @@ pub const tcp = struct {
 
         errdefer _ = lwip.tcp_close(pcb);
         try c_err(lwip.tcp_connect(pcb, &target.addr, target.port, Connection.c_on_connect));
+        conn.state = .connecting;
     }
 
     pub const Connection = struct {
@@ -314,8 +323,15 @@ pub const tcp = struct {
         fn c_on_connect(ptr: ?*anyopaque, c_pcb: [*c]lwip.tcp_pcb, ce: lwip.err_t) callconv(.c) lwip.err_t {
             if (ce != lwip.ERR_OK) return ce; // it is always 0
             const self: *Self = @ptrCast(@alignCast(ptr.?));
-            assert(self.pcb == null);
-            assert(self.state == .closed);
+            if (self.pcb != null) {
+                lwip.tcp_abort(c_pcb);
+                log.debug("c_on_connect already connected, aborting pcb", .{});
+                return lwip.ERR_ABRT;
+            }
+            assert_panic(
+                self.pcb == null and self.state == .connecting,
+                "net.tcp.Connection.c_on_connect invalid state",
+            );
             self.open(c_pcb);
             return lwip.ERR_OK;
         }
