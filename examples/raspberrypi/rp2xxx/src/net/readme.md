@@ -8,7 +8,7 @@ Enter your ssid/pwd into `secrets.zig` file. All examples will used those creden
 
 `tcp_client` example also uses `host_ip` when connecting to the host, enter your desktop host IP address there.
 
-Joining wifi defaults to the `wpa2_psk` wifi security and country code "XX" (worldwide), if that does not match your configuration add options to the wifi.join:
+Joining WiFi defaults to the `wpa2_psk` WiFi security and country code "XX" (worldwide), if that does not match your configuration add options to the WiFi.join:
 
 ```zig
 try wifi.join(
@@ -20,7 +20,7 @@ try wifi.join(
 
 ## pong.zig
 
-This only sets up cyw43 (pico wifi chip), joins the WiFi network, and initializes lwip stack.   
+This only sets up cyw43 (pico WiFi chip), joins the WiFi network, and initializes lwip stack.   
 When connected it will display its IP address in the log:
 
 ```
@@ -38,12 +38,12 @@ Than you can ping that address from the your host computer and see responses.
 
 Listens for UDP packets on port 9999. Each received packet is echoed to the source IP address and port 9999.
 
-Get pico ip address from log, if you are using dhcp:
+Get pico IP address from log, if you are using DHCP:
 ```
 debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
 ```
 
-Then on host computer send something to that ip and port 9999:
+Then on host computer send something to that IP and port 9999:
 ```sh
 echo "hello from host" | ncat -u 192.168.190.50 9999
 
@@ -60,9 +60,9 @@ Then send something to the pico again.
 
 ## tcp_server.zig
 
-Listens for tcp connections on the port 9998 and logs received data.
+Listens for TCP connections on the port 9998 and logs received data.
 
-Once you find pico ip in the log you can send something to that ip, for example to send file content:
+Once you find pico IP in the log you can send something to that IP, for example to send file content:
 
 ```sh
 ncat 192.168.190.206 9998 < build.zig
@@ -73,11 +73,11 @@ Examples allocates space for two connections when both are active it will not re
 
 ## tcp_client.zig
 
-Connects to the host computer, sends tcp payload of various sizes. From time to time closes connection and reconnects. Receives tcp data and logs it. 
+Connects to the host computer, sends TCP payload of various sizes. From time to time closes connection and reconnects. Receives TCP data and logs it. 
 
-Host computer should listen on the port 9998 for tcp connections. This examples uses `host_ip` from secrets. 
+Host computer should listen on the port 9998 for TCP connections. This examples uses `host_ip` from secrets. 
 
-On the host listen for tcp connections on port 9998:
+On the host listen for TCP connections on port 9998:
 ```sh
 ncat  -lkv -p 9998
 ```
@@ -87,4 +87,4 @@ To echo same packet back to the pico:
 ncat -lkv -p 9998 --exec /bin/cat
 ```
 
-This example will send various tcp payload sizes. When the payload is too big for the tcp send buffer out of memory error will be raised on send.
+This example will send various TCP payload sizes. When the payload is too big for the TCP send buffer out of memory error will be raised on send.

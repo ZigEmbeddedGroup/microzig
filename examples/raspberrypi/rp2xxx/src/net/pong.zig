@@ -62,13 +62,3 @@ pub fn main() !void {
         }
     }
 }
-
-// This will log dhcp assigned ip address, something like:
-//
-// ================ STARTING NEW LOGGER ================
-// [0.700113] debug (main): mac address: 2ccf67f3b7ea
-// [4.382145] debug (main): wifi joined
-// [5.095823] debug (lwip): netif status callback is_link_up: false, is_up: true, ready: false, ip: 0.0.0.0
-// [7.479941] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
-//
-// you can than ping that ip.

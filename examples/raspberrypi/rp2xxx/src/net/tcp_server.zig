@@ -110,9 +110,3 @@ const Session = struct {
         log.debug("{x} closed {}", .{ @intFromPtr(conn), err });
     }
 };
-
-// Once you find pico ip in the log you can send something to that ip, for
-// example to send file content:
-//
-// $  ncat 192.168.190.206 9998 < build.zig
-//
