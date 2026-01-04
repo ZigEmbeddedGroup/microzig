@@ -52,7 +52,7 @@ pub fn Uart(comptime index: UART_Type) type {
         dma: ?*bdma_v1.Channel,
 
         pub fn init(config: Config) Self {
-            rcc.enable_uart(index);
+            rcc.enable_clock(enums.to_peripheral(index));
 
             if (regs.CR1.read().UE == 1)
                 @panic("Trying to initialize USART while it is already enabled");

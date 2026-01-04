@@ -23,6 +23,7 @@ pub const Peripherals = util.create_peripheral_enum(&.{
     "PWR",
     "DAC",
     "RTC",
+    "USB",
     "LPUART",
 });
 
@@ -33,7 +34,7 @@ pub const DMA_Type = util.sub_peripheral_enum(Peripherals, &.{"DMA"}, null);
 pub const TIMGP16_Type = util.sub_peripheral_enum(Peripherals, &.{"TIM"}, "TIM_GP16");
 pub const ADC_Type = util.sub_peripheral_enum(Peripherals, &.{"ADC"}, null);
 
-pub fn to_perihperal(comptime val: anytype) Peripherals {
+pub fn to_peripheral(comptime val: anytype) Peripherals {
     return switch (@TypeOf(val)) {
         UART_Type,
         I2C_Type,
@@ -47,7 +48,7 @@ pub fn to_perihperal(comptime val: anytype) Peripherals {
 }
 
 pub fn get_regs(comptime T: type, comptime val: anytype) *volatile T {
-    const periph_enum = comptime to_perihperal(val);
+    const periph_enum = comptime to_peripheral(val);
     return @field(microzig.chip.peripherals, @tagName(periph_enum));
 }
 

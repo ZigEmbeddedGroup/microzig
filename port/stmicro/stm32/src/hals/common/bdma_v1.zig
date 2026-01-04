@@ -85,7 +85,7 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
             if (channel) |*init_ch| {
                 return init_ch;
             }
-            hal.rcc.enable_dma(dma_ctrl);
+            hal.rcc.enable_clock(enums.to_peripheral(dma_ctrl));
             const channel_base: usize = @intFromPtr(reg_dma) + 0x8 + (20 * @as(usize, @intFromEnum(ch)));
 
             channel = Channel{

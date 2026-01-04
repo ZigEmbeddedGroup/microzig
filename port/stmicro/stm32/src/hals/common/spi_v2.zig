@@ -179,7 +179,7 @@ pub const SPI = struct {
     }
 
     pub fn init(comptime spi_inst: Instances, nss: ?*Digital_IO) SPI {
-        hal.rcc.enable_spi(spi_inst);
+        hal.rcc.enable_clock(enums.to_peripheral(spi_inst));
         return .{ .spi = enums.get_regs(SPI_Peripheral, spi_inst), .instance = spi_inst, .nss = nss };
     }
 };
