@@ -13,6 +13,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     var ret: Self = undefined;
 
+    const hal = microzig.HardwareAbstractionLayer{
+        .root_source_file = dep.builder.path("src/hal.zig"),
+    };
+
     ret.MSP430F5529 = b.allocator.create(microzig.Target) catch @panic("OOM");
     ret.MSP430F5529.* = .{
         .dep = dep,
@@ -21,7 +25,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu_arch = .msp430,
             .cpu_model = .{ .explicit = &std.Target.msp430.cpu.msp430x },
             .os_tag = .freestanding,
-            .abi = .none,
+            .abi = .eabi,
         },
         .chip = .{
             .name = "MSP430F5229",
@@ -35,7 +39,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .flash, .offset = 0x4400, .length = 0xBB80, .access = .rx },
                 .{ .tag = .flash, .offset = 0x10000, .length = 0x143F8, .access = .rx },
                 .{ .tag = .ram, .offset = 0x2400, .length = 0x2000, .access = .rwx },
+                .{ .name = "isr_vector", .tag = .none, .offset = 0xFF80, .length = 0x80, .access = .rx },
             },
+        },
+        .bundle_compiler_rt = false,
+        .bundle_ubsan_rt = false,
+        .hal = hal,
+        .linker_script = .{
+            .generate = .memory_regions,
+            .file = b.path("ld/MSP430.ld"),
         },
     };
 
@@ -47,7 +59,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu_arch = .msp430,
             .cpu_model = .{ .explicit = &std.Target.msp430.cpu.msp430 },
             .os_tag = .freestanding,
-            .abi = .none,
+            .abi = .eabi,
         },
         .chip = .{
             .name = "MSP430G2553",
@@ -60,7 +72,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .memory_regions = &.{
                 .{ .tag = .flash, .offset = 0xC000, .length = 0x3FDE, .access = .rx },
                 .{ .tag = .ram, .offset = 0x200, .length = 0x200, .access = .rwx },
+                .{ .name = "isr_vector", .tag = .none, .offset = 0xFFE0, .length = 0x20, .access = .rx },
             },
+        },
+        .bundle_compiler_rt = false,
+        .bundle_ubsan_rt = false,
+        .hal = hal,
+        .linker_script = .{
+            .generate = .memory_regions,
+            .file = b.path("ld/MSP430.ld"),
         },
     };
 

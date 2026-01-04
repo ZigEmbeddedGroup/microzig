@@ -1,17 +1,39 @@
 const std = @import("std");
+const microzig = @import("microzig/build-internals");
 const Chips = @import("src/Chips.zig");
 
 const Self = @This();
 
 chips: Chips,
+boards: Boards,
 
-// Boards:
-// - MSP-EXP430F5529LP
-// - MSP-EXP430G2ET
+const Boards = struct {
+    @"MSP-EXP430F5529LP": *microzig.Target,
+    @"MSP-EXP430G2ET": *microzig.Target,
+};
 
 pub fn init(dep: *std.Build.Dependency) Self {
+    const chips = Chips.init(dep);
+    const boards = Boards{
+        .@"MSP-EXP430F5529LP" = chips.MSP430F5529.derive(.{
+            .board = .{
+                .name = "MSP-EXP430F5529LP",
+                .description = "MSP430F5529 Launch Pad",
+                .root_source_file = dep.builder.path("src/boards/MSP-EXP430F5529LP.zig"),
+            },
+        }),
+        .@"MSP-EXP430G2ET" = chips.MSP430G2553.derive(.{
+            .board = .{
+                .name = "MSP-EXP430G2ET",
+                .description = "MSP430G2553 Launch Pad",
+                .root_source_file = dep.builder.path("src/boards/MSP-EXP430G2ET.zig"),
+            },
+        }),
+    };
+
     return .{
-        .chips = Chips.init(dep),
+        .chips = chips,
+        .boards = boards,
     };
 }
 

@@ -272,6 +272,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `bundle_compiler_rt` property of the target.
             bundle_compiler_rt: ?bool = null,
 
+            bundle_ubsan_rt: ?bool = null,
+
             /// If set, overrides the `zig_target` property of the target.
             zig_target: ?std.Target.Query = null,
 
@@ -443,10 +445,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         regz_run.addFileArg(patch_file);
                     }
 
-                    if (targetdb.device) |device| {
-                        regz_run.addArg("--device");
-                        regz_run.addArg(device);
-                    }
+                    regz_run.addArg("--device");
+                    regz_run.addArg(targetdb.device);
 
                     regz_run.addDirectoryArg(targetdb.path);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
@@ -510,6 +510,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             };
 
             fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse target.bundle_compiler_rt;
+            fw.artifact.bundle_ubsan_rt = options.bundle_ubsan_rt orelse target.bundle_ubsan_rt;
 
             fw.artifact.link_gc_sections = options.strip_unused_symbols;
             fw.artifact.link_function_sections = options.strip_unused_symbols;
