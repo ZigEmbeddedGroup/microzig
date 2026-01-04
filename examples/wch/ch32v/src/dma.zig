@@ -14,7 +14,25 @@ pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
 };
 
-var rbuf = [_]u8{0x41} ** 128;
+// Should be in flash .rodata
+const rbuf: [1024]u32 = .{0x12345678} ** 1024;
+// Should be in RAM .bss
+var wbuf: [1024]u32 = .{0} ** 1024;
+
+inline fn read_stk_cnt() u64 {
+    const PFIC = microzig.chip.peripherals.PFIC;
+    while (true) {
+        const high1: u32 = PFIC.STK_CNTH.raw;
+        const low: u32 = PFIC.STK_CNTL.raw;
+        const high2: u32 = PFIC.STK_CNTH.raw;
+
+        // If high didn't change, we have a consistent reading
+        if (high1 == high2) {
+            return (@as(u64, high1) << 32) | @as(u64, low);
+        }
+        // Otherwise low rolled over between reads, try again
+    }
+}
 
 pub fn main() !void {
     // Board brings up clocks and time
@@ -31,44 +49,41 @@ pub fn main() !void {
 
     hal.usart.init_logger(usart);
 
-    // USART2_TX uses DMA1 Channel 7
     const chan = dma.Channel.Ch7;
 
-    const USART2 = microzig.chip.peripherals.USART2;
+    std.log.info("Testing with {}", .{@TypeOf(rbuf)});
+    // Clear the target buffer
+    @memset(&wbuf, 0);
+    std.log.info("Starting DMA transfer of {} {}s", .{ rbuf.len, @TypeOf(rbuf[0]) });
+    const start = read_stk_cnt();
 
-    // Create a peripheral target for USART2 TX data register
-    const usart2_tx = dma.PeripheralTarget{ .addr = @intFromPtr(&USART2.DATAR) };
+    // Automatically detects direction, increment, data size from types!
+    // This is about 6x faster than using the CPU to memcpy
+    chan.setup_transfer(
+        &wbuf,
+        &rbuf, // source (memory)
+        .{ .priority = .VeryHigh },
+    );
+    chan.wait_for_finish_blocking();
+
+    const end = read_stk_cnt();
+    std.log.info("DMA took {} ticks", .{end - start});
+
+    // Sanity-check DMA result
+    if (!std.mem.eql(@TypeOf(wbuf[0]), wbuf[0..], rbuf[0..])) {
+        std.log.err("DMA copy mismatch! result does not match source", .{});
+    }
+
+    // Compare
+    // Clear the target buffer
+    @memset(&wbuf, 0);
+    std.log.info("Starting CPU transfer of {} {}s", .{ rbuf.len, @TypeOf(rbuf[0]) });
+    const startc2 = read_stk_cnt();
+    @memcpy(&wbuf, &rbuf);
+    const endc2 = read_stk_cnt();
+    std.log.info("memcpy took {} ticks", .{endc2 - startc2});
 
     while (true) {
-        // Clear the target buffer
-        std.log.info("Starting DMA transfer of {} bytes", .{rbuf.len});
-        const start = time.get_time_since_boot();
-
-        // Enable USART DMA transmitter mode - required for peripheral to generate DMA requests
-        USART2.CTLR3.modify(.{ .DMAT = 1 });
-
-        // Automatically detects direction, increment, data size from types!
-        chan.setup_transfer(
-            usart2_tx, // destination (peripheral)
-            &rbuf, // source (memory)
-            .{ .priority = .High },
-        );
-        chan.wait_for_finish_blocking();
-
-        // Disable USART DMA mode after transfer
-        USART2.CTLR3.modify(.{ .DMAT = 0 });
-        chan.stop();
-
-        const end = time.get_time_since_boot();
-        std.log.info("DMA took {}", .{end.diff(start)});
-
-        // Compare
-        // Clear the target buffer
-        std.log.info("Starting CPU transfer of {} bytes", .{rbuf.len});
-        const startc = time.get_time_since_boot();
-        try usart.write_blocking(&rbuf, .no_deadline);
-        const endc = time.get_time_since_boot();
-        std.log.info("memcpy took {}", .{endc.diff(startc)});
-        hal.time.sleep_ms(1000);
+        hal.time.sleep_ms(10000);
     }
 }
