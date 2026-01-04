@@ -79,10 +79,11 @@ pub fn I2C_Device(comptime config: i2c.Config) type {
         pub fn write_then_read(dev: Self, address: I2CAddress, src: []const u8, dst: []u8) I2CError!void {
             const write_chunks: []const []const u8 = &.{src};
             const read_chunks: []const []u8 = &.{dst};
-            dev.bus.writev_then_readv_auto(config, address, write_chunks, read_chunks, dev.timeout) catch |err| return switch (err) {
-                error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-                else => |e| e,
-            };
+            dev.bus.writev_then_readv_auto(config, address, write_chunks, read_chunks, dev.timeout) catch |err|
+                return switch (err) {
+                    error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                    else => |e| e,
+                };
         }
 
         pub fn writev_then_readv(
@@ -91,11 +92,11 @@ pub fn I2C_Device(comptime config: i2c.Config) type {
             write_chunks: []const []const u8,
             read_chunks: []const []u8,
         ) I2CError!void {
-            return dev.bus.writev_then_readv_auto(config, address, write_chunks, read_chunks, dev.timeout)
-                catch |err| switch (err) {
-                error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-                else => |e| e,
-            };
+            return dev.bus.writev_then_readv_auto(config, address, write_chunks, read_chunks, dev.timeout) catch |err|
+                switch (err) {
+                    error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                    else => |e| e,
+                };
         }
 
         const i2c_vtable = drivers.I2C_Device.VTable{
