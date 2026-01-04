@@ -46,7 +46,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .bundle_ubsan_rt = false,
         .hal = hal,
         .linker_script = .{
-            .generate = .memory_regions,
             .file = b.path("ld/MSP430.ld"),
         },
     };
@@ -79,7 +78,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .bundle_ubsan_rt = false,
         .hal = hal,
         .linker_script = .{
-            .generate = .memory_regions,
             .file = b.path("ld/MSP430.ld"),
         },
     };
