@@ -4,9 +4,9 @@ Currently tested only on pico 2w, should also work on pico w.
 
 ## secrets.zig
 
-Enter your ssid/pwd into `secrets.zig` file. All examples will used that credentials to connect to the wifi. There is option to use dhcp or fixed ip address. 
+Enter your ssid/pwd into `secrets.zig` file. All examples will used those credentials to connect to the WiFi. There is the option to use DHCP or fixed IP address. 
 
-`tcp_client` example also uses `host_ip` when connecting to the host, enter there your desktop host ip address.
+`tcp_client` example also uses `host_ip` when connecting to the host, enter your desktop host IP address there.
 
 Joining wifi defaults to the `wpa2_psk` wifi security and country code "XX" (worldwide), if that does not match your configuration add options to the wifi.join:
 
@@ -20,8 +20,8 @@ try wifi.join(
 
 ## pong.zig
 
-This only setups cyw43 (pico wifi chip), joins wifi network and initializes lwip stack.   
-When connected it will display ip address in the log:
+This only sets up cyw43 (pico wifi chip), joins the WiFi network, and initializes lwip stack.   
+When connected it will display its IP address in the log:
 
 ```
 ================ STARTING NEW LOGGER ================
@@ -31,12 +31,12 @@ debug (lwip): netif status callback is_link_up: false, is_up: true, ready: false
 debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
 ```
 
-Than you can ping that address from the you host computer and get responses.
+Than you can ping that address from the your host computer and see responses.
 
 
 ## udp.zig
 
-Listens for upd packets on port 9999. Each received packet is echoed to the source ip address and port 9999.
+Listens for UDP packets on port 9999. Each received packet is echoed to the source IP address and port 9999.
 
 Get pico ip address from log, if you are using dhcp:
 ```
