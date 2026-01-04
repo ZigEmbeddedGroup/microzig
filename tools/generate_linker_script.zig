@@ -197,6 +197,7 @@ pub fn main() !void {
             \\
             \\  .data :
             \\  {
+            \\    . = ALIGN(4);
             \\    microzig_data_start = .;
             \\    *(.sdata*)
             \\    *(.data*)
@@ -220,14 +221,17 @@ pub fn main() !void {
         }
 
         try writer.interface.print(
+            \\    . = ALIGN(4);
             \\    microzig_data_end = .;
             \\  }} > {s}
             \\
             \\  .bss (NOLOAD):
             \\  {{
+            \\    . = ALIGN(4);
             \\    microzig_bss_start = .;
             \\    *(.sbss*)
             \\    *(.bss*)
+            \\    . = ALIGN(4);
             \\    microzig_bss_end = .;
             \\  }} > {s}
             \\
