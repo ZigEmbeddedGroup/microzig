@@ -107,6 +107,13 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() callconv(.c) noreturn {
+        const stack_init = comptime microzig.utilities.get_end_of_stack();
+        asm volatile (
+            \\MOV %[stack_init], SP
+            :
+            : [stack_init] "i" (@as(u32, @intFromPtr(stack_init))),
+        );
+
         microzig.utilities.initialize_system_memories(.auto);
         @call(.never_inline, microzig_main, .{});
     }
@@ -128,7 +135,7 @@ export fn memset(dest: [*]u8, ch: u8, count: usize) callconv(.c) [*]u8 {
     _ = ch; // R13
     _ = count; // R14
     asm volatile (
-        \\  MOV R5, R12
+        \\  MOV R12, R5
         \\  ADD R5, R14
         \\memset_loop:
         \\  CMP   R5, R12
