@@ -236,7 +236,7 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
                 });
 
                 break :blk lazy_path;
-            }
+            },
         };
 
         if (chips.getEntry(lazy_path)) |entry| {
