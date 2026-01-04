@@ -1,7 +1,7 @@
 //!
-//! This file implements the I²C driver for the CH32V chip family
+//! DMA HAL for the CH32V chip family (CH32V20x)
 //!
-//! Reference: CH32V20x Reference Manual Section on DMA (Chapter 11)
+//! Reference: CH32V20x Reference Manual, DMA (Chapter 11)
 //!
 //!
 const std = @import("std");
@@ -228,11 +228,21 @@ pub const Channel = enum(u3) {
         regs.INTFCR.write_raw(@as(u32, 0b1111) << flag_shift);
 
         // NOTE: DIR bit affects transfer direction even in MEM2MEM mode (undocumented behavior):
-        //   DIR=0: PADDR→MADDR (peripheral/source to memory/destination)
-        //   DIR=1: MADDR→PADDR (memory/source to peripheral/destination)
-        // For typical memory copy with DIR=1: MADDR=source, PADDR=destination
-        regs.MADDR.write_raw(read_addr); // source
-        regs.PADDR.write_raw(write_addr); // destination
+        // - Always place the peripheral address in PADDR when a peripheral is involved.
+        // - DIR selects the data flow between registers:
+        //     DIR=0: PADDR → MADDR (source=PADDR, dest=MADDR)
+        //     DIR=1: MADDR → PADDR (source=MADDR, dest=PADDR)
+        // - We choose the following mapping for clarity/alignment of increments:
+        //     Mem→Periph:  MADDR=read (memory),  PADDR=write (periph), DIR=1
+        //     Periph→Mem:  PADDR=read (periph),  MADDR=write (memory), DIR=0
+        //     Mem→Mem:     PADDR=read (source),  MADDR=write (dest),   DIR=0
+        if (H.is_peripheral(WriteType)) {
+            regs.MADDR.write_raw(read_addr);
+            regs.PADDR.write_raw(write_addr);
+        } else {
+            regs.MADDR.write_raw(write_addr);
+            regs.PADDR.write_raw(read_addr);
+        }
         // Set the amount of data to transfer
         regs.CNTR.write_raw(count);
         // Set the priority
@@ -245,9 +255,9 @@ pub const Channel = enum(u3) {
             .PSIZE = @intFromEnum(data_size),
             .PINC = @intFromBool(peripheral_increment),
             .CIRC = @intFromBool(config.circular_mode),
-            // DIR affects transfer direction even in MEM2MEM mode (undocumented)
-            // DIR=1: MADDR→PADDR, DIR=0: PADDR→MADDR
-            .DIR = if (direction == .Periph2Mem) 0 else 1,
+            // DIR applies in all modes. Set DIR=1 only for Mem→Periph (MADDR→PADDR);
+            // use DIR=0 for Periph→Mem and Mem→Mem (PADDR→MADDR).
+            .DIR = if (direction == .Mem2Periph) 1 else 0,
             // TODO: Add (optional?) support for interrupts
             // Transfer error interrupt
             .TEIE = 0,
