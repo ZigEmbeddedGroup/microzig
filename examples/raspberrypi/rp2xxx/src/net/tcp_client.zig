@@ -161,6 +161,8 @@ const Client = struct {
 // $ ncat  -lkv -p 9998
 //
 // or run simple tcp echo:
+// $ ncat -lkv -p 9998 --exec /bin/cat
+// or
 // $ socat -d2 TCP-LISTEN:9998,fork EXEC:"cat"
 //
 // This example will send various data payload size. When the payload is too big

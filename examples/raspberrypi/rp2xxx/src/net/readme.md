@@ -1,0 +1,90 @@
+# Examples for the pico 2w and lwip network
+
+Currently tested only on pico 2w, should also work on pico w.
+
+## secrets.zig
+
+Enter your ssid/pwd into `secrets.zig` file. All examples will used that credentials to connect to the wifi. There is option to use dhcp or fixed ip address. 
+
+`tcp_client` example also uses `host_ip` when connecting to the host, enter there your desktop host ip address.
+
+Joining wifi defaults to the `wpa2_psk` wifi security and country code "XX" (worldwide), if that does not match your configuration add options to the wifi.join:
+
+```zig
+try wifi.join(
+    secrets.ssid,
+    secrets.pwd,
+    .{ .security = .open, .country = .{ .code = "US".* } },
+);
+```
+
+## pong.zig
+
+This only setups cyw43 (pico wifi chip), joins wifi network and initializes lwip stack.   
+When connected it will display ip address in the log:
+
+```
+================ STARTING NEW LOGGER ================
+debug (main): mac address: 2ccf67f3b7ea
+debug (main): wifi joined
+debug (lwip): netif status callback is_link_up: false, is_up: true, ready: false, ip: 0.0.0.0
+debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
+```
+
+Than you can ping that address from the you host computer and get responses.
+
+
+## udp.zig
+
+Listens for upd packets on port 9999. Each received packet is echoed to the source ip address and port 9999.
+
+Get pico ip address from log, if you are using dhcp:
+```
+debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
+```
+
+Then on host computer send something to that ip and port 9999:
+```sh
+echo "hello from host" | ncat -u 192.168.190.50 9999
+
+ncat -u 192.168.190.50 9999 < LICENSE
+```
+
+To receive echoed packets start listening on the host: 
+```sh
+ncat -ulp 9999
+```
+
+Then send something to the pico again.
+
+
+## tcp_server.zig
+
+Listens for tcp connections on the port 9998 and logs received data.
+
+Once you find pico ip in the log you can send something to that ip, for example to send file content:
+
+```sh
+ncat 192.168.190.206 9998 < build.zig
+```
+
+Examples allocates space for two connections when both are active it will not receive any new connections.
+
+
+## tcp_client.zig
+
+Connects to the host computer, sends tcp payload of various sizes. From time to time closes connection and reconnects. Receives tcp data and logs it. 
+
+Host computer should listen on the port 9998 for tcp connections. This examples uses `host_ip` from secrets. 
+
+On the host listen for tcp connections on port 9998:
+```sh
+ncat  -lkv -p 9998
+```
+
+To echo same packet back to the pico:
+```sh
+ncat -lkv -p 9998 --exec /bin/cat
+```
+
+This example will send various tcp payload sizes. When the payload is too big for the tcp send buffer out of memory error will be raised on send.
