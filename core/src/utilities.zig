@@ -639,3 +639,21 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
         }
     };
 }
+
+test "CircularBuffer bounds" {
+    const expectEqual = std.testing.expectEqual;
+    const bufsize: usize = 64;
+    const FIFO = CircularBuffer(u8, bufsize);
+    var fifo: FIFO = .empty;
+    try expectEqual(bufsize, fifo.get_writable_len());
+    const one_data: [1]u8 = .{42};
+    try fifo.write(one_data[0..]);
+    try expectEqual(bufsize - 1, fifo.get_writable_len());
+
+    var big_data: [100]u8 = undefined;
+    @memset(big_data[0..], 42);
+
+    const maybe_err = fifo.write(big_data[0..]);
+
+    try std.testing.expectError(error.Full, maybe_err);
+}
