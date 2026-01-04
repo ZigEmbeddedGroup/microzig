@@ -94,6 +94,6 @@ pub fn data_head(bytes: []u8, max: usize) []u8 {
 // then send something to the pico:
 // $ nc -u 192.168.190.206 9999 -c < LICENSE
 //
-// pico will show recived bytes and echo that to the sender ip and port 9999
+// pico will show received bytes and echo that to the sender IP and port 9999
 // debug (main): received 867 bytes, from: 192.168.190.235:47205, last: true, data: Copyright (c) Zig Embedded Group
 //
