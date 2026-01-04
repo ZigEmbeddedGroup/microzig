@@ -198,9 +198,6 @@ pub const Board = struct {
     /// Display name of the board.
     name: []const u8,
 
-    /// Description of the board in case the name is cryptic
-    description: ?[]const u8 = null,
-
     /// (optional) link to the documentation/vendor page of the board.
     url: ?[]const u8 = null,
 

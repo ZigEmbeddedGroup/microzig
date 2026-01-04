@@ -21,11 +21,11 @@ pub const Pin = struct {
 
     fn get_reg(comptime periph_name: []const u8, comptime register_name: []const u8) *volatile u8 {
         if (!@hasDecl(peripherals, periph_name))
-            @panic("missing peripheral");
+            @panic("missing peripheral " ++ periph_name);
 
         const periph = @field(peripherals, periph_name);
         if (!@hasField(@typeInfo(@TypeOf(periph)).pointer.child, register_name))
-            @panic("missing register");
+            @panic("missing register " ++ register_name);
 
         return &@field(periph, register_name).raw;
     }

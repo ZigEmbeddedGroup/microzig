@@ -57,7 +57,7 @@ else if (std.mem.eql(u8, config.cpu_name, "MSP430"))
         RESET: interrupt.Handler,
     }
 else
-    @compileError("Chip not supported yet");
+    @compileError("Invalid CPU, there are only MSP430 and MSP430X: " ++ config.cpu_name);
 
 const vector_table: VectorTable = vector_table: {
     var tmp: VectorTable = .{
