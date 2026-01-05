@@ -35,7 +35,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_ws2812", .file = "src/ws2812.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_uart_log", .file = "src/uart_log.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_dma", .file = "src/i2c_dma.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_position_sensor", .file = "src/i2c_position_sensor.zig" },
 
         // CH32V30x
