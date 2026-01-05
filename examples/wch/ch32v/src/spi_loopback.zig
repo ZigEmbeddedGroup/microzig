@@ -74,41 +74,56 @@ pub fn main() !void {
         &.{ 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF },
     };
 
-    // Initialize SPI1 in Mode 0 (CPOL=0, CPHA=0)
-    std.log.info("Initializing SPI Mode 0 (CPOL=0, CPHA=0) at 1 MHz...", .{});
     const spi1 = spi.instance.SPI1;
-    spi1.apply(.{
-        .baud_rate = 1_000_000,
-        .polarity = .idle_low,
-        .phase = .first_edge,
-        .bit_order = .msb_first,
-    });
-
     var rx_buffer: [16]u8 = undefined;
 
-    // Test all patterns
-    for (test_patterns, 0..) |pattern, i| {
-        @memset(&rx_buffer, 0);
+    // SPI modes to test (all 4 combinations of CPOL and CPHA)
+    const SpiMode = struct {
+        name: []const u8,
+        polarity: spi.Polarity,
+        phase: spi.Phase,
+    };
 
-        // Perform loopback
-        spi1.transceive_blocking(pattern, rx_buffer[0..pattern.len], mdf.time.Duration.from_ms(100)) catch |err| {
-            std.log.err("Test pattern {} failed: {}", .{ i, err });
-            continue;
-        };
+    const spi_modes = [_]SpiMode{
+        .{ .name = "Mode 0 (CPOL=0, CPHA=0)", .polarity = .idle_low, .phase = .first_edge },
+        .{ .name = "Mode 1 (CPOL=0, CPHA=1)", .polarity = .idle_low, .phase = .second_edge },
+        .{ .name = "Mode 2 (CPOL=1, CPHA=0)", .polarity = .idle_high, .phase = .first_edge },
+        .{ .name = "Mode 3 (CPOL=1, CPHA=1)", .polarity = .idle_high, .phase = .second_edge },
+    };
 
-        // Verify
-        if (std.mem.eql(u8, pattern, rx_buffer[0..pattern.len])) {
-            std.log.info("  Pattern {}: PASS (len={})", .{ i, pattern.len });
-        } else {
-            std.log.err("  Pattern {}: FAIL", .{i});
-            std.log.err("    Sent: {any}", .{pattern});
-            std.log.err("    Recv: {any}", .{rx_buffer[0..pattern.len]});
+    // Test each SPI mode (comptime inline loop for compile-time config)
+    inline for (spi_modes) |mode| {
+        std.log.info("Testing {s} at 1 MHz...", .{mode.name});
+        spi1.apply(.{
+            .baud_rate = 1_000_000,
+            .polarity = mode.polarity,
+            .phase = mode.phase,
+            .bit_order = .msb_first,
+        });
+
+        // Test all patterns in this mode
+        for (test_patterns, 0..) |pattern, i| {
+            @memset(&rx_buffer, 0);
+
+            // Perform loopback
+            spi1.transceive_blocking(pattern, rx_buffer[0..pattern.len], mdf.time.Duration.from_ms(100)) catch |err| {
+                std.log.err("  Pattern {} failed: {}", .{ i, err });
+                continue;
+            };
+
+            // Verify
+            if (std.mem.eql(u8, pattern, rx_buffer[0..pattern.len])) {
+                std.log.info("  Pattern {}: PASS (len={})", .{ i, pattern.len });
+            } else {
+                std.log.err("  Pattern {}: FAIL", .{i});
+                std.log.err("    Sent: {any}", .{pattern});
+                std.log.err("    Recv: {any}", .{rx_buffer[0..pattern.len]});
+            }
         }
+        std.log.info("", .{});
     }
 
-    std.log.info("", .{});
-    std.log.info("All basic tests complete!", .{});
-    std.log.info("Note: To test other SPI modes/baud rates, modify the apply() config", .{});
+    std.log.info("All SPI mode tests complete!", .{});
 
     // Test vectored I/O
     std.log.info("", .{});
