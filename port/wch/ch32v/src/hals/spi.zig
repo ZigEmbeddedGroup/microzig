@@ -417,7 +417,7 @@ pub const SPI = enum(u1) {
         const regs = spi.get_regs();
         var iter = read_vec.iterator();
 
-        while (iter.next_element()) |element| {
+        while (iter.next_element_ptr()) |element| {
             // Wait for TX buffer empty
             try spi.wait_tx_empty(deadline);
 
@@ -428,7 +428,7 @@ pub const SPI = enum(u1) {
             try spi.wait_rx_not_empty(deadline);
 
             // Read received byte
-            element.value_ref.* = @truncate(regs.DATAR.read().DR);
+            element.value_ptr.* = @truncate(regs.DATAR.read().DR);
         }
 
         // Wait for transmission to complete
@@ -502,7 +502,7 @@ pub const SPI = enum(u1) {
 
         // Setup RX DMA (discard to dummy buffer)
         dma_cfg.rx_channel.setup_transfer(
-            @as([*]u8, &dummy_rx)[0..data.len],
+            @as([*]u8, @ptrCast(&dummy_rx))[0..data.len],
             rx_target,
             .{ .priority = dma_cfg.priority },
         );
@@ -558,7 +558,7 @@ pub const SPI = enum(u1) {
         // Setup TX DMA (dummy 0xFF bytes)
         dma_cfg.tx_channel.setup_transfer(
             tx_target,
-            @as([*]const u8, &dummy_tx)[0..data.len],
+            @as([*]const u8, @ptrCast(&dummy_tx))[0..data.len],
             .{ .priority = dma_cfg.priority },
         );
 
@@ -608,13 +608,11 @@ pub const SPI = enum(u1) {
         timeout: ?mdf.time.Duration,
     ) Error!void {
         if (comptime config.dma) |dma_cfg| {
-            const total_len = comptime blk: {
-                var len: usize = 0;
-                for (chunks) |chunk| {
-                    len += chunk.len;
-                }
-                break :blk len;
-            };
+            // Calculate total length at runtime
+            var total_len: usize = 0;
+            for (chunks) |chunk| {
+                total_len += chunk.len;
+            }
 
             if (total_len >= dma_cfg.threshold) {
                 // For vectored DMA, we need to send chunks sequentially
@@ -636,13 +634,11 @@ pub const SPI = enum(u1) {
         timeout: ?mdf.time.Duration,
     ) Error!void {
         if (comptime config.dma) |dma_cfg| {
-            const total_len = comptime blk: {
-                var len: usize = 0;
-                for (chunks) |chunk| {
-                    len += chunk.len;
-                }
-                break :blk len;
-            };
+            // Calculate total length at runtime
+            var total_len: usize = 0;
+            for (chunks) |chunk| {
+                total_len += chunk.len;
+            }
 
             if (total_len >= dma_cfg.threshold) {
                 // For vectored DMA, we need to read chunks sequentially

@@ -264,11 +264,18 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             };
         }
 
-        pub fn readv(dev: Self, chunks: []const []u8) Datagram_Device.ReadError!void {
-            return dev.bus.readv_auto(config, chunks, dev.timeout) catch |err| switch (err) {
+        pub fn readv(dev: Self, chunks: []const []u8) Datagram_Device.ReadError!usize {
+            dev.bus.readv_auto(config, chunks, dev.timeout) catch |err|
+                return switch (err) {
                 error.Timeout => Datagram_Device.ReadError.Timeout,
                 else => Datagram_Device.ReadError.IoError,
             };
+            // Calculate total bytes read
+            var total: usize = 0;
+            for (chunks) |chunk| {
+                total += chunk.len;
+            }
+            return total;
         }
 
         pub fn writev_then_readv(
@@ -314,7 +321,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             return dev.writev(chunks);
         }
 
-        fn readv_fn(dd: *anyopaque, chunks: []const []u8) Datagram_Device.ReadError!void {
+        fn readv_fn(dd: *anyopaque, chunks: []const []u8) Datagram_Device.ReadError!usize {
             const dev: *Self = @ptrCast(@alignCast(dd));
             return dev.readv(chunks);
         }
