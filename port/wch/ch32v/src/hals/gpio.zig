@@ -150,7 +150,7 @@ pub const Pin = packed struct(u8) {
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.IDR.raw & gpio.mask() != 0)
+        return if (port.INDR.raw & gpio.mask() != 0)
             1
         else
             0;

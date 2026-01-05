@@ -93,24 +93,14 @@ pub fn main() !void {
     hal.time.sleep_ms(10);
 
     // Create Digital_IO wrapper for D/C pin
-    const DC_IO = DC_Pin_Wrapper{};
-    var dc_io = DC_IO{};
+    var dc_io = DC_Pin_Wrapper{};
 
-    // Initialize SSD1306 driver
+    // Initialize SSD1306 driver using the init function directly
     const ssd1306 = microzig.drivers.display.ssd1306;
-
-    // Create driver options for SPI 4-wire mode
-    const driver_options = ssd1306.SSD1306_Options{
-        .mode = .spi_4wire,
-        .Datagram_Device = mdf.base.Datagram_Device,
-        .Digital_IO = mdf.base.Digital_IO,
-    };
-
-    const Display = ssd1306.SSD1306(driver_options);
-    var display = Display.init(
+    var display = ssd1306.init(
+        .spi_4wire,
         spi_dev.datagram_device(),
         dc_io.digital_io(),
-        .{ .width = 128, .height = 64 },
     ) catch |err| {
         @panic(@errorName(err));
     };
@@ -155,14 +145,29 @@ const DC_Pin_Wrapper = struct {
         _ = self;
         const S = struct {
             const vtable: mdf.base.Digital_IO.VTable = .{
-                .set_state = set_state_fn,
+                .set_direction_fn = set_direction_fn,
+                .set_bias_fn = set_bias_fn,
+                .write_fn = write_fn,
+                .read_fn = read_fn,
             };
 
-            fn set_state_fn(_: *anyopaque, state: mdf.base.Digital_IO.State) void {
+            fn set_direction_fn(_: *anyopaque, _: mdf.base.Digital_IO.Direction) mdf.base.Digital_IO.SetDirError!void {
+                // D/C pin is always output, nothing to do
+            }
+
+            fn set_bias_fn(_: *anyopaque, _: ?mdf.base.Digital_IO.State) mdf.base.Digital_IO.SetBiasError!void {
+                // No bias control needed
+            }
+
+            fn write_fn(_: *anyopaque, state: mdf.base.Digital_IO.State) mdf.base.Digital_IO.WriteError!void {
                 dc_pin.put(switch (state) {
                     .low => 0,
                     .high => 1,
                 });
+            }
+
+            fn read_fn(_: *anyopaque) mdf.base.Digital_IO.ReadError!mdf.base.Digital_IO.State {
+                return if (dc_pin.read() == 1) .high else .low;
             }
         };
 

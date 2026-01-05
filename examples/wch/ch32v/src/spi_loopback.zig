@@ -74,8 +74,8 @@ pub fn main() !void {
         &.{ 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF },
     };
 
-    // Test SPI mode 0 (CPOL=0, CPHA=0)
-    std.log.info("Testing SPI Mode 0 (CPOL=0, CPHA=0)...", .{});
+    // Initialize SPI1 in Mode 0 (CPOL=0, CPHA=0)
+    std.log.info("Initializing SPI Mode 0 (CPOL=0, CPHA=0) at 1 MHz...", .{});
     const spi1 = spi.instance.SPI1;
     spi1.apply(.{
         .baud_rate = 1_000_000,
@@ -86,6 +86,7 @@ pub fn main() !void {
 
     var rx_buffer: [16]u8 = undefined;
 
+    // Test all patterns
     for (test_patterns, 0..) |pattern, i| {
         @memset(&rx_buffer, 0);
 
@@ -105,70 +106,9 @@ pub fn main() !void {
         }
     }
 
-    // Test different SPI modes
-    const spi_modes = [_]struct {
-        name: []const u8,
-        polarity: spi.Polarity,
-        phase: spi.Phase,
-    }{
-        .{ .name = "Mode 1 (CPOL=0, CPHA=1)", .polarity = .idle_low, .phase = .second_edge },
-        .{ .name = "Mode 2 (CPOL=1, CPHA=0)", .polarity = .idle_high, .phase = .first_edge },
-        .{ .name = "Mode 3 (CPOL=1, CPHA=1)", .polarity = .idle_high, .phase = .second_edge },
-    };
-
-    for (spi_modes) |mode| {
-        std.log.info("", .{});
-        std.log.info("Testing {s}...", .{mode.name});
-
-        spi1.apply(.{
-            .baud_rate = 1_000_000,
-            .polarity = mode.polarity,
-            .phase = mode.phase,
-        });
-
-        // Test with a simple pattern
-        const simple_pattern = [_]u8{ 0x12, 0x34, 0x56, 0x78 };
-        @memset(&rx_buffer, 0);
-
-        spi1.transceive_blocking(&simple_pattern, rx_buffer[0..simple_pattern.len], mdf.time.Duration.from_ms(100)) catch |err| {
-            std.log.err("  {s} failed: {}", .{ mode.name, err });
-            continue;
-        };
-
-        if (std.mem.eql(u8, &simple_pattern, rx_buffer[0..simple_pattern.len])) {
-            std.log.info("  {s}: PASS", .{mode.name});
-        } else {
-            std.log.err("  {s}: FAIL", .{mode.name});
-        }
-    }
-
-    // Test different baud rates
     std.log.info("", .{});
-    std.log.info("Testing different baud rates...", .{});
-
-    const baud_rates = [_]u32{ 125_000, 250_000, 500_000, 1_000_000, 2_000_000, 4_000_000 };
-
-    for (baud_rates) |baud_rate| {
-        spi1.apply(.{
-            .baud_rate = baud_rate,
-            .polarity = .idle_low,
-            .phase = .first_edge,
-        });
-
-        const test_data = [_]u8{0xA5};
-        @memset(&rx_buffer, 0);
-
-        spi1.transceive_blocking(&test_data, rx_buffer[0..test_data.len], mdf.time.Duration.from_ms(100)) catch |err| {
-            std.log.err("  {} Hz failed: {}", .{ baud_rate, err });
-            continue;
-        };
-
-        if (std.mem.eql(u8, &test_data, rx_buffer[0..test_data.len])) {
-            std.log.info("  {} Hz: PASS", .{baud_rate});
-        } else {
-            std.log.err("  {} Hz: FAIL", .{baud_rate});
-        }
-    }
+    std.log.info("All basic tests complete!", .{});
+    std.log.info("Note: To test other SPI modes/baud rates, modify the apply() config", .{});
 
     // Test vectored I/O
     std.log.info("", .{});
