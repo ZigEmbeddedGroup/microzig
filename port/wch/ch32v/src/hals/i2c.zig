@@ -456,11 +456,8 @@ pub const I2C = enum(u1) {
         data: []const u8,
         timeout: ?mdf.time.Duration,
     ) Error!void {
-        comptime {
-            if (config.dma == null) {
-                @compileError("write_dma() requires DMA configuration in I2C config");
-            }
-        }
+        comptime if (config.dma == null)
+            @compileError("write_dma() requires DMA configuration in I2C config");
 
         const dma_cfg = comptime config.dma.?;
         const regs = i2c.get_regs();
@@ -519,11 +516,8 @@ pub const I2C = enum(u1) {
         dst: []u8,
         timeout: ?mdf.time.Duration,
     ) Error!void {
-        comptime {
-            if (config.dma == null) {
-                @compileError("read_dma() requires DMA configuration in I2C config");
-            }
-        }
+        comptime if (config.dma == null)
+            @compileError("read_dma() requires DMA configuration in I2C config");
 
         const dma_cfg = comptime config.dma.?;
         const regs = i2c.get_regs();
