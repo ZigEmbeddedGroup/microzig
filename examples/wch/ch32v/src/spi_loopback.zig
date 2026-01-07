@@ -54,7 +54,7 @@ pub fn main() !void {
     // PA5: SCK  (Alternate Function Push-Pull, 50MHz)
     // PA6: MISO (Input Floating)
     // PA7: MOSI (Alternate Function Push-Pull, 50MHz)
-    const sck_pin = gpio.Pin.init(0, 5);  // PA5
+    const sck_pin = gpio.Pin.init(0, 5); // PA5
     const miso_pin = gpio.Pin.init(0, 6); // PA6
     const mosi_pin = gpio.Pin.init(0, 7); // PA7
 
