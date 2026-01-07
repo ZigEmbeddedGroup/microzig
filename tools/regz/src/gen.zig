@@ -484,6 +484,8 @@ fn write_vector_table(
         try avr.write_interrupt_vector(db, arena, device, writer)
     else if (device.arch.is_riscv())
         try riscv.write_interrupt_vector(db, arena, device, writer)
+    else if (device.arch == .msp430)
+        return
     else if (device.arch == .unknown)
         return
     else
@@ -792,7 +794,7 @@ fn write_registers_and_nested_structs(
     nested_struct_fields: []NestedStructField,
     out_writer: *std.Io.Writer,
 ) !void {
-    log.debug("write_registers: modes.len={}", .{modes.len});
+    log.debug("write_registers: modes.len={} registers.len={}", .{ modes.len, registers.len });
     if (modes.len > 0)
         try write_registers_with_modes(db, arena, struct_id, block_size_bytes, modes, out_writer)
     else

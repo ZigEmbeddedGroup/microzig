@@ -20,6 +20,17 @@ You can [subscribe to this page via RSS]($link.alternative('rss')).
 
 ## Changes
 
+## [MSP430 Support]($section.id('2026-01-07'))
+
+[]($image.asset('msp430-01.gif'))
+
+[MSP430](https://www.ti.com/product-category/microcontrollers-processors/mcus/msp430/overview.html)
+is a microcontroller line from Texas Instruments. It's a 16-bit RISC
+architecture with only two CPU variants. That combined with the excellent
+documentation, it's a pleasure to read about. The board seen in the above gif is
+the Launch pad for the MSP430F5529, which is what I (Matthew Knight) learned on,
+in university. 
+
 ## [Printer]($section.id('2025-07-07'))
 
 []($image.asset('printer-01.png'))

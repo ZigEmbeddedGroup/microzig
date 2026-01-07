@@ -8,6 +8,7 @@ pub const Format = enum {
     svd,
     atdf,
     embassy,
+    targetdb,
 };
 
 pub const Chip = struct {

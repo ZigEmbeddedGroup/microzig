@@ -46,6 +46,8 @@ pub const Arch = enum {
     qingke_v4,
     hazard3,
 
+    msp430,
+
     pub const BaseType = []const u8;
     pub const default = .unknown;
 

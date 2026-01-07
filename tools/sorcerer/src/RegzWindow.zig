@@ -19,11 +19,16 @@ const dvui = @import("dvui");
 
 var count: usize = 0;
 
-pub fn create(gpa: Allocator, format: regz.Database.Format, path: []const u8) !*RegzWindow {
+pub fn create(
+    gpa: Allocator,
+    format: regz.Database.Format,
+    path: []const u8,
+    device: ?[]const u8,
+) !*RegzWindow {
     const window = try gpa.create(RegzWindow);
     errdefer gpa.destroy(window);
 
-    var db = try regz.Database.create_from_path(gpa, format, path);
+    var db = try regz.Database.create_from_path(gpa, format, path, device);
     errdefer db.destroy();
 
     var arena: std.heap.ArenaAllocator = .init(gpa);

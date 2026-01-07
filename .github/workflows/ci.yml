@@ -197,6 +197,7 @@ jobs:
             nxp/lpc,
             nxp/mcx,
             stmicro/stm32,
+            texasinstruments/msp430,
             raspberrypi/rp2xxx,
             wch/ch32v,
             no_hal/stm32_l031,

@@ -24,6 +24,7 @@ const Arguments = struct {
     format: ?Database.Format = null,
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
+    device: ?[]const u8 = null,
     patch_paths: std.ArrayList([]const u8) = .{},
     dump_path: ?[:0]const u8 = null,
     help: bool = false,
@@ -38,6 +39,8 @@ const Arguments = struct {
     fn deinit(args: *Arguments) void {
         if (args.input_path) |input_path| args.allocator.free(input_path);
         if (args.output_path) |output_path| args.allocator.free(output_path);
+        if (args.device) |device| args.allocator.free(device);
+        if (args.dump_path) |dump_path| args.allocator.free(dump_path);
 
         for (args.patch_paths.items) |patch_path| args.allocator.free(patch_path);
         args.patch_paths.deinit(args.allocator);
@@ -51,6 +54,7 @@ fn print_usage(writer: *std.Io.Writer) !void {
         \\  --db_dump_path <str>  Dump SQLite file
         \\  --format <str>        Explicitly set format type, one of: svd, atdf, json, embassy
         \\  --output_path <str>   Write to a file
+        \\  --device <str>        Specific device to generate code for
         \\  --patch_path <str>    After reading format, apply NDJSON based patch file
         \\<str>
         \\
@@ -90,6 +94,9 @@ fn parse_args(allocator: Allocator) !Arguments {
         } else if (std.mem.eql(u8, args[i], "--output_path")) {
             i += 1;
             ret.output_path = try allocator.dupeZ(u8, args[i]);
+        } else if (std.mem.eql(u8, args[i], "--device")) {
+            i += 1;
+            ret.device = try allocator.dupe(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--patch_path")) {
             i += 1;
             try ret.append_patch_path(args[i]);
@@ -139,7 +146,7 @@ fn main_impl() anyerror!void {
         return error.Explained;
     };
 
-    var db = try Database.create_from_path(allocator, format, input_path);
+    var db = try Database.create_from_path(allocator, format, input_path, args.device);
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {

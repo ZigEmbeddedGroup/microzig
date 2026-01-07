@@ -32,6 +32,7 @@ const port_list: []const struct {
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
+    .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
 };
 
 const exe_targets: []const std.Target.Query = &.{
@@ -85,6 +86,7 @@ pub const PortSelect = struct {
     rp2xxx: bool = false,
     stm32: bool = false,
     ch32v: bool = false,
+    msp430: bool = false,
 
     pub const all: PortSelect = blk: {
         var ret: PortSelect = undefined;
@@ -270,6 +272,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `bundle_compiler_rt` property of the target.
             bundle_compiler_rt: ?bool = null,
 
+            bundle_ubsan_rt: ?bool = null,
+
             /// If set, overrides the `zig_target` property of the target.
             zig_target: ?std.Target.Query = null,
 
@@ -427,7 +431,26 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addDirectoryArg(path);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
+                .targetdb => |targetdb| blk: {
+                    const regz_run = b.addRunArtifact(regz_exe);
 
+                    regz_run.addArg("--format");
+                    regz_run.addArg(@tagName(target.chip.register_definition));
+
+                    regz_run.addArg("--output_path"); // Write to a file
+                    const chips_dir = regz_run.addOutputDirectoryArg("chips");
+
+                    for (target.chip.patch_files) |patch_file| {
+                        regz_run.addArg("--patch_path");
+                        regz_run.addFileArg(patch_file);
+                    }
+
+                    regz_run.addArg("--device");
+                    regz_run.addArg(targetdb.device);
+
+                    regz_run.addDirectoryArg(targetdb.path);
+                    break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
+                },
                 .zig => |src| src,
             };
             const chip_mod = b.createModule(.{
@@ -487,6 +510,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             };
 
             fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse target.bundle_compiler_rt;
+            fw.artifact.bundle_ubsan_rt = options.bundle_ubsan_rt orelse target.bundle_ubsan_rt;
 
             fw.artifact.link_gc_sections = options.strip_unused_symbols;
             fw.artifact.link_function_sections = options.strip_unused_symbols;
@@ -755,6 +779,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             .module = mb.dep.builder.dependency("modules/riscv32-common", .{}).module("riscv32-common"),
                         },
                     }) catch @panic("OOM"),
+                };
+            } else if (target.cpu.model == &std.Target.msp430.cpu.msp430) {
+                return .{
+                    .name = "MSP430",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_msp430"),
+                };
+            } else if (target.cpu.model == &std.Target.msp430.cpu.msp430x) {
+                return .{
+                    .name = "MSP430X",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_msp430x"),
                 };
             }
 
