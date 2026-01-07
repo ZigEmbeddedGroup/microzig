@@ -107,17 +107,17 @@ pub const I2C = enum(u1) {
         // Compile-time DMA validation
         if (comptime config.dma) |dma_cfg| {
             const tx_peripheral = comptime if (@intFromEnum(i2c) == 0)
-                dma.ChannelMapping.Peripheral.I2C1_TX
+                dma.Peripheral.I2C1_TX
             else
-                dma.ChannelMapping.Peripheral.I2C2_TX;
+                dma.Peripheral.I2C2_TX;
             const rx_peripheral = comptime if (@intFromEnum(i2c) == 0)
-                dma.ChannelMapping.Peripheral.I2C1_RX
+                dma.Peripheral.I2C1_RX
             else
-                dma.ChannelMapping.Peripheral.I2C2_RX;
+                dma.Peripheral.I2C2_RX;
 
             // Validate channels (compile error if invalid)
-            comptime dma.ChannelMapping.validate(tx_peripheral, dma_cfg.tx_channel);
-            comptime dma.ChannelMapping.validate(rx_peripheral, dma_cfg.rx_channel);
+            comptime tx_peripheral.validate(dma_cfg.tx_channel);
+            comptime rx_peripheral.validate(dma_cfg.rx_channel);
         }
 
         // Enable peripheral clock

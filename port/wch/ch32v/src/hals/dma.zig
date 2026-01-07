@@ -332,59 +332,57 @@ pub const Channel = enum(u3) {
     }
 };
 
-/// DMA channel mapping for different peripherals on CH32V203
+/// DMA peripheral mapping for CH32V203
 /// Based on CH32V20x Reference Manual DMA Request Mapping Table
-pub const ChannelMapping = struct {
-    pub const Peripheral = enum {
-        // I2C
-        I2C1_TX,
-        I2C1_RX,
-        I2C2_TX,
-        I2C2_RX,
+pub const Peripheral = enum {
+    // I2C
+    I2C1_TX,
+    I2C1_RX,
+    I2C2_TX,
+    I2C2_RX,
 
-        // USART (uncomment when UART HAL gets DMA support)
-        // USART1_TX,
-        // USART1_RX,
-        // USART2_TX,
-        // USART2_RX,
-        // USART3_TX,
-        // USART3_RX,
-        // USART4_RX,
-        // USART4_TX,
-        // USART5_RX,
-        // USART5_TX,
-        // USART6_TX,
-        // USART6_RX,
+    // USART (uncomment when UART HAL gets DMA support)
+    // USART1_TX,
+    // USART1_RX,
+    // USART2_TX,
+    // USART2_RX,
+    // USART3_TX,
+    // USART3_RX,
+    // USART4_RX,
+    // USART4_TX,
+    // USART5_RX,
+    // USART5_TX,
+    // USART6_TX,
+    // USART6_RX,
 
-        // SPI (uncomment when SPI HAL gets DMA support)
-        // SPI1_RX,
-        // SPI1_TX,
-        // SPI2_TX,
-        // SPI3_RX,
-        // SPI3_TX,
+    // SPI (uncomment when SPI HAL gets DMA support)
+    // SPI1_RX,
+    // SPI1_TX,
+    // SPI2_TX,
+    // SPI3_RX,
+    // SPI3_TX,
 
-        // ADC (uncomment when ADC HAL gets DMA support)
-        // ADC1,
+    // ADC (uncomment when ADC HAL gets DMA support)
+    // ADC1,
 
-        // Timers (uncomment when Timer HAL gets DMA support)
-        // TIM1_CH1, TIM1_CH2, TIM1_CH3, TIM1_CH4, TIM1_UP, TIM1_TRIG, TIM1_COM,
-        // TIM2_CH1, TIM2_CH2, TIM2_CH3, TIM2_CH4, TIM2_UP,
-        // TIM3_CH1, TIM3_CH3, TIM3_CH4, TIM3_UP, TIM3_TRIG,
-        // TIM4_CH1, TIM4_CH2, TIM4_CH3, TIM4_UP,
-        // TIM5_CH1, TIM5_CH2, TIM5_CH3, TIM5_CH4, TIM5_UP, TIM5_TRIG,
-        // TIM6_UP, TIM7_UP,
-        // TIM8_CH1, TIM8_CH2, TIM8_CH3, TIM8_CH4, TIM8_UP, TIM8_TRIG, TIM8_COM,
-        // TIM9_UP, TIM9_CH1,
-        // TIM10_CH4, TIM10_TRIG, TIM10_COM,
+    // Timers (uncomment when Timer HAL gets DMA support)
+    // TIM1_CH1, TIM1_CH2, TIM1_CH3, TIM1_CH4, TIM1_UP, TIM1_TRIG, TIM1_COM,
+    // TIM2_CH1, TIM2_CH2, TIM2_CH3, TIM2_CH4, TIM2_UP,
+    // TIM3_CH1, TIM3_CH3, TIM3_CH4, TIM3_UP, TIM3_TRIG,
+    // TIM4_CH1, TIM4_CH2, TIM4_CH3, TIM4_UP,
+    // TIM5_CH1, TIM5_CH2, TIM5_CH3, TIM5_CH4, TIM5_UP, TIM5_TRIG,
+    // TIM6_UP, TIM7_UP,
+    // TIM8_CH1, TIM8_CH2, TIM8_CH3, TIM8_CH4, TIM8_UP, TIM8_TRIG, TIM8_COM,
+    // TIM9_UP, TIM9_CH1,
+    // TIM10_CH4, TIM10_TRIG, TIM10_COM,
 
-        // DAC (uncomment when DAC HAL gets DMA support)
-        // DAC1, DAC2,
+    // DAC (uncomment when DAC HAL gets DMA support)
+    // DAC1, DAC2,
 
-        // SDIO (uncommet when SDIO HAL gets DMA support)
-        // SDIO,
-    };
+    // SDIO (uncommet when SDIO HAL gets DMA support)
+    // SDIO,
 
-    /// Get valid DMA channels for a peripheral (compile-time)
+    /// Get valid DMA channels for this peripheral (compile-time)
     /// Returns a slice of valid channels from TRM mapping table
     pub fn get_valid_channels(comptime peripheral: Peripheral) []const Channel {
         return comptime switch (peripheral) {
@@ -406,14 +404,14 @@ pub const ChannelMapping = struct {
         };
     }
 
-    /// Validate that a channel is valid for a peripheral (testable)
+    /// Validate that a channel is valid for this peripheral (testable)
     /// Returns error.InvalidChannel if the combination is invalid.
     pub fn validate_channel(
         comptime peripheral: Peripheral,
         comptime channel: Channel,
     ) error{InvalidChannel}!void {
         const is_valid = comptime blk: {
-            const valid_channels = get_valid_channels(peripheral);
+            const valid_channels = peripheral.get_valid_channels();
             for (valid_channels) |valid_ch| {
                 if (valid_ch == channel) break :blk true;
             }
@@ -423,12 +421,12 @@ pub const ChannelMapping = struct {
         if (!is_valid) return error.InvalidChannel;
     }
 
-    /// Validate that a channel is valid for a peripheral (compile-time)
+    /// Validate that a channel is valid for this peripheral (compile-time)
     /// Generates helpful compile error if the combination is invalid.
     pub fn validate(comptime peripheral: Peripheral, comptime channel: Channel) void {
-        validate_channel(peripheral, channel) catch {
+        peripheral.validate_channel(channel) catch {
             // Build helpful error message showing valid options
-            const valid_channels = comptime get_valid_channels(peripheral);
+            const valid_channels = comptime peripheral.get_valid_channels();
 
             // Build list of valid channel names
             comptime var channel_list: []const u8 = "";
@@ -451,56 +449,56 @@ pub const ChannelMapping = struct {
 // Tests
 // ============================================================================
 
-test "ChannelMapping - valid I2C channels" {
+test "Peripheral - valid I2C channels" {
     // I2C1 valid channels
-    try ChannelMapping.validate_channel(.I2C1_TX, .Ch6);
-    try ChannelMapping.validate_channel(.I2C1_RX, .Ch7);
+    try Peripheral.I2C1_TX.validate_channel(.Ch6);
+    try Peripheral.I2C1_RX.validate_channel(.Ch7);
 
     // I2C2 valid channels
-    try ChannelMapping.validate_channel(.I2C2_TX, .Ch4);
-    try ChannelMapping.validate_channel(.I2C2_RX, .Ch5);
+    try Peripheral.I2C2_TX.validate_channel(.Ch4);
+    try Peripheral.I2C2_RX.validate_channel(.Ch5);
 }
 
-test "ChannelMapping - invalid I2C channels" {
+test "Peripheral - invalid I2C channels" {
     // I2C1 TX invalid channels
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_TX, .Ch1));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_TX, .Ch2));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_TX, .Ch3));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_TX, .Ch4));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_TX, .Ch5));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_TX, .Ch7));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_TX.validate_channel(.Ch1));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_TX.validate_channel(.Ch2));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_TX.validate_channel(.Ch3));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_TX.validate_channel(.Ch4));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_TX.validate_channel(.Ch5));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_TX.validate_channel(.Ch7));
 
     // I2C1 RX invalid channels
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_RX, .Ch1));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C1_RX, .Ch6));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_RX.validate_channel(.Ch1));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C1_RX.validate_channel(.Ch6));
 
     // I2C2 TX invalid channels
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C2_TX, .Ch1));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C2_TX, .Ch5));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C2_TX.validate_channel(.Ch1));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C2_TX.validate_channel(.Ch5));
 
     // I2C2 RX invalid channels
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C2_RX, .Ch1));
-    try std.testing.expectError(error.InvalidChannel, ChannelMapping.validate_channel(.I2C2_RX, .Ch4));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C2_RX.validate_channel(.Ch1));
+    try std.testing.expectError(error.InvalidChannel, Peripheral.I2C2_RX.validate_channel(.Ch4));
 }
 
-test "ChannelMapping - get_valid_channels returns correct slices" {
+test "Peripheral - get_valid_channels returns correct slices" {
     // I2C1 TX should return only Ch6
-    const i2c1_tx_channels = ChannelMapping.get_valid_channels(.I2C1_TX);
+    const i2c1_tx_channels = Peripheral.I2C1_TX.get_valid_channels();
     try std.testing.expectEqual(@as(usize, 1), i2c1_tx_channels.len);
     try std.testing.expectEqual(Channel.Ch6, i2c1_tx_channels[0]);
 
     // I2C1 RX should return only Ch7
-    const i2c1_rx_channels = ChannelMapping.get_valid_channels(.I2C1_RX);
+    const i2c1_rx_channels = Peripheral.I2C1_RX.get_valid_channels();
     try std.testing.expectEqual(@as(usize, 1), i2c1_rx_channels.len);
     try std.testing.expectEqual(Channel.Ch7, i2c1_rx_channels[0]);
 
     // I2C2 TX should return only Ch4
-    const i2c2_tx_channels = ChannelMapping.get_valid_channels(.I2C2_TX);
+    const i2c2_tx_channels = Peripheral.I2C2_TX.get_valid_channels();
     try std.testing.expectEqual(@as(usize, 1), i2c2_tx_channels.len);
     try std.testing.expectEqual(Channel.Ch4, i2c2_tx_channels[0]);
 
     // I2C2 RX should return only Ch5
-    const i2c2_rx_channels = ChannelMapping.get_valid_channels(.I2C2_RX);
+    const i2c2_rx_channels = Peripheral.I2C2_RX.get_valid_channels();
     try std.testing.expectEqual(@as(usize, 1), i2c2_rx_channels.len);
     try std.testing.expectEqual(Channel.Ch5, i2c2_rx_channels[0]);
 }
