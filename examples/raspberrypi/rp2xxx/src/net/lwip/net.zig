@@ -95,7 +95,8 @@ pub const Interface = struct {
         netif.output = lwip.etharp_output;
         netif.output_ip6 = lwip.ethip6_output;
         netif.mtu = sz.mtu;
-        netif.flags = lwip.NETIF_FLAG_BROADCAST | lwip.NETIF_FLAG_ETHARP | lwip.NETIF_FLAG_ETHERNET | lwip.NETIF_FLAG_IGMP | lwip.NETIF_FLAG_MLD6;
+        netif.flags = lwip.NETIF_FLAG_BROADCAST | lwip.NETIF_FLAG_ETHARP |
+            lwip.NETIF_FLAG_ETHERNET | lwip.NETIF_FLAG_IGMP | lwip.NETIF_FLAG_MLD6;
         netif.hwaddr_len = lwip.ETH_HWADDR_LEN;
         return lwip.ERR_OK;
     }
@@ -156,7 +157,11 @@ pub const Interface = struct {
         var packets: usize = 0;
         while (true) : (packets += 1) {
             // get packet buffer of the max size
-            const pbuf: *lwip.pbuf = lwip.pbuf_alloc(lwip.PBUF_RAW, sz.pbuf_pool, lwip.PBUF_POOL) orelse return error.OutOfMemory;
+            const pbuf: *lwip.pbuf = lwip.pbuf_alloc(
+                lwip.PBUF_RAW,
+                sz.pbuf_pool,
+                lwip.PBUF_POOL,
+            ) orelse return error.OutOfMemory;
             assert_panic(
                 pbuf.next == null and pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool,
                 "net.Interface.pool invalid pbuf allocation",
@@ -169,7 +174,9 @@ pub const Interface = struct {
             };
             errdefer _ = lwip.pbuf_free(pbuf); // netif.input: takes ownership of pbuf on success
             // set payload header and len
-            if (lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) return error.InvalidPbufHead;
+            if (lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
+                return error.InvalidPbufHead;
+            }
             pbuf.len = @intCast(len);
             pbuf.tot_len = @intCast(len);
             // pass data to the lwip input function
@@ -220,7 +227,11 @@ pub const Udp = struct {
     }
 
     pub fn send(self: *Self, data: []const u8, target: Endpoint) !void {
-        const pbuf: *lwip.pbuf = lwip.pbuf_alloc(lwip.PBUF_TRANSPORT, @intCast(data.len), lwip.PBUF_POOL) orelse return error.OutOfMemory;
+        const pbuf: *lwip.pbuf = lwip.pbuf_alloc(
+            lwip.PBUF_TRANSPORT,
+            @intCast(data.len),
+            lwip.PBUF_POOL,
+        ) orelse return error.OutOfMemory;
         defer _ = lwip.pbuf_free(pbuf);
         try c_err(lwip.pbuf_take(pbuf, data.ptr, @intCast(data.len)));
         try c_err(lwip.udp_sendto(self.pcb, pbuf, &target.addr, target.port));
@@ -320,7 +331,11 @@ pub const tcp = struct {
             }
         }
 
-        fn c_on_connect(ptr: ?*anyopaque, c_pcb: [*c]lwip.tcp_pcb, ce: lwip.err_t) callconv(.c) lwip.err_t {
+        fn c_on_connect(
+            ptr: ?*anyopaque,
+            c_pcb: [*c]lwip.tcp_pcb,
+            ce: lwip.err_t,
+        ) callconv(.c) lwip.err_t {
             if (ce != lwip.ERR_OK) return ce; // it is always 0
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (self.pcb != null) {
@@ -336,7 +351,12 @@ pub const tcp = struct {
             return lwip.ERR_OK;
         }
 
-        fn c_on_recv(ptr: ?*anyopaque, _: [*c]lwip.tcp_pcb, c_pbuf: [*c]lwip.pbuf, ce: lwip.err_t) callconv(.c) lwip.err_t {
+        fn c_on_recv(
+            ptr: ?*anyopaque,
+            _: [*c]lwip.tcp_pcb,
+            c_pbuf: [*c]lwip.pbuf,
+            ce: lwip.err_t,
+        ) callconv(.c) lwip.err_t {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (c_pbuf == null) {
                 // peer clean close received
@@ -401,7 +421,13 @@ pub const tcp = struct {
         pub fn limits(self: *Self) void {
             log.debug(
                 "tcp limits current snd_buf: {}, max snd_buf: {}, mss: {}, wnd: {}, snd_queuelen: {}",
-                .{ self.send_buffer(), lwip.TCP_SND_BUF, lwip.TCP_MSS, lwip.TCP_WND, lwip.TCP_SND_QUEUELEN },
+                .{
+                    self.send_buffer(),
+                    lwip.TCP_SND_BUF,
+                    lwip.TCP_MSS,
+                    lwip.TCP_WND,
+                    lwip.TCP_SND_QUEUELEN,
+                },
             );
         }
     };
@@ -425,7 +451,11 @@ pub const tcp = struct {
             lwip.tcp_accept(self.pcb, c_on_accept);
         }
 
-        fn c_on_accept(ptr: ?*anyopaque, pcb: [*c]lwip.tcp_pcb, ce: lwip.err_t) callconv(.c) lwip.err_t {
+        fn c_on_accept(
+            ptr: ?*anyopaque,
+            pcb: [*c]lwip.tcp_pcb,
+            ce: lwip.err_t,
+        ) callconv(.c) lwip.err_t {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (to_error(ce)) |err| {
                 log.err("c_on_accept {}", .{err});
@@ -447,7 +477,8 @@ pub const Endpoint = struct {
     port: u16 = 0,
 
     pub fn format(self: Endpoint, writer: anytype) !void {
-        try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(@as(*const lwip.ip4_addr_t, @ptrCast(&self.addr))), 0));
+        const ip4_addr: *const lwip.ip4_addr_t = @ptrCast(&self.addr);
+        try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(ip4_addr), 0));
         var buf: [16]u8 = undefined;
         try writer.writeAll(std.fmt.bufPrint(&buf, ":{}", .{self.port}) catch "");
     }
@@ -539,10 +570,11 @@ const IPFormatter = struct {
     }
 
     pub fn format(
-        addr: IPFormatter,
+        self: IPFormatter,
         writer: anytype,
     ) !void {
-        try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(@as(*const lwip.ip4_addr_t, @ptrCast(&addr.addr))), 0));
+        const ip4_addr: *const lwip.ip4_addr_t = @ptrCast(&self.addr);
+        try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(ip4_addr), 0));
     }
 };
 
