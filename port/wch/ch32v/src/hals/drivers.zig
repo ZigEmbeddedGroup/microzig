@@ -20,103 +20,112 @@ const I2CAddress = drivers.I2C_Device.Address;
 
 ///
 /// A Implementation of the I2C_Device interface
+/// Generic over I2C configuration to enable compile-time DMA optimization
 ///
-pub const I2C_Device = struct {
-    /// Selects which I²C bus should be used.
-    bus: i2c.I2C,
+pub fn I2C_Device(comptime config: i2c.Config) type {
+    return struct {
+        const Self = @This();
 
-    /// Default timeout duration
-    timeout: ?mdf.time.Duration = null,
+        /// Selects which I²C bus should be used.
+        bus: i2c.I2C,
 
-    pub fn init(bus: i2c.I2C, timeout: ?mdf.time.Duration) I2C_Device {
-        return .{
-            .bus = bus,
-            .timeout = timeout,
+        /// Default timeout duration
+        timeout: ?mdf.time.Duration = null,
+
+        pub fn init(bus: i2c.I2C, timeout: ?mdf.time.Duration) Self {
+            return .{
+                .bus = bus,
+                .timeout = timeout,
+            };
+        }
+
+        pub fn i2c_device(dev: *Self) drivers.I2C_Device {
+            return .{
+                .ptr = dev,
+                .vtable = &i2c_vtable,
+            };
+        }
+
+        pub fn write(dev: Self, address: I2CAddress, buf: []const u8) I2CError!void {
+            return dev.bus.write_auto(config, address, buf, dev.timeout) catch |err| switch (err) {
+                error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                else => |e| e,
+            };
+        }
+
+        pub fn writev(dev: Self, address: I2CAddress, chunks: []const []const u8) I2CError!void {
+            return dev.bus.writev_auto(config, address, chunks, dev.timeout) catch |err| switch (err) {
+                error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                else => |e| e,
+            };
+        }
+
+        pub fn read(dev: Self, address: I2CAddress, buf: []u8) I2CError!usize {
+            dev.bus.read_auto(config, address, buf, dev.timeout) catch |err| return switch (err) {
+                error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                else => |e| e,
+            };
+            return buf.len;
+        }
+
+        pub fn readv(dev: Self, address: I2CAddress, chunks: []const []u8) I2CError!usize {
+            dev.bus.readv_auto(config, address, chunks, dev.timeout) catch |err| return switch (err) {
+                error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                else => |e| e,
+            };
+            return microzig.utilities.SliceVector([]u8).init(chunks).size();
+        }
+
+        pub fn write_then_read(dev: Self, address: I2CAddress, src: []const u8, dst: []u8) I2CError!void {
+            const write_chunks: []const []const u8 = &.{src};
+            const read_chunks: []const []u8 = &.{dst};
+            dev.bus.writev_then_readv_auto(config, address, write_chunks, read_chunks, dev.timeout) catch |err|
+                return switch (err) {
+                    error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                    else => |e| e,
+                };
+        }
+
+        pub fn writev_then_readv(
+            dev: Self,
+            address: I2CAddress,
+            write_chunks: []const []const u8,
+            read_chunks: []const []u8,
+        ) I2CError!void {
+            return dev.bus.writev_then_readv_auto(config, address, write_chunks, read_chunks, dev.timeout) catch |err|
+                switch (err) {
+                    error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
+                    else => |e| e,
+                };
+        }
+
+        const i2c_vtable = drivers.I2C_Device.VTable{
+            .writev_fn = writev_fn,
+            .readv_fn = readv_fn,
+            .writev_then_readv_fn = writev_then_readv_fn,
         };
-    }
 
-    pub fn i2c_device(dev: *I2C_Device) drivers.I2C_Device {
-        return .{
-            .ptr = dev,
-            .vtable = &i2c_vtable,
-        };
-    }
+        fn writev_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []const u8) I2CError!void {
+            const dev: *Self = @ptrCast(@alignCast(dd));
+            return dev.writev(address, chunks);
+        }
 
-    pub fn write(dev: I2C_Device, address: I2CAddress, buf: []const u8) I2CError!void {
-        return dev.bus.write_blocking(address, buf, dev.timeout) catch |err| switch (err) {
-            error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-    }
+        fn readv_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []u8) I2CError!usize {
+            const dev: *Self = @ptrCast(@alignCast(dd));
+            return dev.readv(address, chunks);
+        }
 
-    pub fn writev(dev: I2C_Device, address: I2CAddress, chunks: []const []const u8) I2CError!void {
-        return dev.bus.writev_blocking(address, chunks, dev.timeout) catch |err| switch (err) {
-            error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-    }
-
-    pub fn read(dev: I2C_Device, address: I2CAddress, buf: []u8) I2CError!usize {
-        dev.bus.read_blocking(address, buf, dev.timeout) catch |err| return switch (err) {
-            error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-        return buf.len;
-    }
-
-    pub fn readv(dev: I2C_Device, address: I2CAddress, chunks: []const []u8) I2CError!usize {
-        dev.bus.readv_blocking(address, chunks, dev.timeout) catch |err| return switch (err) {
-            error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-        return microzig.utilities.SliceVector([]u8).init(chunks).size();
-    }
-
-    pub fn write_then_read(dev: I2C_Device, address: I2CAddress, src: []const u8, dst: []u8) I2CError!void {
-        dev.bus.write_then_read_blocking(address, src, dst, dev.timeout) catch |err| return switch (err) {
-            error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-    }
-
-    pub fn writev_then_readv(
-        dev: I2C_Device,
-        address: I2CAddress,
-        write_chunks: []const []const u8,
-        read_chunks: []const []u8,
-    ) I2CError!void {
-        return dev.bus.writev_then_readv_blocking(address, write_chunks, read_chunks, dev.timeout) catch |err| switch (err) {
-            error.ArbitrationLost, error.BusError, error.Overrun => I2CError.UnknownAbort,
-            else => |e| e,
-        };
-    }
-
-    const i2c_vtable = drivers.I2C_Device.VTable{
-        .writev_fn = writev_fn,
-        .readv_fn = readv_fn,
-        .writev_then_readv_fn = writev_then_readv_fn,
+        fn writev_then_readv_fn(
+            dd: *anyopaque,
+            address: I2CAddress,
+            write_chunks: []const []const u8,
+            read_chunks: []const []u8,
+        ) I2CError!void {
+            const dev: *Self = @ptrCast(@alignCast(dd));
+            return dev.writev_then_readv(address, write_chunks, read_chunks);
+        }
     };
-
-    fn writev_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []const u8) I2CError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.writev(address, chunks);
-    }
-
-    fn readv_fn(dd: *anyopaque, address: I2CAddress, chunks: []const []u8) I2CError!usize {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.readv(address, chunks);
-    }
-
-    fn writev_then_readv_fn(
-        dd: *anyopaque,
-        address: I2CAddress,
-        write_chunks: []const []const u8,
-        read_chunks: []const []u8,
-    ) I2CError!void {
-        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.writev_then_readv(address, write_chunks, read_chunks);
-    }
-};
+}
 
 ///
 /// Implementation of a time device
