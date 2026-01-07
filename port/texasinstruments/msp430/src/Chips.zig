@@ -28,11 +28,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .abi = .eabi,
         },
         .chip = .{
-            .name = "MSP430F5229",
+            .name = "MSP430F5529",
             .register_definition = .{
                 .targetdb = .{
                     .path = targetdb,
-                    .device = "MSP430F5229",
+                    .device = "MSP430F5529",
                 },
             },
             .memory_regions = &.{

@@ -190,6 +190,14 @@ pub fn main() !void {
                 \\  }} > {[flash]s}
                 \\
             , .{ .flash = if (!parsed_args.ram_image) flash_region_name else ram_region_name }),
+            .msp430 => try writer.interface.writeAll(
+                \\/DISCARD/ :
+                \\{
+                \\  *(.eh_frame*)
+                \\  *(.eh_frame_hdr*)
+                \\}
+                \\
+            ),
             else => {},
         }
 

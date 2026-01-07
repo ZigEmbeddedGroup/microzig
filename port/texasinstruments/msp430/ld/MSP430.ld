@@ -5,4 +5,4 @@ SECTIONS
     KEEP(*(.isr_vector*))
   } > isr_vector
 }
-INSERT BEFORE .flash_end;
+INSERT AFTER .text;
