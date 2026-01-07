@@ -115,9 +115,9 @@ pub const I2C = enum(u1) {
             else
                 dma.Peripheral.I2C2_RX;
 
-            // Validate channels (compile error if invalid)
-            comptime tx_peripheral.validate(dma_cfg.tx_channel);
-            comptime rx_peripheral.validate(dma_cfg.rx_channel);
+            // Ensure that these channels are compatible with these peripherals (compile error if invalid)
+            comptime tx_peripheral.ensure_compatible_with(dma_cfg.tx_channel);
+            comptime rx_peripheral.ensure_compatible_with(dma_cfg.rx_channel);
         }
 
         // Enable peripheral clock

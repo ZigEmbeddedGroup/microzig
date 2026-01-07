@@ -424,7 +424,7 @@ pub const Peripheral = enum {
 
     /// Validate that a channel is valid for this peripheral (compile-time)
     /// Generates helpful compile error if the combination is invalid.
-    pub fn validate(comptime self: Peripheral, comptime channel: Channel) void {
+    pub fn ensure_compatible_with(comptime self: Peripheral, comptime channel: Channel) void {
         self.validate_channel(channel) catch {
             // Build helpful error message showing valid options
             const valid_channels = comptime self.get_valid_channels();
