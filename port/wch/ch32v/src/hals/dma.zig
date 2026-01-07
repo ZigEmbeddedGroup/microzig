@@ -384,8 +384,8 @@ pub const Peripheral = enum {
 
     /// Get valid DMA channels for this peripheral (compile-time)
     /// Returns a slice of valid channels from TRM mapping table
-    pub fn get_valid_channels(comptime peripheral: Peripheral) []const Channel {
-        return comptime switch (peripheral) {
+    pub fn get_valid_channels(comptime self: Peripheral) []const Channel {
+        return comptime switch (self) {
             // I2C mappings from CH32V203 TRM Table 11-1
             .I2C1_TX => &[_]Channel{.Ch6},
             .I2C1_RX => &[_]Channel{.Ch7},
@@ -408,11 +408,11 @@ pub const Peripheral = enum {
     /// Validate that a channel is valid for this peripheral (testable)
     /// Returns error.InvalidChannel if the combination is invalid.
     pub fn validate_channel(
-        comptime peripheral: Peripheral,
+        comptime self: Peripheral,
         comptime channel: Channel,
     ) error{InvalidChannel}!void {
         const is_valid = comptime blk: {
-            const valid_channels = peripheral.get_valid_channels();
+            const valid_channels = self.get_valid_channels();
             for (valid_channels) |valid_ch| {
                 if (valid_ch == channel) break :blk true;
             }
@@ -424,10 +424,10 @@ pub const Peripheral = enum {
 
     /// Validate that a channel is valid for this peripheral (compile-time)
     /// Generates helpful compile error if the combination is invalid.
-    pub fn validate(comptime peripheral: Peripheral, comptime channel: Channel) void {
-        peripheral.validate_channel(channel) catch {
+    pub fn validate(comptime self: Peripheral, comptime channel: Channel) void {
+        self.validate_channel(channel) catch {
             // Build helpful error message showing valid options
-            const valid_channels = comptime peripheral.get_valid_channels();
+            const valid_channels = comptime self.get_valid_channels();
 
             // Build list of valid channel names
             comptime var channel_list: []const u8 = "";
@@ -438,7 +438,7 @@ pub const Peripheral = enum {
 
             const msg = comptime std.fmt.comptimePrint(
                 "DMA Channel {s} is not valid for {s}. Valid channels: [{s}]",
-                .{ @tagName(channel), @tagName(peripheral), channel_list },
+                .{ @tagName(channel), @tagName(self), channel_list },
             );
 
             @compileError(msg);
