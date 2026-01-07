@@ -177,17 +177,17 @@ pub const SPI = enum(u1) {
         // Compile-time DMA validation
         if (comptime config.dma) |dma_cfg| {
             const tx_peripheral = comptime if (@intFromEnum(spi) == 0)
-                dma.ChannelMapping.Peripheral.SPI1_TX
+                dma.Peripheral.SPI1_TX
             else
-                dma.ChannelMapping.Peripheral.SPI2_TX;
+                dma.Peripheral.SPI2_TX;
             const rx_peripheral = comptime if (@intFromEnum(spi) == 0)
-                dma.ChannelMapping.Peripheral.SPI1_RX
+                dma.Peripheral.SPI1_RX
             else
-                dma.ChannelMapping.Peripheral.SPI2_RX;
+                dma.Peripheral.SPI2_RX;
 
             // Validate channels (compile error if invalid)
-            comptime dma.ChannelMapping.validate(tx_peripheral, dma_cfg.tx_channel);
-            comptime dma.ChannelMapping.validate(rx_peripheral, dma_cfg.rx_channel);
+            comptime tx_peripheral.ensure_compatible_with(dma_cfg.tx_channel);
+            comptime rx_peripheral.ensure_compatible_with(dma_cfg.rx_channel);
         }
 
         // Enable peripheral clock
