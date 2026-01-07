@@ -150,7 +150,7 @@ const Client = struct {
                     }
                     return;
                 };
-                log.debug("send {} bytes", .{chunk_len});
+                log.debug("sent {} bytes", .{chunk_len});
             },
             .connecting => {},
         }

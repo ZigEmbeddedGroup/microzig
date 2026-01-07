@@ -111,7 +111,7 @@ pub const Interface = struct {
         });
     }
 
-    /// Called by lwip when there is packet to send.
+    /// Called by lwip when there is a packet to send.
     /// pbuf chain total_len is <= netif.mtu + ethernet header
     fn c_netif_linkoutput(netif_c: [*c]lwip.netif, pbuf_c: [*c]lwip.pbuf) callconv(.c) lwip.err_t {
         const netif: *lwip.netif = netif_c;
@@ -202,7 +202,7 @@ pub const Udp = struct {
     pub const RecvOptions = struct {
         src: Endpoint,
         /// If udp packet is fragmented into multiple lwip packet buffers (pbuf)
-        /// this will be false for all expect the last fragment.
+        /// this will be false for all except the last fragment.
         last_fragment: bool,
     };
     const OnRecv = *const fn (*Self, []u8, RecvOptions) void;
@@ -229,7 +229,7 @@ pub const Udp = struct {
     pub fn bind(self: *Self, port: u16, on_recv: OnRecv) !void {
         assert_panic(
             self.on_recv == null,
-            "net.Udp.bind already bind",
+            "net.Udp.bind already bound",
         );
         self.on_recv = on_recv;
         try c_err(lwip.udp_bind(self.pcb, lwip.IP_ADDR_ANY, port));
