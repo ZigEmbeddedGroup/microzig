@@ -49,13 +49,13 @@ pub const Error = error{
 
 /// Clock polarity configuration
 pub const Polarity = enum(u1) {
-    idle_low = 0,  // Clock is low when idle (CPOL=0)
+    idle_low = 0, // Clock is low when idle (CPOL=0)
     idle_high = 1, // Clock is high when idle (CPOL=1)
 };
 
 /// Clock phase configuration
 pub const Phase = enum(u1) {
-    first_edge = 0,  // Data captured on first clock edge (CPHA=0)
+    first_edge = 0, // Data captured on first clock edge (CPHA=0)
     second_edge = 1, // Data captured on second clock edge (CPHA=1)
 };
 
@@ -67,7 +67,7 @@ pub const BitOrder = enum(u1) {
 
 /// Data frame format
 pub const DataSize = enum(u1) {
-    eight_bit = 0,  // 8-bit data frames
+    eight_bit = 0, // 8-bit data frames
     sixteen_bit = 1, // 16-bit data frames (not yet supported)
 };
 

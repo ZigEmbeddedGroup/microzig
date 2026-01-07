@@ -31,11 +31,11 @@ pub const microzig_options = microzig.Options{
 };
 
 // Pin definitions
-const sck_pin = gpio.Pin.init(0, 5);  // PA5
+const sck_pin = gpio.Pin.init(0, 5); // PA5
 const mosi_pin = gpio.Pin.init(0, 7); // PA7
-const cs_pin = gpio.Pin.init(0, 4);   // PA4
-const dc_pin = gpio.Pin.init(0, 3);   // PA3 (Data/Command)
-const rst_pin = gpio.Pin.init(0, 2);  // PA2 (Reset, optional)
+const cs_pin = gpio.Pin.init(0, 4); // PA4
+const dc_pin = gpio.Pin.init(0, 3); // PA3 (Data/Command)
+const rst_pin = gpio.Pin.init(0, 2); // PA2 (Reset, optional)
 
 pub fn main() !void {
     // Board brings up clocks and time
@@ -54,8 +54,8 @@ pub fn main() !void {
     rst_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
 
     // Initialize pins to safe states
-    cs_pin.put(1);  // CS high (inactive)
-    dc_pin.put(1);  // D/C high (data mode)
+    cs_pin.put(1); // CS high (inactive)
+    dc_pin.put(1); // D/C high (data mode)
     rst_pin.put(1); // RST high (not in reset)
 
     // Initialize SPI1 with DMA support
