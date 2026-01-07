@@ -32,8 +32,11 @@ pub fn main() !void {
 fn generate_chips_file(
     allocator: std.mem.Allocator,
     writer: *std.Io.Writer,
-    //chip_files: []const std.json.Parsed(ChipFile),
 ) !void {
     _ = allocator;
     _ = writer;
+
+    // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/839
+    // Implement Chips.zig generation for MSP430
+    @panic("TODO");
 }
