@@ -379,7 +379,7 @@ pub const Peripheral = enum {
     // DAC (uncomment when DAC HAL gets DMA support)
     // DAC1, DAC2,
 
-    // SDIO (uncommet when SDIO HAL gets DMA support)
+    // SDIO (uncomment when SDIO HAL gets DMA support)
     // SDIO,
 
     /// Get valid DMA channels for this peripheral (compile-time)
@@ -392,7 +392,8 @@ pub const Peripheral = enum {
             .I2C2_TX => &[_]Channel{.Ch4},
             .I2C2_RX => &[_]Channel{.Ch5},
 
-            // Future: Add mappings when uncommenting peripherals above
+            // NOTE: Add mappings here when adding support for new peripherals and uncommenting
+            // enums above
             // .USART1_TX => &[_]Channel{.Ch4},
             // .USART1_RX => &[_]Channel{.Ch5},
             // .USART2_TX => &[_]Channel{.Ch7},
