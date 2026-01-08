@@ -93,7 +93,7 @@ pub fn main() !void {
     hal.time.sleep_ms(10);
 
     // Create Digital_IO wrapper for D/C pin
-    var dc_io = DC_Pin_Wrapper{};
+    var dc_io = DP_PinWrapper{};
 
     // Initialize SSD1306 driver using the init function directly
     const ssd1306 = microzig.drivers.display.ssd1306;
@@ -140,8 +140,8 @@ pub fn main() !void {
 }
 
 // Digital_IO wrapper for D/C pin
-const DC_Pin_Wrapper = struct {
-    pub fn digital_io(self: *DC_Pin_Wrapper) mdf.base.Digital_IO {
+const DP_PinWrapper = struct {
+    pub fn digital_io(self: *DP_PinWrapper) mdf.base.Digital_IO {
         _ = self;
         const S = struct {
             const vtable: mdf.base.Digital_IO.VTable = .{
