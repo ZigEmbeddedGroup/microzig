@@ -2042,7 +2042,7 @@ fn cleanup_unused_enums(db: *Database) !void {
 }
 
 pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSlice([]const Patch, db.gpa, zon_text, diags, .{});
+    const patches = try std.zon.parse.fromSliceAlloc([]const Patch, db.gpa, zon_text, diags, .{});
     defer std.zon.parse.free(db.gpa, patches);
 
     for (patches) |patch| {

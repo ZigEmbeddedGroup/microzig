@@ -12,8 +12,9 @@ pub const std_options = std.Options{
     .log_level = .debug,
 };
 
-pub fn main() !void {
-    main_impl() catch |err| switch (err) {
+
+pub fn main(init: std.process.Init) !void {
+    main_impl(init) catch |err| switch (err) {
         error.Explained => std.process.exit(1),
         else => {
             return err;
@@ -60,9 +61,10 @@ fn print_usage(writer: *std.Io.Writer) !void {
     try writer.flush();
 }
 
-fn parse_args(io: std.Io, allocator: Allocator) !Arguments {
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+fn parse_args(init: std.process.Init) !Arguments {
+    const io = init.io;
+    const allocator = init.arena.allocator();
+    const args = try init.minimal.args.toSlice(allocator);
 
     var ret = Arguments{
         .allocator = allocator,
@@ -115,19 +117,15 @@ fn parse_args(io: std.Io, allocator: Allocator) !Arguments {
     return ret;
 }
 
-fn main_impl() anyerror!void {
+fn main_impl(init: std.process.Init) anyerror!void {
     defer xml.cleanupParser();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    const io = init.io;
+    const arena = init.arena.allocator();
 
-    const allocator = gpa.allocator();
+    const allocator = init.gpa;
 
-    var threaded: std.Io.Threaded = .init(.failing, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
-
-    var args = try parse_args(io, allocator);
+    var args = try parse_args(init);
     defer args.deinit();
 
     if (args.help) {
@@ -149,7 +147,7 @@ fn main_impl() anyerror!void {
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {
-        const patch = try std.Io.Dir.cwd().readFileAlloc(io, patch_path, allocator, .limited(1024 * 1024));
+        const patch = try std.Io.Dir.cwd().readFileAllocOptions(io, patch_path, allocator, .limited(1024 * 1024), .@"1", 0);
         defer allocator.free(patch);
 
         var diags: std.zon.parse.Diagnostics = .{};
@@ -166,10 +164,7 @@ fn main_impl() anyerror!void {
 
     // arch dependent stuff
     {
-        var arena = ArenaAllocator.init(allocator);
-        defer arena.deinit();
-
-        for (try db.get_devices(arena.allocator())) |device| {
+        for (try db.get_devices(arena)) |device| {
             if (device.arch.is_arm()) {
                 const arm = @import("arch/arm.zig");
                 try arm.load_system_interrupts(db, device.id, device.arch);
