@@ -14,7 +14,7 @@ pub const microzig_options = microzig.Options{
 };
 const log = std.log.scoped(.main);
 
-const Net = @import("lwip/net.zig");
+const net = @import("lwip/net.zig");
 comptime {
     _ = @import("lwip/exports.zig");
 }
@@ -35,12 +35,11 @@ pub fn main() !void {
     log.debug("mac address: {x}", .{wifi.mac});
 
     // join network
-    try wifi.join(secrets.ssid, secrets.pwd, .{});
+    try wifi.join(secrets.ssid, secrets.pwd, secrets.join_opt);
     log.debug("wifi joined", .{});
 
-    // init lwip
-    var net: Net = .{
-        .mac = wifi.mac,
+    // init lwip network interface
+    var nic: net.Interface = .{
         .link = .{
             .ptr = wifi,
             .recv = drivers.WiFi.recv,
@@ -48,12 +47,12 @@ pub fn main() !void {
             .ready = drivers.WiFi.ready,
         },
     };
-    try net.init();
+    try nic.init(wifi.mac, try secrets.nic_options());
 
     var ts = time.get_time_since_boot();
     while (true) {
         // run lwip poller
-        try net.poll();
+        try nic.poll();
 
         // blink
         const now = time.get_time_since_boot();
@@ -63,13 +62,3 @@ pub fn main() !void {
         }
     }
 }
-
-// This will log dhcp assigned ip address, something like:
-//
-// ================ STARTING NEW LOGGER ================
-// [0.700113] debug (main): mac address: 2ccf67f3b7ea
-// [4.382145] debug (main): wifi joined
-// [5.095823] debug (lwip): netif status callback is_link_up: false, is_up: true, ready: false, ip: 0.0.0.0
-// [7.479941] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.190.206
-//
-// you can than ping that ip.

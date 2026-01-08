@@ -1,3 +1,6 @@
+// all available options:
+// https://github.com/lwip-tcpip/lwip/blob/STABLE-2_1_3_RELEASE/src/include/lwip/opt.h
+//
 #ifndef lwipopts_h
 #define lwipopts_h
 
@@ -37,9 +40,9 @@
 #define MEMP_NUM_SYS_TIMEOUT 16
 
 // callbacks
-#define LWIP_NETIF_LINK_CALLBACK 1
+#define LWIP_NETIF_LINK_CALLBACK 0
 #define LWIP_NETIF_STATUS_CALLBACK 1
-#define LWIP_NETIF_EXT_STATUS_CALLBACK 1
+#define LWIP_NETIF_EXT_STATUS_CALLBACK 0
 
 // stats
 #define LWIP_STATS 1

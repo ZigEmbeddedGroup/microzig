@@ -192,7 +192,8 @@ pub const Response = struct {
             zero.msg.event_type = .none;
             return zero;
         }
-        var evt: EventPacket = @bitCast(buf[0..@sizeOf(EventPacket)].*);
+        var evt: EventPacket = undefined;
+        @memcpy(std.mem.asBytes(&evt), buf[0..@sizeOf(EventPacket)]);
         std.mem.byteSwapAllFields(EventPacket, &evt);
         return evt;
     }

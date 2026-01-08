@@ -84,7 +84,10 @@ pub fn build(b: *std.Build) void {
         .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },
-        .{ .name = "net-dhcp", .file = "src/net/dhcp.zig" },
+        .{ .name = "net-pong", .file = "src/net/pong.zig" },
+        .{ .name = "net-udp", .file = "src/net/udp.zig" },
+        .{ .name = "net-tcp_client", .file = "src/net/tcp_client.zig" },
+        .{ .name = "net-tcp_server", .file = "src/net/tcp_server.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
