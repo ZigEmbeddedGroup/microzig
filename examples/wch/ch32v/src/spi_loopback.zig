@@ -85,13 +85,13 @@ pub fn main() !void {
     var rx_buffer: [64]u8 = undefined; // Increased to handle 32-byte pattern
 
     // SPI modes to test (all 4 combinations of CPOL and CPHA)
-    const SpiMode = struct {
+    const SPI_Mode = struct {
         name: []const u8,
         polarity: spi.Polarity,
         phase: spi.Phase,
     };
 
-    const spi_modes = [_]SpiMode{
+    const spi_modes = [_]SPI_Mode{
         .{ .name = "Mode 0 (CPOL=0, CPHA=0)", .polarity = .idle_low, .phase = .first_edge },
         .{ .name = "Mode 1 (CPOL=0, CPHA=1)", .polarity = .idle_low, .phase = .second_edge },
         .{ .name = "Mode 2 (CPOL=1, CPHA=0)", .polarity = .idle_high, .phase = .first_edge },

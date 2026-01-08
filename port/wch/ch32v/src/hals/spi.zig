@@ -37,7 +37,7 @@ const gpio = hal.gpio;
 const SPI1 = microzig.chip.peripherals.SPI1;
 const SPI2 = microzig.chip.peripherals.SPI2;
 
-const SpiRegs = microzig.chip.types.peripherals.SPI1;
+const SPI_Regs = microzig.chip.types.peripherals.SPI1;
 
 pub const Error = error{
     Timeout,
@@ -90,7 +90,7 @@ pub const Config = struct {
     /// DMA configuration for SPI transfers (optional)
     /// When configured, enables DMA for transfers >= threshold bytes
     /// Smaller transfers automatically use polling mode
-    pub const DmaConfig = struct {
+    pub const DMA_Config = struct {
         tx_channel: dma.Channel,
         rx_channel: dma.Channel,
         priority: dma.Priority = .Medium,
@@ -115,7 +115,7 @@ pub const Config = struct {
 
     /// Optional DMA configuration - null means polling-only mode
     /// Example: .dma = .{ .tx_channel = .Ch3, .rx_channel = .Ch2 }
-    dma: ?DmaConfig = null,
+    dma: ?DMA_Config = null,
 
     /// Optional chip select configuration - null means manual CS control
     chip_select: ?ChipSelectConfig = null,
@@ -132,7 +132,7 @@ pub const instance = struct {
 pub const SPI = enum(u1) {
     _,
 
-    pub inline fn get_regs(spi: SPI) *volatile SpiRegs {
+    pub inline fn get_regs(spi: SPI) *volatile SPI_Regs {
         return switch (@intFromEnum(spi)) {
             0 => @ptrCast(SPI1),
             1 => @ptrCast(SPI2),
