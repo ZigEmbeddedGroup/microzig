@@ -81,14 +81,6 @@ pub const Pin = struct {
     pin: u2,
     wifi: *WiFi,
 
-    pub fn get(self: *Pin) bool {
-        return self.wifi.gpio_get(self.pin);
-    }
-
-    pub fn put(self: *Pin, value: u1) void {
-        self.wifi.gpio_set(self.pin, value);
-    }
-
     pub fn toggle(self: *Pin) void {
         self.wifi.gpio_toggle(self.pin);
     }
