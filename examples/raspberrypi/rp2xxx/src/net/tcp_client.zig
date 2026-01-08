@@ -33,7 +33,7 @@ pub fn main() !void {
     var wifi = try wifi_driver.init(.{});
     var led = wifi.gpio(0);
     // join network
-    try wifi.join(secrets.ssid, secrets.pwd, .{});
+    try wifi.join(secrets.ssid, secrets.pwd, secrets.join_opt);
 
     // init lwip network interface
     var nic: net.Interface = .{

@@ -4,6 +4,7 @@ const assert = std.debug.assert;
 
 const Bus = @import("cyw43439/bus.zig");
 const WiFi = @import("cyw43439/wifi.zig");
+pub const JoinOptions = WiFi.JoinOptions;
 
 const log = std.log.scoped(.cyw43);
 
@@ -27,7 +28,7 @@ pub fn init(
     self.mac = try self.read_mac();
 }
 
-pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: WiFi.JoinOptions) !void {
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
     try self.wifi.join(ssid, pwd, opt);
 }
 

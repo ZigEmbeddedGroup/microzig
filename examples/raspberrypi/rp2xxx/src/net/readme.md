@@ -4,19 +4,9 @@ Currently tested only on pico 2w, should also work on pico w.
 
 ## secrets.zig
 
-Enter your ssid/pwd into `secrets.zig` file. All examples will used those credentials to connect to the WiFi. There is the option to use DHCP or fixed IP address. 
+Enter your ssid, wifi password and wifi security type into `secrets.zig` file. All examples will used those credentials to connect to the WiFi. There is the option to use DHCP or fixed IP address.
 
 `tcp_client` example also uses `host_ip` when connecting to the host, enter your desktop host IP address there.
-
-Joining WiFi defaults to the `wpa2_psk` WiFi security and country code "XX" (worldwide), if that does not match your configuration add options to the WiFi.join:
-
-```zig
-try wifi.join(
-    secrets.ssid,
-    secrets.pwd,
-    .{ .security = .open, .country = .{ .code = "US".* } },
-);
-```
 
 ## pong.zig
 

@@ -1,14 +1,17 @@
 const net = @import("lwip/net.zig");
+const microzig = @import("microzig");
+const JoinOptions = microzig.hal.drivers.WiFi.Chip.JoinOptions;
 
 // wifi credentials
 pub const ssid = "...";
 pub const pwd = "...";
+pub const join_opt: JoinOptions = .{ .security = .wpa2_psk };
 
 pub fn nic_options() !net.Interface.Options {
     // to use dhcp assigned ip addres
     return .{};
 
-    // to use fixed ip change to something like:
+    // // to use fixed ip change to something like:
     // return .{
     //     .fixed = try .init(
     //         "192.168.190.50", // fixed ip
