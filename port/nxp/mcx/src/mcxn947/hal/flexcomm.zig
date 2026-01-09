@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const syscon = microzig.hal.syscon;
+const syscon = @import("syscon.zig");
 const chip = microzig.chip;
 const peripherals = chip.peripherals;
 
@@ -41,66 +41,18 @@ pub const FlexComm = enum(u4) {
 	}
 
 	pub fn init(flexcomm: FlexComm, ty: Type) void {
-        syscon.peripheral_reset_release(switch (@intFromEnum(flexcomm)) {
-            0 => .FC0,
-            1 => .FC1,
-            2 => .FC2,
-            3 => .FC3,
-            4 => .FC4,
-            5 => .FC5,
-            6 => .FC6,
-            7 => .FC7,
-            8 => .FC8,
-            9 => .FC9,
-            else => unreachable
-        }
-);
-        syscon.module_enable_clock(switch (@intFromEnum(flexcomm)) {
-            0 => .FC0,
-            1 => .FC1,
-            2 => .FC2,
-            3 => .FC3,
-            4 => .FC4,
-            5 => .FC5,
-            6 => .FC6,
-            7 => .FC7,
-            8 => .FC8,
-            9 => .FC9,
-            else => unreachable
-        }
-);
+		const module = flexcomm.get_module();
+
+		syscon.module_reset_release(module);
+		syscon.module_enable_clock(module);
 		flexcomm.get_regs().PSELID.modify_one("PERSEL", @enumFromInt(@intFromEnum(ty)));
 	}
 
 	pub fn deinit(flexcomm: FlexComm) void {
-		syscon.module_disable_clock(switch (@intFromEnum(flexcomm)) {
-			0 => .FC0,
-			1 => .FC1,
-			2 => .FC2,
-			3 => .FC3,
-			4 => .FC4,
-			5 => .FC5,
-			6 => .FC6,
-			7 => .FC7,
-			8 => .FC8,
-			9 => .FC9,
-			else => unreachable
-		}
-		);
-		syscon.peripheral_reset_assert(switch (@intFromEnum(flexcomm)) {
-			0 => .FC0,
-			1 => .FC1,
-			2 => .FC2,
-			3 => .FC3,
-			4 => .FC4,
-			5 => .FC5,
-			6 => .FC6,
-			7 => .FC7,
-			8 => .FC8,
-			9 => .FC9,
-			else => unreachable
-		}
-		);
+		const module = flexcomm.get_module();
+
+		syscon.module_disable_clock(module);
+		syscon.module_reset_assert(module);
 	}
 
 	// TODO: maybe patch ?
@@ -145,7 +97,7 @@ pub const FlexComm = enum(u4) {
 		const freq: u32 = switch(clock) {
 			// .PLL   => 1,
 			.FRO_12MHz 	   => 12_000_000,
-			// .fro_hf_div    => 3,
+			// .fro_hf_div => 3,
 			.clk_1m 	   =>  1_000_000,
 			// .usb_pll=> 5,
 			// .lp_oscillator => 6,
@@ -165,6 +117,10 @@ pub const FlexComm = enum(u4) {
 		// We can't do `base + n * offset` to get the register since the offset
 		// is not constant for flexcomm registers
 		return FlexComm.Registers[flexcomm.get_n()];
+	}
+
+	fn get_module(flexcomm: FlexComm) syscon.Module {
+		return @enumFromInt(@intFromEnum(syscon.Module.FC0) + flexcomm.get_n());
 	}
 };
 
