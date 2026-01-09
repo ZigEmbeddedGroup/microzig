@@ -1,3 +1,4 @@
+const assert = @import("std").debug.assert;
 const microzig = @import("microzig");
 const syscon = @import("./syscon.zig");
 const gpio = @import("./gpio.zig");
@@ -7,7 +8,12 @@ pub const Port = enum(u3) {
     _,
 
 	pub fn num(comptime n: u3) Port {
+		comptime assert(n <= 5);
 		return @enumFromInt(n);
+	}
+
+	pub fn get_n(port: Port) u3 {
+		return @intFromEnum(port);
 	}
 
     pub fn init(comptime port: Port) void {

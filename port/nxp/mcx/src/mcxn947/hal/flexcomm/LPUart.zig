@@ -211,7 +211,7 @@ pub const LPUart = enum(u4) {
 	}
 
 	pub fn get_flexcomm(uart: LPUart) FlexComm {
-		return @enumFromInt(@intFromEnum(uart));
+		return FlexComm.num(@intFromEnum(uart));
 	}
 
 	fn can_write(uart: LPUart) bool {
