@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const chip = microzig.chip;
 
 
-// from the reference Manuel, definition of `slow_clk`:
+// from the reference Manual, definition of `slow_clk`:
 // > Slow clock derived from system_clk divided by 4. slow_clk provides the bus clock for FMU, SPC, CMC, TDET,
 // > CMP0, CMP1, VBAT, LPTRM0, LPTRM1, RTC, GPIO5, PORT5, and TSI.
 
