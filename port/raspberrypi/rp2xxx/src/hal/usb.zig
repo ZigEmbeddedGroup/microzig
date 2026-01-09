@@ -304,8 +304,7 @@ pub fn Polled(
             return self;
         }
 
-        /// Configures a given endpoint to send data (device-to-host, IN) when the host
-        /// next asks for it.
+        /// Configures a given IN endpoint to send data when the host next asks for it.
         ///
         /// The contents of `buffer` will be _copied_ into USB SRAM, so you can
         /// reuse `buffer` immediately after this returns. No need to wait for the
@@ -319,13 +318,12 @@ pub fn Polled(
 
             // It is technically possible to support longer buffers but this demo
             // doesn't bother.
-            // TODO: assert!(buffer.len() <= 64);
-            // You should only be calling this on IN endpoints.
-            // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::In);
+            assert!(buffer.len <= 64);
 
             const ep = self.hardware_endpoint_get_by_address(.in(ep_num));
-            // wait for controller to give processor ownership of the buffer before writing it.
-            // while (ep.buffer_control.?.read().AVAILABLE_0 == 1) {}
+            // Wait for controller to give processor ownership of the buffer before writing it.
+            // This is technically not neccessary, but the usb cdc driver is bugged.
+            while (ep.buffer_control.?.read().AVAILABLE_0 == 1) {}
 
             // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
             std.mem.copyForwards(u8, ep.data_buffer[0..buffer.len], buffer);
