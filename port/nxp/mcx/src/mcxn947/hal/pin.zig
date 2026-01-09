@@ -8,6 +8,7 @@ pub const Pin = enum(u8) {
 	const PinTy = *volatile @FieldType(chip.types.peripherals.PORT0, "PCR0");
 	// TODO: check if a given pin is actually available
 	pub fn num(port: u3, pin: u5) Pin {
+		@import("std").debug.assert(port <= 5);
 		return @enumFromInt((@as(u8, port) << 5) | pin);
 	}
 
@@ -31,16 +32,16 @@ pub const Pin = enum(u8) {
 		return Configurator.default(pin);
 	}
 
-	// default value depends on the pin and port
+	// TODO: not all options are available on all port and pins
 	pub const Config = packed struct (u16) {
 		pull: Pull,
-		pull_resistor_value: Strength, // not supported everywhere
+		pull_resistor_strength: Strength, // not supported everywhere
 		slew_rate: SlewRate, // same
 		passive_filter_enabled: bool, // same
 		open_drain_enabled: bool,
 		drive_strength: Strength, // same
 		reserved7: u1 = 0,
-		mux: u4, // lol
+		mux: u4,
 		input_buffer_enabled: bool,
 		invert_input: bool,
 		reserved14: u1 = 0,
@@ -51,17 +52,27 @@ pub const Pin = enum(u8) {
 		pub const Strength = enum(u1) { low = 0, high = 1 };
 	};
 
-	// Builder ?
 	pub const Configurator = struct {
 		pin: Pin,
 		config: Config,
 
-		// TODO: default value depending on pin
-		// we could do that using the reset value provided in the svd
+		// real default value depends on the port and pin
+		// we could get it using the reset value provided in the svd
 		pub fn default(pin: Pin) Configurator {
 			return .{
 				.pin = pin,
-				.config = @import("std").mem.zeroes(Config)
+				.config = .{
+					.pull = .disabled,
+					.pull_resistor_strength = .low,
+					.slew_rate = .fast,
+					.passive_filter_enabled = false,
+					.open_drain_enabled = false,
+					.drive_strength = .low,
+					.mux = 0,
+					.input_buffer_enabled = false,
+					.invert_input = false,
+					.lock = false
+				}
 			};
 		}
 
@@ -71,9 +82,9 @@ pub const Pin = enum(u8) {
 			return new;
 		}
 
-		pub fn set_pull_resistor_value(old: Configurator, strength: Config.Strength) Configurator {
+		pub fn set_pull_strength(old: Configurator, strength: Config.Strength) Configurator {
 			var new = old;
-			new.config.pull_resistor_value = strength;
+			new.config.pull_resistor_strength = strength;
 			return new;
 		}
 
@@ -84,15 +95,27 @@ pub const Pin = enum(u8) {
 		}
 
 		/// Enables the pin's passive filter
-		pub fn enable_filter(old: Configurator, enabled: bool) Configurator {
+		pub fn enable_filter(old: Configurator) Configurator {
 			var new = old;
-			new.config.passive_filter_enabled = enabled;
+			new.config.passive_filter_enabled = true;
 			return new;
 		}
 
-		pub fn enable_open_drain(old: Configurator, enabled: bool) Configurator {
+		pub fn disable_filter(old: Configurator) Configurator {
 			var new = old;
-			new.config.open_drain_enabled = enabled;
+			new.config.passive_filter_enabled = false;
+			return new;
+		}
+
+		pub fn enable_open_drain(old: Configurator) Configurator {
+			var new = old;
+			new.config.open_drain_enabled = true;
+			return new;
+		}
+
+		pub fn disable_open_drain(old: Configurator) Configurator {
+			var new = old;
+			new.config.open_drain_enabled = false;
 			return new;
 		}
 
@@ -108,9 +131,15 @@ pub const Pin = enum(u8) {
 			return new;
 		}
 
-		pub fn enable_input_buffer(old: Configurator, enabled: bool) Configurator {
+		pub fn enable_input_buffer(old: Configurator) Configurator {
 			var new = old;
-			new.config.input_buffer_enabled = enabled;
+			new.config.input_buffer_enabled = true;
+			return new;
+		}
+
+		pub fn disable_input_buffer(old: Configurator) Configurator {
+			var new = old;
+			new.config.input_buffer_enabled = false;
 			return new;
 		}
 
