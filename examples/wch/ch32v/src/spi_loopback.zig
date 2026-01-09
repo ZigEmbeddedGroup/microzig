@@ -71,7 +71,11 @@ pub fn main() !void {
         &.{0x55},
         &.{ 0x01, 0x02, 0x03, 0x04, 0x05 },
         &.{ 0xDE, 0xAD, 0xBE, 0xEF },
-        &.{ 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }, // 16 bytes - at threshold
+        // 16 bytes - at DMA threshold
+        &.{
+            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+            0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
+        },
         // 32-byte pattern to definitely trigger DMA (>= 16 byte threshold)
         &.{
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -153,14 +157,10 @@ pub fn main() !void {
         },
     });
 
-    const chunk1 = [_]u8{ 0x01, 0x02 };
-    const chunk2 = [_]u8{ 0x03, 0x04 };
-    const chunk3 = [_]u8{ 0x05, 0x06 };
-    const chunks = [_][]const u8{ &chunk1, &chunk2, &chunk3 };
+    const chunks = [_][]const u8{ &.{ 1, 2 }, &.{ 3, 4 }, &.{ 5, 6 } };
 
-    spi1.writev_blocking(&chunks, mdf.time.Duration.from_ms(100)) catch |err| {
+    spi1.writev_blocking(&chunks, mdf.time.Duration.from_ms(100)) catch |err|
         std.log.err("  writev failed: {}", .{err});
-    };
 
     std.log.info("  writev: PASS (if no errors above)", .{});
 
