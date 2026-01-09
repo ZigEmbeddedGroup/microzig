@@ -20,8 +20,9 @@ pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
 pub const Config = struct {
     // Comptime defined supported max endpoints number, can be reduced to save RAM space
-    max_endpoints_count: u8 = RP2XXX_MAX_ENDPOINTS_COUNT,
-    max_interfaces_count: u8 = 16,
+    max_endpoints_count: comptime_int = RP2XXX_MAX_ENDPOINTS_COUNT,
+    max_interfaces_count: comptime_int = 16,
+    sync_noops: comptime_int = 3,
 };
 
 pub const DeviceConfiguration = usb.DeviceConfiguration;
@@ -110,10 +111,10 @@ const rp2xxx_endpoints = struct {
 /// create a concrete one.
 pub fn Polled(
     controller_config: usb.Config,
-    device_config: Config,
+    config: Config,
 ) type {
     comptime {
-        if (device_config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
+        if (config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
             @compileError("RP2XXX USB endpoints number can't be grater than RP2XXX_MAX_ENDPOINTS_COUNT");
     }
 
@@ -125,7 +126,7 @@ pub fn Polled(
             .endpoint_open = endpoint_open,
         };
 
-        endpoints: [device_config.max_endpoints_count][2]HardwareEndpoint,
+        endpoints: [config.max_endpoints_count][2]HardwareEndpoint,
         data_buffer: []u8,
         controller: usb.DeviceController(controller_config),
         interface: usb.DeviceInterface,
@@ -224,12 +225,12 @@ pub fn Polled(
             peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
             peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
 
-            for (1..device_config.max_endpoints_count) |i| {
+            for (1..config.max_endpoints_count) |i| {
                 rp2xxx_endpoints.get_ep_ctrl(@enumFromInt(i), .In).?.write_raw(0);
                 rp2xxx_endpoints.get_ep_ctrl(@enumFromInt(i), .Out).?.write_raw(0);
             }
 
-            for (0..device_config.max_endpoints_count) |i| {
+            for (0..config.max_endpoints_count) |i| {
                 rp2xxx_endpoints.get_buf_ctrl(@enumFromInt(i), .In).?.write_raw(0);
                 rp2xxx_endpoints.get_buf_ctrl(@enumFromInt(i), .Out).?.write_raw(0);
             }
@@ -283,8 +284,18 @@ pub fn Polled(
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
-            endpoint_open(&self.interface, &.{ .endpoint = .in(.ep0), .max_packet_size = .from(64), .attributes = .{ .transfer_type = .Control, .usage = .data }, .interval = 0 });
-            endpoint_open(&self.interface, &.{ .endpoint = .out(.ep0), .max_packet_size = .from(64), .attributes = .{ .transfer_type = .Control, .usage = .data }, .interval = 0 });
+            endpoint_open(&self.interface, &.{
+                .endpoint = .in(.ep0),
+                .max_packet_size = .from(64),
+                .attributes = .{ .transfer_type = .Control, .usage = .data },
+                .interval = 0,
+            });
+            endpoint_open(&self.interface, &.{
+                .endpoint = .out(.ep0),
+                .max_packet_size = .from(64),
+                .attributes = .{ .transfer_type = .Control, .usage = .data },
+                .interval = 0,
+            });
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
@@ -336,11 +347,7 @@ pub fn Polled(
 
             // Nop for some clock cycles
             // use volatile so the compiler doesn't optimize the nops away
-            asm volatile (
-                \\ nop
-                \\ nop
-                \\ nop
-            );
+            asm volatile ("nop\n" ** config.sync_noops);
 
             // Set available bit
             ep.buffer_control.?.modify(.{
@@ -421,12 +428,13 @@ pub fn Polled(
         fn endpoint_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
 
-            assert(@intFromEnum(desc.endpoint.num) <= device_config.max_endpoints_count);
+            assert(@intFromEnum(desc.endpoint.num) <= config.max_endpoints_count);
 
             const ep = desc.endpoint;
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
             ep_hard.ep_addr = ep;
+            assert(desc.max_packet_size.into() <= 64);
             ep_hard.max_packet_size = @intCast(desc.max_packet_size.into());
             ep_hard.transfer_type = desc.attributes.transfer_type;
             ep_hard.next_pid_1 = false;
