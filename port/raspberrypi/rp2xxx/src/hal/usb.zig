@@ -54,7 +54,7 @@ const HardwareEndpoint = struct {
     max_packet_size: u11,
     buffer_control: ?*BufferControlMmio,
     endpoint_control: ?*EndpointControlMimo,
-    data_buffer: []u8,
+    data_buffer: []align(4) u8,
 };
 
 const rp2xxx_buffers = struct {
@@ -69,9 +69,9 @@ const rp2xxx_buffers = struct {
     const USB_DATA_BUFFER = USB_DPRAM_DATA_BUFFER_BASE + (2 * CTRL_EP_BUFFER_SIZE);
     const USB_DATA_BUFFER_SIZE = 3840 - (2 * CTRL_EP_BUFFER_SIZE);
 
-    const ep0_buffer0: *[CTRL_EP_BUFFER_SIZE]u8 = @as(*[CTRL_EP_BUFFER_SIZE]u8, @ptrFromInt(USB_EP0_BUFFER0));
-    const ep0_buffer1: *[CTRL_EP_BUFFER_SIZE]u8 = @as(*[CTRL_EP_BUFFER_SIZE]u8, @ptrFromInt(USB_EP0_BUFFER1));
-    const data_buffer: *[USB_DATA_BUFFER_SIZE]u8 = @as(*[USB_DATA_BUFFER_SIZE]u8, @ptrFromInt(USB_DATA_BUFFER));
+    const ep0_buffer0: *align(64) [CTRL_EP_BUFFER_SIZE]u8 = @ptrFromInt(USB_EP0_BUFFER0);
+    const ep0_buffer1: *align(64) [CTRL_EP_BUFFER_SIZE]u8 = @ptrFromInt(USB_EP0_BUFFER1);
+    const data_buffer: *align(64) [USB_DATA_BUFFER_SIZE]u8 = @ptrFromInt(USB_DATA_BUFFER);
 
     fn data_offset(ep_data_buffer: []u8) u16 {
         const buf_base = @intFromPtr(&ep_data_buffer[0]);
@@ -127,7 +127,7 @@ pub fn Polled(
         };
 
         endpoints: [config.max_endpoints_count][2]HardwareEndpoint,
-        data_buffer: []u8,
+        data_buffer: []align(4) u8,
         controller: usb.DeviceController(controller_config),
         interface: usb.DeviceInterface,
 
@@ -318,15 +318,25 @@ pub fn Polled(
 
             // It is technically possible to support longer buffers but this demo
             // doesn't bother.
-            assert!(buffer.len <= 64);
+            assert(buffer.len <= 64);
 
             const ep = self.hardware_endpoint_get_by_address(.in(ep_num));
             // Wait for controller to give processor ownership of the buffer before writing it.
             // This is technically not neccessary, but the usb cdc driver is bugged.
             while (ep.buffer_control.?.read().AVAILABLE_0 == 1) {}
 
-            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
-            std.mem.copyForwards(u8, ep.data_buffer[0..buffer.len], buffer);
+            const len = buffer.len;
+            switch (chip) {
+                .RP2040 => @memcpy(ep.data_buffer[0..len], buffer[0..len]),
+                .RP2350 => {
+                    const dst: [*]align(4) u32 = @ptrCast(ep.data_buffer.ptr);
+                    const src: [*]align(1) const u32 = @ptrCast(buffer.ptr);
+                    for (0..len / 4) |i|
+                        dst[i] = src[i];
+                    for (0..len % 4) |i|
+                        ep.data_buffer[len - i - 1] = buffer[len - i - 1];
+                },
+            }
 
             // Configure the IN:
             const np: u1 = if (ep.next_pid_1) 1 else 0;
@@ -461,7 +471,7 @@ pub fn Polled(
             std.debug.assert(self.data_buffer.len >= size);
 
             ep.data_buffer = self.data_buffer[0..size];
-            self.data_buffer = self.data_buffer[size..];
+            self.data_buffer = @alignCast(self.data_buffer[size..]);
         }
 
         fn endpoint_enable(ep: *HardwareEndpoint) void {
