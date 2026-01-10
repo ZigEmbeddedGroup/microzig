@@ -9,10 +9,7 @@ const assert = std.debug.assert;
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const chip = microzig.hal.compatibility.chip;
-
 const usb = microzig.core.usb;
-const types = usb.types;
-const EpNum = types.Endpoint.Num;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
@@ -56,7 +53,7 @@ fn PerEndpoint(T: type) type {
         in: T,
         out: T,
 
-        fn get(self: *volatile @This(), dir: types.Dir) *volatile T {
+        fn get(self: *volatile @This(), dir: usb.types.Dir) *volatile T {
             return switch (dir) {
                 .In => &self.in,
                 .Out => &self.out,
@@ -134,9 +131,9 @@ pub fn Polled(
                     const epnum = @as(u4, @intCast(lowbit_index >> 1));
                     // Of the pair, the IN endpoint comes first, followed by OUT, so
                     // we can get the direction by:
-                    const dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out;
+                    const dir: usb.types.Dir = if (lowbit_index & 1 == 0) .In else .Out;
 
-                    const ep: types.Endpoint = .{ .num = @enumFromInt(epnum), .dir = dir };
+                    const ep: usb.types.Endpoint = .{ .num = @enumFromInt(epnum), .dir = dir };
                     // Process the buffer-done event.
 
                     // Process the buffer-done event.
@@ -279,7 +276,7 @@ pub fn Polled(
         /// packet to be sent.
         fn start_tx(
             itf: *usb.DeviceInterface,
-            ep_num: EpNum,
+            ep_num: usb.types.Endpoint.Num,
             buffer: []const u8,
         ) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
@@ -327,7 +324,11 @@ pub fn Polled(
             bufctrl_ptr.write(bufctrl);
         }
 
-        fn start_rx(itf: *usb.DeviceInterface, ep_num: EpNum, len: usize) void {
+        fn start_rx(
+            itf: *usb.DeviceInterface,
+            ep_num: usb.types.Endpoint.Num,
+            len: usize,
+        ) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
 
             // It is technically possible to support longer buffers but this demo doesn't bother.
@@ -366,7 +367,7 @@ pub fn Polled(
         /// Side effect: The setup request status flag will be cleared
         ///
         /// One can assume that this function is only called if the
-        /// setup request falg is set.
+        /// setup request flag is set.
         fn get_setup_packet() usb.types.SetupPacket {
             // Clear the status flag (write-one-to-clear)
             peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
@@ -375,18 +376,11 @@ pub fn Polled(
             // control endpoint. Which it should be. We don't have any other
             // Control endpoints.
 
-            // Copy the setup packet out of its dedicated buffer at the base of
-            // USB SRAM. The PAC models this buffer as two 32-bit registers,
-            // which is, like, not _wrong_ but slightly awkward since it means
-            // we can't just treat it as bytes. Instead, copy it out to a byte
-            // array.
-            var setup_packet: [8]u8 = @splat(0);
-            const spl: u32 = peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw;
-            const sph: u32 = peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw;
-            @memcpy(setup_packet[0..4], std.mem.asBytes(&spl));
-            @memcpy(setup_packet[4..8], std.mem.asBytes(&sph));
-            // Reinterpret as setup packet
-            return std.mem.bytesToValue(usb.types.SetupPacket, &setup_packet);
+            // The PAC models this buffer as two 32-bit registers.
+            return @bitCast([2]u32{
+                peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
+                peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
+            });
         }
 
         fn set_address(itf: *usb.DeviceInterface, addr: u7) void {
@@ -396,7 +390,7 @@ pub fn Polled(
             peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = addr });
         }
 
-        fn hardware_endpoint_get_by_address(self: *@This(), ep: types.Endpoint) *HardwareEndpointData {
+        fn hardware_endpoint_get_by_address(self: *@This(), ep: usb.types.Endpoint) *HardwareEndpointData {
             return &self.endpoints[@intFromEnum(ep.num)][@intFromEnum(ep.dir)];
         }
 
