@@ -20,7 +20,7 @@ pub const DeviceInterface = struct {
         ep_writev: *const fn (*DeviceInterface, types.Endpoint.Num, []const []const u8) types.Len,
         ep_readv: *const fn (*DeviceInterface, types.Endpoint.Num, []const []u8) types.Len,
         ep_listen: *const fn (*DeviceInterface, types.Endpoint.Num, types.Len) void,
-        endpoint_open: *const fn (*DeviceInterface, *const descriptor.Endpoint) void,
+        ep_open: *const fn (*DeviceInterface, *const descriptor.Endpoint) void,
         set_address: *const fn (*DeviceInterface, u7) void,
     };
 
@@ -52,8 +52,8 @@ pub const DeviceInterface = struct {
     /// direction is IN this may call the controller's `on_buffer` function,
     /// so driver initialization must be done before this function is called
     /// on IN endpoint descriptors.
-    pub fn endpoint_open(self: *@This(), desc: *const descriptor.Endpoint) void {
-        return self.vtable.endpoint_open(self, desc);
+    pub fn ep_open(self: *@This(), desc: *const descriptor.Endpoint) void {
+        return self.vtable.ep_open(self, desc);
     }
 
     /// Immediately sets the device address.
@@ -434,7 +434,7 @@ pub fn DeviceController(config: Config) type {
 
                 inline for (@typeInfo(@TypeOf(cfg)).@"struct".fields) |fld| {
                     if (comptime fld.type == descriptor.Endpoint)
-                        device_itf.endpoint_open(&@field(cfg, fld.name));
+                        device_itf.ep_open(&@field(cfg, fld.name));
                 }
             }
         }

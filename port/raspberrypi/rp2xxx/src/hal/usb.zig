@@ -88,8 +88,8 @@ pub fn Polled(
             .ep_writev = ep_writev,
             .ep_readv = ep_readv,
             .ep_listen = ep_listen,
+            .ep_open = ep_open,
             .set_address = set_address,
-            .endpoint_open = endpoint_open,
         };
 
         endpoints: [config.max_endpoints_count][2]HardwareEndpointData,
@@ -227,13 +227,13 @@ pub fn Polled(
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
-            endpoint_open(&self.interface, &.{
+            ep_open(&self.interface, &.{
                 .endpoint = .in(.ep0),
                 .max_packet_size = .from(64),
                 .attributes = .{ .transfer_type = .Control, .usage = .data },
                 .interval = 0,
             });
-            endpoint_open(&self.interface, &.{
+            ep_open(&self.interface, &.{
                 .endpoint = .out(.ep0),
                 .max_packet_size = .from(64),
                 .attributes = .{ .transfer_type = .Control, .usage = .data },
@@ -379,7 +379,7 @@ pub fn Polled(
             return &self.endpoints[@intFromEnum(ep.num)][@intFromEnum(ep.dir)];
         }
 
-        fn endpoint_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
+        fn ep_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
 
             assert(@intFromEnum(desc.endpoint.num) <= config.max_endpoints_count);
