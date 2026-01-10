@@ -5,6 +5,7 @@ const log = std.log.scoped(.usb);
 pub const descriptor = @import("usb/descriptor.zig");
 pub const drivers = struct {
     pub const cdc = @import("usb/drivers/cdc.zig");
+    pub const example = @import("usb/drivers/example.zig");
     pub const hid = @import("usb/drivers/hid.zig");
 };
 pub const types = @import("usb/types.zig");
