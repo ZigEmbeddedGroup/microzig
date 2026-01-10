@@ -17,8 +17,8 @@ pub const nak: ?[]const u8 = null;
 pub const DeviceInterface = struct {
     pub const VTable = struct {
         start_tx: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
-        ep_readv: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) usize,
-        ep_listen: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
+        ep_readv: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) u11,
+        ep_listen: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, len: u11) void,
         endpoint_open: *const fn (self: *DeviceInterface, desc: *const descriptor.Endpoint) void,
         set_address: *const fn (self: *DeviceInterface, addr: u7) void,
     };
@@ -35,11 +35,11 @@ pub const DeviceInterface = struct {
     /// Called by drivers to retrieve a received packet.
     /// Must be called exactly once before each packet.
     /// Buffers in `data` must collectively be long enough to fit the whole packet.
-    pub fn ep_readv(self: *@This(), ep_num: types.Endpoint.Num, data: []const []u8) usize {
+    pub fn ep_readv(self: *@This(), ep_num: types.Endpoint.Num, data: []const []u8) u11 {
         return self.vtable.ep_readv(self, ep_num, data);
     }
 
-    pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
+    pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: u11) void {
         return self.vtable.ep_listen(self, ep_num, len);
     }
 

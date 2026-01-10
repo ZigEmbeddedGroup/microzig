@@ -115,14 +115,18 @@ pub fn CdcClassDriver(options: Options) type {
         device: *usb.DeviceInterface,
         ep_notif: types.Endpoint.Num,
         ep_in: types.Endpoint.Num,
-        ep_out: types.Endpoint.Num,
         line_coding: LineCoding align(4),
 
-        rx: FIFO,
+        /// OUT endpoint on which there is data ready to be read,
+        /// or .ep0 when no data is available.
+        ep_out: types.Endpoint.Num,
+        rx_data: [options.max_packet_size]u8,
+        rx_seek: u11,
+        rx_end: u11,
+
         tx: FIFO,
 
         last_len: u11,
-        rx_ready: bool,
 
         epin_buf: [options.max_packet_size]u8 = undefined,
 
@@ -131,9 +135,21 @@ pub fn CdcClassDriver(options: Options) type {
         }
 
         pub fn read(self: *@This(), dst: []u8) usize {
-            const read_count = self.rx.read(dst);
-            self.prep_out_transaction();
-            return read_count;
+            const len = @min(dst.len, self.rx_end - self.rx_seek);
+            @memcpy(dst[0..len], self.rx_data[self.rx_seek..][0..len]);
+            self.rx_seek += len;
+
+            if (self.rx_seek != self.rx_end) return len;
+
+            // request more data
+            const ep_out = @atomicLoad(types.Endpoint.Num, &self.ep_out, .acquire);
+            if (ep_out != .ep0) {
+                self.rx_end = self.device.ep_readv(ep_out, &.{&self.rx_data});
+                self.rx_seek = 0;
+                self.device.ep_listen(ep_out, options.max_packet_size);
+            }
+
+            return len;
         }
 
         pub fn write(self: *@This(), data: []const u8) []const u8 {
@@ -162,29 +178,26 @@ pub fn CdcClassDriver(options: Options) type {
             return len;
         }
 
-        fn prep_out_transaction(self: *@This()) void {
-            if (self.rx.get_writable_len() >= options.max_packet_size) {
-                // Let endpoint know that we are ready for next packet
-                self.device.ep_listen(self.ep_out, options.max_packet_size);
-            }
-        }
-
         pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
+            defer device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
             return .{
                 .device = device,
                 .ep_notif = desc.ep_notifi.endpoint.num,
                 .ep_in = desc.ep_in.endpoint.num,
-                .ep_out = desc.ep_out.endpoint.num,
                 .line_coding = .{
                     .bit_rate = 115200,
                     .stop_bits = 0,
                     .parity = 0,
                     .data_bits = 8,
                 },
-                .rx = .empty,
+
+                .rx_data = undefined,
+                .rx_seek = 0,
+                .rx_end = 0,
+                .ep_out = .ep0,
+
                 .tx = .empty,
                 .last_len = 0,
-                .rx_ready = true,
             };
         }
 
@@ -207,12 +220,7 @@ pub fn CdcClassDriver(options: Options) type {
         }
 
         pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
-            if (ep_num != self.ep_out) return;
-
-            var buf: [options.max_packet_size]u8 = undefined;
-            const len = self.device.ep_readv(ep_num, &.{&buf});
-            self.rx.write(buf[0..len]) catch {};
-            self.prep_out_transaction();
+            @atomicStore(types.Endpoint.Num, &self.ep_out, ep_num, .release);
         }
 
         pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {

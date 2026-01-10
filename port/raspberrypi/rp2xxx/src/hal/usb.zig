@@ -310,7 +310,7 @@ pub fn Polled(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
-        ) usize {
+        ) u11 {
             const self: *@This() = @fieldParentPtr("interface", itf);
             assert(data.len > 0);
 
@@ -323,7 +323,8 @@ pub fn Polled(
                 for (dst[0..len], hw_buf[0..len]) |*d, *s|
                     @atomicStore(u8, d, @atomicLoad(u8, s, .unordered), .unordered);
                 hw_buf = hw_buf[len..];
-                if (hw_buf.len == 0) return hw_buf.ptr - ep.data_buffer.ptr;
+                if (hw_buf.len == 0)
+                    return @intCast(hw_buf.ptr - ep.data_buffer.ptr);
             }
             unreachable;
         }
@@ -331,7 +332,7 @@ pub fn Polled(
         fn ep_listen(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
-            len: usize,
+            len: u11,
         ) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
 
