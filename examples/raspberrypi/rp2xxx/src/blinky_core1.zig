@@ -2,29 +2,29 @@ const std = @import("std");
 
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
+const board = microzig.board;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const multicore = rp2xxx.multicore;
 
-const led = gpio.num(7);
+const pins = board.pin_config.pins();
 
 fn core1() void {
     while (true) {
-        led.put(1);
+        pins.led.put(1);
         time.sleep_ms(100);
-        led.put(0);
+        pins.led.put(0);
         time.sleep_ms(100);
     }
 }
 
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
+    _ = board.pin_config.apply();
 
     // Blink a few time on core0
-    led.put(1);
+    pins.led.put(1);
     time.sleep_ms(250);
-    led.put(0);
+    pins.led.put(0);
     time.sleep_ms(250);
 
     multicore.launch_core1(core1);

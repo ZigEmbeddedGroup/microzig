@@ -45,6 +45,7 @@ pub fn build(b: *std.Build) void {
 
         // Adafruit boards
         .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = mb.ports.rp2xxx.boards.adafruit.metro_rp2350, .name = "adafruit_metro_rp2350_blinky", .file = "src/board_blinky.zig" },
 
         // WaveShare Boards:
