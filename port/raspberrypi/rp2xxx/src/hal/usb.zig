@@ -310,7 +310,7 @@ pub fn Polled(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
-        ) u11 {
+        ) usb.types.Len {
             const self: *@This() = @fieldParentPtr("interface", itf);
             assert(data.len > 0);
 
@@ -332,7 +332,7 @@ pub fn Polled(
         fn ep_listen(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
-            len: u11,
+            len: usb.types.Len,
         ) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
 

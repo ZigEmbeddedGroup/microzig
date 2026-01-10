@@ -142,6 +142,9 @@ pub const SetupPacket = extern struct {
     length: u16,
 };
 
+/// Represents packet length.
+pub const Len = u11;
+
 /// u16 value, little endian regardless of native endianness.
 pub const U16Le = extern struct {
     value: [2]u8,

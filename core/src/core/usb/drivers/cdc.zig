@@ -121,12 +121,12 @@ pub fn CdcClassDriver(options: Options) type {
         /// or .ep0 when no data is available.
         ep_out: types.Endpoint.Num,
         rx_data: [options.max_packet_size]u8,
-        rx_seek: u11,
-        rx_end: u11,
+        rx_seek: types.Len,
+        rx_end: types.Len,
 
         tx: FIFO,
 
-        last_len: u11,
+        last_len: types.Len,
 
         epin_buf: [options.max_packet_size]u8 = undefined,
 
@@ -219,11 +219,11 @@ pub fn CdcClassDriver(options: Options) type {
             return usb.nak;
         }
 
-        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
+        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {
             @atomicStore(types.Endpoint.Num, &self.ep_out, ep_num, .release);
         }
 
-        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {
+        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
             if (ep_num != self.ep_in) return;
 
             if (self.write_flush() == 0) {
