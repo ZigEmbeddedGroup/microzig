@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const log = std.log.scoped(.usb);
 
 pub const descriptor = @import("usb/descriptor.zig");
@@ -64,6 +65,11 @@ pub const Config = struct {
     debug: bool = false,
     /// Currently only a single configuration is supported.
     configurations: []const Configuration,
+};
+
+const Handler = struct {
+    driver: []const u8,
+    function: []const u8,
 };
 
 /// USB device controller
@@ -147,6 +153,31 @@ pub fn DeviceController(config: Config) type {
             } }){};
         };
 
+        const handlers = blk: {
+            var ret: struct { In: [16]Handler, Out: [16]Handler } = .{
+                .In = @splat(.{ .driver = "", .function = "" }),
+                .Out = @splat(.{ .driver = "", .function = "" }),
+            };
+            for (driver_fields) |fld_drv| {
+                const cfg = @field(config_descriptor, fld_drv.name);
+                const fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
+                for (fields) |fld| {
+                    if (fld.type != descriptor.Endpoint) continue;
+                    const desc: descriptor.Endpoint = @field(cfg, fld.name);
+                    const handler = &@field(ret, @tagName(desc.endpoint.dir))[@intFromEnum(desc.endpoint.num)];
+                    // assert(handler.driver.len == 0 and handler.function.len == 0);
+                    handler.* = .{
+                        .driver = fld_drv.name,
+                        .function = switch (desc.endpoint.dir) {
+                            .In => "on_rx",
+                            .Out => "on_tx_ready",
+                        },
+                    };
+                }
+            }
+            break :blk ret;
+        };
+
         /// When the host sets the device address, the acknowledgement
         /// step must use the _old_ address.
         new_address: ?u8,
@@ -213,61 +244,49 @@ pub fn DeviceController(config: Config) type {
         }
 
         /// Called by the device implementation when a packet has been sent or received.
-        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, ep: types.Endpoint, buffer: []u8) void {
+        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint, buffer: []u8) void {
             if (config.debug) log.info("buff status", .{});
-
             if (config.debug) log.info("    data: {any}", .{buffer});
 
-            // Perform any required action on the data. For OUT, the `data`
-            // will be whatever was sent by the host. For IN, it's a copy of
-            // whatever we sent.
-            switch (ep.num) {
-                .ep0 => if (ep.dir == .In) {
-                    if (config.debug) log.info("    EP0_IN_ADDR", .{});
+            const handler = comptime @field(handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
 
-                    // We use this opportunity to finish the delayed
-                    // SetAddress request, if there is one:
-                    if (self.new_address) |addr| {
-                        // Change our address:
-                        device_itf.set_address(@intCast(addr));
-                        self.new_address = null;
-                    }
+            if (comptime ep == types.Endpoint.in(.ep0)) {
+                if (config.debug) log.info("    EP0_IN_ADDR", .{});
 
-                    if (buffer.len > 0 and self.tx_slice.len > 0) {
-                        self.tx_slice = self.tx_slice[buffer.len..];
+                // We use this opportunity to finish the delayed
+                // SetAddress request, if there is one:
+                if (self.new_address) |addr| {
+                    // Change our address:
+                    device_itf.set_address(@intCast(addr));
+                    self.new_address = null;
+                }
 
-                        const next_data_chunk = self.tx_slice[0..@min(64, self.tx_slice.len)];
-                        if (next_data_chunk.len > 0) {
-                            device_itf.start_tx(.ep0, next_data_chunk);
-                        } else {
-                            device_itf.start_rx(.ep0, 0);
+                if (buffer.len > 0 and self.tx_slice.len > 0) {
+                    self.tx_slice = self.tx_slice[buffer.len..];
 
-                            if (self.driver_last) |drv|
-                                self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
-                        }
+                    const next_data_chunk = self.tx_slice[0..@min(64, self.tx_slice.len)];
+                    if (next_data_chunk.len > 0) {
+                        device_itf.start_tx(.ep0, next_data_chunk);
                     } else {
-                        // Otherwise, we've just finished sending
-                        // something to the host. We expect an ensuing
-                        // status phase where the host sends us (via EP0
-                        // OUT) a zero-byte DATA packet, so, set that
-                        // up:
                         device_itf.start_rx(.ep0, 0);
 
                         if (self.driver_last) |drv|
                             self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                     }
-                },
-                inline else => |ep_num| inline for (driver_fields) |fld_drv| {
-                    const cfg = @field(config_descriptor, fld_drv.name);
-                    const fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
-                    inline for (fields) |fld| {
-                        const desc = @field(cfg, fld.name);
-                        if (comptime fld.type == descriptor.Endpoint and desc.endpoint.num == ep_num) {
-                            if (ep.dir == desc.endpoint.dir)
-                                @field(self.driver_data.?, fld_drv.name).transfer(ep, buffer);
-                        }
-                    }
-                },
+                } else {
+                    // Otherwise, we've just finished sending
+                    // something to the host. We expect an ensuing
+                    // status phase where the host sends us (via EP0
+                    // OUT) a zero-byte DATA packet, so, set that
+                    // up:
+                    device_itf.start_rx(.ep0, 0);
+
+                    if (self.driver_last) |drv|
+                        self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
+                }
+            } else if (comptime handler.driver.len != 0) {
+                const drv = &@field(self.driver_data.?, handler.driver);
+                @field(@FieldType(config0.Drivers, handler.driver), handler.function)(drv, ep.num, buffer);
             }
         }
 

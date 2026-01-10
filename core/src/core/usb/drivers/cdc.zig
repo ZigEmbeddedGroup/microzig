@@ -121,6 +121,8 @@ pub fn CdcClassDriver(options: Options) type {
         rx: FIFO,
         tx: FIFO,
 
+        last_len: u11,
+
         epin_buf: [options.max_packet_size]u8 = undefined,
 
         pub fn available(self: *@This()) usize {
@@ -155,6 +157,7 @@ pub fn CdcClassDriver(options: Options) type {
             }
             const len = self.tx.read(&self.epin_buf);
             self.device.start_tx(self.ep_in, self.epin_buf[0..len]);
+            self.last_len = @intCast(len);
             return len;
         }
 
@@ -179,6 +182,7 @@ pub fn CdcClassDriver(options: Options) type {
                 },
                 .rx = .empty,
                 .tx = .empty,
+                .last_len = 0,
             };
         }
 
@@ -200,19 +204,22 @@ pub fn CdcClassDriver(options: Options) type {
             return usb.nak;
         }
 
-        pub fn transfer(self: *@This(), ep: types.Endpoint, data: []u8) void {
-            if (ep == types.Endpoint.out(self.ep_out)) {
-                self.rx.write(data) catch {};
-                self.prep_out_transaction();
-            }
+        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num, data: []u8) void {
+            if (ep_num != self.ep_out) return;
 
-            if (ep == types.Endpoint.in(self.ep_in)) {
-                if (self.write_flush() == 0) {
-                    // If there is no data left, a empty packet should be sent if
-                    // data len is multiple of EP Packet size and not zero
-                    if (self.tx.get_readable_len() == 0 and data.len > 0 and data.len == options.max_packet_size) {
-                        self.device.start_tx(self.ep_in, &.{});
-                    }
+            self.rx.write(data) catch {};
+            self.prep_out_transaction();
+        }
+
+        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num, _: []u8) void {
+            if (ep_num != self.ep_in) return;
+
+            if (self.write_flush() == 0) {
+                // If there is no data left, a empty packet should be sent if
+                // data len is multiple of EP Packet size and not zero
+                if (self.tx.get_readable_len() == 0 and self.last_len == options.max_packet_size) {
+                    self.device.start_tx(self.ep_in, usb.ack);
+                    self.last_len = 0;
                 }
             }
         }
