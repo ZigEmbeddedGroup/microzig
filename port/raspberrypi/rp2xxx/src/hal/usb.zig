@@ -338,29 +338,24 @@ pub fn Polled(
                 },
             }
 
-            // Configure the IN:
-            const np: u1 = if (ep.next_pid_1) 1 else 0;
-
-            // The AVAILABLE bit in the buffer control register should be set
-            // separately to the rest of the data in the buffer control register,
-            // so that the rest of the data in the buffer control register is
-            // accurate when the AVAILABLE bit is set.
+            var bufctrl = ep.buffer_control.?.read();
 
             // Write the buffer information to the buffer control register
-            ep.buffer_control.?.modify(.{
-                .PID_0 = np, // DATA0/1, depending
-                .FULL_0 = 1, // We have put data in
-                .LENGTH_0 = @as(u10, @intCast(buffer.len)), // There are this many bytes
-            });
+            bufctrl.PID_0 = if (ep.next_pid_1) 1 else 0; // flip DATA0/1
+            bufctrl.FULL_0 = 1; // We have put data in
+            bufctrl.LENGTH_0 = @intCast(len); // There are this many bytes
 
-            // Nop for some clock cycles
-            // use volatile so the compiler doesn't optimize the nops away
-            asm volatile ("nop\n" ** config.sync_noops);
-
+            if (config.sync_noops != 0) {
+                ep.buffer_control.?.write(bufctrl);
+                // The AVAILABLE bit in the buffer control register should be set
+                // separately to the rest of the data in the buffer control register,
+                // so that the rest of the data in the buffer control register is
+                // accurate when the AVAILABLE bit is set.
+                asm volatile ("nop\n" ** config.sync_noops);
+            }
             // Set available bit
-            ep.buffer_control.?.modify(.{
-                .AVAILABLE_0 = 1, // The data is for the computer to use now
-            });
+            bufctrl.AVAILABLE_0 = 1;
+            ep.buffer_control.?.write(bufctrl);
 
             ep.next_pid_1 = !ep.next_pid_1;
         }
@@ -368,28 +363,33 @@ pub fn Polled(
         fn start_rx(itf: *usb.DeviceInterface, ep_num: EpNum, len: usize) void {
             const self: *@This() = @fieldParentPtr("interface", itf);
 
-            // It is technically possible to support longer buffers but this demo
-            // doesn't bother.
-            // TODO: assert!(len <= 64);
-            // You should only be calling this on OUT endpoints.
-            // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::Out);
+            // It is technically possible to support longer buffers but this demo doesn't bother.
+            assert(len <= 64);
 
             const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
 
-            if (ep.awaiting_rx)
-                return;
+            // This function should only be called when the buffer is known to be available,
+            // but the current driver implementations do not conform to that.
+            if (ep.awaiting_rx) return;
 
-            // Check which DATA0/1 PID this endpoint is expecting next.
-            const np: u1 = if (ep.next_pid_1) 1 else 0;
             // Configure the OUT:
-            ep.buffer_control.?.modify(.{
-                .PID_0 = np, // DATA0/1 depending
-                .FULL_0 = 0, // Buffer is NOT full, we want the computer to fill it
-                .AVAILABLE_0 = 1, // It is, however, available to be filled
-                .LENGTH_0 = @as(u10, @intCast(len)), // Up tho this many bytes
-            });
+            var bufctrl = ep.buffer_control.?.read();
+            bufctrl.PID_0 = if (ep.next_pid_1) 1 else 0; // Flip DATA0/1
+            bufctrl.FULL_0 = 0; // Buffer is NOT full, we want the computer to fill it
+            bufctrl.LENGTH_0 = @intCast(len); // Up tho this many bytes
 
-            // Flip the DATA0/1 PID for the next receive
+            if (config.sync_noops != 0) {
+                ep.buffer_control.?.write(bufctrl);
+                // The AVAILABLE bit in the buffer control register should be set
+                // separately to the rest of the data in the buffer control register,
+                // so that the rest of the data in the buffer control register is
+                // accurate when the AVAILABLE bit is set.
+                asm volatile ("nop\n" ** config.sync_noops);
+            }
+            // Set available bit
+            bufctrl.AVAILABLE_0 = 1;
+            ep.buffer_control.?.write(bufctrl);
+
             ep.next_pid_1 = !ep.next_pid_1;
             ep.awaiting_rx = true;
         }
