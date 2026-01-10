@@ -10,21 +10,23 @@
 //!   PA5: SCK  (Alternate Function Push-Pull, 50MHz)
 //!   PA6: MISO (Input Floating or Input Pull-up)
 //!   PA7: MOSI (Alternate Function Push-Pull, 50MHz)
-//!   PA4: CS   (Output Push-Pull, 50MHz - if using GPIO CS)
 //!
 //! SPI1 Remapped Pins (config.remap = .remap1):
 //!   PB3: SCK  (Alternate Function Push-Pull, 50MHz)
 //!   PB4: MISO (Input Floating or Input Pull-up)
 //!   PB5: MOSI (Alternate Function Push-Pull, 50MHz)
-//!   PA15: CS  (Output Push-Pull, 50MHz - if using GPIO CS)
 //!
 //! SPI2 Pins (no remap available):
 //!   PB13: SCK  (Alternate Function Push-Pull, 50MHz)
 //!   PB14: MISO (Input Floating or Input Pull-up)
 //!   PB15: MOSI (Alternate Function Push-Pull, 50MHz)
-//!   PB12: CS   (Output Push-Pull, 50MHz - if using GPIO CS)
 //!
-//! User must configure pins before calling apply()
+//! Chip Select (CS) Pin:
+//! ====================
+//! CS is NOT managed by this HAL - you must handle it manually.
+//! For automatic CS management, use SPI_Datagram_Device wrapper (see drivers.zig).
+//!
+//! User must configure all pins before calling apply()
 //!
 
 const std = @import("std");
@@ -99,13 +101,6 @@ pub const Config = struct {
         threshold: usize = 16,
     };
 
-    /// Chip select pin configuration (optional HAL-managed CS)
-    /// If provided, CS will be automatically asserted/deasserted during transfers
-    pub const ChipSelectConfig = struct {
-        pin: gpio.Pin,
-        active_high: bool = false,
-    };
-
     baud_rate: u32 = 1_000_000,
     polarity: Polarity = .idle_low,
     phase: Phase = .first_edge,
@@ -117,8 +112,9 @@ pub const Config = struct {
     /// Example: .dma = .{ .tx_channel = .Ch3, .rx_channel = .Ch2 }
     dma: ?DMA_Config = null,
 
-    /// Optional chip select configuration - null means manual CS control
-    chip_select: ?ChipSelectConfig = null,
+    /// NOTE: Chip select (CS) must be managed manually by the caller.
+    /// This SPI HAL is stateless and does not manage CS pins.
+    /// See SPI_Datagram_Device in drivers.zig for automatic CS management.
 };
 
 pub const instance = struct {
