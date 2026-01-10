@@ -149,9 +149,9 @@ pub fn Polled(
                     // the buffer is ours again. This is indicated by the hw
                     // _clearing_ the AVAILABLE bit.
                     //
-                    // This ensures that we can return a shared reference to
-                    // the databuffer contents without races.
-                    // TODO: if ((bc & (1 << 10)) == 1) return EPBError.NotAvailable;
+                    // It seems the hardware sets the AVAILABLE bit _after_ setting BUFF_STATUS
+                    // So we wait for it just to be sure.
+                    while (buffer_control[epnum].get(ep.dir).read().AVAILABLE_0 != 0) {}
 
                     // Cool. Checks out.
 
@@ -288,7 +288,7 @@ pub fn Polled(
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].in;
             const ep = self.hardware_endpoint_get_by_address(.in(ep_num));
             // Wait for controller to give processor ownership of the buffer before writing it.
-            // This is technically not neccessary, but the usb cdc driver is bugged.
+            // This is technically not necessary, but the usb cdc driver is bugged.
             while (bufctrl_ptr.read().AVAILABLE_0 == 1) {}
 
             const len = buffer.len;
