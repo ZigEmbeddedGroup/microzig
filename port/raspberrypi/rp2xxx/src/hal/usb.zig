@@ -113,36 +113,22 @@ pub fn Polled(
                 self.controller.on_setup_req(&self.interface, &setup);
             }
 
+            var buff_status: u32 = 0;
             // Events on one or more buffers? (In practice, always one.)
             if (ints.BUFF_STATUS != 0) {
                 const bufbits_init = peripherals.USB.BUFF_STATUS.raw;
-                var bufbits = bufbits_init;
+                buff_status |= bufbits_init;
+                peripherals.USB.BUFF_STATUS.write_raw(bufbits_init);
+            }
 
-                while (true) {
-                    // Who's still outstanding? Find their bit index by counting how
-                    // many LSBs are zero.
-                    const lowbit_index = std.math.cast(u5, @ctz(bufbits)) orelse break;
-                    // Remove their bit from our set.
-                    bufbits ^= @as(u32, @intCast(1)) << lowbit_index;
+            // Here we exploit knowledge of the ordering of buffer control
+            // registers in the peripheral. Each endpoint has a pair of
+            // registers, IN being first
+            for (0..16) |ep_num| {
+                const shift: u5 = @intCast(2 * ep_num);
 
-                    // Here we exploit knowledge of the ordering of buffer control
-                    // registers in the peripheral. Each endpoint has a pair of
-                    // registers, so we can determine the endpoint number by:
-                    const epnum = @as(u4, @intCast(lowbit_index >> 1));
-                    // Of the pair, the IN endpoint comes first, followed by OUT, so
-                    // we can get the direction by:
-                    const dir: usb.types.Dir = if (lowbit_index & 1 == 0) .In else .Out;
-
-                    const ep: usb.types.Endpoint = .{ .num = @enumFromInt(epnum), .dir = dir };
-                    // Process the buffer-done event.
-
-                    // Process the buffer-done event.
-                    //
-                    // Scan the device table to figure out which endpoint struct
-                    // corresponds to this address. We could use a smarter
-                    // method here, but in practice, the number of endpoints is
-                    // small so a linear scan doesn't kill us.
-
+                if (buff_status & (@as(u32, 1) << shift) != 0) {
+                    const ep: usb.types.Endpoint = .in(@enumFromInt(ep_num));
                     const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
                     // We should only get here if we've been notified that
@@ -151,22 +137,36 @@ pub fn Polled(
                     //
                     // It seems the hardware sets the AVAILABLE bit _after_ setting BUFF_STATUS
                     // So we wait for it just to be sure.
-                    while (buffer_control[epnum].get(ep.dir).read().AVAILABLE_0 != 0) {}
-
-                    // Cool. Checks out.
+                    while (buffer_control[ep_num].in.read().AVAILABLE_0 != 0) {}
 
                     // Get the actual length of the data, which may be less
                     // than the buffer size.
-                    const len = buffer_control[@intFromEnum(ep.num)].get(ep.dir).read().LENGTH_0;
+                    const len = buffer_control[@intFromEnum(ep.num)].in.read().LENGTH_0;
+
+                    self.controller.on_buffer(&self.interface, ep, ep_hard.data_buffer[0..len]);
+                }
+
+                if (buff_status & (@as(u32, 2) << shift) != 0) {
+                    const ep: usb.types.Endpoint = .out(@enumFromInt(ep_num));
+                    const ep_hard = self.hardware_endpoint_get_by_address(ep);
+
+                    // We should only get here if we've been notified that
+                    // the buffer is ours again. This is indicated by the hw
+                    // _clearing_ the AVAILABLE bit.
+                    //
+                    // It seems the hardware sets the AVAILABLE bit _after_ setting BUFF_STATUS
+                    // So we wait for it just to be sure.
+                    while (buffer_control[ep_num].out.read().AVAILABLE_0 != 0) {}
+
+                    // Get the actual length of the data, which may be less
+                    // than the buffer size.
+                    const len = buffer_control[@intFromEnum(ep.num)].out.read().LENGTH_0;
 
                     self.controller.on_buffer(&self.interface, ep, ep_hard.data_buffer[0..len]);
 
-                    if (ep.dir == .Out)
-                        ep_hard.awaiting_rx = false;
+                    ep_hard.awaiting_rx = false;
                 }
-
-                peripherals.USB.BUFF_STATUS.write_raw(bufbits_init);
-            } // <-- END of buf status handling
+            }
 
             // Has the host signaled a bus reset?
             if (ints.BUS_RESET != 0) {

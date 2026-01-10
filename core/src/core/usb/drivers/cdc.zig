@@ -118,8 +118,8 @@ pub fn CdcClassDriver(options: Options) type {
         ep_out: types.Endpoint.Num,
         line_coding: LineCoding align(4),
 
-        rx: FIFO = .empty,
-        tx: FIFO = .empty,
+        rx: FIFO,
+        tx: FIFO,
 
         epin_buf: [options.max_packet_size]u8 = undefined,
 
@@ -177,6 +177,8 @@ pub fn CdcClassDriver(options: Options) type {
                     .parity = 0,
                     .data_bits = 8,
                 },
+                .rx = .empty,
+                .tx = .empty,
             };
         }
 
