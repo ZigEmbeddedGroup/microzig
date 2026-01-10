@@ -106,6 +106,7 @@ pub const Target = struct {
 			const value = @field(options, field.name);
 			if(value) |val| @field(ret, field.name) = val;
 		}
+        ret.chip = chip;
         return ret;
     }
 };
