@@ -44,6 +44,7 @@ pub const DeviceInterface = struct {
     }
 
     /// Called by drivers to report readiness to receive up to `len` bytes.
+    /// After being called it may not be called again until a packet is received.
     pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: types.Len) void {
         return self.vtable.ep_listen(self, ep_num, len);
     }
@@ -76,11 +77,6 @@ pub const Config = struct {
     debug: bool = false,
     /// Currently only a single configuration is supported.
     configurations: []const Configuration,
-};
-
-const Handler = struct {
-    driver: []const u8,
-    function: []const u8,
 };
 
 /// USB device controller
@@ -171,6 +167,11 @@ pub fn DeviceController(config: Config) type {
         };
 
         const handlers = blk: {
+            const Handler = struct {
+                driver: []const u8,
+                function: []const u8,
+            };
+
             var ret: struct { In: [16]Handler, Out: [16]Handler, itf: []const DriverEnum } = .{
                 .In = @splat(.{ .driver = "", .function = "" }),
                 .Out = @splat(.{ .driver = "", .function = "" }),
