@@ -98,6 +98,7 @@ boards: struct {
     ch32v203: struct {
         suzuduino_uno_v1b: *const microzig.Target,
         lana_tny: *const microzig.Target,
+        nano_ch32v203: *const microzig.Target,
     },
     ch32v305: struct {
         nano_ch32v305: *const microzig.Target,
@@ -206,6 +207,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     });
 
+    const board_nano_ch32v203 = chip_ch32v203x8.derive(.{
+        .board = .{
+            .name = "nanoCH32V203",
+            .url = "https://github.com/wuxx/nanoCH32V203",
+            .root_source_file = b.path("src/boards/nanoCH32V203.zig"),
+        },
+    });
+
     return .{
         .chips = .{
             .ch32v003x4 = chip_ch32v003x4,
@@ -231,6 +240,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .ch32v203 = .{
                 .suzuduino_uno_v1b = board_suzuduino_uno_v1b,
                 .lana_tny = board_lana_tny,
+                .nano_ch32v203 = board_nano_ch32v203,
             },
             .ch32v305 = .{
                 .nano_ch32v305 = board_nano_ch32v305,
