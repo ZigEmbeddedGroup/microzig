@@ -17,7 +17,7 @@
 //!
 //! Example usage:
 //! ```zig
-//! const Display = Sharp_Memory_LCD(.{
+//! const Display = SharpMemory_LCD(.{
 //!     .width = 160,
 //!     .height = 68,
 //!     .vcom_mode = .none,  // nice!view doesn't need VCOM
@@ -57,7 +57,6 @@ pub const Config = struct {
     Digital_IO: ?type = null,
 };
 
-// TODO: Use an enum
 /// Sharp Memory LCD command bytes
 const Cmd = enum(u8) {
     Write = 0x01, // Write line data
@@ -79,7 +78,7 @@ pub const Color = enum(u1) {
 };
 
 /// Create a Sharp Memory LCD driver instance
-pub fn Sharp_Memory_LCD(comptime config: Config) type {
+pub fn SharpMemory_LCD(comptime config: Config) type {
     // Validate config at compile time
     if (config.width % 8 != 0) {
         @compileError("LCD width must be a multiple of 8");

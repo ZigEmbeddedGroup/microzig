@@ -16,7 +16,7 @@ pub const display = struct {
     pub const ST7735 = st77xx.ST7735;
     pub const ST7789 = st77xx.ST7789;
     pub const HD44780 = hd44780.HD44780;
-    pub const Sharp_Memory_LCD = sharp_memory_lcd.Sharp_Memory_LCD;
+    pub const SharpMemory_LCD = sharp_memory_lcd.SharpMemory_LCD;
 
     // Export color types:
     pub const colors = @import("display/colors.zig");
