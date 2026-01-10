@@ -131,7 +131,10 @@ fn validate_config(comptime config: Config) void {
     // Validate supported target frequencies for HSE
     if (config.source == .hse) {
         const hse_freq = config.hse_frequency.?;
-        if (config.target_frequency != hse_freq and config.target_frequency != 48_000_000) {
+        if (config.target_frequency != hse_freq and
+            config.target_frequency != 48_000_000 and
+            config.target_frequency != 144_000_000)
+        {
             @compileError("Unsupported target_frequency for HSE. Supported: HSE frequency directly, or 48 MHz with PLL");
         }
     }
@@ -245,6 +248,7 @@ fn init_from_hse(hse_freq: u32, target_freq: u32) void {
 
     // Use PLL to reach 48 MHz from HSE
     // Common case: 8 MHz HSE -> 48 MHz (6x multiplier)
+    // TODO: We don't actually ensure that HSE is 8MHz. Fix this.
     if (target_freq == 48_000_000) {
         RCC.CFGR0.modify(.{
             .HPRE = 0, // AHB prescaler = 1
@@ -253,6 +257,23 @@ fn init_from_hse(hse_freq: u32, target_freq: u32) void {
             .PLLSRC = 1, // PLL source = HSE
             .PLLXTPRE = 0, // HSE not divided before PLL
             .PLLMUL = 4, // PLL multiplier = 6
+        });
+
+        // Enable PLL
+        RCC.CTLR.modify(.{ .PLLON = 1 });
+        while (RCC.CTLR.read().PLLRDY == 0) {}
+
+        // Select PLL as system clock
+        RCC.CFGR0.modify(.{ .SW = 2 });
+        while (RCC.CFGR0.read().SWS != 2) {}
+    } else if (target_freq == 144_000_000) {
+        RCC.CFGR0.modify(.{
+            .HPRE = 0, // AHB prescaler = 1
+            .PPRE2 = 0, // APB2 prescaler = 1
+            .PPRE1 = 4, // APB1 prescaler = 2
+            .PLLSRC = 1, // PLL source = HSE
+            .PLLXTPRE = 0, // HSE not divided before PLL
+            .PLLMUL = 15, // PLL multiplier = 18
         });
 
         // Enable PLL
