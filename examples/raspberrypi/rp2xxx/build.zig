@@ -41,6 +41,10 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
         .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
 
+        // Adafruit boards
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.metro_rp2350, .name = "adafruit_metro_rp2350_blinky", .file = "src/board_blinky.zig" },
+
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040_matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
         // .{ .target = "board:waveshare/rp2040_eth", .name = "rp2040-eth" },

@@ -60,7 +60,7 @@ pub const pin_config = pins.GlobalConfiguration{
     },
 
     .GPIO23 = .{
-        .name = "red_led",
+        .name = "led",
         .function = .SIO,
         .direction = .out,
     },
