@@ -12,31 +12,46 @@ const chip = microzig.chip;
 //
 // the `switch` in `can_enable_clock` and `can_reset` are not great for
 // small assembly. It is probably possible to remove them (though it mean writing to reserved bits).
-pub fn module_enable_clock(module: Module) void {
-	if(!module.can_enable_clock()) return;
-	const reg = &chip.peripherals.SYSCON0.AHBCLKCTRLSET[module.cc()];
 
+/// Enables the module's clock.
+///
+/// It is a no-op if `module.can_control_clock()` is false.
+pub fn module_enable_clock(module: Module) void {
+	if(!module.can_control_clock()) return;
+
+	const reg = &chip.peripherals.SYSCON0.AHBCLKCTRLSET[module.cc()];
 	reg.write_raw(@as(u32, 1) << module.offset());
 }
-pub fn module_disable_clock(module: Module) void {
-	if(!module.can_enable_clock()) return;
-	const reg = &chip.peripherals.SYSCON0.AHBCLKCTRLCLR[module.cc()];
 
+/// Disables the module's clock.
+///
+/// It is a no-op if `module.can_control_clock()` is false.
+pub fn module_disable_clock(module: Module) void {
+	if(!module.can_control_clock()) return;
+
+	const reg = &chip.peripherals.SYSCON0.AHBCLKCTRLCLR[module.cc()];
 	reg.write_raw(@as(u32, 1) << module.offset());
 }
 
 // same as for `module_enable_clock`
+/// Asserts the module is reset.
+/// The module is reset until `module_reset_release` is called on it.
+///
+/// It is a no-op if `module.can_reset()` is false.
 pub fn module_reset_assert(module: Module) void {
 	if(!module.can_reset()) return;
-	const reg = &chip.peripherals.SYSCON0.PRESETCTRLSET[module.cc()];
-	
+
+	const reg = &chip.peripherals.SYSCON0.PRESETCTRLSET[module.cc()];	
 	reg.write_raw(@as(u32, 1) << module.offset());
 }
 
+/// Release the module's reset.
+///
+/// It is a no-op if `module.can_reset()` is false.
 pub fn module_reset_release(module: Module) void {
 	if(!module.can_reset()) return;
-	const reg = &chip.peripherals.SYSCON0.PRESETCTRLCLR[module.cc()];
-	
+
+	const reg = &chip.peripherals.SYSCON0.PRESETCTRLCLR[module.cc()];	
 	reg.write_raw(@as(u32, 1) << module.offset());
 }
 
@@ -44,7 +59,7 @@ pub fn module_reset_release(module: Module) void {
 
 
 // This enum can be automatically generated using `generate.zig`,
-// but some fields have been manually added
+// but some fields have been manually added for conveniance (e.g. PORT5, GPIO5)
 // TODO: some fields are probably missing, add them
 // TODO: use u8
 pub const Module = enum(u7) {
@@ -180,11 +195,17 @@ pub const Module = enum(u7) {
 	//
 
 
-	pub fn cc(module: Module) u2 {
+	/// Returns the index of the control register that handles this module.
+	///
+	/// This index is the same for `AHBCLKCTRLn` and `PRESETCTRLn` registers.
+	fn cc(module: Module) u2 {
 		return @intCast(@intFromEnum(module) >> 5);
 	}
 
-	pub fn offset(module: Module) u5 {
+	/// Returns the offset of the module in the corresponding control register.
+	///
+	/// This offset is the same for `AHBCLKCTRLn` and `PRESETCTRLn` registers.
+	fn offset(module: Module) u5 {
 		return @truncate(@intFromEnum(module));
 	}
 
@@ -222,7 +243,7 @@ pub const Module = enum(u7) {
 	}
 
 	/// Whether a module's clock can be enabled / disabled using `AHBCLKCTRLn` registers.
-	fn can_enable_clock(module: Module) bool {
+	fn can_control_clock(module: Module) bool {
 		return !module.is_reserved();
 	}
 };
