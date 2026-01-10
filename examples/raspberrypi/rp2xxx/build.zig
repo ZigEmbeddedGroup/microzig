@@ -145,26 +145,17 @@ pub fn build(b: *std.Build) void {
             .imports = example.imports,
         });
 
+        // Import net module for some examples
         if (std.mem.indexOf(u8, example.name, "_net-") != null) {
-            const target = b.resolveTargetQuery(firmware.target.zig_target);
-            const foundation_dep = b.dependency("foundationlibc", .{
-                .target = target,
+            const net_dep = b.dependency("net", .{
+                .target = b.resolveTargetQuery(firmware.target.zig_target),
                 .optimize = optimize,
+                // lwip options:
+                //.lwip_mem_size = 32 * 1024,
+                //.lwip_pbuf_pool_size = 32,
             });
-            const lwip_dep = b.dependency("lwip", .{
-                .target = target,
-                .optimize = optimize,
-            });
-            const lwip_mod = lwip_dep.module("lwip");
-            // link libc
-            lwip_mod.linkLibrary(foundation_dep.artifact("foundation"));
-            // add path to the configuration, lwipopts.h
-            lwip_mod.addIncludePath(b.path("src/net/lwip/include"));
-            // add c import paths
-            for (lwip_mod.include_dirs.items) |dir| {
-                firmware.app_mod.include_dirs.append(b.allocator, dir) catch @panic("out of memory");
-            }
-            firmware.app_mod.addImport("lwip", lwip_mod);
+            const net_mod = net_dep.module("net");
+            firmware.app_mod.addImport("net", net_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
