@@ -28,7 +28,6 @@ const pin_config = hal.pins.GlobalConfiguration{
     },
 };
 
-const pins = pin_config.pins();
 
 // ---- UART Configuration --------------------------------
 
@@ -46,7 +45,7 @@ pub fn main() !void {
 
     // --- Set up GPIO -------------------------------
 
-    pin_config.apply();
+    _ = pin_config.apply();
 
     // --- Set up UART -------------------------------
 

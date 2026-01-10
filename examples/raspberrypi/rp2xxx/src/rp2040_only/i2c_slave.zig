@@ -38,7 +38,7 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    pin_config.apply();
+    _ = pin_config.apply();
 
     std.log.info("Hello from i2c_slave.", .{});
 
