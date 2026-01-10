@@ -39,7 +39,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_position_sensor", .file = "src/i2c_position_sensor.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_loopback", .file = "src/spi_loopback.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_flash_w25q", .file = "src/spi_flash_w25q.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_ssd1306", .file = "src/spi_ssd1306.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_sharp_niceview", .file = "src/sharp_niceview.zig" },
 
         // CH32V30x
