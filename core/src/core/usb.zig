@@ -26,22 +26,23 @@ pub const DeviceInterface = struct {
     vtable: *const VTable,
 
     /// Called by drivers to send a packet.
-    /// Submitting an empty slice signals an ACK.
     pub fn ep_writev(self: *@This(), ep_num: types.Endpoint.Num, data: []const []const u8) types.Len {
         return self.vtable.ep_writev(self, ep_num, data);
     }
 
+    /// Send ack on given IN endpoint.
     pub fn ep_ack(self: *@This(), ep_num: types.Endpoint.Num) void {
         assert(0 == self.ep_writev(ep_num, &.{ack}));
     }
 
     /// Called by drivers to retrieve a received packet.
-    /// Must be called exactly once before each packet.
+    /// Must be called exactly once for each packet.
     /// Buffers in `data` must collectively be long enough to fit the whole packet.
     pub fn ep_readv(self: *@This(), ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
         return self.vtable.ep_readv(self, ep_num, data);
     }
 
+    /// Called by drivers to report readiness to receive up to `len` bytes.
     pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: types.Len) void {
         return self.vtable.ep_listen(self, ep_num, len);
     }
@@ -162,7 +163,7 @@ pub fn DeviceController(config: Config) type {
             } }){};
         };
 
-        const handlers = blk: {
+        const endpoint_handlers = blk: {
             var ret: struct { In: [16]Handler, Out: [16]Handler } = .{
                 .In = @splat(.{ .driver = "", .function = "" }),
                 .Out = @splat(.{ .driver = "", .function = "" }),
@@ -173,14 +174,17 @@ pub fn DeviceController(config: Config) type {
                 for (fields) |fld| {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc: descriptor.Endpoint = @field(cfg, fld.name);
-                    const handler = &@field(ret, @tagName(desc.endpoint.dir))[@intFromEnum(desc.endpoint.num)];
-                    // assert(handler.driver.len == 0 and handler.function.len == 0);
+                    const ep_num = @intFromEnum(desc.endpoint.num);
+                    const handler = &@field(ret, @tagName(desc.endpoint.dir))[ep_num];
+                    const function = @field(fld_drv.type.handlers, fld.name);
+                    if (handler.driver.len != 0 or handler.function.len != 0)
+                        @compileError(std.fmt.comptimePrint(
+                            "ep{} {t}: multiple handlers: {s}.{s} and {s}.{s}",
+                            .{ ep_num, desc.endpoint.dir, handler.driver, handler.function, fld_drv.name, function },
+                        ));
                     handler.* = .{
                         .driver = fld_drv.name,
-                        .function = switch (desc.endpoint.dir) {
-                            .In => "on_tx_ready",
-                            .Out => "on_rx",
-                        },
+                        .function = function,
                     };
                 }
             }
@@ -257,7 +261,7 @@ pub fn DeviceController(config: Config) type {
             if (config.debug) log.info("buff status", .{});
             if (config.debug) log.info("    data: {any}", .{buffer});
 
-            const handler = comptime @field(handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
+            const handler = comptime @field(endpoint_handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
 
             if (comptime ep == types.Endpoint.in(.ep0)) {
                 if (config.debug) log.info("    EP0_IN_ADDR", .{});
@@ -275,6 +279,9 @@ pub fn DeviceController(config: Config) type {
                         const len = device_itf.ep_writev(.ep0, &.{slice});
                         self.tx_slice = slice[len..];
                     } else {
+                        // Otherwise, we've just finished sending tx_slice.
+                        // We expect an ensuing status phase where the host
+                        // sends us a zero-byte DATA packet via EP0 OUT.
                         // device_itf.ep_listen(.ep0, 0);
                         self.tx_slice = null;
 

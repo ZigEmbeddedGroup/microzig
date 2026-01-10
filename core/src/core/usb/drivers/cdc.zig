@@ -3,6 +3,7 @@ const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const descriptor = usb.descriptor;
 const types = usb.types;
+const EpNum = types.Endpoint.Num;
 
 pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
@@ -109,21 +110,27 @@ pub fn CdcClassDriver(options: Options) type {
             }
         };
 
+        pub const handlers = .{
+            .ep_notifi = "on_notifi_ready",
+            .ep_out = "on_rx",
+            .ep_in = "on_tx_ready",
+        };
+
         device: *usb.DeviceInterface,
-        ep_notif: types.Endpoint.Num,
+        ep_notifi: EpNum,
         line_coding: LineCoding align(4),
 
         /// OUT endpoint on which there is data ready to be read,
         /// or .ep0 when no data is available.
-        ep_out: types.Endpoint.Num,
+        ep_out: EpNum,
         rx_data: [options.max_packet_size]u8,
         rx_seek: types.Len,
         rx_end: types.Len,
 
         /// IN endpoint where data can be sent,
         /// or .ep0 when data is being sent.
-        ep_in: types.Endpoint.Num,
-        ep_in_original: types.Endpoint.Num,
+        ep_in: EpNum,
+        ep_in_original: EpNum,
         tx_data: [options.max_packet_size]u8,
         tx_end: types.Len,
 
@@ -139,11 +146,11 @@ pub fn CdcClassDriver(options: Options) type {
             if (self.available() > 0) return len;
 
             // request more data
-            const ep_out = @atomicLoad(types.Endpoint.Num, &self.ep_out, .seq_cst);
+            const ep_out = @atomicLoad(EpNum, &self.ep_out, .seq_cst);
             if (ep_out != .ep0) {
                 self.rx_end = self.device.ep_readv(ep_out, &.{&self.rx_data});
                 self.rx_seek = 0;
-                @atomicStore(types.Endpoint.Num, &self.ep_out, .ep0, .seq_cst);
+                @atomicStore(EpNum, &self.ep_out, .ep0, .seq_cst);
                 self.device.ep_listen(ep_out, options.max_packet_size);
             }
 
@@ -164,15 +171,16 @@ pub fn CdcClassDriver(options: Options) type {
             return len;
         }
 
+        /// Returns true if flush operation succeded.
         pub fn flush(self: *@This()) bool {
             if (self.tx_end == 0)
                 return true;
 
-            const ep_in = @atomicLoad(types.Endpoint.Num, &self.ep_in, .seq_cst);
+            const ep_in = @atomicLoad(EpNum, &self.ep_in, .seq_cst);
             if (ep_in == .ep0)
                 return false;
 
-            @atomicStore(types.Endpoint.Num, &self.ep_in, .ep0, .seq_cst);
+            @atomicStore(EpNum, &self.ep_in, .ep0, .seq_cst);
 
             assert(self.tx_end == self.device.ep_writev(ep_in, &.{self.tx_data[0..self.tx_end]}));
             self.tx_end = 0;
@@ -183,7 +191,7 @@ pub fn CdcClassDriver(options: Options) type {
             defer device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
             return .{
                 .device = device,
-                .ep_notif = desc.ep_notifi.endpoint.num,
+                .ep_notifi = desc.ep_notifi.endpoint.num,
                 .line_coding = .{
                     .bit_rate = 115200,
                     .stop_bits = 0,
@@ -221,14 +229,19 @@ pub fn CdcClassDriver(options: Options) type {
             return usb.nak;
         }
 
-        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {
-            @atomicStore(types.Endpoint.Num, &self.ep_out, ep_num, .seq_cst);
+        pub fn on_rx(self: *@This(), ep_num: EpNum) void {
+            assert(EpNum.ep0 == @atomicLoad(EpNum, &self.ep_out, .seq_cst));
+            @atomicStore(EpNum, &self.ep_out, ep_num, .seq_cst);
         }
 
-        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
-            if (ep_num != self.ep_in_original) return;
+        pub fn on_tx_ready(self: *@This(), ep_num: EpNum) void {
+            assert(EpNum.ep0 == @atomicLoad(EpNum, &self.ep_in, .seq_cst));
+            @atomicStore(EpNum, &self.ep_in, ep_num, .seq_cst);
+        }
 
-            @atomicStore(types.Endpoint.Num, &self.ep_in, ep_num, .seq_cst);
+        pub fn on_notifi_ready(self: *@This(), ep_num: EpNum) void {
+            assert(EpNum.ep0 == @atomicLoad(EpNum, &self.ep_notifi, .seq_cst));
+            @atomicStore(EpNum, &self.ep_notifi, ep_num, .seq_cst);
         }
     };
 }

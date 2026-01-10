@@ -244,6 +244,7 @@ pub fn Polled(
             // where the host will notice our presence.
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
+            // Listen for ACKs
             self.interface.ep_listen(.ep0, 0);
 
             return self;

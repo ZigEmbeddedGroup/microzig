@@ -35,7 +35,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                     },
                     .hid = hid_descriptor,
                     .ep_out = .{
-                        .endpoint = .in(@enumFromInt(first_endpoint_out)),
+                        .endpoint = .out(@enumFromInt(first_endpoint_out)),
                         .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,
@@ -55,6 +55,11 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             .country_code = .NotSupported,
             .num_descriptors = 1,
             .report_length = .from(@sizeOf(@TypeOf(report_descriptor))),
+        };
+
+        pub const handlers = .{
+            .ep_out = "on_rx",
+            .ep_in = "on_tx_ready",
         };
 
         device: *usb.DeviceInterface,
