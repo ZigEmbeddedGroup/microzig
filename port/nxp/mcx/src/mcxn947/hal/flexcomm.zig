@@ -5,8 +5,6 @@ const chip = microzig.chip;
 const peripherals = chip.peripherals;
 const assert = std.debug.assert;
 
-pub const LPUart = @import("flexcomm/LPUart.zig").LPUart;
-pub const LPI2c = @import("flexcomm/LPI2c.zig").LPI2c;
 
 /// A Low-Power Flexible Communications interface (LP FlexComm).
 /// To initialize Uart, SPI or I2C, use `LPUart` or `LPI2c` instead.
@@ -17,6 +15,8 @@ pub const LPI2c = @import("flexcomm/LPI2c.zig").LPI2c;
 pub const FlexComm = enum(u4) {
     _,
 
+    pub const LPUart = @import("flexcomm/LPUart.zig").LPUart;
+    pub const LPI2c = @import("flexcomm/LPI2c.zig").LPI2c;
 
     pub const Type = enum(u3) {
         none        = 0,

@@ -14,7 +14,6 @@ const chip = microzig.chip;
 // small assembly. It is probably possible to remove them (though it mean writing to reserved bits).
 
 /// Enables the module's clock.
-///
 /// It is a no-op if `module.can_control_clock()` is false.
 pub fn module_enable_clock(module: Module) void {
     if(!module.can_control_clock()) return;
@@ -24,7 +23,6 @@ pub fn module_enable_clock(module: Module) void {
 }
 
 /// Disables the module's clock.
-///
 /// It is a no-op if `module.can_control_clock()` is false.
 pub fn module_disable_clock(module: Module) void {
     if(!module.can_control_clock()) return;
@@ -36,7 +34,6 @@ pub fn module_disable_clock(module: Module) void {
 // same as for `module_enable_clock`
 /// Asserts the module is reset.
 /// The module is reset until `module_reset_release` is called on it.
-///
 /// It is a no-op if `module.can_reset()` is false.
 pub fn module_reset_assert(module: Module) void {
     if(!module.can_reset()) return;
@@ -46,7 +43,6 @@ pub fn module_reset_assert(module: Module) void {
 }
 
 /// Release the module's reset.
-///
 /// It is a no-op if `module.can_reset()` is false.
 pub fn module_reset_release(module: Module) void {
     if(!module.can_reset()) return;
