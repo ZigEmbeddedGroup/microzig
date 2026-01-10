@@ -4,14 +4,8 @@ const microzig = @import("microzig");
 const hal = microzig.hal;
 const pins = hal.pins;
 
-pub const bootrom = @import("shared/rp2040_bootrom.zig");
-
-comptime {
-    _ = bootrom;
-}
-
 pub const pin_config = pins.GlobalConfiguration{
-    .GPIO25 = .{
+    .GPIO7 = .{
         .name = "led",
         .function = .SIO,
     },

@@ -10,10 +10,8 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
         .direction = .out,
     },
 };
-const pins = pin_config.pins();
-
 pub fn main() !void {
-    pin_config.apply();
+    const pins = pin_config.apply();
 
     // Set up different blinking behavior if this reset was due to a WD trip
     const wd_reset: bool = if (watchdog.caused_reboot()) |_|
