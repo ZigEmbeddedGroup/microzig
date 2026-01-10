@@ -1,5 +1,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
+const assert = std.debug.assert;
 const descriptor = usb.descriptor;
 const types = usb.types;
 
@@ -173,7 +174,7 @@ pub fn CdcClassDriver(options: Options) type {
 
             @atomicStore(types.Endpoint.Num, &self.ep_in, .ep0, .seq_cst);
 
-            self.device.start_tx(ep_in, self.tx_data[0..self.tx_end]);
+            assert(self.tx_end == self.device.ep_writev(ep_in, &.{self.tx_data[0..self.tx_end]}));
             self.tx_end = 0;
             return true;
         }

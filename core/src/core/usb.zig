@@ -16,20 +16,23 @@ pub const nak: ?[]const u8 = null;
 /// Any device implementation used with DeviceController must implement those functions
 pub const DeviceInterface = struct {
     pub const VTable = struct {
-        start_tx: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
-        ep_readv: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len,
-        ep_listen: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, len: types.Len) void,
-        endpoint_open: *const fn (self: *DeviceInterface, desc: *const descriptor.Endpoint) void,
-        set_address: *const fn (self: *DeviceInterface, addr: u7) void,
+        ep_writev: *const fn (*DeviceInterface, types.Endpoint.Num, []const []const u8) types.Len,
+        ep_readv: *const fn (*DeviceInterface, types.Endpoint.Num, []const []u8) types.Len,
+        ep_listen: *const fn (*DeviceInterface, types.Endpoint.Num, types.Len) void,
+        endpoint_open: *const fn (*DeviceInterface, *const descriptor.Endpoint) void,
+        set_address: *const fn (*DeviceInterface, u7) void,
     };
 
     vtable: *const VTable,
 
     /// Called by drivers to send a packet.
     /// Submitting an empty slice signals an ACK.
-    /// If you intend to send ACK, please use the constant `usb.ack`.
-    pub fn start_tx(self: *@This(), ep_num: types.Endpoint.Num, buffer: []const u8) void {
-        return self.vtable.start_tx(self, ep_num, buffer);
+    pub fn ep_writev(self: *@This(), ep_num: types.Endpoint.Num, data: []const []const u8) types.Len {
+        return self.vtable.ep_writev(self, ep_num, data);
+    }
+
+    pub fn ep_ack(self: *@This(), ep_num: types.Endpoint.Num) void {
+        assert(0 == self.ep_writev(ep_num, &.{ack}));
     }
 
     /// Called by drivers to retrieve a received packet.
@@ -190,7 +193,7 @@ pub fn DeviceController(config: Config) type {
         /// 0 - no config set
         cfg_num: u16,
         /// Ep0 data waiting to be sent
-        tx_slice: []const u8,
+        tx_slice: ?[]const u8,
         /// Last setup packet request
         setup_packet: types.SetupPacket,
         /// Class driver associated with last setup request if any
@@ -202,7 +205,7 @@ pub fn DeviceController(config: Config) type {
         pub const init: @This() = .{
             .new_address = null,
             .cfg_num = 0,
-            .tx_slice = "",
+            .tx_slice = null,
             .setup_packet = undefined,
             .driver_last = null,
             .driver_data = null,
@@ -267,30 +270,22 @@ pub fn DeviceController(config: Config) type {
                     self.new_address = null;
                 }
 
-                if (buffer.len > 0 and self.tx_slice.len > 0) {
-                    self.tx_slice = self.tx_slice[buffer.len..];
-
-                    const next_data_chunk = self.tx_slice[0..@min(64, self.tx_slice.len)];
-                    if (next_data_chunk.len > 0) {
-                        device_itf.start_tx(.ep0, next_data_chunk);
+                if (self.tx_slice) |slice| {
+                    if (slice.len > 0) {
+                        const len = device_itf.ep_writev(.ep0, &.{slice});
+                        self.tx_slice = slice[len..];
                     } else {
-                        device_itf.ep_listen(.ep0, 0);
+                        // device_itf.ep_listen(.ep0, 0);
+                        self.tx_slice = null;
 
                         if (self.driver_last) |drv|
                             self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                     }
-                } else {
-                    // Otherwise, we've just finished sending
-                    // something to the host. We expect an ensuing
-                    // status phase where the host sends us (via EP0
-                    // OUT) a zero-byte DATA packet, so, set that
-                    // up:
-                    device_itf.ep_listen(.ep0, 0);
-
-                    if (self.driver_last) |drv|
-                        self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                 }
-            } else if (comptime handler.driver.len != 0) {
+            } else if (comptime ep == types.Endpoint.out(.ep0)) {
+                log.info("ep0_out {}", .{buffer.len});
+            }
+            if (comptime handler.driver.len != 0) {
                 const drv = &@field(self.driver_data.?, handler.driver);
                 @field(@FieldType(config0.Drivers, handler.driver), handler.function)(drv, ep.num);
             }
@@ -308,9 +303,10 @@ pub fn DeviceController(config: Config) type {
 
         /// Command response utility function that can split long data in multiple packets
         fn send_cmd_response(self: *@This(), device_itf: *DeviceInterface, data: []const u8, expected_max_length: u16) void {
-            self.tx_slice = data[0..@min(data.len, expected_max_length)];
-            const len = @min(config.device_descriptor.max_packet_size0, self.tx_slice.len);
-            device_itf.start_tx(.ep0, data[0..len]);
+            const limited = data[0..@min(data.len, expected_max_length)];
+            const len = device_itf.ep_writev(.ep0, &.{limited});
+            assert(len <= config.device_descriptor.max_packet_size0);
+            self.tx_slice = limited[len..];
         }
 
         fn driver_class_control(self: *@This(), device_itf: *DeviceInterface, driver: DriverEnum, stage: types.ControlStage, setup: *const types.SetupPacket) void {
@@ -333,7 +329,7 @@ pub fn DeviceController(config: Config) type {
                     switch (std.meta.intToEnum(types.SetupRequest, setup.request) catch return) {
                         .SetAddress => {
                             self.new_address = @as(u8, @intCast(setup.value & 0xff));
-                            device_itf.start_tx(.ep0, ack);
+                            device_itf.ep_ack(.ep0);
                             if (config.debug) log.info("    SetAddress: {}", .{self.new_address.?});
                         },
                         .SetConfiguration => {
@@ -348,7 +344,7 @@ pub fn DeviceController(config: Config) type {
                                     // TODO: call umount callback if any
                                 }
                             }
-                            device_itf.start_tx(.ep0, ack);
+                            device_itf.ep_ack(.ep0);
                         },
                         .GetDescriptor => {
                             const descriptor_type = std.meta.intToEnum(descriptor.Type, setup.value >> 8) catch null;
@@ -359,7 +355,7 @@ pub fn DeviceController(config: Config) type {
                         .SetFeature => {
                             if (std.meta.intToEnum(types.FeatureSelector, setup.value >> 8)) |feat| {
                                 switch (feat) {
-                                    .DeviceRemoteWakeup, .EndpointHalt => device_itf.start_tx(.ep0, ack),
+                                    .DeviceRemoteWakeup, .EndpointHalt => device_itf.ep_ack(.ep0),
                                     // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                                     .TestMode => {},
                                 }

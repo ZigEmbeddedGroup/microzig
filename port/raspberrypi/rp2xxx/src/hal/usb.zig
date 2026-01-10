@@ -21,7 +21,6 @@ pub const Config = struct {
 };
 
 const HardwareEndpointData = struct {
-    awaiting_rx: bool,
     data_buffer: []align(64) u8,
 };
 
@@ -86,7 +85,7 @@ pub fn Polled(
 
     return struct {
         const vtable: usb.DeviceInterface.VTable = .{
-            .start_tx = start_tx,
+            .ep_writev = ep_writev,
             .ep_readv = ep_readv,
             .ep_listen = ep_listen,
             .set_address = set_address,
@@ -147,9 +146,6 @@ pub fn Polled(
                     const len = buffer_control[ep_num].get(ep.dir).read().LENGTH_0;
 
                     self.controller.on_buffer(&self.interface, ep, ep_hard.data_buffer[0..len]);
-
-                    if (ep.dir == .Out)
-                        ep_hard.awaiting_rx = false;
                 }
             }
 
@@ -248,6 +244,8 @@ pub fn Polled(
             // where the host will notice our presence.
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
+            self.interface.ep_listen(.ep0, 0);
+
             return self;
         }
 
@@ -256,38 +254,31 @@ pub fn Polled(
         /// The contents of `buffer` will be _copied_ into USB SRAM, so you can
         /// reuse `buffer` immediately after this returns. No need to wait for the
         /// packet to be sent.
-        fn start_tx(
+        fn ep_writev(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
-            buffer: []const u8,
-        ) void {
+            data: []const []const u8,
+        ) usb.types.Len {
             const self: *@This() = @fieldParentPtr("interface", itf);
-
-            // It is technically possible to support longer buffers but this demo
-            // doesn't bother.
-            assert(buffer.len <= 64);
 
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].in;
             const ep = self.hardware_endpoint_get_by_address(.in(ep_num));
-            // Wait for controller to give processor ownership of the buffer before writing it.
-            // This is technically not necessary, but the usb cdc driver is bugged.
-            while (bufctrl_ptr.read().AVAILABLE_0 == 1) {}
 
-            const len = buffer.len;
+            const len = @min(data[0].len, ep.data_buffer.len);
             switch (chip) {
-                .RP2040 => @memcpy(ep.data_buffer[0..len], buffer[0..len]),
+                .RP2040 => @memcpy(ep.data_buffer[0..len], data[0][0..len]),
                 .RP2350 => {
                     const dst: [*]align(4) u32 = @ptrCast(ep.data_buffer.ptr);
-                    const src: [*]align(1) const u32 = @ptrCast(buffer.ptr);
+                    const src: [*]align(1) const u32 = @ptrCast(data[0].ptr);
                     for (0..len / 4) |i|
                         dst[i] = src[i];
                     for (0..len % 4) |i|
-                        ep.data_buffer[len - i - 1] = buffer[len - i - 1];
+                        ep.data_buffer[len - i - 1] = data[0][len - i - 1];
                 },
             }
 
             var bufctrl = bufctrl_ptr.read();
-
+            assert(bufctrl.AVAILABLE_0 == 0);
             // Write the buffer information to the buffer control register
             bufctrl.PID_0 ^= 1; // flip DATA0/1
             bufctrl.FULL_0 = 1; // We have put data in
@@ -304,6 +295,8 @@ pub fn Polled(
             // Set available bit
             bufctrl.AVAILABLE_0 = 1;
             bufctrl_ptr.write(bufctrl);
+
+            return @intCast(len);
         }
 
         fn ep_readv(
@@ -330,27 +323,18 @@ pub fn Polled(
         }
 
         fn ep_listen(
-            itf: *usb.DeviceInterface,
+            _: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             len: usb.types.Len,
         ) void {
-            const self: *@This() = @fieldParentPtr("interface", itf);
-
-            // It is technically possible to support longer buffers but this demo doesn't bother.
-            assert(len <= 64);
-
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].out;
-            const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
 
-            // This function should only be called when the buffer is known to be available,
-            // but the current driver implementations do not conform to that.
-            if (ep.awaiting_rx) return;
-
-            // Configure the OUT:
             var bufctrl = bufctrl_ptr.read();
+            assert(bufctrl.AVAILABLE_0 == 0);
+            // Configure the OUT:
             bufctrl.PID_0 ^= 1; // Flip DATA0/1
             bufctrl.FULL_0 = 0; // Buffer is NOT full, we want the computer to fill it
-            bufctrl.LENGTH_0 = @intCast(len); // Up tho this many bytes
+            bufctrl.LENGTH_0 = @intCast(@min(len, 64)); // Up tho this many bytes
 
             if (config.sync_noops != 0) {
                 bufctrl_ptr.write(bufctrl);
@@ -363,8 +347,6 @@ pub fn Polled(
             // Set available bit
             bufctrl.AVAILABLE_0 = 1;
             bufctrl_ptr.write(bufctrl);
-
-            ep.awaiting_rx = true;
         }
 
         /// Returns a received USB setup packet
@@ -405,7 +387,6 @@ pub fn Polled(
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
             assert(desc.max_packet_size.into() <= 64);
-            ep_hard.awaiting_rx = false;
 
             buffer_control[@intFromEnum(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
 
