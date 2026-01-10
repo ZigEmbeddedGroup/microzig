@@ -10,11 +10,9 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const chip = microzig.hal.compatibility.chip;
 
-pub const usb = microzig.core.usb;
-pub const types = usb.types;
-pub const hid = usb.hid;
-pub const cdc = usb.cdc;
-const EpNum = usb.types.Endpoint.Num;
+const usb = microzig.core.usb;
+const types = usb.types;
+const EpNum = types.Endpoint.Num;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
@@ -25,36 +23,18 @@ pub const Config = struct {
     sync_noops: comptime_int = 3,
 };
 
-pub const DeviceConfiguration = usb.DeviceConfiguration;
-pub const DeviceDescriptor = usb.DeviceDescriptor;
-pub const DescType = usb.descriptor.Type;
-pub const InterfaceDescriptor = usb.types.InterfaceDescriptor;
-pub const ConfigurationDescriptor = usb.types.ConfigurationDescriptor;
-pub const EndpointDescriptor = usb.types.EndpointDescriptor;
-pub const EndpointConfiguration = usb.EndpointConfiguration;
-pub const Dir = usb.types.Dir;
-pub const TransferType = usb.types.TransferType;
-pub const Endpoint = usb.types.Endpoint;
-
-pub const utf8ToUtf16Le = usb.utf8ToUtf16Le;
-
 const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(microzig.chip.peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
 const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
 const EndpointType = microzig.chip.types.peripherals.USB_DPRAM.EndpointType;
 
 const HardwareEndpoint = struct {
-    configured: bool,
-    ep_addr: types.Endpoint,
-    next_pid_1: bool,
     transfer_type: types.TransferType,
-    endpoint_control_index: usize,
-    buffer_control_index: usize,
     awaiting_rx: bool,
 
     max_packet_size: u11,
     buffer_control: ?*BufferControlMmio,
     endpoint_control: ?*EndpointControlMimo,
-    data_buffer: []align(4) u8,
+    data_buffer: []align(64) u8,
 };
 
 const rp2xxx_buffers = struct {
@@ -127,7 +107,7 @@ pub fn Polled(
         };
 
         endpoints: [config.max_endpoints_count][2]HardwareEndpoint,
-        data_buffer: []align(4) u8,
+        data_buffer: []align(64) u8,
         controller: usb.DeviceController(controller_config),
         interface: usb.DeviceInterface,
 
@@ -142,7 +122,7 @@ pub fn Polled(
                 // to an IN on EP0 needs to use PID DATA1, and this line will ensure
                 // that.
                 var ep = self.hardware_endpoint_get_by_address(.in(.ep0));
-                ep.next_pid_1 = true;
+                ep.buffer_control.?.modify(.{ .PID_0 = 0 });
 
                 const setup = get_setup_packet();
                 self.controller.on_setup_req(&self.interface, &setup);
@@ -341,7 +321,7 @@ pub fn Polled(
             var bufctrl = ep.buffer_control.?.read();
 
             // Write the buffer information to the buffer control register
-            bufctrl.PID_0 = if (ep.next_pid_1) 1 else 0; // flip DATA0/1
+            bufctrl.PID_0 ^= 1; // flip DATA0/1
             bufctrl.FULL_0 = 1; // We have put data in
             bufctrl.LENGTH_0 = @intCast(len); // There are this many bytes
 
@@ -356,8 +336,6 @@ pub fn Polled(
             // Set available bit
             bufctrl.AVAILABLE_0 = 1;
             ep.buffer_control.?.write(bufctrl);
-
-            ep.next_pid_1 = !ep.next_pid_1;
         }
 
         fn start_rx(itf: *usb.DeviceInterface, ep_num: EpNum, len: usize) void {
@@ -374,7 +352,7 @@ pub fn Polled(
 
             // Configure the OUT:
             var bufctrl = ep.buffer_control.?.read();
-            bufctrl.PID_0 = if (ep.next_pid_1) 1 else 0; // Flip DATA0/1
+            bufctrl.PID_0 ^= 1; // Flip DATA0/1
             bufctrl.FULL_0 = 0; // Buffer is NOT full, we want the computer to fill it
             bufctrl.LENGTH_0 = @intCast(len); // Up tho this many bytes
 
@@ -390,7 +368,6 @@ pub fn Polled(
             bufctrl.AVAILABLE_0 = 1;
             ep.buffer_control.?.write(bufctrl);
 
-            ep.next_pid_1 = !ep.next_pid_1;
             ep.awaiting_rx = true;
         }
 
@@ -441,30 +418,34 @@ pub fn Polled(
             const ep = desc.endpoint;
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
-            ep_hard.ep_addr = ep;
             assert(desc.max_packet_size.into() <= 64);
             ep_hard.max_packet_size = @intCast(desc.max_packet_size.into());
             ep_hard.transfer_type = desc.attributes.transfer_type;
-            ep_hard.next_pid_1 = false;
             ep_hard.awaiting_rx = false;
 
             ep_hard.buffer_control = rp2xxx_endpoints.get_buf_ctrl(ep.num, ep.dir);
-            ep_hard.endpoint_control = rp2xxx_endpoints.get_ep_ctrl(ep.num, ep.dir);
+
+            ep_hard.buffer_control.?.modify(.{ .PID_0 = 1 });
 
             if (ep.num == .ep0) {
                 // ep0 has fixed data buffer
                 ep_hard.data_buffer = rp2xxx_buffers.ep0_buffer0;
             } else {
-                self.endpoint_alloc(ep_hard) catch {};
-                endpoint_enable(ep_hard);
+                self.endpoint_alloc(ep_hard, desc) catch {};
+                rp2xxx_endpoints.get_ep_ctrl(ep.num, ep.dir).?.modify(.{
+                    .ENABLE = 1,
+                    .INTERRUPT_PER_BUFF = 1,
+                    .ENDPOINT_TYPE = @as(EndpointType, @enumFromInt(@intFromEnum(desc.attributes.transfer_type))),
+                    .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep_hard.data_buffer),
+                });
             }
         }
 
-        fn endpoint_alloc(self: *@This(), ep: *HardwareEndpoint) !void {
+        fn endpoint_alloc(self: *@This(), ep: *HardwareEndpoint, desc: *const usb.descriptor.Endpoint) !void {
             // round up size to multiple of 64
-            var size = try std.math.divCeil(u11, ep.max_packet_size, 64) * 64;
+            var size = try std.math.divCeil(u16, desc.max_packet_size.into(), 64) * 64;
             // double buffered Bulk endpoint
-            if (ep.transfer_type == .Bulk) {
+            if (desc.attributes.transfer_type == .Bulk) {
                 size *= 2;
             }
 
@@ -472,15 +453,6 @@ pub fn Polled(
 
             ep.data_buffer = self.data_buffer[0..size];
             self.data_buffer = @alignCast(self.data_buffer[size..]);
-        }
-
-        fn endpoint_enable(ep: *HardwareEndpoint) void {
-            ep.endpoint_control.?.modify(.{
-                .ENABLE = 1,
-                .INTERRUPT_PER_BUFF = 1,
-                .ENDPOINT_TYPE = @as(EndpointType, @enumFromInt(@intFromEnum(ep.transfer_type))),
-                .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep.data_buffer),
-            });
         }
     };
 }
