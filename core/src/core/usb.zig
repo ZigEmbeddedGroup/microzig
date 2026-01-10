@@ -139,6 +139,12 @@ pub fn DeviceController(config: Config) type {
                 }
             }
 
+            if (num_strings != config.string_descriptors.len)
+                @compileError(std.fmt.comptimePrint(
+                    "expected {} string descriptros, got {}",
+                    .{ num_strings, config.string_descriptors.len },
+                ));
+
             const desc_cfg: descriptor.Configuration = .{
                 .total_length = .from(size),
                 .num_interfaces = num_interfaces,
@@ -164,14 +170,28 @@ pub fn DeviceController(config: Config) type {
             } }){};
         };
 
-        const endpoint_handlers = blk: {
-            var ret: struct { In: [16]Handler, Out: [16]Handler } = .{
+        const handlers = blk: {
+            var ret: struct { In: [16]Handler, Out: [16]Handler, itf: []const DriverEnum } = .{
                 .In = @splat(.{ .driver = "", .function = "" }),
                 .Out = @splat(.{ .driver = "", .function = "" }),
+                .itf = &.{},
             };
+            var itf_handlers = ret.itf;
             for (driver_fields) |fld_drv| {
                 const cfg = @field(config_descriptor, fld_drv.name);
                 const fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
+
+                const itf0 = @field(cfg, fields[0].name);
+                const itf_start, const itf_count = if (fields[0].type == descriptor.InterfaceAssociation)
+                    .{ itf0.first_interface, itf0.interface_count }
+                else
+                    .{ itf0.interface_number, 1 };
+
+                if (itf_start != itf_handlers.len)
+                    @compileError("interface numbering mismatch");
+
+                itf_handlers = itf_handlers ++ &[1]DriverEnum{@field(DriverEnum, fld_drv.name)} ** itf_count;
+
                 for (fields) |fld| {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc: descriptor.Endpoint = @field(cfg, fld.name);
@@ -189,6 +209,7 @@ pub fn DeviceController(config: Config) type {
                     };
                 }
             }
+            ret.itf = itf_handlers;
             break :blk ret;
         };
 
@@ -232,24 +253,10 @@ pub fn DeviceController(config: Config) type {
             switch (setup.request_type.recipient) {
                 .Device => try self.process_setup_request(device_itf, setup),
                 .Interface => switch (@as(u8, @truncate(setup.index))) {
-                    inline else => |itf_num| inline for (driver_fields) |fld_drv| {
-                        const cfg = @field(config_descriptor, fld_drv.name);
-                        comptime var fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
-
-                        const itf_count = if (fields[0].type != descriptor.InterfaceAssociation)
-                            1
-                        else blk: {
-                            defer fields = fields[1..];
-                            break :blk @field(cfg, fields[0].name).interface_count;
-                        };
-
-                        const itf_start = @field(cfg, fields[0].name).interface_number;
-
-                        if (comptime itf_num >= itf_start and itf_num < itf_start + itf_count) {
-                            const drv = @field(DriverEnum, fld_drv.name);
-                            self.driver_last = drv;
-                            self.driver_class_control(device_itf, drv, .Setup, setup);
-                        }
+                    inline else => |itf_num| if (itf_num < handlers.itf.len) {
+                        const drv = handlers.itf[itf_num];
+                        self.driver_last = drv;
+                        self.driver_class_control(device_itf, drv, .Setup, setup);
                     },
                 },
                 .Endpoint => {},
@@ -262,7 +269,7 @@ pub fn DeviceController(config: Config) type {
             if (config.debug) log.info("buff status", .{});
             if (config.debug) log.info("    data: {any}", .{buffer});
 
-            const handler = comptime @field(endpoint_handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
+            const handler = comptime @field(handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
 
             if (comptime ep == types.Endpoint.in(.ep0)) {
                 if (config.debug) log.info("    EP0_IN_ADDR", .{});

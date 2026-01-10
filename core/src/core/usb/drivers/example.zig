@@ -20,10 +20,10 @@ pub const ExampleDriver = struct {
         ) @This() {
             return .{
                 .example_interface = .{
-                    .interface_number = first_interface + 1,
+                    .interface_number = first_interface,
                     .alternate_setting = 0,
-                    .num_endpoints = 2,
-                    .interface_class = 10,
+                    .num_endpoints = 3,
+                    .interface_class = 0,
                     .interface_subclass = 0,
                     .interface_protocol = 0,
                     .interface_s = first_string,
