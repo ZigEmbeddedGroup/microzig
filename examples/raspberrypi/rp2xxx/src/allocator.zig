@@ -28,7 +28,6 @@ const pin_config = hal.pins.GlobalConfiguration{
     },
 };
 
-
 // ---- UART Configuration --------------------------------
 
 const baud_rate = 115200;
