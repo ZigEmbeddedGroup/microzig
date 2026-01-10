@@ -16,7 +16,6 @@ const pin_config = hal.pins.GlobalConfiguration{
     .GPIO0 = .{ .name = "gpio0", .function = .UART0_TX },
 };
 
-
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = uart.log,
