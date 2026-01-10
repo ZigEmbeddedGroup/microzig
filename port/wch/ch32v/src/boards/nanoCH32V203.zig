@@ -7,8 +7,9 @@ const ch32v = microzig.hal;
 
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
-    .source = .hsi,
+    .source = .hse,
     .target_frequency = 48_000_000,
+    .hse_frequency = 8_000_000,
 };
 
 /// CPU frequency is derived from clock config
