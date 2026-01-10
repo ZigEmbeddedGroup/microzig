@@ -123,13 +123,12 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             return usb.nak;
         }
 
-        pub fn on_tx_ready(self: *@This(), ep: types.Endpoint.Num, data: []u8) void {
+        pub fn on_tx_ready(self: *@This(), ep: types.Endpoint.Num) void {
             _ = self;
             _ = ep;
-            _ = data;
         }
 
-        pub fn on_rx(self: *@This(), ep: types.Endpoint.Num, _: []u8) void {
+        pub fn on_rx(self: *@This(), ep: types.Endpoint.Num) void {
             _ = self;
             _ = ep;
         }

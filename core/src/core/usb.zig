@@ -17,7 +17,8 @@ pub const nak: ?[]const u8 = null;
 pub const DeviceInterface = struct {
     pub const VTable = struct {
         start_tx: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, buffer: []const u8) void,
-        start_rx: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
+        ep_readv: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) usize,
+        ep_listen: *const fn (self: *DeviceInterface, ep_num: types.Endpoint.Num, len: usize) void,
         endpoint_open: *const fn (self: *DeviceInterface, desc: *const descriptor.Endpoint) void,
         set_address: *const fn (self: *DeviceInterface, addr: u7) void,
     };
@@ -31,10 +32,15 @@ pub const DeviceInterface = struct {
         return self.vtable.start_tx(self, ep_num, buffer);
     }
 
-    /// Called by drivers to report readiness to receive up to `len` bytes.
+    /// Called by drivers to retrieve a received packet.
     /// Must be called exactly once before each packet.
-    pub fn start_rx(self: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
-        return self.vtable.start_rx(self, ep_num, len);
+    /// Buffers in `data` must collectively be long enough to fit the whole packet.
+    pub fn ep_readv(self: *@This(), ep_num: types.Endpoint.Num, data: []const []u8) usize {
+        return self.vtable.ep_readv(self, ep_num, data);
+    }
+
+    pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: usize) void {
+        return self.vtable.ep_listen(self, ep_num, len);
     }
 
     /// Opens an endpoint according to the descriptor. Note that if the endpoint
@@ -268,7 +274,7 @@ pub fn DeviceController(config: Config) type {
                     if (next_data_chunk.len > 0) {
                         device_itf.start_tx(.ep0, next_data_chunk);
                     } else {
-                        device_itf.start_rx(.ep0, 0);
+                        device_itf.ep_listen(.ep0, 0);
 
                         if (self.driver_last) |drv|
                             self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
@@ -279,14 +285,14 @@ pub fn DeviceController(config: Config) type {
                     // status phase where the host sends us (via EP0
                     // OUT) a zero-byte DATA packet, so, set that
                     // up:
-                    device_itf.start_rx(.ep0, 0);
+                    device_itf.ep_listen(.ep0, 0);
 
                     if (self.driver_last) |drv|
                         self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                 }
             } else if (comptime handler.driver.len != 0) {
                 const drv = &@field(self.driver_data.?, handler.driver);
-                @field(@FieldType(config0.Drivers, handler.driver), handler.function)(drv, ep.num, buffer);
+                @field(@FieldType(config0.Drivers, handler.driver), handler.function)(drv, ep.num);
             }
         }
 

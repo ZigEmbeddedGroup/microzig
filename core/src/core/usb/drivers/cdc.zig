@@ -122,6 +122,7 @@ pub fn CdcClassDriver(options: Options) type {
         tx: FIFO,
 
         last_len: u11,
+        rx_ready: bool,
 
         epin_buf: [options.max_packet_size]u8 = undefined,
 
@@ -164,7 +165,7 @@ pub fn CdcClassDriver(options: Options) type {
         fn prep_out_transaction(self: *@This()) void {
             if (self.rx.get_writable_len() >= options.max_packet_size) {
                 // Let endpoint know that we are ready for next packet
-                self.device.start_rx(self.ep_out, options.max_packet_size);
+                self.device.ep_listen(self.ep_out, options.max_packet_size);
             }
         }
 
@@ -183,6 +184,7 @@ pub fn CdcClassDriver(options: Options) type {
                 .rx = .empty,
                 .tx = .empty,
                 .last_len = 0,
+                .rx_ready = true,
             };
         }
 
@@ -204,14 +206,16 @@ pub fn CdcClassDriver(options: Options) type {
             return usb.nak;
         }
 
-        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num, data: []u8) void {
+        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
             if (ep_num != self.ep_out) return;
 
-            self.rx.write(data) catch {};
+            var buf: [options.max_packet_size]u8 = undefined;
+            const len = self.device.ep_readv(ep_num, &.{&buf});
+            self.rx.write(buf[0..len]) catch {};
             self.prep_out_transaction();
         }
 
-        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num, _: []u8) void {
+        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {
             if (ep_num != self.ep_in) return;
 
             if (self.write_flush() == 0) {

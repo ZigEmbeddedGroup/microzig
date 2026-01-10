@@ -87,7 +87,8 @@ pub fn Polled(
     return struct {
         const vtable: usb.DeviceInterface.VTable = .{
             .start_tx = start_tx,
-            .start_rx = start_rx,
+            .ep_readv = ep_readv,
+            .ep_listen = ep_listen,
             .set_address = set_address,
             .endpoint_open = endpoint_open,
         };
@@ -156,18 +157,15 @@ pub fn Polled(
             if (ints.BUS_RESET != 0) {
                 // Acknowledge by writing the write-one-to-clear status bit.
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
-                peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = 0 });
+                set_address(&self.interface, 0);
 
                 self.controller.on_bus_reset();
             }
         }
 
         pub fn init() @This() {
-            if (chip == .RP2350) {
-                peripherals.USB.MAIN_CTRL.modify(.{
-                    .PHY_ISO = 0,
-                });
-            }
+            if (chip == .RP2350)
+                peripherals.USB.MAIN_CTRL.write(.{ .PHY_ISO = 0 });
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
@@ -308,7 +306,29 @@ pub fn Polled(
             bufctrl_ptr.write(bufctrl);
         }
 
-        fn start_rx(
+        fn ep_readv(
+            itf: *usb.DeviceInterface,
+            ep_num: usb.types.Endpoint.Num,
+            data: []const []u8,
+        ) usize {
+            const self: *@This() = @fieldParentPtr("interface", itf);
+            assert(data.len > 0);
+
+            const bufctrl = &buffer_control[@intFromEnum(ep_num)].out.read();
+            const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
+            var hw_buf: []align(1) u8 = ep.data_buffer[0..bufctrl.LENGTH_0];
+            for (data) |dst| {
+                const len = @min(dst.len, hw_buf.len);
+                // make sure reads from device memory of size 1
+                for (dst[0..len], hw_buf[0..len]) |*d, *s|
+                    @atomicStore(u8, d, @atomicLoad(u8, s, .unordered), .unordered);
+                hw_buf = hw_buf[len..];
+                if (hw_buf.len == 0) return hw_buf.ptr - ep.data_buffer.ptr;
+            }
+            unreachable;
+        }
+
+        fn ep_listen(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             len: usize,
@@ -367,11 +387,8 @@ pub fn Polled(
             });
         }
 
-        fn set_address(itf: *usb.DeviceInterface, addr: u7) void {
-            const self: *@This() = @fieldParentPtr("interface", itf);
-            _ = self;
-
-            peripherals.USB.ADDR_ENDP.modify(.{ .ADDRESS = addr });
+        fn set_address(_: *usb.DeviceInterface, addr: u7) void {
+            peripherals.USB.ADDR_ENDP.write(.{ .ADDRESS = addr });
         }
 
         fn hardware_endpoint_get_by_address(self: *@This(), ep: usb.types.Endpoint) *HardwareEndpointData {
