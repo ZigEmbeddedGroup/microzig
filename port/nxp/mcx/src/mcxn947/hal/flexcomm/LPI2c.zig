@@ -39,7 +39,7 @@ pub const LPI2c = enum(u4) {
         debug: bool,
         enable_doze: bool,
         ignore_nack: bool,
-        pin_config: void,
+        pin_config: void = {},
         // TODO: is u32 overkill ?
         bus_idle_timeout: ?u32, // in ns
         pin_low_timeout: ?u32,
