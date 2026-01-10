@@ -5,11 +5,13 @@ const chip = microzig.chip;
 pub const GPIO = enum(u8) {
 	_,
 
+	/// Get a GPIO pin. Does not check whether the pin is available.
+	// TODO: check unavailable pins
 	pub fn num(comptime n: u3, comptime pin: u5) GPIO {
-		// TODO: check unavailable pins
 		return @enumFromInt(@as(u8, n) << 5 | pin);
 	}
 
+	/// Init the GPIO by releasing an eventual reset and enabling its clock.
 	pub fn init(gpio: GPIO) void {
 		const module = gpio.get_module();
 
@@ -17,6 +19,15 @@ pub const GPIO = enum(u8) {
 		syscon.module_enable_clock(module);
 	}
 
+	/// Deinit the GPIO by disabling its clock and asserting its reset.
+	pub fn deinit(gpio: GPIO) void {
+		const module = gpio.get_module();
+
+		syscon.module_disable_clock(module);
+		syscon.module_reset_assert(module);
+	}
+
+	/// Sets the logical output of the GPIO.
 	pub fn put(gpio: GPIO, output: u1) void {
 		const regs = gpio.get_regs();
 
@@ -27,12 +38,14 @@ pub const GPIO = enum(u8) {
 			regs.PCOR.write_raw(new);
 	}
 
+	/// Returns the logical input of the GPIO.
 	pub fn get(gpio: GPIO) bool {
 		const regs = gpio.get_regs();
 
 		return regs.PDIR.raw >> gpio.get_pin() & 1 != 0;
 	}
 
+	/// Toggles the logical output of the GPIO.
 	pub fn toggle(gpio: GPIO) void {
 		const regs = gpio.get_regs();
 
@@ -47,47 +60,26 @@ pub const GPIO = enum(u8) {
 		regs.PDDR.write_raw((old & ~gpio.get_mask()) | new);
 	}
 
-	// TODO: check
-	pub fn set_interrupt_config(gpio: GPIO, trigger: InterruptConfig) void {
-		const regs = gpio.get_regs();
-		const irqc = @as(u32, @intFromEnum(trigger)) << 16;
-		const isf = @as(u32, 1) << 24;
-
-		regs.ICR[gpio.get_pin()].write_raw(irqc | isf);
-	}
-
-	// TODO: check
-	pub fn get_interrupt_flag(gpio: GPIO) bool {
-		const regs = gpio.get_regs();
-
-		return regs.ISFR0.raw >> gpio.get_pin() & 1 != 0;
-	}
-
-	// TODO: check
-	pub fn clear_interrupt_flag(gpio: GPIO) void {
-		const regs = gpio.get_regs();
-		const old: u32 = regs.ISFR0.raw;
-
-		regs.ISFR0.write_raw(old | gpio.get_mask());
-	}
-
+	/// Returns the gpio's control register
 	fn get_regs(gpio: GPIO) *volatile chip.types.peripherals.GPIO0 {
 		const base: u32 = @intFromPtr(chip.peripherals.GPIO0);
+
 		return switch (gpio.get_n()) {
-			0...5 => |i| @ptrFromInt(base + i * @as(u32, 0x2000)),
+			0...4 => |i| @ptrFromInt(base + i * @as(u32, 0x2000)),
+			5 => @ptrCast(chip.peripherals.GPIO5), // GPIO5 has a different address
 			else => unreachable
 		};
 	}
 
-	inline fn get_n(gpio: GPIO) u3 {
+	fn get_n(gpio: GPIO) u3 {
 		return @intCast(@intFromEnum(gpio) >> 5);
 	}
 
-	inline fn get_pin(gpio: GPIO) u5 {
+	fn get_pin(gpio: GPIO) u5 {
 		return @intCast(@intFromEnum(gpio) & 0x1f);
 	}
 
-	inline fn get_mask(gpio: GPIO) u32 {
+	fn get_mask(gpio: GPIO) u32 {
 		return @as(u32, 1) << gpio.get_pin();
 	}
 
@@ -97,20 +89,3 @@ pub const GPIO = enum(u8) {
 };
 
 const Direction = enum(u1) { in, out };
-
-const InterruptConfig = enum(u4) {
-	disabled = 0,
-	dma_rising_edge = 1,
-	dma_falling_edge = 2,
-	dma_either_edge = 3,
-	flag_rising_edge = 5,
-	flag_falling_edge = 6,
-	flag_either_edge = 7,
-	interrupt_logic_zero = 8,
-	interrupt_rising_edge = 9,
-	interrupt_falling_edge = 10,
-	interrupt_either_edge = 11,
-	interrupt_logic_one = 12,
-	active_high_trigger_output_enable = 13,
-	active_low_trigger_output_enable = 14,
-};

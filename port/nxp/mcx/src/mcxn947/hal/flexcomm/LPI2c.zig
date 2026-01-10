@@ -32,23 +32,37 @@ pub const LPI2c = enum(u4) {
 	};
 
 	pub const Config = struct {
-		baudrate: u32 = 100_000,
-		mode: OperatingMode = .standard,
-		relaxed: bool = false,
-		enabled: bool = true,
-		debug: bool = false,
-		enable_doze: bool = false,
-		ignore_nack: bool = false,
-		pin_config: void = {},
+		baudrate: u32,
+		mode: OperatingMode,
+		relaxed: bool,
+		enabled: bool,
+		debug: bool,
+		enable_doze: bool,
+		ignore_nack: bool,
+		pin_config: void,
 		// TODO: is u32 overkill ?
-		bus_idle_timeout: ?u32 = null, // in ns
-		pin_low_timeout: ?u32 = null,
-		sda_glitch_filter: ?u32 = null, // in ns
-		scl_glitch_filter: ?u32 = null, // in ns
+		bus_idle_timeout: ?u32, // in ns
+		pin_low_timeout: ?u32,
+		sda_glitch_filter: ?u32, // in ns
+		scl_glitch_filter: ?u32, // in ns
 		// TODO: host request
 
 
 		pub const OperatingMode = enum { standard, fast, fastplus, highspeed, ultrafast };
+
+		pub const Default = Config {
+			.baudrate = 100_000,
+			.mode = .standard,
+			.relaxed = false,
+			.enabled = true,
+			.debug = false,
+			.enable_doze = false,
+			.ignore_nack = false,
+			.bus_idle_timeout = null,
+			.pin_low_timeout = null,
+			.sda_glitch_filter = null,
+			.scl_glitch_filter = null
+		};
 	};
 
 	pub const Error = error {
@@ -59,8 +73,12 @@ pub const LPI2c = enum(u4) {
 		BusBusy
 	};
 
-	// controller only
-	pub fn init(interface: u4, config: Config) !LPI2c {
+	pub const ConfigError = error {
+		UnsupportedBaudRate
+	};
+
+	/// Initializes the I2C controller.
+	pub fn init(interface: u4, config: Config) ConfigError!LPI2c {
 		FlexComm.num(interface).init(.I2C);
 
 		const i2c: LPI2c = @enumFromInt(interface);
@@ -98,7 +116,7 @@ pub const LPI2c = enum(u4) {
 
 		if(config.pin_low_timeout != null) @panic("TODO");
 		// regs.MCFGR3.write(.{
-		// .PINLOW = 
+		// .PINLOW =
 		// });
 
 		try i2c.set_baudrate(config.mode, config.baudrate);
@@ -112,7 +130,7 @@ pub const LPI2c = enum(u4) {
 		return i2c;
 	}
 
-	/// Resets the Uart interface and deinit the corresponding FlexComm interface.
+	/// Resets the I2C interface and deinit the corresponding FlexComm interface.
 	pub fn deinit(i2c: LPI2c) void {
 		i2c.reset();
 		FlexComm.num(i2c.get_n()).deinit();
@@ -135,6 +153,7 @@ pub const LPI2c = enum(u4) {
 		return i2c.get_regs().MSR.read().BBF == .BUSY;
 	}
 
+	/// Returns an error if any is indicated by the status register.
 	pub fn check_flags(i2c: LPI2c) Error!void {
 		const MSR = i2c.get_regs().MSR.read();
 		const NDF: bool = MSR.NDF == .INT_YES;
@@ -179,14 +198,11 @@ pub const LPI2c = enum(u4) {
 		return FlexComm.num(i2c.get_n());
 	}
 
-
-	//
-	// Configuration functions
-	//
-
-	/// `lpi2c_clk` in Hz
-	/// controller (master) mode only
-	pub fn set_baudrate(i2c: LPI2c, mode: Config.OperatingMode, baudrate: u32) error { BaudrateUnavailable }!void {
+	/// Sets the baudrate for the controller (master).
+	/// `highspeed` and `ultrafast` modes are currently unimplemented.
+	///
+	/// Note that the baudrate depends on the flexcomm's interface clock: changing the clock will change the baudrate.
+	pub fn set_baudrate(i2c: LPI2c, mode: Config.OperatingMode, baudrate: u32) ConfigError!void {
 		const lpi2c_clk_f = i2c.get_flexcomm().get_clock();
 		const regs = i2c.get_regs();
 		// We currently assume these are negligible, but it could be useful
@@ -210,7 +226,7 @@ pub const LPI2c = enum(u4) {
 		};
 		// to convert from 10ns to 1s, we divide by 10^8
 		const conv_factor = std.math.pow(u32, 10, 8);
-		if(baudrate > max_baudrate) return error.BaudrateUnavailable;
+		if(baudrate > max_baudrate) return error.UnsupportedBaudRate;
 
 
 		// The variables used here correspond to the ones in NXP's reference manual
@@ -257,7 +273,7 @@ pub const LPI2c = enum(u4) {
 			}
 		}
 
-		if(best_prescale == null) return error.BaudrateUnavailable;
+		if(best_prescale == null) return error.UnsupportedBaudRate;
 
 		const prescale = best_prescale.?;
 		const sda_latency: u8 = (2 + filt_sda + scl_risetime) >> prescale;
@@ -332,6 +348,7 @@ pub const LPI2c = enum(u4) {
 		return computed_baudrate;
 	}
 
+	/// Disables the I2C interface and return whether it was enabled.
 	pub fn disable(i2c: LPI2c) bool {
 		const regs = i2c.get_regs();
 		var MCR = regs.MCR.read();
@@ -373,6 +390,8 @@ pub const LPI2c = enum(u4) {
 		return .{ .tx = MFSR.TXCOUNT, .rx = MFSR.RXCOUNT };
 	}
 
+	/// Sends a I2C start. Blocks until the start command can be written in the tx fifo.
+	/// Does not block until the start has been sent.
 	pub fn send_start_blocking(i2c: LPI2c, address: u7, mode: enum(u2) { write = 0, read = 1 }) Error!void {
 		try i2c.wait_for_tx_space();
 
@@ -382,6 +401,7 @@ pub const LPI2c = enum(u4) {
 		});
 	}
 
+	/// Sends a I2C stop. Blocks until the stop command has been sent.
 	pub fn send_stop_blocking(i2c: LPI2c) Error!void {
 		try i2c.wait_for_tx_space();
 
@@ -422,8 +442,9 @@ pub const LPI2c = enum(u4) {
 
 	// Follows the linux kernel's approach
 	pub const I2cMsg = struct {
-		flags: packed struct {
+		flags: packed struct(u8) {
 			direction: enum(u1) { write = 0, read = 1 },
+			padding: u7 = 0
 			// ten_bit: bool = false
 		},
 		address: u16,
@@ -439,7 +460,6 @@ pub const LPI2c = enum(u4) {
 		i2c.clear_flags();
 
 		for(messages) |message| {
-			// note: for better codegen, using direction as a enum(u8) might be better
 			switch(message.flags.direction) {
 				.read => try i2c.readv_blocking(message),
 				.write => try i2c.writev_blocking(message),

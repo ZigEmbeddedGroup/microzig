@@ -6,6 +6,8 @@ const chip = microzig.chip;
 const peripherals = chip.peripherals;
 const Io = std.Io;
 
+/// Uart interface. Currently only support 8 bit mode.
+// TODO: 9 and 10 bit mode
 pub const LPUart = enum(u4) {
 	_,
 
@@ -24,18 +26,18 @@ pub const LPUart = enum(u4) {
 	};
 
 	pub const Config = struct {
-		data_mode: DataMode = .@"8bit",
-		stop_bits_count: enum { one, two } = .one,
-		parity: enum(u2) { none = 0, even = 0b10, odd = 0b11 } = .none,
-		baudrate: u32 = 115200,
-		enable_send: bool = true,
-		enable_receive: bool = true,
-		bit_order: enum { lsb, mbs } = .lsb,
+		data_mode: DataMode,
+		stop_bits_count: enum { one, two },
+		parity: enum(u2) { none = 0, even = 0b10, odd = 0b11 },
+		baudrate: u32,
+		enable_send: bool,
+		enable_receive: bool,
+		bit_order: enum { lsb, mbs },
 
 		/// Whether received bits should be inverted (also applies to start and stop bits)
-		rx_invert: bool = false,
+		rx_invert: bool,
 		/// Whether transmitted bits should be inverted (also applies to start and stop bits)
-		tx_invert: bool = false,
+		tx_invert: bool,
 
 		pub const DataMode = enum {
 			@"7bit",
@@ -43,9 +45,26 @@ pub const LPUart = enum(u4) {
 			@"9bit",
 			@"10bit",
 		};
+
+		pub const Default = Config {
+			.data_mode = .@"8bit",
+			.stop_bits_count = .one,
+			.parity = .none,
+			.baudrate = 115200,
+			.enable_send = true,
+			.enable_receive = true,
+			.bit_order = .lsb,
+			.rx_invert = false,
+			.tx_invert = false
+		};
 	};
 
-	pub fn init(interface: u4, config: Config) !LPUart {
+	pub const ConfigError = error {
+		UnsupportedBaudRate
+	};
+
+	/// Initializes the Uart controller.
+	pub fn init(interface: u4, config: Config) ConfigError!LPUart {
 		FlexComm.num(interface).init(.UART);
 
 		const uart: LPUart = @enumFromInt(interface);
@@ -135,10 +154,9 @@ pub const LPUart = enum(u4) {
 	/// this function errors.
 	///
 	/// Whether a baudrate is available depends on the clock of the interface.
-	// TODO: remove `clk` parameter by fetching the clock
 	// TODO: check if there is a risk of losing data since we disable then enable the receiver
 	// TODO: tests with baudrate (see raspberry uart tests)
-	pub fn set_baudrate(uart: LPUart, baudrate: u32) error { BaudrateUnavailable }!void {
+	pub fn set_baudrate(uart: LPUart, baudrate: u32) ConfigError!void {
 		const clk = uart.get_flexcomm().get_clock();
 		const regs = uart.get_regs();
 		var best_osr: u5 = 0;
@@ -149,7 +167,7 @@ pub const LPUart = enum(u4) {
 			// both the receiver and transmitter must be disabled while changing the baudrate
 			const te, const re = uart.disable();
 			defer uart.set_enabled(te, re);
-            
+
 			var baud = regs.BAUD.read();
 			baud.SBR = 0;
 			baud.OSR = .DEFAULT;
@@ -175,13 +193,13 @@ pub const LPUart = enum(u4) {
 			}
 		}
 		if(best_diff > 3 * baudrate / 100) {
-			return error.BaudrateUnavailable;
+			return error.UnsupportedBaudRate;
 		}
 
 		// both the receiver and transmitter must be disabled while changing the baudrate
 		const te, const re = uart.disable();
 		defer uart.set_enabled(te, re);
-        
+
 		var baud = regs.BAUD.read();
 		baud.SBR = best_sbr;
 		baud.OSR = @enumFromInt(best_osr - 1);
@@ -332,9 +350,3 @@ pub const LPUart = enum(u4) {
 		}
 	};
 };
-
-fn delay_cycles(cycles: u32) void {
-	for (0..cycles) |_| {
-		asm volatile ("nop");
-	}
-}

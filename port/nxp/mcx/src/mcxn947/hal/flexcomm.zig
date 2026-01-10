@@ -3,12 +3,17 @@ const microzig = @import("microzig");
 const syscon = @import("syscon.zig");
 const chip = microzig.chip;
 const peripherals = chip.peripherals;
-
-const assert = @import("std").debug.assert;
+const assert = std.debug.assert;
 
 pub const LPUart = @import("flexcomm/LPUart.zig").LPUart;
 pub const LPI2c = @import("flexcomm/LPI2c.zig").LPI2c;
 
+/// A Low-Power Flexible Communications interface (LP FlexComm).
+/// To initialize Uart, SPI or I2C, use `LPUart` or `LPI2c` instead.
+///
+/// Note that the module's clock is not the same as the interface's clock.
+/// If the module's clock is disabled, writing to flexcomm control registers do nothing.
+/// The interface's clock is the one used to control the speed of the communication.
 pub const FlexComm = enum(u4) {
 	_,
 
@@ -18,7 +23,7 @@ pub const FlexComm = enum(u4) {
 		UART 		= 1,
 		SPI  		= 2,
 		I2C  		= 3,
-		@"UART+I2C" = 7 // this is not a mistake
+		@"UART+I2C" = 7
 	};
 	
 	pub const FlexCommTy = *volatile chip.types.peripherals.LP_FLEXCOMM0;
@@ -35,11 +40,16 @@ pub const FlexComm = enum(u4) {
 		peripherals.LP_FLEXCOMM9,
 	};
 
+	/// Returns the corresponding flexcomm interface.
+	/// `n` can be at most 9 (inclusive).
 	pub fn num(n: u4) FlexComm {
 		assert(n <= 9);
 		return @enumFromInt(n);
 	}
 
+	/// Initialize a Uart / SPI / I2C interface on a given flexcomm interface.
+	///
+	/// Release the reset and enable the module's clock.
 	pub fn init(flexcomm: FlexComm, ty: Type) void {
 		const module = flexcomm.get_module();
 
@@ -48,6 +58,7 @@ pub const FlexComm = enum(u4) {
 		flexcomm.get_regs().PSELID.modify_one("PERSEL", @enumFromInt(@intFromEnum(ty)));
 	}
 
+	/// Deinit the interface by disabling the clock and asserting the module's reset.
 	pub fn deinit(flexcomm: FlexComm) void {
 		const module = flexcomm.get_module();
 
@@ -55,7 +66,6 @@ pub const FlexComm = enum(u4) {
 		syscon.module_reset_assert(module);
 	}
 
-	// TODO: maybe patch ?
 	pub const Clock = enum(u3) {
 		none 		  = 0,
 		PLL 		  = 1,
@@ -76,6 +86,11 @@ pub const FlexComm = enum(u4) {
 			return @enumFromInt(@intFromEnum(clk));
 		}
 	};
+
+	/// Configures the clock of the interface.
+	/// `divider` must be between 1 and 256 (inclusive).
+	///
+	/// To stop the clock, see `FlexComm.stop_clock`.
 	pub fn set_clock(flexcomm: FlexComm, clock: Clock, divider: u16) void {
 		assert(divider > 0 and divider <= 256);
 		const n = flexcomm.get_n();
@@ -88,12 +103,25 @@ pub const FlexComm = enum(u4) {
 		chip.peripherals.SYSCON0.FCCLKSEL[n].modify_one("SEL", clock.to());
 	}
 
+	/// Stops the interface's clock.
+	pub fn stop_clock(flexcomm: FlexComm) void {
+		chip.peripherals.SYSCON0.FLEXCOMMCLKDIV[flexcomm.get_n()].modify("HALT", .HALT);
+	}
+
+	/// Starts the interface's clock.
+	pub fn start_clock(flexcomm: FlexComm) void {
+		chip.peripherals.SYSCON0.FLEXCOMMCLKDIV[flexcomm.get_n()].modify("HALT", .RUN);
+	}
+
+	/// Computes the current clock speed of the interface in Hz (taking into account the divider).
+	/// Returns 0 if the clock is disabled.
 	pub fn get_clock(flexcomm: FlexComm) u32 {
 		const n = flexcomm.get_n();
 		const div = chip.peripherals.SYSCON0.FLEXCOMMCLKDIV[n].read();
 		if(div.HALT == .HALT) return 0;
 
 		const clock = Clock.from(chip.peripherals.SYSCON0.FCCLKSEL[n].read().SEL);
+		// TODO: complete this function (see the sdk's implementation)
 		const freq: u32 = switch(clock) {
 			// .PLL   => 1,
 			.FRO_12MHz 	   => 12_000_000,
@@ -104,7 +132,6 @@ pub const FlexComm = enum(u4) {
 			else => @panic("TODO")
 			// else => 0
 		};
-		// TODO: check if clock is on
 
 		return freq / (@as(u32, div.DIV) + 1);
 	}
