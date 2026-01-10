@@ -37,17 +37,10 @@ fn find_arg(args: []const []const u8, key: []const u8) !?[]const u8 {
 var elf_reader_buf: [1024]u8 = undefined;
 var output_writer_buf: [1024]u8 = undefined;
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    var threaded: std.Io.Threaded = .init(gpa.allocator(), .{});
-    defer threaded.deinit();
-    const io = threaded.io();
-
-    const args = try std.process.argsAlloc(gpa.allocator());
-    defer std.process.argsFree(gpa.allocator(), args);
-
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const gpa = init.gpa;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
     for (args) |arg| if (std.mem.eql(u8, "--help", arg)) {
         var writer = std.Io.File.stdout().writer(io, &.{});
         try writer.interface.writeAll(usage);
@@ -78,7 +71,7 @@ pub fn main() !void {
     else
         null;
 
-    var archive = uf2.Archive.init(gpa.allocator());
+    var archive = uf2.Archive.init(gpa);
     defer archive.deinit();
 
     const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
