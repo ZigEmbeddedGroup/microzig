@@ -112,9 +112,9 @@ pub const Config = struct {
     /// Example: .dma = .{ .tx_channel = .Ch3, .rx_channel = .Ch2 }
     dma: ?DMA_Config = null,
 
-    /// NOTE: Chip select (CS) must be managed manually by the caller.
-    /// This SPI HAL is stateless and does not manage CS pins.
-    /// See SPI_Datagram_Device in drivers.zig for automatic CS management.
+    // NOTE: Chip select (CS) must be managed manually by the caller.
+    // This SPI HAL is stateless and does not manage CS pins.
+    // See SPI_Datagram_Device in drivers.zig for automatic CS management.
 };
 
 pub const instance = struct {
