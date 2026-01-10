@@ -4,6 +4,7 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
+const gpio = @import("./gpio.zig");
 const i2c = @import("./i2c.zig");
 const mdf = microzig.drivers;
 
@@ -126,6 +127,83 @@ pub fn I2C_Device(comptime config: i2c.Config) type {
         }
     };
 }
+
+///
+/// Implementation of a digital i/o device.
+///
+pub const GPIO_Device = struct {
+    pub const SetDirError = Digital_IO.SetDirError;
+    pub const SetBiasError = Digital_IO.SetBiasError;
+    pub const WriteError = Digital_IO.WriteError;
+    pub const ReadError = Digital_IO.ReadError;
+
+    pub const State = Digital_IO.State;
+    pub const Direction = Digital_IO.Direction;
+
+    pin: gpio.Pin,
+
+    pub fn init(pin: gpio.Pin) GPIO_Device {
+        return .{ .pin = pin };
+    }
+
+    pub fn digital_io(dio: *GPIO_Device) Digital_IO {
+        return Digital_IO{
+            .ptr = dio,
+            .vtable = &vtable,
+        };
+    }
+
+    pub fn set_direction(dio: GPIO_Device, dir: Direction) SetDirError!void {
+        dio.pin.set_mode(switch (dir) {
+            .output => .{ .output = .general_purpose_push_pull },
+            .input => .{ .input = .pull },
+        });
+    }
+
+    pub fn set_bias(dio: GPIO_Device, maybe_bias: ?State) SetBiasError!void {
+        dio.pin.set_pull(if (maybe_bias) |bias| switch (bias) {
+            .low => .down,
+            .high => .up,
+        } else .disabled);
+    }
+
+    pub fn write(dio: GPIO_Device, state: State) WriteError!void {
+        dio.pin.put(state.value());
+    }
+
+    pub fn read(dio: GPIO_Device) ReadError!State {
+        return @enumFromInt(dio.pin.read());
+    }
+
+    const vtable = Digital_IO.VTable{
+        .set_direction_fn = set_direction_fn,
+        .set_bias_fn = set_bias_fn,
+        .write_fn = write_fn,
+        .read_fn = read_fn,
+    };
+
+    fn set_direction_fn(io: *anyopaque, dir: Direction) SetDirError!void {
+        const gd: *GPIO_Device = @ptrCast(@alignCast(io));
+        try gd.set_direction(dir);
+    }
+
+    fn set_bias_fn(io: *anyopaque, bias: ?State) SetBiasError!void {
+        const gd: *GPIO_Device = @ptrCast(@alignCast(io));
+
+        try gd.set_bias(bias);
+    }
+
+    fn write_fn(io: *anyopaque, state: State) WriteError!void {
+        const gd: *GPIO_Device = @ptrCast(@alignCast(io));
+
+        try gd.write(state);
+    }
+
+    fn read_fn(io: *anyopaque) ReadError!State {
+        const gd: *GPIO_Device = @ptrCast(@alignCast(io));
+        return try gd.read();
+    }
+};
 
 ///
 /// Implementation of a time device
