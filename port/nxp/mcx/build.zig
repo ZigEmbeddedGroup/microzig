@@ -67,7 +67,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 			.generate = .none,
 			.file = b.path("linker.ld")
 		},
-		.hal = .{ .root_source_file = b.path("src/mcxn947/hal.zig") }
+		.hal = .{ .root_source_file = b.path("src/mcxn947/hal/hal.zig") }
 	};
 
 
