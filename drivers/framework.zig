@@ -8,6 +8,7 @@ pub const display = struct {
     pub const ssd1306 = @import("display/ssd1306.zig");
     pub const st77xx = @import("display/st77xx.zig");
     pub const hd44780 = @import("display/hd44780.zig");
+    pub const sharp_memory_lcd = @import("display/sharp_memory_lcd.zig");
 
     // Export generic drivers:
     pub const SH1106 = sh1106.SH1106;
@@ -15,6 +16,7 @@ pub const display = struct {
     pub const ST7735 = st77xx.ST7735;
     pub const ST7789 = st77xx.ST7789;
     pub const HD44780 = hd44780.HD44780;
+    pub const Sharp_Memory_LCD = sharp_memory_lcd.Sharp_Memory_LCD;
 
     // Export color types:
     pub const colors = @import("display/colors.zig");
@@ -220,6 +222,7 @@ test {
     _ = display.ssd1306;
     _ = display.st77xx;
     _ = display.HD44780;
+    _ = display.sharp_memory_lcd;
 
     _ = input.keyboard_matrix;
     _ = input.debounced_button;
