@@ -187,15 +187,24 @@ pub const Interface = struct {
         }
     }
 
-    pub fn log_stats(self: *Self) void {
+    pub fn log_mem_stats(self: *Self) void {
         _ = self;
         const stats = lwip.lwip_stats;
-        log.debug("stats ip_frag: {}", .{stats.ip_frag});
-        log.debug("stats icpmp: {}", .{stats.icmp});
-        log.debug("stats mem: {} ", .{stats.mem});
-        for (stats.memp, 0..) |s, i| {
-            log.debug("stats memp {}: {}", .{ i, s.* });
-        }
+        log.debug("stats mem: {}", .{stats.mem});
+        log.debug("pbuf pool: {}", .{stats.memp[lwip.MEMP_PBUF_POOL].*});
+        log.debug("memp upd pcb:        {}", .{stats.memp[lwip.MEMP_UDP_PCB].*});
+        log.debug("memp tcp pcb:        {}", .{stats.memp[lwip.MEMP_TCP_PCB].*});
+        log.debug("memp tcp listen pcb: {}", .{stats.memp[lwip.MEMP_TCP_PCB_LISTEN].*});
+        log.debug("memp tcp seg:        {}", .{stats.memp[lwip.MEMP_TCP_SEG].*});
+        log.debug("memp reassdata:      {}", .{stats.memp[lwip.MEMP_REASSDATA].*});
+        log.debug("memp frag buf:       {}", .{stats.memp[lwip.MEMP_FRAG_PBUF].*});
+        log.debug("memp igmp group:     {}", .{stats.memp[lwip.MEMP_IGMP_GROUP].*});
+        log.debug("memp sys timeout:    {}", .{stats.memp[lwip.MEMP_SYS_TIMEOUT].*});
+        log.debug("memp nd6 queue:      {}", .{stats.memp[lwip.MEMP_ND6_QUEUE].*});
+        log.debug("memp ip6 reassdata:  {}", .{stats.memp[lwip.MEMP_IP6_REASSDATA].*});
+        log.debug("memp mld6 group:     {}", .{stats.memp[lwip.MEMP_MLD6_GROUP].*});
+        log.debug("memp pbuf:           {}", .{stats.memp[lwip.MEMP_PBUF].*});
+        //log.debug("memp max:            {}", .{stats.memp[lwip.MEMP_MAX].*});
     }
 };
 
@@ -606,4 +615,21 @@ comptime {
     assert(sz.pbuf_pool == 1540);
     assert(sz.link_head == 22);
     assert(sz.mtu == 1500);
+}
+
+export fn lwip_lock_interrupts(were_enabled: *bool) void {
+    _ = were_enabled;
+}
+
+export fn lwip_unlock_interrupts(enable: bool) void {
+    _ = enable;
+}
+
+export fn lwip_assert(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
+    log.err("assert: {s} in file: {s}, line: {}", .{ msg, file, line });
+    @panic("lwip assert");
+}
+
+export fn lwip_diag(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
+    log.debug("{s} in file: {s}, line: {}", .{ msg, file, line });
 }
