@@ -3,8 +3,6 @@ const usb = @import("../../usb.zig");
 const descriptor = usb.descriptor;
 const types = usb.types;
 
-const utilities = @import("../../../utilities.zig");
-
 pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
     GetLineCoding = 0x21,
@@ -31,8 +29,6 @@ pub const Options = struct {
 };
 
 pub fn CdcClassDriver(options: Options) type {
-    const FIFO = utilities.CircularBuffer(u8, options.max_packet_size);
-
     return struct {
         pub const Descriptor = extern struct {
             itf_assoc: descriptor.InterfaceAssociation,
@@ -114,7 +110,6 @@ pub fn CdcClassDriver(options: Options) type {
 
         device: *usb.DeviceInterface,
         ep_notif: types.Endpoint.Num,
-        ep_in: types.Endpoint.Num,
         line_coding: LineCoding align(4),
 
         /// OUT endpoint on which there is data ready to be read,
@@ -124,14 +119,15 @@ pub fn CdcClassDriver(options: Options) type {
         rx_seek: types.Len,
         rx_end: types.Len,
 
-        tx: FIFO,
+        /// IN endpoint where data can be sent,
+        /// or .ep0 when data is being sent.
+        ep_in: types.Endpoint.Num,
+        ep_in_original: types.Endpoint.Num,
+        tx_data: [options.max_packet_size]u8,
+        tx_end: types.Len,
 
-        last_len: types.Len,
-
-        epin_buf: [options.max_packet_size]u8 = undefined,
-
-        pub fn available(self: *@This()) usize {
-            return self.rx.get_readable_len();
+        pub fn available(self: *@This()) types.Len {
+            return self.rx_end - self.rx_seek;
         }
 
         pub fn read(self: *@This(), dst: []u8) usize {
@@ -139,43 +135,47 @@ pub fn CdcClassDriver(options: Options) type {
             @memcpy(dst[0..len], self.rx_data[self.rx_seek..][0..len]);
             self.rx_seek += len;
 
-            if (self.rx_seek != self.rx_end) return len;
+            if (self.available() > 0) return len;
 
             // request more data
-            const ep_out = @atomicLoad(types.Endpoint.Num, &self.ep_out, .acquire);
+            const ep_out = @atomicLoad(types.Endpoint.Num, &self.ep_out, .seq_cst);
             if (ep_out != .ep0) {
                 self.rx_end = self.device.ep_readv(ep_out, &.{&self.rx_data});
                 self.rx_seek = 0;
+                @atomicStore(types.Endpoint.Num, &self.ep_out, .ep0, .seq_cst);
                 self.device.ep_listen(ep_out, options.max_packet_size);
             }
 
             return len;
         }
 
-        pub fn write(self: *@This(), data: []const u8) []const u8 {
-            const write_count = @min(self.tx.get_writable_len(), data.len);
+        pub fn write(self: *@This(), data: []const u8) usize {
+            const len = @min(self.tx_data.len - self.tx_end, data.len);
 
-            if (write_count > 0) {
-                self.tx.write_assume_capacity(data[0..write_count]);
-            } else {
-                return data[0..];
-            }
+            if (len == 0) return 0;
 
-            if (self.tx.get_writable_len() == 0) {
-                _ = self.write_flush();
-            }
+            @memcpy(self.tx_data[self.tx_end..][0..len], data[0..len]);
+            self.tx_end += @intCast(len);
 
-            return data[write_count..];
+            if (self.tx_end == self.tx_data.len)
+                _ = self.flush();
+
+            return len;
         }
 
-        pub fn write_flush(self: *@This()) usize {
-            if (self.tx.get_readable_len() == 0) {
-                return 0;
-            }
-            const len = self.tx.read(&self.epin_buf);
-            self.device.start_tx(self.ep_in, self.epin_buf[0..len]);
-            self.last_len = @intCast(len);
-            return len;
+        pub fn flush(self: *@This()) bool {
+            if (self.tx_end == 0)
+                return true;
+
+            const ep_in = @atomicLoad(types.Endpoint.Num, &self.ep_in, .seq_cst);
+            if (ep_in == .ep0)
+                return false;
+
+            @atomicStore(types.Endpoint.Num, &self.ep_in, .ep0, .seq_cst);
+
+            self.device.start_tx(ep_in, self.tx_data[0..self.tx_end]);
+            self.tx_end = 0;
+            return true;
         }
 
         pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
@@ -183,7 +183,6 @@ pub fn CdcClassDriver(options: Options) type {
             return .{
                 .device = device,
                 .ep_notif = desc.ep_notifi.endpoint.num,
-                .ep_in = desc.ep_in.endpoint.num,
                 .line_coding = .{
                     .bit_rate = 115200,
                     .stop_bits = 0,
@@ -191,13 +190,15 @@ pub fn CdcClassDriver(options: Options) type {
                     .data_bits = 8,
                 },
 
+                .ep_out = .ep0,
                 .rx_data = undefined,
                 .rx_seek = 0,
                 .rx_end = 0,
-                .ep_out = .ep0,
 
-                .tx = .empty,
-                .last_len = 0,
+                .ep_in = desc.ep_in.endpoint.num,
+                .ep_in_original = desc.ep_in.endpoint.num,
+                .tx_data = undefined,
+                .tx_end = 0,
             };
         }
 
@@ -220,20 +221,13 @@ pub fn CdcClassDriver(options: Options) type {
         }
 
         pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {
-            @atomicStore(types.Endpoint.Num, &self.ep_out, ep_num, .release);
+            @atomicStore(types.Endpoint.Num, &self.ep_out, ep_num, .seq_cst);
         }
 
         pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
-            if (ep_num != self.ep_in) return;
+            if (ep_num != self.ep_in_original) return;
 
-            if (self.write_flush() == 0) {
-                // If there is no data left, a empty packet should be sent if
-                // data len is multiple of EP Packet size and not zero
-                if (self.tx.get_readable_len() == 0 and self.last_len == options.max_packet_size) {
-                    self.device.start_tx(self.ep_in, usb.ack);
-                    self.last_len = 0;
-                }
-            }
+            @atomicStore(types.Endpoint.Num, &self.ep_in, ep_num, .seq_cst);
         }
     };
 }
