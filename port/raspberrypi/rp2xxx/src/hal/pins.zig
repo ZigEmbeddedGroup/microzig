@@ -814,25 +814,28 @@ pub const GlobalConfiguration = struct {
         var ret: self.PinsType() = undefined;
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
-                if (pin_config.function == .SIO) {
-                    @field(ret, pin_config.name orelse field.name) = gpio.num(@intFromEnum(@field(Pin, field.name)));
-                } else if (pin_config.function.is_pwm()) {
-                    @field(ret, pin_config.name orelse field.name) = pwm.Pwm{
-                        .slice_number = pin_config.function.pwm_slice(),
-                        .channel = pin_config.function.pwm_channel(),
-                    };
-                } else if (pin_config.function.is_adc()) {
-                    @field(ret, pin_config.name orelse field.name) = @as(adc.Input, @enumFromInt(switch (pin_config.function) {
-                        .ADC0 => 0,
-                        .ADC1 => 1,
-                        .ADC2 => 2,
-                        .ADC3 => 3,
-                        .ADC4 => 4,
-                        .ADC5 => 5,
-                        .ADC6 => 6,
-                        .ADC7 => 7,
-                        else => unreachable,
-                    }));
+                const cname = pin_config.name orelse field.name;
+                if (@hasField(self.PinsType(), cname)) {
+                    if (pin_config.function == .SIO) {
+                        @field(ret, cname) = gpio.num(@intFromEnum(@field(Pin, field.name)));
+                    } else if (pin_config.function.is_pwm()) {
+                        @field(ret, cname) = pwm.Pwm{
+                            .slice_number = pin_config.function.pwm_slice(),
+                            .channel = pin_config.function.pwm_channel(),
+                        };
+                    } else if (pin_config.function.is_adc()) {
+                        @field(ret, cname) = @as(adc.Input, @enumFromInt(switch (pin_config.function) {
+                            .ADC0 => 0,
+                            .ADC1 => 1,
+                            .ADC2 => 2,
+                            .ADC3 => 3,
+                            .ADC4 => 4,
+                            .ADC5 => 5,
+                            .ADC6 => 6,
+                            .ADC7 => 7,
+                            else => unreachable,
+                        }));
+                    }
                 }
             }
         }
@@ -840,7 +843,7 @@ pub const GlobalConfiguration = struct {
         return ret;
     }
 
-    pub fn apply(comptime config: GlobalConfiguration) void {
+    pub fn apply(comptime config: GlobalConfiguration) config.PinsType() {
         comptime var input_gpios: u48 = 0;
         comptime var output_gpios: u48 = 0;
         comptime var has_adc = false;
@@ -963,5 +966,7 @@ pub const GlobalConfiguration = struct {
             // Set other ADC features using functions in `hal.adc`.
             adc.set_enabled(true);
         }
+
+        return config.pins();
     }
 };

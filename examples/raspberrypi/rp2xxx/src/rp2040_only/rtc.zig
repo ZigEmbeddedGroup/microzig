@@ -33,7 +33,7 @@ fn rtc_isr() callconv(.c) void {
 }
 
 pub fn main() !void {
-    const pins = pin_config.pins();
+    const pins = pin_config.apply();
 
     // Configure initial datetime for RTC
     rp2xxx.rtc.set_datetime(.{
