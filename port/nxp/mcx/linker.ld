@@ -97,7 +97,7 @@ SECTIONS
     . = ALIGN(4);
     __DATA_RAM = .;
     __data_start__ = .;      /* create a global symbol at data start */
-	microzig_data_start = .;
+    microzig_data_start = .;
     *(.ramfunc*)             /* for functions in ram */
     *(.data)                 /* .data sections */
     *(.data*)                /* .data* sections */
@@ -108,7 +108,7 @@ SECTIONS
     KEEP(*(.jcr*))
     . = ALIGN(4);
     __data_end__ = .;        /* define a global symbol at data end */
-	microzig_data_end = .;
+    microzig_data_end = .;
   } > m_data
 
   __DATA_END = __DATA_ROM + (__data_end__ - __data_start__);
@@ -120,7 +120,7 @@ SECTIONS
   {
     /* This is used by the startup in order to initialize the .bss section */
     . = ALIGN(4);
-	microzig_bss_start = .;
+    microzig_bss_start = .;
     __START_BSS = .;
     __bss_start__ = .;
     *(.bss)
@@ -129,20 +129,20 @@ SECTIONS
     . = ALIGN(4);
     __bss_end__ = .;
     __END_BSS = .;
-	microzig_bss_end = .;
+    microzig_bss_end = .;
   } > m_data
 
   .heap :
   {
     . = ALIGN(8);
     __end__ = .;
-	microzig_heap_start = .;
+    microzig_heap_start = .;
     PROVIDE(end = .);
     __HeapBase = .;
     . += HEAP_SIZE;
     __HeapLimit = .;
     __heap_limit = .; /* Add for _sbrk */
-	microzig_heap_end = .;
+    microzig_heap_end = .;
   } > m_data
 
   .stack :
