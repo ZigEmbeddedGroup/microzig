@@ -51,12 +51,12 @@ pub const pin_config = pins.GlobalConfiguration{
 
     .GPIO20 = .{
         .name = "sda",
-        .function = .I2C0,
+        .function = .I2C0_SDA,
     },
 
     .GPIO21 = .{
         .name = "scl",
-        .function = .I2C0,
+        .function = .I2C0_SCL,
     },
 
     .GPIO23 = .{
@@ -89,7 +89,7 @@ pub const pin_config = pins.GlobalConfiguration{
 
     .GPIO28 = .{
         .name = "miso",
-        .function = .SPI0,
+        .function = .SPI1_RX,
     },
 
     .GPIO29 = .{
@@ -99,13 +99,13 @@ pub const pin_config = pins.GlobalConfiguration{
     },
 
     .GPIO30 = .{
-        .name = "mosi",
-        .function = .SPI0,
+        .name = "sck",
+        .function = .SPI1_SCK,
     },
 
     .GPIO31 = .{
-        .name = "sck",
-        .function = .SPI0,
+        .name = "mosi",
+        .function = .SPI1_TX,
     },
 
     .GPIO32 = .{
@@ -118,20 +118,20 @@ pub const pin_config = pins.GlobalConfiguration{
 
     .GPIO34 = .{
         .name = "sd_sck",
-        .function = .SPI1,
+        .function = .SPI0_SCK,
         .direction = .out,
     },
 
     .GPIO35 = .{
-        .name = "sd_miso",
-        .function = .SPI1,
-        .direction = .in,
+        .name = "sd_mosi",
+        .function = .SPI0_TX,
+        .direction = .out,
     },
 
     .GPIO36 = .{
-        .name = "sd_mosi",
-        .function = .SPI1,
-        .direction = .out,
+        .name = "sd_miso",
+        .function = .SPI0_RX,
+        .direction = .in,
     },
 
     .GPIO37 = .{
@@ -146,7 +146,7 @@ pub const pin_config = pins.GlobalConfiguration{
 
     .GPIO39 = .{
         .name = "sd_cs",
-        .function = .SPI1,
+        .function = .SIO,
         .direction = .out,
     },
 
