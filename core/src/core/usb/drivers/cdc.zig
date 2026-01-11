@@ -129,7 +129,6 @@ pub fn CdcClassDriver(options: Options) type {
         /// IN endpoint where data can be sent,
         /// or .ep0 when data is being sent.
         ep_in: types.Endpoint.Num,
-        ep_in_original: types.Endpoint.Num,
         tx_data: [options.max_packet_size]u8,
         tx_end: types.Len,
 
@@ -204,7 +203,6 @@ pub fn CdcClassDriver(options: Options) type {
                 .rx_end = 0,
 
                 .ep_in = desc.ep_in.endpoint.num,
-                .ep_in_original = desc.ep_in.endpoint.num,
                 .tx_data = undefined,
                 .tx_end = 0,
             };
@@ -213,7 +211,7 @@ pub fn CdcClassDriver(options: Options) type {
         pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) ?[]const u8 {
             if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| {
                 if (stage == .Setup) switch (request) {
-                    .SetLineCoding => return usb.ack, // HACK, we should handle data phase somehow to read sent line_coding
+                    .SetLineCoding => return usb.ack, // we should handle data phase somehow to read sent line_coding
                     .GetLineCoding => return std.mem.asBytes(&self.line_coding),
                     .SetControlLineState => {
                         // const DTR_BIT = 1;

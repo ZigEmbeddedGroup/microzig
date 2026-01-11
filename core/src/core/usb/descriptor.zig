@@ -57,7 +57,7 @@ pub const Device = extern struct {
         /// Type of this descriptor, must be `DeviceQualifier`.
         descriptor_type: Type = .DeviceQualifier,
         /// Specification version as Binary Coded Decimal
-        bcd_usb: types.U16Le,
+        bcd_usb: types.U16_Le,
         /// Class, subclass and protocol of device.
         device_triple: DeviceTriple,
         /// Maximum unit of data this device can move.
@@ -77,17 +77,17 @@ pub const Device = extern struct {
     /// Type of this descriptor, must be `Device`.
     descriptor_type: Type = .Device,
     /// Specification version as Binary Coded Decimal
-    bcd_usb: types.U16Le,
+    bcd_usb: types.U16_Le,
     /// Class, subclass and protocol of device.
     device_triple: DeviceTriple,
     /// Maximum length of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
-    vendor: types.U16Le,
+    vendor: types.U16_Le,
     /// ID of product.
-    product: types.U16Le,
+    product: types.U16_Le,
     /// Device version number as Binary Coded Decimal.
-    bcd_device: types.U16Le,
+    bcd_device: types.U16_Le,
     /// Index of manufacturer name in string descriptor table.
     manufacturer_s: u8,
     /// Index of product name in string descriptor table.
@@ -144,7 +144,7 @@ pub const Configuration = extern struct {
     /// Total length of all descriptors in this configuration, concatenated.
     /// This will include this descriptor, plus at least one interface
     /// descriptor, plus each interface descriptor's endpoint descriptors.
-    total_length: types.U16Le,
+    total_length: types.U16_Le,
     /// Number of interface descriptors in this configuration.
     num_interfaces: u8,
     /// Number to use when requesting this configuration via a
@@ -171,7 +171,7 @@ pub const String = struct {
         const ret: *const extern struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .String,
-            lang: types.U16Le,
+            lang: types.U16_Le,
         } = comptime &.{ .lang = .from(@intFromEnum(lang)) };
         return .{ .data = @ptrCast(ret) };
     }
@@ -221,7 +221,7 @@ pub const Endpoint = extern struct {
     /// control the transfer type using the values from `TransferType`.
     attributes: Attributes,
     /// Maximum packet size this endpoint can accept/produce.
-    max_packet_size: types.U16Le,
+    max_packet_size: types.U16_Le,
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,

@@ -146,7 +146,7 @@ pub const SetupPacket = extern struct {
 pub const Len = u11;
 
 /// u16 value, little endian regardless of native endianness.
-pub const U16Le = extern struct {
+pub const U16_Le = extern struct {
     value: [2]u8,
 
     pub fn from(val: u16) @This() {

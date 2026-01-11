@@ -351,14 +351,13 @@ pub fn DeviceController(config: Config) type {
                         .SetConfiguration => {
                             if (config.debug) log.info("    SetConfiguration", .{});
                             if (self.cfg_num != setup.value) {
+                                // if (self.cfg_num > 0)
+                                //     deinitialize drivers
+
                                 self.cfg_num = setup.value;
 
-                                if (self.cfg_num > 0) {
+                                if (self.cfg_num > 0)
                                     try self.process_set_config(device_itf, self.cfg_num - 1);
-                                    // TODO: call mount callback if any
-                                } else {
-                                    // TODO: call umount callback if any
-                                }
                             }
                             device_itf.ep_ack(.ep0);
                         },
@@ -427,7 +426,7 @@ pub fn DeviceController(config: Config) type {
         }
 
         fn process_set_config(self: *@This(), device_itf: *DeviceInterface, _: u16) !void {
-            // TODO: we support just one config for now so ignore config index
+            // We support just one config for now so ignore config index
             self.driver_data = @as(config0.Drivers, undefined);
             inline for (driver_fields) |fld_drv| {
                 const cfg = @field(config_descriptor, fld_drv.name);
