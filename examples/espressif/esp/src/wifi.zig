@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const SPSC_Queue = microzig.concurrency.SPSC_Queue;
 const interrupt = microzig.cpu.interrupt;
 const hal = microzig.hal;
-const RTOS = hal.RTOS;
+const rtos = hal.rtos;
 const radio = hal.radio;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
@@ -31,24 +31,29 @@ pub const microzig_options: microzig.Options = .{
     },
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
-        .interrupt29 = .{ .c = radio.interrupt_handler },
-        .interrupt30 = .{ .c = RTOS.general_purpose_interrupt_handler },
-        .interrupt31 = .{ .naked = RTOS.yield_handler },
+        .interrupt29 = radio.interrupt_handler,
+        .interrupt30 = rtos.general_purpose_interrupt_handler,
+        .interrupt31 = rtos.yield_interrupt_handler,
     },
     .cpu = .{
-        .interrupt_stack_size = 4096,
+        .interrupt_stack = .{
+            .enable = true,
+        },
+    },
+    .hal = .{
+        .rtos = .{
+            .enable = true,
+        },
     },
 };
 
 var buffer: [50 * 1024]u8 = undefined;
-var rtos: RTOS = undefined;
 
 pub fn main() !void {
     var heap_allocator: microzig.Allocator = .init_with_buffer(&buffer);
     const gpa = heap_allocator.allocator();
-    rtos.init(gpa);
 
-    try radio.init(gpa, &rtos);
+    try radio.init(gpa);
     defer radio.deinit();
 
     try radio.wifi.init();

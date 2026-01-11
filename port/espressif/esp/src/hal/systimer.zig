@@ -183,6 +183,14 @@ pub const Alarm = enum(u2) {
         });
     }
 
+    pub fn interrupt_source(self: Alarm) microzig.cpu.interrupt.Source {
+        return switch (self) {
+            .alarm0 => .systimer_target0,
+            .alarm1 => .systimer_target1,
+            .alarm2 => .systimer_target2,
+        };
+    }
+
     pub fn set_interrupt_enabled(self: Alarm, enable: bool) void {
         switch (self) {
             .alarm0 => SYSTIMER.INT_ENA.modify(.{ .TARGET0_INT_ENA = @intFromBool(enable) }),

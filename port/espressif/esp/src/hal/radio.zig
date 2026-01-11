@@ -17,7 +17,6 @@ pub const bluetooth = @import("radio/bluetooth.zig");
 const osi = @import("radio/osi.zig");
 const timer = @import("radio/timer.zig");
 pub const wifi = @import("radio/wifi.zig");
-const RTOS = @import("RTOS.zig");
 
 const log = std.log.scoped(.esp_radio);
 
@@ -26,8 +25,12 @@ pub const Options = struct {
     wifi: wifi.Options = .{},
 };
 
-pub fn init(allocator: Allocator, rtos: *RTOS) Allocator.Error!void {
+pub fn init(gpa: Allocator) Allocator.Error!void {
     // TODO: check that clock frequency is higher or equal to 80mhz
+
+    const radio_interrupt = microzig.options.hal.radio.interrupt;
+
+    comptime microzig.cpu.interrupt.expect_handler(radio_interrupt, interrupt_handler);
 
     {
         const cs = microzig.interrupt.enter_critical_section();
@@ -36,10 +39,12 @@ pub fn init(allocator: Allocator, rtos: *RTOS) Allocator.Error!void {
         enable_wifi_power_domain_and_init_clocks();
         // phy_mem_init(); // only sets some global variable on esp32c3
 
-        osi.allocator = allocator;
-        osi.rtos = rtos;
+        osi.gpa = gpa;
 
-        setup_interrupts();
+        microzig.cpu.interrupt.map(.wifi_mac, radio_interrupt);
+        microzig.cpu.interrupt.map(.wifi_pwr, radio_interrupt);
+        microzig.cpu.interrupt.set_type(radio_interrupt, .level);
+        microzig.cpu.interrupt.set_priority(radio_interrupt, .highest);
     }
 
     log.debug("initialization complete", .{});
@@ -126,18 +131,15 @@ fn enable_wifi_power_domain_and_init_clocks() void {
     });
 }
 
-fn setup_interrupts() void {
-    const radio_interrupt = microzig.options.hal.radio.interrupt;
-    microzig.cpu.interrupt.map(.wifi_mac, radio_interrupt);
-    microzig.cpu.interrupt.map(.wifi_pwr, radio_interrupt);
-    microzig.cpu.interrupt.set_type(radio_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(radio_interrupt, .highest);
-}
-
-pub fn interrupt_handler(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-    if (osi.wifi_interrupt_handler) |handler| {
-        handler.f(handler.arg);
-    } else {
-        // should be unreachable
-    }
-}
+pub const interrupt_handler: microzig.cpu.InterruptHandler = .{
+    .c = struct {
+        fn handler_fn(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
+            // TODO: multiplex the wifi and bluetooth handlers
+            if (osi.wifi_interrupt_handler) |handler| {
+                handler.f(handler.arg);
+            } else {
+                // should be unreachable
+            }
+        }
+    }.handler_fn,
+};
