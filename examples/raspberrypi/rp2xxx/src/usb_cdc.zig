@@ -11,7 +11,7 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-const UsbSerial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
+const USB_Serial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
 
 var usb_dev: rp2xxx.usb.Polled(
     usb.Config{
@@ -43,7 +43,7 @@ var usb_dev: rp2xxx.usb.Polled(
             .configuration_s = 0,
             .attributes = .{ .self_powered = true },
             .max_current_ma = 100,
-            .Drivers = struct { serial: UsbSerial },
+            .Drivers = struct { serial: USB_Serial },
         }},
     },
     .{},
@@ -88,7 +88,7 @@ pub fn main() !void {
                 old = new;
                 led.toggle();
                 i += 1;
-                std.log.info("cdc test: {}\r\n", .{i});
+                std.log.info("cdc test: {}", .{i});
 
                 usb_cdc_write(&drivers.serial, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
             }
@@ -106,17 +106,17 @@ var usb_tx_buff: [1024]u8 = undefined;
 
 // Transfer data to host
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
-pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype) void {
+pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
     const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
     var write_buff = text;
     while (write_buff.len > 0) {
-        write_buff = serial.write(write_buff);
+        write_buff = write_buff[serial.write(write_buff)..];
         usb_dev.poll();
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
-    _ = serial.write_flush();
-    usb_dev.poll();
+    while (!serial.flush())
+        usb_dev.poll();
 }
 
 var usb_rx_buff: [1024]u8 = undefined;
@@ -124,7 +124,7 @@ var usb_rx_buff: [1024]u8 = undefined;
 // Receive data from host
 // NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
 pub fn usb_cdc_read(
-    serial: *UsbSerial,
+    serial: *USB_Serial,
 ) []const u8 {
     var total_read: usize = 0;
     var read_buff: []u8 = usb_rx_buff[0..];

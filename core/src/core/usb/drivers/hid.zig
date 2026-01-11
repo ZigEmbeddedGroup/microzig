@@ -35,7 +35,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                     },
                     .hid = hid_descriptor,
                     .ep_out = .{
-                        .endpoint = .in(@enumFromInt(first_endpoint_out)),
+                        .endpoint = .out(@enumFromInt(first_endpoint_out)),
                         .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,
@@ -55,6 +55,11 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             .country_code = .NotSupported,
             .num_descriptors = 1,
             .report_length = .from(@sizeOf(@TypeOf(report_descriptor))),
+        };
+
+        pub const handlers = .{
+            .ep_out = "on_rx",
+            .ep_in = "on_tx_ready",
         };
 
         device: *usb.DeviceInterface,
@@ -85,18 +90,19 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                     const hid_request_type = std.meta.intToEnum(descriptor.hid.RequestType, setup.request) catch return usb.nak;
                     switch (hid_request_type) {
                         .SetIdle => {
-                            // TODO: The host is attempting to limit bandwidth by requesting that
+                            // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                            // The host is attempting to limit bandwidth by requesting that
                             // the device only return report data when its values actually change,
                             // or when the specified duration elapses. In practice, the device can
                             // still send reports as often as it wants, but for completeness this
                             // should be implemented eventually.
                             //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                             return usb.ack;
                         },
                         .SetProtocol => {
-                            // TODO: The device should switch the format of its reports from the
-                            // boot keyboard/mouse protocol to the format described in its report descriptor,
+                            // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                            // The device should switch the format of its reports from the boot
+                            // keyboard/mouse protocol to the format described in its report descriptor,
                             // or vice versa.
                             //
                             // For now, this request is ACKed without doing anything; in practice,
@@ -104,15 +110,14 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                             // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
                             // our device might not work in a limited BIOS environment.
                             //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                             return usb.ack;
                         },
                         .SetReport => {
-                            // TODO: This request sends a feature or output report to the device,
+                            // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/454
+                            // This request sends a feature or output report to the device,
                             // e.g. turning on the caps lock LED. This must be handled in an
                             // application-specific way, so notify the application code of the event.
                             //
-                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                             return usb.ack;
                         },
                         else => {},
@@ -123,10 +128,14 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             return usb.nak;
         }
 
-        pub fn transfer(self: *@This(), ep: types.Endpoint, data: []u8) void {
+        pub fn on_tx_ready(self: *@This(), ep: types.Endpoint.Num) void {
             _ = self;
             _ = ep;
-            _ = data;
+        }
+
+        pub fn on_rx(self: *@This(), ep: types.Endpoint.Num) void {
+            _ = self;
+            _ = ep;
         }
     };
 }
