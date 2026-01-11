@@ -147,15 +147,26 @@ pub const Len = u11;
 
 /// u16 value, little endian regardless of native endianness.
 pub const U16_Le = extern struct {
-    value: [2]u8,
+    value_le: u16 align(1),
 
     pub fn from(val: u16) @This() {
-        var self: @This() = undefined;
-        std.mem.writeInt(u16, &self.value, val, .little);
-        return self;
+        return .{ .value_le = std.mem.nativeToLittle(u16, val) };
     }
 
     pub fn into(self: @This()) u16 {
-        return std.mem.readInt(u16, &self.value, .little);
+        return std.mem.littleToNative(u16, self.value_le);
+    }
+};
+
+/// u32 value, little endian regardless of native endianness.
+pub const U32_Le = extern struct {
+    value_le: u32 align(1),
+
+    pub fn from(val: u32) @This() {
+        return .{ .value_le = std.mem.nativeToLittle(u32, val) };
+    }
+
+    pub fn into(self: @This()) u32 {
+        return std.mem.littleToNative(u32, self.value_le);
     }
 };
