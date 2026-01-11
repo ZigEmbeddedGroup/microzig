@@ -36,13 +36,13 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                     .hid = hid_descriptor,
                     .ep_out = .{
                         .endpoint = .out(@enumFromInt(first_endpoint_out)),
-                        .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                        .attributes = .interrupt,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,
                     },
                     .ep_in = .{
                         .endpoint = .in(@enumFromInt(first_endpoint_in)),
-                        .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                        .attributes = .interrupt,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,
                     },
@@ -78,7 +78,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             _ = self;
             if (stage == .Setup) switch (setup.request_type.type) {
                 .Standard => {
-                    const hid_desc_type = std.meta.intToEnum(descriptor.hid.Hid.Type, (setup.value >> 8) & 0xff) catch return usb.nak;
+                    const hid_desc_type = std.meta.intToEnum(descriptor.hid.Hid.Type, setup.value.into() >> 8) catch return usb.nak;
                     const request_code = std.meta.intToEnum(types.SetupRequest, setup.request) catch return usb.nak;
 
                     if (request_code == .GetDescriptor and hid_desc_type == .Hid)

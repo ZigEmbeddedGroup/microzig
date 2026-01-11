@@ -95,13 +95,13 @@ pub fn CdcClassDriver(options: Options) type {
                     },
                     .ep_out = .{
                         .endpoint = .out(@enumFromInt(first_endpoint_out)),
-                        .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                        .attributes = .bulk,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = 0,
                     },
                     .ep_in = .{
                         .endpoint = .in(@enumFromInt(first_endpoint_in + 1)),
-                        .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                        .attributes = .bulk,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = 0,
                     },

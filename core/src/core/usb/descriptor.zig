@@ -204,6 +204,9 @@ pub const Endpoint = extern struct {
         synchronisation: Synchronisation = .none,
         usage: Usage,
         reserved: u2 = 0,
+
+        pub const bulk: @This() = .{ .transfer_type = .Bulk, .usage = .data };
+        pub const interrupt: @This() = .{ .transfer_type = .Interrupt, .usage = .data };
     };
 
     comptime {

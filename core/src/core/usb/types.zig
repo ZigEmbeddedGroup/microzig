@@ -133,13 +133,13 @@ pub const SetupPacket = extern struct {
     /// conflict.
     request: u8,
     /// A simple argument of up to 16 bits, specific to the request.
-    value: u16,
+    value: U16_Le,
     /// Not used in the requests we support.
-    index: u16,
+    index: U16_Le,
     /// If data will be transferred after this request (in the direction given
     /// by `request_type`), this gives the number of bytes (OUT) or maximum
     /// number of bytes (IN).
-    length: u16,
+    length: U16_Le,
 };
 
 /// Represents packet length.

@@ -30,19 +30,19 @@ pub const ExampleDriver = struct {
                 },
                 .ep_in1 = .{
                     .endpoint = .in(@enumFromInt(first_endpoint_in)),
-                    .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                    .attributes = .interrupt,
                     .max_packet_size = .from(64),
                     .interval = 16,
                 },
                 .ep_in2 = .{
                     .endpoint = .in(@enumFromInt(first_endpoint_in + 1)),
-                    .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                    .attributes = .bulk,
                     .max_packet_size = .from(64),
                     .interval = 0,
                 },
                 .ep_out = .{
                     .endpoint = .out(@enumFromInt(first_endpoint_out)),
-                    .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+                    .attributes = .bulk,
                     .max_packet_size = .from(64),
                     .interval = 0,
                 },
