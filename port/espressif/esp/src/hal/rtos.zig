@@ -23,7 +23,7 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // minimum stack size available at all times.
 
 // TODO: add identifier names to tasks
-// TODO: stack usage report based on stack painting
+// TODO: stack usage report based on stack painting and overflow detection
 // TODO: question: should idle do more stuff (like task garbage collection)?
 // TODO: implement task garbage collection and recycling
 // TODO: implement std.Io
@@ -35,7 +35,7 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // previous union state to avoid compiler bug (0.15.2)
 
 const STACK_ALIGN: std.mem.Alignment = .@"16";
-const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 31 * @sizeOf(usize));
+const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 32 * @sizeOf(usize));
 
 const rtos_options = microzig.options.hal.rtos;
 pub const Priority = rtos_options.Priority;
@@ -123,8 +123,9 @@ pub fn init() void {
 
 // TODO: deinit
 
-fn idle() callconv(.naked) void {
+fn idle() linksection(".ram_text") callconv(.naked) void {
     asm volatile (
+        \\csrsi mstatus, 8  # enable interrupts
         \\1:
         \\wfi
         \\j 1b
@@ -152,6 +153,9 @@ pub fn spawn(
 
     const TypeErased = struct {
         fn call() callconv(.c) void {
+            // interrupts are initially disabled in newly created tasks
+            microzig.cpu.interrupt.enable_interrupts();
+
             const context_ptr: *const Args =
                 @ptrFromInt(args_align.forward(@intFromPtr(rtos_state.current_task) + @sizeOf(Task)));
             @call(.auto, function, context_ptr.*);
@@ -220,15 +224,8 @@ pub const YieldAction = union(enum) {
 
 pub inline fn yield(action: YieldAction) void {
     const cs = enter_critical_section();
-    yield_and_leave_cs(action, cs);
-}
+    defer cs.leave();
 
-/// Must execute inside a critical section. Calling leave on the critical
-/// section becomes unnecessary.
-pub inline fn yield_and_leave_cs(action: YieldAction, cs: CriticalSection) void {
-    defer if (!cs.enable_on_leave) {
-        microzig.cpu.interrupt.disable_interrupts();
-    };
     const current_task, const next_task = yield_inner(action);
     context_switch(&current_task.context, &next_task.context);
 }
@@ -286,8 +283,6 @@ inline fn context_switch(prev_context: *Context, next_context: *Context) void {
         \\lw a2, 0(a1)      # load next pc
         \\lw sp, 4(a1)      # load next stack pointer
         \\lw s0, 8(a1)      # load next frame pointer
-        \\
-        \\csrsi mstatus, 8  # enable interrupts
         \\
         \\jr a2             # jump to next task
         \\1:
@@ -350,7 +345,7 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
 
             asm volatile (
                 \\
-                \\addi sp, sp, -31*4
+                \\addi sp, sp, -32*4
                 \\
                 \\sw ra, 0*4(sp)
                 \\sw t0, 1*4(sp)
@@ -415,14 +410,14 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 // change sp to the new task
                 \\mv sp, a2
                 \\
-                // if the next task program counter is equal to 1f's location just jump
-                // to it (ie. the task was interrupted). Technically not required but
-                // works as an optimization.
+                // if the next task program counter is equal to 1f's location
+                // just jump to it (ie. the task forcefully yielded).
                 \\beq a1, s1, 1f
                 \\
-                // ensure interrupts get enabled after mret
+                // ensure interrupts are disabled after mret (when a normal
+                // context switch occured)
                 \\li t0, 0x80
-                \\csrs mstatus, t0
+                \\csrc mstatus, t0
                 \\
                 // jump to new task
                 \\csrw mepc, a1
@@ -466,7 +461,7 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\lw gp, 27*4(sp)
                 \\lw tp, 28*4(sp)
                 \\
-                \\addi sp, sp, 31*4
+                \\addi sp, sp, 32*4
                 \\mret
                 :
                 : [schedule_in_isr] "i" (&schedule_in_isr),
@@ -570,7 +565,7 @@ pub const Task = struct {
     node: std.DoublyLinkedList.Node = .{},
 
     /// Task specific semaphore (required by the wifi driver)
-    semaphore: Semaphore = .init(0),
+    semaphore: Semaphore = .init(0, 1),
 
     pub const State = union(enum) {
         none,
@@ -751,7 +746,7 @@ pub const Mutex = struct {
 
     pub fn unlock(mutex: *Mutex) void {
         const cs = enter_critical_section();
-        defer yield_and_leave_cs(.reschedule, cs);
+        defer cs.leave();
 
         assert(mutex.state == .locked);
         mutex.state = .unlocked;
@@ -796,30 +791,32 @@ pub const RecursiveMutex = struct {
 
     pub fn unlock(mutex: *RecursiveMutex) bool {
         const cs = enter_critical_section();
+        defer cs.leave();
 
         assert(mutex.value > 0);
         mutex.value -= 1;
         if (mutex.value <= 0) {
-            defer yield_and_leave_cs(.reschedule, cs);
-
             mutex.owning_task = null;
             mutex.wait_queue.wake_one();
-
             return true;
         } else {
-            cs.leave();
             return false;
         }
     }
 };
 
 pub const Semaphore = struct {
-    value: u32,
+    current_value: u32,
+    max_value: u32,
     wait_queue: PriorityWaitQueue = .{},
 
-    pub fn init(initial_value: u32) Semaphore {
+    pub fn init(initial_value: u32, max_value: u32) Semaphore {
+        assert(initial_value <= max_value);
+        assert(max_value > 0);
+
         return .{
-            .value = initial_value,
+            .current_value = initial_value,
+            .max_value = max_value,
         };
     }
 
@@ -836,7 +833,7 @@ pub const Semaphore = struct {
         else
             null;
 
-        while (sem.value <= 0) {
+        while (sem.current_value <= 0) {
             if (maybe_timeout_ticks) |timeout_ticks|
                 if (timeout_ticks.is_reached())
                     return error.Timeout;
@@ -844,15 +841,19 @@ pub const Semaphore = struct {
             sem.wait_queue.wait(rtos_state.current_task, maybe_timeout_ticks);
         }
 
-        sem.value -= 1;
+        sem.current_value -= 1;
     }
 
     pub fn give(sem: *Semaphore) void {
         const cs = enter_critical_section();
-        defer yield_and_leave_cs(.reschedule, cs);
+        defer cs.leave();
 
-        sem.value += 1;
-        sem.wait_queue.wake_one();
+        sem.current_value += 1;
+        if (sem.current_value > sem.max_value) {
+            sem.current_value = sem.max_value;
+        } else {
+            sem.wait_queue.wake_one();
+        }
     }
 };
 
@@ -892,7 +893,7 @@ pub const TypeErasedQueue = struct {
         var n: usize = 0;
 
         const cs = enter_critical_section();
-        defer if (n > 0) yield_and_leave_cs(.reschedule, cs);
+        defer cs.leave();
 
         while (true) {
             n += q.put_non_blocking_from_cs(elements[n..]);
@@ -954,7 +955,7 @@ pub const TypeErasedQueue = struct {
         var n: usize = 0;
 
         const cs = enter_critical_section();
-        defer if (n > 0) yield_and_leave_cs(.reschedule, cs);
+        defer cs.leave();
 
         while (true) {
             n += q.get_non_blocking_from_cs(buffer[n..]);

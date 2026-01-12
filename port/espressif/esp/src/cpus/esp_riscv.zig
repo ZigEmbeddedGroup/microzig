@@ -388,8 +388,9 @@ pub const TrapFrame = extern struct {
     a7: usize,
 };
 
-/// Statically allocated interrupt stack of the requested size.
-pub var interrupt_stack: [std.mem.alignForward(usize, interrupt_stack_options.size, 16)]u8 align(16) = undefined;
+/// Statically allocated interrupt stack of the requested size. Used when the
+/// interrupt stack option is enabled.
+pub var interrupt_stack: [std.mem.alignForward(usize, interrupt_stack_options.size, 16)]u8 align(16) linksection(".ram_vectors") = undefined;
 
 fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void {
     const interrupt_jump_asm, const interrupt_c_stubs_asm = comptime blk: {

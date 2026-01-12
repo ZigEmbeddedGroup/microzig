@@ -315,7 +315,7 @@ pub fn semphr_create(max_value: u32, init_value: u32) callconv(.c) ?*anyopaque {
         log.warn("failed to allocate semaphore", .{});
         return null;
     };
-    sem.* = .init(init_value);
+    sem.* = .init(init_value, max_value);
 
     log.debug(">>>> semaphore create: {*}", .{sem});
 
@@ -870,32 +870,14 @@ pub fn timer_disarm(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
     log.debug("timer_disarm {?}", .{ets_timer_ptr});
 
     const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
-
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    if (timer.find(ets_timer)) |tim| {
-        tim.deadline = .init_absolute(null);
-    } else {
-        log.warn("timer not found based on ets_timer", .{});
-    }
+    timer.disarm(ets_timer);
 }
 
 pub fn timer_done(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
     log.debug("timer_done {?}", .{ets_timer_ptr});
 
     const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
-
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    if (timer.find(ets_timer)) |tim| {
-        ets_timer.priv = null;
-        ets_timer.expire = 0;
-        timer.remove(gpa, tim);
-    } else {
-        log.warn("timer not found based on ets_timer", .{});
-    }
+    timer.done(gpa, ets_timer);
 }
 
 pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?*anyopaque) callconv(.c) void {
@@ -903,44 +885,16 @@ pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?
 
     const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
     const callback: timer.CallbackFn = @ptrCast(@alignCast(callback_ptr));
-
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    if (timer.find(ets_timer)) |tim| {
-        tim.callback = callback;
-        tim.arg = arg;
-        tim.deadline = .init_absolute(null);
-
-        ets_timer.expire = 0;
-    } else {
-        ets_timer.next = null;
-        ets_timer.period = 0;
-        ets_timer.func = null;
-        ets_timer.priv = null;
-
-        timer.add(gpa, ets_timer, callback, arg) catch {
-            log.warn("failed to allocate timer", .{});
-        };
-    }
+    timer.setfn(gpa, ets_timer, callback, arg) catch {
+        log.warn("failed to allocate timer", .{});
+    };
 }
 
 pub fn timer_arm_us(ets_timer_ptr: ?*anyopaque, us: u32, repeat: bool) callconv(.c) void {
     log.debug("timer_arm_us {?} {} {}", .{ ets_timer_ptr, us, repeat });
 
     const ets_timer: *c.ets_timer = @ptrCast(@alignCast(ets_timer_ptr));
-
-    // TODO: locking
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    if (timer.find(ets_timer)) |tim| {
-        const period: time.Duration = .from_us(us);
-        tim.deadline = .init_relative(get_time_since_boot(), period);
-        tim.periodic = if (repeat) period else null;
-    } else {
-        log.warn("timer not found based on ets_timer", .{});
-    }
+    timer.arm(ets_timer, .from_us(us), repeat);
 }
 
 pub fn wifi_reset_mac() callconv(.c) void {

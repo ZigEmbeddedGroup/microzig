@@ -54,6 +54,7 @@ SECTIONS
 
   .ram.text :
   {
+    . = ALIGN(16);
     KEEP(*(.ram_text))
     KEEP(*(.ram_vectors))
 
@@ -63,6 +64,7 @@ SECTIONS
 
   .ram.text.wifi :
   {
+    . = ALIGN(16);
     *( .wifi0iram  .wifi0iram.*)
     *( .wifirxiram  .wifirxiram.*)
     *( .wifislprxiram  .wifislprxiram.*)
@@ -81,25 +83,33 @@ SECTIONS
 
   .data :
   {
+    . = ALIGN(16);
     microzig_data_start = .;
     *(.sdata*)
     *(.data*)
+    . = ALIGN(16);
     microzig_data_end = .;
   } > DRAM
 
   .data.wifi :
   {
+    . = ALIGN(16);
     *(.dram1*)
   } > DRAM
 
   .bss (NOLOAD) :
   {
+    . = ALIGN(16);
     microzig_bss_start = .;
     *(.sbss*)
     *(.bss*)
+    . = ALIGN(16);
     microzig_bss_end = .;
   } > DRAM
 
+  /* FIXME: this is a workaround for the threadlocal variable that may be
+   * created by foundation libc, because otherwise DRAM overflows (if .tbss is
+   * not explicitly added, it is placed after .heap) */
   .tbss (NOLOAD) :
   {
     *(.tbss*)
@@ -107,9 +117,9 @@ SECTIONS
 
   .heap (NOLOAD) :
   {
-      microzig_heap_start = .;
-      . = ORIGIN(DRAM) + LENGTH(DRAM);
-      microzig_heap_end   = .;
+    microzig_heap_start = .;
+    . = ORIGIN(DRAM) + LENGTH(DRAM);
+    microzig_heap_end   = .;
   } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);

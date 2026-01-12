@@ -32,6 +32,8 @@ pub fn init(gpa: Allocator) Allocator.Error!void {
 
     comptime microzig.cpu.interrupt.expect_handler(radio_interrupt, interrupt_handler);
 
+    try timer.init(gpa);
+
     {
         const cs = microzig.interrupt.enter_critical_section();
         defer cs.leave();
@@ -58,10 +60,6 @@ pub fn init(gpa: Allocator) Allocator.Error!void {
 // TODO
 // should free everything
 pub fn deinit() void {}
-
-pub fn tick() void {
-    timer.tick();
-}
 
 pub fn read_mac(iface: enum {
     sta,

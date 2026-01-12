@@ -20,12 +20,13 @@ SECTIONS
     *(.coexiram.* )
   } > IRAM
 
-  . = ALIGN(8);
+  . = ALIGN(16);
   _iram_size = . - microzig_ram_text_start;
 
   _dram_start = ORIGIN(DRAM) + _iram_size;
   .data _dram_start : AT(_iram_size)
   {
+    . = ALIGN(16);
     microzig_data_start = .;
     *(.srodata*)
     *(.sdata*)
@@ -41,22 +42,24 @@ SECTIONS
 
   .bss (NOLOAD) :
   {
+    . = ALIGN(16);
     microzig_bss_start = .;
     *(.bss*)
     *(.sbss*)
+    . = ALIGN(16);
     microzig_bss_end = .;
   } > DRAM
 
-  .tbss :
+  .tbss (NOLOAD) :
   {
     *(.tbss*)
   } > DRAM
 
   .heap (NOLOAD) :
   {
-      microzig_heap_start = .;
-      . = ORIGIN(DRAM) + LENGTH(DRAM);
-      microzig_heap_end   = .;
+    microzig_heap_start = .;
+    . = ORIGIN(DRAM) + LENGTH(DRAM);
+    microzig_heap_end   = .;
   } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);

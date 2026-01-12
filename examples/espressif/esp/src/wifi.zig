@@ -47,7 +47,7 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-var buffer: [50 * 1024]u8 = undefined;
+var buffer: [70 * 1024]u8 = undefined;
 
 pub fn main() !void {
     var heap_allocator: microzig.Allocator = .init_with_buffer(&buffer);
@@ -84,8 +84,6 @@ pub fn main() !void {
     var last_mem_show = hal.time.get_time_since_boot();
 
     while (true) {
-        radio.tick();
-
         const sta_state = radio.wifi.get_sta_state();
         if (!connected and sta_state == .sta_connected) {
             std.log.info("link up", .{});
@@ -119,6 +117,8 @@ pub fn main() !void {
             std.log.info("free memory: {}K ({})", .{ free_heap / 1024, free_heap });
             last_mem_show = now;
         }
+
+        rtos.sleep(.from_ms(10));
     }
 }
 

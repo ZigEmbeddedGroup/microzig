@@ -25,10 +25,12 @@ SECTIONS
 
   .ram_text ORIGIN(IRAM) : AT(_irom_size + _drom_size)
   {
+    . = ALIGN(16);
     microzig_ram_text_start = .;
     KEEP(*(.ram_text))
     KEEP(*(.ram_vectors))
 
+    . = ALIGN(16);
     /* wifi rwtext */
     *(.wifi0iram  .wifi0iram.*)
     *(.wifirxiram  .wifirxiram.*)
@@ -39,17 +41,17 @@ SECTIONS
     *(.wifiextrairam.* )
     *(.coexiram.* )
 
-    . = ALIGN(8);
-
+    . = ALIGN(16);
     microzig_ram_text_end = .;
   } > IRAM
 
-  . = ALIGN(4);
+  . = ALIGN(16);
   _iram_size = . - microzig_ram_text_start;
 
   _dram_start = ORIGIN(DRAM) + _iram_size;
   .data _dram_start : AT(_irom_size + _drom_size + _iram_size)
   {
+    . = ALIGN(16);
     /* put microzig_data_start right before .ram_text */
     microzig_data_start = . - _iram_size;
     *(.sdata*)
@@ -57,27 +59,32 @@ SECTIONS
 
     /* wifi data */
     *(.dram1*)
+
+    . = ALIGN(16);
     microzig_data_end = .;
   } > DRAM
 
   .bss (NOLOAD) :
   {
+    . = ALIGN(16);
     microzig_bss_start = .;
     *(.sbss*)
     *(.bss*)
+    . = ALIGN(16);
     microzig_bss_end = .;
   } > DRAM
 
   .tbss (NOLOAD) :
   {
+    . = ALIGN(16);
     *(.tbss*)
   } > DRAM
 
   .heap (NOLOAD) :
   {
-      microzig_heap_start = .;
-      . = ORIGIN(DRAM) + LENGTH(DRAM);
-      microzig_heap_end   = .;
+    microzig_heap_start = .;
+    . = ORIGIN(DRAM) + LENGTH(DRAM);
+    microzig_heap_end   = .;
   } > DRAM
 
   microzig_data_load_start = ORIGIN(DROM) + _irom_size + _drom_size;
