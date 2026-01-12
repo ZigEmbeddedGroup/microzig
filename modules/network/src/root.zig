@@ -104,11 +104,11 @@ pub const Interface = struct {
     fn c_on_netif_status(netif_c: [*c]lwip.netif) callconv(.c) void {
         const netif: *lwip.netif = netif_c;
         const self: *Self = @fieldParentPtr("netif", netif);
-        log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}", .{
+        log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {s}", .{
             netif.flags & lwip.NETIF_FLAG_LINK_UP > 0,
             netif.flags & lwip.NETIF_FLAG_UP > 0,
             self.ready(),
-            IPFormatter.new(netif.ip_addr),
+            lwip.ipaddr_ntoa(&netif.ip_addr),
         });
     }
 
@@ -570,22 +570,6 @@ fn c_err(res: anytype) Error!void {
         else => @compileError("unknown type"),
     }
 }
-
-const IPFormatter = struct {
-    addr: lwip.ip_addr_t,
-
-    pub fn new(addr: lwip.ip_addr_t) IPFormatter {
-        return IPFormatter{ .addr = addr };
-    }
-
-    pub fn format(
-        self: IPFormatter,
-        writer: anytype,
-    ) !void {
-        const ip4_addr: *const lwip.ip4_addr_t = @ptrCast(&self.addr);
-        try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(ip4_addr), 0));
-    }
-};
 
 // required buffer sizes
 const sz = struct {
