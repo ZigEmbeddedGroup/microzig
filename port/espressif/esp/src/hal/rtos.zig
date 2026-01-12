@@ -88,7 +88,7 @@ pub const RTOS_State = struct {
 pub fn init() void {
     comptime {
         if (!microzig.options.cpu.interrupt_stack.enable)
-            @compileError("Please enable interrupt stack to use the rtos");
+            @compileError("rtos requires the interrupt stack cpu option to be enabled");
         microzig.cpu.interrupt.expect_handler(rtos_options.general_purpose_interrupt, general_purpose_interrupt_handler);
         microzig.cpu.interrupt.expect_handler(rtos_options.yield_interrupt, yield_interrupt_handler);
     }

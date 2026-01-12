@@ -1,22 +1,23 @@
-const builtin = @import("builtin");
 const std = @import("std");
-const log = std.log.scoped(.esp_radio_osi);
+const builtin = @import("builtin");
 
+const c = @import("esp-wifi-driver");
 const microzig = @import("microzig");
 const enter_critical_section = microzig.interrupt.enter_critical_section;
 const time = microzig.drivers.time;
 const peripherals = microzig.chip.peripherals;
 const APB_CTRL = peripherals.APB_CTRL;
-const hal = microzig.hal;
+const radio_interrupt = microzig.options.hal.radio.interrupt;
 
 const radio = @import("../radio.zig");
+const rng = @import("../rng.zig");
 const rtos = @import("../rtos.zig");
 const systimer = @import("../systimer.zig");
 const get_time_since_boot = @import("../time.zig").get_time_since_boot;
 const timer = @import("timer.zig");
 const wifi = @import("wifi.zig");
 
-const c = @import("esp-wifi-driver");
+const log = std.log.scoped(.esp_radio_osi);
 
 // TODO: config
 const coex_enabled: bool = false;
@@ -27,8 +28,6 @@ pub var wifi_interrupt_handler: ?struct {
     f: *const fn (?*anyopaque) callconv(.c) void,
     arg: ?*anyopaque,
 } = undefined;
-
-const radio_interrupt = microzig.options.hal.radio.interrupt;
 
 extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void;
 
@@ -158,9 +157,20 @@ pub fn vTaskDelay(ticks: u32) callconv(.c) void {
     rtos.sleep(.from_us(ticks));
 }
 
-comptime {
-    // provide some weak links so they can be overriten
+pub var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
 
+pub fn printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
+    syslog(fmt, @cVaStart());
+}
+
+pub fn esp_fill_random(buf: [*c]u8, len: usize) callconv(.c) void {
+    log.debug("esp_fill_random {any} {}", .{ buf, len });
+
+    rng.read(buf[0..len]);
+}
+
+/// Some are weaklinks which can be overriten.
+pub fn export_symbols() void {
     @export(&strlen, .{ .name = "strlen", .linkage = .weak });
     @export(&strnlen, .{ .name = "strnlen", .linkage = .weak });
     @export(&strrchr, .{ .name = "strrchr", .linkage = .weak });
@@ -176,34 +186,18 @@ comptime {
     @export(&sleep, .{ .name = "sleep", .linkage = .weak });
     @export(&usleep, .{ .name = "usleep", .linkage = .weak });
     @export(&vTaskDelay, .{ .name = "vTaskDelay", .linkage = .weak });
-}
 
-pub export var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
-
-pub export fn rtc_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
-    syslog(fmt, @cVaStart());
-}
-
-pub export fn phy_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
-    syslog(fmt, @cVaStart());
-}
-
-pub export fn coexist_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
-    syslog(fmt, @cVaStart());
-}
-
-pub export fn net80211_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
-    syslog(fmt, @cVaStart());
-}
-
-pub export fn pp_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
-    syslog(fmt, @cVaStart());
-}
-
-pub export fn esp_fill_random(buf: [*c]u8, len: usize) callconv(.c) void {
-    log.debug("esp_fill_random {any} {}", .{ buf, len });
-
-    hal.rng.read(buf[0..len]);
+    @export(&WIFI_EVENT, .{ .name = "WIFI_EVENT" });
+    inline for (&.{
+        "rtc_printf",
+        "phy_printf",
+        "coexist_printf",
+        "net80211_printf",
+        "pp_printf",
+    }) |name| {
+        @export(&printf, .{ .name = name });
+    }
+    @export(&esp_fill_random, .{ .name = "esp_fill_random" });
 }
 
 // ----- end of exports -----
@@ -651,7 +645,7 @@ pub fn get_free_heap_size() callconv(.c) void {
 }
 
 pub fn rand() callconv(.c) u32 {
-    return hal.rng.random_u32();
+    return rng.random_u32();
 }
 
 pub fn dport_access_stall_other_cpu_start_wrap() callconv(.c) void {
@@ -851,7 +845,7 @@ pub fn phy_update_country_info(country: [*c]const u8) callconv(.c) c_int {
 pub fn read_mac(mac: [*c]u8, typ: c_uint) callconv(.c) c_int {
     log.debug("read_mac {*} {}", .{ mac, typ });
 
-    const mac_tmp: [6]u8 = hal.radio.read_mac(switch (typ) {
+    const mac_tmp: [6]u8 = radio.read_mac(switch (typ) {
         0 => .sta,
         1 => .ap,
         2 => .bt,
@@ -979,7 +973,7 @@ pub fn nvs_erase_key() callconv(.c) void {
 }
 
 pub fn get_random(buf: [*c]u8, len: usize) callconv(.c) c_int {
-    hal.rng.read(buf[0..len]);
+    rng.read(buf[0..len]);
     return 0;
 }
 
@@ -988,7 +982,7 @@ pub fn get_time() callconv(.c) void {
 }
 
 pub fn random() callconv(.c) c_ulong {
-    return hal.rng.random_u32();
+    return rng.random_u32();
 }
 
 pub fn slowclk_cal_get() callconv(.c) u32 {

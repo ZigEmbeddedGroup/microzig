@@ -1,14 +1,12 @@
+const builtin = @import("builtin");
 const std = @import("std");
+const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
 const c = @import("esp-wifi-driver");
 const microzig = @import("microzig");
 const TrapFrame = microzig.cpu.TrapFrame;
-const time = microzig.drivers.time;
-const hal = microzig.hal;
-const systimer = hal.systimer;
 const peripherals = microzig.chip.peripherals;
-const SYSTEM = peripherals.SYSTEM;
 const RTC_CNTL = peripherals.RTC_CNTL;
 const APB_CTRL = peripherals.APB_CTRL;
 
@@ -25,12 +23,25 @@ pub const Options = struct {
     wifi: wifi.Options = .{},
 };
 
+var refcount: std.atomic.Value(usize) = .init(0);
+
 pub fn init(gpa: Allocator) Allocator.Error!void {
     // TODO: check that clock frequency is higher or equal to 80mhz
 
     const radio_interrupt = microzig.options.hal.radio.interrupt;
 
-    comptime microzig.cpu.interrupt.expect_handler(radio_interrupt, interrupt_handler);
+    comptime {
+        if (!microzig.options.hal.rtos.enable)
+            @compileError("radio requires the rtos option to be enabled");
+
+        microzig.cpu.interrupt.expect_handler(radio_interrupt, interrupt_handler);
+
+        osi.export_symbols();
+    }
+
+    if (refcount.rmw(.Add, 1, .monotonic) > 0) {
+        return;
+    }
 
     try timer.init(gpa);
 
@@ -51,15 +62,24 @@ pub fn init(gpa: Allocator) Allocator.Error!void {
 
     log.debug("initialization complete", .{});
 
-    // TODO: config
-    wifi.c_result(c.esp_wifi_internal_set_log_level(c.WIFI_LOG_VERBOSE)) catch {
+    const internal_wifi_log_level = switch (builtin.mode) {
+        .Debug => c.WIFI_LOG_VERBOSE,
+        else => c.WIFI_LOG_NONE,
+    };
+    wifi.c_result(c.esp_wifi_internal_set_log_level(internal_wifi_log_level)) catch {
         log.warn("failed to set wifi internal log level", .{});
     };
 }
 
-// TODO
-// should free everything
-pub fn deinit() void {}
+pub fn deinit() void {
+    const prev_count = refcount.rmw(.Sub, 1, .monotonic);
+    assert(prev_count != 0);
+    if (prev_count != 1) {
+        return;
+    }
+
+    timer.deinit();
+}
 
 pub fn read_mac(iface: enum {
     sta,
@@ -132,11 +152,13 @@ fn enable_wifi_power_domain_and_init_clocks() void {
 pub const interrupt_handler: microzig.cpu.InterruptHandler = .{
     .c = struct {
         fn handler_fn(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-            // TODO: multiplex the wifi and bluetooth handlers
-            if (osi.wifi_interrupt_handler) |handler| {
-                handler.f(handler.arg);
-            } else {
-                // should be unreachable
+            const status: microzig.cpu.interrupt.Status = .init();
+            if (status.is_set(.wifi_mac) or status.is_set(.wifi_pwr)) {
+                if (osi.wifi_interrupt_handler) |handler| {
+                    handler.f(handler.arg);
+                } else {
+                    // should be unreachable
+                }
             }
         }
     }.handler_fn,

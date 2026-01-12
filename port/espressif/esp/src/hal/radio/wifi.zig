@@ -19,10 +19,14 @@ pub const Options = struct {
     tx_queue_len: usize = 15,
 };
 
-pub fn init() InternalError!void {
+const InitError = std.mem.Allocator.Error || InternalError;
+
+pub fn init(gpa: std.mem.Allocator) InitError!void {
     if (inited) {
         @panic("wifi already initialized");
     }
+
+    try radio.init(gpa);
 
     init_config.wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs;
     init_config.feature_caps = g_wifi_feature_caps;
@@ -67,6 +71,8 @@ pub fn deinit() void {
     _ = c.esp_wifi_stop();
     _ = c.esp_wifi_deinit_internal();
     _ = c.esp_supplicant_deinit();
+
+    radio.deinit();
 
     inited = false;
 }

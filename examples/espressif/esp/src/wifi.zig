@@ -53,10 +53,7 @@ pub fn main() !void {
     var heap_allocator: microzig.Allocator = .init_with_buffer(&buffer);
     const gpa = heap_allocator.allocator();
 
-    try radio.init(gpa);
-    defer radio.deinit();
-
-    try radio.wifi.init();
+    try radio.wifi.init(gpa);
     defer radio.wifi.deinit();
 
     c.lwip_init();

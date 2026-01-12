@@ -26,7 +26,7 @@ var timer_list: std.SinglyLinkedList = .{};
 
 pub fn init(gpa: Allocator) Allocator.Error!void {
     _ = try rtos.spawn(gpa, task_fn, .{}, .{
-        .priority = .highest,
+        .priority = .highest, // TODO: what should the priority be?
         .stack_size = 8192,
     });
 }
