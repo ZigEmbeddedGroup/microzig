@@ -36,14 +36,7 @@ pub fn main() !void {
     log.debug("wifi joined", .{});
 
     // init lwip network interface
-    var nic: net.Interface = .{
-        .link = .{
-            .ptr = wifi,
-            .recv = drivers.WiFi.recv,
-            .send = drivers.WiFi.send,
-            .ready = drivers.WiFi.ready,
-        },
-    };
+    var nic: net.Interface = .{ .link = .adapt(wifi.interface()) };
     try nic.init(wifi.mac, try secrets.nic_options());
 
     var ts = time.get_time_since_boot();

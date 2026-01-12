@@ -26,13 +26,25 @@ pub const Interface = struct {
 
     netif: lwip.netif = .{},
     dhcp: lwip.dhcp = .{},
+    link: Link,
 
-    link: struct {
+    pub const Link = struct {
         ptr: *anyopaque,
-        recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
-        send: *const fn (*anyopaque, []u8) anyerror!void,
-        ready: *const fn (*anyopaque) bool,
-    },
+        vtable: struct {
+            recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
+            send: *const fn (*anyopaque, []u8) anyerror!void,
+        },
+
+        pub fn adapt(any: anytype) Link {
+            return .{
+                .ptr = any.ptr,
+                .vtable = .{
+                    .recv = any.vtable.recv,
+                    .send = any.vtable.send,
+                },
+            };
+        }
+    };
 
     pub const Options = struct {
         fixed: ?Fixed = null,
@@ -119,11 +131,6 @@ pub const Interface = struct {
         var pbuf: *lwip.pbuf = pbuf_c;
         const self: *Self = @fieldParentPtr("netif", netif);
 
-        if (!self.link.ready(self.link.ptr)) {
-            log.err("linkouput link not ready", .{});
-            return lwip.ERR_MEM; // lwip will try later
-        }
-
         if (lwip.pbuf_header(pbuf, sz.link_head) != 0) {
             log.err("can't get pbuf headroom len: {}, tot_len: {} ", .{ pbuf.len, pbuf.tot_len });
             return lwip.ERR_ARG;
@@ -138,9 +145,13 @@ pub const Interface = struct {
             if (pbuf_c.*.next != null) _ = lwip.pbuf_free(pbuf);
         }
 
-        self.link.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
+        self.link.vtable.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
             log.err("link send {}", .{err});
-            return lwip.ERR_ARG;
+            return switch (err) {
+                error.OutOfMemory => lwip.ERR_MEM,
+                error.LinkDown => lwip.ERR_IF,
+                else => lwip.ERR_ARG,
+            };
         };
         return lwip.ERR_OK;
     }
@@ -167,7 +178,7 @@ pub const Interface = struct {
                 "net.Interface.pool invalid pbuf allocation",
             );
             // receive into that buffer
-            const head, const len = try self.link.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
+            const head, const len = try self.link.vtable.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
                 // no data release packet buffer and exit loop
                 _ = lwip.pbuf_free(pbuf);
                 break;
@@ -573,28 +584,18 @@ fn c_err(res: anytype) Error!void {
 
 // required buffer sizes
 const sz = struct {
-    const pbuf_pool = lwip.PBUF_POOL_BUFSIZE; // 1540 = 1500 mtu + ethernet + link head/tail
+    /// Size of each buffer in packet buffer pool
+    /// 1540 bytes = link head (22) + ethernet (14) + mtu (1500) + link_tail (4)
+    const pbuf_pool = lwip.PBUF_POOL_BUFSIZE; // 1540
     const link_head = lwip.PBUF_LINK_ENCAPSULATION_HLEN; // 22
     const link_tail = 4; // reserved for the status in recv buffer
     const ethernet = 14; // layer 2 ethernet header size
 
-    // layer 3 (ip) mtu,
+    /// layer 3 (ip) mtu
     const mtu = pbuf_pool - link_head - link_tail - ethernet; // 1500
-
-    // ip v4 sizes
-    const v4 = struct {
-        // headers
-        const ip = 20;
-        const udp = 8;
-        const tcp = 20;
-
-        const payload = struct {
-            const udp = mtu - ip - v4.udp; // 1472
-        };
-    };
 };
 
-// test lwipopts.h config
+// test lwip config
 comptime {
     assert(sz.pbuf_pool == 1540);
     assert(sz.link_head == 22);

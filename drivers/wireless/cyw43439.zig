@@ -63,11 +63,6 @@ pub fn send_zc(ptr: *anyopaque, bytes: []u8) anyerror!void {
     try self.wifi.send_zc(bytes);
 }
 
-pub fn ready(ptr: *anyopaque) bool {
-    const self: *Self = @ptrCast(@alignCast(ptr));
-    return self.wifi.has_credit();
-}
-
 pub fn gpio(self: *Self, pin: u2) Pin {
     assert(pin < 3);
     self.wifi.gpio_enable(pin);
@@ -85,6 +80,24 @@ pub const Pin = struct {
         self.wifi.gpio_toggle(self.pin);
     }
 };
+
+pub const Interface = struct {
+    ptr: *anyopaque,
+    vtable: struct {
+        recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
+        send: *const fn (*anyopaque, []u8) anyerror!void,
+    },
+};
+
+pub fn interface(self: *Self) Interface {
+    return .{
+        .ptr = self,
+        .vtable = .{
+            .recv = recv_zc,
+            .send = send_zc,
+        },
+    };
+}
 
 // References:
 //   https://github.com/embassy-rs/embassy/blob/abb1d8286e2415686150e2e315ca1c380659c3c3/cyw43/src/consts.rs
