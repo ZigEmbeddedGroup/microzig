@@ -278,11 +278,18 @@ fn generate_chips_file(
                 \\        },
                 \\
             );
-        }
-        if (std.mem.startsWith(u8, chip_file.name, "STM32L47")) {
+        } else if (std.mem.startsWith(u8, chip_file.name, "STM32L47")) {
             try writer.writeAll(
                 \\        .hal = .{
                 \\            .root_source_file = b.path("src/hals/STM32L47X.zig"),
+                \\            .imports = hal_imports,
+                \\        },
+                \\
+            );
+        } else if (std.mem.startsWith(u8, chip_file.name, "STM32H723")) {
+            try writer.writeAll(
+                \\        .hal = .{
+                \\            .root_source_file = b.path("src/hals/STM32H723.zig"),
                 \\            .imports = hal_imports,
                 \\        },
                 \\
