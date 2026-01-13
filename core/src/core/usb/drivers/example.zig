@@ -45,13 +45,16 @@ pub const EchoExampleDriver = struct {
     ep_tx: usb.types.Endpoint.Num,
 
     /// This function is called when the host chooses a configuration
-    /// that contains this driver.
-    pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
-        defer device.ep_listen(desc.ep_out.endpoint.num, 64);
-        return .{
+    /// that contains this driver. `self` points to undefined memory.
+    pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+        self.* = .{
             .device = device,
             .ep_tx = desc.ep_in.endpoint.num,
         };
+        device.ep_listen(
+            desc.ep_out.endpoint.num,
+            @intCast(desc.ep_out.max_packet_size.into()),
+        );
     }
 
     /// Used for configuration through endpoint 0.

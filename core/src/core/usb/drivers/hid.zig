@@ -56,8 +56,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
         ep_in: types.Endpoint.Num,
         ep_out: types.Endpoint.Num,
 
-        pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
-            return .{
+        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+            self.* = .{
                 .device = device,
                 .ep_in = desc.ep_in.endpoint.num,
                 .ep_out = desc.ep_out.endpoint.num,

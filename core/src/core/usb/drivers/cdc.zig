@@ -166,9 +166,8 @@ pub fn CdcClassDriver(options: Options) type {
             return true;
         }
 
-        pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
-            defer device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
-            return .{
+        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+            self.* = .{
                 .device = device,
                 .ep_notifi = desc.ep_notifi.endpoint.num,
                 .line_coding = .{
@@ -187,6 +186,7 @@ pub fn CdcClassDriver(options: Options) type {
                 .tx_data = undefined,
                 .tx_end = 0,
             };
+            device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
         }
 
         pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) ?[]const u8 {

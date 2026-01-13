@@ -151,11 +151,14 @@ pub fn Polled(config: Config) type {
 
             // Has the host signaled a bus reset?
             if (ints.BUS_RESET != 0) {
+                // Abort all endpoints
+                peripherals.USB.EP_ABORT.raw = 0xFFFFFFFF;
                 // Acknowledge by writing the write-one-to-clear status bit.
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 set_address(&self.interface, 0);
-
-                controller.on_bus_reset();
+                controller.on_bus_reset(&self.interface);
+                while (peripherals.USB.EP_ABORT_DONE.raw != 0xFFFFFFFF) {}
+                peripherals.USB.EP_ABORT.raw = 0;
             }
         }
 

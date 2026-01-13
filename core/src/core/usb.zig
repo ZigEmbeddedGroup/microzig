@@ -294,7 +294,7 @@ pub fn DeviceController(config: Config) type {
             self.driver_last = null;
 
             switch (setup.request_type.recipient) {
-                .Device => try self.process_setup_request(device_itf, setup),
+                .Device => self.process_setup_request(device_itf, setup),
                 .Interface => switch (@as(u8, @truncate(setup.index.into()))) {
                     inline else => |itf_num| if (itf_num < handlers.itf.len) {
                         const drv = handlers.itf[itf_num];
@@ -350,8 +350,10 @@ pub fn DeviceController(config: Config) type {
         }
 
         /// Called by the device implementation on bus reset.
-        pub fn on_bus_reset(self: *@This()) void {
+        pub fn on_bus_reset(self: *@This(), device_itf: *DeviceInterface) void {
             if (config.debug) log.info("bus reset", .{});
+
+            self.process_set_config(device_itf, 0);
 
             // Reset our state.
             self.* = .init;
@@ -377,7 +379,7 @@ pub fn DeviceController(config: Config) type {
             };
         }
 
-        fn process_setup_request(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) !void {
+        fn process_setup_request(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) void {
             switch (setup.request_type.type) {
                 .Class => {
                     //const itfIndex = setup.index & 0x00ff;
@@ -386,28 +388,19 @@ pub fn DeviceController(config: Config) type {
                 .Standard => {
                     switch (std.meta.intToEnum(types.SetupRequest, setup.request) catch return) {
                         .SetAddress => {
+                            if (config.debug) log.info("    SetAddress: {}", .{self.new_address.?});
                             self.new_address = @truncate(setup.value.into());
                             device_itf.ep_ack(.ep0);
-                            if (config.debug) log.info("    SetAddress: {}", .{self.new_address.?});
                         },
                         .SetConfiguration => {
                             if (config.debug) log.info("    SetConfiguration", .{});
-                            const new_cfg = setup.value.into();
-                            if (self.cfg_num != new_cfg) {
-                                // if (self.cfg_num > 0)
-                                //     deinitialize drivers
-
-                                self.cfg_num = new_cfg;
-
-                                if (new_cfg > 0)
-                                    try self.process_set_config(device_itf, self.cfg_num - 1);
-                            }
+                            self.process_set_config(device_itf, setup.value.into());
                             device_itf.ep_ack(.ep0);
                         },
                         .GetDescriptor => {
                             const descriptor_type = std.meta.intToEnum(descriptor.Type, setup.value.into() >> 8) catch null;
                             if (descriptor_type) |dt| {
-                                try self.process_get_descriptor(device_itf, setup, dt);
+                                self.process_get_descriptor(device_itf, setup, dt);
                             }
                         },
                         .SetFeature => {
@@ -425,7 +418,7 @@ pub fn DeviceController(config: Config) type {
             }
         }
 
-        fn process_get_descriptor(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket, descriptor_type: descriptor.Type) !void {
+        fn process_get_descriptor(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket, descriptor_type: descriptor.Type) void {
             switch (descriptor_type) {
                 .Device => {
                     if (config.debug) log.info("        Device", .{});
@@ -468,16 +461,40 @@ pub fn DeviceController(config: Config) type {
             }
         }
 
-        fn process_set_config(self: *@This(), device_itf: *DeviceInterface, _: u16) !void {
+        fn process_set_config(self: *@This(), device_itf: *DeviceInterface, cfg_num: u16) void {
+            if (cfg_num == self.cfg_num) return;
+
+            if (self.driver_data) |data_old| {
+                _ = data_old;
+                // deinitialize drivers
+            }
+
+            self.cfg_num = cfg_num;
+            if (cfg_num == 0) {
+                self.driver_data = null;
+                return;
+            }
+
             // We support just one config for now so ignore config index
             self.driver_data = @as(config0.Drivers, undefined);
             inline for (driver_fields) |fld_drv| {
                 const cfg = @field(config_descriptor, fld_drv.name);
-                @field(self.driver_data.?, fld_drv.name) = .init(&cfg, device_itf);
+                const desc_fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
 
-                inline for (@typeInfo(@TypeOf(cfg)).@"struct".fields) |fld| {
-                    if (comptime fld.type == descriptor.Endpoint)
-                        device_itf.ep_open(&@field(cfg, fld.name));
+                // Open OUT endpoint first so that the driver can call ep_listen in init
+                inline for (desc_fields) |fld| {
+                    const desc = &@field(cfg, fld.name);
+                    if (comptime fld.type == descriptor.Endpoint and desc.endpoint.dir == .Out)
+                        device_itf.ep_open(desc);
+                }
+
+                @field(self.driver_data.?, fld_drv.name).init(&cfg, device_itf);
+
+                // Open IN endpoint last so that callbacks can happen
+                inline for (desc_fields) |fld| {
+                    const desc = &@field(cfg, fld.name);
+                    if (comptime fld.type == descriptor.Endpoint and desc.endpoint.dir == .In)
+                        device_itf.ep_open(desc);
                 }
             }
         }
