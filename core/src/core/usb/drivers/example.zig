@@ -7,8 +7,8 @@ pub const EchoExampleDriver = struct {
     /// The descriptors need to have the same memory layout as the sent data.
     pub const Descriptor = extern struct {
         example_interface: usb.descriptor.Interface,
-        ep_in: usb.descriptor.Endpoint,
         ep_out: usb.descriptor.Endpoint,
+        ep_in: usb.descriptor.Endpoint,
 
         /// This function is used during descriptor creation. If multiple instances
         /// of a driver are used, a descriptor will be created for each.
