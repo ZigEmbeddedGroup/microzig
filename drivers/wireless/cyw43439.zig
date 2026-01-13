@@ -33,6 +33,10 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !v
     try self.wifi.join(ssid, pwd, opt);
 }
 
+pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !WiFi.JoinPoller {
+    return try self.wifi.join_poller(ssid, pwd, opt);
+}
+
 fn show_clm_ver(self: *Self) !void {
     var data: [128]u8 = @splat(0);
     const n = try self.wifi.get_var("clmver", &data);
@@ -83,6 +87,10 @@ pub const Pin = struct {
 
     pub fn toggle(self: *Pin) void {
         self.wifi.gpio_toggle(self.pin);
+    }
+
+    pub fn put(self: *Pin, value: u1) void {
+        self.wifi.gpio_put(self.pin, value);
     }
 };
 

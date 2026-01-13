@@ -276,7 +276,13 @@ pub const JoinOptions = struct {
     };
 };
 
+/// Blocking wifi network join
 pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
+    var jp = try self.join_poller(ssid, pwd, opt);
+    try jp.wait(30 * 1000);
+}
+
+pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !JoinPoller {
     const bus = self.bus;
 
     // Clear pullups
@@ -406,35 +412,43 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !v
 
         try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
     }
-
-    try self.join_wait(30 * 1000, opt.security);
+    return .{
+        .wifi = self,
+        .state = .{ .link_auth = opt.security == .open },
+    };
 }
 
-fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
-    var delay: u32 = 0;
-    var link_up: bool = false;
-    var link_auth: bool = security == .open;
-    var set_ssid: bool = false;
-    var bytes: [512]u8 align(4) = undefined;
+pub const JoinPoller = struct {
+    const State = packed struct {
+        link_up: bool = false,
+        link_auth: bool = false,
+        set_ssid: bool = false,
 
-    while (delay < wait_ms) {
-        // self.log_read(); // show chip logs
-        const rsp = try self.read(&bytes) orelse {
-            self.sleep_ms(ioctl.response_poll_interval);
-            delay += ioctl.response_poll_interval;
-            continue;
+        pub const connected: State = .{
+            .link_up = true,
+            .link_auth = true,
+            .set_ssid = true,
         };
+    };
+
+    wifi: *Self,
+    state: State = .{},
+
+    pub fn poll(jp: *JoinPoller) !void {
+        var bytes: [512]u8 align(4) = undefined;
+        const rsp = try jp.wifi.read(&bytes) orelse return;
+
         switch (rsp.sdp.channel()) {
             .event => {
                 const evt = rsp.event().msg;
                 switch (evt.event_type) {
                     .link => {
                         if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
-                        link_up = true;
+                        jp.state.link_up = true;
                     },
                     .psk_sup => {
                         if (evt.status != .unsolicited) return error.Cyw43JoinWpaHandshake;
-                        link_auth = true;
+                        jp.state.link_auth = true;
                     },
                     .assoc => {
                         if (evt.status != .success) return error.Cyw43JoinAssocRequest;
@@ -447,19 +461,30 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
                     },
                     .set_ssid => {
                         if (evt.status != .success) return error.Cyw43JoinSetSsid;
-                        set_ssid = true;
+                        jp.state.set_ssid = true;
                     },
                     else => {},
-                }
-                if (set_ssid and link_up and link_auth) {
-                    return;
                 }
             },
             else => {},
         }
     }
-    return error.Cyw43JoinTimeout;
-}
+
+    pub fn is_connected(jp: *JoinPoller) bool {
+        return jp.state == State.connected;
+    }
+
+    pub fn wait(jp: *JoinPoller, wait_ms: u32) !void {
+        var delay: u32 = 0;
+        try jp.poll();
+        while (delay < wait_ms and !jp.is_connected()) {
+            jp.wifi.sleep_ms(ioctl.response_poll_interval);
+            delay += ioctl.response_poll_interval;
+            try jp.poll();
+        }
+        return error.Cyw43JoinTimeout;
+    }
+};
 
 // show unexpected command response
 fn log_response(self: *Self, rsp: ioctl.Response) void {
@@ -585,9 +610,15 @@ pub fn gpio_enable(self: *Self, pin: u2) void {
 }
 
 pub fn gpio_toggle(self: *Self, pin: u2) void {
-    var val = self.bus.read_int(u32, .backplane, chip.gpio.output);
-    val = val ^ @as(u32, 1) << pin;
-    self.bus.write_int(u32, .backplane, chip.gpio.output, val);
+    var reg = self.bus.read_int(u32, .backplane, chip.gpio.output);
+    reg = reg ^ @as(u32, 1) << pin;
+    self.bus.write_int(u32, .backplane, chip.gpio.output, reg);
+}
+
+pub fn gpio_put(self: *Self, pin: u2, value: u1) void {
+    var reg = self.bus.read_int(u32, .backplane, chip.gpio.output);
+    reg = reg | @as(u32, value) << pin;
+    self.bus.write_int(u32, .backplane, chip.gpio.output, reg);
 }
 
 // to set gpio pin by sending command
