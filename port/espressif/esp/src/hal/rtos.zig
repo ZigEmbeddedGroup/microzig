@@ -22,13 +22,12 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // and vice versa. Because of the forced yield, tasks are required to have a
 // minimum stack size available at all times.
 
-// TODO: add identifier names to tasks
-// TODO: stack usage report based on stack painting and overflow detection
+// TODO: stack overflow detection
 // TODO: question: should idle do more stuff (like task garbage collection)?
 // TODO: implement task garbage collection and recycling
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
-// TODO: implement priority inheritance for respective sync primitives
+// TODO: implement priority inheritance for sync primitives
 // TODO: better handling if timeout is in the past or very short
 // TODO: support SMP for other esp32 chips with multicore (far future)
 // NOTE: don't use anonymous structs for reinitializing state unions with
@@ -54,6 +53,8 @@ pub const Options = struct {
     systimer_alarm: systimer.Alarm = .alarm0,
     cpu_interrupt: system.CpuInterrupt = .cpu_interrupt_0,
     yield_interrupt: microzig.cpu.Interrupt = .interrupt31,
+
+    paint_stack: ?u8 = null,
 };
 
 var main_task: Task = .{
@@ -69,7 +70,7 @@ var idle_task: Task = .{
         .fp = null,
     },
     .priority = .idle,
-    .stack = &.{},
+    .stack = &idle_stack,
 };
 
 var rtos_state: RTOS_State = undefined;
@@ -99,6 +100,9 @@ pub fn init() void {
     rtos_state = .{
         .current_task = &main_task,
     };
+    if (rtos_options.paint_stack) |paint_byte| {
+        @memset(&idle_stack, paint_byte);
+    }
     make_ready(&idle_task);
 
     microzig.cpu.interrupt.map(rtos_options.cpu_interrupt.source(), rtos_options.yield_interrupt);
@@ -124,9 +128,12 @@ pub fn init() void {
 // TODO: deinit
 
 fn idle() linksection(".ram_text") callconv(.naked) void {
+    // TODO: cpu would hang after a while. Enabling interrupts before wfi
+    // appears to have solved the problem but the root cause is still a
+    // mistery.
     asm volatile (
-        \\csrsi mstatus, 8  # enable interrupts
         \\1:
+        \\csrsi mstatus, 8  # make sure interrupts are enabled
         \\wfi
         \\j 1b
     );
@@ -137,8 +144,8 @@ pub fn get_current_task() *Task {
 }
 
 pub const SpawnOptions = struct {
+    name: ?[]const u8 = null,
     stack_size: usize = 4096,
-    // TODO: should we ban idle priority?
     priority: Priority = .lowest,
 };
 
@@ -148,6 +155,8 @@ pub fn spawn(
     args: std.meta.ArgsTuple(@TypeOf(function)),
     options: SpawnOptions,
 ) !*Task {
+    assert(options.priority != .idle);
+
     const Args = @TypeOf(args);
     const args_align: std.mem.Alignment = comptime .fromByteUnits(@alignOf(Args));
 
@@ -181,8 +190,12 @@ pub fn spawn(
     task_args.* = args;
 
     const stack: []u8 = raw_alloc[stack_start..stack_end];
+    if (rtos_options.paint_stack) |paint_byte| {
+        @memset(stack, paint_byte);
+    }
 
     task.* = .{
+        .name = options.name,
         .context = .{
             .sp = stack[stack.len..].ptr,
             .pc = &TypeErased.call,
@@ -335,6 +348,40 @@ pub fn is_a_higher_priority_task_ready() bool {
     else
         false;
 }
+
+pub const report_stack_usage = if (rtos_options.paint_stack) |paint_byte| struct {
+    fn report_stack_usage() void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        const list: []const ?*std.DoublyLinkedList.Node = &.{
+            rtos_state.ready_queue.inner.first,
+            rtos_state.timer_queue.first,
+            rtos_state.scheduled_for_deletion_list.first,
+        };
+        for (list) |first| {
+            var it: ?*std.DoublyLinkedList.Node = first;
+            while (it) |node| : (it = node.next) {
+                const task: *Task = @alignCast(@fieldParentPtr("node", node));
+                if (task == &main_task) continue;
+                log_stack_task_usage(task);
+            }
+        }
+    }
+
+    fn log_stack_task_usage(task: *Task) void {
+        for (task.stack, 0..) |byte, i| {
+            if (byte != paint_byte) {
+                std.log.debug("task with name {?s} uses {} bytes out of {} for stack", .{
+                    task.name,
+                    task.stack.len - i,
+                    task.stack.len,
+                });
+                break;
+            }
+        }
+    }
+}.report_stack_usage else @compileError("please enable the paint_stack option to use this function");
 
 pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
     .naked = struct {
@@ -491,12 +538,12 @@ fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) v
 
 pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ .c = struct {
     pub fn handler_fn(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
+        const cs = enter_critical_section();
+        defer cs.leave();
+
         var status: microzig.cpu.interrupt.Status = .init();
         if (status.is_set(rtos_options.systimer_alarm.interrupt_source())) {
             rtos_options.systimer_alarm.clear_interrupt();
-
-            const cs = enter_critical_section();
-            defer cs.leave();
 
             sweep_timer_queue_for_timeouts();
         }
@@ -554,6 +601,8 @@ fn sweep_timer_queue_for_timeouts() void {
 }
 
 pub const Task = struct {
+    name: ?[]const u8 = null,
+
     context: Context,
     stack: []u8,
     priority: Priority,
@@ -755,7 +804,6 @@ pub const Mutex = struct {
     }
 };
 
-// TODO: maybe move inside radion/osi.zig since it is made specifically for it
 pub const RecursiveMutex = struct {
     recursive: bool,
     value: u32 = 0,

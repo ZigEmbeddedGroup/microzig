@@ -198,6 +198,7 @@ pub fn export_symbols() void {
         @export(&printf, .{ .name = name });
     }
     @export(&esp_fill_random, .{ .name = "esp_fill_random" });
+    @export(&esp_event_post, .{ .name = "esp_event_post" });
 }
 
 // ----- end of exports -----
@@ -554,12 +555,12 @@ fn task_create_common(
     task_handle: ?*anyopaque,
     core_id: u32,
 ) i32 {
-    _ = name; // autofix
     _ = core_id; // autofix
 
     const task_entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn = @ptrCast(@alignCast(task_func));
 
     const task: *rtos.Task = rtos.spawn(gpa, task_wrapper, .{ task_entry, param }, .{
+        .name = std.mem.span(name),
         .priority = @enumFromInt(prio),
         .stack_size = stack_depth,
     }) catch {
@@ -638,6 +639,19 @@ pub fn task_get_current_task() callconv(.c) ?*anyopaque {
 
 pub fn task_get_max_priority() callconv(.c) i32 {
     return @intFromEnum(rtos.Priority.highest);
+}
+
+pub fn esp_event_post(
+    base: [*c]const u8,
+    id: i32,
+    data: ?*anyopaque,
+    data_size: usize,
+    ticks_to_wait: u32,
+) callconv(.c) i32 {
+    _ = base;
+    _ = ticks_to_wait;
+    wifi.on_event_post(id, data, data_size);
+    return 0;
 }
 
 pub fn get_free_heap_size() callconv(.c) void {

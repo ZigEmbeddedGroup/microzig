@@ -56,47 +56,24 @@ pub fn build(b: *std.Build) void {
             });
 
             if (example.features.lwip) {
-                const resolved_zig_target = b.resolveTargetQuery(firmware.target.zig_target);
+                const target = b.resolveTargetQuery(firmware.target.zig_target);
 
-                const foundation_libc_dep = b.dependency("foundation_libc", .{
+                const foundation_dep = b.dependency("foundation_libc", .{
+                    .target = target,
                     .optimize = optimize,
-                    .target = resolved_zig_target,
-                });
-                const lwip_dep = b.dependency("lwip", .{});
-
-                const lwip_lib = b.addLibrary(.{
-                    .name = "lwip",
-                    .root_module = b.createModule(.{
-                        .optimize = optimize,
-                        .target = resolved_zig_target,
-                        .link_libc = false,
-                    }),
-                    .linkage = .static,
                 });
 
-                lwip_lib.addCSourceFiles(.{
-                    .root = lwip_dep.path("src"),
-                    .files = &lwip_files,
-                    .flags = &lwip_flags,
+                const lwip_dep = b.dependency("lwip", .{
+                    .target = target,
+                    .optimize = optimize,
+                    .include_dir = b.path("src/lwip/include"),
                 });
 
-                lwip_lib.linkLibrary(foundation_libc_dep.artifact("foundation"));
+                const libc_lib = foundation_dep.artifact("foundation");
+                const lwip_lib = lwip_dep.artifact("lwip");
 
-                lwip_lib.addIncludePath(b.path("src/include"));
-                lwip_lib.addIncludePath(lwip_dep.path("src/include"));
-
+                lwip_lib.root_module.linkLibrary(libc_lib);
                 firmware.app_mod.linkLibrary(lwip_lib);
-
-                const lwip_translate_c = b.addTranslateC(.{
-                    .root_source_file = b.path("src/include/lwip.h"),
-                    .target = resolved_zig_target,
-                    .optimize = optimize,
-                    .link_libc = false,
-                });
-                lwip_translate_c.addIncludePath(b.path("src/include"));
-                lwip_translate_c.addIncludePath(lwip_dep.path("src/include"));
-
-                firmware.app_mod.addImport("lwip", lwip_translate_c.createModule());
             }
 
             // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`

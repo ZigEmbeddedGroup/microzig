@@ -1,13 +1,16 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const SPSC_Queue = microzig.concurrency.SPSC_Queue;
 const interrupt = microzig.cpu.interrupt;
 const hal = microzig.hal;
 const rtos = hal.rtos;
 const radio = hal.radio;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
-const c = @import("lwip");
+const lwip = @import("lwip/include.zig");
+const exports = @import("lwip/exports.zig");
+comptime {
+    _ = exports;
+}
 
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
@@ -44,29 +47,26 @@ pub const microzig_options: microzig.Options = .{
         .rtos = .{
             .enable = true,
         },
+        .radio = .{
+            .wifi = .{
+                .on_event = on_event,
+                .on_packet_received = on_packet_received,
+            },
+        },
     },
 };
 
-var buffer: [70 * 1024]u8 = undefined;
+var netif: lwip.c.netif = undefined;
 
 pub fn main() !void {
-    var heap_allocator: microzig.Allocator = .init_with_buffer(&buffer);
+    var heap_allocator: microzig.Allocator = .init_with_heap(8192);
     const gpa = heap_allocator.allocator();
 
     try radio.wifi.init(gpa);
     defer radio.wifi.deinit();
 
-    c.lwip_init();
-
-    var netif: c.netif = undefined;
-    _ = c.netif_add(&netif, @ptrCast(c.IP4_ADDR_ANY), @ptrCast(c.IP4_ADDR_ANY), @ptrCast(c.IP4_ADDR_ANY), null, netif_init, c.netif_input);
-    @memcpy(&netif.name, "e0");
-    c.netif_create_ip6_linklocal_address(&netif, 1);
-    netif.ip6_autoconfig_enabled = 1;
-    c.netif_set_status_callback(&netif, netif_status_callback);
-    c.netif_set_default(&netif);
-    c.netif_set_up(&netif);
-    _ = c.dhcp_start(&netif);
+    exports.gpa = gpa;
+    _ = lwip.c.tcpip_init(init_done, null);
 
     try radio.wifi.apply(.{
         .sta = .{
@@ -77,76 +77,75 @@ pub fn main() !void {
     try radio.wifi.start();
     try radio.wifi.connect();
 
-    var connected: bool = false;
-    var last_mem_show = hal.time.get_time_since_boot();
-
+    var count: usize = 0;
     while (true) {
-        const sta_state = radio.wifi.get_sta_state();
-        if (!connected and sta_state == .sta_connected) {
-            std.log.info("link up", .{});
-            c.netif_set_link_up(&netif);
-            connected = true;
-        } else if (connected and sta_state == .sta_disconnected) {
-            std.log.info("link down", .{});
-            c.netif_set_link_down(&netif);
-            connected = false;
-        }
-
-        while (radio.wifi.recv_packet(.sta)) |packet| {
-            defer packet.deinit();
-
-            const maybe_pbuf: ?*c.struct_pbuf = c.pbuf_alloc(c.PBUF_RAW, @intCast(packet.data.len), c.PBUF_POOL);
-            if (maybe_pbuf) |pbuf| {
-                _ = c.pbuf_take(pbuf, packet.data.ptr, @intCast(packet.data.len));
-                defer _ = c.pbuf_free(pbuf);
-
-                if (c.netif_input(pbuf, &netif) != c.ERR_OK) {
-                    std.log.warn("lwip netif input failed", .{});
-                }
-            }
-        }
-
-        c.sys_check_timeouts();
-
-        const now = hal.time.get_time_since_boot();
-        if (!now.diff(last_mem_show).less_than(.from_ms(1000))) {
-            const free_heap = heap_allocator.free_heap();
-            std.log.info("free memory: {}K ({})", .{ free_heap / 1024, free_heap });
-            last_mem_show = now;
-        }
-
-        rtos.sleep(.from_ms(10));
+        const free_heap = heap_allocator.free_heap();
+        std.log.info("{} free memory: {}K ({})", .{ count, free_heap / 1024, free_heap });
+        count += 1;
+        rtos.sleep(.from_ms(1000));
     }
 }
 
-fn netif_init(netif_c: [*c]c.struct_netif) callconv(.c) c.err_t {
-    const netif: *c.struct_netif = netif_c;
-
-    netif.linkoutput = netif_output;
-    netif.output = c.etharp_output;
-    netif.output_ip6 = c.ethip6_output;
-    netif.mtu = 1500;
-    netif.flags = c.NETIF_FLAG_BROADCAST | c.NETIF_FLAG_ETHARP | c.NETIF_FLAG_ETHERNET | c.NETIF_FLAG_IGMP | c.NETIF_FLAG_MLD6;
-    @memcpy(&netif.hwaddr, &radio.read_mac(.sta));
-    netif.hwaddr_len = 6;
-
-    return c.ERR_OK;
+fn on_event(e: radio.wifi.EventType) void {
+    switch (e) {
+        .StaConnected => _ = lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_up, null),
+        .StaDisconnected => _ = lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_down, null),
+        else => {}
+    }
 }
 
-var packet_buf: [1500]u8 = undefined;
+fn on_packet_received(comptime _: radio.wifi.Interface, data: []const u8) void {
+    const maybe_pbuf: ?*lwip.c.struct_pbuf = lwip.c.pbuf_alloc(lwip.c.PBUF_RAW, @intCast(data.len), lwip.c.PBUF_POOL);
+    if (maybe_pbuf) |pbuf| {
+        _ = lwip.c.pbuf_take(pbuf, data.ptr, @intCast(data.len));
+        if (lwip.c.tcpip_input(pbuf, &netif) != lwip.c.ERR_OK) {
+            std.log.warn("lwip netif input failed", .{});
+        }
+    }
+}
 
-fn netif_output(netif: [*c]c.struct_netif, pbuf_c: [*c]c.struct_pbuf) callconv(.c) c.err_t {
-    _ = netif;
-    const pbuf: *c.struct_pbuf = pbuf_c;
+fn init_done(_: ?*anyopaque) callconv(.c) void {
+    _ = lwip.c.netif_add(
+        &netif,
+        @ptrCast(lwip.c.IP4_ADDR_ANY),
+        @ptrCast(lwip.c.IP4_ADDR_ANY),
+        @ptrCast(lwip.c.IP4_ADDR_ANY),
+        null,
+        netif_init,
+        lwip.c.tcpip_input,
+    );
+    _ = lwip.c.dhcp_start(&netif);
+}
 
-    // std.log.info("sending packet", .{});
+fn netif_init(_: [*c]lwip.c.struct_netif) callconv(.c) lwip.c.err_t {
+    @memcpy(&netif.name, "e0");
+    netif.linkoutput = netif_output;
+    netif.output = lwip.c.etharp_output;
+    netif.output_ip6 = lwip.c.ethip6_output;
+    netif.mtu = 1500;
+    netif.flags = lwip.c.NETIF_FLAG_BROADCAST | lwip.c.NETIF_FLAG_ETHARP | lwip.c.NETIF_FLAG_ETHERNET | lwip.c.NETIF_FLAG_IGMP | lwip.c.NETIF_FLAG_MLD6;
+    @memcpy(&netif.hwaddr, &radio.read_mac(.sta));
+    netif.hwaddr_len = 6;
+    lwip.c.netif_create_ip6_linklocal_address(&netif, 1);
+    lwip.c.netif_set_status_callback(&netif, netif_status_callback);
+    lwip.c.netif_set_default(&netif);
+    lwip.c.netif_set_up(&netif);
+
+    return lwip.c.ERR_OK;
+}
+
+var packet_buf: [1600]u8 = undefined;
+
+fn netif_output(_: [*c]lwip.c.struct_netif, pbuf_c: [*c]lwip.c.struct_pbuf) callconv(.c) lwip.c.err_t {
+    const pbuf: *lwip.c.struct_pbuf = pbuf_c;
+    std.debug.assert(pbuf.tot_len <= packet_buf.len);
 
     var off: usize = 0;
     while (off < pbuf.tot_len) {
-        const cnt = c.pbuf_copy_partial(pbuf, packet_buf[off..].ptr, @as(u15, @intCast(pbuf.tot_len - off)), @as(u15, @intCast(off)));
+        const cnt = lwip.c.pbuf_copy_partial(pbuf, packet_buf[off..].ptr, @as(u15, @intCast(pbuf.tot_len - off)), @as(u15, @intCast(off)));
         if (cnt == 0) {
             std.log.err("failed to copy network packet", .{});
-            return c.ERR_BUF;
+            return lwip.c.ERR_BUF;
         }
         off += cnt;
     }
@@ -155,31 +154,21 @@ fn netif_output(netif: [*c]c.struct_netif, pbuf_c: [*c]c.struct_pbuf) callconv(.
         std.log.err("failed to send packet: {}", .{err});
     };
 
-    return c.ERR_OK;
+    return lwip.c.ERR_OK;
 }
 
 const IPFormatter = struct {
-    addr: c.ip_addr_t,
+    addr: lwip.c.ip_addr_t,
 
-    pub fn init(addr: c.ip_addr_t) IPFormatter {
+    pub fn init(addr: lwip.c.ip_addr_t) IPFormatter {
         return .{ .addr = addr };
     }
 
     pub fn format(addr: IPFormatter, writer: *std.Io.Writer) !void {
-        try writer.writeAll(std.mem.sliceTo(c.ip4addr_ntoa(@as(*const c.ip4_addr_t, @ptrCast(&addr.addr))), 0));
+        try writer.writeAll(std.mem.sliceTo(lwip.c.ip4addr_ntoa(@as(*const lwip.c.ip4_addr_t, @ptrCast(&addr.addr))), 0));
     }
 };
 
-fn netif_status_callback(netif_c: [*c]c.netif) callconv(.c) void {
-    const netif: *c.netif = netif_c;
-
+fn netif_status_callback(_: [*c]lwip.c.netif) callconv(.c) void {
     std.log.info("netif status changed ip to {f}", .{IPFormatter.init(netif.ip_addr)});
-}
-
-export fn sys_now() callconv(.c) u32 {
-    return @truncate(hal.time.get_time_since_boot().to_us() * 1_000);
-}
-
-export fn rand() callconv(.c) i32 {
-    return @bitCast(hal.rng.random_u32());
 }

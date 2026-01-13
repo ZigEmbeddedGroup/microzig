@@ -26,6 +26,7 @@ var timer_list: std.SinglyLinkedList = .{};
 
 pub fn init(gpa: Allocator) Allocator.Error!void {
     _ = try rtos.spawn(gpa, task_fn, .{}, .{
+        .name = "radio_timer",
         .priority = .highest, // TODO: what should the priority be?
         .stack_size = 8192,
     });
