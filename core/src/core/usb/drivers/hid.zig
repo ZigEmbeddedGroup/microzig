@@ -18,14 +18,12 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             ep_in: descriptor.Endpoint,
 
             pub fn create(
-                first_interface: u8,
+                alloc: *usb.DescriptorAllocator,
                 first_string: u8,
-                first_endpoint_in: u4,
-                first_endpoint_out: u4,
             ) @This() {
                 return .{
                     .interface = .{
-                        .interface_number = first_interface,
+                        .interface_number = alloc.next_itf(),
                         .alternate_setting = 0,
                         .num_endpoints = 2,
                         .interface_class = 3,
@@ -35,13 +33,13 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                     },
                     .hid = hid_descriptor,
                     .ep_out = .{
-                        .endpoint = .out(@enumFromInt(first_endpoint_out)),
+                        .endpoint = alloc.next_ep(.Out),
                         .attributes = .interrupt,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,
                     },
                     .ep_in = .{
-                        .endpoint = .in(@enumFromInt(first_endpoint_in)),
+                        .endpoint = alloc.next_ep(.In),
                         .attributes = .interrupt,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = options.endpoint_interval,

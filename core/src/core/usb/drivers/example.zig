@@ -12,15 +12,15 @@ pub const EchoExampleDriver = struct {
 
         /// This function is used during descriptor creation. If multiple instances
         /// of a driver are used, a descriptor will be created for each.
+        /// Endpoint numbers are allocated automatically, this function should
+        /// use placeholder .ep0 values on all endpoints.
         pub fn create(
-            first_interface: u8,
+            alloc: *usb.DescriptorAllocator,
             first_string: u8,
-            first_endpoint_in: u4,
-            first_endpoint_out: u4,
         ) @This() {
             return .{
                 .example_interface = .{
-                    .interface_number = first_interface,
+                    .interface_number = alloc.next_itf(),
                     .alternate_setting = 0,
                     .num_endpoints = 2,
                     .interface_class = 0xFF,
@@ -28,14 +28,14 @@ pub const EchoExampleDriver = struct {
                     .interface_protocol = 0xFF,
                     .interface_s = first_string,
                 },
-                .ep_in = .{
-                    .endpoint = .in(@enumFromInt(first_endpoint_in)),
+                .ep_out = .{
+                    .endpoint = alloc.next_ep(.Out),
                     .attributes = .bulk,
                     .max_packet_size = .from(64),
                     .interval = 0,
                 },
-                .ep_out = .{
-                    .endpoint = .out(@enumFromInt(first_endpoint_out + 1)),
+                .ep_in = .{
+                    .endpoint = alloc.next_ep(.In),
                     .attributes = .bulk,
                     .max_packet_size = .from(64),
                     .interval = 0,
@@ -58,13 +58,11 @@ pub const EchoExampleDriver = struct {
     /// This function is called when the host chooses a configuration
     /// that contains this driver.
     pub fn init(desc: *const Descriptor, device: *usb.DeviceInterface) @This() {
-        const self: @This() = .{
+        defer device.ep_listen(desc.ep_out.endpoint.num, 64);
+        return .{
             .device = device,
             .ep_tx = desc.ep_in.endpoint.num,
         };
-        // Listen for first packet
-        device.ep_listen(desc.ep_out.endpoint.num, 64);
-        return self;
     }
 
     /// Used for configuration through endpoint 0.

@@ -13,6 +13,34 @@ pub const types = @import("usb/types.zig");
 pub const ack: []const u8 = "";
 pub const nak: ?[]const u8 = null;
 
+pub const DescriptorAllocator = struct {
+    next_ep_num: [2]u8,
+    next_itf_num: u8,
+    unique_endpoints: bool,
+
+    pub fn init(unique_endpoints: bool) @This() {
+        return .{
+            .next_ep_num = @splat(1),
+            .next_itf_num = 0,
+            .unique_endpoints = unique_endpoints,
+        };
+    }
+
+    pub fn next_ep(self: *@This(), dir: types.Dir) types.Endpoint {
+        const idx: u1 = @intFromEnum(dir);
+        const ret = self.next_ep_num[idx];
+        self.next_ep_num[idx] += 1;
+        if (self.unique_endpoints)
+            self.next_ep_num[idx ^ 1] += 1;
+        return .{ .dir = dir, .num = @enumFromInt(ret) };
+    }
+
+    pub fn next_itf(self: *@This()) u8 {
+        defer self.next_itf_num += 1;
+        return self.next_itf_num;
+    }
+};
+
 /// USB Device interface
 /// Any device implementation used with DeviceController must implement those functions
 pub const DeviceInterface = struct {
@@ -77,6 +105,10 @@ pub const Config = struct {
     debug: bool = false,
     /// Currently only a single configuration is supported.
     configurations: []const Configuration,
+    /// Only use either IN or OUT on each endpoint. Useful for debugging.
+    /// Realistically, it should only be turned off if you are exhausting
+    /// the 15 endpoint limit.
+    unique_endpoints: bool = true,
 };
 
 /// USB device controller
@@ -90,39 +122,25 @@ pub fn DeviceController(config: Config) type {
         const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
         const config_descriptor = blk: {
-            var num_interfaces = 0;
-            var num_strings = 4;
-            var num_ep_in = 1;
-            var num_ep_out = 1;
+            var alloc: DescriptorAllocator = .init(config.unique_endpoints);
+            var next_string = 4;
 
             var size = @sizeOf(descriptor.Configuration);
             var fields: [driver_fields.len + 1]std.builtin.Type.StructField = undefined;
 
             for (driver_fields, 1..) |drv, i| {
-                const payload = drv.type.Descriptor.create(num_interfaces, num_strings, num_ep_in, num_ep_out);
+                const payload = drv.type.Descriptor.create(&alloc, next_string);
                 const Payload = @TypeOf(payload);
                 size += @sizeOf(Payload);
-
-                fields[i] = .{
-                    .name = drv.name,
-                    .type = Payload,
-                    .default_value_ptr = &payload,
-                    .is_comptime = false,
-                    .alignment = 1,
-                };
 
                 for (@typeInfo(Payload).@"struct".fields) |fld| {
                     const desc = @field(payload, fld.name);
                     switch (fld.type) {
                         descriptor.Interface => {
-                            num_interfaces += 1;
                             if (desc.interface_s != 0)
-                                num_strings += 1;
+                                next_string += 1;
                         },
-                        descriptor.Endpoint => switch (desc.endpoint.dir) {
-                            .In => num_ep_in += 1,
-                            .Out => num_ep_out += 1,
-                        },
+                        descriptor.Endpoint,
                         descriptor.InterfaceAssociation,
                         descriptor.cdc.Header,
                         descriptor.cdc.CallManagement,
@@ -133,17 +151,25 @@ pub fn DeviceController(config: Config) type {
                         else => @compileLog(fld),
                     }
                 }
+
+                fields[i] = .{
+                    .name = drv.name,
+                    .type = Payload,
+                    .default_value_ptr = &payload,
+                    .is_comptime = false,
+                    .alignment = 1,
+                };
             }
 
-            if (num_strings != config.string_descriptors.len)
+            if (next_string != config.string_descriptors.len)
                 @compileError(std.fmt.comptimePrint(
                     "expected {} string descriptros, got {}",
-                    .{ num_strings, config.string_descriptors.len },
+                    .{ next_string, config.string_descriptors.len },
                 ));
 
             const desc_cfg: descriptor.Configuration = .{
                 .total_length = .from(size),
-                .num_interfaces = num_interfaces,
+                .num_interfaces = alloc.next_itf_num,
                 .configuration_value = config0.num,
                 .configuration_s = config0.configuration_s,
                 .attributes = config0.attributes,

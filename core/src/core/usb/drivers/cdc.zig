@@ -44,15 +44,14 @@ pub fn CdcClassDriver(options: Options) type {
             ep_in: descriptor.Endpoint,
 
             pub fn create(
-                first_interface: u8,
+                alloc: *usb.DescriptorAllocator,
                 first_string: u8,
-                first_endpoint_in: u4,
-                first_endpoint_out: u4,
             ) @This() {
-                const endpoint_notifi_size = 8;
+                const itf_notifi = alloc.next_itf();
+                const itf_data = alloc.next_itf();
                 return .{
                     .itf_assoc = .{
-                        .first_interface = first_interface,
+                        .first_interface = itf_notifi,
                         .interface_count = 2,
                         .function_class = 2,
                         .function_subclass = 2,
@@ -60,7 +59,7 @@ pub fn CdcClassDriver(options: Options) type {
                         .function = 0,
                     },
                     .itf_notifi = .{
-                        .interface_number = first_interface,
+                        .interface_number = itf_notifi,
                         .alternate_setting = 0,
                         .num_endpoints = 1,
                         .interface_class = 2,
@@ -71,21 +70,21 @@ pub fn CdcClassDriver(options: Options) type {
                     .cdc_header = .{ .bcd_cdc = .from(0x0120) },
                     .cdc_call_mgmt = .{
                         .capabilities = 0,
-                        .data_interface = first_interface + 1,
+                        .data_interface = itf_data,
                     },
                     .cdc_acm = .{ .capabilities = 6 },
                     .cdc_union = .{
-                        .master_interface = first_interface,
-                        .slave_interface_0 = first_interface + 1,
+                        .master_interface = itf_notifi,
+                        .slave_interface_0 = itf_data,
                     },
                     .ep_notifi = .{
-                        .endpoint = .in(@enumFromInt(first_endpoint_in)),
+                        .endpoint = alloc.next_ep(.In),
                         .attributes = .interrupt,
-                        .max_packet_size = .from(endpoint_notifi_size),
+                        .max_packet_size = .from(8),
                         .interval = 16,
                     },
                     .itf_data = .{
-                        .interface_number = first_interface + 1,
+                        .interface_number = itf_data,
                         .alternate_setting = 0,
                         .num_endpoints = 2,
                         .interface_class = 10,
@@ -94,13 +93,13 @@ pub fn CdcClassDriver(options: Options) type {
                         .interface_s = 0,
                     },
                     .ep_out = .{
-                        .endpoint = .out(@enumFromInt(first_endpoint_out)),
+                        .endpoint = alloc.next_ep(.Out),
                         .attributes = .bulk,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = 0,
                     },
                     .ep_in = .{
-                        .endpoint = .in(@enumFromInt(first_endpoint_in + 1)),
+                        .endpoint = alloc.next_ep(.In),
                         .attributes = .bulk,
                         .max_packet_size = .from(options.max_packet_size),
                         .interval = 0,
