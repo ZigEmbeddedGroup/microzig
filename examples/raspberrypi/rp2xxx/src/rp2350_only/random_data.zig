@@ -15,15 +15,13 @@ const pin_config = hal.pins.GlobalConfiguration{
     .GPIO0 = .{ .name = "gpio0", .function = .UART0_TX },
 };
 
-const pins = pin_config.pins();
-
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = uart.log,
 };
 
 pub fn main() !void {
-    pin_config.apply();
+    _ = pin_config.apply();
 
     uart0.apply(.{
         .clock_config = hal.clock_config,
