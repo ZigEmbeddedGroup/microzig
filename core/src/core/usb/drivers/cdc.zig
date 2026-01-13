@@ -80,7 +80,7 @@ pub fn CdcClassDriver(options: Options) type {
                     },
                     .ep_notifi = .{
                         .endpoint = .in(@enumFromInt(first_endpoint_in)),
-                        .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+                        .attributes = .interrupt,
                         .max_packet_size = .from(endpoint_notifi_size),
                         .interval = 16,
                     },

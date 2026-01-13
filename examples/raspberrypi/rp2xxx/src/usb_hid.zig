@@ -16,8 +16,6 @@ const HidDriver = usb.drivers.hid.HidClassDriver(
     usb.descriptor.hid.ReportDescriptorKeyboard,
 );
 
-const usb_config_descriptor = microzig.core.usb.descriptor.Configuration.create();
-
 var usb_dev: rp2xxx.usb.Polled(
     usb.Config{
         .device_descriptor = .{
@@ -46,8 +44,8 @@ var usb_dev: rp2xxx.usb.Polled(
         .configurations = &.{.{
             .num = 1,
             .configuration_s = 0,
-            .attributes = .{ .self_powered = true },
-            .max_current_ma = 100,
+            .attributes = .{ .self_powered = false },
+            .max_current_ma = 50,
             .Drivers = struct { hid: HidDriver },
         }},
     },

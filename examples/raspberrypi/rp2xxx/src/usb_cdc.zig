@@ -41,8 +41,8 @@ var usb_dev: rp2xxx.usb.Polled(
         .configurations = &.{.{
             .num = 1,
             .configuration_s = 0,
-            .attributes = .{ .self_powered = true },
-            .max_current_ma = 100,
+            .attributes = .{ .self_powered = false },
+            .max_current_ma = 50,
             .Drivers = struct { serial: USB_Serial },
         }},
     },
@@ -107,11 +107,10 @@ var usb_tx_buff: [1024]u8 = undefined;
 // Transfer data to host
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
 pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
-    const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
+    var tx = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
-    var write_buff = text;
-    while (write_buff.len > 0) {
-        write_buff = write_buff[serial.write(write_buff)..];
+    while (tx.len > 0) {
+        tx = tx[serial.write(tx)..];
         usb_dev.poll();
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
@@ -126,15 +125,13 @@ var usb_rx_buff: [1024]u8 = undefined;
 pub fn usb_cdc_read(
     serial: *USB_Serial,
 ) []const u8 {
-    var total_read: usize = 0;
-    var read_buff: []u8 = usb_rx_buff[0..];
+    var rx_len: usize = 0;
 
     while (true) {
-        const len = serial.read(read_buff);
-        read_buff = read_buff[len..];
-        total_read += len;
+        const len = serial.read(usb_rx_buff[rx_len..]);
+        rx_len += len;
         if (len == 0) break;
     }
 
-    return usb_rx_buff[0..total_read];
+    return usb_rx_buff[0..rx_len];
 }
