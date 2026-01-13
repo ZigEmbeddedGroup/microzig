@@ -4,9 +4,8 @@ const descriptor = usb.descriptor;
 const types = usb.types;
 
 pub const Options = struct {
-    max_packet_size: u16,
     boot_protocol: bool,
-    endpoint_interval: u8,
+    poll_interval: u8,
 };
 
 pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
@@ -20,6 +19,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
                 first_string: u8,
+                max_supported_packet_size: usb.types.Len,
             ) @This() {
                 return .{
                     .interface = .{
@@ -34,18 +34,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                         .interface_s = first_string,
                     },
                     .hid = hid_descriptor,
-                    .ep_out = .{
-                        .endpoint = alloc.next_ep(.Out),
-                        .attributes = .interrupt,
-                        .max_packet_size = .from(options.max_packet_size),
-                        .interval = options.endpoint_interval,
-                    },
-                    .ep_in = .{
-                        .endpoint = alloc.next_ep(.In),
-                        .attributes = .interrupt,
-                        .max_packet_size = .from(options.max_packet_size),
-                        .interval = options.endpoint_interval,
-                    },
+                    .ep_out = .interrupt(alloc.next_ep(.Out), max_supported_packet_size, options.poll_interval),
+                    .ep_in = .interrupt(alloc.next_ep(.In), max_supported_packet_size, options.poll_interval),
                 };
             }
         };

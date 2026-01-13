@@ -17,6 +17,7 @@ pub const EchoExampleDriver = struct {
         pub fn create(
             alloc: *usb.DescriptorAllocator,
             first_string: u8,
+            max_supported_packet_size: usb.types.Len,
         ) @This() {
             return .{
                 .example_interface = .{
@@ -26,18 +27,8 @@ pub const EchoExampleDriver = struct {
                     .interface_triple = .vendor_specific,
                     .interface_s = first_string,
                 },
-                .ep_out = .{
-                    .endpoint = alloc.next_ep(.Out),
-                    .attributes = .bulk,
-                    .max_packet_size = .from(64),
-                    .interval = 0,
-                },
-                .ep_in = .{
-                    .endpoint = alloc.next_ep(.In),
-                    .attributes = .bulk,
-                    .max_packet_size = .from(64),
-                    .interval = 0,
-                },
+                .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
+                .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),
             };
         }
     };

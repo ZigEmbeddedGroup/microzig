@@ -188,9 +188,6 @@ pub const Endpoint = extern struct {
         synchronisation: Synchronisation = .none,
         usage: Usage,
         reserved: u2 = 0,
-
-        pub const bulk: @This() = .{ .transfer_type = .Bulk, .usage = .data };
-        pub const interrupt: @This() = .{ .transfer_type = .Interrupt, .usage = .data };
     };
 
     comptime {
@@ -212,6 +209,33 @@ pub const Endpoint = extern struct {
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
+
+    pub fn control(ep: types.Endpoint, max_packet_size: types.Len) @This() {
+        return .{
+            .endpoint = ep,
+            .attributes = .{ .transfer_type = .Control, .usage = .data },
+            .max_packet_size = .from(max_packet_size),
+            .interval = 0, // Unused for bulk endpoints
+        };
+    }
+
+    pub fn bulk(ep: types.Endpoint, max_packet_size: types.Len) @This() {
+        return .{
+            .endpoint = ep,
+            .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+            .max_packet_size = .from(max_packet_size),
+            .interval = 0, // Unused for bulk endpoints
+        };
+    }
+
+    pub fn interrupt(ep: types.Endpoint, max_packet_size: types.Len, poll_interval: u8) @This() {
+        return .{
+            .endpoint = ep,
+            .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+            .max_packet_size = .from(max_packet_size),
+            .interval = poll_interval,
+        };
+    }
 };
 
 /// Description of an interface within a configuration.

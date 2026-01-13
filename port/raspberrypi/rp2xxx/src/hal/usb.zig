@@ -81,6 +81,8 @@ pub fn Polled(config: Config) type {
     }
 
     return struct {
+        pub const max_supported_packet_size = 64;
+
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
             .ep_readv = ep_readv,
@@ -224,18 +226,8 @@ pub fn Polled(config: Config) type {
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
-            ep_open(&self.interface, &.{
-                .endpoint = .in(.ep0),
-                .max_packet_size = .from(64),
-                .attributes = .{ .transfer_type = .Control, .usage = .data },
-                .interval = 0,
-            });
-            ep_open(&self.interface, &.{
-                .endpoint = .out(.ep0),
-                .max_packet_size = .from(64),
-                .attributes = .{ .transfer_type = .Control, .usage = .data },
-                .interval = 0,
-            });
+            ep_open(&self.interface, &.control(.in(.ep0), max_supported_packet_size));
+            ep_open(&self.interface, &.control(.out(.ep0), max_supported_packet_size));
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
@@ -321,18 +313,20 @@ pub fn Polled(config: Config) type {
         }
 
         fn ep_listen(
-            _: *usb.DeviceInterface,
+            itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             len: usb.types.Len,
         ) void {
+            const self: *@This() = @fieldParentPtr("interface", itf);
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].out;
 
             var bufctrl = bufctrl_ptr.read();
+            const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
             assert(bufctrl.AVAILABLE_0 == 0);
             // Configure the OUT:
             bufctrl.PID_0 ^= 1; // Flip DATA0/1
             bufctrl.FULL_0 = 0; // Buffer is NOT full, we want the computer to fill it
-            bufctrl.LENGTH_0 = @intCast(@min(len, 64)); // Up tho this many bytes
+            bufctrl.LENGTH_0 = @intCast(@min(len, ep.data_buffer.len)); // Up tho this many bytes
 
             if (config.sync_noops != 0) {
                 bufctrl_ptr.write(bufctrl);
@@ -384,7 +378,7 @@ pub fn Polled(config: Config) type {
             const ep = desc.endpoint;
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
-            assert(desc.max_packet_size.into() <= 64);
+            assert(desc.max_packet_size.into() <= max_supported_packet_size);
 
             buffer_control[@intFromEnum(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
 

@@ -109,6 +109,8 @@ pub const Config = struct {
     /// Realistically, it should only be turned off if you are exhausting
     /// the 15 endpoint limit.
     unique_endpoints: bool = true,
+    /// Device specific, either 8, 16, 32 or 64.
+    max_supported_packet_size: types.Len,
 };
 
 pub fn validate_controller(T: type) void {
@@ -133,6 +135,9 @@ pub fn DeviceController(config: Config) type {
         const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
         const config_descriptor = blk: {
+            const max_psize = config.max_supported_packet_size;
+            assert(max_psize == 8 or max_psize == 16 or max_psize == 32 or max_psize == 64);
+
             var alloc: DescriptorAllocator = .init(config.unique_endpoints);
             var next_string = 4;
 
@@ -140,7 +145,7 @@ pub fn DeviceController(config: Config) type {
             var fields: [driver_fields.len + 1]std.builtin.Type.StructField = undefined;
 
             for (driver_fields, 1..) |drv, i| {
-                const payload = drv.type.Descriptor.create(&alloc, next_string);
+                const payload = drv.type.Descriptor.create(&alloc, next_string, max_psize);
                 const Payload = @TypeOf(payload);
                 size += @sizeOf(Payload);
 

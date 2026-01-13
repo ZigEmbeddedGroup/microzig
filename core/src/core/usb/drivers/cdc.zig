@@ -46,6 +46,7 @@ pub fn CdcClassDriver(options: Options) type {
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
                 first_string: u8,
+                max_supported_packet_size: usb.types.Len,
             ) @This() {
                 const itf_notifi = alloc.next_itf();
                 const itf_data = alloc.next_itf();
@@ -75,12 +76,7 @@ pub fn CdcClassDriver(options: Options) type {
                         .master_interface = itf_notifi,
                         .slave_interface_0 = itf_data,
                     },
-                    .ep_notifi = .{
-                        .endpoint = alloc.next_ep(.In),
-                        .attributes = .interrupt,
-                        .max_packet_size = .from(8),
-                        .interval = 16,
-                    },
+                    .ep_notifi = .interrupt(alloc.next_ep(.In), 8, 16),
                     .itf_data = .{
                         .interface_number = itf_data,
                         .alternate_setting = 0,
@@ -88,18 +84,8 @@ pub fn CdcClassDriver(options: Options) type {
                         .interface_triple = .from(.CdcData, .Unused, .NoneRequired),
                         .interface_s = 0,
                     },
-                    .ep_out = .{
-                        .endpoint = alloc.next_ep(.Out),
-                        .attributes = .bulk,
-                        .max_packet_size = .from(options.max_packet_size),
-                        .interval = 0,
-                    },
-                    .ep_in = .{
-                        .endpoint = alloc.next_ep(.In),
-                        .attributes = .bulk,
-                        .max_packet_size = .from(options.max_packet_size),
-                        .interval = 0,
-                    },
+                    .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
+                    .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),
                 };
             }
         };

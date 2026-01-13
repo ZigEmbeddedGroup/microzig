@@ -42,6 +42,7 @@ var usb_controller: usb.DeviceController(.{
         .max_current_ma = 50,
         .Drivers = struct { serial: USB_Serial },
     }},
+    .max_supported_packet_size = @TypeOf(usb_device).max_supported_packet_size,
 }) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {

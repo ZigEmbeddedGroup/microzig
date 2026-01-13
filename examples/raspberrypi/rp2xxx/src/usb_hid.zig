@@ -12,7 +12,7 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
 const HidDriver = usb.drivers.hid.HidClassDriver(
-    .{ .max_packet_size = 64, .boot_protocol = true, .endpoint_interval = 0 },
+    .{ .boot_protocol = true, .poll_interval = 0 },
     usb.descriptor.hid.ReportDescriptorKeyboard,
 );
 
@@ -45,6 +45,7 @@ var usb_controller: usb.DeviceController(.{
         .max_current_ma = 50,
         .Drivers = struct { hid: HidDriver },
     }},
+    .max_supported_packet_size = @TypeOf(usb_device).max_supported_packet_size,
 }) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
