@@ -16,37 +16,36 @@ const HidDriver = usb.drivers.hid.HidClassDriver(
     usb.descriptor.hid.ReportDescriptorKeyboard,
 );
 
-var usb_dev: rp2xxx.usb.Polled(
-    usb.Config{
-        .device_descriptor = .{
-            .bcd_usb = .from(0x0200),
-            .device_triple = .unspecified,
-            .max_packet_size0 = 64,
-            .vendor = .from(0x2E8A),
-            .product = .from(0x000A),
-            .bcd_device = .from(0x0100),
-            .manufacturer_s = 1,
-            .product_s = 2,
-            .serial_s = 3,
-            .num_configurations = 1,
-        },
-        .string_descriptors = &.{
-            .from_lang(.English),
-            .from_str("Raspberry Pi"),
-            .from_str("Pico Test Device"),
-            .from_str("someserial"),
-            .from_str("Boot Keyboard"),
-        },
-        .configurations = &.{.{
-            .num = 1,
-            .configuration_s = 0,
-            .attributes = .{ .self_powered = false },
-            .max_current_ma = 50,
-            .Drivers = struct { hid: HidDriver },
-        }},
+var usb_device: rp2xxx.usb.Polled(.{}) = undefined;
+
+var usb_controller: usb.DeviceController(.{
+    .device_descriptor = .{
+        .bcd_usb = .from(0x0200),
+        .device_triple = .unspecified,
+        .max_packet_size0 = 64,
+        .vendor = .from(0x2E8A),
+        .product = .from(0x000A),
+        .bcd_device = .from(0x0100),
+        .manufacturer_s = 1,
+        .product_s = 2,
+        .serial_s = 3,
+        .num_configurations = 1,
     },
-    .{},
-) = undefined;
+    .string_descriptors = &.{
+        .from_lang(.English),
+        .from_str("Raspberry Pi"),
+        .from_str("Pico Test Device"),
+        .from_str("someserial"),
+        .from_str("Boot Keyboard"),
+    },
+    .configurations = &.{.{
+        .num = 1,
+        .configuration_s = 0,
+        .attributes = .{ .self_powered = false },
+        .max_current_ma = 50,
+        .Drivers = struct { hid: HidDriver },
+    }},
+}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -71,15 +70,15 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev = .init();
+    usb_device = .init();
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.poll();
+        usb_device.poll(&usb_controller);
 
-        if (usb_dev.controller.drivers()) |drivers| {
+        if (usb_controller.drivers()) |drivers| {
             _ = drivers; // TODO
 
             new = time.get_time_since_boot().to_us();

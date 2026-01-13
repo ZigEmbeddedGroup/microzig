@@ -111,6 +111,17 @@ pub const Config = struct {
     unique_endpoints: bool = true,
 };
 
+pub fn validate_controller(T: type) void {
+    comptime {
+        const info = @typeInfo(T);
+        if (info != .pointer or info.pointer.is_const or info.pointer.size != .one)
+            @compileError("Expected a mutable pointer to the usb controller, got: " ++ @typeName(T));
+        const Controller = info.pointer.child;
+        _ = Controller;
+        // More checks
+    }
+}
+
 /// USB device controller
 ///
 /// This code handles usb enumeration and configuration and routes packets to drivers.

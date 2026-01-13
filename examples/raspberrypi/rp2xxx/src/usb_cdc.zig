@@ -13,37 +13,36 @@ const uart_tx_pin = gpio.num(0);
 
 const USB_Serial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
 
-var usb_dev: rp2xxx.usb.Polled(
-    usb.Config{
-        .device_descriptor = .{
-            .bcd_usb = .from(0x0200),
-            .device_triple = .from(.Miscellaneous, @enumFromInt(2), @enumFromInt(1)),
-            .max_packet_size0 = 64,
-            .vendor = .from(0x2E8A),
-            .product = .from(0x000A),
-            .bcd_device = .from(0x0100),
-            .manufacturer_s = 1,
-            .product_s = 2,
-            .serial_s = 3,
-            .num_configurations = 1,
-        },
-        .string_descriptors = &.{
-            .from_lang(.English),
-            .from_str("Raspberry Pi"),
-            .from_str("Pico Test Device"),
-            .from_str("someserial"),
-            .from_str("Board CDC"),
-        },
-        .configurations = &.{.{
-            .num = 1,
-            .configuration_s = 0,
-            .attributes = .{ .self_powered = false },
-            .max_current_ma = 50,
-            .Drivers = struct { serial: USB_Serial },
-        }},
+var usb_device: rp2xxx.usb.Polled(.{}) = undefined;
+
+var usb_controller: usb.DeviceController(.{
+    .device_descriptor = .{
+        .bcd_usb = .from(0x0200),
+        .device_triple = .from(.Miscellaneous, @enumFromInt(2), @enumFromInt(1)),
+        .max_packet_size0 = 64,
+        .vendor = .from(0x2E8A),
+        .product = .from(0x000A),
+        .bcd_device = .from(0x0100),
+        .manufacturer_s = 1,
+        .product_s = 2,
+        .serial_s = 3,
+        .num_configurations = 1,
     },
-    .{},
-) = undefined;
+    .string_descriptors = &.{
+        .from_lang(.English),
+        .from_str("Raspberry Pi"),
+        .from_str("Pico Test Device"),
+        .from_str("someserial"),
+        .from_str("Board CDC"),
+    },
+    .configurations = &.{.{
+        .num = 1,
+        .configuration_s = 0,
+        .attributes = .{ .self_powered = false },
+        .max_current_ma = 50,
+        .Drivers = struct { serial: USB_Serial },
+    }},
+}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -68,7 +67,7 @@ pub fn main() !void {
     led.put(1);
 
     // Then initialize the USB device using the configuration defined above
-    usb_dev = .init();
+    usb_device = .init();
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
@@ -76,9 +75,9 @@ pub fn main() !void {
     var i: u32 = 0;
     while (true) {
         // You can now poll for USB events
-        usb_dev.poll();
+        usb_device.poll(&usb_controller);
 
-        if (usb_dev.controller.drivers()) |drivers| {
+        if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {
                 old = new;
@@ -107,11 +106,11 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
 
     while (tx.len > 0) {
         tx = tx[serial.write(tx)..];
-        usb_dev.poll();
+        usb_device.poll(&usb_controller);
     }
     // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
     while (!serial.flush())
-        usb_dev.poll();
+        usb_device.poll(&usb_controller);
 }
 
 var usb_rx_buff: [1024]u8 = undefined;

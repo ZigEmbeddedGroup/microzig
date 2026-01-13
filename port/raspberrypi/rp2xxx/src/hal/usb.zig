@@ -74,10 +74,7 @@ const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMimo) = @ptrCas
 
 /// A set of functions required by the abstract USB impl to
 /// create a concrete one.
-pub fn Polled(
-    controller_config: usb.Config,
-    config: Config,
-) type {
+pub fn Polled(config: Config) type {
     comptime {
         if (config.max_endpoints_count > RP2XXX_MAX_ENDPOINTS_COUNT)
             @compileError("RP2XXX USB endpoints number can't be grater than RP2XXX_MAX_ENDPOINTS_COUNT");
@@ -94,10 +91,11 @@ pub fn Polled(
 
         endpoints: [config.max_endpoints_count][2]HardwareEndpointData,
         data_buffer: []align(64) u8,
-        controller: usb.DeviceController(controller_config),
         interface: usb.DeviceInterface,
 
-        pub fn poll(self: *@This()) void {
+        pub fn poll(self: *@This(), controller: anytype) void {
+            comptime usb.validate_controller(@TypeOf(controller));
+
             // Check which interrupt flags are set.
             const ints = peripherals.USB.INTS.read();
 
@@ -109,7 +107,7 @@ pub fn Polled(
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
                 const setup = get_setup_packet();
-                self.controller.on_setup_req(&self.interface, &setup);
+                controller.on_setup_req(&self.interface, &setup);
             }
 
             var buff_status: u32 = 0;
@@ -145,7 +143,7 @@ pub fn Polled(
                     // than the buffer size.
                     const len = buffer_control[ep_num].get(ep.dir).read().LENGTH_0;
 
-                    self.controller.on_buffer(&self.interface, ep, ep_hard.data_buffer[0..len]);
+                    controller.on_buffer(&self.interface, ep, ep_hard.data_buffer[0..len]);
                 }
             }
 
@@ -155,7 +153,7 @@ pub fn Polled(
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 set_address(&self.interface, 0);
 
-                self.controller.on_bus_reset();
+                controller.on_bus_reset();
             }
         }
 
@@ -223,7 +221,6 @@ pub fn Polled(
                 .endpoints = undefined,
                 .data_buffer = rp2xxx_buffers.data_buffer,
                 .interface = .{ .vtable = &vtable },
-                .controller = .init,
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
