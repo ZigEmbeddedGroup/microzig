@@ -29,22 +29,6 @@ pub const Type = enum(u8) {
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
 pub const Device = extern struct {
-    /// Class, subclass and protocol of device.
-    pub const DeviceTriple = extern struct {
-        /// Class of device, giving a broad functional area.
-        class: types.ClassCode,
-        /// Subclass of device, refining the class.
-        subclass: u8,
-        /// Protocol within the subclass.
-        protocol: u8,
-
-        pub const unspecified: @This() = .{
-            .class = .Unspecified,
-            .subclass = 0,
-            .protocol = 0,
-        };
-    };
-
     /// USB Device Qualifier Descriptor
     /// This descriptor is a subset of the DeviceDescriptor
     pub const Qualifier = extern struct {
@@ -59,7 +43,7 @@ pub const Device = extern struct {
         /// Specification version as Binary Coded Decimal
         bcd_usb: types.U16_Le,
         /// Class, subclass and protocol of device.
-        device_triple: DeviceTriple,
+        device_triple: types.ClassSubclassProtocol,
         /// Maximum unit of data this device can move.
         max_packet_size0: u8,
         /// Number of configurations supported by this device.
@@ -79,7 +63,7 @@ pub const Device = extern struct {
     /// Specification version as Binary Coded Decimal
     bcd_usb: types.U16_Le,
     /// Class, subclass and protocol of device.
-    device_triple: DeviceTriple,
+    device_triple: types.ClassSubclassProtocol,
     /// Maximum length of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
@@ -248,12 +232,8 @@ pub const Interface = extern struct {
     alternate_setting: u8,
     /// Number of endpoint descriptors in this interface.
     num_endpoints: u8,
-    /// Interface class code, distinguishing the type of interface.
-    interface_class: u8,
-    /// Interface subclass code, refining the class of interface.
-    interface_subclass: u8,
-    /// Protocol within the interface class/subclass.
-    interface_protocol: u8,
+    /// Interface class, subclass and protocol.
+    interface_triple: types.ClassSubclassProtocol,
     /// Index of interface name within string descriptor table.
     interface_s: u8,
 };

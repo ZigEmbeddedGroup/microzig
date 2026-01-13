@@ -17,11 +17,7 @@ var usb_dev: rp2xxx.usb.Polled(
     usb.Config{
         .device_descriptor = .{
             .bcd_usb = .from(0x0200),
-            .device_triple = .{
-                .class = .Miscellaneous,
-                .subclass = 2,
-                .protocol = 1,
-            },
+            .device_triple = .from(.Miscellaneous, @enumFromInt(2), @enumFromInt(1)),
             .max_packet_size0 = 64,
             .vendor = .from(0x2E8A),
             .product = .from(0x000A),

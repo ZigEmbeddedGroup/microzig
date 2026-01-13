@@ -23,9 +23,7 @@ pub const EchoExampleDriver = struct {
                     .interface_number = alloc.next_itf(),
                     .alternate_setting = 0,
                     .num_endpoints = 2,
-                    .interface_class = 0xFF,
-                    .interface_subclass = 0xFF,
-                    .interface_protocol = 0xFF,
+                    .interface_triple = .vendor_specific,
                     .interface_s = first_string,
                 },
                 .ep_out = .{
