@@ -10,7 +10,7 @@
             .hash = "N-V-__8AAFi8WBlOh-NikHFVBjzQE0F1KixgKjVWYnlijPNm",
         },
         .ClockHelper = .{
-            .url = "/home/guilherme/\xc3\x81rea de trabalho/mz-clockhelper/ClockHelper/",
+            .url = "git+https://github.com/ZigEmbeddedGroup/ClockHelper#922c35eb54f0417318ccfcc32367bdcf11823ede",
             .hash = "ClockHelper-2.0.0-RcMaOUMGIwEUEHQJ0C2Q-KbWdKXN2GqzQcs9MpVSTgm3",
         },
     },
