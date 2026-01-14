@@ -150,9 +150,6 @@ pub fn build(b: *std.Build) void {
             const net_dep = b.dependency("net", .{
                 .target = b.resolveTargetQuery(firmware.target.zig_target),
                 .optimize = optimize,
-                // lwip options:
-                //.lwip_mem_size = 32 * 1024,
-                //.lwip_pbuf_pool_size = 32,
             });
             const net_mod = net_dep.module("net");
             firmware.app_mod.addImport("net", net_mod);

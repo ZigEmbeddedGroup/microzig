@@ -215,7 +215,6 @@ pub const Interface = struct {
         log.debug("memp ip6 reassdata:  {}", .{stats.memp[lwip.MEMP_IP6_REASSDATA].*});
         log.debug("memp mld6 group:     {}", .{stats.memp[lwip.MEMP_MLD6_GROUP].*});
         log.debug("memp pbuf:           {}", .{stats.memp[lwip.MEMP_PBUF].*});
-        //log.debug("memp max:            {}", .{stats.memp[lwip.MEMP_MAX].*});
     }
 };
 
