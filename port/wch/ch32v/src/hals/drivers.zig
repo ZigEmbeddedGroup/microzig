@@ -247,13 +247,13 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             };
         }
 
-        /// Assert chip select
-        fn assert_cs(dev: Self) void {
+        /// Connect to the device (assert chip select)
+        pub fn connect(dev: Self) Datagram_Device.ConnectError!void {
             dev.cs_pin.put(if (dev.cs_active_high) 1 else 0);
         }
 
-        /// Deassert chip select
-        fn deassert_cs(dev: Self) void {
+        /// Disconnect from the device (deassert chip select)
+        pub fn disconnect(dev: Self) void {
             dev.cs_pin.put(if (dev.cs_active_high) 0 else 1);
         }
 
@@ -308,12 +308,12 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
 
         fn connect_fn(dd: *anyopaque) Datagram_Device.ConnectError!void {
             const dev: *Self = @ptrCast(@alignCast(dd));
-            dev.assert_cs();
+            try dev.connect();
         }
 
         fn disconnect_fn(dd: *anyopaque) void {
             const dev: *Self = @ptrCast(@alignCast(dd));
-            dev.deassert_cs();
+            dev.disconnect();
         }
 
         fn writev_fn(dd: *anyopaque, chunks: []const []const u8) Datagram_Device.WriteError!void {
