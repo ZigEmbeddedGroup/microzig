@@ -16,7 +16,7 @@ pub const InternalError = error{InternalError};
 var inited: bool = false;
 
 pub const Options = struct {
-    on_event: ?*const fn (e: EventType) void = null,
+    on_event: ?*const fn (e: Event) void = null,
     on_packet_received: ?*const fn (comptime interface: Interface, data: []const u8) void = null,
     on_packet_transmitted: ?*const fn (interface: Interface, data: []const u8, status: bool) void = null,
 };
@@ -351,6 +351,26 @@ pub fn disconnect() InternalError!void {
     try c_result(c.esp_wifi_disconnect_internal());
 }
 
+pub fn start_blocking() InternalError!void {
+    const mode = try get_mode();
+    var events: EventSet = .initEmpty();
+    if (mode.is_sta()) events.setPresent(.StaStart, true);
+    if (mode.is_ap()) events.setPresent(.ApStart, true);
+    clear_events(events);
+    try start();
+    wait_for_all_events(events);
+}
+
+pub const ConnectError = error{FailedToConnect} || InternalError;
+
+pub fn connect_blocking() ConnectError!void {
+    const events: EventSet = .initMany(&.{ .StaConnected, .StaDisconnected });
+    clear_events(events);
+    try connect();
+    if (wait_for_any_event(events).contains(.StaDisconnected))
+        return error.FailedToConnect;
+}
+
 pub const EventType = enum(i32) {
     /// Wi-Fi is ready for operation.
     WifiReady = 0,
@@ -453,9 +473,6 @@ pub const EventType = enum(i32) {
     /// Received Neighbor Report response.
     StaNeighborRep,
 };
-
-// var event_state_mutex: rtos.Mutex = .{};
-// var event_state_condition: rtos.Condition = .{};
 
 pub const Event = union(EventType) {
     /// Wi-Fi is ready for operation.
@@ -566,32 +583,79 @@ pub const Event = union(EventType) {
     StaNeighborRep: c.wifi_event_neighbor_report_t,
 };
 
+pub const EventSet = std.EnumSet(EventType);
+
+var event_mutex: rtos.Mutex = .{};
+var event_condition: rtos.Condition = .{};
+var active_events: EventSet = .{};
+
+pub fn wait_for_any_event(events: EventSet) EventSet {
+    event_mutex.lock();
+    defer event_mutex.unlock();
+
+    while (true) {
+        const intersection = active_events.intersectWith(events);
+        if (intersection.count() > 0) return intersection;
+        event_condition.wait(&event_mutex);
+    }
+}
+
+pub fn wait_for_all_events(events: EventSet) void {
+    event_mutex.lock();
+    defer event_mutex.unlock();
+
+    while (!active_events.supersetOf(events)) {
+        event_condition.wait(&event_mutex);
+    }
+}
+
+pub fn wait_for_event(event: EventType) void {
+    event_mutex.lock();
+    defer event_mutex.unlock();
+
+    while (!active_events.contains(event)) {
+        event_condition.wait(&event_mutex);
+    }
+}
+
+pub fn clear_events(events: EventSet) void {
+    event_mutex.lock();
+    defer event_mutex.unlock();
+
+    active_events = active_events.differenceWith(events);
+}
+
 /// Internal function. Called by osi layer.
 pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
-    log.info("esp_event_post {} {?} {}", .{ id, data, data_size });
+    log.debug("esp_event_post {} {?} {}", .{ id, data, data_size });
 
     const event_type: EventType = @enumFromInt(id);
-    log.info("received event: {t}", .{event_type});
-
     update_sta_state(event_type);
+    log.info("event occurred: {t}", .{event_type});
 
-    // const event: Event = switch (event_type) {
-    //     inline else => |tag| blk: {
-    //         const PayloadType = @FieldType(Event, @tagName(tag));
-    //         if (PayloadType == void) break :blk @unionInit(Event, @tagName(tag), {});
-    //
-    //         // Purposely skipping the assert if the type is void. There are
-    //         // some todos where we use void for the payload instead of the
-    //         // actual payload type.
-    //         assert(data_size == @sizeOf(PayloadType));
-    //
-    //         break :blk @unionInit(Event, @tagName(tag), @as(*PayloadType, @ptrCast(@alignCast(data))).*);
-    //     },
-    // };
-    // log.info("event: {any}", .{event});
+    {
+        event_mutex.lock();
+        defer event_mutex.unlock();
+        active_events.setPresent(event_type, true);
+    }
+    event_condition.broadcast();
+
+    const event = switch (event_type) {
+        inline else => |tag| blk: {
+            const PayloadType = @FieldType(Event, @tagName(tag));
+            if (PayloadType == void) break :blk @unionInit(Event, @tagName(tag), {});
+
+            // Purposely skipping the assert if the type is void. There are
+            // some todos where we use void for the payload instead of the
+            // actual payload type.
+            assert(data_size == @sizeOf(PayloadType));
+
+            break :blk @unionInit(Event, @tagName(tag), @as(*PayloadType, @ptrCast(@alignCast(data))).*);
+        },
+    };
 
     if (wifi_options.on_event) |on_event| {
-        on_event(event_type);
+        on_event(event);
     }
 }
 

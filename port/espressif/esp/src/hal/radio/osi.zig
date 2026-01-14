@@ -559,10 +559,12 @@ fn task_create_common(
 
     const task_entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn = @ptrCast(@alignCast(task_func));
 
+    // increase stack size if we are in debug mode
+    const stack_size: usize = stack_depth + if (builtin.mode == .Debug) 6000 else 0;
     const task: *rtos.Task = rtos.spawn(gpa, task_wrapper, .{ task_entry, param }, .{
         .name = std.mem.span(name),
         .priority = @enumFromInt(prio),
-        .stack_size = stack_depth,
+        .stack_size = stack_size,
     }) catch {
         log.warn("failed to create task", .{});
         return 0;

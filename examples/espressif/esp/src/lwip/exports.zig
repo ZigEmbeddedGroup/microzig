@@ -140,7 +140,7 @@ export fn sys_thread_new(name: [*:0]u8, thread: c.lwip_thread_fn, arg: ?*anyopaq
     _ = prio; // autofix
     return rtos.spawn(gpa, task_wrapper, .{thread, arg}, .{
         .name = std.mem.span(name),
-        .stack_size = 8192,
+        .stack_size = 4096,
         .priority = @enumFromInt(2),
     }) catch @panic("failed to allocate lwip task");
 }

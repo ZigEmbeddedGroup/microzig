@@ -46,10 +46,10 @@ pub const microzig_options: microzig.Options = .{
     .hal = .{
         .rtos = .{
             .enable = true,
+            .paint_stack = 0xbb,
         },
         .radio = .{
             .wifi = .{
-                .on_event = on_event,
                 .on_packet_received = on_packet_received,
             },
         },
@@ -74,23 +74,18 @@ pub fn main() !void {
         },
     });
 
-    try radio.wifi.start();
-    try radio.wifi.connect();
+    try radio.wifi.start_blocking();
+    try radio.wifi.connect_blocking();
+    _ = lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_up, null);
 
     var count: usize = 0;
     while (true) {
         const free_heap = heap_allocator.free_heap();
         std.log.info("{} free memory: {}K ({})", .{ count, free_heap / 1024, free_heap });
+        rtos.report_stack_usage();
         count += 1;
-        rtos.sleep(.from_ms(1000));
-    }
-}
 
-fn on_event(e: radio.wifi.EventType) void {
-    switch (e) {
-        .StaConnected => _ = lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_up, null),
-        .StaDisconnected => _ = lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_down, null),
-        else => {}
+        rtos.sleep(.from_ms(5000));
     }
 }
 
@@ -138,7 +133,7 @@ var packet_buf: [1600]u8 = undefined;
 
 fn netif_output(_: [*c]lwip.c.struct_netif, pbuf_c: [*c]lwip.c.struct_pbuf) callconv(.c) lwip.c.err_t {
     const pbuf: *lwip.c.struct_pbuf = pbuf_c;
-    std.debug.assert(pbuf.tot_len <= packet_buf.len);
+    std.debug.assert(pbuf.tot_len < packet_buf.len);
 
     var off: usize = 0;
     while (off < pbuf.tot_len) {

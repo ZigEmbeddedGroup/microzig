@@ -34,7 +34,7 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // previous union state to avoid compiler bug (0.15.2)
 
 const STACK_ALIGN: std.mem.Alignment = .@"16";
-const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 32 * @sizeOf(usize));
+const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 64 * @sizeOf(usize));
 
 const rtos_options = microzig.options.hal.rtos;
 pub const Priority = rtos_options.Priority;
@@ -64,6 +64,7 @@ var main_task: Task = .{
 };
 var idle_stack: [STACK_ALIGN.forward(EXTRA_STACK_SIZE)]u8 align(STACK_ALIGN.toByteUnits()) = undefined;
 var idle_task: Task = .{
+    .name = "idle",
     .context = .{
         .pc = &idle,
         .sp = idle_stack[idle_stack.len..].ptr,
@@ -801,6 +802,35 @@ pub const Mutex = struct {
         mutex.state = .unlocked;
 
         mutex.wait_queue.wake_one();
+    }
+};
+
+pub const Condition = struct {
+    wait_queue: PriorityWaitQueue = .{},
+
+    pub fn wait(cond: *Condition, mutex: *Mutex) void {
+        {
+            const cs = enter_critical_section();
+            defer cs.leave();
+
+            mutex.unlock();
+
+            cond.wait_queue.wait(get_current_task(), null);
+        }
+
+        mutex.lock();
+    }
+
+    pub fn signal(cond: *Condition) void {
+        const cs = enter_critical_section();
+        defer cs.leave();
+        cond.wait_queue.wake_one();
+    }
+
+    pub fn broadcast(cond: *Condition) void {
+        const cs = enter_critical_section();
+        defer cs.leave();
+        cond.wait_queue.wake_all();
     }
 };
 
