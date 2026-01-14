@@ -96,6 +96,7 @@ pub const Cmd = enum(u32) {
     set_wsec = 134,
     set_band = 142,
     set_wpa_auth = 165,
+    set_scan_channel_time = 185,
     get_var = 262,
     set_var = 263,
     set_wsec_pmk = 268,
@@ -196,6 +197,55 @@ pub const Response = struct {
         @memcpy(std.mem.asBytes(&evt), buf[0..@sizeOf(EventPacket)]);
         std.mem.byteSwapAllFields(EventPacket, &evt);
         return evt;
+    }
+
+    pub fn event_scan_result(self: Self, res: *EventScanResult) !Security {
+        assert(self.sdp.channel() == .event);
+        const buf = self.data();
+        if (buf.len < @sizeOf(EventPacket) + @sizeOf(EventScanResult)) {
+            return error.Cyw43InsufficientData;
+        }
+        const res_buf = buf[@sizeOf(EventPacket)..];
+        @memcpy(std.mem.asBytes(res), res_buf[0..@sizeOf(EventScanResult)]);
+        res.info.channel &= 0xff;
+        if (res_buf.len < res.info.ie_offset + res.info.ie_length) {
+            return error.Cyw43InsufficientData;
+        }
+
+        // ref: https://github.com/georgerobotics/cyw43-driver/blob/13004039ffe127519f33824bf7d240e1f23fbdcd/src/cyw43_ll.c#L538
+        var security: Security = .{};
+        const is_open = res.info.capability & 0x0010 == 0;
+        if (!is_open) security.wep_psk = true;
+
+        var ie_buf = res_buf[res.info.ie_offset..][0..res.info.ie_length];
+        while (ie_buf.len >= 2) {
+            const typ = ie_buf[0];
+            const len = ie_buf[1];
+            if (typ == 48) {
+                security.wpa2 = true;
+            } else {
+                const wpa_oui_type1 = "\x00\x50\xF2\x01";
+                if (typ == 221 and ie_buf.len >= 2 + wpa_oui_type1.len) {
+                    if (std.mem.eql(u8, ie_buf[2..][0..4], wpa_oui_type1)) {
+                        security.wpa = true;
+                    }
+                }
+            }
+            if (ie_buf.len < 2 + len) break;
+            ie_buf = ie_buf[2 + len ..];
+        }
+
+        return security;
+    }
+};
+
+pub const Security = packed struct {
+    wep_psk: bool = false,
+    wpa: bool = false,
+    wpa2: bool = false,
+
+    pub fn open(s: Security) bool {
+        return @as(u3, @bitCast(s)) == 0;
     }
 };
 
@@ -350,11 +400,46 @@ const EventPacket = extern struct {
 };
 
 // Escan result event (excluding 12-byte IOCTL header and BDC header)
-const EventScanResult = extern struct {
-    eth: EthernetHeader,
-    hdr: EventHeader,
-    msg: EventMessage,
-    scan: ScanResultHeader,
+pub const EventScanResult = extern struct {
+    // Scan result header (part of wl_escan_result_t)
+    const Header = extern struct {
+        buflen: u32,
+        version: u32,
+        sync_id: u16,
+        bss_count: u16,
+    };
+
+    // BSS info from EScan (part of wl_bss_info_t)
+    const BssInfo = extern struct {
+        version: u32, // version field
+        length: u32, // byte length of data in this record, starting at version and including IEs
+        bssid: [6]u8, // The MAC address of the Access Point (AP)
+        beacon_period: u16, // Interval between two consecutive beacon frames. Units are Kusec
+        capability: u16, // Capability information
+        ssid_len: u8, // SSID length
+        ssid: [32]u8, // Array to store SSID
+        nrates: u32, // Count of rates in this set
+        rates: [16]u8, // rates in 500kbps units, higher bit set if basic
+        channel: u16, // Channel specification for basic service set
+        atim_window: u16, // Announcement traffic indication message window size. Units are Kusec
+        dtim_period: u8, // Delivery traffic indication message period
+        rssi: u16, // receive signal strength (in dBm)
+        phy_noise: u8, // noise (in dBm)
+        // The following fields assume the 'version' field is 109 (0x6D)
+        n_cap: u8, // BSS is 802.11N Capable
+        nbss_cap: u32, // 802.11N BSS Capabilities (based on HT_CAP_*)
+        ctl_ch: u8, // 802.11N BSS control channel number
+        reserved1: u32, // Reserved for expansion of BSS properties
+        flags: u8, // flags
+        reserved2: [3]u8, // Reserved for expansion of BSS properties
+        basic_mcs: [16]u8, // 802.11N BSS required MCS set
+        ie_offset: u16, // offset at which IEs start, from beginning
+        ie_length: u32, // byte length of Information Elements
+        snr: u16, // Average SNR(signal to noise ratio) during frame reception
+        // Variable-length Information Elements follow, see cyw43_ll_wifi_parse_scan_result
+    };
+
+    hdr: Header,
     info: BssInfo,
 };
 
@@ -389,48 +474,9 @@ const EventMessage = extern struct {
     bsscfgidx: u8,
 };
 
-// Scan result header (part of wl_escan_result_t)
-const ScanResultHeader = extern struct {
-    buflen: u32,
-    version: u32,
-    sync_id: u16,
-    bss_count: u16,
-};
-
-// BSS info from EScan (part of wl_bss_info_t)
-const BssInfo = extern struct {
-    version: u32, // version field
-    length: u32, // byte length of data in this record, starting at version and including IEs
-    bssid: [6]u8, // Unique 6-byte MAC address
-    beacon_period: u16, // Interval between two consecutive beacon frames. Units are Kusec
-    capability: u16, // Capability information
-    ssid_len: u8, // SSID length
-    ssid: [32]u8, // Array to store SSID
-    nrates: u32, // Count of rates in this set
-    rates: [16]u8, // rates in 500kbps units, higher bit set if basic
-    channel: u16, // Channel specification for basic service set
-    atim_window: u16, // Announcement traffic indication message window size. Units are Kusec
-    dtim_period: u8, // Delivery traffic indication message period
-    rssi: u16, // receive signal strength (in dBm)
-    phy_noise: u8, // noise (in dBm)
-    // The following fields assume the 'version' field is 109 (0x6D)
-    n_cap: u8, // BSS is 802.11N Capable
-    nbss_cap: u32, // 802.11N BSS Capabilities (based on HT_CAP_*)
-    ctl_ch: u8, // 802.11N BSS control channel number
-    reserved1: u32, // Reserved for expansion of BSS properties
-    flags: u8, // flags
-    reserved2: [3]u8, // Reserved for expansion of BSS properties
-    basic_mcs: [16]u8, // 802.11N BSS required MCS set
-    ie_offset: u16, // offset at which IEs start, from beginning
-    ie_length: u32, // byte length of Information Elements
-    snr: u16, // Average SNR(signal to noise ratio) during frame reception
-    // Variable-length Information Elements follow, see cyw43_ll_wifi_parse_scan_result
-};
-
-// zig fmt: off
-
 // Async events
-const EventType = enum(u32) {
+pub const EventType = enum(u32) {
+    // zig fmt: off
     none                           =   0xffffffff,
     set_ssid                       =   0, // indicates status of set ssid ,
     join                           =   1, // differentiates join ibss from found (wlc_e_start) ibss
@@ -582,9 +628,17 @@ const EventType = enum(u32) {
     ext_auth_frame_rx              = 188, // authentication request received
     mgmt_frame_txstatus            = 189, // mgmt frame Tx complete
     _,
-};
+    // zig fmt: on
 
-// zig fmt: on
+    pub fn mask(events: []const EventType) [26]u8 {
+        var m: [26]u8 = @splat(0);
+        for (events) |event| {
+            const e: u32 = @intFromEnum(event);
+            m[4 + e / 8] |= @as(u8, 1) << @as(u3, @truncate(e & 7));
+        }
+        return m;
+    }
+};
 
 pub const EventStatus = enum(u32) {
     /// operation was successful
@@ -717,4 +771,23 @@ test "small data is padded in request to 4 bytes" {
     const r2 = request(buf[512..], .set_var, "ampdu_ba_wsize", &.{0x08}, 1, 2);
 
     try testing.expectEqualSlices(u8, r1, r2);
+}
+
+test "events mask" {
+    const buf = hex_to_bytes("000000008B120102004000000000800100000000000000000000");
+    try testing.expectEqual(26, buf.len);
+    const mask = EventType.mask(&.{
+        .join,
+        .assoc,
+        .reassoc,
+        .assoc_req_ie,
+        .assoc_resp_ie,
+        .set_ssid,
+        .link,
+        .auth,
+        .psk_sup,
+        .eapol_msg,
+        .disassoc_ind,
+    });
+    try testing.expectEqualSlices(u8, &buf, &mask);
 }

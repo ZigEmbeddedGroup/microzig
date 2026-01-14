@@ -337,16 +337,20 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
         try self.set_var("ampdu_rx_factor", &.{0x00});
         self.sleep_ms(150);
     }
-    // Enable events
-    {
-        // using events list from: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L38
-        // ref: https://github.com/jbentham/picowi/blob/bb33b1e7a15a685f06dda6764b79e429ce9b325e/lib/picowi_join.c#L74
-        // can be something like:
-        // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/control.rs#L242
-        const buf = ioctl.hex_to_bytes("000000008B120102004000000000800100000000000000000000");
-        try self.set_var("bsscfg:event_msgs", &buf);
-        self.sleep_ms(50);
-    }
+    try self.enable_events(&.{
+        .join,
+        .assoc,
+        .reassoc,
+        .assoc_req_ie,
+        .assoc_resp_ie,
+        .set_ssid,
+        .link,
+        .auth,
+        .psk_sup,
+        .eapol_msg,
+        .disassoc_ind,
+    });
+
     var buf: [64]u8 = @splat(0); // space for 10 addresses
     // Enable multicast
     {
@@ -483,6 +487,111 @@ pub const JoinPoller = struct {
             try jp.poll();
         }
         return error.Cyw43JoinTimeout;
+    }
+};
+
+const ScanParams = extern struct {
+    version: u32 = 1,
+    action: u16 = 1,
+    sync_id: u16 = 0x1,
+
+    ssid_len: u32 = 0,
+    ssid: [32]u8 = @splat(0),
+
+    bssid: [6]u8 = .{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
+    bss_type: u8 = 2,
+    scan_type: u8 = 1, // passive
+
+    nprobes: u32 = 0xff_ff_ff_ff,
+    active_time: u32 = 0xff_ff_ff_ff,
+    passive_time: u32 = 0xff_ff_ff_ff,
+    home_time: u32 = 0xff_ff_ff_ff,
+
+    nchans: u16 = 0,
+    nssids: u16 = 0,
+
+    chans: [14][2]u8 = @splat(@splat(0)),
+    ssids: [1][32]u8 = @splat(@splat(0)),
+};
+
+fn enable_events(self: *Self, events: []const ioctl.EventType) !void {
+    const mask = ioctl.EventType.mask(events);
+    try self.set_var("bsscfg:event_msgs", &mask);
+    self.sleep_ms(50);
+}
+
+/// Init scan and return poller
+pub fn scan_poller(self: *Self) !ScanPoller {
+    try self.enable_events(&.{ .escan_result, .set_ssid });
+
+    try self.set_cmd(.set_scan_channel_time, &.{40});
+    try self.set_var("pm2_sleep_ret", &.{0xc8});
+    try self.set_var("bcn_li_bcn", &.{1});
+    try self.set_var("bcn_li_dtim", &.{1});
+    try self.set_var("assoc_listen", &.{0x0a});
+    try self.set_cmd(.set_band, &.{0});
+    try self.set_cmd(.up, &.{0});
+    var scan_params: ScanParams = .{};
+    try self.set_var("escan", mem.asBytes(&scan_params));
+
+    return .{
+        .wifi = self,
+    };
+}
+
+pub const ScanPoller = struct {
+    wifi: *Self,
+    res: ioctl.EventScanResult = undefined,
+    done: bool = false,
+
+    const Result = struct {
+        ssid: []const u8,
+        ap_mac: [6]u8,
+        security: ioctl.Security,
+        channel: u16,
+    };
+
+    /// Returns ssid of the found wifi network. Null is returned when scan is
+    /// completed. Zero length ssid when there is no event to read.
+    /// Same ssid can be returned mutliple times.
+    ///
+    ///  var sp = try wifi.scan_poller();
+    ///  while (try sp.poll()) |ssid| {
+    ///      if (ssid.len != 0) {
+    ///          log.debug("ssid: {s}", .{ssid});
+    ///      }
+    ///      hal.time.sleep_ms(10);
+    ///  }
+    ///
+    pub fn poll(sp: *ScanPoller) !?Result {
+        if (sp.done) return null;
+        var bytes: [1280]u8 align(4) = undefined;
+        if (try sp.wifi.read(&bytes)) |rsp| {
+            switch (rsp.sdp.channel()) {
+                .event => {
+                    const evt = rsp.event().msg;
+                    switch (evt.event_type) {
+                        .escan_result => {
+                            if (evt.status == .success) {
+                                sp.done = true;
+                                return null;
+                            }
+                            const security = try rsp.event_scan_result(&sp.res);
+                            if (sp.res.info.ssid_len == 0) return null;
+                            return .{
+                                .ap_mac = sp.res.info.bssid,
+                                .ssid = sp.res.info.ssid[0..sp.res.info.ssid_len],
+                                .security = security,
+                                .channel = sp.res.info.channel,
+                            };
+                        },
+                        else => sp.wifi.log_response(rsp),
+                    }
+                },
+                else => sp.wifi.log_response(rsp),
+            }
+        }
+        return null;
     }
 };
 

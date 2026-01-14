@@ -37,6 +37,10 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
     return try self.wifi.join_poller(ssid, pwd, opt);
 }
 
+pub fn scan_poller(self: *Self) !WiFi.ScanPoller {
+    return try self.wifi.scan_poller();
+}
+
 fn show_clm_ver(self: *Self) !void {
     var data: [128]u8 = @splat(0);
     const n = try self.wifi.get_var("clmver", &data);
