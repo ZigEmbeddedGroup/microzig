@@ -378,11 +378,6 @@ jobs:
               }
             }
 
-            // Add filtered issues summary if exists
-            if (hasFilteredIssues) {
-              reviewBody += `\n<details>\n<summary>ℹ️ Additional issues on unchanged lines</summary>\n\n\`\`\`\n${filteredContent}\n\`\`\`\n\n</details>\n`;
-            }
-
             reviewBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
 
             // Determine review event type
