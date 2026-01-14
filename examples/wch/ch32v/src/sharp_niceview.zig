@@ -120,7 +120,7 @@ pub fn main() !void {
     std.log.info("Initializing Sharp Memory LCD driver...", .{});
     const disp_height = 68;
     const disp_width = 160;
-    const Display = mdf.display.Sharp_Memory_LCD(.{
+    const Display = mdf.display.SharpMemory_LCD(.{
         .width = disp_width,
         .height = disp_height,
         // WARNING: This can be required for actual sharp LCD panels to avoid damaging the LCD.
