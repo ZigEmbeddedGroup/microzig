@@ -4,7 +4,7 @@
 //!
 //! Hardware setup:
 //! - W25Q128 flash chip connected to SPI1:
-//!   - CS:   PA4 (or any GPIO)
+//!   - CS:   PA3 (or any GPIO)
 //!   - SCK:  PA5
 //!   - MISO: PA6
 //!   - MOSI: PA7
@@ -58,7 +58,7 @@ const PAGE_SIZE: usize = 256;
 const SECTOR_SIZE: usize = 4096;
 
 // CS pin
-const cs_pin = gpio.Pin.init(0, 4); // PA4
+const cs_pin = gpio.Pin.init(0, 3); // PA3
 
 pub fn main() !void {
     // Board brings up clocks and time

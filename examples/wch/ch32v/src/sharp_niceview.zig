@@ -5,7 +5,7 @@
 //!
 //! Hardware setup:
 //! - nice!view display connected to SPI1:
-//!   - CS:   PA4 (Chip Select - ACTIVE HIGH!)
+//!   - CS:   PA3 (Chip Select - ACTIVE HIGH!)
 //!   - SCK:  PA5
 //!   - MOSI: PA7
 //!   - VCC:  3.3V
@@ -46,7 +46,7 @@ pub const microzig_options = microzig.Options{
 // Pin definitions
 const sck_pin = gpio.Pin.init(0, 5); // PA5
 const mosi_pin = gpio.Pin.init(0, 7); // PA7
-const cs_pin = gpio.Pin.init(0, 6); // PA6
+const cs_pin = gpio.Pin.init(0, 3); // PA3
 
 pub fn main() !void {
     // Board brings up clocks and time
