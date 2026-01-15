@@ -15,6 +15,7 @@ credit: u8 = 0,
 tx_sequence: u8 = 0,
 status: ?Status = null,
 log_state: LogState = .{},
+events: Events = .{},
 
 const ioctl_request_bytes_len = 1024;
 
@@ -341,14 +342,14 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
         .join,
         .assoc,
         .reassoc,
-        .assoc_req_ie,
-        .assoc_resp_ie,
         .set_ssid,
         .link,
         .auth,
         .psk_sup,
-        .eapol_msg,
         .disassoc_ind,
+        .disassoc,
+        .deauth,
+        .deauth_ind,
     });
 
     var buf: [64]u8 = @splat(0); // space for 10 addresses
@@ -416,66 +417,57 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
 
         try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
     }
-    return .{
-        .wifi = self,
-        .state = .{ .link_auth = opt.security == .open },
-    };
+    if (opt.security == .open) {
+        self.events.psk_sup = .success;
+    }
+
+    return .{ .wifi = self };
+}
+
+pub fn connected(self: Self) bool {
+    return self.events.connected();
 }
 
 pub const JoinPoller = struct {
-    const State = packed struct {
-        link_up: bool = false,
-        link_auth: bool = false,
-        set_ssid: bool = false,
-
-        pub const connected: State = .{
-            .link_up = true,
-            .link_auth = true,
-            .set_ssid = true,
-        };
-    };
-
     wifi: *Self,
-    state: State = .{},
 
-    pub fn poll(jp: *JoinPoller) !void {
+    // Join to open network events:
+    //   [1.824251] type: .auth,     status: .success
+    //   [1.859136] type: .assoc,    status: .success
+    //   [1.876234] type: .link,     status: .success
+    //   [1.893244] type: .join,     status: .success
+    //   [1.910249] type: .set_ssid, status: .success
+    // Join to wpa2 network events:
+    //   [4.039611] type: .auth,     status: .success
+    //   [4.073556] type: .assoc,    status: .success
+    //   [4.090268] type: .link,     status: .success
+    //   [4.106842] type: .psk_sup,  status: .unsolicited
+    //   [4.124026] type: .join,     status: .success
+    //   [4.140596] type: .set_ssid, status: .success
+
+    // On disconnect:
+    //   [10.410040] type: .deauth_ind, status: .success
+    //   [11.456022] type: .auth,       status: .fail
+    //   [20.875620] type: .link,       status: .success
+    // On reconnect
+    //   [39.896166] type: .auth,    status: .success
+    //   [39.910309] type: .reassoc, status: .success
+    //   [39.917245] type: .link,    status: .success
+    //   [40.202375] type: .join,    status: .success
+
+    pub fn poll(jp: *JoinPoller) !bool {
+        const events = &jp.wifi.events;
+        if (events.connected()) return false;
+
         var bytes: [512]u8 align(4) = undefined;
-        const rsp = try jp.wifi.read(&bytes) orelse return;
+        const rsp = try jp.wifi.read(&bytes) orelse return true;
 
         switch (rsp.sdp.channel()) {
-            .event => {
-                const evt = rsp.event().msg;
-                switch (evt.event_type) {
-                    .link => {
-                        if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
-                        jp.state.link_up = true;
-                    },
-                    .psk_sup => {
-                        if (evt.status != .unsolicited) return error.Cyw43JoinWpaHandshake;
-                        jp.state.link_auth = true;
-                    },
-                    .assoc => {
-                        if (evt.status != .success) return error.Cyw43JoinAssocRequest;
-                    },
-                    .auth => {
-                        if (evt.status != .success) return error.Cyw43JoinAuthRequest;
-                    },
-                    .disassoc_ind => {
-                        return error.Cyw43JoinDisassocIndication;
-                    },
-                    .set_ssid => {
-                        if (evt.status != .success) return error.Cyw43JoinSetSsid;
-                        jp.state.set_ssid = true;
-                    },
-                    else => {},
-                }
-            },
-            else => {},
+            .event => jp.wifi.handle_event(&rsp.event().msg),
+            else => jp.wifi.log_response(rsp),
         }
-    }
-
-    pub fn is_connected(jp: *JoinPoller) bool {
-        return jp.state == State.connected;
+        try events.err();
+        return !events.connected();
     }
 
     pub fn wait(jp: *JoinPoller, wait_ms: u32) !void {
@@ -489,6 +481,49 @@ pub const JoinPoller = struct {
         return error.Cyw43JoinTimeout;
     }
 };
+
+fn handle_event(self: *Self, evt: *const ioctl.EventMessage) void {
+    const events = &self.events;
+    const state = Events.State.from;
+    // log.debug(
+    //     "poll event type: {}, status: {} ",
+    //     .{ evt.event_type, evt.status },
+    // );
+    switch (evt.event_type) {
+        .link => {
+            events.link = state(evt.status == .success and evt.flags & 1 > 0);
+        },
+        .psk_sup => {
+            events.psk_sup =
+                state(evt.status == .success or evt.status == .unsolicited);
+        },
+        .assoc, .reassoc => {
+            events.assoc = state(evt.status == .success);
+        },
+        .disassoc_ind, .disassoc => {
+            events.assoc = .fail;
+        },
+        .auth => {
+            events.auth = state(evt.status == .success);
+        },
+        .deauth_ind, .deauth => {
+            events.auth = .fail;
+        },
+        .set_ssid => {
+            events.set_ssid = state(evt.status == .success);
+        },
+        .join => {
+            events.join = state(evt.status == .success);
+        },
+        .none => {},
+        else => {
+            log.warn(
+                "unhandled event type: {}, status: {} ",
+                .{ evt.event_type, evt.status },
+            );
+        },
+    }
+}
 
 const ScanParams = extern struct {
     version: u32 = 1,
@@ -545,24 +580,16 @@ pub const ScanPoller = struct {
     done: bool = false,
 
     const Result = struct {
-        ssid: []const u8,
-        ap_mac: [6]u8,
-        security: ioctl.Security,
-        channel: u16,
+        ssid: []const u8 = &.{},
+        ap_mac: [6]u8 = @splat(0),
+        security: ioctl.Security = .{},
+        channel: u16 = 0,
+
+        pub fn empty(res: Result) bool {
+            return res.ssid.len == 0;
+        }
     };
 
-    /// Returns ssid of the found wifi network. Null is returned when scan is
-    /// completed. Zero length ssid when there is no event to read.
-    /// Same ssid can be returned mutliple times.
-    ///
-    ///  var sp = try wifi.scan_poller();
-    ///  while (try sp.poll()) |ssid| {
-    ///      if (ssid.len != 0) {
-    ///          log.debug("ssid: {s}", .{ssid});
-    ///      }
-    ///      hal.time.sleep_ms(10);
-    ///  }
-    ///
     pub fn poll(sp: *ScanPoller) !?Result {
         if (sp.done) return null;
         var bytes: [1280]u8 align(4) = undefined;
@@ -577,7 +604,7 @@ pub const ScanPoller = struct {
                                 return null;
                             }
                             const security = try rsp.event_scan_result(&sp.res);
-                            if (sp.res.info.ssid_len == 0) return null;
+                            if (sp.res.info.ssid_len == 0) return .{};
                             return .{
                                 .ap_mac = sp.res.info.bssid,
                                 .ssid = sp.res.info.ssid[0..sp.res.info.ssid_len],
@@ -591,7 +618,7 @@ pub const ScanPoller = struct {
                 else => sp.wifi.log_response(rsp),
             }
         }
-        return null;
+        return .{};
     }
 };
 
@@ -646,6 +673,7 @@ pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
         const rsp = try self.read(buffer) orelse return null;
         switch (rsp.sdp.channel()) {
             .data => return rsp.data_pos(),
+            .event => self.handle_event(&rsp.event().msg),
             else => self.log_response(rsp),
         }
     }
@@ -750,6 +778,43 @@ const Status = packed struct {
     f2_packet_available: bool, // Packet is available/ready in F2 TX FIFO.
     packet_length: u11, //        Length of packet available in F2 FIFO,
     _reserved3: u12,
+};
+
+const Events = struct {
+    pub const State = enum(u2) {
+        none,
+        success,
+        fail,
+
+        fn from(ok: bool) State {
+            return if (ok) .success else .fail;
+        }
+    };
+
+    link: State = .none,
+    psk_sup: State = .none,
+    set_ssid: State = .none,
+    assoc: State = .none,
+    auth: State = .none,
+    join: State = .none,
+
+    pub fn err(e: Events) !void {
+        if (e.link == .fail) return error.Cyw43LinkDown;
+        if (e.psk_sup == .fail) return error.Cyw43WpaHandshake;
+        if (e.set_ssid == .fail) return error.Cyw43SetSsid;
+        if (e.assoc == .fail) return error.Cyw43AssocRequest;
+        if (e.auth == .fail) return error.Cyw43AuthRequest;
+        if (e.join == .fail) return error.Cyw43Join;
+    }
+
+    pub fn connected(e: Events) bool {
+        return e.link == .success and
+            e.psk_sup == .success and
+            e.set_ssid == .success and
+            e.assoc == .success and
+            e.auth == .success and
+            e.join == .success;
+    }
 };
 
 // CYW43439 chip values

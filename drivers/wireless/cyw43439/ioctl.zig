@@ -460,7 +460,7 @@ const EventHeader = extern struct {
 };
 
 // Raw event header (sdpcm_raw_event_header_t)
-const EventMessage = extern struct {
+pub const EventMessage = extern struct {
     version: u16,
     flags: u16,
     event_type: EventType,
