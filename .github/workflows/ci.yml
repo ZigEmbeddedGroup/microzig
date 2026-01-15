@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.15.1
+  ZIG_VERSION: master
 
 jobs:
   formatting-check:
@@ -170,7 +170,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        port_dir: [gigadevice/gd32, raspberrypi/rp2xxx, stmicro/stm32, wch/ch32v]
+        port_dir:
+          [gigadevice/gd32, raspberrypi/rp2xxx, stmicro/stm32, wch/ch32v]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -188,7 +189,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example_dir: [
+        example_dir:
+          [
             espressif/esp,
             gigadevice/gd32,
             microchip/atmega,
@@ -245,7 +247,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.1
+          version: master
       - name: Build Website
         run: zig build
         working-directory: website
