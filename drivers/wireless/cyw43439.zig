@@ -2,6 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const assert = std.debug.assert;
 
+const Link = @import("link");
 const Bus = @import("cyw43439/bus.zig");
 const WiFi = @import("cyw43439/wifi.zig");
 pub const JoinOptions = WiFi.JoinOptions;
@@ -58,9 +59,13 @@ pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
     return self.wifi.recv_zc(bytes);
 }
 
-pub fn send_zc(ptr: *anyopaque, bytes: []u8) anyerror!void {
+pub fn send_zc(ptr: *anyopaque, bytes: []u8) Link.Error!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
-    try self.wifi.send_zc(bytes);
+    self.wifi.send_zc(bytes) catch |err| switch (err) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.LinkDown => return error.LinkDown,
+        else => return error.InternalError,
+    };
 }
 
 pub fn gpio(self: *Self, pin: u2) Pin {
@@ -81,15 +86,7 @@ pub const Pin = struct {
     }
 };
 
-pub const Interface = struct {
-    ptr: *anyopaque,
-    vtable: struct {
-        recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
-        send: *const fn (*anyopaque, []u8) anyerror!void,
-    },
-};
-
-pub fn interface(self: *Self) Interface {
+pub fn link(self: *Self) Link {
     return .{
         .ptr = self,
         .vtable = .{

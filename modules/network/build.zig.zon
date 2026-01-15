@@ -10,6 +10,9 @@
         .lwip = .{
             .path = "../lwip/",
         },
+        .link = .{
+            .path = "link/",
+        },
     },
     .paths = .{
         "build.zig",

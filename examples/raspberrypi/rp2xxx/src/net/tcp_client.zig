@@ -33,7 +33,7 @@ pub fn main() !void {
     try wifi.join(secrets.ssid, secrets.pwd, secrets.join_opt);
 
     // init lwip network interface
-    var nic: net.Interface = .{ .link = .adapt(wifi.interface()) };
+    var nic: net.Interface = .{ .link = wifi.link() };
     try nic.init(wifi.mac, try secrets.nic_options());
 
     // init handler

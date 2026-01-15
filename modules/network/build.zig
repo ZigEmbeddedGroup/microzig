@@ -72,6 +72,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .root_source_file = b.path("src/root.zig"),
+        .imports = &.{.{
+            .name = "link",
+            .module = b.dependency("link", .{}).module("link"),
+        }},
     });
     net_mod.addImport("lwip", lwip_mod);
     // Copy macros and include dirs from lwip to net, so we have same values

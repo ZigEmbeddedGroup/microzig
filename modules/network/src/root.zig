@@ -2,6 +2,7 @@
 /// link interface.
 const std = @import("std");
 const config = @import("config");
+const Link = @import("link");
 
 const assert = std.debug.assert;
 fn assert_panic(ok: bool, msg: []const u8) void {
@@ -28,24 +29,6 @@ pub const Interface = struct {
     netif: lwip.netif = .{},
     dhcp: lwip.dhcp = .{},
     link: Link,
-
-    pub const Link = struct {
-        ptr: *anyopaque,
-        vtable: struct {
-            recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
-            send: *const fn (*anyopaque, []u8) anyerror!void,
-        },
-
-        pub fn adapt(any: anytype) Link {
-            return .{
-                .ptr = any.ptr,
-                .vtable = .{
-                    .recv = any.vtable.recv,
-                    .send = any.vtable.send,
-                },
-            };
-        }
-    };
 
     pub const Options = struct {
         fixed: ?Fixed = null,
