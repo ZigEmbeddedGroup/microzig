@@ -1,15 +1,15 @@
 /// Platform dependent exports required by lwip
 ///
 const std = @import("std");
+const assert = std.debug.assert;
+
 const microzig = @import("microzig");
 const esp = microzig.hal;
 const rtos = esp.rtos;
 
-const log = std.log.scoped(.lwip);
-const assert = std.debug.assert;
-
 const c = @import("include.zig").c;
 
+const log = std.log.scoped(.lwip);
 // TODO: we use a different allocator here than the one in osi. maybe we can
 // have only one.
 // TODO: mutex and mailbox can be implemented without allocations if we define
@@ -98,8 +98,12 @@ export fn sys_mbox_free(ptr: *c.sys_mbox_t) void {
     ptr.* = null;
 }
 
-export fn sys_mbox_valid(ptr: *c.sys_mbox_t) i32 {
+export fn sys_mbox_valid(ptr: *c.sys_mbox_t) c_int {
     return @intFromBool(ptr.* != null);
+}
+
+export fn sys_mbox_set_invalid(ptr: *c.sys_mbox_t) void {
+    ptr.* = null;
 }
 
 export fn sys_mbox_post(ptr: *c.sys_mbox_t, element: MailboxElement) void {
@@ -122,10 +126,60 @@ comptime {
 
 export fn sys_arch_mbox_fetch(ptr: *c.sys_mbox_t, element_ptr: *MailboxElement, timeout: u32) u32 {
     const mailbox: *Mailbox = @ptrCast(@alignCast(ptr.*));
+    const now = esp.time.get_time_since_boot();
     element_ptr.* = mailbox.get_one(if (timeout != 0) .from_ms(timeout) else null) catch {
         return c.SYS_ARCH_TIMEOUT;
     };
-    return 0;
+    // returns waiting time in ms
+    return @intCast(esp.time.get_time_since_boot().diff(now).to_us() / 1_000);
+}
+
+export fn sys_arch_mbox_tryfetch(ptr: *c.sys_mbox_t, element_ptr: *MailboxElement) u32 {
+    const mailbox: *Mailbox = @ptrCast(@alignCast(ptr.*));
+    if (mailbox.get_one_non_blocking()) |element| {
+        element_ptr.* = element;
+        return 0;
+    } else {
+        return c.SYS_MBOX_EMPTY;
+    }
+}
+
+export fn sys_sem_new(ptr: *c.sys_sem_t, count: u8) c.err_t {
+    const sem = gpa.create(rtos.Semaphore) catch {
+        log.warn("failed to allocate semaphore", .{});
+        return c.ERR_MEM;
+    };
+    sem.* = .init(count, 1);
+    ptr.* = sem;
+    return c.ERR_OK;
+}
+
+export fn sys_sem_free(ptr: *c.sys_sem_t) void {
+    const sem: *rtos.Semaphore = @ptrCast(@alignCast(ptr.*));
+    gpa.destroy(sem);
+}
+
+export fn sys_sem_signal(ptr: *c.sys_sem_t) void {
+    const sem: *rtos.Semaphore = @ptrCast(@alignCast(ptr.*));
+    sem.give();
+}
+
+export fn sys_arch_sem_wait(ptr: *c.sys_sem_t, timeout: u32) u32 {
+    const sem: *rtos.Semaphore = @ptrCast(@alignCast(ptr.*));
+    const now = esp.time.get_time_since_boot();
+    sem.take_with_timeout(if (timeout != 0) .from_ms(timeout) else null) catch {
+        return c.SYS_ARCH_TIMEOUT;
+    };
+    // returns waiting time in ms
+    return @intCast(esp.time.get_time_since_boot().diff(now).to_us() / 1_000);
+}
+
+export fn sys_sem_valid(ptr: *c.sys_sem_t) c_int {
+    return @intFromBool(ptr.* != null);
+}
+
+export fn sys_sem_set_invalid(ptr: *c.sys_sem_t) void {
+    ptr.* = null;
 }
 
 fn task_wrapper(

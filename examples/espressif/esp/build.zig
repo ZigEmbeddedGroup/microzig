@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "systimer", .file = "src/systimer.zig" },
         .{ .name = "ws2812_blinky", .file = "src/ws2812_blinky.zig" },
         .{ .name = "rtos", .file = "src/rtos.zig" },
-        .{ .name = "wifi", .file = "src/wifi.zig", .features = .{
+        .{ .name = "tcp_server", .file = "src/tcp_server.zig", .features = .{
             .flashless = false,
             .lwip = true,
         } },

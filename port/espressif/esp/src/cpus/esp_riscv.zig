@@ -544,6 +544,7 @@ fn _handle_interrupt(
         if (@intFromEnum(priority) < 15) {
             const mepc = csr.mepc.read_raw();
             const mstatus = csr.mstatus.read_raw();
+            const mtval = csr.mtval.read_raw();
 
             const prev_thresh = interrupt.get_priority_threshold();
             interrupt.set_priority_threshold(@enumFromInt(@intFromEnum(priority) + 1));
@@ -558,6 +559,8 @@ fn _handle_interrupt(
 
             csr.mepc.write_raw(mepc);
             csr.mstatus.write_raw(mstatus);
+            csr.mtval.write_raw(mtval);
+            csr.mcause.write(mcause);
         } else {
             handler(trap_frame);
         }

@@ -30,11 +30,9 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // TODO: implement priority inheritance for sync primitives
 // TODO: better handling if timeout is in the past or very short
 // TODO: support SMP for other esp32 chips with multicore (far future)
-// NOTE: don't use anonymous structs for reinitializing state unions with
-// previous union state to avoid compiler bug (0.15.2)
 
 const STACK_ALIGN: std.mem.Alignment = .@"16";
-const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 64 * @sizeOf(usize));
+const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 32 * @sizeOf(usize));
 
 const rtos_options = microzig.options.hal.rtos;
 pub const Priority = rtos_options.Priority;
@@ -133,12 +131,37 @@ fn idle() linksection(".ram_text") callconv(.naked) void {
     // appears to have solved the problem but the root cause is still a
     // mistery.
     asm volatile (
-        \\1:
         \\csrsi mstatus, 8  # make sure interrupts are enabled
+        \\1:
         \\wfi
         \\j 1b
     );
 }
+
+// fn idle() linksection(".ram_text") callconv(.c) void {
+//     microzig.cpu.interrupt.enable_interrupts();
+//
+//     while (true) {
+//         {
+//             const cs = microzig.interrupt.enter_critical_section();
+//             defer cs.leave();
+//
+//             std.log.info("idle with interrupts enabled = {}", .{cs.enable_on_leave});
+//         }
+//
+//         microzig.cpu.wfi();
+//     }
+//
+//     // TODO: cpu would hang after a while. Enabling interrupts before wfi
+//     // appears to have solved the problem but the root cause is still a
+//     // mistery.
+//     asm volatile (
+//         \\csrsi mstatus, 8  # make sure interrupts are enabled
+//         \\1:
+//         \\wfi
+//         \\j 1b
+//     );
+// }
 
 pub fn get_current_task() *Task {
     return rtos_state.current_task;
@@ -411,6 +434,7 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\sw a5, 13*4(sp)
                 \\sw a6, 14*4(sp)
                 \\sw a7, 15*4(sp)
+                // s0 is saved in context
                 \\sw s1, 16*4(sp)
                 \\sw s2, 17*4(sp)
                 \\sw s3, 18*4(sp)
@@ -425,11 +449,11 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\sw gp, 27*4(sp)
                 \\sw tp, 28*4(sp)
                 \\
-                \\csrr a1, mepc
-                \\sw a1, 29*4(sp)
+                \\csrr a0, mepc
+                \\sw a0, 29*4(sp)
                 \\
-                \\csrr a1, mstatus
-                \\sw a1, 30*4(sp)
+                \\csrr a0, mstatus
+                \\sw a0, 30*4(sp)
                 \\
                 // save sp for later
                 \\mv a2, sp
@@ -448,7 +472,6 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 // first parameter is a pointer to context
                 \\mv a0, sp
-                \\mv s1, a1
                 \\jal %[schedule_in_isr]
                 \\
                 // load next task context
@@ -460,12 +483,13 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 // if the next task program counter is equal to 1f's location
                 // just jump to it (ie. the task forcefully yielded).
-                \\beq a1, s1, 1f
+                \\la a0, 1f
+                \\beq a1, a0, 1f
                 \\
                 // ensure interrupts are disabled after mret (when a normal
                 // context switch occured)
-                \\li t0, 0x80
-                \\csrc mstatus, t0
+                \\li a0, 0x80
+                \\csrc mstatus, a0
                 \\
                 // jump to new task
                 \\csrw mepc, a1
@@ -473,11 +497,11 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 \\1:
                 \\
-                \\lw t1, 30*4(sp)
-                \\csrw mstatus, t1
+                \\lw a0, 30*4(sp)
+                \\csrw mstatus, a0
                 \\
-                \\lw t0, 29*4(sp)
-                \\csrw mepc, t0
+                \\lw a0, 29*4(sp)
+                \\csrw mepc, a0
                 \\
                 \\lw ra, 0*4(sp)
                 \\lw t0, 1*4(sp)
@@ -1118,6 +1142,15 @@ pub fn Queue(Elem: type) type {
             if (q.get(&buf, 1, timeout) != 1)
                 return error.Timeout;
             return buf[0];
+        }
+
+        pub fn get_one_non_blocking(q: *Self) ?Elem {
+            var buf: [1]Elem = undefined;
+            if (q.type_erased.get_non_blocking(@ptrCast(&buf)) == 1) {
+                return buf[0];
+            } else {
+                return null;
+            }
         }
 
         pub fn capacity(q: *const Self) usize {

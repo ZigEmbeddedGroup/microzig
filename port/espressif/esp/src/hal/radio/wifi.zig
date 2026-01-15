@@ -11,10 +11,6 @@ const osi = @import("osi.zig");
 
 const log = std.log.scoped(.esp_radio_wifi);
 
-pub const InternalError = error{InternalError};
-
-var inited: bool = false;
-
 pub const Options = struct {
     on_event: ?*const fn (e: Event) void = null,
     on_packet_received: ?*const fn (comptime interface: Interface, data: []const u8) void = null,
@@ -23,17 +19,149 @@ pub const Options = struct {
 
 const InitError = std.mem.Allocator.Error || InternalError;
 
-pub fn init(gpa: std.mem.Allocator) InitError!void {
-    comptime export_symbols();
+pub const InitConfig = struct {
+    /// Power save mode.
+    power_save_mode: PowerSaveMode = .none,
 
-    if (inited) {
-        @panic("wifi already initialized");
-    }
+    /// Country info. If .auto the country info of the AP to which the station
+    /// is connected is used.
+    country_info: CountryInfo = .auto,
+    /// Set maximum transmitting power after WiFi start.
+    /// TODO: explain what values are valid
+    /// TODO: should it be part of country info?
+    max_tx_power: i8 = 20,
+
+    /// Max number of WiFi static RX buffers.
+    ///
+    /// Each buffer takes approximately 1.6KB of RAM. The static rx buffers are
+    /// allocated when esp_wifi_init is called, they are not freed until
+    /// esp_wifi_deinit is called.
+    ///
+    /// WiFi hardware use these buffers to receive all 802.11 frames. A higher
+    /// number may allow higher throughput but increases memory use. If
+    /// [`Self::ampdu_rx_enable`] is enabled, this value is recommended to set
+    /// equal or bigger than [`Self::rx_ba_win`] in order to achieve better
+    /// throughput and compatibility with both stations and APs.
+    static_rx_buf_num: u8 = 10,
+
+    /// Max number of WiFi dynamic RX buffers
+    ///
+    /// Set the number of WiFi dynamic RX buffers, 0 means unlimited RX buffers
+    /// will be allocated (provided sufficient free RAM). The size of each
+    /// dynamic RX buffer depends on the size of the received data frame.
+    ///
+    /// For each received data frame, the WiFi driver makes a copy to an RX
+    /// buffer and then delivers it to the high layer TCP/IP stack. The dynamic
+    /// RX buffer is freed after the higher layer has successfully received the
+    /// data frame.
+    ///
+    /// For some applications, WiFi data frames may be received faster than the
+    /// application can process them. In these cases we may run out of memory
+    /// if RX buffer number is unlimited (0).
+    ///
+    /// If a dynamic RX buffer limit is set, it should be at least the number
+    /// of static RX buffers.
+    dynamic_rx_buf_num: u16 = 32,
+
+    /// Set the number of WiFi static TX buffers.
+    ///
+    /// Each buffer takes approximately 1.6KB of RAM. The static RX buffers are
+    /// allocated when esp_wifi_init() is called, they are not released until
+    /// esp_wifi_deinit() is called.
+    ///
+    /// For each transmitted data frame from the higher layer TCP/IP stack, the
+    /// WiFi driver makes a copy of it in a TX buffer.
+    ///
+    /// For some applications especially UDP applications, the upper layer can
+    /// deliver frames faster than WiFi layer can transmit. In these cases, we
+    /// may run out of TX buffers.
+    static_tx_buf_num: u8 = 0,
+
+    /// Set the number of WiFi dynamic TX buffers.
+    ///
+    /// The size of each dynamic TX buffer is not fixed, it depends on the size
+    /// of each transmitted data frame.
+    ///
+    /// For each transmitted frame from the higher layer TCP/IP stack, the WiFi
+    /// driver makes a copy of it in a TX buffer.
+    ///
+    /// For some applications, especially UDP applications, the upper layer can
+    /// deliver frames faster than WiFi layer can transmit. In these cases, we
+    /// may run out of TX buffers.
+    dynamic_tx_buf_num: u16 = 32,
+
+    /// Select this option to enable AMPDU RX feature.
+    ampdu_rx_enable: bool = true,
+
+    /// Select this option to enable AMPDU TX feature.
+    ampdu_tx_enable: bool = true,
+
+    /// Select this option to enable AMSDU TX feature.
+    amsdu_tx_enable: bool = false,
+
+    /// Set the size of WiFi Block Ack RX window.
+    ///
+    /// Generally a bigger value means higher throughput and better
+    /// compatibility but more memory. Most of time we should NOT change the
+    /// default value unless special reason, e.g. test the maximum UDP RX
+    /// throughput with iperf etc. For iperf test in shieldbox, the recommended
+    /// value is 9~12.
+    ///
+    /// If PSRAM is used and WiFi memory is preferred to allocate in PSRAM
+    /// first, the default and minimum value should be 16 to achieve better
+    /// throughput and compatibility with both stations and APs.
+    rx_ba_win: u8 = 6,
+
+    pub const CountryInfo = union(enum) {
+        auto,
+        manual: struct {
+            /// Country code.
+            country_code: *const [2]u8 = "01",
+            /// Start channel of the allowed 2.4GHz Wi-Fi channels.
+            start_channel: u8 = 1,
+            /// Total channel number of the allowed 2.4GHz Wi-Fi channels.
+            total_channel_number: u8 = 11,
+        },
+
+        fn get_wifi_country_t(info: CountryInfo, max_tx_power: i8) c.wifi_country_t {
+            return switch (info) {
+                .auto => .{
+                    .cc = .{'0', '1', 0},
+                    .schan = 1,
+                    .nchan = 11,
+                    .max_tx_power = max_tx_power,
+                    .policy = c.WIFI_COUNTRY_POLICY_AUTO
+
+                },
+                .manual => |manual_info| .{
+                    .cc = manual_info.country_code.* ++ .{0},
+                    .schan = manual_info.start_channel,
+                    .nchan = manual_info.total_channel_number,
+                    .max_tx_power = max_tx_power,
+                    .policy = c.WIFI_COUNTRY_POLICY_MANUAL,
+                },
+            };
+        }
+    };
+};
+
+pub fn init(gpa: std.mem.Allocator, config: InitConfig) InitError!void {
+    comptime export_symbols();
 
     try radio.init(gpa);
 
-    init_config.wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs;
-    init_config.feature_caps = g_wifi_feature_caps;
+    {
+        init_config.wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs;
+        init_config.feature_caps = g_wifi_feature_caps;
+        init_config.static_rx_buf_num = config.static_rx_buf_num;
+        init_config.dynamic_rx_buf_num = config.dynamic_rx_buf_num;
+        init_config.static_tx_buf_num = config.static_tx_buf_num;
+        init_config.dynamic_tx_buf_num = config.dynamic_tx_buf_num;
+        init_config.ampdu_rx_enable = @intFromBool(config.ampdu_rx_enable);
+        init_config.ampdu_tx_enable = @intFromBool(config.ampdu_tx_enable);
+        init_config.amsdu_tx_enable = @intFromBool(config.amsdu_tx_enable);
+        init_config.rx_ba_win = config.rx_ba_win;
+    }
 
     // TODO: if coex enabled
     if (false) try c_result(c.coex_init());
@@ -49,35 +177,19 @@ pub fn init(gpa: std.mem.Allocator) InitError!void {
     try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_STA, recv_cb_sta));
 
     {
-        // TODO: config
-        const country_code: [3]u8 = .{ 'C', 'N', 0 };
-        const country: c.wifi_country_t = .{
-            .cc = country_code,
-            .schan = 1,
-            .nchan = 13,
-            .max_tx_power = 20,
-            .policy = c.WIFI_COUNTRY_POLICY_MANUAL,
-        };
-        try c_result(c.esp_wifi_set_country(&country));
+        const country_info = config.country_info.get_wifi_country_t(config.max_tx_power);
+        try c_result(c.esp_wifi_set_country(&country_info));
     }
 
-    try set_power_save_mode(.none);
-
-    inited = true;
+    try set_power_save_mode(config.power_save_mode);
 }
 
 pub fn deinit() void {
-    if (!inited) {
-        @panic("trying to deinit the wifi controller but it isn't initialized");
-    }
-
     _ = c.esp_wifi_stop();
     _ = c.esp_wifi_deinit_internal();
     _ = c.esp_supplicant_deinit();
 
     radio.deinit();
-
-    inited = false;
 }
 
 pub const ApplyConfigError = InternalError || error{
@@ -332,6 +444,22 @@ pub fn set_protocol(protocols: []const Config.AccessPoint.Protocol) InternalErro
     if (mode.is_ap()) {
         try c_result(c.esp_wifi_set_protocol(c.WIFI_IF_AP, combined));
     }
+}
+
+/// Set the inactive time in seconds of the STA or AP.
+///
+/// 1. For Station, if the station does not receive a beacon frame from the
+/// connected SoftAP during the inactive time, disconnect from SoftAP. Default
+/// 6s. Must be at least 3s.
+///
+/// 2. For SoftAP, if the softAP doesn't receive any data from the connected
+/// STA during inactive time, the softAP will force deauth the STA. Default is
+/// 300s. Must be at least 10s.
+pub fn set_inactive_time(interface: Interface, inactive_time: u32) InternalError!void {
+    try c_result(c.esp_wifi_set_inactive_time(
+        @intFromEnum(interface),
+        inactive_time,
+    ));
 }
 
 pub fn start() InternalError!void {
@@ -659,23 +787,29 @@ pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
     }
 }
 
-// TODO: Should we also add ApState? Should we remove StaState?
 pub const StaState = enum(u32) {
     none,
-    sta_started,
-    sta_connected,
-    sta_disconnected,
-    sta_stopped,
+    started,
+    connected,
+    disconnected,
+    stopped,
+
+    pub fn is_started(state: StaState) bool {
+        return switch (state) {
+            .started, .connected, .disconnected => true,
+            else => false,
+        };
+    }
 };
 
 var sta_state: std.atomic.Value(StaState) = .init(.none);
 
 fn update_sta_state(event: EventType) void {
     const new_sta_state: StaState = switch (event) {
-        .StaStart => .sta_started,
-        .StaConnected => .sta_connected,
-        .StaDisconnected => .sta_disconnected,
-        .StaStop => .sta_stopped,
+        .StaStart => .started,
+        .StaConnected => .connected,
+        .StaDisconnected => .disconnected,
+        .StaStop => .stopped,
         else => return,
     };
     sta_state.store(new_sta_state, .monotonic);
@@ -745,21 +879,21 @@ fn export_symbols() void {
 var init_config: c.wifi_init_config_t = .{
     .osi_funcs = &g_wifi_osi_funcs,
     // .wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs,
-    .static_rx_buf_num = 10,
-    .dynamic_rx_buf_num = 32,
+    .static_rx_buf_num = 10, // overwritten by init
+    .dynamic_rx_buf_num = 32, // overwritten by init
     .tx_buf_type = c.CONFIG_ESP_WIFI_TX_BUFFER_TYPE,
-    .static_tx_buf_num = 0,
-    .dynamic_tx_buf_num = 32,
+    .static_tx_buf_num = 0, // overwritten by init
+    .dynamic_tx_buf_num = 32, // overwritten by init
     .rx_mgmt_buf_type = c.CONFIG_ESP_WIFI_STATIC_RX_MGMT_BUFFER,
     .rx_mgmt_buf_num = c.CONFIG_ESP_WIFI_RX_MGMT_BUF_NUM_DEF,
     .cache_tx_buf_num = c.WIFI_CACHE_TX_BUFFER_NUM,
     .csi_enable = 0, // TODO: WiFi channel state information enable flag.
-    .ampdu_rx_enable = 1,
-    .ampdu_tx_enable = 1,
-    .amsdu_tx_enable = 0,
+    .ampdu_rx_enable = 1, // overwritten by init
+    .ampdu_tx_enable = 1, // overwritten by init
+    .amsdu_tx_enable = 0, // overwritten by init
     .nvs_enable = 0,
     .nano_enable = 0,
-    .rx_ba_win = 6,
+    .rx_ba_win = 6, // overwritten by init
     .wifi_task_core_id = 0,
     .beacon_max_len = c.WIFI_SOFTAP_BEACON_MAX_LEN,
     .mgmt_sbuf_num = c.WIFI_MGMT_SBUF_NUM,
@@ -903,8 +1037,23 @@ var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
     ._magic = @bitCast(c.ESP_WIFI_OS_ADAPTER_MAGIC),
 };
 
-pub fn c_result(err_code: i32) InternalError!void {
-    const InternalWifiError = enum(i32) {
+pub const InternalError = error {
+    OutOfMemory,
+    InvalidArg,
+    Timeout,
+    WouldBlock,
+    WifiNotInitialized,
+    WifiNotStarted,
+    WifiNotStopped,
+    WifiNotConnected,
+    WifiInvalid_MAC,
+    WifiInvalid_SSID,
+    WifiInvalidPassword,
+    WifiOther,
+};
+
+pub fn c_result(raw_err_code: i32) InternalError!void {
+    const InternalWifiErrorCode = enum(i32) {
         /// Out of memory
         esp_err_no_mem = 0x101,
 
@@ -972,10 +1121,23 @@ pub fn c_result(err_code: i32) InternalError!void {
         esp_err_wifi_tx_disallow = 0x3016,
     };
 
-    if (err_code != c.ESP_OK) {
-        const err: InternalWifiError = @enumFromInt(err_code);
-        log.err("internal wifi error occurred: {s}", .{@tagName(err)});
-        return error.InternalError;
+    if (raw_err_code != c.ESP_OK) {
+        const err_code = std.enums.fromInt(InternalWifiErrorCode, raw_err_code) orelse
+            @panic("esp wifi returned unexpected error code");
+        log.debug("internal wifi error occurred: {t}", .{err_code});
+        return switch (err_code) {
+            .esp_err_no_mem => error.OutOfMemory,
+            .esp_err_wifi_timeout => error.Timeout,
+            .esp_err_wifi_would_block => error.WouldBlock,
+            .esp_err_wifi_not_init => error.WifiNotInitialized,
+            .esp_err_wifi_not_started => error.WifiNotStarted,
+            .esp_err_wifi_not_connect => error.WifiNotConnected,
+            .esp_err_wifi_not_stopped => error.WifiNotStopped,
+            .esp_err_wifi_mac => error.WifiInvalid_MAC,
+            .esp_err_wifi_ssid => error.WifiInvalid_SSID,
+            .esp_err_wifi_password => error.WifiInvalidPassword,
+            else => error.WifiOther,
+        };
     }
 }
 

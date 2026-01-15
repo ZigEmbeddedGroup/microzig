@@ -31,12 +31,10 @@ pub var wifi_interrupt_handler: ?struct {
 
 extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void;
 
-const log_esp_wifi_driver_internal = std.log.scoped(.esp_wifi_driver_internal);
-
 fn syslog(fmt: ?[*:0]const u8, va_list: std.builtin.VaList) callconv(.c) void {
     var buf: [512:0]u8 = undefined;
     vsnprintf(&buf, 512, fmt, va_list);
-    log_esp_wifi_driver_internal.debug("{s}", .{std.mem.span((&buf).ptr)});
+    log.debug("{s}", .{std.mem.span((&buf).ptr)});
 }
 
 // ----- exports -----
@@ -112,10 +110,6 @@ pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
 }
 
 pub fn free(ptr: ?*anyopaque) callconv(.c) void {
-    // Avoid multiple frees at the same time as it causes a panic
-    microzig.cpu.interrupt.disable_interrupts();
-    defer microzig.cpu.interrupt.enable_interrupts();
-
     log.debug("free {?}", .{ptr});
 
     if (ptr == null) {
@@ -130,7 +124,7 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
 
 pub fn puts(ptr: ?*anyopaque) callconv(.c) void {
     const s: []const u8 = std.mem.span(@as([*:0]const u8, @ptrCast(ptr)));
-    log_esp_wifi_driver_internal.debug("{s}", .{s});
+    log.debug("{s}", .{s});
 }
 
 pub fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) callconv(.c) i32 {
