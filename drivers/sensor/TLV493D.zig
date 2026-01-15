@@ -146,7 +146,7 @@ pub const TLV493D = struct {
 
     dev: I2C_Device,
     address: I2C_Device.Address,
-    clock: Clock_Device,
+    clock: *Clock_Device,
     read_data: ReadRegister,
     write_data: WriteRegister,
     x_data: i12 = 0,
@@ -157,7 +157,7 @@ pub const TLV493D = struct {
     expected_frame_count: u2 = 0,
 
     /// Create a new TLV493D instance
-    pub fn init(dev: I2C_Device, address: I2C_Device.Address, clock: Clock_Device, config: Config) Error!Self {
+    pub fn init(dev: I2C_Device, address: I2C_Device.Address, clock: *Clock_Device, config: Config) Error!Self {
         var self = Self{
             .dev = dev,
             .address = address,

@@ -227,22 +227,21 @@ pub const ClockDevice = struct {
     }
 };
 
+const clock: struct {
+    interface: Clock_Device = .{
+        .vtable = .{
+            .get_time_since_boot = get_time_since_boot_fn,
+        },
+    },
+
+    fn get_time_since_boot_fn(_: *Clock_Device) time.Absolute {
+        return time.get_time_since_boot();
+    }
+} = .{};
+
 ///
 /// Implementation of a `Clock_Device` that uses the HAL's `time` module.
 ///
-pub fn clock_device() Clock_Device {
-    const S = struct {
-        const vtable: Clock_Device.VTable = .{
-            .get_time_since_boot = get_time_since_boot_fn,
-        };
-
-        fn get_time_since_boot_fn(_: *anyopaque) mdf.time.Absolute {
-            return time.get_time_since_boot();
-        }
-    };
-
-    return .{
-        .ptr = undefined,
-        .vtable = &S.vtable,
-    };
+pub fn clock_device() *Clock_Device {
+    return &clock.interface;
 }

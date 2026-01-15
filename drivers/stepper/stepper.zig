@@ -17,7 +17,7 @@ pub const Stepper_Options = struct {
     dir_pin: mdf.base.Digital_IO,
     step_pin: mdf.base.Digital_IO,
     enable_pin: ?mdf.base.Digital_IO = undefined,
-    clock_device: mdf.base.Clock_Device,
+    clock_device: *mdf.base.Clock_Device,
     motor_steps: u16 = 200,
 };
 
@@ -66,7 +66,7 @@ pub fn Stepper(comptime Driver: type) type {
         step_pin: mdf.base.Digital_IO,
         enable_pin: ?mdf.base.Digital_IO,
         enable_active_state: mdf.base.Digital_IO.State = .low,
-        clock: mdf.base.Clock_Device,
+        clock: *mdf.base.Clock_Device,
         rpm: f64 = 0,
 
         // Movement state

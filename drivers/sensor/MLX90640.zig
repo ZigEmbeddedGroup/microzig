@@ -22,7 +22,7 @@ const Mlx90649Error = error{
 pub const MLX90640_Config = struct {
     i2c: mdf.base.I2C_Device,
     address: mdf.base.I2C_Device.Address,
-    clock: mdf.base.Clock_Device,
+    clock: *mdf.base.Clock_Device,
     open_air_shift: f32 = 8,
     emissivity: f32 = 0.95,
 };
@@ -92,7 +92,7 @@ pub const MLX90640 = struct {
     scratch_data: [768]f32 = undefined,
     i2c: mdf.base.I2C_Device,
     address: mdf.base.I2C_Device.Address,
-    clock_device: mdf.base.Clock_Device,
+    clock_device: *mdf.base.Clock_Device,
     params: parameters,
     emissivity: f32,
     open_air_shift: f32,

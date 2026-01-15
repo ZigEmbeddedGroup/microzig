@@ -28,7 +28,7 @@ const Clock_Device = mdf.base.Clock_Device;
 
 pub const MPU_6050 = struct {
     dev: Datagram_Device,
-    clock: Clock_Device,
+    clock: *Clock_Device,
     accel_range: AccelRange,
     gyro_range: GyroRange,
 
@@ -41,7 +41,7 @@ pub const MPU_6050 = struct {
     pub const VerifyError = error{ DeviceNotResponding, UnexpectedDeviceId };
     pub const InitError = Error || VerifyError;
 
-    pub fn init(dev: Datagram_Device, clock: Clock_Device) InitError!MPU_6050 {
+    pub fn init(dev: Datagram_Device, clock: *Clock_Device) InitError!MPU_6050 {
         var self: MPU_6050 = .{
             .dev = dev,
             .clock = clock,

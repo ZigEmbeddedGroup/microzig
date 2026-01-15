@@ -9,61 +9,80 @@ const mdf = @import("../framework.zig");
 
 const Clock_Device = @This();
 
-/// Pointer to the object implementing the driver.
-///
-/// If the implementation requires no `ptr` pointer,
-/// you can safely use `undefined` here.
-ptr: *anyopaque,
-
 /// Virtual table for the digital i/o functions.
 vtable: *const VTable,
 
-/// API
-pub fn is_reached(td: Clock_Device, time: mdf.time.Absolute) bool {
+/// Make this object using:
+/// `const timeout = clock.make_timeout(Duration.from_us(100))`
+///
+/// This is handy when you need to communicate with peripherale
+/// within a duration.
+pub const Timeout = struct {
+    clock: *Clock_Device,
+    time: mdf.time.Absolute,
+
+    pub fn is_reached(self: @This()) bool {
+        return self.clock.is_reached(self.time);
+    }
+
+    pub fn diff(self: @This()) mdf.time.Duration {
+        return self.time.diff(self.clock.get_time_since_boot());
+    }
+};
+
+fn is_reached(td: *Clock_Device, time: mdf.time.Absolute) bool {
     const now = td.get_time_since_boot();
     return time.is_reached_by(now);
 }
 
-pub fn make_timeout(td: Clock_Device, timeout: mdf.time.Duration) mdf.time.Absolute {
-    return @as(mdf.time.Absolute, @enumFromInt(td.get_time_since_boot().to_us() + timeout.to_us()));
+/// API
+pub fn make_timeout(td: *Clock_Device, timeout: mdf.time.Duration) Timeout {
+    return .{
+        .clock = td,
+        .time = @as(mdf.time.Absolute, @enumFromInt(td.get_time_since_boot().to_us() + timeout.to_us())),
+    };
 }
 
-pub fn make_timeout_us(td: Clock_Device, timeout_us: u64) mdf.time.Absolute {
-    return @as(mdf.time.Absolute, @enumFromInt(td.get_time_since_boot().to_us() + timeout_us));
+pub fn make_timeout_us(td: *Clock_Device, timeout_us: u64) Timeout {
+    return .{
+        .clock = td,
+        .time = @as(mdf.time.Absolute, @enumFromInt(td.get_time_since_boot().to_us() + timeout_us)),
+    };
 }
 
-pub fn sleep_ms(td: Clock_Device, time_ms: u32) void {
+pub fn sleep_ms(td: *Clock_Device, time_ms: u32) void {
     td.sleep_us(time_ms * 1000);
 }
 
-pub fn sleep_us(td: Clock_Device, time_us: u64) void {
+pub fn sleep_us(td: *Clock_Device, time_us: u64) void {
     // If the device provides a custom sleep implementation, use it
     if (td.vtable.sleep) |sleep_fn| {
-        sleep_fn(td.ptr, time_us);
+        sleep_fn(td, time_us);
         return;
     }
 
     // Otherwise, fall back to polling
     const end_time = td.make_timeout_us(time_us);
-    while (!td.is_reached(end_time)) {}
+    while (!end_time.is_reached()) {}
 }
 
 /// VTable methods
-pub fn get_time_since_boot(td: Clock_Device) mdf.time.Absolute {
-    return td.vtable.get_time_since_boot(td.ptr);
+pub fn get_time_since_boot(td: *Clock_Device) mdf.time.Absolute {
+    return td.vtable.get_time_since_boot(td);
 }
 
 pub const VTable = struct {
-    get_time_since_boot: *const fn (*anyopaque) mdf.time.Absolute,
-    sleep: ?*const fn (*anyopaque, u64) void = null,
+    get_time_since_boot: *const fn (td: *Clock_Device) mdf.time.Absolute,
+    sleep: ?*const fn (td: *Clock_Device, u64) void = null,
 };
 
 pub const Test_Device = struct {
     time: u64 = 0,
     total_sleep_time: u64 = 0,
+    interface: Clock_Device,
 
     pub fn init() Test_Device {
-        return Test_Device{};
+        return Test_Device{ .interface = .{ .vtable = &vtable } };
     }
 
     pub fn elapse_time(dev: *Test_Device, time_us: u64) void {
@@ -82,20 +101,17 @@ pub const Test_Device = struct {
         dev.total_sleep_time = 0;
     }
 
-    pub fn clock_device(dev: *Test_Device) Clock_Device {
-        return Clock_Device{
-            .ptr = dev,
-            .vtable = &vtable,
-        };
+    pub fn clock_device(dev: *Test_Device) *Clock_Device {
+        return &dev.interface;
     }
 
-    pub fn get_time_since_boot_fn(ctx: *anyopaque) mdf.time.Absolute {
-        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
+    pub fn get_time_since_boot_fn(ctx: *Clock_Device) mdf.time.Absolute {
+        const dev: *Test_Device = @alignCast(@fieldParentPtr("interface", ctx));
         return @enumFromInt(dev.time);
     }
 
-    pub fn sleep_fn(ctx: *anyopaque, time_us: u64) void {
-        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
+    pub fn sleep_fn(ctx: *Clock_Device, time_us: u64) void {
+        const dev: *Test_Device = @alignCast(@fieldParentPtr("interface", ctx));
         dev.total_sleep_time += time_us;
         dev.time += time_us;
     }
@@ -116,17 +132,18 @@ test Test_Device {
     ttd.elapse_time(2);
     try std.testing.expectEqual(2, td.get_time_since_boot().to_us());
 
-    try std.testing.expect(!td.is_reached(@enumFromInt(4)));
-    ttd.elapse_time(2);
-    try std.testing.expect(td.is_reached(@enumFromInt(4)));
-
     // Timeouts
+    const timeout = td.make_timeout(@enumFromInt(2));
+    try std.testing.expect(!timeout.is_reached());
+    ttd.elapse_time(2);
+    try std.testing.expect(timeout.is_reached());
+
     try std.testing.expectEqual(
         54,
-        @intFromEnum(td.make_timeout(mdf.time.Duration.from_us(50))),
+        @intFromEnum(td.make_timeout(mdf.time.Duration.from_us(50)).time),
     );
     ttd.elapse_time(50);
-    try std.testing.expectEqual(104, @intFromEnum(td.make_timeout_us(50)));
+    try std.testing.expectEqual(104, @intFromEnum(td.make_timeout_us(50).time));
 
     try std.testing.expectEqual(0, ttd.get_total_sleep_time());
     td.sleep_ms(1000);

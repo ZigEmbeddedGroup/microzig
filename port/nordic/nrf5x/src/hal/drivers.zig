@@ -254,19 +254,19 @@ pub const I2C_Device = struct {
 /// Implementation of a time device
 ///
 pub const ClockDevice = struct {
-    pub fn clock_device(td: *ClockDevice) Clock_Device {
-        _ = td;
-        return Clock_Device{
-            .ptr = undefined,
-            .vtable = &vtable,
-        };
-    }
     const vtable = Clock_Device.VTable{
         .get_time_since_boot = get_time_since_boot_fn,
     };
 
-    fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
-        _ = td;
+    interface: Clock_Device = .{
+        .vtable = &vtable,
+    },
+
+    pub fn clock_device(td: *ClockDevice) Clock_Device {
+        return &td.interface;
+    }
+
+    fn get_time_since_boot_fn(_: *Clock_Device) time.Absolute {
         const t = hal.time.get_time_since_boot().to_us();
         return @enumFromInt(t);
     }
@@ -377,22 +377,21 @@ pub const SPI_Device = struct {
     }
 };
 
+var clock: struct {
+    interface: Clock_Device = .{
+        .vtable = &.{
+            .get_time_since_boot = get_time_since_boot_fn,
+        },
+    },
+
+    fn get_time_since_boot_fn(_: *Clock_Device) time.Absolute {
+        return hal.time.get_time_since_boot();
+    }
+} = .{};
+
 ///
 /// Implementation of a `Clock_Device` that uses the HAL's `time` module.
 ///
-pub fn clock_device() Clock_Device {
-    const S = struct {
-        const vtable: Clock_Device.VTable = .{
-            .get_time_since_boot = get_time_since_boot_fn,
-        };
-
-        fn get_time_since_boot_fn(_: *anyopaque) time.Absolute {
-            return hal.time.get_time_since_boot();
-        }
-    };
-
-    return .{
-        .ptr = undefined,
-        .vtable = &S.vtable,
-    };
+pub fn clock_device() *Clock_Device {
+    return &clock.interface;
 }

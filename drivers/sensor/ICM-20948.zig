@@ -65,7 +65,7 @@ pub const ICM_20948 = struct {
 
     dev: mdf.base.I2C_Device,
     address: mdf.base.I2C_Device.Address,
-    clock: mdf.base.Clock_Device,
+    clock: *mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
     slave_address: u8 = 0,
@@ -325,7 +325,7 @@ pub const ICM_20948 = struct {
     pub fn init(
         dev: mdf.base.I2C_Device,
         address: mdf.base.I2C_Device.Address,
-        clock: mdf.base.Clock_Device,
+        clock: *mdf.base.Clock_Device,
         config: Config,
     ) Error!Self {
         return Self{ .dev = dev, .address = address, .clock = clock, .config = config };

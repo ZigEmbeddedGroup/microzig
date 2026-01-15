@@ -17,12 +17,12 @@ pub fn WS2812(options: struct {
         const buffer_size = options.max_led_count * 24 / 2;
 
         dev: options.Datagram_Device,
-        clock_dev: options.Clock_Device,
-        next_write_time: ?mdf.time.Absolute = null,
+        clock_dev: *options.Clock_Device,
+        next_write_time: ?mdf.base.Clock_Device.Timeout = null,
         buffer: [buffer_size]u8 = undefined,
 
         /// Initializes the driver.
-        pub fn init(dev: options.Datagram_Device, clock_dev: options.Clock_Device) Self {
+        pub fn init(dev: options.Datagram_Device, clock_dev: *options.Clock_Device) Self {
             return .{
                 .dev = dev,
                 .clock_dev = clock_dev,
@@ -36,9 +36,8 @@ pub fn WS2812(options: struct {
 
             // ensures that a reset takes place between writes
             if (self.next_write_time) |next_write_time| {
-                const now = self.clock_dev.get_time_since_boot();
-                if (!next_write_time.is_reached_by(now)) {
-                    self.clock_dev.sleep_us(next_write_time.diff(now).to_us());
+                if (!next_write_time.is_reached()) {
+                    self.clock_dev.sleep_us(next_write_time.diff().to_us());
                 }
             }
 

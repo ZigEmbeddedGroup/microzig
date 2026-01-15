@@ -15,7 +15,7 @@ pub const Stepper_Options = struct {
     in2_pin: mdf.base.Digital_IO,
     in3_pin: mdf.base.Digital_IO,
     in4_pin: mdf.base.Digital_IO,
-    clock_device: mdf.base.Clock_Device,
+    clock_device: *mdf.base.Clock_Device,
     motor_steps: u16 = 512,
     max_rpm: f64 = 30,
 };
@@ -29,7 +29,7 @@ pub const ULN2003 = struct {
     const STEP_TABLE_HALF = [_]u4{ 0b1000, 0b1100, 0b0100, 0b0110, 0b0010, 0b0011, 0b0001, 0b1001 };
 
     in: [4]mdf.base.Digital_IO,
-    clock: mdf.base.Clock_Device,
+    clock: *mdf.base.Clock_Device,
     rpm: f64 = 0,
     max_rpm: f64,
     step_table: []const u4 = STEP_TABLE_FULL[0..],

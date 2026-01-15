@@ -19,7 +19,7 @@ pub const DS18B20 = struct {
     const Self = @This();
 
     pin: mdf.base.Digital_IO,
-    clock_dev: mdf.base.Clock_Device,
+    clock_dev: *mdf.base.Clock_Device,
 
     // timing constants in microseconds
     const T_RESET_US = 480;
@@ -89,7 +89,7 @@ pub const DS18B20 = struct {
         resolution: Resolution,
     };
 
-    pub fn init(pin: mdf.base.Digital_IO, clock_dev: mdf.base.Clock_Device) !Self {
+    pub fn init(pin: mdf.base.Digital_IO, clock_dev: *mdf.base.Clock_Device) !Self {
         try pin.set_direction(.input);
         return .{ .pin = pin, .clock_dev = clock_dev };
     }

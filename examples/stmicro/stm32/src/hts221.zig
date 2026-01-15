@@ -23,7 +23,8 @@ pub fn init() void {
 
 pub fn main() !void {
     std.log.info("Starting main", .{});
-    const clock = try stm32.systick_timer.clock_device();
+    var timer = try stm32.systick_timer.init();
+    var clock = timer.clock_device();
     var i2c1 = board.i2c1();
     try i2c1.apply();
     var device = i2c1.i2c_device();
