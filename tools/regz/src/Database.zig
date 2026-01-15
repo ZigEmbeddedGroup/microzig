@@ -630,7 +630,7 @@ pub fn create_from_path(io: std.Io, allocator: Allocator, format: Format, path: 
                 db.destroy();
             }
 
-            try targetdb.load_into_db(db, path, device);
+            try targetdb.load_into_db(io, db, path, device);
             break :blk db;
         },
         .svd, .atdf => blk: {
