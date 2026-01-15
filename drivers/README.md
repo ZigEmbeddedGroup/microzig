@@ -5,6 +5,7 @@ A collection of device drivers and driver abstractions for embedded systems usin
 ## Table of Contents
 
 - [Introduction](#introduction)
+- [Available Drivers](#available-drivers)
 - [Base Interfaces](#base-interfaces)
   - [Datagram_Device](#datagram_device)
   - [Stream_Device](#stream_device)
@@ -21,7 +22,6 @@ A collection of device drivers and driver abstractions for embedded systems usin
 - [Real-World Examples](#real-world-examples)
 - [HAL Implementation Guide](#hal-implementation-guide)
 - [Performance Considerations](#performance-considerations)
-- [Available Drivers](#available-drivers)
 
 ## Introduction
 
@@ -56,6 +56,35 @@ The framework (typically) supports two modes of operation:
 - You know the concrete types at compile time
 - You want to enable aggressive compiler optimizations (inlining, constant propagation)
 - You're working on resource-constrained systems
+
+## Available Drivers
+
+Drivers with a checkmark are already implemented, drivers without are missing:
+
+- **Input**
+  - [x] Keyboard Matrix
+  - [x] Rotary Encoder
+  - [x] Debounced Button
+  - Touch
+    - [ ] [XPT2046](https://github.com/ZigEmbeddedGroup/microzig/issues/247)
+
+- **Display**
+  - [x] SSD1306 (I²C works, [3-wire SPI](https://github.com/ZigEmbeddedGroup/microzig/issues/251) and [4-wire SPI](https://github.com/ZigEmbeddedGroup/microzig/issues/252) are missing)
+  - [x] Sharp ls0xx
+  - [ ] [ST7735](https://github.com/ZigEmbeddedGroup/microzig/issues/250) (WIP)
+  - [ ] [ILI9488](https://github.com/ZigEmbeddedGroup/microzig/issues/249)
+
+- **LED**
+  - [x] WS2812
+
+- **Wireless**
+  - [ ] CYW43 (WIP)
+  - [ ] [SX1276, SX1278](https://github.com/ZigEmbeddedGroup/microzig/issues/248)
+
+- **Stepper Motors**
+  - [x] A4988
+  - [x] DRV8825 (Implemented but untested)
+  - [x] ULN2003
 
 ## Base Interfaces
 
@@ -1233,34 +1262,3 @@ std.log.info("Average time: {} us per operation", .{elapsed / 1000});
 ```
 
 Compare vtable vs zero-cost to quantify the difference for your specific use case.
-
----
-
-## Available Drivers
-
-Drivers with a checkmark are already implemented, drivers without are missing:
-
-- **Input**
-  - [x] Keyboard Matrix
-  - [x] Rotary Encoder
-  - [x] Debounced Button
-  - Touch
-    - [ ] [XPT2046](https://github.com/ZigEmbeddedGroup/microzig/issues/247)
-
-- **Display**
-  - [x] SSD1306 (I²C works, [3-wire SPI](https://github.com/ZigEmbeddedGroup/microzig/issues/251) and [4-wire SPI](https://github.com/ZigEmbeddedGroup/microzig/issues/252) are missing)
-  - [x] Sharp ls0xx
-  - [ ] [ST7735](https://github.com/ZigEmbeddedGroup/microzig/issues/250) (WIP)
-  - [ ] [ILI9488](https://github.com/ZigEmbeddedGroup/microzig/issues/249)
-
-- **LED**
-  - [x] WS2812
-
-- **Wireless**
-  - [ ] CYW43 (WIP)
-  - [ ] [SX1276, SX1278](https://github.com/ZigEmbeddedGroup/microzig/issues/248)
-
-- **Stepper Motors**
-  - [x] A4988
-  - [x] DRV8825 (Implemented but untested)
-  - [x] ULN2003
