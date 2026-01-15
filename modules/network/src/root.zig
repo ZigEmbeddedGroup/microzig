@@ -1,6 +1,7 @@
 /// Platform independent network library. Connects lwip with underlying network
 /// link interface.
 const std = @import("std");
+const config = @import("config");
 
 const assert = std.debug.assert;
 fn assert_panic(ok: bool, msg: []const u8) void {
@@ -106,7 +107,7 @@ pub const Interface = struct {
         netif.linkoutput = c_netif_linkoutput;
         netif.output = lwip.etharp_output;
         netif.output_ip6 = lwip.ethip6_output;
-        netif.mtu = sz.mtu;
+        netif.mtu = config.mtu;
         netif.flags = lwip.NETIF_FLAG_BROADCAST | lwip.NETIF_FLAG_ETHARP |
             lwip.NETIF_FLAG_ETHERNET | lwip.NETIF_FLAG_IGMP | lwip.NETIF_FLAG_MLD6;
         netif.hwaddr_len = lwip.ETH_HWADDR_LEN;
@@ -131,7 +132,7 @@ pub const Interface = struct {
         var pbuf: *lwip.pbuf = pbuf_c;
         const self: *Self = @fieldParentPtr("netif", netif);
 
-        if (lwip.pbuf_header(pbuf, sz.link_head) != 0) {
+        if (config.pbuf_header_length > 0 and lwip.pbuf_header(pbuf, config.pbuf_header_length) != 0) {
             log.err("can't get pbuf headroom len: {}, tot_len: {} ", .{ pbuf.len, pbuf.tot_len });
             return lwip.ERR_ARG;
         }
@@ -170,11 +171,11 @@ pub const Interface = struct {
             // get packet buffer of the max size
             const pbuf: *lwip.pbuf = lwip.pbuf_alloc(
                 lwip.PBUF_RAW,
-                sz.pbuf_pool,
+                config.pbuf_length,
                 lwip.PBUF_POOL,
             ) orelse return error.OutOfMemory;
             assert_panic(
-                pbuf.next == null and pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool,
+                pbuf.next == null and pbuf.len == pbuf.tot_len and pbuf.len == config.pbuf_length,
                 "net.Interface.pool invalid pbuf allocation",
             );
             // receive into that buffer
@@ -185,7 +186,7 @@ pub const Interface = struct {
             };
             errdefer _ = lwip.pbuf_free(pbuf); // netif.input: takes ownership of pbuf on success
             // set payload header and len
-            if (lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
+            if (head > 0 and lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
                 return error.InvalidPbufHead;
             }
             pbuf.len = @intCast(len);
@@ -579,26 +580,6 @@ fn c_err(res: anytype) Error!void {
         },
         else => @compileError("unknown type"),
     }
-}
-
-// required buffer sizes
-const sz = struct {
-    /// Size of each buffer in packet buffer pool
-    /// 1540 bytes = link head (22) + ethernet (14) + mtu (1500) + link_tail (4)
-    const pbuf_pool = lwip.PBUF_POOL_BUFSIZE; // 1540
-    const link_head = lwip.PBUF_LINK_ENCAPSULATION_HLEN; // 22
-    const link_tail = 4; // reserved for the status in recv buffer
-    const ethernet = 14; // layer 2 ethernet header size
-
-    /// layer 3 (ip) mtu
-    const mtu = pbuf_pool - link_head - link_tail - ethernet; // 1500
-};
-
-// test lwip config
-comptime {
-    assert(sz.pbuf_pool == 1540);
-    assert(sz.link_head == 22);
-    assert(sz.mtu == 1500);
 }
 
 export fn lwip_lock_interrupts(were_enabled: *bool) void {
