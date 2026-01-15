@@ -554,7 +554,7 @@ var gpio_pin = hal.gpio.Pin.init(0, 13); // PA13
 
 // Create LED driver specialized for concrete Pin type
 const LED = LED_Driver(.{
-    .Digital_IO = hal.gpio.Pin,  // Concrete type!
+    .Digital_IO = hal.drivers.GPIO_Device, // Concrete type!
     .active_high = true,
 });
 var led = try LED.init(gpio_pin);  // Pass concrete pin directly
