@@ -341,6 +341,11 @@ pub const Peripheral = enum {
     I2C2_TX,
     I2C2_RX,
 
+    // SPI
+    SPI1_RX,
+    SPI1_TX,
+    SPI2_TX,
+
     // USART (uncomment when UART HAL gets DMA support)
     // USART1_TX,
     // USART1_RX,
@@ -354,13 +359,6 @@ pub const Peripheral = enum {
     // USART5_TX,
     // USART6_TX,
     // USART6_RX,
-
-    // SPI (uncomment when SPI HAL gets DMA support)
-    // SPI1_RX,
-    // SPI1_TX,
-    // SPI2_TX,
-    // SPI3_RX,
-    // SPI3_TX,
 
     // ADC (uncomment when ADC HAL gets DMA support)
     // ADC1,
@@ -392,14 +390,17 @@ pub const Peripheral = enum {
             .I2C2_TX => &[_]Channel{.Ch4},
             .I2C2_RX => &[_]Channel{.Ch5},
 
+            // SPI mappings from CH32V203 TRM Table 11-1
+            .SPI1_RX => &[_]Channel{.Ch2},
+            .SPI1_TX => &[_]Channel{.Ch3},
+            .SPI2_TX => &[_]Channel{.Ch5},
+
             // NOTE: Add mappings here when adding support for new peripherals and uncommenting
             // enums above
             // .USART1_TX => &[_]Channel{.Ch4},
             // .USART1_RX => &[_]Channel{.Ch5},
             // .USART2_TX => &[_]Channel{.Ch7},
             // .USART2_RX => &[_]Channel{.Ch6},
-            // .SPI1_TX => &[_]Channel{.Ch3},
-            // .SPI1_RX => &[_]Channel{.Ch2},
             // .ADC1 => &[_]Channel{.Ch1},
             // etc...
         };
