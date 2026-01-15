@@ -14,6 +14,9 @@ pub const microzig_options = microzig.Options{
 };
 const log = std.log.scoped(.main);
 
+comptime {
+    _ = @import("lwip_exports.zig");
+}
 const net = @import("net");
 const secrets = @import("secrets.zig");
 
