@@ -223,18 +223,19 @@ pub const Response = struct {
         while (ie_buf.len >= 2) {
             const typ = ie_buf[0];
             const len = ie_buf[1];
+            ie_buf = ie_buf[2..];
             if (typ == 48) {
                 sec.wpa2 = true;
             } else {
                 const wpa_oui_type1 = "\x00\x50\xF2\x01";
-                if (typ == 221 and ie_buf.len >= 2 + wpa_oui_type1.len) {
-                    if (std.mem.eql(u8, ie_buf[2..][0..4], wpa_oui_type1)) {
+                if (typ == 221 and ie_buf.len >= wpa_oui_type1.len) {
+                    if (mem.eql(u8, ie_buf[0..wpa_oui_type1.len], wpa_oui_type1)) {
                         sec.wpa = true;
                     }
                 }
             }
-            if (ie_buf.len < 2 + len) break;
-            ie_buf = ie_buf[2 + len ..];
+            if (ie_buf.len <= len) break;
+            ie_buf = ie_buf[len..];
         }
 
         return .{ res, sec };
