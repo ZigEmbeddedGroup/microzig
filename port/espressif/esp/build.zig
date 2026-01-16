@@ -34,7 +34,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const esp_wifi_driver_mod = make_esp_wifi_driver_module(b, "esp32c3", esp32_c3_zig_target);
 
-    const chip_esp32c3: microzig.Target = .{
+    const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .{ .esp = .{
             .chip_id = .esp32_c3,
@@ -95,8 +95,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     return .{
         .chips = .{
-            .esp32_c3 = chip_esp32c3.derive(.{}),
-            .esp32_c3_direct_boot = chip_esp32c3.derive(.{
+            .esp32_c3 = chip_esp32_c3.derive(.{}),
+            .esp32_c3_direct_boot = chip_esp32_c3.derive(.{
                 .preferred_binary_format = .bin,
                 .cpu = .{
                     .name = "esp_riscv",
@@ -122,7 +122,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     ),
                 },
             }),
-            .esp32_c3_flashless = chip_esp32c3.derive(.{
+            .esp32_c3_flashless = chip_esp32_c3.derive(.{
                 .ram_image = true,
                 .linker_script = .{
                     .generate = .memory_regions,

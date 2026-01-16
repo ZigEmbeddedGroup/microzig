@@ -78,8 +78,17 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
 
 pub const interrupt = struct {
     pub const globally_enabled = riscv32_common.interrupt.globally_enabled;
-    pub const enable_interrupts = riscv32_common.interrupt.enable_interrupts;
-    pub const disable_interrupts = riscv32_common.interrupt.disable_interrupts;
+
+    pub fn enable_interrupts() void {
+        fence();
+        csr.mstatus.set(.{ .mie = 1 });
+    }
+
+    pub fn disable_interrupts() void {
+        csr.mstatus.clear(.{ .mie = 1 });
+        fence();
+    }
+
 
     const INTERRUPT_CORE0 = microzig.chip.peripherals.INTERRUPT_CORE0;
 

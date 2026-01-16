@@ -33,13 +33,11 @@ pub const interrupt = struct {
     }
 
     pub fn enable_interrupts() void {
-        fence();
         csr.mstatus.set(.{ .mie = 1 });
     }
 
     pub fn disable_interrupts() void {
         csr.mstatus.clear(.{ .mie = 1 });
-        fence();
     }
 
     pub const core = utilities.interrupt.CoreImpl(CoreInterrupt);

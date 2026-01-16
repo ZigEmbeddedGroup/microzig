@@ -14,4 +14,8 @@ typedef uint32_t sys_prot_t;
 #define SYS_SEM_NULL   NULL
 #define SYS_MUTEX_NULL NULL
 
+void* malloc(size_t size);
+void* calloc(size_t count, size_t size);
+void free(void* ptr);
+
 #endif /* __SYS_ARCH_H__ */
