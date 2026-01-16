@@ -189,9 +189,10 @@ fn task_wrapper(
 }
 
 export fn sys_thread_new(name: [*:0]u8, thread: c.lwip_thread_fn, arg: ?*anyopaque, stacksize: c_int, prio: c_int) c.sys_thread_t {
-    _ = stacksize; // autofix
-    _ = prio; // autofix
-    return rtos.spawn(gpa, task_wrapper, .{thread, arg}, .{
+    _ = stacksize;
+    _ = prio;
+
+    return rtos.spawn(gpa, task_wrapper, .{ thread, arg }, .{
         .name = std.mem.span(name),
         .stack_size = 4096,
         .priority = @enumFromInt(2),

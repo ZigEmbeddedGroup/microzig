@@ -126,12 +126,11 @@ pub const InitConfig = struct {
         fn get_wifi_country_t(info: CountryInfo, max_tx_power: i8) c.wifi_country_t {
             return switch (info) {
                 .auto => .{
-                    .cc = .{'0', '1', 0},
+                    .cc = .{ '0', '1', 0 },
                     .schan = 1,
                     .nchan = 11,
                     .max_tx_power = max_tx_power,
-                    .policy = c.WIFI_COUNTRY_POLICY_AUTO
-
+                    .policy = c.WIFI_COUNTRY_POLICY_AUTO,
                 },
                 .manual => |manual_info| .{
                     .cc = manual_info.country_code.* ++ .{0},
@@ -1036,7 +1035,7 @@ var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
     ._magic = @bitCast(c.ESP_WIFI_OS_ADAPTER_MAGIC),
 };
 
-pub const InternalError = error {
+pub const InternalError = error{
     OutOfMemory,
     InvalidArg,
     Timeout,
