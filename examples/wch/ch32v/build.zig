@@ -12,6 +12,11 @@ pub fn build(b: *std.Build) void {
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
+    // Use GNU objcopy instead of LLVM objcopy to avoid 512MB binary issue.
+    // LLVM objcopy includes LOAD segments for NOLOAD sections, causing the binary
+    // to span from flash (0x0) to RAM (0x20000000) = 512MB of zeros.
+    const gnu_objcopy = b.findProgram(&.{"riscv64-unknown-elf-objcopy"}, &.{}) catch null;
+
     const available_examples = [_]Example{
         // CH32V003
         .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "empty_ch32v003", .file = "src/empty.zig" },
@@ -72,10 +77,21 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        mb.install_firmware(fw, .{});
-
-        // For debugging, we also always install the firmware as an ELF file
         mb.install_firmware(fw, .{ .format = .elf });
+
+        // Use GNU objcopy to create .bin files (avoids LLVM objcopy 512MB issue)
+        if (gnu_objcopy) |objcopy_path| {
+            const bin_filename = b.fmt("{s}.bin", .{example.name});
+            const objcopy_run = b.addSystemCommand(&.{objcopy_path});
+            objcopy_run.addArgs(&.{ "-O", "binary" });
+            objcopy_run.addArtifactArg(fw.artifact);
+            const bin_output = objcopy_run.addOutputFileArg(bin_filename);
+            b.getInstallStep().dependOn(&b.addInstallFileWithDir(
+                bin_output,
+                .{ .custom = "firmware" },
+                bin_filename,
+            ).step);
+        }
     }
 }
 
