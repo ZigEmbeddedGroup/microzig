@@ -22,8 +22,7 @@ const ioctl_request_bytes_len = 1024;
 pub fn init(self: *Self) !void {
     const bus = self.bus;
 
-    // Init ALP (Active Low Power) clock
-    {
+    { // Init ALP (Active Low Power) clock
         _ = bus.write_int(u8, .backplane, Bus.backplane.chip_clock_csr, Bus.backplane.alp_avail_req);
         _ = bus.write_int(u8, .backplane, Bus.backplane.function2_watermark, 0x10);
         const watermark = bus.read_int(u8, .backplane, Bus.backplane.function2_watermark);
@@ -39,8 +38,8 @@ pub fn init(self: *Self) !void {
         // const chip_id = bus.read_int(u16, .backplane, chip.pmu_base_address);
         // log.debug("chip ID: 0x{X}", .{chip_id});
     }
-    // Upload firmware
-    {
+
+    { // Upload firmware
         self.core_disable(.wlan);
         self.core_reset(.socram);
 
@@ -51,8 +50,8 @@ pub fn init(self: *Self) !void {
         const firmware = @embedFile("../cyw43/firmware/43439A0_7_95_61.bin");
         bus.backplane_write(chip.atcm_ram_base_address, firmware);
     }
-    // Load nvram
-    {
+
+    { // Load nvram
         const nvram_len = ((NVRAM.len + 3) >> 2) * 4; // Round up to 4 bytes.
         const addr_magic = chip.atcm_ram_base_address + chip.chip_ram_size - 4;
         const addr = addr_magic - nvram_len;
@@ -62,43 +61,46 @@ pub fn init(self: *Self) !void {
         const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
         bus.write_int(u32, .backplane, addr_magic, nvram_len_magic);
     }
-    // starting up core...
+
+    // Starting up core...
     self.core_reset(.wlan);
     try self.core_is_up(.wlan);
 
-    // wait until HT clock is available; takes about 29ms
+    // Wait until HT clock is available; takes about 29ms
     while (bus.read_int(u8, .backplane, Bus.backplane.chip_clock_csr) & 0x80 == 0) {}
 
-    // "Set up the interrupt mask and enable interrupts"
-    const sdio_int_host_mask: u32 = 0x24;
-    const i_hmb_sw_mask: u32 = 0x000000f0;
-    bus.write_int(
-        u32,
-        .backplane,
-        chip.sdiod_core_base_address + sdio_int_host_mask,
-        i_hmb_sw_mask,
-    );
-    bus.write_int(u16, .bus, Bus.reg.interrupt_enable, @bitCast(Bus.Irq{ .f2_packet_available = true }));
+    { // Set up the interrupt mask and enable interrupts
+        const sdio_int_host_mask: u32 = 0x24;
+        const i_hmb_sw_mask: u32 = 0x000000f0;
+        bus.write_int(
+            u32,
+            .backplane,
+            chip.sdiod_core_base_address + sdio_int_host_mask,
+            i_hmb_sw_mask,
+        );
+        bus.write_int(u16, .bus, Bus.reg.interrupt_enable, @bitCast(Bus.Irq{ .f2_packet_available = true }));
+    }
 
     // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."
     bus.write_int(u8, .backplane, Bus.backplane.function2_watermark, 0x20);
 
-    // waiting for F2 to be ready...
+    // Waiting for F2 to be ready...
     while (true) {
-        const status: Status = @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
+        const status: Status = @bitCast(bus.read_int(u32, .bus, Bus.reg.status));
         if (status.f2_rx_ready) break;
     }
 
-    // clear pad pulls
-    bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0);
-    _ = bus.read_int(u8, .backplane, Bus.backplane.pull_up);
+    { // Clear pad pulls
+        bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0);
+        _ = bus.read_int(u8, .backplane, Bus.backplane.pull_up);
+    }
 
-    // start HT clock
-    bus.write_int(u8, .backplane, Bus.backplane.chip_clock_csr, 0x10);
-    while (bus.read_int(u8, .backplane, Bus.backplane.chip_clock_csr) & 0x80 == 0) {}
+    { // start HT clock
+        bus.write_int(u8, .backplane, Bus.backplane.chip_clock_csr, 0x10);
+        while (bus.read_int(u8, .backplane, Bus.backplane.chip_clock_csr) & 0x80 == 0) {}
+    }
 
-    // Load Country Locale Matrix (CLM)
-    {
+    { // Load Country Locale Matrix (CLM)
         const data = @embedFile("../cyw43/firmware/43439A0_clm.bin");
 
         const ClmLoadControl = extern struct {
@@ -122,7 +124,94 @@ pub fn init(self: *Self) !void {
             nbytes += n;
         }
     }
+
+    { // Clear data unavail error
+        const val = bus.read_int(u16, .bus, Bus.reg.interrupt);
+        if (val & 1 > 0)
+            bus.write_int(u16, .bus, Bus.reg.interrupt, val);
+    }
+
+    { // Set sleep KSO (keep SDIO on), cyw43_kso_set
+        bus.write_int(u8, .backplane, Bus.backplane.sleep_csr, 1);
+        bus.write_int(u8, .backplane, Bus.backplane.sleep_csr, 1);
+        _ = bus.read_int(u8, .backplane, Bus.backplane.sleep_csr);
+    }
+
+    { // cyw43_ll_wifi_on
+
+        { // Set country
+            // TODO: move to arguments
+            const opt: JoinOptions = .{};
+
+            const code = opt.country.code;
+            var val = extern struct {
+                abbrev: [4]u8,
+                revision: i32,
+                code: [4]u8,
+            }{
+                .abbrev = .{ code[0], code[1], 0, 0 },
+                .revision = opt.country.revision,
+                .code = .{ code[0], code[1], 0, 0 },
+            };
+            self.set_var("country", mem.asBytes(&val)) catch |err| switch (err) {
+                error.Cyw43InvalidCommandStatus => {
+                    log.err(
+                        "invalid country code: {s}, revision: {}",
+                        .{ opt.country.code, opt.country.revision },
+                    );
+                    return error.Cyw43InvalidCountryCode;
+                },
+                else => return err,
+            };
+        }
+
+        // Set antenna to chip antenna
+        try self.set_cmd(.set_antdiv, &.{0});
+
+        { // Set some WiFi config
+            try self.set_var("bus:txglom", &.{0x00});
+            try self.set_var("apsta", &.{0x01});
+            try self.set_var("ampdu_ba_wsize", &.{0x08});
+            try self.set_var("ampdu_mpdu", &.{0x04});
+            try self.set_var("ampdu_rx_factor", &.{0x00});
+            self.sleep_ms(150);
+        }
+
+        try self.enable_events(&.{
+            .join,
+            .assoc,
+            .reassoc,
+            .set_ssid,
+            .link,
+            .auth,
+            .psk_sup,
+            .disassoc_ind,
+            .disassoc,
+            .deauth,
+            .deauth_ind,
+            .escan_result,
+        });
+
+        // Set the interface as "up"
+        try self.set_cmd(.up, &.{});
+    }
+
+    { // Set power mode parameters cyw43_ll_wifi_pm
+        try self.set_var("pm2_sleep_ret", &.{0xc8});
+        try self.set_var("bcn_li_bcn", &.{1});
+        try self.set_var("bcn_li_dtim", &.{1});
+        try self.set_var("assoc_listen", &.{0x0a});
+        try self.set_cmd(.set_gmode, &.{1}); // auto
+        try self.set_cmd(.set_band, &.{0}); // any
+    }
+
     self.log_init();
+}
+
+fn enable_events(self: *Self, events: []const ioctl.EventType) !void {
+    const mask = ioctl.EventType.mask(events);
+    try self.set_var("bsscfg:event_msgs", &mask);
+    self.sleep_ms(50);
 }
 
 fn core_disable(self: *Self, core: Core) void {
@@ -270,7 +359,7 @@ pub const JoinOptions = struct {
         wpa3_sae,
     };
 
-    // ref: https://github.com/embassy-rs/embassy/blob/96a026c73bad2ebb8dfc78e88c9690611bf2cb97/cyw43/src/structs.rs#L371
+    // https://github.com/georgerobotics/cyw43-driver/blob/13004039ffe127519f33824bf7d240e1f23fbdcd/src/cyw43_country.h#L59
     pub const Country = struct {
         code: [2]u8 = "XX".*, // Worldwide
         revision: i32 = -1,
@@ -284,74 +373,6 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !v
 }
 
 pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !JoinPoller {
-    const bus = self.bus;
-
-    // Clear pullups
-    {
-        bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0xf);
-        bus.write_int(u8, .backplane, Bus.backplane.pull_up, 0);
-        _ = self.bus.read_int(u8, .backplane, Bus.backplane.pull_up);
-    }
-    // Clear data unavail error
-    {
-        const val = self.bus.read_int(u16, .bus, Bus.reg.interrupt);
-        if (val & 1 > 0)
-            self.bus.write_int(u16, .bus, Bus.reg.interrupt, val);
-    }
-    // Set sleep KSO (should poll to check for success)
-    {
-        bus.write_int(u8, .backplane, Bus.backplane.sleep_csr, 1);
-        bus.write_int(u8, .backplane, Bus.backplane.sleep_csr, 1);
-        _ = self.bus.read_int(u8, .backplane, Bus.backplane.pull_up);
-        //log.debug("REG_BACKPLANE_SLEEP_CSR value: {}", .{val});
-    }
-    // Set country
-    {
-        const code = opt.country.code;
-        var val = extern struct {
-            abbrev: [4]u8,
-            revision: i32,
-            code: [4]u8,
-        }{
-            .abbrev = .{ code[0], code[1], 0, 0 },
-            .revision = opt.country.revision,
-            .code = .{ code[0], code[1], 0, 0 },
-        };
-        self.set_var("country", mem.asBytes(&val)) catch |err| switch (err) {
-            error.Cyw43InvalidCommandStatus => {
-                log.err(
-                    "invalid country code: {s}, revision: {}",
-                    .{ opt.country.code, opt.country.revision },
-                );
-                return error.Cyw43InvalidCountryCode;
-            },
-            else => return err,
-        };
-    }
-    try self.set_cmd(.set_antdiv, &.{0});
-    // Data aggregation
-    {
-        try self.set_var("bus:txglom", &.{0x00});
-        try self.set_var("apsta", &.{0x01});
-        try self.set_var("ampdu_ba_wsize", &.{0x08});
-        try self.set_var("ampdu_mpdu", &.{0x04});
-        try self.set_var("ampdu_rx_factor", &.{0x00});
-        self.sleep_ms(150);
-    }
-    try self.enable_events(&.{
-        .join,
-        .assoc,
-        .reassoc,
-        .set_ssid,
-        .link,
-        .auth,
-        .psk_sup,
-        .disassoc_ind,
-        .disassoc,
-        .deauth,
-        .deauth_ind,
-    });
-
     var buf: [64]u8 = @splat(0); // space for 10 addresses
     // Enable multicast
     {
@@ -360,63 +381,54 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
         try self.set_var("mcast_list", &buf);
         self.sleep_ms(50);
     }
-    // join_restart function
-    {
-        try self.set_cmd(.up, &.{});
-        try self.set_cmd(.set_gmode, &.{1});
-        try self.set_cmd(.set_band, &.{0});
-        try self.set_var("pm2_sleep_ret", &.{0xc8});
-        try self.set_var("bcn_li_bcn", &.{1});
-        try self.set_var("bcn_li_dtim", &.{1});
-        try self.set_var("assoc_listen", &.{0x0a});
 
-        try self.set_cmd(.set_wsec, &.{switch (opt.security) {
-            .wpa_psk => 2,
-            .wpa2_psk, .wpa3_sae => 6,
-            .open => 0,
-        }});
-        switch (opt.security) {
-            .open => {
-                try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 0, 0, 0, 0 });
-            },
-            else => {
-                try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 1, 0, 0, 0 });
-                try self.set_var("bsscfg:sup_wpa2_eapver", &.{ 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff });
-                try self.set_var("bsscfg:sup_wpa_tmo", &.{ 0, 0, 0, 0, 0xc4, 0x09, 0, 0 });
-            },
-        }
-        self.sleep_ms(2);
-
-        switch (opt.security) {
-            .open => {},
-            .wpa3_sae => {
-                try self.set_var("sae_password", ioctl.encode_sae_pwd(&buf, pwd));
-            },
-            else => {
-                try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
-            },
-        }
-        try self.set_cmd(.set_infra, &.{1});
-
-        try self.set_cmd(.set_auth, &.{switch (opt.security) {
-            .wpa3_sae => 3,
-            else => 0,
-        }});
-        try self.set_var("mfp", &.{switch (opt.security) {
-            .wpa_psk => 0,
-            .wpa2_psk => 1,
-            .wpa3_sae => 2,
-            .open => 0,
-        }});
-        try self.set_cmd(.set_wpa_auth, switch (opt.security) {
-            .wpa_psk => &.{ 0x04, 0, 0, 0 },
-            .wpa2_psk => &.{ 0x80, 0, 0, 0 },
-            .wpa3_sae => &.{ 0, 0, 0x04, 0 },
-            .open => &.{ 0, 0, 0, 0 },
-        });
-
-        try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
+    try self.set_cmd(.set_wsec, &.{switch (opt.security) {
+        .wpa_psk => 2,
+        .wpa2_psk, .wpa3_sae => 6,
+        .open => 0,
+    }});
+    switch (opt.security) {
+        .open => {
+            try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 0, 0, 0, 0 });
+        },
+        else => {
+            try self.set_var("bsscfg:sup_wpa", &.{ 0, 0, 0, 0, 1, 0, 0, 0 });
+            try self.set_var("bsscfg:sup_wpa2_eapver", &.{ 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff });
+            try self.set_var("bsscfg:sup_wpa_tmo", &.{ 0, 0, 0, 0, 0xc4, 0x09, 0, 0 });
+        },
     }
+    self.sleep_ms(2);
+
+    switch (opt.security) {
+        .open => {},
+        .wpa3_sae => {
+            try self.set_var("sae_password", ioctl.encode_sae_pwd(&buf, pwd));
+        },
+        else => {
+            try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd));
+        },
+    }
+    try self.set_cmd(.set_infra, &.{1});
+
+    try self.set_cmd(.set_auth, &.{switch (opt.security) {
+        .wpa3_sae => 3,
+        else => 0,
+    }});
+    try self.set_var("mfp", &.{switch (opt.security) {
+        .wpa_psk => 0,
+        .wpa2_psk => 1,
+        .wpa3_sae => 2,
+        .open => 0,
+    }});
+    try self.set_cmd(.set_wpa_auth, switch (opt.security) {
+        .wpa_psk => &.{ 0x04, 0, 0, 0 },
+        .wpa2_psk => &.{ 0x80, 0, 0, 0 },
+        .wpa3_sae => &.{ 0, 0, 0x04, 0 },
+        .open => &.{ 0, 0, 0, 0 },
+    });
+
+    try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
+
     if (opt.security == .open) {
         self.events.psk_sup = .success;
     }
@@ -431,6 +443,8 @@ pub fn connected(self: Self) bool {
 pub const JoinPoller = struct {
     wifi: *Self,
 
+    // TODO: describe
+    //
     // Join to open network events:
     //   [1.824251] type: .auth,     status: .success
     //   [1.859136] type: .assoc,    status: .success
@@ -454,6 +468,23 @@ pub const JoinPoller = struct {
     //   [39.910309] type: .reassoc, status: .success
     //   [39.917245] type: .link,    status: .success
     //   [40.202375] type: .join,    status: .success
+    //
+    // wrong pwd events
+    // [3.759191] debug (cyw43_wifi): poll event type: .auth, status: .success
+    // [3.785954] debug (cyw43_wifi): poll event type: .assoc, status: .success
+    // [3.802674] debug (cyw43_wifi): poll event type: .link, status: .success
+    // [3.829335] debug (cyw43_wifi): poll event type: .join, status: .success
+    // [3.845951] debug (cyw43_wifi): poll event type: .set_ssid, status: .success
+    // [6.276576] debug (cyw43_wifi): poll event type: .psk_sup, status: .partial
+    // [6.283378] error: panic: main() returned error.Cyw43WpaHandshake
+    //
+    // wrong ssid
+    // [1.555841] debug (cyw43_wifi): poll event type: .set_ssid, status: .no_networks
+    // [1.563185] error: panic: main() returned error.Cyw43SetSsid
+    //
+    // wrong security open/wpa_psk/wpa3_sae instad of wpa2_psk
+    // [1.525449] debug (cyw43_wifi): poll event type: .set_ssid, status: .fail
+    // [1.532186] error: panic: main() returned error.Cyw43SetSsid
 
     pub fn poll(jp: *JoinPoller) !bool {
         const events = &jp.wifi.events;
@@ -484,10 +515,11 @@ pub const JoinPoller = struct {
 fn handle_event(self: *Self, evt: *const ioctl.EventMessage) void {
     const events = &self.events;
     const state = Events.State.from;
-    // log.debug(
-    //     "poll event type: {}, status: {} ",
-    //     .{ evt.event_type, evt.status },
-    // );
+    // TODO remove
+    log.debug(
+        "poll event type: {}, status: {} ",
+        .{ evt.event_type, evt.status },
+    );
     switch (evt.event_type) {
         .link => {
             events.link = state(evt.status == .success and evt.flags & 1 > 0);
@@ -529,44 +561,29 @@ const ScanParams = extern struct {
     action: u16 = 1,
     sync_id: u16 = 0x1,
 
+    // ssid to scan for, 0 - all
     ssid_len: u32 = 0,
     ssid: [32]u8 = @splat(0),
 
-    bssid: [6]u8 = .{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
-    bss_type: u8 = 2,
-    scan_type: u8 = 1, // passive
+    bssid: [6]u8 = @splat(0xff),
+    bss_type: u8 = 2, // 2 - bss type any
+    scan_type: u8 = 0, // 0=active, 1=passive
 
     nprobes: u32 = 0xff_ff_ff_ff,
     active_time: u32 = 0xff_ff_ff_ff,
     passive_time: u32 = 0xff_ff_ff_ff,
     home_time: u32 = 0xff_ff_ff_ff,
 
-    nchans: u16 = 0,
-    nssids: u16 = 0,
-
-    chans: [14][2]u8 = @splat(@splat(0)),
-    ssids: [1][32]u8 = @splat(@splat(0)),
+    channel_num: u32 = 0,
+    channel_list: [1]u16 = @splat(0),
 };
-
-fn enable_events(self: *Self, events: []const ioctl.EventType) !void {
-    const mask = ioctl.EventType.mask(events);
-    try self.set_var("bsscfg:event_msgs", &mask);
-    self.sleep_ms(50);
-}
 
 /// Init scan and return poller
 pub fn scan_poller(self: *Self) !ScanPoller {
-    try self.enable_events(&.{.escan_result});
-
-    try self.set_cmd(.set_scan_channel_time, &.{40});
-    try self.set_var("pm2_sleep_ret", &.{0xc8});
-    try self.set_var("bcn_li_bcn", &.{1});
-    try self.set_var("bcn_li_dtim", &.{1});
-    try self.set_var("assoc_listen", &.{0x0a});
-    try self.set_cmd(.set_band, &.{0});
-    try self.set_cmd(.up, &.{0});
-    var scan_params: ScanParams = .{};
-    try self.set_var("escan", mem.asBytes(&scan_params));
+    // Params can be used to choose active/passive scan type or to set specific
+    // ssid to scan for.
+    var params: ScanParams = .{};
+    try self.set_var("escan", mem.asBytes(&params));
 
     return .{
         .wifi = self,
@@ -585,7 +602,7 @@ pub const ScanPoller = struct {
 
     /// De-duplication of returned results.
     /// Remember x last access point mac addresses.
-    seen_buffer: [16][6]u8 = undefined,
+    seen_buffer: [8][6]u8 = undefined,
     seen_idx: usize = 0,
 
     const Result = struct {
@@ -648,7 +665,7 @@ pub const ScanPoller = struct {
         }
         // Store in seen list
         sp.seen_buffer[sp.seen_idx % sp.seen_buffer.len] = ap_mac;
-        sp.seen_idx += 1;
+        sp.seen_idx +%= 1;
 
         // Store ssid in stable buffer
         sp.ssid_buf = info.ssid;
