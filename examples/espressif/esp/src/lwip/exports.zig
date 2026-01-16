@@ -10,8 +10,7 @@ const rtos = esp.rtos;
 const c = @import("include.zig").c;
 
 const log = std.log.scoped(.lwip);
-// TODO: we use a different allocator here than the one in osi. maybe we can
-// have only one.
+
 // TODO: mutex and mailbox can be implemented without allocations if we define
 // the correct types in sys_arch.h
 

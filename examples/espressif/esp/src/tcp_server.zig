@@ -21,7 +21,6 @@ pub const microzig_options: microzig.Options = .{
         .{ .scope = .esp_radio, .level = .info },
         .{ .scope = .esp_radio_wifi, .level = .info },
         .{ .scope = .esp_radio_osi, .level = .info },
-        .{ .scope = .esp_wifi_driver_internal, .level = .err },
     },
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
@@ -38,7 +37,6 @@ pub const microzig_options: microzig.Options = .{
     .hal = .{
         .rtos = .{
             .enable = true,
-            .paint_stack = 0xbb,
         },
         .radio = .{
             .wifi = .{

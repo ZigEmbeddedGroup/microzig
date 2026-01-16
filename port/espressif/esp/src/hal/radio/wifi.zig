@@ -759,7 +759,6 @@ pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
 
     const event_type: EventType = @enumFromInt(id);
     update_sta_state(event_type);
-    log.info("event occurred: {t}", .{event_type});
 
     {
         event_mutex.lock();
