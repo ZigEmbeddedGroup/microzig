@@ -1,6 +1,8 @@
 const microzig = @import("microzig");
 const enums = @import("../common/enums.zig");
+const util = @import("../common/util.zig");
 
+pub const Peripherals = enums.Peripherals;
 const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
 const I2C1SEL = microzig.chip.types.peripherals.rcc_l4.I2C1SEL;
@@ -31,42 +33,6 @@ pub const Clock = struct {
 
 pub var current_clock: Clock = .{};
 
-pub fn enable_gpio_port(used_gpios_port: u8) void {
-    RCC.AHB2ENR.modify(.{
-        .GPIOAEN = @as(u1, @truncate(0b1 & used_gpios_port)),
-        .GPIOBEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 1))),
-        .GPIOCEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 2))),
-        .GPIODEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 3))),
-        .GPIOEEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 4))),
-        .GPIOHEN = @as(u1, @truncate(0b1 & (used_gpios_port >> 7))),
-    });
-}
-
-pub fn enable_uart(comptime index: enums.UART_V3_Type) void {
-    switch (index) {
-        .LPUART1 => RCC.APB1ENR2.modify(.{ .LPUART1EN = 1 }),
-        .USART1 => RCC.APB2ENR.modify(.{ .USART1EN = 1 }),
-        .USART2 => RCC.APB1ENR1.modify(.{ .USART2EN = 1 }),
-        .USART3 => RCC.APB1ENR1.modify(.{ .USART3EN = 1 }),
-        .UART4 => RCC.APB1ENR1.modify(.{ .UART4EN = 1 }),
-        .UART5 => RCC.APB1ENR1.modify(.{ .UART5EN = 1 }),
-    }
-}
-
-pub fn enable_i2c(comptime i2cindex: enums.I2C_V2_Type, clock: ICSW) void {
-    RCC.APB1ENR1.modify(switch (i2cindex) {
-        .I2C1 => .{ .I2C1EN = 1 },
-        .I2C2 => .{ .I2C2EN = 1 },
-        .I2C3 => .{ .I2C3EN = 1 },
-    });
-
-    RCC.CCIPR.modify(switch (i2cindex) {
-        .I2C1 => .{ .I2C1SEL = @as(I2C1SEL, @enumFromInt(@intFromEnum(clock))) },
-        .I2C2 => .{ .I2C2SEL = @as(I2C2SEL, @enumFromInt(@intFromEnum(clock))) },
-        .I2C3 => .{ .I2C3SEL = @as(I2C3SEL, @enumFromInt(@intFromEnum(clock))) },
-    });
-}
-
 pub fn enable_rtc_lcd() void {
     RCC.APB1ENR1.modify(.{
         .PWREN = 1,
@@ -95,9 +61,70 @@ pub fn enable_rtc_lcd() void {
     });
 }
 
-pub fn enable_dma(index: enums.DMA_V2_Type) void {
-    switch (index) {
-        .DMA1 => RCC.AHB1ENR.modify(.{ .DMA1EN = 1 }),
-        .DMA2 => RCC.AHB1ENR.modify(.{ .DMA2EN = 1 }),
+pub fn set_clock(comptime peri: Peripherals, state: u1) void {
+    const peri_name = @tagName(peri);
+    if (util.match_name(peri_name, &.{"RTC"})) {
+        @panic("RTC not implemented yet");
     }
+
+    const field = comptime if (util.match_name(peri_name, &.{
+        "ADC1",
+        "ADC2",
+    })) "ADC12EN" else if (util.match_name(peri_name, &.{
+        "ADC3",
+        "ADC4",
+    })) "ADC34EN" else peri_name ++ "EN";
+
+    const rcc_register_name = comptime if (util.match_name(peri_name, &.{
+        "TSC",
+        "CRC",
+        "FLASH",
+        "DMA",
+    })) "AHB1ENR" else if (util.match_name(peri_name, &.{
+        "RNG",
+        "CRC",
+        "ADC",
+        "GPIO",
+    })) "AHB2ENR" else if (util.match_name(peri_name, &.{
+        "QUADSPI",
+    })) "AHB3ENR" else if (util.match_name(peri_name, &.{
+        "SAI",
+        "TIM17",
+        "TIM16",
+        "TIM15",
+        "USART1",
+        "TIM8",
+        "SPI1",
+        "TIM1",
+        "SDMMC",
+        "SYSCFG",
+    })) "APB2ENR" else if (util.match_name(peri_name, &.{
+        "LPTIM1",
+        "DAC",
+        "PWR",
+        "CAN",
+        "I2C1",
+        "I2C2",
+        "I2C3",
+        "UART",
+        "USART",
+        "SPI",
+        "WWDG",
+        "LCD",
+        "TIM",
+    })) "APB1ENR1" else if (util.match_name(peri_name, &.{
+        "LPTIM2",
+        "I2C4",
+        "LPUART1EN",
+    })) "APB1ENR2" else @panic("Unsported peripheral clock");
+
+    @field(RCC, rcc_register_name).modify_one(field, state);
+}
+
+pub fn enable_clock(comptime peri: Peripherals) void {
+    set_clock(peri, 1);
+}
+
+pub fn disable_clock(comptime peri: Peripherals) void {
+    set_clock(peri, 0);
 }

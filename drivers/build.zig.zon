@@ -2,6 +2,9 @@
     .name = .mz_drivers,
     .fingerprint = 0x576453eedc5af46e,
     .minimum_zig_version = "0.15.1",
+    .dependencies = .{
+        .link = .{ .path = "../modules/network/link" },
+    },
     .version = "0.0.1",
     .paths = .{
         "build.zig",

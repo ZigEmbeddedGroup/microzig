@@ -190,6 +190,14 @@ pub fn main() !void {
                 \\  }} > {[flash]s}
                 \\
             , .{ .flash = if (!parsed_args.ram_image) flash_region_name else ram_region_name }),
+            .msp430 => try writer.interface.writeAll(
+                \\/DISCARD/ :
+                \\{
+                \\  *(.eh_frame*)
+                \\  *(.eh_frame_hdr*)
+                \\}
+                \\
+            ),
             else => {},
         }
 
@@ -197,6 +205,7 @@ pub fn main() !void {
             \\
             \\  .data :
             \\  {
+            \\    . = ALIGN(4);
             \\    microzig_data_start = .;
             \\    *(.sdata*)
             \\    *(.data*)
@@ -220,14 +229,17 @@ pub fn main() !void {
         }
 
         try writer.interface.print(
+            \\    . = ALIGN(4);
             \\    microzig_data_end = .;
             \\  }} > {s}
             \\
             \\  .bss (NOLOAD):
             \\  {{
+            \\    . = ALIGN(4);
             \\    microzig_bss_start = .;
             \\    *(.sbss*)
             \\    *(.bss*)
+            \\    . = ALIGN(4);
             \\    microzig_bss_end = .;
             \\  }} > {s}
             \\

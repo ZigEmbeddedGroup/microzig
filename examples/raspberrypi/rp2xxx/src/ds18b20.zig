@@ -18,10 +18,8 @@ const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     },
 };
 
-const pins = pin_config.pins();
-
 pub fn main() !void {
-    pin_config.apply();
+    const pins = pin_config.apply();
 
     var ds18b20_gpio = rp2xxx.drivers.GPIO_Device.init(pins.ds18b20);
     const clock_device = rp2xxx.drivers.clock_device();

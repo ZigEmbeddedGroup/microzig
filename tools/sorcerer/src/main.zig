@@ -228,7 +228,7 @@ fn open_register_schema_submenu(m: *dvui.MenuWidget) !void {
                     };
 
                     const path = try gpa.dupe(u8, f);
-                    const new_window = try RegzWindow.create(gpa, format, path);
+                    const new_window = try RegzWindow.create(gpa, format, path, null);
                     errdefer new_window.destroy();
 
                     try state.regz_windows.put(gpa, f, new_window);
@@ -280,8 +280,6 @@ fn from_microzig_menu() void {
     if (!state.show_from_microzig_window)
         return;
 
-    // TODO: handle no schema usages
-
     var float = dvui.floatingWindow(@src(), .{ .open_flag = &state.show_from_microzig_window }, .{
         .min_size_content = .{ .w = 400, .h = 400 },
         .tag = "from_microzig_window",
@@ -321,9 +319,10 @@ fn from_microzig_menu() void {
             .svd => .svd,
             .atdf => .atdf,
             .embassy => .embassy,
+            .targetdb => .targetdb,
         };
 
-        const new_window = RegzWindow.create(gpa, format, path) catch unreachable;
+        const new_window = RegzWindow.create(gpa, format, path, null) catch unreachable;
 
         state.regz_windows.put(gpa, path, new_window) catch {
             new_window.destroy();

@@ -602,13 +602,14 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
         pub fn write(buffer: *Self, data: []const u8) error{Full}!void {
             buffer.assert_valid();
             defer buffer.assert_valid();
-
             for (data) |d| {
                 if (buffer.full)
                     return error.Full;
 
                 buffer.items[buffer.end] = d;
                 buffer.increment_end();
+                if (buffer.start == buffer.end)
+                    buffer.full = true;
             }
         }
 
@@ -638,4 +639,25 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
             buffer.full = false;
         }
     };
+}
+
+test "CircularBuffer bounds" {
+    const expectEqual = std.testing.expectEqual;
+    const bufsize: usize = 64;
+    const FIFO = CircularBuffer(u8, bufsize);
+    var fifo: FIFO = .empty;
+    try expectEqual(bufsize, fifo.get_writable_len());
+
+    const one_data: [1]u8 = .{42};
+    try fifo.write(one_data[0..]);
+    try expectEqual(bufsize - 1, fifo.get_writable_len());
+    try expectEqual(1, fifo.get_readable_len());
+
+    var buf: [100]u8 = undefined;
+    const big_data = buf[0..];
+    @memset(big_data, 42);
+    try expectEqual(big_data.len, 100);
+    const maybe_err = fifo.write(big_data);
+
+    try std.testing.expectError(error.Full, maybe_err);
 }

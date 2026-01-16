@@ -1,9 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = @import("time.zig");
-const create_peripheral_enum = @import("../common/util.zig").create_peripheral_enum;
+const enums = @import("../common/enums.zig");
 
-const I2C_t = microzig.chip.types.peripherals.i2c_v1.I2C;
+const I2C_Peripheral = microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
 const F_S = microzig.chip.types.peripherals.i2c_v1.F_S;
 const peripherals = microzig.chip.peripherals;
@@ -96,12 +96,10 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
     }
 }
 
-pub const Instances = create_peripheral_enum("I2C", "i2c_v1");
-fn get_regs(comptime instance: Instances) *volatile I2C_t {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
+pub const Instances = enums.I2C_Type;
+
 pub const I2C = struct {
-    regs: *volatile I2C_t,
+    regs: *volatile I2C_Peripheral,
     fn validate_pclk(pclk: usize, mode: Mode) !void {
         if (pclk > 50_000_000) return comptime_fail_or_error("pclk needs to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
         switch (mode) {
@@ -415,6 +413,6 @@ pub const I2C = struct {
     }
 
     pub fn init(comptime instance: Instances) I2C {
-        return .{ .regs = get_regs(instance) };
+        return .{ .regs = enums.get_regs(I2C_Peripheral, instance) };
     }
 };

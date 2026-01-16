@@ -1,10 +1,14 @@
 const microzig = @import("microzig");
 
+pub const drivers = @import("drivers.zig");
 pub const pins = @import("pins.zig");
 pub const gpio = @import("gpio.zig");
 pub const clocks = @import("clocks.zig");
 pub const time = @import("time.zig");
+pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
+pub const spi = @import("spi.zig");
+pub const dma = @import("dma.zig");
 
 /// HSI (High Speed Internal) oscillator frequency
 /// This is the fixed internal RC oscillator frequency for CH32V20x
@@ -21,7 +25,10 @@ pub fn init() void {
 
 test "hal tests" {
     _ = clocks;
+    _ = dma;
     _ = gpio;
     _ = time;
+    _ = i2c;
     _ = usart;
+    _ = spi;
 }

@@ -1,9 +1,9 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const enums = microzig.hal.enums;
+const enums = @import("enums.zig");
 
-const I2C_V2_Type = enums.I2C_V2_Type;
-const I2C_t = microzig.chip.types.peripherals.i2c_v2.I2C;
+const I2C_Type = enums.I2C_Type;
+const I2C_Peripherals = microzig.chip.types.peripherals.i2c_v2.I2C;
 const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const drivers = microzig.drivers.base;
@@ -30,12 +30,8 @@ const TimingSpec_Standard = .{
     .t_min_af = 0.05,
 };
 
-fn get_regs(comptime instance: I2C_V2_Type) *volatile I2C_t {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
-
 const I2C = struct {
-    regs: *volatile I2C_t,
+    regs: *volatile I2C_Peripherals,
 
     fn compute_presc() ConfigError!struct { f32, u4 } {
         // Let first see if we need to prescale.
@@ -198,9 +194,9 @@ const I2C = struct {
         return i2c.write_blocking_intern(address, false, data);
     }
 
-    pub fn init(comptime instance: I2C_V2_Type) I2C {
-        hal.rcc.enable_i2c(instance, .SYS);
-        return .{ .regs = get_regs(instance) };
+    pub fn init(comptime instance: I2C_Type) I2C {
+        hal.rcc.enable_clock(enums.to_peripheral(instance));
+        return .{ .regs = enums.get_regs(I2C_Peripherals, instance) };
     }
 };
 
@@ -254,7 +250,7 @@ pub const I2C_Device = struct {
         try i2c.i2c.apply();
     }
 
-    pub fn init(comptime instance: I2C_V2_Type) I2C_Device {
+    pub fn init(comptime instance: I2C_Type) I2C_Device {
         return .{ .i2c = I2C.init(instance) };
     }
 

@@ -2,8 +2,10 @@ const std = @import("std");
 const mem = std.mem;
 const assert = std.debug.assert;
 
+const Link = @import("link");
 const Bus = @import("cyw43439/bus.zig");
 const WiFi = @import("cyw43439/wifi.zig");
+pub const JoinOptions = WiFi.JoinOptions;
 
 const log = std.log.scoped(.cyw43);
 
@@ -27,7 +29,7 @@ pub fn init(
     self.mac = try self.read_mac();
 }
 
-pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: WiFi.JoinOptions) !void {
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
     try self.wifi.join(ssid, pwd, opt);
 }
 
@@ -57,14 +59,13 @@ pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
     return self.wifi.recv_zc(bytes);
 }
 
-pub fn send_zc(ptr: *anyopaque, bytes: []u8) anyerror!void {
+pub fn send_zc(ptr: *anyopaque, bytes: []u8) Link.Error!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
-    try self.wifi.send_zc(bytes);
-}
-
-pub fn ready(ptr: *anyopaque) bool {
-    const self: *Self = @ptrCast(@alignCast(ptr));
-    return self.wifi.has_credit();
+    self.wifi.send_zc(bytes) catch |err| switch (err) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.LinkDown => return error.LinkDown,
+        else => return error.InternalError,
+    };
 }
 
 pub fn gpio(self: *Self, pin: u2) Pin {
@@ -80,18 +81,20 @@ pub const Pin = struct {
     pin: u2,
     wifi: *WiFi,
 
-    pub fn get(self: *Pin) bool {
-        return self.wifi.gpio_get(self.pin);
-    }
-
-    pub fn put(self: *Pin, value: u1) void {
-        self.wifi.gpio_set(self.pin, value);
-    }
-
     pub fn toggle(self: *Pin) void {
         self.wifi.gpio_toggle(self.pin);
     }
 };
+
+pub fn link(self: *Self) Link {
+    return .{
+        .ptr = self,
+        .vtable = .{
+            .recv = recv_zc,
+            .send = send_zc,
+        },
+    };
+}
 
 // References:
 //   https://github.com/embassy-rs/embassy/blob/abb1d8286e2415686150e2e315ca1c380659c3c3/cyw43/src/consts.rs

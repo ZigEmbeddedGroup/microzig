@@ -21,6 +21,12 @@ pub fn main() !void {
                 pins.led,
             };
             break :res .{ pins, all_leds };
+        } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32F303NUCLEO")) {
+            const pins = board.leds_config.apply();
+            const all_leds = .{
+                pins.LD2,
+            };
+            break :res .{ pins, all_leds };
         } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32F3DISCOVERY")) {
             const pins = board.leds_config.apply();
             const all_leds = .{
@@ -33,16 +39,13 @@ pub fn main() !void {
                 pins.LD9,
                 pins.LD10,
             };
-
             break :res .{ pins, all_leds };
         } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32L476DISCOVERY")) {
             const pins = board.leds_config.apply();
-
             const all_leds = .{
                 pins.LD4,
                 pins.LD5,
             };
-
             break :res .{ pins, all_leds };
         } else {
             @compileError("blinky is not (yet?) implemented for this target");

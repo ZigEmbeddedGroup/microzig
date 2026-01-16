@@ -25,13 +25,14 @@
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
-        .@"port/microchip/samd51" = .{ .path = "port/microchip/samd51", .lazy = true },
         .@"port/microchip/atmega" = .{ .path = "port/microchip/atmega", .lazy = true },
+        .@"port/microchip/samd51" = .{ .path = "port/microchip/samd51", .lazy = true },
         .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
         .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
         .@"port/nxp/mcx" = .{ .path = "port/nxp/mcx", .lazy = true },
         .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
+        .@"port/texasinstruments/msp430" = .{ .path = "port/texasinstruments/msp430", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
 
         // used for creating package tarballs

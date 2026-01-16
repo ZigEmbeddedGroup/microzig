@@ -5,14 +5,11 @@ const std = @import("std");
 const microzig = @import("microzig");
 const util = @import("../common/util.zig");
 const dma_common = @import("dma_common.zig");
-pub const Instances = @import("./enums.zig").DMA_V1_Type;
+const enums = @import("./enums.zig");
+pub const Instances = enums.DMA_Type;
 
 const hal = microzig.hal;
 const DMA_Peripheral = microzig.chip.types.peripherals.bdma_v1.DMA;
-
-fn get_regs(comptime instance: Instances) *volatile DMA_Peripheral {
-    return @field(microzig.chip.peripherals, @tagName(instance));
-}
 
 pub const Error = error{
     BufferOverflow,
@@ -37,40 +34,15 @@ const countDmaChannel = microzig.chip.properties.dma_channel_count orelse 14;
 
 var dma_buffer: [countDmaChannel * 100]u8 linksection(".dma_buffer") = undefined;
 
-const DMA1_InteruptName = .{
-    "DMA1_Channel1",
-    "DMA1_Channel2",
-    "DMA1_Channel3",
-    "DMA1_Channel4",
-    "DMA1_Channel5",
-    "DMA1_Channel6",
-    "DMA1_Channel7",
-};
-
-const DMA2_InteruptName = .{
-    "DMA2_Channel1",
-    "DMA2_Channel2",
-    "DMA2_Channel3",
-    "DMA2_Channel4",
-    "DMA2_Channel5",
-    "DMA2_Channel6",
-    "DMA2_Channel7",
-};
-
-const DMA_InterputName = .{
-    DMA1_InteruptName,
-    DMA2_InteruptName,
-};
-
 pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
-    const reg_dma = get_regs(dma_ctrl);
+    const reg_dma = enums.get_regs(DMA_Peripheral, dma_ctrl);
 
-    const buffer_idx = (@intFromEnum(dma_ctrl) - 1) * 7 + @intFromEnum(ch);
+    const buffer_idx = enums.base_perihperal_index(dma_ctrl) * 7 + @intFromEnum(ch);
     const start = buffer_idx * 100;
 
     // Here we are not able to use comptimeFmt since it will introduce dependency loop
     // due to std_options.
-    const interrupt_name = DMA_InterputName[@intFromEnum(dma_ctrl) - 1][@intFromEnum(ch)];
+    const interrupt_name = @tagName(dma_ctrl) ++ "_" ++ @tagName(ch);
     const interrupt_index = blk: for (microzig.chip.interrupts) |*interrupt| {
         if (std.mem.eql(u8, interrupt_name, interrupt.name)) {
             break :blk interrupt.index;
@@ -113,7 +85,7 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
             if (channel) |*init_ch| {
                 return init_ch;
             }
-            hal.rcc.enable_dma(dma_ctrl);
+            hal.rcc.enable_clock(enums.to_peripheral(dma_ctrl));
             const channel_base: usize = @intFromPtr(reg_dma) + 0x8 + (20 * @as(usize, @intFromEnum(ch)));
 
             channel = Channel{

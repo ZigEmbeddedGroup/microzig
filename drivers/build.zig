@@ -8,6 +8,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("framework.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{.{
+            .name = "link",
+            .module = b.dependency("link", .{}).module("link"),
+        }},
     });
 
     const test_suite = b.addTest(.{

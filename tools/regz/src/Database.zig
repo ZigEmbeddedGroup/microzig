@@ -13,6 +13,7 @@ const xml = @import("xml.zig");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
 const embassy = @import("embassy.zig");
+const targetdb = @import("targetdb.zig");
 const gen = @import("gen.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
@@ -526,11 +527,12 @@ pub const Format = enum {
     atdf,
     // embassy's stm32-data format: https://github.com/embassy-rs/stm32-data-generated
     embassy,
+    targetdb,
 
     pub fn is_XML(format: Format) bool {
         return switch (format) {
             .svd, .atdf => true,
-            .embassy => false,
+            .targetdb, .embassy => false,
         };
     }
 };
@@ -603,13 +605,13 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     switch (format) {
         .svd => try svd.load_into_db(db, doc),
         .atdf => try atdf.load_into_db(db, doc),
-        .embassy => return error.InvalidFormat,
+        .embassy, .targetdb => return error.InvalidFormat,
     }
 
     return db;
 }
 
-pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) !*Database {
+pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, device: ?[]const u8) !*Database {
     return switch (format) {
         .embassy => blk: {
             var db = try Database.create(allocator);
@@ -619,6 +621,16 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) 
             }
 
             try embassy.load_into_db(db, path);
+            break :blk db;
+        },
+        .targetdb => blk: {
+            var db = try Database.create(allocator);
+            errdefer {
+                std.log.err("sqlite: {s}", .{db.conn.lastError()});
+                db.destroy();
+            }
+
+            try targetdb.load_into_db(db, path, device);
             break :blk db;
         },
         .svd, .atdf => blk: {

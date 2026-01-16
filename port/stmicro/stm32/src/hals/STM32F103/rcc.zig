@@ -5,6 +5,7 @@ const ClockTree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
 const microzig = @import("microzig");
 const power = @import("power.zig");
 const enums = @import("../common/enums.zig");
+const util = @import("../common/util.zig");
 
 //expose only the configuration structs
 pub const Config = ClockTree.Config;
@@ -27,55 +28,7 @@ const ClockInitError = error{
     LSETimeout,
 };
 
-pub const RccPeriferals = enum {
-    DMA1,
-    DMA2,
-    SRAM,
-    FLASH,
-    CRC,
-    FSMC, //F103xE
-    SDIO, //F103xC/D/E
-
-    // APB2ENR (APB2 peripherals)
-    AFIO,
-    GPIOA,
-    GPIOB,
-    GPIOC,
-    GPIOD,
-    GPIOE,
-    GPIOF, //F103xE
-    GPIOG, //F103xE
-    ADC1,
-    ADC2,
-    TIM1,
-    SPI1,
-    USART1,
-
-    // APB1ENR (APB1 peripherals)
-    TIM2,
-    TIM3,
-    TIM4,
-    TIM5, //F103xE
-    TIM6, //F103xE
-    TIM7, //F103xE
-    WWDG,
-    SPI2,
-    SPI3, //F103xD/E
-    USART2,
-    USART3,
-    UART4, //F103xC/D/E
-    UART5, //F103xC/D/E
-    I2C1,
-    I2C2,
-    USB,
-    CAN,
-    BKP,
-    PWR,
-    DAC, //F103xE
-
-    //BKP
-    RTC,
-};
+pub const Peripherals = enums.Peripherals;
 
 pub const ResetReason = enum {
     low_power,
@@ -428,109 +381,65 @@ pub fn get_reset_reason() ResetReason {
 ///to put the peripheral in a known state before configuring it.
 ///
 ///NOTE: this function does not effect the ENR (clock enable) registers.
-pub fn reset_clock(peri: RccPeriferals) void {
+pub fn reset_clock(comptime peri: Peripherals) void {
+    const peri_name = @tagName(peri);
+    const field = peri_name ++ "RST";
+    const rcc_register_name = comptime if (util.match_name(peri_name, &.{
+        "AFIO",
+        "GPIO",
+        "ADC",
+        "TIM1",
+        "SPI1",
+        "USART1",
+    })) "APB2RSTR" else if (util.match_name(peri_name, &.{
+        "TIM",
+        "WWDG",
+        "SPI",
+        "USART",
+        "UART",
+        "I2C",
+        "CAN",
+        "BKP",
+        "PWR",
+        "DAC",
+    })) "APB1RSTR" else @panic("No reset possible for this peripheral");
 
-    //set the selected peripheral reset bit
-    switch (peri) {
-        // APB2RSTR (APB2 peripherals)
-        .AFIO => rcc.APB2RSTR.modify(.{ .AFIORST = 1 }),
-        .GPIOA => rcc.APB2RSTR.modify(.{ .GPIOARST = 1 }),
-        .GPIOB => rcc.APB2RSTR.modify(.{ .GPIOBRST = 1 }),
-        .GPIOC => rcc.APB2RSTR.modify(.{ .GPIOCRST = 1 }),
-        .GPIOD => rcc.APB2RSTR.modify(.{ .GPIODRST = 1 }),
-        .GPIOE => rcc.APB2RSTR.modify(.{ .GPIOERST = 1 }),
-        .GPIOF => rcc.APB2RSTR.modify(.{ .GPIOFRST = 1 }), //F103xE
-        .GPIOG => rcc.APB2RSTR.modify(.{ .GPIOGRST = 1 }), //F103xE
-        .ADC1 => rcc.APB2RSTR.modify(.{ .ADC1RST = 1 }),
-        .ADC2 => rcc.APB2RSTR.modify(.{ .ADC2RST = 1 }),
-        .TIM1 => rcc.APB2RSTR.modify(.{ .TIM1RST = 1 }),
-        .SPI1 => rcc.APB2RSTR.modify(.{ .SPI1RST = 1 }),
-        .USART1 => rcc.APB2RSTR.modify(.{ .USART1RST = 1 }),
-
-        // APB1RSTR (APB1 peripherals)
-        .TIM2 => rcc.APB1RSTR.modify(.{ .TIM2RST = 1 }),
-        .TIM3 => rcc.APB1RSTR.modify(.{ .TIM3RST = 1 }),
-        .TIM4 => rcc.APB1RSTR.modify(.{ .TIM4RST = 1 }),
-        .TIM5 => rcc.APB1RSTR.modify(.{ .TIM5RST = 1 }), //F103xE
-        .TIM6 => rcc.APB1RSTR.modify(.{ .TIM6RST = 1 }), //F103xE
-        .TIM7 => rcc.APB1RSTR.modify(.{ .TIM7RST = 1 }), //F103xE
-        .WWDG => rcc.APB1RSTR.modify(.{ .WWDGRST = 1 }),
-        .SPI2 => rcc.APB1RSTR.modify(.{ .SPI2RST = 1 }),
-        .SPI3 => rcc.APB1RSTR.modify(.{ .SPI3RST = 1 }), //F103xD/E
-        .USART2 => rcc.APB1RSTR.modify(.{ .USART2RST = 1 }),
-        .USART3 => rcc.APB1RSTR.modify(.{ .USART3RST = 1 }),
-        .UART4 => rcc.APB1RSTR.modify(.{ .UART4RST = 1 }), //F103xC/D/E
-        .UART5 => rcc.APB1RSTR.modify(.{ .UART5RST = 1 }), //F103xC/D/E
-        .I2C1 => rcc.APB1RSTR.modify(.{ .I2C1RST = 1 }),
-        .I2C2 => rcc.APB1RSTR.modify(.{ .I2C2RST = 1 }),
-        .USB => rcc.APB1RSTR.modify(.{ .USBRST = 1 }),
-        .CAN => rcc.APB1RSTR.modify(.{ .CANRST = 1 }),
-        .BKP => rcc.APB1RSTR.modify(.{ .BKPRST = 1 }),
-        .PWR => rcc.APB1RSTR.modify(.{ .PWRRST = 1 }),
-        .DAC => rcc.APB1RSTR.modify(.{ .DACRST = 1 }), //F103xE
-        else => {},
-    }
+    @field(rcc, rcc_register_name).modify_one(field, 1);
     //release the reset, this is necessary because the reset bits are not self-clearing
     //write 0 to all bits is safe becuse 0 does nothing (other than releasing the reset)
-    rcc.APB2RSTR.raw = 0;
-    rcc.APB1RSTR.raw = 0;
+    @field(rcc, rcc_register_name).raw = 0;
 }
 
-pub fn set_clock(peri: RccPeriferals, state: u1) void {
-    switch (peri) {
-        .DMA1 => rcc.AHBENR.modify(.{ .DMA1EN = state }),
-        .DMA2 => rcc.AHBENR.modify(.{ .DMA2EN = state }),
-        .SRAM => rcc.AHBENR.modify(.{ .SRAMEN = state }),
-        .FLASH => rcc.AHBENR.modify(.{ .FLASHEN = state }),
-        .CRC => rcc.AHBENR.modify(.{ .CRCEN = state }),
-        .FSMC => rcc.AHBENR.modify(.{ .FSMCEN = state }), //F103xE
-        .SDIO => rcc.AHBENR.modify(.{ .SDIOEN = state }), //F103xC/D/E
-
-        // APB2ENR (APB2 peripherals)
-        .AFIO => rcc.APB2ENR.modify(.{ .AFIOEN = state }),
-        .GPIOA => rcc.APB2ENR.modify(.{ .GPIOAEN = state }),
-        .GPIOB => rcc.APB2ENR.modify(.{ .GPIOBEN = state }),
-        .GPIOC => rcc.APB2ENR.modify(.{ .GPIOCEN = state }),
-        .GPIOD => rcc.APB2ENR.modify(.{ .GPIODEN = state }),
-        .GPIOE => rcc.APB2ENR.modify(.{ .GPIOEEN = state }),
-        .GPIOF => rcc.APB2ENR.modify(.{ .GPIOFEN = state }), //F103xE
-        .GPIOG => rcc.APB2ENR.modify(.{ .GPIOGEN = state }), //F103xE
-        .ADC1 => rcc.APB2ENR.modify(.{ .ADC1EN = state }),
-        .ADC2 => rcc.APB2ENR.modify(.{ .ADC2EN = state }),
-        .TIM1 => rcc.APB2ENR.modify(.{ .TIM1EN = state }),
-        .SPI1 => rcc.APB2ENR.modify(.{ .SPI1EN = state }),
-        .USART1 => rcc.APB2ENR.modify(.{ .USART1EN = state }),
-
-        // APB1ENR (APB1 peripherals)
-        .TIM2 => rcc.APB1ENR.modify(.{ .TIM2EN = state }),
-        .TIM3 => rcc.APB1ENR.modify(.{ .TIM3EN = state }),
-        .TIM4 => rcc.APB1ENR.modify(.{ .TIM4EN = state }),
-        .TIM5 => rcc.APB1ENR.modify(.{ .TIM5EN = state }), //F103xE
-        .TIM6 => rcc.APB1ENR.modify(.{ .TIM6EN = state }), //F103xE
-        .TIM7 => rcc.APB1ENR.modify(.{ .TIM7EN = state }), //F103xE
-        .WWDG => rcc.APB1ENR.modify(.{ .WWDGEN = state }),
-        .SPI2 => rcc.APB1ENR.modify(.{ .SPI2EN = state }),
-        .SPI3 => rcc.APB1ENR.modify(.{ .SPI3EN = state }), //F103xD/E
-        .USART2 => rcc.APB1ENR.modify(.{ .USART2EN = state }),
-        .USART3 => rcc.APB1ENR.modify(.{ .USART3EN = state }),
-        .UART4 => rcc.APB1ENR.modify(.{ .UART4EN = state }), //F103xC/D/E
-        .UART5 => rcc.APB1ENR.modify(.{ .UART5EN = state }), //F103xC/D/E
-        .I2C1 => rcc.APB1ENR.modify(.{ .I2C1EN = state }),
-        .I2C2 => rcc.APB1ENR.modify(.{ .I2C2EN = state }),
-        .USB => rcc.APB1ENR.modify(.{ .USBEN = state }),
-        .CAN => rcc.APB1ENR.modify(.{ .CANEN = state }),
-        .BKP => rcc.APB1ENR.modify(.{ .BKPEN = state }),
-        .PWR => rcc.APB1ENR.modify(.{ .PWREN = state }),
-        .DAC => rcc.APB1ENR.modify(.{ .DACEN = state }), //F103xE
-        .RTC => enable_rtc(state != 0),
+pub fn set_clock(comptime peri: Peripherals, state: u1) void {
+    const peri_name = @tagName(peri);
+    const field = peri_name ++ "EN";
+    if (util.match_name(peri_name, &.{"RTC"})) {
+        enable_rtc(state != 0);
+        return;
     }
+    const rcc_register_name = comptime if (util.match_name(peri_name, &.{
+        "DMA",
+        "FLASH",
+        "CRC",
+        "FSMC",
+        "SDIO",
+    })) "AHBENR" else if (util.match_name(peri_name, &.{
+        "AFIO",
+        "GPIO",
+        "ADC",
+        "TIM1",
+        "SPI1",
+        "USART1",
+    })) "APB2ENR" else "APB1ENR";
+
+    @field(rcc, rcc_register_name).modify_one(field, state);
 }
 
-pub fn enable_clock(peri: RccPeriferals) void {
+pub fn enable_clock(comptime peri: Peripherals) void {
     set_clock(peri, 1);
 }
 
-pub fn disable_clock(peri: RccPeriferals) void {
+pub fn disable_clock(comptime peri: Peripherals) void {
     set_clock(peri, 0);
 }
 
@@ -568,58 +477,44 @@ pub fn reset_bus(bus: Bus) void {
 //NOTE: should we panic on invalid clocks?
 //errors at comptime appear for peripherals manually configured like USB.
 ///if requests the clock of an unconfigured peripheral, 0 means error, != 0 means ok
-pub fn get_clock(comptime source: RccPeriferals) u32 {
-    return @intFromFloat(switch (source) {
-        // AHB peripherals
-        .DMA1,
-        .DMA2,
-        .SRAM,
-        .FLASH,
-        .CRC,
-        => current_clocks.AHBOutput,
-
-        .FSMC => current_clocks.FSMClkOutput,
-        .SDIO => current_clocks.SDIOClkOutput,
-
-        // APB2 peripherals
-        .AFIO,
-        .GPIOA,
-        .GPIOB,
-        .GPIOC,
-        .GPIOD,
-        .GPIOE,
-        .GPIOF,
-        .GPIOG,
-        .SPI1,
-        .USART1,
-        => current_clocks.APB2Prescaler,
-
-        .ADC1, .ADC2 => current_clocks.ADCoutput,
-
-        .TIM1 => current_clocks.TimPrescalerAPB2,
-
-        // APB1 peripherals
-        .TIM2, .TIM3, .TIM4, .TIM5, .TIM6, .TIM7 => current_clocks.TimPrescalerAPB1,
-
-        .DAC => current_clocks.APB1Output,
-
-        .WWDG,
-        .SPI2,
-        .SPI3,
-        .USART2,
-        .USART3,
-        .UART4,
-        .UART5,
-        .I2C1,
-        .I2C2,
-        .CAN,
-        .BKP,
-        .PWR,
-        => current_clocks.APB1Output,
-
-        .USB => current_clocks.USBoutput,
-        .RTC => current_clocks.RTCOutput,
-    });
+pub fn get_clock(comptime source: Peripherals) u32 {
+    const peri_name = @tagName(source);
+    const clock = if (util.match_name(peri_name, &.{
+        "DMA",
+        "FLASH",
+        "CRC",
+    })) current_clocks.AHBOutput else if (util.match_name(peri_name, &.{
+        "FSMC",
+    })) current_clocks.FSMClkOutput else if (util.match_name(peri_name, &.{
+        "SDIO",
+    })) current_clocks.SDIOClkOutput else if (util.match_name(peri_name, &.{
+        "AFIO",
+        "GPIO",
+        "SPI1",
+        "UUSART1",
+    })) current_clocks.APB2Prescaler else if (util.match_name(peri_name, &.{
+        "ADC",
+    })) current_clocks.ADCoutput else if (util.match_name(peri_name, &.{
+        "TIM1",
+    })) current_clocks.TimPrescalerAPB2 else if (util.match_name(peri_name, &.{
+        "TIM",
+    })) current_clocks.TimPrescalerAPB1 else if (util.match_name(peri_name, &.{
+        "DAC",
+    })) current_clocks.APB1Output else if (util.match_name(peri_name, &.{
+        "WWDG",
+        "SPI",
+        "USART",
+        "UART",
+        "I2C",
+        "CAN",
+        "BKP",
+        "PWR",
+    })) current_clocks.APB1Output else if (util.match_name(peri_name, &.{
+        "USB",
+    })) current_clocks.USBoutput else if (util.match_name(peri_name, &.{
+        "RTC",
+    })) current_clocks.RTCOutput else @panic("Unknown clock for peripheral");
+    return @intFromFloat(clock);
 }
 
 pub inline fn get_sys_clk() u32 {
@@ -632,7 +527,7 @@ inline fn calc_wait_ticks(val: usize) usize {
     return ms_per_tick * val;
 }
 
-pub fn enable_dma(index: enums.DMA_V1_Type) void {
+pub fn enable_dma(index: enums.DMA_Type) void {
     switch (index) {
         .DMA1 => rcc.AHBENR.modify(.{ .DMA1EN = 1 }),
     }

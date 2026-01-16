@@ -28,8 +28,6 @@ const pin_config = hal.pins.GlobalConfiguration{
     },
 };
 
-const pins = pin_config.pins();
-
 // ---- UART Configuration --------------------------------
 
 const baud_rate = 115200;
@@ -46,7 +44,7 @@ pub fn main() !void {
 
     // --- Set up GPIO -------------------------------
 
-    pin_config.apply();
+    _ = pin_config.apply();
 
     // --- Set up UART -------------------------------
 

@@ -418,7 +418,7 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
     var bytes: [512]u8 align(4) = undefined;
 
     while (delay < wait_ms) {
-        // self.log_read();
+        // self.log_read(); // show chip logs
         const rsp = try self.read(&bytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
@@ -427,10 +427,6 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
         switch (rsp.sdp.channel()) {
             .event => {
                 const evt = rsp.event().msg;
-                // log.debug(
-                //     "  event type: {s:<15}, status: {s} flags: {x}",
-                //     .{ @tagName(evt.event_type), @tagName(evt.status), evt.flags },
-                // );
                 switch (evt.event_type) {
                     .link => {
                         if (evt.flags & 1 == 0) return error.Cyw43JoinLinkDown;
@@ -456,18 +452,16 @@ fn join_wait(self: *Self, wait_ms: u32, security: JoinOptions.Security) !void {
                     else => {},
                 }
                 if (set_ssid and link_up and link_auth) {
-                    //log.debug("join OK", .{});
                     return;
                 }
             },
-            else => self.log_response(rsp),
+            else => {},
         }
     }
     return error.Cyw43JoinTimeout;
 }
 
 // show unexpected command response
-// can be assert also
 fn log_response(self: *Self, rsp: ioctl.Response) void {
     _ = self;
     switch (rsp.sdp.channel()) {
@@ -475,7 +469,7 @@ fn log_response(self: *Self, rsp: ioctl.Response) void {
             const evt = rsp.event().msg;
             if (evt.event_type == .none and evt.status == .success)
                 return;
-            log.info(
+            log.debug(
                 "unhandled event type: {}, status: {} ",
                 .{ evt.event_type, evt.status },
             );
@@ -534,8 +528,8 @@ pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
 ///
 /// Buffer has to be 4 bytes aligned and it will be extended in as_words to the
 /// word boundary!
-pub fn send_zc(self: *Self, buffer: []u8) !void {
-    if (!self.has_credit()) return error.Cyw43NoCredit;
+pub fn send_zc(self: *Self, buffer: []u8) anyerror!void {
+    if (!self.has_credit()) return error.OutOfMemory;
 
     const eth_frame_len = buffer.len - 22;
     // add bus header

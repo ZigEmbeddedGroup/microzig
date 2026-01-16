@@ -1,3 +1,6 @@
+// all available options:
+// https://github.com/lwip-tcpip/lwip/blob/STABLE-2_1_3_RELEASE/src/include/lwip/opt.h
+//
 #ifndef lwipopts_h
 #define lwipopts_h
 
@@ -19,27 +22,10 @@
 #define LWIP_DNS LWIP_UDP
 #define LWIP_MDNS_RESPONDER LWIP_UDP
 
-// memory
-#define MEM_ALIGNMENT 4
-#define MEM_SIZE (32 * 1024) // limit of dynamic mem alloc
-
-#define PBUF_POOL_SIZE 32      // number of preallocated buffers
-#define PBUF_POOL_BUFSIZE 1540 // enough for 1500 MTU + headers (14 + 22 + 4)
-#define PBUF_LINK_HLEN 14
-#define PBUF_LINK_ENCAPSULATION_HLEN 22 // CYW43 WiFi header space
-// #define LWIP_NETIF_TX_SINGLE_PBUF 1  // reject chained TX (if available)
-
-#define MEMP_NUM_PBUF 32
-#define MEMP_NUM_RAW_PCB 32
-#define MEMP_NUM_TCP_PCB 8
-#define MEMP_NUM_TCP_SEG 32
-#define MEMP_NUM_UDP_PCB 8
-#define MEMP_NUM_SYS_TIMEOUT 16
-
 // callbacks
-#define LWIP_NETIF_LINK_CALLBACK 1
+#define LWIP_NETIF_LINK_CALLBACK 0
 #define LWIP_NETIF_STATUS_CALLBACK 1
-#define LWIP_NETIF_EXT_STATUS_CALLBACK 1
+#define LWIP_NETIF_EXT_STATUS_CALLBACK 0
 
 // stats
 #define LWIP_STATS 1

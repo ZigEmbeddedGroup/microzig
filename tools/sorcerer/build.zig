@@ -220,40 +220,49 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
     var boards: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Board)) = .init(b.allocator);
     var locations: LazyPathHashMap(RegisterSchemaUsage.Location) = .init(b.allocator);
 
-    for (targets) |t| switch (t.chip.register_definition) {
-        inline else => |lazy_path| {
-            try deduped_targets.put(lazy_path, switch (t.chip.register_definition) {
-                .svd => .svd,
-                .embassy => .embassy,
-                .atdf => .atdf,
-                .zig => continue,
+    for (targets) |t| {
+        const lazy_path = switch (t.chip.register_definition) {
+            .targetdb => |targetdb| blk: {
+                try deduped_targets.put(targetdb.path, .targetdb);
+                break :blk targetdb.path;
+            },
+            inline else => |lazy_path| blk: {
+                try deduped_targets.put(lazy_path, switch (t.chip.register_definition) {
+                    .svd => .svd,
+                    .embassy => .embassy,
+                    .atdf => .atdf,
+                    .targetdb => unreachable,
+                    .zig => continue,
+                });
+
+                break :blk lazy_path;
+            },
+        };
+
+        if (chips.getEntry(lazy_path)) |entry| {
+            try entry.value_ptr.append(b.allocator, .{
+                .name = t.chip.name,
             });
+        } else {
+            var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .{};
+            try chip_list.append(b.allocator, .{
+                .name = t.chip.name,
+            });
+            try chips.put(lazy_path, chip_list);
+        }
 
-            if (chips.getEntry(lazy_path)) |entry| {
-                try entry.value_ptr.append(b.allocator, .{
-                    .name = t.chip.name,
-                });
-            } else {
-                var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .{};
-                try chip_list.append(b.allocator, .{
-                    .name = t.chip.name,
-                });
-                try chips.put(lazy_path, chip_list);
-            }
-
-            if (t.board) |board| if (boards.getEntry(lazy_path)) |entry| {
-                try entry.value_ptr.append(b.allocator, .{
-                    .name = board.name,
-                });
-            } else {
-                var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .{};
-                try board_list.append(b.allocator, .{
-                    .name = board.name,
-                });
-                try boards.put(lazy_path, board_list);
-            };
-        },
-    };
+        if (t.board) |board| if (boards.getEntry(lazy_path)) |entry| {
+            try entry.value_ptr.append(b.allocator, .{
+                .name = board.name,
+            });
+        } else {
+            var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .{};
+            try board_list.append(b.allocator, .{
+                .name = board.name,
+            });
+            try boards.put(lazy_path, board_list);
+        };
+    }
 
     for (deduped_targets.keys()) |lazy_path| {
         const location = find_target_location(b, lazy_path);

@@ -41,7 +41,9 @@ pub const Target = struct {
 
     /// Determines whether the compiler_rt package is bundled with the application or not.
     /// This should always be true except for platforms where compiler_rt cannot be built right now.
-    bundle_compiler_rt: bool = true,
+    bundle_compiler_rt: ?bool = true,
+
+    bundle_ubsan_rt: ?bool = null,
 
     /// Determines whether the artifact produced for this target will exist solely in RAM. This will
     /// inform whether we need to do any special handling e.g. of vector tables and whether we need
@@ -78,6 +80,7 @@ pub const Target = struct {
         cpu: ?Cpu = null,
         chip: ?Chip = null,
         single_threaded: ?bool = null,
+        bundle_ubsan_rt: ?bool = null,
         bundle_compiler_rt: ?bool = null,
         ram_image: ?bool = null,
         hal: ?HardwareAbstractionLayer = null,
@@ -105,6 +108,7 @@ pub const Target = struct {
             .chip = chip,
             .single_threaded = options.single_threaded orelse from.single_threaded,
             .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
+            .bundle_ubsan_rt = options.bundle_ubsan_rt orelse from.bundle_ubsan_rt,
             .ram_image = options.ram_image orelse from.ram_image,
             .hal = options.hal orelse from.hal,
             .board = options.board orelse from.board,
@@ -150,6 +154,12 @@ pub const Chip = struct {
 
         /// Path to embassy stm32-data directory
         embassy: LazyPath,
+
+        /// Single device from TI targetdb
+        targetdb: struct {
+            path: LazyPath,
+            device: []const u8,
+        },
     },
 
     /// The memory regions that are present in this chip.
