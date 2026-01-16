@@ -46,6 +46,8 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
+const SSID = "SSID";
+const AUTH: ?radio.wifi.Config.Auth = null;
 const SERVER_PORT = 3333;
 
 var maybe_netif: ?*lwip.c.netif = null;
@@ -79,7 +81,8 @@ pub fn main() !void {
 
     try radio.wifi.apply(.{
         .sta = .{
-            .ssid = "Internet",
+            .ssid = SSID,
+            .auth = AUTH,
         },
     });
 

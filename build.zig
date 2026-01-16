@@ -45,10 +45,12 @@ const exe_targets: []const std.Target.Query = &.{
 };
 
 pub fn build(b: *Build) void {
+    const optimize = b.standardOptimizeOption(.{});
+
     const generate_linker_script_mod = b.createModule(.{
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.graph.host,
-        .optimize = .ReleaseSafe,
+        .optimize = optimize,
     });
 
     const generate_linker_script_exe = b.addExecutable(.{
