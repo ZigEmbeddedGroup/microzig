@@ -383,7 +383,7 @@ pub const Clock_Device = struct {
 - `sleep_us(time_us)` - Sleep for N microseconds (polls if no custom sleep)
 - `sleep_ms(time_ms)` - Sleep for N milliseconds
 - `make_timeout(duration)` - Create deadline from current time + duration
-- `is_reached(absolute_time)` - Check if time point has passed
+- `Timeout.is_reached()` - Check if time point has passed
 
 **Usage Example**:
 ```zig
@@ -394,7 +394,7 @@ const timeout = clock.make_timeout(mdf.time.Duration.from_ms(100));
 
 // Poll with timeout
 while (!is_ready()) {
-    if (clock.is_reached(timeout)) {
+    if (timeout.is_reached()) {
         return error.Timeout;
     }
 }
