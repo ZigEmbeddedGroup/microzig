@@ -29,12 +29,20 @@ pub fn init(
     self.mac = try self.read_mac();
 }
 
-pub fn connected(self: *Self) bool {
-    return self.wifi.connected();
+pub fn joined(self: *Self) bool {
+    return self.wifi.join_state == .joined;
+}
+
+pub fn join_state(self: *Self) WiFi.JoinState {
+    return self.wifi.join_state;
 }
 
 pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
     try self.wifi.join(ssid, pwd, opt);
+}
+
+pub fn poll(self: *Self) !void {
+    try self.wifi.poll();
 }
 
 pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !WiFi.JoinPoller {
@@ -43,6 +51,10 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
 
 pub fn scan_poller(self: *Self) !WiFi.ScanPoller {
     return try self.wifi.scan_poller();
+}
+
+pub fn scan_result(self: *Self) ?WiFi.ScanResult {
+    return self.wifi.scan_result;
 }
 
 fn show_clm_ver(self: *Self) !void {

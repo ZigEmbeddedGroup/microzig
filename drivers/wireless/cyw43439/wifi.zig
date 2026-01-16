@@ -16,6 +16,8 @@ tx_sequence: u8 = 0,
 status: ?Status = null,
 log_state: LogState = .{},
 events: Events = .{},
+scan_result: ?ScanResult = null,
+join_state: JoinState = .initial,
 
 const ioctl_request_bytes_len = 1024;
 
@@ -433,15 +435,16 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
         self.events.psk_sup = .success;
     }
 
-    return .{ .wifi = self };
+    self.join_state = .joining;
+    return .{ .parent = self };
 }
 
 pub fn connected(self: Self) bool {
-    return self.events.connected();
+    return self.join_state == .joined;
 }
 
 pub const JoinPoller = struct {
-    wifi: *Self,
+    parent: *Self,
 
     // TODO: describe
     //
@@ -487,39 +490,42 @@ pub const JoinPoller = struct {
     // [1.532186] error: panic: main() returned error.Cyw43SetSsid
 
     pub fn poll(jp: *JoinPoller) !bool {
-        const events = &jp.wifi.events;
-        if (events.connected()) return false;
-
-        var bytes: [512]u8 align(4) = undefined;
-        const rsp = try jp.wifi.read(&bytes) orelse return true;
-
-        switch (rsp.sdp.channel()) {
-            .event => jp.wifi.handle_event(&rsp.event().msg),
-            else => jp.wifi.log_response(rsp),
+        const events = &jp.parent.events;
+        if (jp.parent.join_state == .joining) {
+            try jp.parent.poll();
+            try events.err();
         }
-        try events.err();
-        return !events.connected();
+        return jp.parent.join_state == .joining;
     }
 
     pub fn wait(jp: *JoinPoller, wait_ms: u32) !void {
         var delay: u32 = 0;
         while (delay < wait_ms) {
             if (!try jp.poll()) return;
-            jp.wifi.sleep_ms(ioctl.response_poll_interval);
+            jp.parent.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
         }
         return error.Cyw43JoinTimeout;
     }
 };
 
-fn handle_event(self: *Self, evt: *const ioctl.EventMessage) void {
+pub fn poll(self: *Self) !void {
+    var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
+    const rsp = try self.read(&bytes) orelse return;
+    switch (rsp.sdp.channel()) {
+        .event => self.handle_event(rsp),
+        else => self.log_response(rsp),
+    }
+}
+
+fn handle_event(self: *Self, rsp: ioctl.Response) void {
+    const evt = (rsp.event() orelse return).msg;
     const events = &self.events;
     const state = Events.State.from;
-    // TODO remove
-    log.debug(
-        "poll event type: {}, status: {} ",
-        .{ evt.event_type, evt.status },
-    );
+    // log.debug(
+    //     "handle event type: {}, status: {} ",
+    //     .{ evt.event_type, evt.status },
+    // );
     switch (evt.event_type) {
         .link => {
             events.link = state(evt.status == .success and evt.flags & 1 > 0);
@@ -546,14 +552,48 @@ fn handle_event(self: *Self, evt: *const ioctl.EventMessage) void {
         .join => {
             events.join = state(evt.status == .success);
         },
-        .none => {},
+        .escan_result => {
+            self.scan_result = null;
+            events.scan = switch (evt.status) {
+                .success => .success,
+                .partial => .running,
+                else => .fail,
+            };
+            if (evt.status == .partial) {
+                self.handle_scan_event(rsp);
+            }
+        },
+        .none => return,
         else => {
             log.warn(
                 "unhandled event type: {}, status: {} ",
                 .{ evt.event_type, evt.status },
             );
+            return;
         },
     }
+    const new_state = events.join_state();
+    // if (new_state != self.join_state) {
+    //     log.debug("state changed old: {}, new: {}", .{ self.join_state, new_state });
+    //     log.debug("events: {}", .{self.events});
+    // }
+    self.join_state = new_state;
+}
+
+fn handle_scan_event(self: *Self, rsp: ioctl.Response) void {
+    const res, const security = rsp.event_scan_result() catch |err| {
+        log.err("fail to parse event scan result {}", .{err});
+        return;
+    };
+    if (res.info.ssid_len == 0) return; // skip zero length ssid
+    const info = &res.info;
+    self.scan_result = .{};
+    const sr = &self.scan_result.?;
+    sr.ssid_buf = info.ssid;
+    sr.ap_mac = info.bssid;
+    sr.ssid = sr.ssid_buf[0..info.ssid_len];
+    sr.security = security;
+    sr.channel = info.channel;
 }
 
 const ScanParams = extern struct {
@@ -584,99 +624,49 @@ pub fn scan_poller(self: *Self) !ScanPoller {
     // ssid to scan for.
     var params: ScanParams = .{};
     try self.set_var("escan", mem.asBytes(&params));
+    self.events.scan = .running;
 
     return .{
-        .wifi = self,
+        .parent = self,
     };
 }
 
 pub const ScanPoller = struct {
-    wifi: *Self,
+    parent: *Self,
 
-    /// Poller not done, client should poll for more results
-    more: bool = true,
-    /// Result of the last poll or null if it did't find new ssid
-    result: ?Result = null,
-    /// Stable buffer for the ssid in Result
-    ssid_buf: [32]u8 = @splat(0),
-
-    /// De-duplication of returned results.
-    /// Remember x last access point mac addresses.
-    seen_buffer: [8][6]u8 = undefined,
+    /// Buffer for last x seen ssid's. Used for de-duplication of scan results.
+    seen_buf: [8][6]u8 = undefined,
     seen_idx: usize = 0,
-
-    const Result = struct {
-        ssid: []const u8 = &.{},
-        ap_mac: [6]u8 = @splat(0),
-        security: ioctl.Security = .{},
-        channel: u16 = 0,
-
-        pub fn empty(res: Result) bool {
-            return res.ssid.len == 0;
-        }
-    };
 
     /// Returns true if scan is not finished.
     /// If poll finds new ssid result is not null.
     ///
     /// Intended usage:
     ///   while (try scan.poll()) {
-    ///     if (scan.result) |res| { ...
+    ///     if (scan.result()) |res| { ...
     pub fn poll(sp: *ScanPoller) !bool {
-        if (sp.more) {
-            sp.result = null;
-            try sp.poll_tick();
+        if (sp.status() == .running) {
+            try sp.parent.poll();
         }
-        return sp.more;
+        return sp.status() == .running;
     }
 
-    fn poll_tick(sp: *ScanPoller) !void {
-        var bytes: [1280]u8 align(4) = undefined;
-        const rsp = try sp.wifi.read(&bytes) orelse return;
-        switch (rsp.sdp.channel()) {
-            .event => {
-                const evt = rsp.event().msg;
-                switch (evt.event_type) {
-                    .escan_result => {
-                        if (evt.status == .success) {
-                            sp.more = false;
-                            return;
-                        }
-                        try sp.handle_scan_result(rsp);
-                    },
-                    else => sp.wifi.log_response(rsp),
-                }
-            },
-            else => sp.wifi.log_response(rsp),
-        }
-    }
-
-    fn handle_scan_result(sp: *ScanPoller, rsp: ioctl.Response) !void {
-        const res, const security = try rsp.event_scan_result();
-        if (res.info.ssid_len == 0) return; // skip zero length ssid
-        const info = &res.info;
-        const ap_mac = info.bssid;
-
+    pub fn result(sp: *ScanPoller) ?ScanResult {
+        const res = sp.parent.scan_result orelse return null;
         // Check if access point mac is already seen
-        for (0..@min(sp.seen_idx, sp.seen_buffer.len)) |i| {
-            if (std.mem.eql(u8, &sp.seen_buffer[i], &ap_mac)) {
-                return;
+        for (0..@min(sp.seen_idx, sp.seen_buf.len)) |i| {
+            if (std.mem.eql(u8, &sp.seen_buf[i], &res.ap_mac)) {
+                return null;
             }
         }
         // Store in seen list
-        sp.seen_buffer[sp.seen_idx % sp.seen_buffer.len] = ap_mac;
+        sp.seen_buf[sp.seen_idx % sp.seen_buf.len] = res.ap_mac;
         sp.seen_idx +%= 1;
+        return res;
+    }
 
-        // Store ssid in stable buffer
-        sp.ssid_buf = info.ssid;
-
-        // Prepare result
-        sp.result = .{
-            .ap_mac = ap_mac,
-            .ssid = sp.ssid_buf[0..info.ssid_len],
-            .security = security,
-            .channel = info.channel,
-        };
+    pub fn status(sp: ScanPoller) Events.State {
+        return sp.parent.events.scan;
     }
 };
 
@@ -685,7 +675,7 @@ fn log_response(self: *Self, rsp: ioctl.Response) void {
     _ = self;
     switch (rsp.sdp.channel()) {
         .event => {
-            const evt = rsp.event().msg;
+            const evt = (rsp.event() orelse return).msg;
             if (evt.event_type == .none and evt.status == .success)
                 return;
             log.debug(
@@ -731,7 +721,7 @@ pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
         const rsp = try self.read(buffer) orelse return null;
         switch (rsp.sdp.channel()) {
             .data => return rsp.data_pos(),
-            .event => self.handle_event(&rsp.event().msg),
+            .event => self.handle_event(rsp),
             else => self.log_response(rsp),
         }
     }
@@ -838,41 +828,82 @@ const Status = packed struct {
     _reserved3: u12,
 };
 
-const Events = struct {
-    pub const State = enum(u2) {
-        none,
-        success,
-        fail,
+pub const ScanResult = struct {
+    ssid: []const u8 = &.{},
+    ap_mac: [6]u8 = @splat(0),
+    security: ioctl.Security = .{},
+    channel: u16 = 0,
+    ssid_buf: [32]u8 = @splat(0),
+};
 
-        fn from(ok: bool) State {
+const Events = packed struct {
+    pub const State = enum(u2) {
+        none = 0b00,
+        success = 0b01,
+        fail = 0b10,
+        running = 0b11,
+
+        fn from(ok: bool) Events.State {
             return if (ok) .success else .fail;
         }
     };
 
-    link: State = .none,
-    psk_sup: State = .none,
-    set_ssid: State = .none,
-    assoc: State = .none,
-    auth: State = .none,
-    join: State = .none,
+    // essential join events
+    auth: Events.State = .none,
+    link: Events.State = .none,
+    psk_sup: Events.State = .none,
+    set_ssid: Events.State = .none,
+    // other join events
+    assoc: Events.State = .none,
+    join: Events.State = .none,
+    // scan event
+    scan: Events.State = .none,
 
     pub fn err(e: Events) !void {
+        if (e.auth == .fail) return error.Cyw43Authentication;
         if (e.link == .fail) return error.Cyw43LinkDown;
         if (e.psk_sup == .fail) return error.Cyw43WpaHandshake;
         if (e.set_ssid == .fail) return error.Cyw43SetSsid;
-        if (e.assoc == .fail) return error.Cyw43AssocRequest;
-        if (e.auth == .fail) return error.Cyw43AuthRequest;
-        if (e.join == .fail) return error.Cyw43Join;
     }
 
-    pub fn connected(e: Events) bool {
-        return e.link == .success and
-            e.psk_sup == .success and
-            e.set_ssid == .success and
-            e.assoc == .success and
-            e.auth == .success and
-            e.join == .success;
+    pub fn join_state(e: Events) JoinState {
+        var i: u14 = @bitCast(e);
+        i &= 0b00_00_00_11_11_11_11; // filter essential join events
+        const fail_mask = 0b10_10_10_10;
+        const succ_mask = 0b01_01_01_01;
+        if (i == 0) return .initial;
+        if (i & fail_mask > 0) return .disjoined; // any failed
+        if (i & succ_mask == succ_mask) return .joined; // all success
+        return .joining;
     }
+};
+
+const testing = std.testing;
+
+test "events to join_state" {
+    var e: Events = .{};
+    try testing.expectEqual(.initial, e.join_state());
+    e.auth = .success;
+    try testing.expectEqual(.joining, e.join_state());
+    e.link = .success;
+    e.psk_sup = .success;
+    try testing.expectEqual(.joining, e.join_state());
+    try testing.expectEqual(0b00_01_01_01, @as(u14, @bitCast(e)));
+    e.set_ssid = .success;
+    try testing.expectEqual(.joined, e.join_state());
+    e.auth = .fail;
+    try testing.expectEqual(.disjoined, e.join_state());
+    e.auth = .none;
+    try testing.expectEqual(.joining, e.join_state());
+    e.auth = .success;
+    try testing.expectEqual(.joined, e.join_state());
+}
+
+pub const JoinState = enum {
+    initial,
+    joining,
+    joined,
+    disjoined,
 };
 
 // CYW43439 chip values
