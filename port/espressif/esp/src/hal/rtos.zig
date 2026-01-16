@@ -49,7 +49,7 @@ pub const Options = struct {
     general_purpose_interrupt: microzig.cpu.Interrupt = .interrupt30,
     systimer_unit: systimer.Unit = .unit0,
     systimer_alarm: systimer.Alarm = .alarm0,
-    cpu_interrupt: system.CpuInterrupt = .cpu_interrupt_0,
+    cpu_interrupt: system.CPU_Interrupt = .cpu_interrupt_0,
     yield_interrupt: microzig.cpu.Interrupt = .interrupt31,
 
     paint_stack: ?u8 = null,

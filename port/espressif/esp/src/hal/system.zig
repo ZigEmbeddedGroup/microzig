@@ -125,13 +125,13 @@ pub fn enable_clocks_and_release_reset(mask: PeripheralMask) void {
     peripheral_reset_clear(mask);
 }
 
-pub const CpuInterrupt = enum {
+pub const CPU_Interrupt = enum {
     cpu_interrupt_0,
     cpu_interrupt_1,
     cpu_interrupt_2,
     cpu_interrupt_3,
 
-    pub fn source(cpu_interrupt: CpuInterrupt) microzig.cpu.interrupt.Source {
+    pub fn source(cpu_interrupt: CPU_Interrupt) microzig.cpu.interrupt.Source {
         return switch (cpu_interrupt) {
             .cpu_interrupt_0 => .from_cpu_intr0,
             .cpu_interrupt_1 => .from_cpu_intr1,
@@ -140,7 +140,7 @@ pub const CpuInterrupt = enum {
         };
     }
 
-    pub fn set_pending(cpu_interrupt: CpuInterrupt, enabled: bool) void {
+    pub fn set_pending(cpu_interrupt: CPU_Interrupt, enabled: bool) void {
         const regs: @TypeOf(&SYSTEM.CPU_INTR_FROM_CPU_0) = switch (cpu_interrupt) {
             .cpu_interrupt_0 => @ptrCast(&SYSTEM.CPU_INTR_FROM_CPU_0),
             .cpu_interrupt_1 => @ptrCast(&SYSTEM.CPU_INTR_FROM_CPU_1),

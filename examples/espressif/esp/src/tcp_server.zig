@@ -18,9 +18,9 @@ comptime {
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .log_scope_levels = &.{
-        .{ .scope = .esp_radio, .level = .info },
-        .{ .scope = .esp_radio_wifi, .level = .info },
-        .{ .scope = .esp_radio_osi, .level = .info },
+        .{ .scope = .esp_radio, .level = .err },
+        .{ .scope = .esp_radio_wifi, .level = .err },
+        .{ .scope = .esp_radio_osi, .level = .err },
     },
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
@@ -91,7 +91,7 @@ pub fn main() !void {
     try lwip.c_err(lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_up, null));
 
     ip_ready_semaphore.take();
-    std.log.info("Listening on {f}:{}", .{ IPFormatter.init(netif.ip_addr), SERVER_PORT });
+    std.log.info("Listening on {f}:{}", .{ IP_Formatter.init(netif.ip_addr), SERVER_PORT });
 
     const server_conn = netconn_new_with_proto_and_callback(lwip.c.NETCONN_TCP, 0, null) orelse {
         std.log.err("Failed to create netconn", .{});
@@ -214,14 +214,14 @@ fn netif_output(_: [*c]lwip.c.struct_netif, pbuf_c: [*c]lwip.c.struct_pbuf) call
     return lwip.c.ERR_OK;
 }
 
-const IPFormatter = struct {
+const IP_Formatter = struct {
     addr: lwip.c.ip_addr_t,
 
-    pub fn init(addr: lwip.c.ip_addr_t) IPFormatter {
+    pub fn init(addr: lwip.c.ip_addr_t) IP_Formatter {
         return .{ .addr = addr };
     }
 
-    pub fn format(addr: IPFormatter, writer: *std.Io.Writer) !void {
+    pub fn format(addr: IP_Formatter, writer: *std.Io.Writer) !void {
         try writer.writeAll(std.mem.sliceTo(lwip.c.ip4addr_ntoa(@as(*const lwip.c.ip4_addr_t, @ptrCast(&addr.addr))), 0));
     }
 };
