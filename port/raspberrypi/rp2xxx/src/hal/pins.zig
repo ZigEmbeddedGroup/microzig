@@ -767,44 +767,41 @@ pub const GlobalConfiguration = struct {
     }
 
     pub fn PinsType(self: GlobalConfiguration) type {
-        var fields: []const StructField = &.{};
+        const len = blk: {
+            var len: usize = 0;
+            for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
+                if (@field(self, field.name)) |_| {
+                    len += 1;
+                }
+            }
+
+            break :blk len;
+        };
+
+        var field_names: [len][]const u8 = undefined;
+        var field_types: [len]type = undefined;
+        var field_attrs: [len]std.builtin.Type.StructField.Attributes = undefined;
+        var idx: usize = 0;
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
-                var pin_field = StructField{
-                    .is_comptime = false,
-                    .default_value_ptr = null,
-
-                    // initialized below:
-                    .name = undefined,
-                    .type = undefined,
-                    .alignment = undefined,
+                field_names[idx] = pin_config.name orelse field.name;
+                field_types[idx] = if (pin_config.function == .SIO)
+                    gpio.Pin
+                else if (pin_config.function.is_pwm())
+                    pwm.Pwm
+                else if (pin_config.function.is_adc())
+                    adc.Input
+                else {
+                    continue;
                 };
 
-                pin_field.name = pin_config.name orelse field.name;
-                if (pin_config.function == .SIO) {
-                    pin_field.type = gpio.Pin;
-                } else if (pin_config.function.is_pwm()) {
-                    pin_field.type = pwm.Pwm;
-                } else if (pin_config.function.is_adc()) {
-                    pin_field.type = adc.Input;
-                } else {
-                    continue;
-                }
+                field_attrs[idx] = .{};
 
-                pin_field.alignment = @alignOf(field.type);
-
-                fields = fields ++ &[_]StructField{pin_field};
+                idx += 1;
             }
         }
 
-        return @Type(.{
-            .@"struct" = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
+        return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
     }
 
     /// Populate and return the PinsType struct

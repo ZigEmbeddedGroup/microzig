@@ -110,25 +110,27 @@ pub const PortSelect = struct {
 // Don't know if this is required but it doesn't hurt either.
 // Helps in case there are multiple microzig instances including the same ports (eg: examples).
 pub const PortCache = blk: {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    for (port_list) |port| {
-        const typ = ?(custom_lazy_import(port.dep_name) orelse struct {});
-        fields = fields ++ [_]std.builtin.Type.StructField{.{
-            .name = port.name,
-            .type = typ,
-            .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(typ, null))),
-            .is_comptime = false,
-            .alignment = @alignOf(typ),
-        }};
+    var field_names: [port_list.len][]const u8 = undefined;
+    var field_types: [port_list.len]type = undefined;
+    var field_attrs: [port_list.len]std.builtin.Type.StructField.Attributes = undefined;
+
+    for (port_list, 0..) |port, i| {
+        const typ = custom_lazy_import(port.dep_name) orelse struct {};
+        const default: ?typ = null;
+        field_names[i] = port.name;
+        field_types[i] = ?typ;
+        field_attrs[i] = .{
+            .default_value_ptr = &default,
+        };
     }
-    break :blk @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
+
+    break :blk @Struct(
+        .auto,
+        null,
+        &field_names,
+        &field_types,
+        &field_attrs,
+    );
 };
 
 var port_cache: PortCache = .{};
@@ -172,29 +174,31 @@ pub fn MicroBuild(port_select: PortSelect) type {
         const Self = @This();
 
         const SelectedPorts = blk: {
-            var fields: []const std.builtin.Type.StructField = &.{};
+            var field_names: [port_list.len][]const u8 = undefined;
+            var field_types: [port_list.len]type = undefined;
+            var field_attrs: [port_list.len]std.builtin.Type.StructField.Attributes = undefined;
 
+            var count: usize = 0;
             for (port_list) |port| {
                 if (@field(port_select, port.name)) {
+                    const i = count;
                     const typ = custom_lazy_import(port.dep_name) orelse struct {};
-                    fields = fields ++ [_]std.builtin.Type.StructField{.{
-                        .name = port.name,
-                        .type = typ,
-                        .default_value_ptr = null,
-                        .is_comptime = false,
-                        .alignment = @alignOf(typ),
-                    }};
+
+                    field_names[i] = port.name;
+                    field_types[i] = typ;
+                    field_attrs[i] = .{};
+
+                    count += 1;
                 }
             }
 
-            break :blk @Type(.{
-                .@"struct" = .{
-                    .layout = .auto,
-                    .fields = fields,
-                    .decls = &.{},
-                    .is_tuple = false,
-                },
-            });
+            break :blk @Struct(
+                .auto,
+                null,
+                field_names[0..count],
+                field_types[0..count],
+                field_attrs[0..count],
+            );
         };
 
         const InitReturnType = blk: {
@@ -395,7 +399,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
-            const regz_exe = b.dependency("tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
+            const regz_exe = b.dependency("tools/regz", .{ .optimize = .Debug }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
                 .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);

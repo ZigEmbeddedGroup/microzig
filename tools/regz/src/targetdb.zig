@@ -8,15 +8,15 @@ const RegisterID = Database.RegisterID;
 const StructID = Database.StructID;
 const EnumID = Database.EnumID;
 
-pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void {
-    var targetdb_dir = try std.fs.cwd().openDir(path, .{});
-    defer targetdb_dir.close();
+pub fn load_into_db(io: std.Io, db: *Database, path: []const u8, device: ?[]const u8) !void {
+    var targetdb_dir = try std.Io.Dir.cwd().openDir(io, path, .{});
+    defer targetdb_dir.close(io);
 
-    var devices_dir = try targetdb_dir.openDir("devices", .{ .iterate = true });
-    defer devices_dir.close();
+    var devices_dir = try targetdb_dir.openDir(io, "devices", .{ .iterate = true });
+    defer devices_dir.close(io);
 
     var it = devices_dir.iterate();
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
@@ -26,22 +26,19 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
 
         if (device) |d| {
             if (std.mem.eql(u8, d, entry.name[0 .. entry.name.len - ".xml".len])) {
-                try load_device(db, devices_dir, entry.name);
+                try load_device(io, db, devices_dir, entry.name);
                 return;
             }
         } else {
-            try load_device(db, devices_dir, entry.name);
+            try load_device(io, db, devices_dir, entry.name);
         }
     } else if (device != null) {
         return error.DeviceMissing;
     }
 }
 
-fn load_device(db: *Database, devices_dir: std.fs.Dir, filename: []const u8) !void {
-    const device_file = try devices_dir.openFile(filename, .{});
-    defer device_file.close();
-
-    const device_text = try device_file.readToEndAlloc(db.gpa, 1024 * 1024);
+fn load_device(io: std.Io, db: *Database, devices_dir: std.Io.Dir, filename: []const u8) !void {
+    const device_text = try devices_dir.readFileAlloc(io, filename, db.gpa, .unlimited);
     defer db.gpa.free(device_text);
 
     var doc = try xml.Doc.from_memory(device_text);
@@ -66,21 +63,24 @@ fn load_device(db: *Database, devices_dir: std.fs.Dir, filename: []const u8) !vo
     var instance_it = cpu_node.iterate(&.{}, &.{"instance"});
 
     while (instance_it.next()) |instance_node| {
-        try load_instance(db, device_id, devices_dir, instance_node);
+        try load_instance(io, db, device_id, devices_dir, instance_node);
     }
 }
 
-fn load_instance(db: *Database, device_id: DeviceID, devices_dir: std.fs.Dir, node: xml.Node) !void {
+fn load_instance(
+    io: std.Io,
+    db: *Database,
+    device_id: DeviceID,
+    devices_dir: std.Io.Dir,
+    node: xml.Node,
+) !void {
     const name = node.get_attribute("id") orelse return error.MissingField;
     const href = node.get_attribute("href") orelse return error.MissingField;
 
     const baseaddr_str = node.get_attribute("baseaddr") orelse return error.MissingField;
     const baseaddr = try std.fmt.parseInt(u64, baseaddr_str, 0);
 
-    const module_file = try devices_dir.openFile(href, .{});
-    defer module_file.close();
-
-    const module_text = try module_file.readToEndAlloc(db.gpa, 1024 * 1024);
+    const module_text = try devices_dir.readFileAlloc(io, href, db.gpa, .unlimited);
     defer db.gpa.free(module_text);
 
     var doc = try xml.Doc.from_memory(module_text);

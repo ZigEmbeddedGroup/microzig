@@ -611,7 +611,7 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     return db;
 }
 
-pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, device: ?[]const u8) !*Database {
+pub fn create_from_path(io: std.Io, allocator: Allocator, format: Format, path: []const u8, device: ?[]const u8) !*Database {
     return switch (format) {
         .embassy => blk: {
             var db = try Database.create(allocator);
@@ -620,7 +620,7 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, 
                 db.destroy();
             }
 
-            try embassy.load_into_db(db, path);
+            try embassy.load_into_db(io, db, path);
             break :blk db;
         },
         .targetdb => blk: {
@@ -630,11 +630,11 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, 
                 db.destroy();
             }
 
-            try targetdb.load_into_db(db, path, device);
+            try targetdb.load_into_db(io, db, path, device);
             break :blk db;
         },
         .svd, .atdf => blk: {
-            const text = try std.fs.cwd().readFileAlloc(allocator, path, file_size_max);
+            const text = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(file_size_max));
             defer allocator.free(text);
 
             break :blk create_from_xml(allocator, format, text);
@@ -2054,7 +2054,7 @@ fn cleanup_unused_enums(db: *Database) !void {
 }
 
 pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSlice([]const Patch, db.gpa, zon_text, diags, .{});
+    const patches = try std.zon.parse.fromSliceAlloc([]const Patch, db.gpa, zon_text, diags, .{});
     defer std.zon.parse.free(db.gpa, patches);
 
     for (patches) |patch| {
