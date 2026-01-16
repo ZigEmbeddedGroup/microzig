@@ -107,14 +107,6 @@ SECTIONS
     microzig_bss_end = .;
   } > DRAM
 
-  /* FIXME: this is a workaround for the threadlocal variable that may be
-   * created by foundation libc, because otherwise DRAM overflows (if .tbss is
-   * not explicitly added, it is placed after .heap) */
-  .tbss (NOLOAD) :
-  {
-    *(.tbss*)
-  } > DRAM
-
   .heap (NOLOAD) :
   {
     microzig_heap_start = .;

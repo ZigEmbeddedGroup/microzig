@@ -74,12 +74,6 @@ SECTIONS
     microzig_bss_end = .;
   } > DRAM
 
-  .tbss (NOLOAD) :
-  {
-    . = ALIGN(16);
-    *(.tbss*)
-  } > DRAM
-
   .heap (NOLOAD) :
   {
     microzig_heap_start = .;

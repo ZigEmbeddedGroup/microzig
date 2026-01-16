@@ -50,11 +50,6 @@ SECTIONS
     microzig_bss_end = .;
   } > DRAM
 
-  .tbss (NOLOAD) :
-  {
-    *(.tbss*)
-  } > DRAM
-
   .heap (NOLOAD) :
   {
     microzig_heap_start = .;

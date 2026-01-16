@@ -61,6 +61,7 @@ pub fn build(b: *std.Build) void {
                 const foundation_dep = b.dependency("foundation_libc", .{
                     .target = target,
                     .optimize = optimize,
+                    .single_threaded = true,
                 });
 
                 const lwip_dep = b.dependency("lwip", .{
