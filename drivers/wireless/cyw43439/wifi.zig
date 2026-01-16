@@ -472,11 +472,10 @@ pub const JoinPoller = struct {
 
     pub fn wait(jp: *JoinPoller, wait_ms: u32) !void {
         var delay: u32 = 0;
-        try jp.poll();
-        while (delay < wait_ms and !jp.is_connected()) {
+        while (delay < wait_ms) {
+            if (!try jp.poll()) return;
             jp.wifi.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
-            try jp.poll();
         }
         return error.Cyw43JoinTimeout;
     }
@@ -557,7 +556,7 @@ fn enable_events(self: *Self, events: []const ioctl.EventType) !void {
 
 /// Init scan and return poller
 pub fn scan_poller(self: *Self) !ScanPoller {
-    try self.enable_events(&.{ .escan_result, .set_ssid });
+    try self.enable_events(&.{.escan_result});
 
     try self.set_cmd(.set_scan_channel_time, &.{40});
     try self.set_var("pm2_sleep_ret", &.{0xc8});
@@ -576,8 +575,18 @@ pub fn scan_poller(self: *Self) !ScanPoller {
 
 pub const ScanPoller = struct {
     wifi: *Self,
-    res: ioctl.EventScanResult = undefined,
-    done: bool = false,
+
+    /// Poller not done, client should poll for more results
+    more: bool = true,
+    /// Result of the last poll or null if it did't find new ssid
+    result: ?Result = null,
+    /// Stable buffer for the ssid in Result
+    ssid_buf: [32]u8 = @splat(0),
+
+    /// De-duplication of returned results.
+    /// Remember x last access point mac addresses.
+    seen_buffer: [16][6]u8 = undefined,
+    seen_idx: usize = 0,
 
     const Result = struct {
         ssid: []const u8 = &.{},
@@ -590,35 +599,67 @@ pub const ScanPoller = struct {
         }
     };
 
-    pub fn poll(sp: *ScanPoller) !?Result {
-        if (sp.done) return null;
+    /// Returns true if scan is not finished.
+    /// If poll finds new ssid result is not null.
+    ///
+    /// Intended usage:
+    ///   while (try scan.poll()) {
+    ///     if (scan.result) |res| { ...
+    pub fn poll(sp: *ScanPoller) !bool {
+        if (sp.more) {
+            sp.result = null;
+            try sp.poll_tick();
+        }
+        return sp.more;
+    }
+
+    fn poll_tick(sp: *ScanPoller) !void {
         var bytes: [1280]u8 align(4) = undefined;
-        if (try sp.wifi.read(&bytes)) |rsp| {
-            switch (rsp.sdp.channel()) {
-                .event => {
-                    const evt = rsp.event().msg;
-                    switch (evt.event_type) {
-                        .escan_result => {
-                            if (evt.status == .success) {
-                                sp.done = true;
-                                return null;
-                            }
-                            const security = try rsp.event_scan_result(&sp.res);
-                            if (sp.res.info.ssid_len == 0) return .{};
-                            return .{
-                                .ap_mac = sp.res.info.bssid,
-                                .ssid = sp.res.info.ssid[0..sp.res.info.ssid_len],
-                                .security = security,
-                                .channel = sp.res.info.channel,
-                            };
-                        },
-                        else => sp.wifi.log_response(rsp),
-                    }
-                },
-                else => sp.wifi.log_response(rsp),
+        const rsp = try sp.wifi.read(&bytes) orelse return;
+        switch (rsp.sdp.channel()) {
+            .event => {
+                const evt = rsp.event().msg;
+                switch (evt.event_type) {
+                    .escan_result => {
+                        if (evt.status == .success) {
+                            sp.more = false;
+                            return;
+                        }
+                        try sp.handle_scan_result(rsp);
+                    },
+                    else => sp.wifi.log_response(rsp),
+                }
+            },
+            else => sp.wifi.log_response(rsp),
+        }
+    }
+
+    fn handle_scan_result(sp: *ScanPoller, rsp: ioctl.Response) !void {
+        const res, const security = try rsp.event_scan_result();
+        if (res.info.ssid_len == 0) return; // skip zero length ssid
+        const info = &res.info;
+        const ap_mac = info.bssid;
+
+        // Check if access point mac is already seen
+        for (0..@min(sp.seen_idx, sp.seen_buffer.len)) |i| {
+            if (std.mem.eql(u8, &sp.seen_buffer[i], &ap_mac)) {
+                return;
             }
         }
-        return .{};
+        // Store in seen list
+        sp.seen_buffer[sp.seen_idx % sp.seen_buffer.len] = ap_mac;
+        sp.seen_idx += 1;
+
+        // Store ssid in stable buffer
+        sp.ssid_buf = info.ssid;
+
+        // Prepare result
+        sp.result = .{
+            .ap_mac = ap_mac,
+            .ssid = sp.ssid_buf[0..info.ssid_len],
+            .security = security,
+            .channel = info.channel,
+        };
     }
 };
 

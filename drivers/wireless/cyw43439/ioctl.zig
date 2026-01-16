@@ -199,35 +199,37 @@ pub const Response = struct {
         return evt;
     }
 
-    pub fn event_scan_result(self: Self, res: *EventScanResult) !Security {
+    pub fn event_scan_result(self: Self) !struct { EventScanResult, Security } {
+        var res: EventScanResult = undefined;
+        var sec: Security = .{};
+
         assert(self.sdp.channel() == .event);
         const buf = self.data();
         if (buf.len < @sizeOf(EventPacket) + @sizeOf(EventScanResult)) {
             return error.Cyw43InsufficientData;
         }
         const res_buf = buf[@sizeOf(EventPacket)..];
-        @memcpy(std.mem.asBytes(res), res_buf[0..@sizeOf(EventScanResult)]);
+        @memcpy(std.mem.asBytes(&res), res_buf[0..@sizeOf(EventScanResult)]);
         res.info.channel &= 0xff;
         if (res_buf.len < res.info.ie_offset + res.info.ie_length) {
             return error.Cyw43InsufficientData;
         }
 
         // ref: https://github.com/georgerobotics/cyw43-driver/blob/13004039ffe127519f33824bf7d240e1f23fbdcd/src/cyw43_ll.c#L538
-        var security: Security = .{};
         const is_open = res.info.capability & 0x0010 == 0;
-        if (!is_open) security.wep_psk = true;
+        if (!is_open) sec.wep_psk = true;
 
         var ie_buf = res_buf[res.info.ie_offset..][0..res.info.ie_length];
         while (ie_buf.len >= 2) {
             const typ = ie_buf[0];
             const len = ie_buf[1];
             if (typ == 48) {
-                security.wpa2 = true;
+                sec.wpa2 = true;
             } else {
                 const wpa_oui_type1 = "\x00\x50\xF2\x01";
                 if (typ == 221 and ie_buf.len >= 2 + wpa_oui_type1.len) {
                     if (std.mem.eql(u8, ie_buf[2..][0..4], wpa_oui_type1)) {
-                        security.wpa = true;
+                        sec.wpa = true;
                     }
                 }
             }
@@ -235,7 +237,7 @@ pub const Response = struct {
             ie_buf = ie_buf[2 + len ..];
         }
 
-        return security;
+        return .{ res, sec };
     }
 };
 
