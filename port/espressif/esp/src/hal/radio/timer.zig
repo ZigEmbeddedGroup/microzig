@@ -1,13 +1,14 @@
 const std = @import("std");
-const log = std.log.scoped(.radio_timer);
 const Allocator = std.mem.Allocator;
 
+const c = @import("esp-wifi-driver");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+
 const rtos = @import("../rtos.zig");
 const get_time_since_boot = @import("../time.zig").get_time_since_boot;
 
-const c = @import("esp-wifi-driver");
+const log = std.log.scoped(.esp_radio_timer);
 
 pub const CallbackFn = *const fn (?*anyopaque) callconv(.c) void;
 
@@ -79,7 +80,7 @@ pub fn arm(
             tim.deadline = .init_relative(get_time_since_boot(), duration);
             tim.periodic = if (repeat) duration else null;
         } else {
-            std.log.warn("timer not found based on ets_timer", .{});
+            log.warn("timer not found based on ets_timer", .{});
         }
     }
 
@@ -93,7 +94,7 @@ pub fn disarm(ets_timer: *c.ets_timer) void {
     if (find(ets_timer)) |tim| {
         tim.deadline = .no_deadline;
     } else {
-        std.log.warn("timer not found based on ets_timer", .{});
+        log.warn("timer not found based on ets_timer", .{});
     }
 }
 
@@ -105,7 +106,7 @@ pub fn done(gpa: std.mem.Allocator, ets_timer: *c.ets_timer) void {
         timer_list.remove(&tim.node);
         gpa.destroy(tim);
     } else {
-        std.log.warn("timer not found based on ets_timer", .{});
+        log.warn("timer not found based on ets_timer", .{});
     }
 }
 

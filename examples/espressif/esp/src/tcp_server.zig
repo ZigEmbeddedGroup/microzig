@@ -19,6 +19,7 @@ pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .log_scope_levels = &.{
         .{ .scope = .esp_radio, .level = .err },
+        .{ .scope = .esp_radio_timer, .level = .err },
         .{ .scope = .esp_radio_wifi, .level = .err },
         .{ .scope = .esp_radio_osi, .level = .err },
     },
