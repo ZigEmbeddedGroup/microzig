@@ -21522,6 +21522,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
                 .{ .name = "RAM_D3", .tag = .ram, .offset = 0x38000000, .length = 0x4000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32H723.zig"),
+            .imports = hal_imports,
+        },
     };
 
     ret.STM32H723VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -21548,6 +21552,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
                 .{ .name = "RAM_D2", .tag = .ram, .offset = 0x30000000, .length = 0x8000, .access = .rwx },
                 .{ .name = "RAM_D3", .tag = .ram, .offset = 0x38000000, .length = 0x4000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32H723.zig"),
+            .imports = hal_imports,
         },
     };
 
@@ -21576,6 +21584,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
                 .{ .name = "RAM_D3", .tag = .ram, .offset = 0x38000000, .length = 0x4000, .access = .rwx },
             },
         },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32H723.zig"),
+            .imports = hal_imports,
+        },
     };
 
     ret.STM32H723ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -21602,6 +21614,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
                 .{ .name = "RAM_D2", .tag = .ram, .offset = 0x30000000, .length = 0x8000, .access = .rwx },
                 .{ .name = "RAM_D3", .tag = .ram, .offset = 0x38000000, .length = 0x4000, .access = .rwx },
             },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hals/STM32H723.zig"),
+            .imports = hal_imports,
         },
     };
 

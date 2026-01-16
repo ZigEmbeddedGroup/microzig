@@ -12,10 +12,10 @@ pub fn match_name(heystack: []const u8, needles: []const []const u8) bool {
 }
 
 pub fn create_peripheral_enum(comptime bases_name: []const []const u8) type {
-    var names: [70]std.builtin.Type.EnumField = undefined;
+    var names: [80]std.builtin.Type.EnumField = undefined;
     var names_index = 0;
     const peripheral = @typeInfo(peripherals);
-    @setEvalBranchQuota(10_000);
+    @setEvalBranchQuota(20_000);
     switch (peripheral) {
         .@"struct" => |data| {
             for (data.decls) |decls| {
