@@ -32,145 +32,229 @@ pub const ClassSubclassProtocol = extern struct {
         _,
 
         pub fn Subclass(self: @This()) type {
-            const name = "Subclass" ++ @tagName(self);
-            return if (@hasDecl(ClassSubclassProtocol, name))
-                @field(ClassSubclassProtocol, name)
-            else
-                ClassSubclassProtocol.SubclassDefault;
+            return @field(ClassSubclassProtocol.Subclass, @tagName(self));
         }
 
         pub fn Protocol(self: @This()) type {
-            const name = "Protocol" ++ @tagName(self);
-            return if (@hasDecl(ClassSubclassProtocol, name))
-                @field(ClassSubclassProtocol, name)
-            else
-                ClassSubclassProtocol.ProtocolDefault;
+            return @field(ClassSubclassProtocol.Protocol, @tagName(self));
         }
     };
 
-    pub const SubclassDefault = enum(u8) {
-        Unspecified = 0x00,
-        VendorSpecific = 0xFF,
-        _,
+    pub const Subclass = struct {
+        pub const Default = enum(u8) {
+            Unspecified = 0x00,
+            VendorSpecific = 0xFF,
+            _,
+        };
+
+        pub const Unspecified = Default;
+        pub const Audio = Default;
+
+        pub const Cdc = enum(u8) {
+            Unspecified = 0x00,
+            VendorSpecific = 0xFF,
+            /// Direct Line Control Model
+            DirectLine = 0x01,
+            /// Abstract Control Model
+            Abstract = 0x02,
+            /// Telephone Control Model
+            Telephone = 0x03,
+            /// Multi-Channel Control Model
+            MultChannel = 0x04,
+            /// CAPI Control Model
+            CAPI = 0x05,
+            /// Ethernet Networking Control Model
+            Ethernet = 0x06,
+            /// ATM Networking Control Model
+            ATM_Networking = 0x07,
+            /// Wireless Handset Control Model
+            WirelessHeadest = 0x08,
+            /// Device Management
+            DeviceManagement = 0x09,
+            /// Mobile Direct Line Model
+            MobileDirect = 0x0A,
+            /// OBEX
+            OBEX = 0x0B,
+            /// Ethernet Emulation Model
+            EthernetEmulation = 0x0C,
+            /// Network Control Model
+            Network = 0x0D,
+            _,
+        };
+
+        pub const Hid = enum(u8) {
+            Unspecified = 0x00,
+            VendorSpecific = 0xFF,
+            ///
+            Boot = 0x01,
+            _,
+        };
+
+        pub const Physical = Default;
+        pub const Image = Default;
+        pub const Printer = Default;
+
+        pub const MassStorage = enum(u8) {
+            /// SCSI command set not reported. De facto use.
+            Unspecified = 0x00,
+            /// Allocated by USB-IF for RBC. RBC is defined outside of USB.
+            RBC = 0x01,
+            /// Allocated by USB-IF for MMC-5 (ATAPI). MMC-5 is defined outside of USB.
+            MMC_5 = 0x02,
+            /// Obsolete. Was QIC-157
+            QIC_157 = 0x03,
+            /// Specifies how to interface Floppy Disk Drives to USB
+            UFI = 0x04,
+            /// Obsolete. Was SFF-8070i
+            SFF_8070i = 0x05,
+            /// SCSI transparent command set. Allocated by USB-IF for SCSI. SCSI standards are defined outside of USB.
+            SCSI = 0x06,
+            /// LSDFS. specifies how host has to negotiate access before trying SCSI
+            LSD_FS = 0x07,
+            /// Allocated by USB-IF for IEEE 1667. IEEE 1667 is defined outside of USB.
+            IEEE_1667 = 0x08,
+            /// Specific to device vendor. De facto use
+            VendorSpecific = 0xFF,
+            _,
+        };
+
+        pub const Hub = Default;
+
+        pub const CdcData = enum(u8) {
+            Unused = 0,
+            VendorSpecific = 0xFF,
+            _,
+        };
+
+        pub const SmartCard = Default;
+        pub const ContentSecurity = Default;
+        pub const Video = Default;
+        pub const PersonalHealthcare = Default;
+        pub const AudioVideoDevice = Default;
+        pub const BillboardDevice = Default;
+        pub const USBTypeCBridge = Default;
+        pub const USBBulkDisplayProtocol = Default;
+        pub const MCTPoverUSBProtocolEndpoint = Default;
+        pub const I3C = Default;
+        pub const DiagnosticDevice = Default;
+        pub const WirelessController = Default;
+        pub const Miscellaneous = Default;
+        pub const ApplicationSpecific = Default;
+        pub const VendorSpecific = Default;
     };
 
-    pub const ProtocolDefault = enum(u8) {
-        NoneRequired = 0x00,
-        VendorSpecific = 0xFF,
-        _,
-    };
+    pub const Protocol = struct {
+        pub const Default = enum(u8) {
+            NoneRequired = 0x00,
+            VendorSpecific = 0xFF,
+            _,
+        };
 
-    pub const SubclassCdc = enum(u8) {
-        Unspecified = 0x00,
-        VendorSpecific = 0xFF,
-        /// Direct Line Control Model
-        DirectLine = 0x01,
-        /// Abstract Control Model
-        Abstract = 0x02,
-        /// Telephone Control Model
-        Telephone = 0x03,
-        /// Multi-Channel Control Model
-        MultChannel = 0x04,
-        /// CAPI Control Model
-        CAPI = 0x05,
-        /// Ethernet Networking Control Model
-        Ethernet = 0x06,
-        /// ATM Networking Control Model
-        ATM_Networking = 0x07,
-        /// Wireless Handset Control Model
-        WirelessHeadest = 0x08,
-        /// Device Management
-        DeviceManagement = 0x09,
-        /// Mobile Direct Line Model
-        MobileDirect = 0x0A,
-        /// OBEX
-        OBEX = 0x0B,
-        /// Ethernet Emulation Model
-        EthernetEmulation = 0x0C,
-        /// Network Control Model
-        Network = 0x0D,
-        _,
-    };
+        pub const Unspecified = Default;
+        pub const Audio = Default;
 
-    pub const ProtocolCdc = enum(u8) {
-        /// USB specification No class specific protocol required
-        NoneRequired = 0x00,
-        /// ITU-T V.250 AT Commands: V.250 etc
-        AT_ITU_T_V_250 = 0x01,
-        /// PCCA-101 AT Commands defined by PCCA-101
-        AT_PCCA_101 = 0x02,
-        /// PCCA-101 AT Commands defined by PCCA-101 & Annex O
-        AT_PCCA_101_O = 0x03,
-        /// GSM 7.07 AT Commands defined by GSM 07.07
-        AT_GSM_7_07 = 0x04,
-        /// 3GPP 27.07 AT Commands defined by 3GPP 27.007
-        AT_3GPP_27_07 = 0x05,
-        /// C-S0017-0 AT Commands defined by TIA for CDMA
-        AT_C_S0017_0 = 0x06,
-        /// USB EEM Ethernet Emulation module
-        USB_EEM = 0x07,
-        /// External Protocol: Commands defined by Command Set Functional Descriptor
-        External = 0xFE,
-        /// USB Specification Vendor-specific
-        VendorSpecific = 0xFF,
-        _,
-    };
+        pub const Cdc = enum(u8) {
+            /// USB specification No class specific protocol required
+            NoneRequired = 0x00,
+            /// ITU-T V.250 AT Commands: V.250 etc
+            AT_ITU_T_V_250 = 0x01,
+            /// PCCA-101 AT Commands defined by PCCA-101
+            AT_PCCA_101 = 0x02,
+            /// PCCA-101 AT Commands defined by PCCA-101 & Annex O
+            AT_PCCA_101_O = 0x03,
+            /// GSM 7.07 AT Commands defined by GSM 07.07
+            AT_GSM_7_07 = 0x04,
+            /// 3GPP 27.07 AT Commands defined by 3GPP 27.007
+            AT_3GPP_27_07 = 0x05,
+            /// C-S0017-0 AT Commands defined by TIA for CDMA
+            AT_C_S0017_0 = 0x06,
+            /// USB EEM Ethernet Emulation module
+            USB_EEM = 0x07,
+            /// External Protocol: Commands defined by Command Set Functional Descriptor
+            External = 0xFE,
+            /// USB Specification Vendor-specific
+            VendorSpecific = 0xFF,
+            _,
+        };
 
-    pub const SubclassCdcData = enum(u8) {
-        Unused = 0,
-        VendorSpecific = 0xFF,
-        _,
-    };
+        pub const Hid = enum(u8) {
+            NoneRequired = 0x00,
+            VendorSpecific = 0xFF,
+            ///
+            Boot = 0x01,
+            _,
+        };
 
-    pub const ProtocolCdcData = enum(u8) {
-        NoneRequired = 0,
-        VendorSpecific = 0xFF,
-        /// Network Transfer Block
-        NetworkTransferBlock = 0x01,
-        /// Physical interface protocol for ISDN BRI
-        ISDN_BRI = 0x30,
-        /// HDLC
-        HDLC = 0x31,
-        /// Transparent
-        Transparent = 0x32,
-        /// Management protocol for Q.921 data link protocol
-        Management_Q_921 = 0x50,
-        /// Data link protocol for Q.931
-        DataLink_Q_931 = 0x51,
-        /// TEI-multiplexor for Q.921 data link protocol
-        TEI_Multiplexor_Q_921 = 0x52,
-        /// Data compression procedures
-        DataCompressionProcedures = 0x90,
-        /// Euro-ISDN protocol control
-        Euro_ISDN = 0x91,
-        /// V.24 rate adaptation to ISDN
-        RateAdaptation_V_24 = 0x92,
-        /// CAPI Commands
-        CAPI = 0x93,
-        /// Host based driver. Note: This protocol code should only be used
-        /// in messages between host and device to identify the host driver
-        /// portion of a protocol stack.
-        HostBasedDriver = 0xFD,
-        /// CDC Specification The protocol(s) are described using a Protocol
-        /// Unit Functional Descriptors on Communications Class Interface
-        SpecifiedIn_PUF_Descriptor = 0xFE,
-        _,
-    };
+        pub const Physical = Default;
+        pub const Image = Default;
+        pub const Printer = Default;
 
-    pub const SubclassHid = enum(u8) {
-        Unspecified = 0x00,
-        VendorSpecific = 0xFF,
-        ///
-        Boot = 0x01,
-        _,
-    };
+        pub const MassStorage = enum(u8) {
+            /// USB Mass Storage Class Control/Bulk/Interrupt (CBI) Transport with command completion interrupt
+            CBI_with_interrupt = 0x00,
+            /// USB Mass Storage Class Control/Bulk/Interrupt (CBI) Transport with no command completion interrupt
+            CBI_no_interrupt = 0x01,
+            /// USB Mass Storage Class Bulk-Only (BBB) Transport
+            BulkOnly = 0x50,
+            /// Allocated by USB-IF for UAS. UAS is defined outside of USB.
+            UAS = 0x62,
+            /// Specific to device vendor De facto use
+            VendorSpecific = 0xFF,
+            _,
+        };
 
-    pub const ProtocolHid = enum(u8) {
-        NoneRequired = 0x00,
-        VendorSpecific = 0xFF,
-        ///
-        Boot = 0x01,
-        _,
+        pub const Hub = Default;
+
+        pub const CdcData = enum(u8) {
+            NoneRequired = 0,
+            VendorSpecific = 0xFF,
+            /// Network Transfer Block
+            NetworkTransferBlock = 0x01,
+            /// Physical interface protocol for ISDN BRI
+            ISDN_BRI = 0x30,
+            /// HDLC
+            HDLC = 0x31,
+            /// Transparent
+            Transparent = 0x32,
+            /// Management protocol for Q.921 data link protocol
+            Management_Q_921 = 0x50,
+            /// Data link protocol for Q.931
+            DataLink_Q_931 = 0x51,
+            /// TEI-multiplexor for Q.921 data link protocol
+            TEI_Multiplexor_Q_921 = 0x52,
+            /// Data compression procedures
+            DataCompressionProcedures = 0x90,
+            /// Euro-ISDN protocol control
+            Euro_ISDN = 0x91,
+            /// V.24 rate adaptation to ISDN
+            RateAdaptation_V_24 = 0x92,
+            /// CAPI Commands
+            CAPI = 0x93,
+            /// Host based driver. Note: This protocol code should only be used
+            /// in messages between host and device to identify the host driver
+            /// portion of a protocol stack.
+            HostBasedDriver = 0xFD,
+            /// CDC Specification The protocol(s) are described using a Protocol
+            /// Unit Functional Descriptors on Communications Class Interface
+            SpecifiedIn_PUF_Descriptor = 0xFE,
+            _,
+        };
+
+        pub const SmartCard = Default;
+        pub const ContentSecurity = Default;
+        pub const Video = Default;
+        pub const PersonalHealthcare = Default;
+        pub const AudioVideoDevice = Default;
+        pub const BillboardDevice = Default;
+        pub const USBTypeCBridge = Default;
+        pub const USBBulkDisplayProtocol = Default;
+        pub const MCTPoverUSBProtocolEndpoint = Default;
+        pub const I3C = Default;
+        pub const DiagnosticDevice = Default;
+        pub const WirelessController = Default;
+        pub const Miscellaneous = Default;
+        pub const ApplicationSpecific = Default;
+        pub const VendorSpecific = Default;
     };
 
     /// Class code, distinguishing the type of interface.
