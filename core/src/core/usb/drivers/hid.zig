@@ -12,7 +12,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
     return struct {
         pub const Descriptor = extern struct {
             interface: usb.descriptor.Interface,
-            hid: usb.descriptor.hid.Hid,
+            hid: usb.descriptor.hid.HID,
             ep_out: usb.descriptor.Endpoint,
             ep_in: usb.descriptor.Endpoint,
 
@@ -27,7 +27,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
                         .alternate_setting = 0,
                         .num_endpoints = 2,
                         .interface_triple = .from(
-                            .Hid,
+                            .HID,
                             if (options.boot_protocol) .Boot else .Unspecified,
                             if (options.boot_protocol) .Boot else .None,
                         ),
@@ -40,7 +40,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             }
         };
 
-        const hid_descriptor: usb.descriptor.hid.Hid = .{
+        const hid_descriptor: usb.descriptor.hid.HID = .{
             .bcd_hid = .from(0x0111),
             .country_code = .NotSupported,
             .num_descriptors = 1,
@@ -68,10 +68,10 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             _ = self;
             switch (setup.request_type.type) {
                 .Standard => {
-                    const hid_desc_type = std.meta.intToEnum(usb.descriptor.hid.Hid.Type, setup.value.into() >> 8) catch return usb.nak;
+                    const hid_desc_type = std.meta.intToEnum(usb.descriptor.hid.HID.Type, setup.value.into() >> 8) catch return usb.nak;
                     const request_code = std.meta.intToEnum(usb.types.SetupRequest, setup.request) catch return usb.nak;
 
-                    if (request_code == .GetDescriptor and hid_desc_type == .Hid)
+                    if (request_code == .GetDescriptor and hid_desc_type == .HID)
                         return @as([]const u8, @ptrCast(&hid_descriptor))
                     else if (request_code == .GetDescriptor and hid_desc_type == .Report)
                         return @as([]const u8, @ptrCast(&report_descriptor));

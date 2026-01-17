@@ -6,23 +6,23 @@ pub const ClassSubclassProtocol = extern struct {
     pub const ClassCode = enum(u8) {
         Unspecified = 0x00,
         Audio = 0x01,
-        Cdc = 0x02,
-        Hid = 0x03,
+        CDC = 0x02,
+        HID = 0x03,
         Physical = 0x05,
         Image = 0x06,
         Printer = 0x07,
         MassStorage = 0x08,
         Hub = 0x09,
-        CdcData = 0x0A,
+        CDC_Data = 0x0A,
         SmartCard = 0x0B,
         ContentSecurity = 0x0D,
         Video = 0x0E,
         PersonalHealthcare = 0x0F,
         AudioVideoDevice = 0x10,
         BillboardDevice = 0x11,
-        USBTypeCBridge = 0x12,
-        USBBulkDisplayProtocol = 0x13,
-        MCTPoverUSBProtocolEndpoint = 0x14,
+        TypeCBridge = 0x12,
+        BulkDisplayProtocol = 0x13,
+        MCTP_over_USB_ProtocolEndpoint = 0x14,
         I3C = 0x3C,
         DiagnosticDevice = 0xDC,
         WirelessController = 0xE0,
@@ -50,7 +50,7 @@ pub const ClassSubclassProtocol = extern struct {
         pub const Unspecified = Default;
         pub const Audio = Default;
 
-        pub const Cdc = enum(u8) {
+        pub const CDC = enum(u8) {
             Unspecified = 0x00,
             VendorSpecific = 0xFF,
             /// Direct Line Control Model
@@ -82,7 +82,7 @@ pub const ClassSubclassProtocol = extern struct {
             _,
         };
 
-        pub const Hid = enum(u8) {
+        pub const HID = enum(u8) {
             Unspecified = 0x00,
             VendorSpecific = 0xFF,
             ///
@@ -120,7 +120,7 @@ pub const ClassSubclassProtocol = extern struct {
 
         pub const Hub = Default;
 
-        pub const CdcData = enum(u8) {
+        pub const CDC_Data = enum(u8) {
             Unused = 0,
             VendorSpecific = 0xFF,
             _,
@@ -132,9 +132,9 @@ pub const ClassSubclassProtocol = extern struct {
         pub const PersonalHealthcare = Default;
         pub const AudioVideoDevice = Default;
         pub const BillboardDevice = Default;
-        pub const USBTypeCBridge = Default;
-        pub const USBBulkDisplayProtocol = Default;
-        pub const MCTPoverUSBProtocolEndpoint = Default;
+        pub const TypeCBridge = Default;
+        pub const BulkDisplayProtocol = Default;
+        pub const MCTP_over_USB_ProtocolEndpoint = Default;
         pub const I3C = Default;
         pub const DiagnosticDevice = Default;
         pub const WirelessController = Default;
@@ -153,7 +153,7 @@ pub const ClassSubclassProtocol = extern struct {
         pub const Unspecified = Default;
         pub const Audio = Default;
 
-        pub const Cdc = enum(u8) {
+        pub const CDC = enum(u8) {
             /// USB specification No class specific protocol required
             NoneRequired = 0x00,
             /// ITU-T V.250 AT Commands: V.250 etc
@@ -177,7 +177,7 @@ pub const ClassSubclassProtocol = extern struct {
             _,
         };
 
-        pub const Hid = enum(u8) {
+        pub const HID = enum(u8) {
             NoneRequired = 0x00,
             VendorSpecific = 0xFF,
             ///
@@ -205,7 +205,7 @@ pub const ClassSubclassProtocol = extern struct {
 
         pub const Hub = Default;
 
-        pub const CdcData = enum(u8) {
+        pub const CDC_Data = enum(u8) {
             NoneRequired = 0,
             VendorSpecific = 0xFF,
             /// Network Transfer Block
@@ -246,9 +246,9 @@ pub const ClassSubclassProtocol = extern struct {
         pub const PersonalHealthcare = Default;
         pub const AudioVideoDevice = Default;
         pub const BillboardDevice = Default;
-        pub const USBTypeCBridge = Default;
-        pub const USBBulkDisplayProtocol = Default;
-        pub const MCTPoverUSBProtocolEndpoint = Default;
+        pub const TypeCBridge = Default;
+        pub const BulkDisplayProtocol = Default;
+        pub const MCTP_over_USB_ProtocolEndpoint = Default;
         pub const I3C = Default;
         pub const DiagnosticDevice = Default;
         pub const WirelessController = Default;

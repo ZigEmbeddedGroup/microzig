@@ -14,7 +14,7 @@ pub const RequestType = enum(u8) {
 };
 
 /// USB HID descriptor
-pub const Hid = extern struct {
+pub const HID = extern struct {
     /// HID country codes
     pub const CountryCode = enum(u8) {
         NotSupported = 0,
@@ -56,7 +56,7 @@ pub const Hid = extern struct {
     };
 
     pub const Type = enum(u8) {
-        Hid = 0x21,
+        HID = 0x21,
         Report = 0x22,
         Physical = 0x23,
     };

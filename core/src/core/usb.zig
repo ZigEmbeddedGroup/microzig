@@ -161,7 +161,7 @@ pub fn DeviceController(config: Config) type {
                         descriptor.cdc.CallManagement,
                         descriptor.cdc.AbstractControlModel,
                         descriptor.cdc.Union,
-                        descriptor.hid.Hid,
+                        descriptor.hid.HID,
                         => {},
                         else => @compileLog(fld),
                     }
