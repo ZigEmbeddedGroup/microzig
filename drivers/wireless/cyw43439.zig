@@ -64,10 +64,11 @@ pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
 
 pub fn send_zc(ptr: *anyopaque, bytes: []u8) Link.Error!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
-    self.wifi.send_zc(bytes) catch |err| switch (err) {
-        error.OutOfMemory => return error.OutOfMemory,
-        error.LinkDown => return error.LinkDown,
-        else => return error.InternalError,
+    if (self.wifi.join_state != .joined) return error.LinkDown;
+    if (!self.wifi.has_credit()) return error.OutOfMemory;
+    self.wifi.send_zc(bytes) catch |err| {
+        log.err("cyw43 send {}", .{err});
+        return error.InternalError;
     };
 }
 
