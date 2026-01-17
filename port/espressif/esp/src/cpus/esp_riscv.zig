@@ -89,7 +89,6 @@ pub const interrupt = struct {
         fence();
     }
 
-
     const INTERRUPT_CORE0 = microzig.chip.peripherals.INTERRUPT_CORE0;
 
     pub fn is_enabled(int: Interrupt) bool {

@@ -27,8 +27,9 @@ const systimer = @import("systimer.zig");
 // minimum stack size available at all times.
 
 // TODO: stack overflow detection
-// TODO: question: should idle do more stuff (like task garbage collection)?
-// TODO: implement task garbage collection and recycling
+// TODO: task joining and deletion
+//       - the idea is that tasks must return before they can be freed
+// TODO: direct task signaling
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
 // TODO: better handling if timeout is in the past or very short
@@ -129,8 +130,9 @@ pub fn init() void {
 // TODO: deinit
 
 fn idle() linksection(".ram_text") callconv(.naked) void {
+    // interrupts are initially disabled in new tasks
     asm volatile (
-        \\csrsi mstatus, 8  # make sure interrupts are enabled
+        \\csrsi mstatus, 8
         \\1:
         \\wfi
         \\j 1b
@@ -160,7 +162,7 @@ pub fn spawn(
 
     const TypeErased = struct {
         fn call() callconv(.c) void {
-            // interrupts are initially disabled in newly created tasks
+            // interrupts are initially disabled in new tasks
             microzig.cpu.interrupt.enable_interrupts();
 
             const context_ptr: *const Args =
