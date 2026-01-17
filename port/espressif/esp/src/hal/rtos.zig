@@ -127,9 +127,6 @@ pub fn init() void {
 // TODO: deinit
 
 fn idle() linksection(".ram_text") callconv(.naked) void {
-    // TODO: cpu would hang after a while. Enabling interrupts before wfi
-    // appears to have solved the problem but the root cause is still a
-    // mistery.
     asm volatile (
         \\csrsi mstatus, 8  # make sure interrupts are enabled
         \\1:
@@ -137,31 +134,6 @@ fn idle() linksection(".ram_text") callconv(.naked) void {
         \\j 1b
     );
 }
-
-// fn idle() linksection(".ram_text") callconv(.c) void {
-//     microzig.cpu.interrupt.enable_interrupts();
-//
-//     while (true) {
-//         {
-//             const cs = microzig.interrupt.enter_critical_section();
-//             defer cs.leave();
-//
-//             std.log.info("idle with interrupts enabled = {}", .{cs.enable_on_leave});
-//         }
-//
-//         microzig.cpu.wfi();
-//     }
-//
-//     // TODO: cpu would hang after a while. Enabling interrupts before wfi
-//     // appears to have solved the problem but the root cause is still a
-//     // mistery.
-//     asm volatile (
-//         \\csrsi mstatus, 8  # make sure interrupts are enabled
-//         \\1:
-//         \\wfi
-//         \\j 1b
-//     );
-// }
 
 pub fn get_current_task() *Task {
     return rtos_state.current_task;
