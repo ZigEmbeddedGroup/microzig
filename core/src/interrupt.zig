@@ -122,9 +122,10 @@ pub const CriticalSectionMutex = struct {
 
     /// Unlocks the mutex.
     pub fn unlock(self: *CriticalSectionMutex) void {
-        if (self.critical_section) |cs| {
+        const maybe_cs = self.critical_section;
+        self.critical_section = null;
+        if (maybe_cs) |cs| {
             cs.leave();
-            self.critical_section = null;
         }
     }
 };

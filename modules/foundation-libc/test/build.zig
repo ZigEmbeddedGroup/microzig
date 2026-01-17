@@ -172,7 +172,7 @@ const validation_target_list = [_]std.Target.Query{
     .{ .cpu_arch = .wasm64, .os_tag = .freestanding },
 
     // nice to have, but broken:
-    //.{ .cpu_arch = .avr, .os_tag = .freestanding },
+    // .{ .cpu_arch = .avr, .os_tag = .freestanding },
     // .{ .cpu_arch = .msp430, .os_tag = .freestanding }, // error: unknown target CPU 'generic'
     // .{ .cpu_arch = .m68k, .os_tag = .freestanding },
     // .{ .cpu_arch = .xtensa, .os_tag = .freestanding },

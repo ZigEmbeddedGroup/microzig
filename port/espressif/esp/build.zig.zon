@@ -6,6 +6,10 @@
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
         .@"microzig/tools/esp-image" = .{ .path = "../../../tools/esp-image" },
+        .@"esp-wifi-sys" = .{
+            .url = "git+https://github.com/esp-rs/esp-wifi-sys#7623c8d746b55cd8d9f7473359069aef381b7d3b",
+            .hash = "N-V-__8AANWs5wTMnVsq2oG-zKWSf91LJ6q8Vv6EUD6xNbKJ",
+        },
     },
     .paths = .{
         "README.md",

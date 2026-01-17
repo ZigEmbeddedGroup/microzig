@@ -1,0 +1,37 @@
+#ifndef LWIP_LWIPOPTS_H
+#define LWIP_LWIPOPTS_H
+
+#define NO_SYS                  0
+#define SYS_LIGHTWEIGHT_PROT    1
+
+#define LWIP_TCPIP_CORE_LOCKING 1
+#define LWIP_TCPIP_CORE_LOCKING_INPUT 1
+
+#define LWIP_IPV4 1
+#define LWIP_IPV6 1
+#define LWIP_UDP 1
+#define LWIP_TCP 1
+#define LWIP_DHCP 1
+#define LWIP_IGMP LWIP_IPV4
+#define LWIP_ICMP LWIP_IPV4
+#define LWIP_DNS LWIP_UDP
+#define LWIP_MDNS_RESPONDER LWIP_UDP
+
+#define MEM_LIBC_MALLOC         1
+#define MEMP_MEM_MALLOC         1
+#define MEM_ALIGNMENT           4
+
+#define TCPIP_THREAD_NAME       "lwip_tcpip"
+// #define TCPIP_THREAD_STACKSIZE  1024
+// #define TCPIP_THREAD_PRIO       3
+
+#define TCPIP_MBOX_SIZE           16
+#define DEFAULT_RAW_RECVMBOX_SIZE 16
+#define DEFAULT_UDP_RECVMBOX_SIZE 16
+#define DEFAULT_TCP_RECVMBOX_SIZE 16
+#define DEFAULT_ACCEPTMBOX_SIZE   16
+
+#define LWIP_NETIF_API 1
+#define LWIP_NETIF_STATUS_CALLBACK 1
+
+#endif

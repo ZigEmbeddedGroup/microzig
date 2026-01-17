@@ -1,18 +1,20 @@
 const std = @import("std");
-const microzig = @import("microzig");
 
 pub const esp_image = @import("esp_image");
+const microzig = @import("microzig");
 
 pub const cache = @import("hal/cache.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const drivers = @import("hal/drivers.zig");
-pub const gpio = @import("hal/gpio.zig");
 pub const efuse = @import("hal/efuse.zig");
+pub const gpio = @import("hal/gpio.zig");
 pub const i2c = @import("hal/i2c.zig");
 pub const ledc = @import("hal/ledc.zig");
+pub const radio = @import("hal/radio.zig");
 pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
+pub const rtos = @import("hal/rtos.zig");
 pub const spi = @import("hal/spi.zig");
 pub const system = @import("hal/system.zig");
 pub const systimer = @import("hal/systimer.zig");
@@ -23,8 +25,6 @@ pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 comptime {
     // export atomic intrinsics
     _ = @import("hal/atomic.zig");
-
-    _ = esp_app_desc;
 }
 
 pub const HAL_Options = struct {
@@ -33,6 +33,8 @@ pub const HAL_Options = struct {
         secure_version: u32 = 0,
         version: []const u8 = "0.0.0",
     } = .{},
+    rtos: rtos.Options = .{},
+    radio: radio.Options = .{},
 };
 
 /// Clock config applied by the default `init()` function of the hal.
@@ -55,6 +57,9 @@ pub fn init_sequence(clock_cfg: clocks.Config) void {
     system.init();
 
     time.init();
+
+    if (microzig.options.hal.rtos.enable)
+        rtos.init();
 }
 
 // NOTE: might be esp32c3 specific only + temporary until timers hal.
