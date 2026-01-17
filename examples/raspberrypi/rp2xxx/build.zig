@@ -96,6 +96,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },
         .{ .name = "net-pong", .file = "src/net/pong.zig" },
+        .{ .name = "net-scan", .file = "src/net/scan.zig" },
         .{ .name = "net-udp", .file = "src/net/udp.zig" },
         .{ .name = "net-tcp_client", .file = "src/net/tcp_client.zig" },
         .{ .name = "net-tcp_server", .file = "src/net/tcp_server.zig" },
