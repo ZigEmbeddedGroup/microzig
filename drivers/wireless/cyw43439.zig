@@ -6,6 +6,7 @@ const Link = @import("link");
 const Bus = @import("cyw43439/bus.zig");
 const WiFi = @import("cyw43439/wifi.zig");
 pub const JoinOptions = WiFi.JoinOptions;
+pub const InitOptions = WiFi.InitOptions;
 
 const log = std.log.scoped(.cyw43);
 
@@ -19,63 +20,41 @@ pub fn init(
     self: *Self,
     spi: Bus.Spi,
     sleep_ms: *const fn (delay: u32) void,
+    opt: InitOptions,
 ) !void {
     self.bus = .{ .spi = spi, .sleep_ms = sleep_ms };
     try self.bus.init();
 
     self.wifi = .{ .bus = &self.bus };
-    try self.wifi.init();
+    try self.wifi.init(opt);
 
-    self.mac = try self.read_mac();
+    self.mac = try self.wifi.read_mac();
 }
 
-pub fn joined(self: *Self) bool {
-    return self.wifi.join_state == .joined;
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !WiFi.JoinPoller {
+    return try self.wifi.join(ssid, pwd, opt);
+}
+
+/// Blocking wifi network join
+pub fn join_wait(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
+    var poller = try self.join(ssid, pwd, opt);
+    try poller.wait(opt.wait_ms);
 }
 
 pub fn join_state(self: *Self) WiFi.JoinState {
     return self.wifi.join_state;
 }
 
-pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
-    try self.wifi.join(ssid, pwd, opt);
+pub fn is_joined(self: *Self) bool {
+    return self.wifi.join_state == .joined;
 }
 
-pub fn poll(self: *Self) !void {
-    try self.wifi.poll();
-}
-
-pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !WiFi.JoinPoller {
-    return try self.wifi.join_poller(ssid, pwd, opt);
-}
-
-pub fn scan_poller(self: *Self) !WiFi.ScanPoller {
-    return try self.wifi.scan_poller();
+pub fn scan(self: *Self) !WiFi.ScanPoller {
+    return try self.wifi.scan();
 }
 
 pub fn scan_result(self: *Self) ?WiFi.ScanResult {
     return self.wifi.scan_result;
-}
-
-fn show_clm_ver(self: *Self) !void {
-    var data: [128]u8 = @splat(0);
-    const n = try self.wifi.get_var("clmver", &data);
-    var iter = mem.splitScalar(u8, data[0..n], 0x0a);
-    log.debug("clmver:", .{});
-    while (iter.next()) |line| {
-        if (line.len == 0 or line[0] == 0x00) continue;
-        log.debug("  {s}", .{line});
-    }
-}
-
-fn read_mac(self: *Self) ![6]u8 {
-    var mac: [6]u8 = @splat(0);
-    const n = try self.wifi.get_var("cur_etheraddr", &mac);
-    if (n != mac.len) {
-        log.err("read_mac unexpected read bytes: {}", .{n});
-        return error.ReadMacFailed;
-    }
-    return mac;
 }
 
 pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {

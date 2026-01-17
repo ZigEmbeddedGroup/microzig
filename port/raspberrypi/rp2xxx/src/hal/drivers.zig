@@ -515,13 +515,13 @@ pub const WiFi = struct {
     pub const ready = Chip.ready;
 
     const Spi = @import("cyw43439_pio_spi.zig");
-    pub const Config = Spi.Config;
+    pub const Options = Chip.InitOptions;
 
     spi: Spi = undefined,
     chip: Chip = .{}, // cyw43 chip interface
 
-    pub fn init(self: *Self, config: Config) !*Chip {
-        self.spi = try Spi.init(config);
+    pub fn init(self: *Self, opt: Options) !*Chip {
+        self.spi = try Spi.init(.{});
         try self.chip.init(
             .{
                 .ptr = &self.spi,
@@ -531,6 +531,7 @@ pub const WiFi = struct {
                 },
             },
             hal.time.sleep_ms,
+            opt,
         );
         return &self.chip;
     }

@@ -13,15 +13,28 @@ bus: *Bus,
 request_id: u16 = 0,
 credit: u8 = 0,
 tx_sequence: u8 = 0,
-status: ?Status = null,
+bus_status: ?BusStatus = null,
 log_state: LogState = .{},
-events: Events = .{},
+
+event_log: EventLog = .{},
+join_state: JoinState = .none,
+scan_state: ScanState = .none,
 scan_result: ?ScanResult = null,
-join_state: JoinState = .initial,
 
 const ioctl_request_bytes_len = 1024;
 
-pub fn init(self: *Self) !void {
+pub const InitOptions = struct {
+    country: Country = .{},
+
+    // List of available countries:
+    // https://github.com/georgerobotics/cyw43-driver/blob/13004039ffe127519f33824bf7d240e1f23fbdcd/src/cyw43_country.h#L59
+    pub const Country = struct {
+        code: [2]u8 = "XX".*, // Worldwide
+        revision: i32 = -1,
+    };
+};
+
+pub fn init(self: *Self, opt: InitOptions) !void {
     const bus = self.bus;
 
     { // Init ALP (Active Low Power) clock
@@ -88,7 +101,7 @@ pub fn init(self: *Self) !void {
 
     // Waiting for F2 to be ready...
     while (true) {
-        const status: Status = @bitCast(bus.read_int(u32, .bus, Bus.reg.status));
+        const status: BusStatus = @bitCast(bus.read_int(u32, .bus, Bus.reg.status));
         if (status.f2_rx_ready) break;
     }
 
@@ -142,9 +155,6 @@ pub fn init(self: *Self) !void {
     { // cyw43_ll_wifi_on
 
         { // Set country
-            // TODO: move to arguments
-            const opt: JoinOptions = .{};
-
             const code = opt.country.code;
             var val = extern struct {
                 abbrev: [4]u8,
@@ -189,7 +199,6 @@ pub fn init(self: *Self) !void {
             .psk_sup,
             .disassoc_ind,
             .disassoc,
-            .deauth,
             .deauth_ind,
             .escan_result,
         });
@@ -352,7 +361,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
 
 pub const JoinOptions = struct {
     security: Security = .wpa2_psk,
-    country: Country = .{},
+    wait_ms: u32 = 30 * 1000,
 
     pub const Security = enum {
         open,
@@ -360,21 +369,9 @@ pub const JoinOptions = struct {
         wpa2_psk,
         wpa3_sae,
     };
-
-    // https://github.com/georgerobotics/cyw43-driver/blob/13004039ffe127519f33824bf7d240e1f23fbdcd/src/cyw43_country.h#L59
-    pub const Country = struct {
-        code: [2]u8 = "XX".*, // Worldwide
-        revision: i32 = -1,
-    };
 };
 
-/// Blocking wifi network join
-pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !void {
-    var jp = try self.join_poller(ssid, pwd, opt);
-    try jp.wait(30 * 1000);
-}
-
-pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !JoinPoller {
+pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !JoinPoller {
     var buf: [64]u8 = @splat(0); // space for 10 addresses
     // Enable multicast
     {
@@ -432,7 +429,7 @@ pub fn join_poller(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOpti
     try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
 
     if (opt.security == .open) {
-        self.events.psk_sup = .success;
+        self.event_log.psk_sup = .success;
     }
 
     self.join_state = .joining;
@@ -446,7 +443,7 @@ pub fn connected(self: Self) bool {
 pub const JoinPoller = struct {
     parent: *Self,
 
-    // TODO: describe
+    // Typical events flow:
     //
     // Join to open network events:
     //   [1.824251] type: .auth,     status: .success
@@ -454,6 +451,7 @@ pub const JoinPoller = struct {
     //   [1.876234] type: .link,     status: .success
     //   [1.893244] type: .join,     status: .success
     //   [1.910249] type: .set_ssid, status: .success
+    //
     // Join to wpa2 network events:
     //   [4.039611] type: .auth,     status: .success
     //   [4.073556] type: .assoc,    status: .success
@@ -461,39 +459,39 @@ pub const JoinPoller = struct {
     //   [4.106842] type: .psk_sup,  status: .unsolicited
     //   [4.124026] type: .join,     status: .success
     //   [4.140596] type: .set_ssid, status: .success
-
+    //
     // On disconnect:
     //   [10.410040] type: .deauth_ind, status: .success
     //   [11.456022] type: .auth,       status: .fail
     //   [20.875620] type: .link,       status: .success
-    // On reconnect
+    //
+    // On reconnect:
     //   [39.896166] type: .auth,    status: .success
     //   [39.910309] type: .reassoc, status: .success
     //   [39.917245] type: .link,    status: .success
     //   [40.202375] type: .join,    status: .success
     //
-    // wrong pwd events
-    // [3.759191] debug (cyw43_wifi): poll event type: .auth, status: .success
-    // [3.785954] debug (cyw43_wifi): poll event type: .assoc, status: .success
-    // [3.802674] debug (cyw43_wifi): poll event type: .link, status: .success
-    // [3.829335] debug (cyw43_wifi): poll event type: .join, status: .success
-    // [3.845951] debug (cyw43_wifi): poll event type: .set_ssid, status: .success
-    // [6.276576] debug (cyw43_wifi): poll event type: .psk_sup, status: .partial
-    // [6.283378] error: panic: main() returned error.Cyw43WpaHandshake
+    // Joining with wrong password:
+    //   [3.759191] type: .auth,     status: .success
+    //   [3.785954] type: .assoc,    status: .success
+    //   [3.802674] type: .link,     status: .success
+    //   [3.829335] type: .join,     status: .success
+    //   [3.845951] type: .set_ssid, status: .success
+    //   [6.276576] type: .psk_sup,  status: .partial
+    //   [6.283378] error: error.Cyw43WpaHandshake
     //
-    // wrong ssid
-    // [1.555841] debug (cyw43_wifi): poll event type: .set_ssid, status: .no_networks
-    // [1.563185] error: panic: main() returned error.Cyw43SetSsid
+    // Wrong network ssid
+    // [1.555841] type: .set_ssid, status: .no_networks
+    // [1.563185] error: error.Cyw43SetSsid
     //
-    // wrong security open/wpa_psk/wpa3_sae instad of wpa2_psk
-    // [1.525449] debug (cyw43_wifi): poll event type: .set_ssid, status: .fail
-    // [1.532186] error: panic: main() returned error.Cyw43SetSsid
-
+    // Wrong security open/wpa_psk/wpa3_sae instad of wpa2_psk
+    // [1.525449] type: .set_ssid, status: .fail
+    // [1.532186] error: error.Cyw43SetSsid
+    //
     pub fn poll(jp: *JoinPoller) !bool {
-        const events = &jp.parent.events;
         if (jp.parent.join_state == .joining) {
             try jp.parent.poll();
-            try events.err();
+            try jp.parent.event_log.err();
         }
         return jp.parent.join_state == .joining;
     }
@@ -520,43 +518,45 @@ pub fn poll(self: *Self) !void {
 
 fn handle_event(self: *Self, rsp: ioctl.Response) void {
     const evt = (rsp.event() orelse return).msg;
-    const events = &self.events;
-    const state = Events.State.from;
-    // log.debug(
-    //     "handle event type: {}, status: {} ",
-    //     .{ evt.event_type, evt.status },
-    // );
+    const event_log = &self.event_log;
+    const state = EventLog.EventState.from;
+    const debug_log = false;
+    if (debug_log)
+        log.debug(
+            "handle event type: {}, status: {} ",
+            .{ evt.event_type, evt.status },
+        );
     switch (evt.event_type) {
         .link => {
-            events.link = state(evt.status == .success and evt.flags & 1 > 0);
+            event_log.link = state(evt.status == .success and evt.flags & 1 > 0);
         },
         .psk_sup => {
-            events.psk_sup =
+            event_log.psk_sup =
                 state(evt.status == .success or evt.status == .unsolicited);
         },
         .assoc, .reassoc => {
-            events.assoc = state(evt.status == .success);
+            event_log.assoc = state(evt.status == .success);
         },
         .disassoc_ind, .disassoc => {
-            events.assoc = .fail;
+            event_log.assoc = .fail;
         },
         .auth => {
-            events.auth = state(evt.status == .success);
+            event_log.auth = state(evt.status == .success);
         },
-        .deauth_ind, .deauth => {
-            events.auth = .fail;
+        .deauth_ind => {
+            event_log.auth = .fail;
         },
         .set_ssid => {
-            events.set_ssid = state(evt.status == .success);
+            event_log.set_ssid = state(evt.status == .success);
         },
         .join => {
-            events.join = state(evt.status == .success);
+            event_log.join = state(evt.status == .success);
         },
         .escan_result => {
             self.scan_result = null;
-            events.scan = switch (evt.status) {
-                .success => .success,
-                .partial => .running,
+            self.scan_state = switch (evt.status) {
+                .success, .newassoc, .ccxfastrm => .success,
+                .partial, .newscan => .running,
                 else => .fail,
             };
             if (evt.status == .partial) {
@@ -572,11 +572,11 @@ fn handle_event(self: *Self, rsp: ioctl.Response) void {
             return;
         },
     }
-    const new_state = events.join_state();
-    // if (new_state != self.join_state) {
-    //     log.debug("state changed old: {}, new: {}", .{ self.join_state, new_state });
-    //     log.debug("events: {}", .{self.events});
-    // }
+    const new_state = event_log.join_state();
+    if (debug_log and new_state != self.join_state) {
+        log.debug("state changed old: {}, new: {}", .{ self.join_state, new_state });
+        log.debug("event log: {}", .{self.event_log});
+    }
     self.join_state = new_state;
 }
 
@@ -619,12 +619,12 @@ const ScanParams = extern struct {
 };
 
 /// Init scan and return poller
-pub fn scan_poller(self: *Self) !ScanPoller {
+pub fn scan(self: *Self) !ScanPoller {
     // Params can be used to choose active/passive scan type or to set specific
     // ssid to scan for.
     var params: ScanParams = .{};
     try self.set_var("escan", mem.asBytes(&params));
-    self.events.scan = .running;
+    self.scan_state = .running;
 
     return .{
         .parent = self,
@@ -645,10 +645,10 @@ pub const ScanPoller = struct {
     ///   while (try scan.poll()) {
     ///     if (scan.result()) |res| { ...
     pub fn poll(sp: *ScanPoller) !bool {
-        if (sp.status() == .running) {
+        if (sp.parent.scan_state == .running) {
             try sp.parent.poll();
         }
-        return sp.status() == .running;
+        return sp.parent.scan_state == .running;
     }
 
     pub fn result(sp: *ScanPoller) ?ScanResult {
@@ -665,14 +665,13 @@ pub const ScanPoller = struct {
         return res;
     }
 
-    pub fn status(sp: ScanPoller) Events.State {
-        return sp.parent.events.scan;
+    pub fn state(sp: ScanPoller) ScanState {
+        return sp.parent.scan_state;
     }
 };
 
 // show unexpected command response
-fn log_response(self: *Self, rsp: ioctl.Response) void {
-    _ = self;
+fn log_response(self: Self, rsp: ioctl.Response) void {
     switch (rsp.sdp.channel()) {
         .event => {
             const evt = (rsp.event() orelse return).msg;
@@ -690,6 +689,7 @@ fn log_response(self: *Self, rsp: ioctl.Response) void {
             log.err("  data: {x}", .{rsp.data()});
         },
         .data => {
+            if (self.join_state == .joining) return;
             log.err("unexpected data:", .{});
             log.err("  bus: {}", .{rsp.sdp});
             log.err("  bdc: {}", .{rsp.bdc()});
@@ -698,7 +698,7 @@ fn log_response(self: *Self, rsp: ioctl.Response) void {
     }
 }
 
-fn sleep_ms(self: *Self, delay: u32) void {
+fn sleep_ms(self: Self, delay: u32) void {
     self.bus.sleep_ms(delay);
 }
 
@@ -760,16 +760,16 @@ pub fn has_credit(self: *Self) bool {
 // Read packet from the wifi chip. Assuming that this is used in the loop
 // until it returns null. That way we can cache status from previous read.
 fn read(self: *Self, buffer: []u8) !?ioctl.Response {
-    if (self.status == null) self.read_status();
-    const status = self.status.?;
-    self.status = null;
+    if (self.bus_status == null) self.read_bus_status();
+    const status = self.bus_status.?;
+    self.bus_status = null;
     if (status.f2_packet_available and status.packet_length > 0) {
         const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
         const words = as_words(buffer, words_len);
 
         self.bus.read(.wlan, 0, status.packet_length, words);
         // last word is status
-        self.status = @bitCast(words[words.len - 1]);
+        self.bus_status = @bitCast(words[words.len - 1]);
         // parse response
         const rsp = try ioctl.response(mem.sliceAsBytes(words)[0..status.packet_length]);
         // update credit
@@ -786,8 +786,8 @@ fn as_words(bytes: []u8, len: usize) []u32 {
     return words;
 }
 
-fn read_status(self: *Self) void {
-    self.status = @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
+fn read_bus_status(self: *Self) void {
+    self.bus_status = @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
 }
 
 pub fn gpio_enable(self: *Self, pin: u2) void {
@@ -814,8 +814,29 @@ pub fn gpio_out(self: *Self, pin: u2, on: bool) !void {
     try self.set_var("gpioout", &data);
 }
 
+fn show_clm_ver(self: *Self) !void {
+    var data: [128]u8 = @splat(0);
+    const n = try self.get_var("clmver", &data);
+    var iter = mem.splitScalar(u8, data[0..n], 0x0a);
+    log.debug("clmver:", .{});
+    while (iter.next()) |line| {
+        if (line.len == 0 or line[0] == 0x00) continue;
+        log.debug("  {s}", .{line});
+    }
+}
+
+pub fn read_mac(self: *Self) ![6]u8 {
+    var mac: [6]u8 = @splat(0);
+    const n = try self.get_var("cur_etheraddr", &mac);
+    if (n != mac.len) {
+        log.err("read_mac unexpected read bytes: {}", .{n});
+        return error.ReadMacFailed;
+    }
+    return mac;
+}
+
 // ref: datasheet 'Table 5. gSPI Status Field Details'
-const Status = packed struct {
+const BusStatus = packed struct {
     data_not_available: bool, //  The requested read data is not available.
     underflow: bool, //           FIFO underflow occurred due to current (F2, F3) read command.
     overflow: bool, //            FIFO overflow occurred due to current (F1, F2, F3) write command.
@@ -836,59 +857,71 @@ pub const ScanResult = struct {
     ssid_buf: [32]u8 = @splat(0),
 };
 
-const Events = packed struct {
-    pub const State = enum(u2) {
+pub const ScanState = enum {
+    none,
+    running,
+    success,
+    fail,
+};
+
+// Log of the join events
+const EventLog = packed struct {
+    pub const EventState = enum(u2) {
         none = 0b00,
         success = 0b01,
         fail = 0b10,
-        running = 0b11,
 
-        fn from(ok: bool) Events.State {
+        fn from(ok: bool) EventState {
             return if (ok) .success else .fail;
         }
     };
 
     // essential join events
-    auth: Events.State = .none,
-    link: Events.State = .none,
-    psk_sup: Events.State = .none,
-    set_ssid: Events.State = .none,
+    auth: EventState = .none,
+    link: EventState = .none,
+    psk_sup: EventState = .none,
+    set_ssid: EventState = .none,
     // other join events
-    assoc: Events.State = .none,
-    join: Events.State = .none,
-    // scan event
-    scan: Events.State = .none,
+    assoc: EventState = .none,
+    join: EventState = .none,
 
-    pub fn err(e: Events) !void {
+    pub fn err(e: EventLog) !void {
         if (e.auth == .fail) return error.Cyw43Authentication;
         if (e.link == .fail) return error.Cyw43LinkDown;
         if (e.psk_sup == .fail) return error.Cyw43WpaHandshake;
         if (e.set_ssid == .fail) return error.Cyw43SetSsid;
     }
 
-    pub fn join_state(e: Events) JoinState {
-        var i: u14 = @bitCast(e);
-        i &= 0b00_00_00_11_11_11_11; // filter essential join events
+    pub fn join_state(e: EventLog) JoinState {
+        var i: u12 = @bitCast(e);
+        i &= 0b00_00_11_11_11_11; // filter essential join events
         const fail_mask = 0b10_10_10_10;
         const succ_mask = 0b01_01_01_01;
-        if (i == 0) return .initial;
+        if (i == 0) return .none;
         if (i & fail_mask > 0) return .disjoined; // any failed
         if (i & succ_mask == succ_mask) return .joined; // all success
         return .joining;
     }
 };
 
+pub const JoinState = enum {
+    none,
+    joining,
+    joined,
+    disjoined,
+};
+
 const testing = std.testing;
 
 test "events to join_state" {
-    var e: Events = .{};
-    try testing.expectEqual(.initial, e.join_state());
+    var e: EventLog = .{};
+    try testing.expectEqual(.none, e.join_state());
     e.auth = .success;
     try testing.expectEqual(.joining, e.join_state());
     e.link = .success;
     e.psk_sup = .success;
     try testing.expectEqual(.joining, e.join_state());
-    try testing.expectEqual(0b00_01_01_01, @as(u14, @bitCast(e)));
+    try testing.expectEqual(0b00_01_01_01, @as(u12, @bitCast(e)));
     e.set_ssid = .success;
     try testing.expectEqual(.joined, e.join_state());
     e.auth = .fail;
@@ -898,13 +931,6 @@ test "events to join_state" {
     e.auth = .success;
     try testing.expectEqual(.joined, e.join_state());
 }
-
-pub const JoinState = enum {
-    initial,
-    joining,
-    joined,
-    disjoined,
-};
 
 // CYW43439 chip values
 const chip = struct {
