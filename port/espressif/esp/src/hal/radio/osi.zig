@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const builtin = @import("builtin");
 
 const c = @import("esp-wifi-driver");
@@ -345,16 +346,75 @@ pub fn wifi_thread_semphr_get() callconv(.c) ?*anyopaque {
     return &rtos.get_current_task().semaphore;
 }
 
+const RecursiveMutex = struct {
+    recursive: bool,
+    value: u32 = 0,
+    owning_task: ?*rtos.Task = null,
+    prev_priority: ?rtos.Priority = null,
+    wait_queue: rtos.PriorityWaitQueue = .{},
+
+    pub fn lock(mutex: *RecursiveMutex) void {
+        const cs = enter_critical_section();
+        defer cs.leave();
+
+        const current_task = rtos.get_current_task();
+
+        if (mutex.owning_task == current_task) {
+            assert(mutex.recursive);
+            mutex.value += 1;
+            return;
+        }
+
+        while (mutex.owning_task) |owning_task| {
+            // Owning task inherits the priority of the current task if it the
+            // current task has a bigger priority.
+            if (@intFromEnum(current_task.priority) > @intFromEnum(owning_task.priority)) {
+                mutex.prev_priority = owning_task.priority;
+                owning_task.priority = current_task.priority;
+                rtos.make_ready(owning_task);
+            }
+
+            mutex.wait_queue.wait(current_task, null);
+        }
+
+        assert(mutex.value == 0);
+        mutex.value += 1;
+        mutex.owning_task = current_task;
+    }
+
+    pub fn unlock(mutex: *RecursiveMutex) bool {
+        const cs = enter_critical_section();
+        defer cs.leave();
+
+        assert(mutex.owning_task == rtos.get_current_task());
+
+        assert(mutex.value > 0);
+        mutex.value -= 1;
+        if (mutex.value <= 0) {
+            const owning_task = mutex.owning_task.?;
+
+            // Restore the priority of the task
+            if (mutex.prev_priority) |prev_priority| {
+                owning_task.priority = prev_priority;
+                mutex.prev_priority = null;
+            }
+            mutex.owning_task = null;
+            mutex.wait_queue.wake_one();
+            return true;
+        } else {
+            return false;
+        }
+    }
+};
+
 pub fn mutex_create() callconv(.c) ?*anyopaque {
     log.debug("mutex_create", .{});
 
-    const mutex = gpa.create(rtos.RecursiveMutex) catch {
+    const mutex = gpa.create(RecursiveMutex) catch {
         log.warn("failed to allocate recursive mutex", .{});
         return null;
     };
-    mutex.* = .{
-        .recursive = false,
-    };
+    mutex.* = .{ .recursive = false };
 
     log.debug(">>>> mutex create: {*}", .{mutex});
 
@@ -364,13 +424,11 @@ pub fn mutex_create() callconv(.c) ?*anyopaque {
 pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
     log.debug("recursive_mutex_create", .{});
 
-    const mutex = gpa.create(rtos.RecursiveMutex) catch {
+    const mutex = gpa.create(RecursiveMutex) catch {
         log.warn("failed to allocate recursive mutex", .{});
         return null;
     };
-    mutex.* = .{
-        .recursive = true,
-    };
+    mutex.* = .{ .recursive = true };
 
     log.debug(">>>> mutex create: {*}", .{mutex});
 
@@ -380,14 +438,14 @@ pub fn recursive_mutex_create() callconv(.c) ?*anyopaque {
 pub fn mutex_delete(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("mutex_delete {?}", .{ptr});
 
-    const mutex: *rtos.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    const mutex: *RecursiveMutex = @ptrCast(@alignCast(ptr));
     gpa.destroy(mutex);
 }
 
 pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex lock {?}", .{ptr});
 
-    const mutex: *rtos.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    const mutex: *RecursiveMutex = @ptrCast(@alignCast(ptr));
     mutex.lock();
 
     return 1;
@@ -396,7 +454,7 @@ pub fn mutex_lock(ptr: ?*anyopaque) callconv(.c) i32 {
 pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     log.debug("mutex unlock {?}", .{ptr});
 
-    const mutex: *rtos.RecursiveMutex = @ptrCast(@alignCast(ptr));
+    const mutex: *RecursiveMutex = @ptrCast(@alignCast(ptr));
     return @intFromBool(mutex.unlock());
 }
 

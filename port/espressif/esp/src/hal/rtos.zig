@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
@@ -27,7 +28,6 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 // TODO: implement task garbage collection and recycling
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
-// TODO: implement priority inheritance for sync primitives
 // TODO: better handling if timeout is in the past or very short
 // TODO: support SMP for other esp32 chips with multicore (far future)
 
@@ -758,45 +758,62 @@ pub const PriorityWaitQueue = struct {
 };
 
 pub const Mutex = struct {
-    state: State = .unlocked,
+    locked: ?*Task = null,
+    prev_priority: ?Priority = null,
     wait_queue: PriorityWaitQueue = .{},
 
-    pub const State = enum(u32) {
-        locked,
-        unlocked,
-    };
-
     pub fn lock(mutex: *Mutex) void {
-        lock_with_timeout(mutex, null) catch unreachable;
+        mutex.lock_with_timeout(null) catch unreachable;
     }
 
     pub fn lock_with_timeout(mutex: *Mutex, maybe_timeout: ?time.Duration) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
+        const current_task = get_current_task();
+
         const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
             .after(timeout)
         else
             null;
 
-        while (mutex.state != .unlocked) {
+        while (mutex.locked) |owning_task| {
             if (maybe_timeout_ticks) |timeout_ticks|
                 if (timeout_ticks.is_reached())
                     return error.Timeout;
 
-            mutex.wait_queue.wait(rtos_state.current_task, maybe_timeout_ticks);
+            // Owning task inherits the priority of the current task if it the
+            // current task has a bigger priority.
+            if (@intFromEnum(current_task.priority) > @intFromEnum(owning_task.priority)) {
+                if (mutex.prev_priority == null)
+                    mutex.prev_priority = owning_task.priority;
+                owning_task.priority = current_task.priority;
+                make_ready(owning_task);
+            }
+
+            mutex.wait_queue.wait(current_task, maybe_timeout_ticks);
         }
 
-        mutex.state = .locked;
+        mutex.locked = current_task;
     }
 
     pub fn unlock(mutex: *Mutex) void {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        assert(mutex.state == .locked);
-        mutex.state = .unlocked;
+        mutex.unlock_impl();
+    }
 
+    fn unlock_impl(mutex: *Mutex) void {
+        const owning_task = mutex.locked.?;
+
+        // Restore the priority of the task
+        if (mutex.prev_priority) |prev_priority| {
+            owning_task.priority = prev_priority;
+            mutex.prev_priority = null;
+        }
+
+        mutex.locked = null;
         mutex.wait_queue.wake_one();
     }
 };
@@ -808,9 +825,7 @@ pub const Condition = struct {
         {
             const cs = enter_critical_section();
             defer cs.leave();
-
-            mutex.unlock();
-
+            mutex.unlock_impl();
             cond.wait_queue.wait(get_current_task(), null);
         }
 
@@ -827,55 +842,6 @@ pub const Condition = struct {
         const cs = enter_critical_section();
         defer cs.leave();
         cond.wait_queue.wake_all();
-    }
-};
-
-pub const RecursiveMutex = struct {
-    recursive: bool,
-    value: u32 = 0,
-    owning_task: ?*Task = null,
-    wait_queue: PriorityWaitQueue = .{},
-
-    pub fn lock(mutex: *RecursiveMutex) void {
-        const cs = enter_critical_section();
-        defer cs.leave();
-
-        const current_task = rtos_state.current_task;
-
-        if (mutex.owning_task == current_task) {
-            assert(mutex.recursive);
-            mutex.value += 1;
-            return;
-        }
-
-        // if (mutex.owning_task) |owning_task| {
-        //     // if (current_task.priority.is_greater(owning_task.priority)) {
-        //     //     rtos.change_task_priority_from_cs(owning_task, current_task.priority, cs);
-        //     // }
-        //
-        while (mutex.owning_task != null) {
-            mutex.wait_queue.wait(current_task, null);
-        }
-        // }
-
-        assert(mutex.value == 0);
-        mutex.value += 1;
-        mutex.owning_task = current_task;
-    }
-
-    pub fn unlock(mutex: *RecursiveMutex) bool {
-        const cs = enter_critical_section();
-        defer cs.leave();
-
-        assert(mutex.value > 0);
-        mutex.value -= 1;
-        if (mutex.value <= 0) {
-            mutex.owning_task = null;
-            mutex.wait_queue.wake_one();
-            return true;
-        } else {
-            return false;
-        }
     }
 };
 
@@ -1128,5 +1094,12 @@ pub fn Queue(Elem: type) type {
         pub fn capacity(q: *const Self) usize {
             return @divExact(q.type_erased.buffer.len, @sizeOf(Elem));
         }
+    };
+}
+
+fn with_safety() bool {
+    return switch (builtin.mode) {
+        .Debug, .ReleaseSafe => true,
+        .ReleaseFast, .ReleaseSmall => false,
     };
 }
