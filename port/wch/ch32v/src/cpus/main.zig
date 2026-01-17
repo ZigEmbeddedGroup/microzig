@@ -259,6 +259,7 @@ pub const startup_logic = struct {
             .mie = 1,
             .mpie = 1,
             .fs = if (cpu_name == .@"qingkev4-rv32imafc") .dirty else .off,
+            .mpp = 0x3,
         });
 
         // Initialize the system.
