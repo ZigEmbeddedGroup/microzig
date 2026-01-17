@@ -29,6 +29,7 @@ pub const Interface = struct {
     netif: lwip.netif = .{},
     dhcp: lwip.dhcp = .{},
     link: Link,
+    status_flags: u16 = 0,
 
     pub const Options = struct {
         fixed: ?Fixed = null,
@@ -75,7 +76,6 @@ pub const Interface = struct {
         std.mem.copyForwards(u8, &netif.hwaddr, &mac);
         lwip.netif_create_ip6_linklocal_address(netif, 1);
         netif.ip6_autoconfig_enabled = 1;
-        lwip.netif_set_status_callback(netif, c_on_netif_status);
         lwip.netif_set_default(netif);
         lwip.netif_set_up(netif);
         if (opt.fixed == null) {
@@ -83,6 +83,8 @@ pub const Interface = struct {
             try c_err(lwip.dhcp_start(netif));
         }
         lwip.netif_set_link_up(netif);
+        lwip.netif_set_status_callback(netif, c_on_netif_status);
+        lwip.netif_set_link_callback(netif, c_on_netif_status);
     }
 
     fn c_netif_init(netif_c: [*c]lwip.netif) callconv(.c) lwip.err_t {
@@ -100,6 +102,10 @@ pub const Interface = struct {
     fn c_on_netif_status(netif_c: [*c]lwip.netif) callconv(.c) void {
         const netif: *lwip.netif = netif_c;
         const self: *Self = @fieldParentPtr("netif", netif);
+
+        const new_flags: u16 = (if (self.ready()) @as(u16, 1) else 0) << 8 | netif.flags;
+        if (self.status_flags == new_flags) return;
+        self.status_flags = new_flags;
         log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {s}", .{
             netif.flags & lwip.NETIF_FLAG_LINK_UP > 0,
             netif.flags & lwip.NETIF_FLAG_UP > 0,
@@ -130,7 +136,6 @@ pub const Interface = struct {
         }
 
         self.link.vtable.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
-            log.err("link send {}", .{err});
             return switch (err) {
                 error.OutOfMemory => lwip.ERR_MEM,
                 error.LinkDown => lwip.ERR_IF,
@@ -343,7 +348,6 @@ pub const tcp = struct {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (self.pcb != null) {
                 lwip.tcp_abort(c_pcb);
-                log.debug("c_on_connect already connected, aborting pcb", .{});
                 return lwip.ERR_ABRT;
             }
             assert_panic(
