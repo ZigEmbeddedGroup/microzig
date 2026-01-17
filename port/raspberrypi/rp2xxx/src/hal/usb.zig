@@ -19,7 +19,6 @@ pub const Config = struct {
     max_endpoints_count: comptime_int = RP2XXX_MAX_ENDPOINTS_COUNT,
     max_interfaces_count: comptime_int = 16,
     sync_noops: comptime_int = 3,
-    log_level: std.log.Level = .warn,
 };
 
 const HardwareEndpointData = struct {
@@ -112,8 +111,8 @@ pub fn Polled(config: Config) type {
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
                 const setup = get_setup_packet();
-                if (config.log_level == .debug)
-                    log.debug("setup  {any}", .{setup});
+
+                log.debug("setup  {any}", .{setup});
                 controller.on_setup_req(&self.interface, &setup);
             }
 
@@ -140,8 +139,7 @@ pub fn Polled(config: Config) type {
                         // So we wait for it just to be sure.
                         while (buffer_control[ep_num].get(ep.dir).read().AVAILABLE_0 != 0) {}
 
-                        if (config.log_level == .debug)
-                            log.debug("buffer ep{} {t}", .{ ep_num, ep.dir });
+                        log.debug("buffer ep{} {t}", .{ ep_num, ep.dir });
                         controller.on_buffer(&self.interface, ep);
                     }
                 }
@@ -150,8 +148,7 @@ pub fn Polled(config: Config) type {
 
             // Has the host signaled a bus reset?
             if (ints.BUS_RESET != 0) {
-                if (config.log_level == .debug or config.log_level == .info)
-                    log.debug("bus reset", .{});
+                log.info("bus reset", .{});
 
                 // Abort all endpoints
                 peripherals.USB.EP_ABORT.raw = 0xFFFFFFFF;
@@ -254,8 +251,7 @@ pub fn Polled(config: Config) type {
             ep_num: usb.types.Endpoint.Num,
             data: []const []const u8,
         ) usb.types.Len {
-            if (config.log_level == .debug)
-                log.debug("writev {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
+            log.debug("writev {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
 
@@ -302,8 +298,7 @@ pub fn Polled(config: Config) type {
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
         ) usb.types.Len {
-            if (config.log_level == .debug)
-                log.debug("readv {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
+            log.debug("readv {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
             assert(data.len > 0);
@@ -328,8 +323,7 @@ pub fn Polled(config: Config) type {
             ep_num: usb.types.Endpoint.Num,
             len: usb.types.Len,
         ) void {
-            if (config.log_level == .debug)
-                log.debug("listen {t} {}", .{ ep_num, len });
+            log.debug("listen {t} {}", .{ ep_num, len });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].out;
@@ -377,8 +371,7 @@ pub fn Polled(config: Config) type {
         }
 
         fn set_address(_: *usb.DeviceInterface, addr: u7) void {
-            if (config.log_level == .debug)
-                log.debug("set addr {}", .{addr});
+            log.debug("set addr {}", .{addr});
 
             peripherals.USB.ADDR_ENDP.write(.{ .ADDRESS = addr });
         }
@@ -390,7 +383,7 @@ pub fn Polled(config: Config) type {
         fn ep_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
             const ep = desc.endpoint;
             const attr = desc.attributes;
-            if (config.log_level == .debug) log.debug(
+            log.debug(
                 "ep open {t} {t} {{ type: {t}, sync: {t}, usage: {t}, size: {} }}",
                 .{ ep.num, ep.dir, attr.transfer_type, attr.synchronisation, attr.usage, desc.max_packet_size.into() },
             );

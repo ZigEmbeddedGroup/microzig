@@ -1,6 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const log = std.log.scoped(.usb);
+const log = std.log.scoped(.usb_ctrl);
 
 pub const descriptor = @import("usb/descriptor.zig");
 pub const drivers = struct {

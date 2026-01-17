@@ -1,8 +1,7 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
-const descriptor = usb.descriptor;
-const types = usb.types;
+const log = std.log.scoped(.usb_cdc);
 
 pub const ManagementRequestType = enum(u8) {
     SetLineCoding = 0x20,
@@ -33,16 +32,16 @@ pub const Options = struct {
 pub fn CdcClassDriver(options: Options) type {
     return struct {
         pub const Descriptor = extern struct {
-            itf_assoc: descriptor.InterfaceAssociation,
-            itf_notifi: descriptor.Interface,
-            cdc_header: descriptor.cdc.Header,
-            cdc_call_mgmt: descriptor.cdc.CallManagement,
-            cdc_acm: descriptor.cdc.AbstractControlModel,
-            cdc_union: descriptor.cdc.Union,
-            ep_notifi: descriptor.Endpoint,
-            itf_data: descriptor.Interface,
-            ep_out: descriptor.Endpoint,
-            ep_in: descriptor.Endpoint,
+            itf_assoc: usb.descriptor.InterfaceAssociation,
+            itf_notifi: usb.descriptor.Interface,
+            cdc_header: usb.descriptor.cdc.Header,
+            cdc_call_mgmt: usb.descriptor.cdc.CallManagement,
+            cdc_acm: usb.descriptor.cdc.AbstractControlModel,
+            cdc_union: usb.descriptor.cdc.Union,
+            ep_notifi: usb.descriptor.Endpoint,
+            itf_data: usb.descriptor.Interface,
+            ep_out: usb.descriptor.Endpoint,
+            ep_in: usb.descriptor.Endpoint,
 
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
@@ -98,23 +97,23 @@ pub fn CdcClassDriver(options: Options) type {
         };
 
         device: *usb.DeviceInterface,
-        ep_notifi: types.Endpoint.Num,
+        ep_notifi: usb.types.Endpoint.Num,
         line_coding: LineCoding align(4),
 
         /// OUT endpoint on which there is data ready to be read,
         /// or .ep0 when no data is available.
-        ep_out: types.Endpoint.Num,
+        ep_out: usb.types.Endpoint.Num,
         rx_data: [options.max_packet_size]u8,
-        rx_seek: types.Len,
-        rx_end: types.Len,
+        rx_seek: usb.types.Len,
+        rx_end: usb.types.Len,
 
         /// IN endpoint where data can be sent,
         /// or .ep0 when data is being sent.
-        ep_in: types.Endpoint.Num,
+        ep_in: usb.types.Endpoint.Num,
         tx_data: [options.max_packet_size]u8,
-        tx_end: types.Len,
+        tx_end: usb.types.Len,
 
-        pub fn available(self: *@This()) types.Len {
+        pub fn available(self: *@This()) usb.types.Len {
             return self.rx_end - self.rx_seek;
         }
 
@@ -126,11 +125,11 @@ pub fn CdcClassDriver(options: Options) type {
             if (self.available() > 0) return len;
 
             // request more data
-            const ep_out = @atomicLoad(types.Endpoint.Num, &self.ep_out, .seq_cst);
+            const ep_out = @atomicLoad(usb.types.Endpoint.Num, &self.ep_out, .seq_cst);
             if (ep_out != .ep0) {
                 self.rx_end = self.device.ep_readv(ep_out, &.{&self.rx_data});
                 self.rx_seek = 0;
-                @atomicStore(types.Endpoint.Num, &self.ep_out, .ep0, .seq_cst);
+                @atomicStore(usb.types.Endpoint.Num, &self.ep_out, .ep0, .seq_cst);
                 self.device.ep_listen(ep_out, options.max_packet_size);
             }
 
@@ -156,11 +155,11 @@ pub fn CdcClassDriver(options: Options) type {
             if (self.tx_end == 0)
                 return true;
 
-            const ep_in = @atomicLoad(types.Endpoint.Num, &self.ep_in, .seq_cst);
+            const ep_in = @atomicLoad(usb.types.Endpoint.Num, &self.ep_in, .seq_cst);
             if (ep_in == .ep0)
                 return false;
 
-            @atomicStore(types.Endpoint.Num, &self.ep_in, .ep0, .seq_cst);
+            @atomicStore(usb.types.Endpoint.Num, &self.ep_in, .ep0, .seq_cst);
 
             assert(self.tx_end == self.device.ep_writev(ep_in, &.{self.tx_data[0..self.tx_end]}));
             self.tx_end = 0;
@@ -190,9 +189,9 @@ pub fn CdcClassDriver(options: Options) type {
             device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
         }
 
-        pub fn interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
+        pub fn interface_setup(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
-            std.log.debug("cdc setup: {t}", .{mgmt_request});
+            log.debug("cdc setup: {t}", .{mgmt_request});
 
             return switch (mgmt_request) {
                 .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding
@@ -208,19 +207,19 @@ pub fn CdcClassDriver(options: Options) type {
             };
         }
 
-        pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {
-            assert(.ep0 == @atomicLoad(types.Endpoint.Num, &self.ep_out, .seq_cst));
-            @atomicStore(types.Endpoint.Num, &self.ep_out, ep_num, .seq_cst);
+        pub fn on_rx(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
+            assert(.ep0 == @atomicLoad(usb.types.Endpoint.Num, &self.ep_out, .seq_cst));
+            @atomicStore(usb.types.Endpoint.Num, &self.ep_out, ep_num, .seq_cst);
         }
 
-        pub fn on_tx_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
-            assert(.ep0 == @atomicLoad(types.Endpoint.Num, &self.ep_in, .seq_cst));
-            @atomicStore(types.Endpoint.Num, &self.ep_in, ep_num, .seq_cst);
+        pub fn on_tx_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
+            assert(.ep0 == @atomicLoad(usb.types.Endpoint.Num, &self.ep_in, .seq_cst));
+            @atomicStore(usb.types.Endpoint.Num, &self.ep_in, ep_num, .seq_cst);
         }
 
-        pub fn on_notifi_ready(self: *@This(), ep_num: types.Endpoint.Num) void {
-            assert(.ep0 == @atomicLoad(types.Endpoint.Num, &self.ep_notifi, .seq_cst));
-            @atomicStore(types.Endpoint.Num, &self.ep_notifi, ep_num, .seq_cst);
+        pub fn on_notifi_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
+            assert(.ep0 == @atomicLoad(usb.types.Endpoint.Num, &self.ep_notifi, .seq_cst));
+            @atomicStore(usb.types.Endpoint.Num, &self.ep_notifi, ep_num, .seq_cst);
         }
     };
 }

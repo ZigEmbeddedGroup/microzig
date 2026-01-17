@@ -51,6 +51,11 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
+    .log_scope_levels = &.{
+        .{ .scope = .usb_dev, .level = .warn },
+        .{ .scope = .usb_ctrl, .level = .warn },
+        .{ .scope = .usb_hid, .level = .warn },
+    },
     .logFn = rp2xxx.uart.log,
 };
 
