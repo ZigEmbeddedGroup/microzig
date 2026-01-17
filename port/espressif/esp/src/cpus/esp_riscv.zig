@@ -448,29 +448,27 @@ fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void 
     };
 
     // adapted from https://github.com/esp-rs/esp-hal/blob/main/esp-riscv-rt/src/lib.rs
-    asm volatile (
-        \\
-    ++ interrupt_jump_asm ++ interrupt_c_stubs_asm ++
-        \\trap_common:
-        \\    sw t0, 1*4(sp)
-        \\    sw t1, 2*4(sp)
-        \\    sw t2, 3*4(sp)
-        \\    sw t3, 4*4(sp)
-        \\    sw t4, 5*4(sp)
-        \\    sw t5, 6*4(sp)
-        \\    sw t6, 7*4(sp)
-        \\    sw a0, 8*4(sp)
-        \\    sw a1, 9*4(sp)
-        \\    sw a2, 10*4(sp)
-        \\    sw a3, 11*4(sp)
-        \\    sw a4, 12*4(sp)
-        \\    sw a5, 13*4(sp)
-        \\    sw a6, 14*4(sp)
-        \\    sw a7, 15*4(sp)
-        \\
-        \\    mv a0, sp       # Pass a pointer to TrapFrame to the handler function
-        \\    mv a1, ra       # Save address of handler function
-        \\
+    asm volatile (interrupt_jump_asm ++ interrupt_c_stubs_asm ++
+            \\trap_common:
+            \\    sw t0, 1*4(sp)
+            \\    sw t1, 2*4(sp)
+            \\    sw t2, 3*4(sp)
+            \\    sw t3, 4*4(sp)
+            \\    sw t4, 5*4(sp)
+            \\    sw t5, 6*4(sp)
+            \\    sw t6, 7*4(sp)
+            \\    sw a0, 8*4(sp)
+            \\    sw a1, 9*4(sp)
+            \\    sw a2, 10*4(sp)
+            \\    sw a3, 11*4(sp)
+            \\    sw a4, 12*4(sp)
+            \\    sw a5, 13*4(sp)
+            \\    sw a6, 14*4(sp)
+            \\    sw a7, 15*4(sp)
+            \\
+            \\    mv a0, sp       # Pass a pointer to TrapFrame to the handler function
+            \\    mv a1, ra       # Save address of handler function
+            \\
         ++ (if (interrupt_stack_options.enable)
             // switch to interrupt stack if not nested
             \\    csrr t0, mscratch
@@ -488,32 +486,31 @@ fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void 
             \\    jal ra, _handle_interrupt
             \\
         ) ++
-        \\
-        \\    lw ra, 0*4(sp)
-        \\    lw t0, 1*4(sp)
-        \\    lw t1, 2*4(sp)
-        \\    lw t2, 3*4(sp)
-        \\    lw t3, 4*4(sp)
-        \\    lw t4, 5*4(sp)
-        \\    lw t5, 6*4(sp)
-        \\    lw t6, 7*4(sp)
-        \\    lw a0, 8*4(sp)
-        \\    lw a1, 9*4(sp)
-        \\    lw a2, 10*4(sp)
-        \\    lw a3, 11*4(sp)
-        \\    lw a4, 12*4(sp)
-        \\    lw a5, 13*4(sp)
-        \\    lw a6, 14*4(sp)
-        \\    lw a7, 15*4(sp)
-        \\
-        \\    addi sp, sp, 16*4 # This removes the frame we allocated from the stack
-        \\
-        \\    mret
-
-    :
-    : [interrupt_stack_top] "i" (if (interrupt_stack_options.enable)
-        interrupt_stack[interrupt_stack.len..].ptr
-    else {}),
+            \\
+            \\    lw ra, 0*4(sp)
+            \\    lw t0, 1*4(sp)
+            \\    lw t1, 2*4(sp)
+            \\    lw t2, 3*4(sp)
+            \\    lw t3, 4*4(sp)
+            \\    lw t4, 5*4(sp)
+            \\    lw t5, 6*4(sp)
+            \\    lw t6, 7*4(sp)
+            \\    lw a0, 8*4(sp)
+            \\    lw a1, 9*4(sp)
+            \\    lw a2, 10*4(sp)
+            \\    lw a3, 11*4(sp)
+            \\    lw a4, 12*4(sp)
+            \\    lw a5, 13*4(sp)
+            \\    lw a6, 14*4(sp)
+            \\    lw a7, 15*4(sp)
+            \\
+            \\    addi sp, sp, 16*4 # This removes the frame we allocated from the stack
+            \\
+            \\    mret
+        :
+        : [interrupt_stack_top] "i" (if (interrupt_stack_options.enable)
+            interrupt_stack[interrupt_stack.len..].ptr
+          else {}),
     );
 }
 
