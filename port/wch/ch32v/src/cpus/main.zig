@@ -321,6 +321,10 @@ pub const startup_logic = struct {
     fn _system_init() callconv(.c) void {
         cpu_impl.system_init(microzig.chip);
     }
+
+    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
+        asm volatile ("j _start");
+    }
 };
 
 // Vector table
@@ -385,16 +389,7 @@ fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler 
     return null;
 }
 
-const vector_table = generate_vector_table();
-
-comptime {
-    asm (
-        \\.section microzig_flash_start, "ax"
-        \\.global _reset_vector
-        \\_reset_vector:
-        \\j _start
-    );
-}
+const vector_table: VectorTable = generate_vector_table();
 
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
