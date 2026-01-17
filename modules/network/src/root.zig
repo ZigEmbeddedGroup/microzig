@@ -154,6 +154,7 @@ pub const Interface = struct {
 
     pub fn poll(self: *Self) !void {
         lwip.sys_check_timeouts();
+        const netif = &self.netif;
         var packets: usize = 0;
         while (true) : (packets += 1) {
             // get packet buffer of the max size
@@ -167,20 +168,31 @@ pub const Interface = struct {
                 "net.Interface.pool invalid pbuf allocation",
             );
             // receive into that buffer
-            const head, const len = try self.link.vtable.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
-                // no data release packet buffer and exit loop
+            const rsp = try self.link.vtable.recv(self.link.ptr, payload_bytes(pbuf));
+            // sync link state
+            const link_state: Link.RecvResponse.LinkState =
+                if (netif.flags & lwip.NETIF_FLAG_LINK_UP > 0) .up else .down;
+            if (rsp.link_state != link_state) {
+                switch (rsp.link_state) {
+                    .up => lwip.netif_set_link_up(netif),
+                    .down => lwip.netif_set_link_down(netif),
+                }
+            }
+
+            if (rsp.len == 0) { // no data release packet buffer and exit loop
                 _ = lwip.pbuf_free(pbuf);
                 break;
-            };
+            }
+
             errdefer _ = lwip.pbuf_free(pbuf); // netif.input: takes ownership of pbuf on success
             // set payload header and len
-            if (head > 0 and lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
+            if (rsp.head > 0 and lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(rsp.head))) != 0) {
                 return error.InvalidPbufHead;
             }
-            pbuf.len = @intCast(len);
-            pbuf.tot_len = @intCast(len);
+            pbuf.len = @intCast(rsp.len);
+            pbuf.tot_len = @intCast(rsp.len);
             // pass data to the lwip input function
-            try c_err(self.netif.input.?(pbuf, &self.netif));
+            try c_err(netif.input.?(pbuf, netif));
         }
         if (packets > 0) {
             lwip.sys_check_timeouts();

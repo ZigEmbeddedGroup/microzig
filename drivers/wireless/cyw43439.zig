@@ -31,6 +31,8 @@ pub fn init(
     self.mac = try self.wifi.read_mac();
 }
 
+/// Non blocking join. Returns poller which should be pulled while poll method
+/// returns true (has more).
 pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !WiFi.JoinPoller {
     return try self.wifi.join(ssid, pwd, opt);
 }
@@ -49,6 +51,7 @@ pub fn is_joined(self: *Self) bool {
     return self.wifi.join_state == .joined;
 }
 
+/// Non blocking scan. Returns poller.
 pub fn scan(self: *Self) !WiFi.ScanPoller {
     return try self.wifi.scan();
 }
@@ -57,16 +60,27 @@ pub fn scan_result(self: *Self) ?WiFi.ScanResult {
     return self.wifi.scan_result;
 }
 
-pub fn recv_zc(ptr: *anyopaque, bytes: []u8) anyerror!?struct { usize, usize } {
+/// Zero copy receive. This buffer is passed to the chip. Buffer has to be 4
+/// bytes aligned and at least 1540 bytes. `head` and `len` defines part of the
+/// buffer where is received ethernet packet. If `len` is zero there is no packet.
+pub fn recv_zc(ptr: *anyopaque, buffer: []u8) anyerror!Link.RecvResponse {
     const self: *Self = @ptrCast(@alignCast(ptr));
-    return self.wifi.recv_zc(bytes);
+    const head, const len = try self.wifi.recv_zc(buffer);
+    return .{
+        .head = head,
+        .len = len,
+        .link_state = if (self.is_joined()) .up else .down,
+    };
 }
 
-pub fn send_zc(ptr: *anyopaque, bytes: []u8) Link.Error!void {
+/// Zero copy send. Buffer has to have 22 bytes of headrom for chip control
+/// command. Ethernet packet has to start at byte 22. Buffer has to be 4 bytes
+/// aligned.
+pub fn send_zc(ptr: *anyopaque, buffer: []u8) Link.Error!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     if (self.wifi.join_state != .joined) return error.LinkDown;
     if (!self.wifi.has_credit()) return error.OutOfMemory;
-    self.wifi.send_zc(bytes) catch |err| {
+    self.wifi.send_zc(buffer) catch |err| {
         log.err("cyw43 send {}", .{err});
         return error.InternalError;
     };

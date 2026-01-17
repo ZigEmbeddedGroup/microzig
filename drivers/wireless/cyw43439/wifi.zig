@@ -715,10 +715,9 @@ fn sleep_ms(self: Self, delay: u32) void {
 ///
 /// Layer 2 header+payload position is passed to the caller. First return
 /// argument is start of that data in the buffer second is length.
-///
-pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
+pub fn recv_zc(self: *Self, buffer: []u8) !struct { usize, usize } {
     while (true) {
-        const rsp = try self.read(buffer) orelse return null;
+        const rsp = try self.read(buffer) orelse return .{ 0, 0 };
         switch (rsp.sdp.channel()) {
             .data => return rsp.data_pos(),
             .event => self.handle_event(rsp),

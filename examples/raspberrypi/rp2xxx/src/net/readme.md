@@ -38,9 +38,11 @@ Scans for WiFi networks and reports each found network. If open network is found
 [1.625584] debug (main):   found ssid: NVRE82242483        , channel: 13, open: false, ap mac e0baad364a3d
 [1.665162] debug (main): joining to: my-net-2
 [2.543121] debug (main): join state .joined
-[4.675729] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.207.170
-[30.053127] debug (main): join state changed .disjoined
-[38.535162] debug (main): join state changed .joined
+[5.017620] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.207.170
+[20.673675] debug (lwip): netif status callback is_link_up: false, is_up: true, ready: false, ip: 192.168.207.170
+[20.683811] debug (main): join state changed .disjoined
+[30.386339] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.207.170
+[30.396295] debug (main): join state changed .joined
 ```
 Here I turned off my-net-2 access point, and bring it back after few seconds.
 
