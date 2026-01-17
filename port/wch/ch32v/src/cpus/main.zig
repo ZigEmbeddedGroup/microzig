@@ -389,7 +389,7 @@ fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler 
     return null;
 }
 
-const vector_table: VectorTable = generate_vector_table();
+const vector_table = generate_vector_table();
 
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
