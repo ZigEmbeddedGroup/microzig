@@ -254,7 +254,15 @@ pub const startup_logic = struct {
         }
 
         // Enable interrupts.
-        csr.mtvec.write(.{ .mode0 = 1, .mode1 = 1, .base = 0 });
+        // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
+        // jumps to the correct handler regardless of any padding between _reset_vector
+        // and vector_table.
+        const vtable_addr = @intFromPtr(&vector_table);
+        csr.mtvec.write(.{
+            .mode0 = 1, // Interrupt entry for each interrupt
+            .mode1 = 1, // Use absolute addresses
+            .base = @intCast((vtable_addr - 4) >> 2),
+        });
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
@@ -312,6 +320,10 @@ pub const startup_logic = struct {
 
     fn _system_init() callconv(.c) void {
         cpu_impl.system_init(microzig.chip);
+    }
+
+    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
+        asm volatile ("j _start");
     }
 };
 
@@ -377,16 +389,7 @@ fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler 
     return null;
 }
 
-const vector_table = generate_vector_table();
-
-comptime {
-    asm (
-        \\.section microzig_flash_start, "ax"
-        \\.global _reset_vector
-        \\_reset_vector:
-        \\j _start
-    );
-}
+const vector_table: VectorTable = generate_vector_table();
 
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
