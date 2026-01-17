@@ -14,7 +14,7 @@ pub const RequestType = enum(u8) {
 };
 
 /// USB HID descriptor
-pub const Hid = extern struct {
+pub const HID = extern struct {
     /// HID country codes
     pub const CountryCode = enum(u8) {
         NotSupported = 0,
@@ -56,7 +56,7 @@ pub const Hid = extern struct {
     };
 
     pub const Type = enum(u8) {
-        Hid = 0x21,
+        HID = 0x21,
         Report = 0x22,
         Physical = 0x23,
     };
@@ -70,7 +70,7 @@ pub const Hid = extern struct {
     /// Type of this descriptor
     descriptor_type: descriptor.Type = .CsDevice,
     /// Numeric expression identifying the HID Class Specification release
-    bcd_hid: types.U16Le,
+    bcd_hid: types.U16_Le,
     /// Numeric expression identifying country code of the localized hardware
     country_code: CountryCode,
     /// Numeric expression specifying the number of class descriptors
@@ -78,7 +78,7 @@ pub const Hid = extern struct {
     /// Type of HID class report
     report_type: Type = .Report,
     /// The total size of the Report descriptor
-    report_length: types.U16Le,
+    report_length: types.U16_Le,
 };
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++

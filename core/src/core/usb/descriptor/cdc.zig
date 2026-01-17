@@ -22,7 +22,7 @@ pub const Header = extern struct {
     descriptor_subtype: SubType = .Header,
     // USB Class Definitions for Communication Devices Specification release
     // number in binary-coded decimal. Typically 0x01_10.
-    bcd_cdc: types.U16Le,
+    bcd_cdc: types.U16_Le,
 };
 
 pub const CallManagement = extern struct {
