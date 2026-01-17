@@ -314,8 +314,13 @@ pub const startup_logic = struct {
         cpu_impl.system_init(microzig.chip);
     }
 
-    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
-        asm volatile ("j _start");
+    comptime {
+        asm (
+            \\.section microzig_flash_start, "ax"
+            \\.global _reset_vector
+            \\_reset_vector:
+            \\j _start
+        );
     }
 };
 
