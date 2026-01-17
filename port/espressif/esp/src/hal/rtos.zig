@@ -1,7 +1,8 @@
-const builtin = @import("builtin");
 const std = @import("std");
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
+const log = std.log.scoped(.rtos);
+const builtin = @import("builtin");
 
 const microzig = @import("microzig");
 const CriticalSection = microzig.interrupt.CriticalSection;
@@ -9,10 +10,12 @@ const enter_critical_section = microzig.interrupt.enter_critical_section;
 const TrapFrame = microzig.cpu.TrapFrame;
 const SYSTEM = microzig.chip.peripherals.SYSTEM;
 const time = microzig.drivers.time;
+const rtos_options = microzig.options.hal.rtos;
+pub const Priority = rtos_options.Priority;
 
+const get_time_since_boot = @import("time.zig").get_time_since_boot;
 const system = @import("system.zig");
 const systimer = @import("systimer.zig");
-const get_time_since_boot = @import("time.zig").get_time_since_boot;
 
 // How it works?
 // For simple task to task context switches, only necessary registers are
@@ -34,9 +37,6 @@ const get_time_since_boot = @import("time.zig").get_time_since_boot;
 const STACK_ALIGN: std.mem.Alignment = .@"16";
 const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 32 * @sizeOf(usize));
 
-const rtos_options = microzig.options.hal.rtos;
-pub const Priority = rtos_options.Priority;
-
 pub const Options = struct {
     enable: bool = false,
     Priority: type = enum(u8) {
@@ -52,10 +52,11 @@ pub const Options = struct {
     cpu_interrupt: system.CPU_Interrupt = .cpu_interrupt_0,
     yield_interrupt: microzig.cpu.Interrupt = .interrupt31,
 
-    paint_stack: ?u8 = null,
+    paint_stack_byte: ?u8 = null,
 };
 
 var main_task: Task = .{
+    .name = "main",
     .context = undefined,
     .priority = .lowest,
     .stack = &.{},
@@ -76,6 +77,7 @@ var rtos_state: RTOS_State = undefined;
 pub const RTOS_State = struct {
     ready_queue: ReadyPriorityQueue = .{},
     timer_queue: std.DoublyLinkedList = .{},
+    suspended_list: std.DoublyLinkedList = .{},
     scheduled_for_deletion_list: std.DoublyLinkedList = .{},
 
     /// The task in .running state. Safe to access outside of critical section
@@ -99,7 +101,7 @@ pub fn init() void {
     rtos_state = .{
         .current_task = &main_task,
     };
-    if (rtos_options.paint_stack) |paint_byte| {
+    if (rtos_options.paint_stack_byte) |paint_byte| {
         @memset(&idle_stack, paint_byte);
     }
     make_ready(&idle_task);
@@ -186,7 +188,7 @@ pub fn spawn(
     task_args.* = args;
 
     const stack: []u8 = raw_alloc[stack_start..stack_end];
-    if (rtos_options.paint_stack) |paint_byte| {
+    if (rtos_options.paint_stack_byte) |paint_byte| {
         @memset(stack, paint_byte);
     }
 
@@ -213,9 +215,12 @@ pub fn spawn(
 pub fn make_ready(task: *Task) void {
     switch (task.state) {
         .ready, .running, .scheduled_for_deletion => return,
-        .none, .suspended => {},
+        .none => {},
         .alarm_set => |_| {
             rtos_state.timer_queue.remove(&task.node);
+        },
+        .suspended => {
+            rtos_state.suspended_list.remove(&task.node);
         },
     }
 
@@ -255,6 +260,7 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
                 schedule_wake_at(current_task, timeout);
             } else {
                 current_task.state = .suspended;
+                rtos_state.suspended_list.append(&current_task.node);
             }
         },
         .delete => {
@@ -344,40 +350,6 @@ pub fn is_a_higher_priority_task_ready() bool {
     else
         false;
 }
-
-pub const report_stack_usage = if (rtos_options.paint_stack) |paint_byte| struct {
-    fn report_stack_usage() void {
-        const cs = microzig.interrupt.enter_critical_section();
-        defer cs.leave();
-
-        const list: []const ?*std.DoublyLinkedList.Node = &.{
-            rtos_state.ready_queue.inner.first,
-            rtos_state.timer_queue.first,
-            rtos_state.scheduled_for_deletion_list.first,
-        };
-        for (list) |first| {
-            var it: ?*std.DoublyLinkedList.Node = first;
-            while (it) |node| : (it = node.next) {
-                const task: *Task = @alignCast(@fieldParentPtr("node", node));
-                if (task == &main_task) continue;
-                log_stack_task_usage(task);
-            }
-        }
-    }
-
-    fn log_stack_task_usage(task: *Task) void {
-        for (task.stack, 0..) |byte, i| {
-            if (byte != paint_byte) {
-                std.log.debug("task with name {?s} uses {} bytes out of {} for stack", .{
-                    task.name,
-                    task.stack.len - i,
-                    task.stack.len,
-                });
-                break;
-            }
-        }
-    }
-}.report_stack_usage else @compileError("please enable the paint_stack option to use this function");
 
 pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
     .naked = struct {
@@ -594,6 +566,51 @@ fn sweep_timer_queue_for_timeouts() void {
         rtos_options.systimer_alarm.set_enabled(true);
     } else {
         rtos_options.systimer_alarm.set_enabled(false);
+    }
+}
+
+pub fn log_tasks_info() void {
+    const cs = microzig.interrupt.enter_critical_section();
+    defer cs.leave();
+
+    log_task_info(get_current_task());
+
+    const list: []const ?*std.DoublyLinkedList.Node = &.{
+        rtos_state.ready_queue.inner.first,
+        rtos_state.timer_queue.first,
+        rtos_state.suspended_list.first,
+        rtos_state.scheduled_for_deletion_list.first,
+    };
+    for (list) |first| {
+        var it: ?*std.DoublyLinkedList.Node = first;
+        while (it) |node| : (it = node.next) {
+            const task: *Task = @alignCast(@fieldParentPtr("node", node));
+            log_task_info(task);
+        }
+    }
+}
+
+fn log_task_info(task: *Task) void {
+    if (rtos_options.paint_stack_byte) |paint_byte| {
+        const stack_usage = for (task.stack, 0..) |byte, i| {
+            if (byte != paint_byte) {
+                break task.stack.len - i;
+            }
+        } else task.stack.len;
+
+        log.debug("task {?s} with prio {} in state {t} uses {} bytes out of {} for stack", .{
+            task.name,
+            @intFromEnum(task.priority),
+            task.state,
+            stack_usage,
+            task.stack.len,
+        });
+    } else {
+        log.debug("task {?s} with prio {} in state {t}", .{
+            task.name,
+            @intFromEnum(task.priority),
+            task.state,
+        });
     }
 }
 
@@ -1094,12 +1111,5 @@ pub fn Queue(Elem: type) type {
         pub fn capacity(q: *const Self) usize {
             return @divExact(q.type_erased.buffer.len, @sizeOf(Elem));
         }
-    };
-}
-
-fn with_safety() bool {
-    return switch (builtin.mode) {
-        .Debug, .ReleaseSafe => true,
-        .ReleaseFast, .ReleaseSmall => false,
     };
 }
