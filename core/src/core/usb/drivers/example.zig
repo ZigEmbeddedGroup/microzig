@@ -57,15 +57,12 @@ pub const EchoExampleDriver = struct {
         );
     }
 
-    /// Used for configuration through endpoint 0.
+    /// Used for interface configuration through endpoint 0.
     /// Data returned by this function is sent on endpoint 0.
-    pub fn class_control(self: *@This(), stage: usb.types.ControlStage, setup: *const usb.types.SetupPacket) ?[]const u8 {
+    pub fn interface_setup(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
         _ = self;
         _ = setup;
-        if (stage == .Setup)
-            return usb.ack
-        else
-            return usb.nak;
+        return usb.ack;
     }
 
     /// Each endpoint (as defined in the descriptor) has its own handler.

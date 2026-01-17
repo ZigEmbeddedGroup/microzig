@@ -9,6 +9,7 @@ pub const ManagementRequestType = enum(u8) {
     GetLineCoding = 0x21,
     SetControlLineState = 0x22,
     SendBreak = 0x23,
+    _,
 };
 
 pub const LineCoding = extern struct {
@@ -189,22 +190,22 @@ pub fn CdcClassDriver(options: Options) type {
             device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
         }
 
-        pub fn class_control(self: *@This(), stage: types.ControlStage, setup: *const types.SetupPacket) ?[]const u8 {
-            if (std.meta.intToEnum(ManagementRequestType, setup.request)) |request| {
-                if (stage == .Setup) switch (request) {
-                    .SetLineCoding => return usb.ack, // we should handle data phase somehow to read sent line_coding
-                    .GetLineCoding => return std.mem.asBytes(&self.line_coding),
-                    .SetControlLineState => {
-                        // const DTR_BIT = 1;
-                        // self.is_ready = (setup.value & DTR_BIT) != 0;
-                        // self.line_state = @intCast(setup.value & 0xFF);
-                        return usb.ack;
-                    },
-                    .SendBreak => return usb.ack,
-                };
-            } else |_| {}
+        pub fn interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
+            const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
+            std.log.debug("cdc setup: {t}", .{mgmt_request});
 
-            return usb.nak;
+            return switch (mgmt_request) {
+                .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding
+                .GetLineCoding => std.mem.asBytes(&self.line_coding),
+                .SetControlLineState => blk: {
+                    // const DTR_BIT = 1;
+                    // self.is_ready = (setup.value & DTR_BIT) != 0;
+                    // self.line_state = @intCast(setup.value & 0xFF);
+                    break :blk usb.ack;
+                },
+                .SendBreak => usb.ack,
+                else => usb.nak,
+            };
         }
 
         pub fn on_rx(self: *@This(), ep_num: types.Endpoint.Num) void {

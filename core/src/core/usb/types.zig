@@ -207,19 +207,13 @@ pub const TransferType = enum(u2) {
     Interrupt = 3,
 };
 
-pub const ControlStage = enum {
-    Idle,
-    Setup,
-    Data,
-    Ack,
-};
-
 /// The types of USB SETUP requests that we understand.
 pub const SetupRequest = enum(u8) {
     SetFeature = 0x03,
     SetAddress = 0x05,
     GetDescriptor = 0x06,
     SetConfiguration = 0x09,
+    _,
 };
 
 pub const FeatureSelector = enum(u8) {
@@ -227,6 +221,7 @@ pub const FeatureSelector = enum(u8) {
     DeviceRemoteWakeup = 0x01,
     TestMode = 0x02,
     // The remaining features only apply to OTG devices.
+    _,
 };
 
 /// USB deals in two different transfer directions, called OUT (host-to-device)
@@ -302,7 +297,6 @@ pub const SetupPacket = extern struct {
     request: u8,
     /// A simple argument of up to 16 bits, specific to the request.
     value: U16_Le,
-    /// Not used in the requests we support.
     index: U16_Le,
     /// If data will be transferred after this request (in the direction given
     /// by `request_type`), this gives the number of bytes (OUT) or maximum

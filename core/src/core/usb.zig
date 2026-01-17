@@ -102,7 +102,6 @@ pub const Config = struct {
 
     device_descriptor: descriptor.Device,
     string_descriptors: []const descriptor.String,
-    debug: bool = false,
     /// Currently only a single configuration is supported.
     configurations: []const Configuration,
     /// Only use either IN or OUT on each endpoint. Useful for debugging.
@@ -256,27 +255,22 @@ pub fn DeviceController(config: Config) type {
             break :blk ret;
         };
 
-        /// When the host sets the device address, the acknowledgement
-        /// step must use the _old_ address.
-        new_address: ?u8,
+        /// If not zero, change the device address at the next opportunity.
+        /// Necessary because when the host sets the device address,
+        /// the acknowledgement step must use the _old_ address.
+        new_address: u8,
         /// 0 - no config set
         cfg_num: u16,
         /// Ep0 data waiting to be sent
         tx_slice: ?[]const u8,
-        /// Last setup packet request
-        setup_packet: types.SetupPacket,
-        /// Class driver associated with last setup request if any
-        driver_last: ?DriverEnum,
         /// Driver state
         driver_data: ?config0.Drivers,
 
         /// Initial values
         pub const init: @This() = .{
-            .new_address = null,
+            .new_address = 0,
             .cfg_num = 0,
             .tx_slice = null,
-            .setup_packet = undefined,
-            .driver_last = null,
             .driver_data = null,
         };
 
@@ -288,41 +282,37 @@ pub fn DeviceController(config: Config) type {
 
         /// Called by the device implementation when a setup request has been received.
         pub fn on_setup_req(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) void {
-            if (config.debug) log.info("setup req", .{});
+            log.debug("on_setup_req", .{});
 
-            self.setup_packet = setup.*;
-            self.driver_last = null;
-
-            switch (setup.request_type.recipient) {
-                .Device => self.process_setup_request(device_itf, setup),
-                .Interface => switch (@as(u8, @truncate(setup.index.into()))) {
-                    inline else => |itf_num| if (itf_num < handlers.itf.len) {
-                        const drv = handlers.itf[itf_num];
-                        self.driver_last = drv;
-                        self.driver_class_control(device_itf, drv, .Setup, setup);
-                    },
-                },
-                .Endpoint => {},
-                else => {},
+            const ret = switch (setup.request_type.recipient) {
+                .Device => self.process_device_setup(device_itf, setup),
+                .Interface => self.process_interface_setup(setup),
+                else => nak,
+            };
+            if (ret) |data| {
+                if (data.len == 0)
+                    device_itf.ep_ack(.ep0)
+                else {
+                    const limited = data[0..@min(data.len, setup.length.into())];
+                    const len = device_itf.ep_writev(.ep0, &.{limited});
+                    assert(len <= config.device_descriptor.max_packet_size0);
+                    self.tx_slice = limited[len..];
+                }
             }
         }
 
         /// Called by the device implementation when a packet has been sent or received.
-        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint, buffer: []u8) void {
-            if (config.debug) log.info("buff status", .{});
-            if (config.debug) log.info("    data: {any}", .{buffer});
+        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint, _: []u8) void {
+            log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
 
             const handler = comptime @field(handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
 
             if (comptime ep == types.Endpoint.in(.ep0)) {
-                if (config.debug) log.info("    EP0_IN_ADDR", .{});
-
                 // We use this opportunity to finish the delayed
                 // SetAddress request, if there is one:
-                if (self.new_address) |addr| {
-                    // Change our address:
-                    device_itf.set_address(@intCast(addr));
-                    self.new_address = null;
+                if (self.new_address != 0) {
+                    device_itf.set_address(@intCast(self.new_address));
+                    self.new_address = 0;
                 }
 
                 if (self.tx_slice) |slice| {
@@ -336,13 +326,14 @@ pub fn DeviceController(config: Config) type {
                         // device_itf.ep_listen(.ep0, 0);
                         self.tx_slice = null;
 
-                        if (self.driver_last) |drv|
-                            self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
+                        // None of the drivers so far are using the ACK phase
+                        // if (self.driver_last) |drv|
+                        //     self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
                     }
                 }
-            } else if (comptime ep == types.Endpoint.out(.ep0)) {
-                log.info("ep0_out {}", .{buffer.len});
-            }
+            } else if (comptime ep == types.Endpoint.out(.ep0))
+                log.warn("Unhandled packet on ep0 Out", .{});
+
             if (comptime handler.driver.len != 0) {
                 const drv = &@field(self.driver_data.?, handler.driver);
                 @field(@FieldType(config0.Drivers, handler.driver), handler.function)(drv, ep.num);
@@ -351,7 +342,7 @@ pub fn DeviceController(config: Config) type {
 
         /// Called by the device implementation on bus reset.
         pub fn on_bus_reset(self: *@This(), device_itf: *DeviceInterface) void {
-            if (config.debug) log.info("bus reset", .{});
+            log.debug("on_bus_reset", .{});
 
             self.process_set_config(device_itf, 0);
 
@@ -361,104 +352,71 @@ pub fn DeviceController(config: Config) type {
 
         // Utility functions
 
-        /// Command response utility function that can split long data in multiple packets
-        fn send_cmd_response(self: *@This(), device_itf: *DeviceInterface, data: []const u8, expected_max_length: u16) void {
-            const limited = data[0..@min(data.len, expected_max_length)];
-            const len = device_itf.ep_writev(.ep0, &.{limited});
-            assert(len <= config.device_descriptor.max_packet_size0);
-            self.tx_slice = limited[len..];
-        }
-
-        fn driver_class_control(self: *@This(), device_itf: *DeviceInterface, driver: DriverEnum, stage: types.ControlStage, setup: *const types.SetupPacket) void {
-            return switch (driver) {
-                inline else => |d| {
-                    const drv = &@field(self.driver_data.?, @tagName(d));
-                    if (drv.class_control(stage, setup)) |response|
-                        self.send_cmd_response(device_itf, response, setup.length.into());
-                },
-            };
-        }
-
-        fn process_setup_request(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) void {
+        fn process_device_setup(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) ?[]const u8 {
             switch (setup.request_type.type) {
-                .Class => {
-                    //const itfIndex = setup.index & 0x00ff;
-                    log.info("Device.Class", .{});
-                },
                 .Standard => {
-                    switch (std.meta.intToEnum(types.SetupRequest, setup.request) catch return) {
-                        .SetAddress => {
-                            if (config.debug) log.info("    SetAddress: {}", .{self.new_address.?});
-                            self.new_address = @truncate(setup.value.into());
-                            device_itf.ep_ack(.ep0);
-                        },
-                        .SetConfiguration => {
-                            if (config.debug) log.info("    SetConfiguration", .{});
-                            self.process_set_config(device_itf, setup.value.into());
-                            device_itf.ep_ack(.ep0);
-                        },
-                        .GetDescriptor => {
-                            const descriptor_type = std.meta.intToEnum(descriptor.Type, setup.value.into() >> 8) catch null;
-                            if (descriptor_type) |dt| {
-                                self.process_get_descriptor(device_itf, setup, dt);
+                    const request: types.SetupRequest = @enumFromInt(setup.request);
+                    log.debug("Device setup: {t}", .{request});
+                    switch (request) {
+                        .SetAddress => self.new_address = @truncate(setup.value.into()),
+                        .SetConfiguration => self.process_set_config(device_itf, setup.value.into()),
+                        .GetDescriptor => return get_descriptor(setup.value.into()),
+                        .SetFeature => {
+                            const feature: types.FeatureSelector = @enumFromInt(setup.value.into() >> 8);
+                            switch (feature) {
+                                .DeviceRemoteWakeup, .EndpointHalt => {},
+                                // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
+                                .TestMode => return nak,
+                                else => return nak,
                             }
                         },
-                        .SetFeature => {
-                            if (std.meta.intToEnum(types.FeatureSelector, setup.value.into() >> 8)) |feat| {
-                                switch (feat) {
-                                    .DeviceRemoteWakeup, .EndpointHalt => device_itf.ep_ack(.ep0),
-                                    // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
-                                    .TestMode => {},
-                                }
-                            } else |_| {}
+                        _ => {
+                            log.warn("Unsupported standard request: {}", .{setup.request});
+                            return nak;
                         },
                     }
+                    return ack;
                 },
-                else => {},
+                else => |t| {
+                    log.warn("Unhandled device setup request: {t}", .{t});
+                    return nak;
+                },
             }
         }
 
-        fn process_get_descriptor(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket, descriptor_type: descriptor.Type) void {
-            switch (descriptor_type) {
-                .Device => {
-                    if (config.debug) log.info("        Device", .{});
-
-                    self.send_cmd_response(device_itf, @ptrCast(&config.device_descriptor), setup.length.into());
+        fn process_interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
+            const itf_num: u8 = @truncate(setup.index.into());
+            switch (itf_num) {
+                inline else => |itf| if (comptime itf < handlers.itf.len) {
+                    const drv = handlers.itf[itf];
+                    return @field(self.driver_data.?, @tagName(drv)).interface_setup(setup);
+                } else {
+                    log.warn("Interface index ({}) out of range ({})", .{ itf_num, handlers.itf.len });
+                    return nak;
                 },
-                .Configuration => {
-                    if (config.debug) log.info("        Config", .{});
-
-                    self.send_cmd_response(device_itf, @ptrCast(&config_descriptor), setup.length.into());
-                },
-                .String => {
-                    if (config.debug) log.info("        String", .{});
-                    // String descriptor index is in bottom 8 bits of
-                    // `value`.
-                    const i: u8 = @truncate(setup.value.into());
-                    if (i >= config.string_descriptors.len)
-                        log.warn("host requested invalid string descriptor {}", .{i})
-                    else
-                        self.send_cmd_response(
-                            device_itf,
-                            config.string_descriptors[i].data,
-                            setup.length.into(),
-                        );
-                },
-                .Interface => {
-                    if (config.debug) log.info("        Interface", .{});
-                },
-                .Endpoint => {
-                    if (config.debug) log.info("        Endpoint", .{});
-                },
-                .DeviceQualifier => {
-                    if (config.debug) log.info("        DeviceQualifier", .{});
-                    // We will just copy parts of the DeviceDescriptor because
-                    // the DeviceQualifierDescriptor can be seen as a subset.
-                    const qualifier = comptime &config.device_descriptor.qualifier();
-                    self.send_cmd_response(device_itf, @ptrCast(qualifier), setup.length.into());
-                },
-                else => {},
             }
+        }
+
+        fn get_descriptor(value: u16) ?[]const u8 {
+            const asBytes = std.mem.asBytes;
+            const desc_type: descriptor.Type = @enumFromInt(value >> 8);
+            const desc_idx: u8 = @truncate(value);
+            log.debug("Request for {t} descriptor {}", .{ desc_type, desc_idx });
+            return switch (desc_type) {
+                .Device => asBytes(&config.device_descriptor),
+                .DeviceQualifier => asBytes(comptime &config.device_descriptor.qualifier()),
+                .Configuration => asBytes(&config_descriptor),
+                .String => if (desc_idx < config.string_descriptors.len)
+                    config.string_descriptors[desc_idx].data
+                else {
+                    log.warn(
+                        "Descriptor index ({}) out of range ({})",
+                        .{ desc_idx, config.string_descriptors.len },
+                    );
+                    return nak;
+                },
+                else => nak,
+            };
         }
 
         fn process_set_config(self: *@This(), device_itf: *DeviceInterface, cfg_num: u16) void {
