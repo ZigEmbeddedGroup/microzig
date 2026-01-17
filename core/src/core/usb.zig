@@ -302,7 +302,7 @@ pub fn DeviceController(config: Config) type {
         }
 
         /// Called by the device implementation when a packet has been sent or received.
-        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint, _: []u8) void {
+        pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint) void {
             log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
 
             const handler = comptime @field(handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];

@@ -5,6 +5,7 @@
 
 const std = @import("std");
 const assert = std.debug.assert;
+const log = std.log.scoped(.usb_dev);
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
@@ -18,6 +19,7 @@ pub const Config = struct {
     max_endpoints_count: comptime_int = RP2XXX_MAX_ENDPOINTS_COUNT,
     max_interfaces_count: comptime_int = 16,
     sync_noops: comptime_int = 3,
+    log_level: std.log.Level = .warn,
 };
 
 const HardwareEndpointData = struct {
@@ -82,7 +84,7 @@ pub fn Polled(config: Config) type {
 
     return struct {
         pub const max_supported_packet_size = 64;
-        pub const max_supported_bcd_usb: usb.types.U16_Le = .from(0x0210);
+        pub const max_supported_bcd_usb: usb.types.U16_Le = .from(0x0110);
 
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
@@ -110,48 +112,47 @@ pub fn Polled(config: Config) type {
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
                 const setup = get_setup_packet();
+                if (config.log_level == .debug)
+                    log.debug("setup  {any}", .{setup});
                 controller.on_setup_req(&self.interface, &setup);
             }
 
-            var buff_status: u32 = 0;
             // Events on one or more buffers? (In practice, always one.)
             if (ints.BUFF_STATUS != 0) {
-                const bufbits_init = peripherals.USB.BUFF_STATUS.raw;
-                buff_status |= bufbits_init;
-                peripherals.USB.BUFF_STATUS.write_raw(bufbits_init);
-            }
+                const buff_status = peripherals.USB.BUFF_STATUS.raw;
 
-            inline for (0..2 * config.max_endpoints_count) |shift| {
-                if (buff_status & (@as(u32, 1) << shift) != 0) {
-                    // Here we exploit knowledge of the ordering of buffer control
-                    // registers in the peripheral. Each endpoint has a pair of
-                    // registers, IN being first
-                    const ep_num = shift / 2;
-                    const ep: usb.types.Endpoint = comptime .{
-                        .num = @enumFromInt(ep_num),
-                        .dir = if (shift & 1 == 0) .In else .Out,
-                    };
+                inline for (0..2 * config.max_endpoints_count) |shift| {
+                    if (buff_status & (@as(u32, 1) << shift) != 0) {
+                        // Here we exploit knowledge of the ordering of buffer control
+                        // registers in the peripheral. Each endpoint has a pair of
+                        // registers, IN being first
+                        const ep_num = shift / 2;
+                        const ep: usb.types.Endpoint = comptime .{
+                            .num = @enumFromInt(ep_num),
+                            .dir = if (shift % 2 == 0) .In else .Out,
+                        };
 
-                    const ep_hard = self.hardware_endpoint_get_by_address(ep);
+                        // We should only get here if we've been notified that
+                        // the buffer is ours again. This is indicated by the hw
+                        // _clearing_ the AVAILABLE bit.
+                        //
+                        // It seems the hardware sets the AVAILABLE bit _after_ setting BUFF_STATUS
+                        // So we wait for it just to be sure.
+                        while (buffer_control[ep_num].get(ep.dir).read().AVAILABLE_0 != 0) {}
 
-                    // We should only get here if we've been notified that
-                    // the buffer is ours again. This is indicated by the hw
-                    // _clearing_ the AVAILABLE bit.
-                    //
-                    // It seems the hardware sets the AVAILABLE bit _after_ setting BUFF_STATUS
-                    // So we wait for it just to be sure.
-                    while (buffer_control[ep_num].get(ep.dir).read().AVAILABLE_0 != 0) {}
-
-                    // Get the actual length of the data, which may be less
-                    // than the buffer size.
-                    const len = buffer_control[ep_num].get(ep.dir).read().LENGTH_0;
-
-                    controller.on_buffer(&self.interface, ep, ep_hard.data_buffer[0..len]);
+                        if (config.log_level == .debug)
+                            log.debug("buffer ep{} {t}", .{ ep_num, ep.dir });
+                        controller.on_buffer(&self.interface, ep);
+                    }
                 }
+                peripherals.USB.BUFF_STATUS.raw = buff_status;
             }
 
             // Has the host signaled a bus reset?
             if (ints.BUS_RESET != 0) {
+                if (config.log_level == .debug or config.log_level == .info)
+                    log.debug("bus reset", .{});
+
                 // Abort all endpoints
                 peripherals.USB.EP_ABORT.raw = 0xFFFFFFFF;
                 // Acknowledge by writing the write-one-to-clear status bit.
@@ -253,6 +254,9 @@ pub fn Polled(config: Config) type {
             ep_num: usb.types.Endpoint.Num,
             data: []const []const u8,
         ) usb.types.Len {
+            if (config.log_level == .debug)
+                log.debug("writev {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
+
             const self: *@This() = @fieldParentPtr("interface", itf);
 
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].in;
@@ -298,6 +302,9 @@ pub fn Polled(config: Config) type {
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
         ) usb.types.Len {
+            if (config.log_level == .debug)
+                log.debug("readv {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
+
             const self: *@This() = @fieldParentPtr("interface", itf);
             assert(data.len > 0);
 
@@ -321,6 +328,9 @@ pub fn Polled(config: Config) type {
             ep_num: usb.types.Endpoint.Num,
             len: usb.types.Len,
         ) void {
+            if (config.log_level == .debug)
+                log.debug("listen {t} {}", .{ ep_num, len });
+
             const self: *@This() = @fieldParentPtr("interface", itf);
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].out;
 
@@ -367,6 +377,9 @@ pub fn Polled(config: Config) type {
         }
 
         fn set_address(_: *usb.DeviceInterface, addr: u7) void {
+            if (config.log_level == .debug)
+                log.debug("set addr {}", .{addr});
+
             peripherals.USB.ADDR_ENDP.write(.{ .ADDRESS = addr });
         }
 
@@ -375,11 +388,17 @@ pub fn Polled(config: Config) type {
         }
 
         fn ep_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
+            const ep = desc.endpoint;
+            const attr = desc.attributes;
+            if (config.log_level == .debug) log.debug(
+                "ep open {t} {t} {{ type: {t}, sync: {t}, usage: {t}, size: {} }}",
+                .{ ep.num, ep.dir, attr.transfer_type, attr.synchronisation, attr.usage, desc.max_packet_size.into() },
+            );
+
             const self: *@This() = @fieldParentPtr("interface", itf);
 
             assert(@intFromEnum(desc.endpoint.num) <= config.max_endpoints_count);
 
-            const ep = desc.endpoint;
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
             assert(desc.max_packet_size.into() <= max_supported_packet_size);
@@ -394,7 +413,7 @@ pub fn Polled(config: Config) type {
                 endpoint_control[@intFromEnum(ep.num) - 1].get(ep.dir).write(.{
                     .ENABLE = 1,
                     .INTERRUPT_PER_BUFF = 1,
-                    .ENDPOINT_TYPE = @enumFromInt(@intFromEnum(desc.attributes.transfer_type)),
+                    .ENDPOINT_TYPE = @enumFromInt(@intFromEnum(attr.transfer_type)),
                     .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep_hard.data_buffer),
                 });
             }
