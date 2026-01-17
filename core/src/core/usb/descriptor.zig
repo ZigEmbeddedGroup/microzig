@@ -17,7 +17,8 @@ pub const Type = enum(u8) {
     Interface = 0x04,
     Endpoint = 0x05,
     DeviceQualifier = 0x06,
-    InterfaceAssociation = 0x0b,
+    InterfaceAssociation = 0x0B,
+    BOS = 0x0F,
     CsDevice = 0x21,
     CsConfig = 0x22,
     CsString = 0x23,
@@ -286,4 +287,21 @@ pub const InterfaceAssociation = extern struct {
     function_protocol: u8,
     // Index of the string descriptor describing the associated interfaces.
     function: u8,
+};
+
+pub const BOS = struct {
+    pub const Object = union(enum) {};
+
+    data: []const u8,
+
+    pub fn from(objects: []const Object) @This() {
+        const data: []const u8 = "";
+        const header: []const u8 = @ptrCast(&extern struct {
+            length: u8 = @sizeOf(@This()),
+            descriptor_type: Type = .BOS,
+            total_length: types.U16_Le = .from(@sizeOf(@This()) + data.len),
+            num_descriptors: u8 = @intCast(objects.len),
+        }{});
+        return .{ .data = header ++ data };
+    }
 };
