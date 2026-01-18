@@ -64,7 +64,7 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             };
         }
 
-        pub fn interface_setup(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+        pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             _ = self;
             switch (setup.request_type.type) {
                 .Standard => {

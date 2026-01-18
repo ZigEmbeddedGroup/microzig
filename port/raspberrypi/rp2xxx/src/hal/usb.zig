@@ -236,7 +236,7 @@ pub fn Polled(config: Config) type {
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
             // Listen for ACKs
-            self.interface.ep_listen(.ep0, 0);
+            self.interface.ep_listen(.ep0, max_supported_packet_size);
 
             return self;
         }
@@ -410,6 +410,7 @@ pub fn Polled(config: Config) type {
                     .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep_hard.data_buffer),
                 });
             }
+            @memset(ep_hard.data_buffer, 0);
         }
 
         fn endpoint_alloc(self: *@This(), desc: *const usb.descriptor.Endpoint) ![]align(64) u8 {

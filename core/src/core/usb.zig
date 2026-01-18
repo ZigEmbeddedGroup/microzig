@@ -385,11 +385,14 @@ pub fn DeviceController(config: Config) type {
         }
 
         fn process_interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
+            if (setup.request_type.type != .Class)
+                log.warn("Non-class ({t}) interface request", .{setup.request_type.type});
+
             const itf_num: u8 = @truncate(setup.index.into());
             switch (itf_num) {
                 inline else => |itf| if (comptime itf < handlers.itf.len) {
                     const drv = handlers.itf[itf];
-                    return @field(self.driver_data.?, @tagName(drv)).interface_setup(setup);
+                    return @field(self.driver_data.?, @tagName(drv)).class_request(setup);
                 } else {
                     log.warn("Interface index ({}) out of range ({})", .{ itf_num, handlers.itf.len });
                     return nak;

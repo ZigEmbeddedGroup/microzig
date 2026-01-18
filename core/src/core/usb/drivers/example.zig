@@ -59,7 +59,7 @@ pub const EchoExampleDriver = struct {
 
     /// Used for interface configuration through endpoint 0.
     /// Data returned by this function is sent on endpoint 0.
-    pub fn interface_setup(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+    pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
         _ = self;
         _ = setup;
         return usb.ack;

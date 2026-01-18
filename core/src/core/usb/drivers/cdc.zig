@@ -4,17 +4,43 @@ const assert = std.debug.assert;
 const log = std.log.scoped(.usb_cdc);
 
 pub const ManagementRequestType = enum(u8) {
+    SetCommFeature = 0x02,
+    GetCommFeature = 0x03,
+    ClearCommFeature = 0x04,
+    SetAuxLineState = 0x10,
+    SetHookState = 0x11,
+    PulseSetup = 0x12,
+    SendPulse = 0x13,
+    SetPulseTime = 0x14,
+    RingAuxJack = 0x15,
     SetLineCoding = 0x20,
     GetLineCoding = 0x21,
     SetControlLineState = 0x22,
     SendBreak = 0x23,
+    SetRingerParams = 0x30,
+    GetRingerParams = 0x31,
+    SetOperationParams = 0x32,
+    GetOperationParams = 0x33,
+    SetLineParams = 0x34,
+    GetLineParams = 0x35,
+    DialDigits = 0x36,
     _,
 };
 
 pub const LineCoding = extern struct {
-    bit_rate: u32 align(1),
-    stop_bits: u8,
-    parity: u8,
+    pub const StopBits = enum(u8) { @"1" = 0, @"1.5" = 1, @"2" = 2, _ };
+    pub const Parity = enum(u8) {
+        none = 0,
+        odd = 1,
+        even = 2,
+        mark = 3,
+        space = 4,
+        _,
+    };
+
+    bit_rate: usb.types.U32_Le,
+    stop_bits: StopBits,
+    parity: Parity,
     data_bits: u8,
 
     pub const init: @This() = .{
@@ -68,15 +94,23 @@ pub fn CdcClassDriver(options: Options) type {
                     },
                     .cdc_header = .{ .bcd_cdc = .from(0x0120) },
                     .cdc_call_mgmt = .{
-                        .capabilities = 0,
+                        .capabilities = .none,
                         .data_interface = itf_data,
                     },
-                    .cdc_acm = .{ .capabilities = 6 },
+                    .cdc_acm = .{
+                        .capabilities = .{
+                            .comm_feature = false,
+                            .send_break = false,
+                            // Line coding requests get sent regardless of this bit
+                            .line_coding = true,
+                            .network_connection = false,
+                        },
+                    },
                     .cdc_union = .{
                         .master_interface = itf_notifi,
                         .slave_interface_0 = itf_data,
                     },
-                    .ep_notifi = .interrupt(alloc.next_ep(.In), 8, 16),
+                    .ep_notifi = .interrupt(alloc.next_ep(.In), 16, 16),
                     .itf_data = .{
                         .interface_number = itf_data,
                         .alternate_setting = 0,
@@ -171,9 +205,9 @@ pub fn CdcClassDriver(options: Options) type {
                 .device = device,
                 .ep_notifi = desc.ep_notifi.endpoint.num,
                 .line_coding = .{
-                    .bit_rate = 115200,
-                    .stop_bits = 0,
-                    .parity = 0,
+                    .bit_rate = .from(115200),
+                    .stop_bits = .@"1",
+                    .parity = .none,
                     .data_bits = 8,
                 },
 
@@ -189,9 +223,9 @@ pub fn CdcClassDriver(options: Options) type {
             device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
         }
 
-        pub fn interface_setup(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+        pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
-            log.debug("cdc setup: {t}", .{mgmt_request});
+            log.debug("cdc setup: {t} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });
 
             return switch (mgmt_request) {
                 .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding
