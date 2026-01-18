@@ -33,11 +33,11 @@ pub const interrupt = struct {
     }
 
     pub fn enable_interrupts() void {
-        csr.mstatus.set(.{ .mie = 1 });
+        csr.mstatus.set_imm(.{ .mie = 1 });
     }
 
     pub fn disable_interrupts() void {
-        csr.mstatus.clear(.{ .mie = 1 });
+        csr.mstatus.clear_imm(.{ .mie = 1 });
     }
 
     pub const core = utilities.interrupt.CoreImpl(CoreInterrupt);
@@ -370,6 +370,7 @@ pub const csr = struct {
     pub const tdata3 = Csr(0x7A3, u32);
     pub const mcontext = Csr(0x7A8, u32);
 
+    // Note: Debug CSRs not accessible except from an external debugger
     pub const dcsr = Csr(0x7B0, u32);
     pub const dpc = Csr(0x7B1, u32);
     pub const dscratch0 = Csr(0x7B2, u32);
@@ -405,6 +406,19 @@ pub const csr = struct {
                 write_raw(@bitCast(value));
             }
 
+            // These _imm functions are separate because comptime values >u5 immediate field(>31)
+            // are unfortunately compile errors instead of being put in a register
+            pub inline fn write_raw_imm(value: u32) void {
+                asm volatile ("csrw " ++ ident ++ ", %[value]"
+                    :
+                    : [value] "ri" (value),
+                );
+            }
+
+            pub inline fn write_imm(value: T) void {
+                write_raw_imm(@bitCast(value));
+            }
+
             pub inline fn modify(modifier: anytype) void {
                 switch (@typeInfo(T)) {
                     .@"struct" => {
@@ -430,6 +444,17 @@ pub const csr = struct {
                 set_raw(get_bits(fields));
             }
 
+            pub inline fn set_raw_imm(bits: u32) void {
+                asm volatile ("csrs " ++ ident ++ ", %[bits]"
+                    :
+                    : [bits] "ri" (bits),
+                );
+            }
+
+            pub inline fn set_imm(fields: anytype) void {
+                set_raw_imm(get_bits(fields));
+            }
+
             pub inline fn clear_raw(bits: u32) void {
                 asm volatile ("csrc " ++ ident ++ ", %[bits]"
                     :
@@ -439,6 +464,17 @@ pub const csr = struct {
 
             pub inline fn clear(fields: anytype) void {
                 clear_raw(get_bits(fields));
+            }
+
+            pub inline fn clear_raw_imm(bits: u32) void {
+                asm volatile ("csrc " ++ ident ++ ", %[bits]"
+                    :
+                    : [bits] "ri" (bits),
+                );
+            }
+
+            pub inline fn clear_imm(fields: anytype) void {
+                clear_raw_imm(get_bits(fields));
             }
 
             pub inline fn read_set_raw(bits: u32) u32 {
@@ -491,11 +527,11 @@ pub const utilities = struct {
                 }
 
                 pub fn enable(int: CoreInterruptEnum) void {
-                    csr.mie.set(@as(u32, 1) << @intFromEnum(int));
+                    csr.mie.set_imm(@as(u32, 1) << @intFromEnum(int));
                 }
 
                 pub fn disable(int: CoreInterruptEnum) void {
-                    csr.mie.clear(@as(u32, 1) << @intFromEnum(int));
+                    csr.mie.clear_imm(@as(u32, 1) << @intFromEnum(int));
                 }
 
                 pub fn is_pending(int: CoreInterruptEnum) bool {
@@ -503,11 +539,11 @@ pub const utilities = struct {
                 }
 
                 pub fn set_pending(int: CoreInterruptEnum) void {
-                    csr.mip.set(@as(u32, 1) << @intFromEnum(int));
+                    csr.mip.set_imm(@as(u32, 1) << @intFromEnum(int));
                 }
 
                 pub fn clear_pending(int: CoreInterruptEnum) void {
-                    csr.mip.clear(@as(u32, 1) << @intFromEnum(int));
+                    csr.mip.clear_imm(@as(u32, 1) << @intFromEnum(int));
                 }
             };
         }
