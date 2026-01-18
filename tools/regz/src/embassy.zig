@@ -516,6 +516,7 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
                 try new_list.append(value);
             }
             try child.object.put(list_name, std.json.Value{ .array = new_list });
+            try root_json.object.put(item_name, child);
         }
     }
 }
