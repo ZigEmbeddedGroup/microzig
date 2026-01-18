@@ -43,6 +43,7 @@ pub const Speed = enum(u2) {
 pub const Pull = enum {
     up,
     down,
+    disabled,
 };
 
 pub const AlternateFunctionMode = enum {
@@ -145,12 +146,13 @@ pub const Pin = packed struct(u8) {
         switch (pull) {
             .up => port.BSHR.raw = gpio.mask(),
             .down => port.BCR.raw = gpio.mask(),
+            .disabled => gpio.set_input_mode(.floating),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.IDR.raw & gpio.mask() != 0)
+        return if (port.INDR.raw & gpio.mask() != 0)
             1
         else
             0;

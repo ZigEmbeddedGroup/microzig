@@ -31573,13 +31573,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<name>RB_UH_DM_PIN__RB_UD_DM_PIN</name>
 						<description>ReadOnly: indicate current UDM pin level</description>
 						<bitRange>[4:4]</bitRange>
-						<access>read-opnly</access>
+						<access>read-only</access>
 					</field>
 					<field>
 						<name>RB_UH_DP_PIN__RB_UD_DP_PIN</name>
 						<description>USB device enable and internal pullup resistance enable</description>
 						<bitRange>[5:5]</bitRange>
-						<access>read-opnly</access>
+						<access>read-only</access>
 					</field>
 					<field>
 						<name>RB_UH_PD_DIS__RB_UD_PD_DIS</name>
