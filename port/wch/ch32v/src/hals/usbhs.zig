@@ -302,9 +302,11 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
         // ---- Poll loop -------------------------------------------------------
 
         pub fn poll(self: *Self) void {
+            var did_work = false;
             while (true) {
                 const fg: u8 = regs().USB_INT_FG.raw;
                 if (fg == 0) break;
+                did_work = true;
 
                 std.log.debug("ch32: INT_FG = 0x{x}", .{fg});
 
@@ -333,14 +335,15 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     regs().USB_INT_FG.raw = UIF_SETUP_ACT;
                     if ((fg & UIF_TRANSFER) != 0) regs().USB_INT_FG.raw = UIF_TRANSFER;
 
-                    const stv = regs().USB_INT_ST.read();
-                    std.log.debug("ch32: INT_ST={any}", .{stv});
+                    // const stv = regs().USB_INT_ST.read();
+                    // std.log.debug("ch32: INT_ST={any}", .{stv});
 
                     const setup = self.read_setup_from_ep0();
-                    std.log.debug("ch32: Setup: {any}", .{setup});
+                    // std.log.debug("ch32: Setup: {any}", .{setup});
 
                     // After SETUP, EP0 IN data stage starts with DATA1.
                     set_tx_ctrl(0, RES_NAK, TOG_DATA1, true);
+                    set_rx_ctrl(0, RES_NAK, TOG_DATA1, true);
 
                     self.controller.on_setup_req(&self.interface, &setup);
                     self.call_on_buffer(.In, 0, self.st(.ep0, .In).buf[0..8]); // consume SETUP
@@ -351,9 +354,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     const stv = regs().USB_INT_ST.read();
                     const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                     const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
-                    if (token != TOKEN_SOF) { // reduce spam from SOF events
-                        std.log.info("ch32: TRANSFER event", .{});
-                    }
+                    std.log.info("ch32: TRANSFER event", .{});
 
                     // clear transfer
                     regs().USB_INT_FG.raw = UIF_TRANSFER;
@@ -370,13 +371,17 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 // 0x10 => FIFO_OV
                 // 0x40 => ISO_ACT
             }
+            if (did_work) {
+                std.log.info("", .{});
+            }
         }
 
         fn handle_transfer(self: *Self, ep: u4, token: u2) void {
             if (ep >= cfg.max_endpoints_count) return;
-
+            std.log.debug("ch32: token={}", .{token});
             switch (token) {
                 TOKEN_OUT => self.handle_out(ep),
+                TOKEN_SOF => {},
                 TOKEN_IN => self.handle_in(ep),
                 TOKEN_SETUP => {
                     // If UIF_SETUP_ACT isn't present, handle SETUP via TRANSFER.
@@ -387,7 +392,6 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                         self.controller.on_setup_req(&self.interface, &setup);
                     }
                 },
-                TOKEN_SOF => {},
             }
         }
 
