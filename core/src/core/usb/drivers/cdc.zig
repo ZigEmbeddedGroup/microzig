@@ -228,7 +228,7 @@ pub fn CdcClassDriver(options: Options) type {
 
         pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
-            log.debug("cdc setup: {t} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });
+            log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });
 
             return switch (mgmt_request) {
                 .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding

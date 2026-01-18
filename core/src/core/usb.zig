@@ -356,8 +356,13 @@ pub fn DeviceController(config: Config) type {
             switch (setup.request_type.type) {
                 .Standard => {
                     const request: types.SetupRequest = @enumFromInt(setup.request);
-                    log.debug("Device setup: {t}", .{request});
+                    log.debug("Device setup: {any}", .{request});
                     switch (request) {
+                        .GetStatus => {
+                            const attr = config_descriptor.__configuration_descriptor.attributes;
+                            const status: types.DeviceStatus = comptime .create(attr.self_powered, false);
+                            return std.mem.asBytes(&status);
+                        },
                         .SetAddress => self.new_address = @truncate(setup.value.into()),
                         .SetConfiguration => self.process_set_config(device_itf, setup.value.into()),
                         .GetDescriptor => return get_descriptor(setup.value.into()),
@@ -370,7 +375,7 @@ pub fn DeviceController(config: Config) type {
                                 else => return nak,
                             }
                         },
-                        _ => {
+                        else => {
                             log.warn("Unsupported standard request: {}", .{setup.request});
                             return nak;
                         },
@@ -378,16 +383,13 @@ pub fn DeviceController(config: Config) type {
                     return ack;
                 },
                 else => |t| {
-                    log.warn("Unhandled device setup request: {t}", .{t});
+                    log.warn("Unhandled device setup request: {any}", .{t});
                     return nak;
                 },
             }
         }
 
         fn process_interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
-            if (setup.request_type.type != .Class)
-                log.warn("Non-class ({t}) interface request", .{setup.request_type.type});
-
             const itf_num: u8 = @truncate(setup.index.into());
             switch (itf_num) {
                 inline else => |itf| if (comptime itf < handlers.itf.len) {
@@ -404,7 +406,7 @@ pub fn DeviceController(config: Config) type {
             const asBytes = std.mem.asBytes;
             const desc_type: descriptor.Type = @enumFromInt(value >> 8);
             const desc_idx: u8 = @truncate(value);
-            log.debug("Request for {t} descriptor {}", .{ desc_type, desc_idx });
+            log.debug("Request for {any} descriptor {}", .{ desc_type, desc_idx });
             return switch (desc_type) {
                 .Device => asBytes(&config.device_descriptor),
                 .DeviceQualifier => asBytes(comptime &config.device_descriptor.qualifier()),

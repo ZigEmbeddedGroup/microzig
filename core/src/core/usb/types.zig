@@ -293,11 +293,30 @@ pub const TransferType = enum(u2) {
 
 /// The types of USB SETUP requests that we understand.
 pub const SetupRequest = enum(u8) {
+    GetStatus = 0x00,
+    ClearFeature = 0x02,
     SetFeature = 0x03,
     SetAddress = 0x05,
     GetDescriptor = 0x06,
+    SetDescriptor = 0x07,
+    GetConfiguration = 0x08,
     SetConfiguration = 0x09,
     _,
+};
+
+pub const DeviceStatus = extern struct {
+    const Flags = packed struct(u8) {
+        self_powered: bool,
+        remote_wakeup: bool,
+        reserved: u6 = 0,
+    };
+
+    flags: Flags,
+    reserved: u8 = 0,
+
+    pub fn create(self_powered: bool, remote_wakeup: bool) @This() {
+        return .{ .flags = .{ .self_powered = self_powered, .remote_wakeup = remote_wakeup } };
+    }
 };
 
 pub const FeatureSelector = enum(u8) {
