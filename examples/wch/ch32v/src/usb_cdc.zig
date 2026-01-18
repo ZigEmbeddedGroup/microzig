@@ -52,6 +52,7 @@ pub var usb_dev: usb.Polled(
             .max_current_ma = 100,
             .Drivers = struct { serial: UsbSerial },
         }},
+        .debug = true,
     },
     .{ .prefer_high_speed = true },
 ) = undefined;
