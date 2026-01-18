@@ -1,6 +1,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
-const EpNum = usb.types.Endpoint.Num;
+const EP_Num = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_hid);
 
 pub const Options = struct {
@@ -55,8 +55,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
         };
 
         device: *usb.DeviceInterface,
-        ep_in: EpNum,
-        ep_out: EpNum,
+        ep_in: EP_Num,
+        ep_out: EP_Num,
 
         pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
             self.* = .{
@@ -120,12 +120,12 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             return usb.nak;
         }
 
-        pub fn on_tx_ready(self: *@This(), ep: EpNum) void {
+        pub fn on_tx_ready(self: *@This(), ep: EP_Num) void {
             _ = self;
             _ = ep;
         }
 
-        pub fn on_rx(self: *@This(), ep: EpNum) void {
+        pub fn on_rx(self: *@This(), ep: EP_Num) void {
             _ = self;
             _ = ep;
         }

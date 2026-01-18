@@ -54,6 +54,7 @@ pub const HID = extern struct {
         Us,
         Yugoslavia,
         TurkishF,
+        _,
     };
 
     pub const Type = enum(u8) {

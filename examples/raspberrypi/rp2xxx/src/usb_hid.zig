@@ -64,10 +64,8 @@ const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     .GPIO25 = .{ .name = "led", .direction = .out },
 };
 
-const pins = pin_config.pins();
-
 pub fn main() !void {
-    pin_config.apply();
+    const pins = pin_config.apply();
 
     const uart = rp2xxx.uart.instance.num(0);
     uart.apply(.{
