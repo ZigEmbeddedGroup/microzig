@@ -6,6 +6,11 @@ const MicroBuild = microzig.MicroBuild(.{
 });
 
 pub fn build(b: *std.Build) void {
+    // Use GNU objcopy instead of LLVM objcopy to avoid 512MB binary issue.
+    // LLVM objcopy includes LOAD segments for NOLOAD sections, causing the binary
+    // to span from flash (0x0) to RAM (0x20000000) = 512MB of zeros.
+    const gnu_objcopy = b.findProgram(&.{"riscv64-unknown-elf-objcopy"}, &.{}) catch null;
+
     const optimize = b.standardOptimizeOption(.{});
     const maybe_example = b.option([]const u8, "example", "only build matching examples");
 
@@ -53,6 +58,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.chips.ch32v303xb, .name = "blinky_systick_ch32v303", .file = "src/blinky_systick.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v305.nano_ch32v305, .name = "nano_ch32v305_blinky", .file = "src/board_blinky.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v307.ch32v307v_r1_1v0, .name = "ch32v307v_r1_1v0_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v307.ch32v307v_r1_1v0, .name = "ch32v307v_r1_1v0_usb_cdc", .file = "src/usb_cdc.zig" },
     };
 
     for (available_examples) |example| {
@@ -77,6 +83,22 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
+
+        // Use GNU objcopy to create .bin files (avoids LLVM objcopy 512MB issue)
+
+        if (gnu_objcopy) |objcopy_path| {
+            const bin_filename = b.fmt("{s}.bin", .{example.name});
+            const objcopy_run = b.addSystemCommand(&.{objcopy_path});
+            objcopy_run.addArgs(&.{ "-O", "binary" });
+            objcopy_run.addArtifactArg(fw.artifact);
+            const bin_output = objcopy_run.addOutputFileArg(bin_filename);
+            b.getInstallStep().dependOn(&b.addInstallFileWithDir(
+                bin_output,
+                .{ .custom = "firmware" },
+                bin_filename,
+            ).step);
+        }
+        // For debugging, we also always install the firmware as an ELF file
         mb.install_firmware(fw, .{ .format = .elf });
 
         // Use GNU objcopy to create .bin files (avoids LLVM objcopy 512MB issue)
