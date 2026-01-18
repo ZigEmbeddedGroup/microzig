@@ -11,7 +11,7 @@ const chip = microzig.chip;
 // as advised in the reference manual
 //
 // the `switch` in `can_enable_clock` and `can_reset` are not great for
-// small assembly. It is probably possible to remove them (though it mean writing to reserved bits).
+// small assembly. It is probably possible to remove them (though it means writing to reserved bits).
 
 /// Enables the module's clock.
 /// It is a no-op if `module.can_control_clock()` is false.
