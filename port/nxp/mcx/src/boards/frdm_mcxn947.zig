@@ -48,6 +48,7 @@ pub fn init_debug_console_pins() void {
 ///     .logFn = get_log_fn("\n", .Default)
 /// };
 /// pub fn main() !void {
+///     hal.Port.num(1).init();
 ///     init_debug_console_pins();
 ///     init_debug_console(Led.Red, &.{});
 ///
