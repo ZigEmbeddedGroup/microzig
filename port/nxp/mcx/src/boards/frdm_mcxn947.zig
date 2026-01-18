@@ -63,7 +63,7 @@ pub fn init_debug_console(led: ?hal.GPIO, writer_buffer: []u8) !void {
     }
 
     FlexComm.num(4).set_clock(.FRO_12MHz, 1);
-    const uart: FlexComm.LPUart = try .init(4, .Default);
+    const uart: FlexComm.LP_UART = try .init(4, .Default);
     uart_writer = uart.writer(writer_buffer);
 }
 
@@ -95,7 +95,7 @@ pub const Colors = struct {
     };
 };
 
-pub var uart_writer: ?FlexComm.LPUart.Writer = null;
+pub var uart_writer: ?FlexComm.LP_UART.Writer = null;
 pub var panic_led: ?hal.GPIO = null;
 
 /// Returns a log function. The function will use `colors` (can be `.None` for no colors)
@@ -142,7 +142,7 @@ pub fn get_log_fn(comptime terminator: []const u8, comptime colors: Colors) @Typ
 /// pub const panic = board.panic;
 /// ```
 pub const panic = std.debug.FullPanic(struct {
-    pub fn panicFn(message: []const u8, first_trace_address: ?usize) noreturn {
+    pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
         if(panic_led) |led| led.put(0);
         return microzig.panic.call(message, first_trace_address);
     }

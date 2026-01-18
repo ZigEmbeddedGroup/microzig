@@ -8,11 +8,11 @@ const Io = std.Io;
 
 /// Uart interface. Currently only support 8 bit mode.
 // TODO: 9 and 10 bit mode
-pub const LPUart = enum(u4) {
+pub const LP_UART = enum(u4) {
     _,
 
-    pub const LPUartTy = *volatile chip.types.peripherals.LPUART0;
-    const Registers: [10]LPUartTy = .{
+    pub const RegTy = *volatile chip.types.peripherals.LPUART0;
+    const Registers: [10]RegTy = .{
         peripherals.LPUART0,
         peripherals.LPUART1,
         peripherals.LPUART2,
@@ -64,10 +64,10 @@ pub const LPUart = enum(u4) {
     };
 
     /// Initializes the Uart controller.
-    pub fn init(interface: u4, config: Config) ConfigError!LPUart {
+    pub fn init(interface: u4, config: Config) ConfigError!LP_UART {
         FlexComm.num(interface).init(.UART);
 
-        const uart: LPUart = @enumFromInt(interface);
+        const uart: LP_UART = @enumFromInt(interface);
         const regs = uart.get_regs();
         uart.reset();
         _ = uart.disable();
@@ -112,20 +112,20 @@ pub const LPUart = enum(u4) {
     }
 
     /// Resets the Uart interface and deinit the corresponding FlexComm interface.
-    pub fn deinit(uart: LPUart) void {
+    pub fn deinit(uart: LP_UART) void {
         uart.reset();
         FlexComm.num(uart.get_n()).deinit();
     }
 
     /// Resets the Uart interface.
-    pub fn reset(uart: LPUart) void {
+    pub fn reset(uart: LP_UART) void {
         uart.get_regs().GLOBAL.modify_one("RST", .RESET);
         uart.get_regs().GLOBAL.modify_one("RST", .NO_EFFECT);
     }
 
     /// Disables the interface.
     /// Returns if the transmitter and the receiver were enabled (in this order).
-    pub fn disable(uart: LPUart) struct { bool, bool } {
+    pub fn disable(uart: LP_UART) struct { bool, bool } {
         const regs = uart.get_regs();
         var ctrl = regs.CTRL.read();
         const enabled = .{ ctrl.TE == .ENABLED, ctrl.RE == .ENABLED };
@@ -139,7 +139,7 @@ pub const LPUart = enum(u4) {
     }
 
     /// Enables the transmitter and/or the receiver depending on the parameters.
-    pub fn set_enabled(uart: LPUart, transmitter_enabled: bool, receiver_enabled: bool) void {
+    pub fn set_enabled(uart: LP_UART, transmitter_enabled: bool, receiver_enabled: bool) void {
         const regs = uart.get_regs();
 
         var ctrl = regs.CTRL.read();
@@ -156,7 +156,7 @@ pub const LPUart = enum(u4) {
     /// Whether a baudrate is available depends on the clock of the interface.
     // TODO: check if there is a risk of losing data since we disable then enable the receiver
     // TODO: tests with baudrate (see raspberry uart tests)
-    pub fn set_baudrate(uart: LPUart, baudrate: u32) ConfigError!void {
+    pub fn set_baudrate(uart: LP_UART, baudrate: u32) ConfigError!void {
         const clk = uart.get_flexcomm().get_clock();
         const regs = uart.get_regs();
         var best_osr: u5 = 0;
@@ -208,7 +208,7 @@ pub const LPUart = enum(u4) {
     }
 
     /// Return the current, real baudrate of the interface (see `set_baudrate` for more details).
-    pub fn get_actual_baudrate(uart: LPUart) f32 {
+    pub fn get_actual_baudrate(uart: LP_UART) f32 {
         const clk = uart.get_flexcomm().get_clock();
         const regs = uart.get_regs();
         const baud = regs.BAUD.read();
@@ -220,32 +220,32 @@ pub const LPUart = enum(u4) {
         return @as(f32, clk) / (baud.SBR * osr);
     }
 
-    fn get_n(uart: LPUart) u4 {
+    fn get_n(uart: LP_UART) u4 {
         return @intFromEnum(uart);
     }
 
-    pub fn get_regs(uart: LPUart) LPUartTy {
-        return LPUart.Registers[uart.get_n()];
+    pub fn get_regs(uart: LP_UART) RegTy {
+        return LP_UART.Registers[uart.get_n()];
     }
 
-    pub fn get_flexcomm(uart: LPUart) FlexComm {
+    pub fn get_flexcomm(uart: LP_UART) FlexComm {
         return FlexComm.num(@intFromEnum(uart));
     }
 
-    fn can_write(uart: LPUart) bool {
+    fn can_write(uart: LP_UART) bool {
         return uart.get_regs().STAT.read().TDRE == .NO_TXDATA;
     }
 
-    pub fn can_read(uart: LPUart) bool {
+    pub fn can_read(uart: LP_UART) bool {
         return uart.get_regs().STAT.read().RDRF == .RXDATA;
     }
 
-    fn is_tx_complete(uart: LPUart) bool {
+    fn is_tx_complete(uart: LP_UART) bool {
         return uart.get_regs().STAT.read().TC == .COMPLETE;
     }
 
     // TODO: error handling
-    pub fn read(uart: LPUart) u8 {
+    pub fn read(uart: LP_UART) u8 {
         const data: *volatile u8 = @ptrCast(&uart.get_regs().DATA);
         return data.*;
     }
@@ -254,7 +254,7 @@ pub const LPUart = enum(u4) {
     // TODO: non blocking
     // TODO: max retries
     // TODO: error handling
-    pub fn transmit(uart: LPUart, buf: []const u8) void {
+    pub fn transmit(uart: LP_UART, buf: []const u8) void {
         const regs = uart.get_regs();
 
         const data: *volatile u8 = @ptrCast(&regs.DATA);
@@ -267,15 +267,15 @@ pub const LPUart = enum(u4) {
         while(!uart.is_tx_complete()) {}
     }
 
-    pub fn writer(uart: LPUart, buffer: []u8) Writer {
+    pub fn writer(uart: LP_UART, buffer: []u8) Writer {
         return .init(uart, buffer);
     }
 
     pub const Writer = struct {
         interface: Io.Writer,
-        uart: LPUart,
+        uart: LP_UART,
 
-        pub fn init(uart: LPUart, buffer: []u8) Writer {
+        pub fn init(uart: LP_UART, buffer: []u8) Writer {
             return .{
                 .uart = uart,
                 .interface = init_interface(buffer)
@@ -309,15 +309,15 @@ pub const LPUart = enum(u4) {
         }
     };
 
-    pub fn reader(uart: LPUart, buffer: []u8) Reader {
+    pub fn reader(uart: LP_UART, buffer: []u8) Reader {
         return .init(uart, buffer);
     }
 
     pub const Reader = struct {
         interface: Io.Reader,
-        uart: LPUart,
+        uart: LP_UART,
 
-        pub fn init(uart: LPUart, buffer: []u8) Reader {
+        pub fn init(uart: LP_UART, buffer: []u8) Reader {
             return .{
                 .uart = uart,
                 .interface = init_interface(buffer)

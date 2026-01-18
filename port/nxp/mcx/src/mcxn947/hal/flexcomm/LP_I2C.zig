@@ -14,11 +14,11 @@ const peripherals = chip.peripherals;
 // TODO: 10 bit addressing
 // TODO: better receive (with matching)
 // TODO: SMBus
-pub const LPI2c = enum(u4) {
+pub const LP_I2C = enum(u4) {
     _,
 
-    pub const LPI2cTy = *volatile chip.types.peripherals.LPI2C0;
-    const Registers: [10]LPI2cTy = .{
+    pub const RegTy = *volatile chip.types.peripherals.LPI2C0;
+    const Registers: [10]RegTy = .{
         peripherals.LPI2C0,
         peripherals.LPI2C1,
         peripherals.LPI2C2,
@@ -78,10 +78,10 @@ pub const LPI2c = enum(u4) {
     };
 
     /// Initializes the I2C controller.
-    pub fn init(interface: u4, config: Config) ConfigError!LPI2c {
+    pub fn init(interface: u4, config: Config) ConfigError!LP_I2C {
         FlexComm.num(interface).init(.I2C);
 
-        const i2c: LPI2c = @enumFromInt(interface);
+        const i2c: LP_I2C = @enumFromInt(interface);
         const regs = i2c.get_regs();
         i2c.reset();
 
@@ -131,13 +131,13 @@ pub const LPI2c = enum(u4) {
     }
 
     /// Resets the I2C interface and deinit the corresponding FlexComm interface.
-    pub fn deinit(i2c: LPI2c) void {
+    pub fn deinit(i2c: LP_I2C) void {
         i2c.reset();
         FlexComm.num(i2c.get_n()).deinit();
     }
 
     /// Resets the I2C interface.
-    pub fn reset(i2c: LPI2c) void {
+    pub fn reset(i2c: LP_I2C) void {
         i2c.get_regs().MCR.write(.{
             .RST = .RESET,
             .MEN = .DISABLED,
@@ -149,12 +149,12 @@ pub const LPI2c = enum(u4) {
         i2c.get_regs().MCR.modify_one("RST", .NOT_RESET);
     }
 
-    pub fn is_bus_busy(i2c: LPI2c) bool {
+    pub fn is_bus_busy(i2c: LP_I2C) bool {
         return i2c.get_regs().MSR.read().BBF == .BUSY;
     }
 
     /// Returns an error if any is indicated by the status register.
-    pub fn check_flags(i2c: LPI2c) Error!void {
+    pub fn check_flags(i2c: LP_I2C) Error!void {
         const MSR = i2c.get_regs().MSR.read();
         const NDF: bool = MSR.NDF == .INT_YES;
         const ALF: bool = MSR.ALF == .INT_YES;
@@ -175,26 +175,26 @@ pub const LPI2c = enum(u4) {
         return;
     }
 
-    pub fn clear_flags(i2c: LPI2c) void {
+    pub fn clear_flags(i2c: LP_I2C) void {
         i2c.get_regs().MSR.write_raw(0);
     }
 
-    fn reset_fifos(i2c: LPI2c) void {
+    fn reset_fifos(i2c: LP_I2C) void {
         i2c.get_regs().MCR.modify(.{
             .RRF = .NOW_EMPTY,
             .RTF = .NOW_EMPTY
         });
     }
 
-    fn get_n(i2c: LPI2c) u4 {
+    fn get_n(i2c: LP_I2C) u4 {
         return @intFromEnum(i2c);
     }
 
-    pub fn get_regs(i2c: LPI2c) LPI2cTy {
-        return LPI2c.Registers[i2c.get_n()];
+    pub fn get_regs(i2c: LP_I2C) RegTy {
+        return LP_I2C.Registers[i2c.get_n()];
     }
 
-    fn get_flexcomm(i2c: LPI2c) FlexComm {
+    fn get_flexcomm(i2c: LP_I2C) FlexComm {
         return FlexComm.num(i2c.get_n());
     }
 
@@ -202,7 +202,7 @@ pub const LPI2c = enum(u4) {
     /// `highspeed` and `ultrafast` modes are currently unimplemented.
     ///
     /// Note that the baudrate depends on the flexcomm's interface clock: changing the clock will change the baudrate.
-    pub fn set_baudrate(i2c: LPI2c, mode: Config.OperatingMode, baudrate: u32) ConfigError!void {
+    pub fn set_baudrate(i2c: LP_I2C, mode: Config.OperatingMode, baudrate: u32) ConfigError!void {
         const lpi2c_clk_f = i2c.get_flexcomm().get_clock();
         const regs = i2c.get_regs();
         // We currently assume these are negligible, but it could be useful
@@ -331,7 +331,7 @@ pub const LPI2c = enum(u4) {
     /// Computes the current baudrate.
     /// Depends on the flexcomm's interface clock.
     /// Changing the clock will change the baudrate.
-    pub fn get_actual_baudrate(i2c: LPI2c) f32 {
+    pub fn get_actual_baudrate(i2c: LP_I2C) f32 {
         const regs = i2c.get_regs();
         const MCCR0 = regs.MCCR0.read();
         const MCFGR1 = regs.MCFGR1.read();
@@ -349,7 +349,7 @@ pub const LPI2c = enum(u4) {
     }
 
     /// Disables the I2C interface and return whether it was enabled.
-    pub fn disable(i2c: LPI2c) bool {
+    pub fn disable(i2c: LP_I2C) bool {
         const regs = i2c.get_regs();
         var MCR = regs.MCR.read();
         const enabled = MCR.MEN == .ENABLED;
@@ -359,7 +359,7 @@ pub const LPI2c = enum(u4) {
         return enabled;
     }
 
-    pub fn set_enabled(i2c: LPI2c, enabled: bool) void {
+    pub fn set_enabled(i2c: LP_I2C, enabled: bool) void {
         i2c.get_regs().MCR.modify_one("MEN", if(enabled) .ENABLED else .DISABLED);
     }
 
@@ -368,31 +368,31 @@ pub const LPI2c = enum(u4) {
     // Read / Write functions
     //
 
-    fn can_read(i2c: LPI2c) bool {
+    fn can_read(i2c: LP_I2C) bool {
         return i2c.get_fifo_counts().rx > 0;
     }
 
-    pub fn can_write(i2c: LPI2c) bool {
+    pub fn can_write(i2c: LP_I2C) bool {
         return i2c.get_fifo_counts().tx < i2c.get_fifo_sizes().tx;
     }
 
     // The `PARAM` register is readonly with default value of 3
     // for `MTXFIFO` and `MRXFIFO`
-    pub fn get_fifo_sizes(i2c: LPI2c) struct { tx: u16, rx: u16 } {
+    pub fn get_fifo_sizes(i2c: LP_I2C) struct { tx: u16, rx: u16 } {
         _ = i2c;
         // const param = i2c.get_regs().PARAM.read();
         // return .{ @as(u16, 1) << param.MTXFIFO, @as(u16, 1) << param.MRXFIFO };
         return .{ .tx = 8, .rx = 8 };
     }
 
-    pub fn get_fifo_counts(i2c: LPI2c) struct { tx: u8, rx: u8 } {
+    pub fn get_fifo_counts(i2c: LP_I2C) struct { tx: u8, rx: u8 } {
         const MFSR  = i2c.get_regs().MFSR.read();
         return .{ .tx = MFSR.TXCOUNT, .rx = MFSR.RXCOUNT };
     }
 
     /// Sends a I2C start. Blocks until the start command can be written in the tx fifo.
     /// Does not block until the start has been sent.
-    pub fn send_start_blocking(i2c: LPI2c, address: u7, mode: enum(u2) { write = 0, read = 1 }) Error!void {
+    pub fn send_start_blocking(i2c: LP_I2C, address: u7, mode: enum(u2) { write = 0, read = 1 }) Error!void {
         try i2c.wait_for_tx_space();
 
         i2c.get_regs().MTDR.write(.{
@@ -402,7 +402,7 @@ pub const LPI2c = enum(u4) {
     }
 
     /// Sends a I2C stop. Blocks until the stop command has been sent.
-    pub fn send_stop_blocking(i2c: LPI2c) Error!void {
+    pub fn send_stop_blocking(i2c: LP_I2C) Error!void {
         try i2c.wait_for_tx_space();
 
         i2c.get_regs().MTDR.write(.{
@@ -420,11 +420,11 @@ pub const LPI2c = enum(u4) {
         i2c.get_regs().MSR.write_raw(1 << 9);
     }
 
-    fn wait_for_tx_space(i2c: LPI2c) Error!void {
+    fn wait_for_tx_space(i2c: LP_I2C) Error!void {
         while(!i2c.can_write()) try i2c.check_flags();
     }
 
-    pub fn send_blocking(i2c: LPI2c, address: u7, data: []const u8) Error!void {
+    pub fn send_blocking(i2c: LP_I2C, address: u7, data: []const u8) Error!void {
         const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
 
         if(i2c.is_bus_busy()) return error.BusBusy;
@@ -441,7 +441,7 @@ pub const LPI2c = enum(u4) {
 
 
     // Follows the linux kernel's approach
-    pub const I2cMsg = struct {
+    pub const I2C_Msg = struct {
         flags: packed struct(u8) {
             direction: enum(u1) { write = 0, read = 1 },
             padding: u7 = 0
@@ -454,7 +454,7 @@ pub const LPI2c = enum(u4) {
         }
     };
 
-    pub fn transfer_blocking(i2c: LPI2c, messages: []const I2cMsg) Error!void {
+    pub fn transfer_blocking(i2c: LP_I2C, messages: []const I2C_Msg) Error!void {
         // TODO: retries
         if(i2c.is_bus_busy()) return error.BusBusy;
         i2c.clear_flags();
@@ -473,7 +473,7 @@ pub const LPI2c = enum(u4) {
     /// Skips empty datagrams.
     /// Does not send `STOP` afterwards.
     /// Does not check if the bus is busy and does not clear flags beforehand.
-    pub fn writev_blocking(i2c: LPI2c, msg: I2cMsg) Error!void {
+    pub fn writev_blocking(i2c: LP_I2C, msg: I2C_Msg) Error!void {
         assert(msg.flags.direction == .write);
         const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
 
@@ -495,7 +495,7 @@ pub const LPI2c = enum(u4) {
     /// Does not check if the bus is busy and does not clear flags beforehand.
     ///
     /// Currently, msg.buffer must be less than `8 × 256`.
-    pub fn readv_blocking(i2c: LPI2c, msg: I2cMsg) Error!void {
+    pub fn readv_blocking(i2c: LP_I2C, msg: I2C_Msg) Error!void {
         assert(msg.flags.direction == .read);
 
         const read_vec = SliceVector([]u8).init(msg.chunks.read);
@@ -535,7 +535,7 @@ pub const LPI2c = enum(u4) {
         }
     }
 
-    pub fn i2c_device(i2c: LPI2c) I2C_Device {
+    pub fn i2c_device(i2c: LP_I2C) I2C_Device {
         return .{
             .ptr = @ptrFromInt(@intFromEnum(i2c)),
             .vtable = &.{
@@ -549,37 +549,37 @@ pub const LPI2c = enum(u4) {
 
 // TODO: check for reserved addresses
 fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8) I2C_Device.Error!void {
-    const dev: LPI2c = @enumFromInt(@intFromPtr(d));
-    const message: LPI2c.I2cMsg = .{
+    const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
+    const message: LP_I2C.I2C_Msg = .{
         .address = @intFromEnum(addr),
         .flags = .{ .direction = .write },
         .chunks = .{ .write = datagrams }
     };
     dev.transfer_blocking(&.{message}) catch |err| switch(err) {
-        LPI2c.Error.UnexpectedNack,
-        LPI2c.Error.FifoError,
-        LPI2c.Error.BusBusy,
-        LPI2c.Error.ArbitrationLost => {
+        LP_I2C.Error.UnexpectedNack,
+        LP_I2C.Error.FifoError,
+        LP_I2C.Error.BusBusy,
+        LP_I2C.Error.ArbitrationLost => {
             std.log.debug("ew: {}\n", .{err});
             return I2C_Device.Error.UnknownAbort;},
-        LPI2c.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
+        LP_I2C.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
     };
 }
 fn readv(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []u8) I2C_Device.Error!usize {
-    const dev: LPI2c = @enumFromInt(@intFromPtr(d));
-    const message: LPI2c.I2cMsg = .{
+    const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
+    const message: LP_I2C.I2C_Msg = .{
         .address = @intFromEnum(addr),
         .flags = .{ .direction = .write },
         .chunks = .{ .write = datagrams }
     };
     dev.transfer_blocking(&.{message}) catch |err| switch(err) {
-        LPI2c.Error.UnexpectedNack,
-        LPI2c.Error.FifoError,
-        LPI2c.Error.BusBusy,
-        LPI2c.Error.ArbitrationLost => {
+        LP_I2C.Error.UnexpectedNack,
+        LP_I2C.Error.FifoError,
+        LP_I2C.Error.BusBusy,
+        LP_I2C.Error.ArbitrationLost => {
             std.log.debug("er: {}\n", .{err});
             return I2C_Device.Error.UnknownAbort;},
-        LPI2c.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
+        LP_I2C.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
     };
 
     return SliceVector([]u8).init(datagrams).size();
@@ -591,8 +591,8 @@ fn writev_then_readv(
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) I2C_Device.Error!void {
-    const dev: LPI2c = @enumFromInt(@intFromPtr(d));
-    const messages: []const LPI2c.I2cMsg = &.{
+    const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
+    const messages: []const LP_I2C.I2C_Msg = &.{
         .{
             .address = @intFromEnum(addr),
             .flags = .{ .direction = .write },
@@ -605,13 +605,13 @@ fn writev_then_readv(
         }
     };
     dev.transfer_blocking(messages) catch |err| switch(err) {
-        LPI2c.Error.UnexpectedNack,
-        LPI2c.Error.FifoError,
-        LPI2c.Error.BusBusy,
-        LPI2c.Error.ArbitrationLost => {
+        LP_I2C.Error.UnexpectedNack,
+        LP_I2C.Error.FifoError,
+        LP_I2C.Error.BusBusy,
+        LP_I2C.Error.ArbitrationLost => {
             std.log.debug("erw: {}\n", .{err});
             return I2C_Device.Error.UnknownAbort;},
-        LPI2c.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
+        LP_I2C.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
     };
 }
 

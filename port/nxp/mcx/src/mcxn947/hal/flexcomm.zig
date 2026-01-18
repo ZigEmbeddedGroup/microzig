@@ -15,8 +15,8 @@ const assert = std.debug.assert;
 pub const FlexComm = enum(u4) {
     _,
 
-    pub const LPUart = @import("flexcomm/LPUart.zig").LPUart;
-    pub const LPI2c = @import("flexcomm/LPI2c.zig").LPI2c;
+    pub const LP_UART = @import("flexcomm/LP_UART.zig").LP_UART;
+    pub const LP_I2C = @import("flexcomm/LP_I2C.zig").LP_I2C;
 
     pub const Type = enum(u3) {
         none        = 0,
@@ -26,8 +26,8 @@ pub const FlexComm = enum(u4) {
         @"UART+I2C" = 7
     };
     
-    pub const FlexCommTy = *volatile chip.types.peripherals.LP_FLEXCOMM0;
-    const Registers: [10]FlexCommTy = .{
+    pub const RegTy = *volatile chip.types.peripherals.LP_FLEXCOMM0;
+    const Registers: [10]RegTy = .{
         peripherals.LP_FLEXCOMM0,
         peripherals.LP_FLEXCOMM1,
         peripherals.LP_FLEXCOMM2,
@@ -140,7 +140,7 @@ pub const FlexComm = enum(u4) {
         return @intFromEnum(flexcomm);
     }
 
-    fn get_regs(flexcomm: FlexComm) FlexCommTy {
+    fn get_regs(flexcomm: FlexComm) RegTy {
         // We can't do `base + n * offset` to get the register since the offset
         // is not constant for flexcomm registers
         return FlexComm.Registers[flexcomm.get_n()];
