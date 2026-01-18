@@ -392,6 +392,173 @@ pub fn get_freqs() ClockSpeeds {
     };
 }
 
+/// USBHS/USBHD clock helper.
+/// This configures RCC_CFGR2 fields for the USBHS PHY PLL reference (if present),
+/// selects whether the USBHS 48MHz clock comes from the system PLL clock or the USB PHY,
+/// and enables the AHB clock gate for USBHS.
+///
+/// Note: The SVD you're using names bit31 as `USBFSSRC`, but the reference manual
+/// describes it as `USBHSSRC` ("USBHS 48MHz clock source selection").
+/// We write the SVD field, but treat it as USBHS 48MHz source select.
+pub const UsbHsClockConfig = struct {
+    pub const RefSource = enum { hse, hsi };
+    /// Desired PHY PLL reference frequency (the USBHSCLK field selects one of these).
+    /// If null, we'll pick the highest one we can generate exactly: 8MHz, then 5MHz, 4MHz, 3MHz.
+    pub const RefFreq = enum(u2) {
+        mhz3 = 0b00,
+        mhz4 = 0b01,
+        mhz8 = 0b10,
+        mhz5 = 0b11,
+    };
+    /// Some parts have the USBHS controller but *no* built-in HS PHY.
+    /// If false, we will not enable the PHY internal PLL and will select 48MHz from PLL CLK.
+    has_hs_phy: bool = true,
+
+    /// If true (and has_hs_phy), select USB PHY as the 48MHz source and enable the PHY internal PLL.
+    /// If false, select PLL CLK as the 48MHz source (you must ensure a valid 48MHz PLL clock exists).
+    use_phy_48mhz: bool = true,
+
+    /// PHY PLL reference source (only used when has_hs_phy && use_phy_48mhz).
+    ref_source: RefSource = .hse,
+
+    /// Frequency of the chosen ref_source, in Hz.
+    /// Typical: HSE crystal (e.g. 8_000_000, 12_000_000, 24_000_000) or HSI (often 8_000_000).
+    ref_source_hz: u32,
+
+    ref_freq: ?RefFreq = null,
+};
+
+fn div_to_usbhsdiv(div: u32) u3 {
+    // RCC_CFGR2 USBHSDIV encoding:
+    // 000: /1, 001: /2, ... 111: /8
+    return @as(u3, @intCast(div - 1));
+}
+
+fn hz_for_ref(ref: UsbHsClockConfig.RefFreq) u32 {
+    return switch (ref) {
+        .mhz3 => 3_000_000,
+        .mhz4 => 4_000_000,
+        .mhz5 => 5_000_000,
+        .mhz8 => 8_000_000,
+    };
+}
+
+const HSPLLSRC = enum(u2) {
+    hse = 0,
+    hsi = 1,
+};
+
+/// Enable + configure USBHS clocks.
+///
+/// This does *not* reconfigure the system PLL to 48MHz; it only selects between:
+/// - "PLL CLK" 48MHz source (cfg.use_phy_48mhz = false), or
+/// - "USB PHY" 48MHz source (cfg.use_phy_48mhz = true and cfg.has_hs_phy = true),
+///   in which case it also configures the PHY PLL reference (USBHSCLK/USBHSPLLSRC/USBHSDIV)
+///   and enables the PHY internal PLL (USBHSPLL).
+pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
+    // Turn on the AHB clock gate for the USBHS peripheral block.
+
+    // If there's no PHY (or caller prefers PLL CLK), force PLL CLK selection and keep PHY PLL off.
+    if (!cfg.has_hs_phy or !cfg.use_phy_48mhz) {
+        RCC.CFGR2.modify(.{
+            // SVD name mismatch: USBFSSRC field == USBHS 48MHz source select per RM.
+            .USBFSSRC = 0, // 0: PLL CLK (per RM: "USBHS 48MHz clock source selection")
+            .USBHSPLL = 0, // PHY internal PLL disabled
+        });
+        return;
+    }
+
+    // Ensure the selected oscillator is on (best-effort; usually already enabled by your system clock init).
+    switch (cfg.ref_source) {
+        .hse => {
+            if (RCC.CTLR.read().HSEON == 0) RCC.CTLR.modify(.{ .HSEON = 1 });
+            while (RCC.CTLR.read().HSERDY == 0) {}
+        },
+        .hsi => {
+            if (RCC.CTLR.read().HSION == 0) RCC.CTLR.modify(.{ .HSION = 1 });
+            while (RCC.CTLR.read().HSIRDY == 0) {}
+        },
+    }
+
+    // Choose a reference frequency and divider that is exactly achievable.
+    const candidates = [_]UsbHsClockConfig.RefFreq{ .mhz8, .mhz5, .mhz4, .mhz3 };
+
+    comptime var chosen_ref: UsbHsClockConfig.RefFreq = undefined;
+    comptime var chosen_div: u32 = 0;
+    comptime {
+        if (cfg.ref_freq) |forced| {
+            const want = hz_for_ref(forced);
+            var found = false;
+            for (1..9) |div| {
+                if (cfg.ref_source_hz % div == 0 and (cfg.ref_source_hz / div) == want) {
+                    chosen_ref = forced;
+                    chosen_div = div;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                @compileError("USBHS PHY PLL ref cannot be generated exactly from ref_source_hz with /1..8 prescaler.");
+            }
+        } else {
+            var found = false;
+            for (candidates) |ref| {
+                const want = hz_for_ref(ref);
+                for (1..9) |div| {
+                    if (cfg.ref_source_hz % div == 0 and (cfg.ref_source_hz / div) == want) {
+                        chosen_ref = ref;
+                        chosen_div = div;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+            if (!found) {
+                @compileError("USBHS PHY PLL ref cannot be generated: need 3/4/5/8MHz from ref_source_hz using /1..8 prescaler.");
+            }
+        }
+    }
+
+    // RCC_USBCLK48MConfig( RCC_USBCLK48MCLKSource_USBPHY ); // bit 31 = 1
+    // RCC_USBHSPLLCLKConfig( RCC_HSBHSPLLCLKSource_HSE );   // bit 27 = 0
+    // RCC_USBHSConfig( RCC_USBPLL_Div2 );                   // bit 24 = 1
+    // RCC_USBHSPLLCKREFCLKConfig( RCC_USBHSPLLCKREFCLK_4M );// bit 28 = 1
+    // RCC_USBHSPHYPLLALIVEcmd( ENABLE );                    // bit 30 = 1
+    // RCC_AHBPeriphClockCmd( RCC_AHBPeriph_USBHS, ENABLE );
+
+    // Program CFGR2:
+    // - USBHSPLLSRC: 0=HSE, 1=HSI
+    // - USBHSDIV: prescaler (/1..8)
+    // - USBHSCLK: selects which ref freq the PHY PLL expects (3/4/8/5 MHz)
+    // - USBHSPLL: enable PHY internal PLL
+    // - USBHSSRC (SVD calls it USBFSSRC): 1=USB PHY as 48MHz source
+    RCC.CFGR2.modify(.{
+        .USBHSPLLSRC = switch (cfg.ref_source) {
+            .hse => 0,
+            .hsi => 1,
+        },
+        .USBHSDIV = div_to_usbhsdiv(chosen_div),
+        .USBHSCLK = @as(u2, @intFromEnum(chosen_ref)),
+        .USBHSPLL = 1,
+        .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
+    });
+
+    // RCC.CFGR2.raw = (1 << 31 | 1 << 24 | 1 << 28 | 1 << 30);
+
+    // RCC.CFGR2.modify(.{
+    //     .USBHSPLLSRC = switch (cfg.ref_source) {
+    //         .hse => 0,
+    //         .hsi => 1,
+    //     },
+    //     .USBHSDIV = 1,
+    //     .USBHSCLK = 1,
+    //     .USBHSPLL = 1,
+    //     .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
+    // });
+    RCC.AHBPCENR.modify(.{ .USBHS_EN = 1 });
+}
+
 // ============================================================================
 // Convenience Functions for HAL Modules
 // ============================================================================
