@@ -11,6 +11,7 @@ pub const RequestType = enum(u8) {
     SetReport = 0x09,
     SetIdle = 0x0a,
     SetProtocol = 0x0b,
+    _,
 };
 
 /// USB HID descriptor
@@ -59,6 +60,7 @@ pub const HID = extern struct {
         HID = 0x21,
         Report = 0x22,
         Physical = 0x23,
+        _,
     };
 
     comptime {

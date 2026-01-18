@@ -152,13 +152,13 @@ pub const String = struct {
 
     data: []const u8,
 
-    pub fn from_lang(lang: Language) @This() {
+    pub fn from_lang(comptime lang: Language) @This() {
         const ret: *const extern struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .String,
             lang: types.U16_Le,
         } = comptime &.{ .lang = .from(@intFromEnum(lang)) };
-        return .{ .data = @ptrCast(ret) };
+        return .{ .data = std.mem.asBytes(ret) };
     }
 
     pub fn from_str(comptime string: []const u8) @This() {
@@ -294,9 +294,9 @@ pub const BOS = struct {
 
     data: []const u8,
 
-    pub fn from(objects: []const Object) @This() {
+    pub fn from(comptime objects: []const Object) @This() {
         const data: []const u8 = "";
-        const header: []const u8 = @ptrCast(&extern struct {
+        const header: []const u8 = std.mem.asBytes(&extern struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .BOS,
             total_length: types.U16_Le = .from(@sizeOf(@This()) + data.len),

@@ -1,6 +1,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
-const assert = std.debug.assert;
+const EpNum = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_hid);
 
 pub const Options = struct {
@@ -11,10 +11,12 @@ pub const Options = struct {
 pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
     return struct {
         pub const Descriptor = extern struct {
-            interface: usb.descriptor.Interface,
-            hid: usb.descriptor.hid.HID,
-            ep_out: usb.descriptor.Endpoint,
-            ep_in: usb.descriptor.Endpoint,
+            const desc = usb.descriptor;
+
+            interface: desc.Interface,
+            hid: desc.hid.HID,
+            ep_out: desc.Endpoint,
+            ep_in: desc.Endpoint,
 
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
@@ -53,8 +55,8 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
         };
 
         device: *usb.DeviceInterface,
-        ep_in: usb.types.Endpoint.Num,
-        ep_out: usb.types.Endpoint.Num,
+        ep_in: EpNum,
+        ep_out: EpNum,
 
         pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
             self.* = .{
@@ -68,16 +70,16 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             _ = self;
             switch (setup.request_type.type) {
                 .Standard => {
-                    const hid_desc_type = std.meta.intToEnum(usb.descriptor.hid.HID.Type, setup.value.into() >> 8) catch return usb.nak;
-                    const request_code = std.meta.intToEnum(usb.types.SetupRequest, setup.request) catch return usb.nak;
+                    const hid_desc_type: usb.descriptor.hid.HID.Type = @enumFromInt(setup.value.into() >> 8);
+                    const request_code: usb.types.SetupRequest = @enumFromInt(setup.request);
 
                     if (request_code == .GetDescriptor and hid_desc_type == .HID)
-                        return @as([]const u8, @ptrCast(&hid_descriptor))
+                        return std.mem.asBytes(&hid_descriptor)
                     else if (request_code == .GetDescriptor and hid_desc_type == .Report)
-                        return @as([]const u8, @ptrCast(&report_descriptor));
+                        return std.mem.asBytes(&report_descriptor);
                 },
                 .Class => {
-                    const hid_request_type = std.meta.intToEnum(usb.descriptor.hid.RequestType, setup.request) catch return usb.nak;
+                    const hid_request_type: usb.descriptor.hid.RequestType = @enumFromInt(setup.request);
                     switch (hid_request_type) {
                         .SetIdle => {
                             // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/454
@@ -118,12 +120,12 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             return usb.nak;
         }
 
-        pub fn on_tx_ready(self: *@This(), ep: usb.types.Endpoint.Num) void {
+        pub fn on_tx_ready(self: *@This(), ep: EpNum) void {
             _ = self;
             _ = ep;
         }
 
-        pub fn on_rx(self: *@This(), ep: usb.types.Endpoint.Num) void {
+        pub fn on_rx(self: *@This(), ep: EpNum) void {
             _ = self;
             _ = ep;
         }

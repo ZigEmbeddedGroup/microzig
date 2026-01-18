@@ -1,14 +1,17 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
+const EpNum = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_echo);
 
 /// This is an example driver that sends any data received on ep2 to ep1.
 pub const EchoExampleDriver = struct {
     /// The descriptors need to have the same memory layout as the sent data.
     pub const Descriptor = extern struct {
-        example_interface: usb.descriptor.Interface,
-        ep_out: usb.descriptor.Endpoint,
-        ep_in: usb.descriptor.Endpoint,
+        const desc = usb.descriptor;
+
+        example_interface: desc.Interface,
+        ep_out: desc.Endpoint,
+        ep_in: desc.Endpoint,
 
         /// This function is used during descriptor creation. If multiple instances
         /// of a driver are used, a descriptor will be created for each.
@@ -42,7 +45,7 @@ pub const EchoExampleDriver = struct {
     };
 
     device: *usb.DeviceInterface,
-    ep_tx: usb.types.Endpoint.Num,
+    ep_tx: EpNum,
 
     /// This function is called when the host chooses a configuration
     /// that contains this driver. `self` points to undefined memory.
@@ -68,22 +71,22 @@ pub const EchoExampleDriver = struct {
     /// Each endpoint (as defined in the descriptor) has its own handler.
     /// Endpoint number is passed as an argument so that it does not need
     /// to be stored in the driver.
-    pub fn on_tx_ready(self: *@This(), ep_tx: usb.types.Endpoint.Num) void {
+    pub fn on_tx_ready(self: *@This(), ep_tx: EpNum) void {
         log.info("tx ready", .{});
         // Mark transmission as available
-        @atomicStore(usb.types.Endpoint.Num, &self.ep_tx, ep_tx, .seq_cst);
+        @atomicStore(EpNum, &self.ep_tx, ep_tx, .seq_cst);
     }
 
-    pub fn on_rx(self: *@This(), ep_rx: usb.types.Endpoint.Num) void {
+    pub fn on_rx(self: *@This(), ep_rx: EpNum) void {
         var buf: [64]u8 = undefined;
         // Read incoming packet into a local buffer
         const len_rx = self.device.ep_readv(ep_rx, &.{&buf});
         log.info("Received: {s}", .{buf[0..len_rx]});
         // Check if we can transmit
-        const ep_tx = @atomicLoad(usb.types.Endpoint.Num, &self.ep_tx, .seq_cst);
+        const ep_tx = @atomicLoad(EpNum, &self.ep_tx, .seq_cst);
         if (ep_tx != .ep0) {
             // Mark transmission as not available
-            @atomicStore(usb.types.Endpoint.Num, &self.ep_tx, .ep0, .seq_cst);
+            @atomicStore(EpNum, &self.ep_tx, .ep0, .seq_cst);
             // Send received packet
             log.info("Sending {} bytes", .{len_rx});
             const len_tx = self.device.ep_writev(ep_tx, &.{buf[0..len_rx]});

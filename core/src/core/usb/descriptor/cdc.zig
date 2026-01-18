@@ -66,7 +66,7 @@ pub const AbstractControlModel = extern struct {
         send_break: bool,
         /// Device supports the notification Network_Connection
         network_connection: bool,
-        reserved1: u4 = 0,
+        reserved: u4 = 0,
     };
 
     comptime {
