@@ -306,7 +306,13 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 const fg: u8 = regs().USB_INT_FG.raw;
                 if (fg == 0) break;
 
-                std.log.debug("ch32: INT_FG={x}", .{fg});
+                std.log.debug("ch32: INT_FG = 0x{x}", .{fg});
+
+                if (fg & UIF_FIFO_OV != 0) {
+                    std.log.warn("ch32: FIFO overflow!", .{});
+                    regs().USB_INT_FG.raw = UIF_FIFO_OV;
+                    continue;
+                }
 
                 if ((fg & UIF_BUS_RST) != 0) {
                     std.log.info("ch32: bus reset", .{});
@@ -326,6 +332,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     // Some parts also assert UIF_TRANSFER w/ TOKEN_SETUP; clear both to avoid double-processing.
                     regs().USB_INT_FG.raw = UIF_SETUP_ACT;
                     if ((fg & UIF_TRANSFER) != 0) regs().USB_INT_FG.raw = UIF_TRANSFER;
+
                     const stv = regs().USB_INT_ST.read();
                     std.log.debug("ch32: INT_ST={any}", .{stv});
 
@@ -341,10 +348,12 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 }
 
                 if ((fg & UIF_TRANSFER) != 0) {
-                    std.log.info("ch32: TRANSFER event", .{});
                     const stv = regs().USB_INT_ST.read();
                     const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                     const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
+                    if (token != TOKEN_SOF) { // reduce spam from SOF events
+                        std.log.info("ch32: TRANSFER event", .{});
+                    }
 
                     // clear transfer
                     regs().USB_INT_FG.raw = UIF_TRANSFER;
@@ -415,6 +424,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             self.call_on_buffer(.Out, ep, st_out.buf[0..n]);
         }
 
+        // IN => into host from device
         fn handle_in(self: *Self, ep: u4) void {
             const num: types.Endpoint.Num = @enumFromInt(ep);
             const st_in = self.st(num, .In);
