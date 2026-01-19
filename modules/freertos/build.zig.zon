@@ -1,0 +1,27 @@
+.{
+    .name = .zig_rtos,
+    .version = "0.0.0",
+    .fingerprint = 0x5089c38a1e0691c8, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.16.0-dev.2193+fc517bd01",
+    .dependencies = .{
+        .freertos_kernel = .{
+            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#52822473466cfa5cdd2146d02dae5f924b8552e4",
+            .hash = "N-V-__8AAMb4CQGTaQBhmyNrZe5AydR8ZY3met6pGoXDe1MC",
+        },
+        .freertos_kernel_community = .{
+            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel-Community-Supported-Ports.git#9ab3b5fb235838b3fc03d4f1cdcfab22007413d2",
+            .hash = "N-V-__8AAPdlHQB-Q5duFJp5D3hmNoJsOsWXr84CsPai1Pk9",
+        },
+        .foundationlibc = .{
+            .path = "../foundation-libc/",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
+    },
+}

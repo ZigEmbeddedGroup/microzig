@@ -25,6 +25,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-hello", .file = "src/freertos/hello_task.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_board_blinky", .file = "src/board_blinky.zig" },
@@ -158,6 +159,17 @@ pub fn build(b: *std.Build) void {
             });
             const net_mod = net_dep.module("net");
             firmware.app_mod.addImport("net", net_mod);
+        }
+
+        // Import freertos module for some examples
+        if (std.mem.indexOf(u8, example.name, "_freertos-") != null) {
+            const freertos_dep = b.dependency("freertos", .{
+                .target = b.resolveTargetQuery(firmware.target.zig_target),
+                .optimize = optimize,
+                .port_name = "RP2040",
+            });
+            const freertos_mod = freertos_dep.module("freertos");
+            firmware.app_mod.addImport("freertos", freertos_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
