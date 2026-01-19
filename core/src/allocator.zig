@@ -45,6 +45,8 @@ pub fn heap(reserve: usize) []u8 {
     return heapPtr[0..heap_len];
 }
 
+pub const Error = error{BufferTooSmall};
+
 /// Set up an allocator by adding all the memory that is not otherwise used by the program.
 ///
 /// In normal configurations, the heap allocations will grow down from the start of the heap to
@@ -55,7 +57,7 @@ pub fn heap(reserve: usize) []u8 {
 /// Example of use:
 /// ```
 /// // Get a heap allocator instance reserving 1024 bytes for the stack.
-/// var heap_allocator = microzig.Allocator.init_with_heap(1024);
+/// var heap_allocator = microzig.Allocator.init_with_heap(1024) catch unreachable;
 ///
 /// // Get the std.mem.Allocator from the heap allocator.
 /// const allocator : std.mem.Allocator = heap_allocator.allocator();
@@ -64,7 +66,7 @@ pub fn heap(reserve: usize) []u8 {
 /// Parameters:
 /// - `reserve`: The number of bytes to omit at the end of the heap.
 ///
-pub fn init_with_heap(reserve: usize) Alloc {
+pub fn init_with_heap(reserve: usize) Error!Alloc {
     return init_with_buffer(heap(reserve));
 }
 
@@ -75,7 +77,7 @@ pub fn init_with_heap(reserve: usize) Alloc {
 /// const buffer: [4096]u8 = undefined;
 ///
 /// // Get a buffer allocator instance reserving 1024 bytes for the stack.
-/// var buffer_allocator = microzig.Allocator.init_with_buffer(buffer);
+/// var buffer_allocator = microzig.Allocator.init_with_buffer(buffer) catch unreachable;
 ///
 /// // Get the std.mem.Allocator from the buffer allocator.
 /// const allocator : std.mem.Allocator = buffer_allocator.allocator();
@@ -84,10 +86,23 @@ pub fn init_with_heap(reserve: usize) Alloc {
 /// Parameters:
 /// - `buffer`: The buffer to use for allocation.
 ///
-pub fn init_with_buffer(buffer: []u8) Alloc {
+pub fn init_with_buffer(buffer: []u8) Error!Alloc {
+    // Check if buffer is large enough for the header calculation
+    if (buffer.len < Chunk.header_size) {
+        return error.BufferTooSmall;
+    }
+
+    const low_boundary = Chunk.alignment.forward(@intFromPtr(buffer.ptr));
+    const high_boundary = Chunk.alignment.backward(@intFromPtr(buffer.ptr) + buffer.len - Chunk.header_size);
+
+    // Check if we have enough space after alignment
+    if (high_boundary <= low_boundary or high_boundary - low_boundary < Chunk.min_size) {
+        return error.BufferTooSmall;
+    }
+
     var self = Alloc{
-        .low_boundary = Chunk.alignment.forward(@intFromPtr(buffer.ptr)),
-        .high_boundary = Chunk.alignment.backward(@intFromPtr(buffer.ptr + buffer.len) - Chunk.header_size),
+        .low_boundary = low_boundary,
+        .high_boundary = high_boundary,
     };
 
     // Create the initial chunk with all the space as free memory.
@@ -658,7 +673,7 @@ const testing = std.testing;
 test "init_with_buffer - minimum viable buffer" {
     // Minimum buffer must be at least Chunk.min_size + alignment overhead
     var buffer: [Chunk.min_size * 2]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
 
     try testing.expect(alloc.low_boundary >= @intFromPtr(&buffer));
     try testing.expect(alloc.high_boundary <= @intFromPtr(&buffer) + buffer.len);
@@ -668,7 +683,7 @@ test "init_with_buffer - minimum viable buffer" {
 test "init_with_buffer - alignment correction" {
     // Use unaligned buffer to test alignment adjustment
     var buffer: [256]u8 align(1) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
 
     // Low boundary should be aligned
     try testing.expect(Chunk.alignment.check(alloc.low_boundary));
@@ -677,7 +692,7 @@ test "init_with_buffer - alignment correction" {
 
 test "init_with_buffer - initial free chunk setup" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
 
     // There should be exactly one free chunk initially
     var free_count: usize = 0;
@@ -694,12 +709,22 @@ test "init_with_buffer - initial free chunk setup" {
     try testing.expect(alloc.dbg_integrity_check());
 }
 
-test "init_with_buffer - buffer too small for requested size" {
+test "init_with_buffer - buffer too small" {
+    // Buffer too small to fit even a single chunk
+    var tiny_buffer: [8]u8 align(16) = undefined;
+    try testing.expectError(error.BufferTooSmall, Alloc.init_with_buffer(&tiny_buffer));
+
+    // Buffer at header size but not enough for min_size after alignment
+    var small_buffer: [Chunk.header_size]u8 align(16) = undefined;
+    try testing.expectError(error.BufferTooSmall, Alloc.init_with_buffer(&small_buffer));
+}
+
+test "init_with_buffer - buffer large enough but allocation fails" {
     // Buffer large enough to initialize but too small for big allocations
     var buffer: [64]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
 
-    // Should still initialize, but large allocations fail
+    // Should initialize, but large allocations fail
     const a = alloc.allocator();
     const result = a.alloc(u8, 1000);
     try testing.expectError(error.OutOfMemory, result);
@@ -711,7 +736,7 @@ test "init_with_buffer - buffer too small for requested size" {
 
 test "alloc - single allocation" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alloc(u8, 64);
@@ -724,7 +749,7 @@ test "alloc - single allocation" {
 
 test "alloc - multiple sequential allocations" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alloc(u8, 64);
@@ -744,7 +769,7 @@ test "alloc - multiple sequential allocations" {
 
 test "alloc - various sizes" {
     var buffer: [4096]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const sizes = [_]usize{ 1, 7, 8, 15, 16, 31, 32, 63, 64, 100, 200 };
@@ -765,7 +790,7 @@ test "alloc - various sizes" {
 
 test "alloc - write and read back data" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alloc(u8, 256);
@@ -790,7 +815,7 @@ test "alloc - write and read back data" {
 
 test "alloc - alignment 1" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alignedAlloc(u8, .@"1", 64);
@@ -801,7 +826,7 @@ test "alloc - alignment 1" {
 
 test "alloc - alignment 4" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alignedAlloc(u8, .@"4", 64);
@@ -812,7 +837,7 @@ test "alloc - alignment 4" {
 
 test "alloc - alignment 8" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alignedAlloc(u8, .@"8", 64);
@@ -823,7 +848,7 @@ test "alloc - alignment 8" {
 
 test "alloc - alignment 16" {
     var buffer: [2048]u8 align(32) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alignedAlloc(u8, .@"16", 64);
@@ -834,7 +859,7 @@ test "alloc - alignment 16" {
 
 test "alloc - alignment 32" {
     var buffer: [4096]u8 align(64) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alignedAlloc(u8, .@"32", 64);
@@ -845,7 +870,7 @@ test "alloc - alignment 32" {
 
 test "alloc - mixed alignments" {
     var buffer: [4096]u8 align(64) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alignedAlloc(u8, .@"4", 32);
@@ -869,7 +894,7 @@ test "alloc - mixed alignments" {
 
 test "resize - grow in place when next chunk is free" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     var mem = try a.alloc(u8, 64);
@@ -889,7 +914,7 @@ test "resize - grow in place when next chunk is free" {
 
 test "resize - shrink releases trailing space" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     var mem = try a.alloc(u8, 256);
@@ -909,7 +934,7 @@ test "resize - shrink releases trailing space" {
 
 test "resize - grow fails when next chunk is in use" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alloc(u8, 64);
@@ -926,7 +951,7 @@ test "resize - grow fails when next chunk is in use" {
 
 test "resize - grow fails when not enough combined space" {
     var buffer: [512]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem = try a.alloc(u8, 64);
@@ -941,7 +966,7 @@ test "resize - grow fails when not enough combined space" {
 
 test "resize - shrink to minimum" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     var mem = try a.alloc(u8, 256);
@@ -961,7 +986,7 @@ test "resize - shrink to minimum" {
 
 test "free - coalesce with next free chunk" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alloc(u8, 64);
@@ -980,7 +1005,7 @@ test "free - coalesce with next free chunk" {
 
 test "free - coalesce with prior free chunk" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alloc(u8, 64);
@@ -999,7 +1024,7 @@ test "free - coalesce with prior free chunk" {
 
 test "free - coalesce with both neighbors" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alloc(u8, 64);
@@ -1020,7 +1045,7 @@ test "free - coalesce with both neighbors" {
 
 test "free - no coalescing when neighbors are in use" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const mem1 = try a.alloc(u8, 64);
@@ -1043,7 +1068,7 @@ test "free - no coalescing when neighbors are in use" {
 
 test "fragmentation - alternating alloc/free pattern" {
     var buffer: [4096]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     var ptrs: [10][]u8 = undefined;
@@ -1078,7 +1103,7 @@ test "fragmentation - alternating alloc/free pattern" {
 
 test "fragmentation - recovery after full fragmentation" {
     var buffer: [4096]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     const initial_free = alloc.free_heap();
@@ -1114,7 +1139,7 @@ test "fragmentation - recovery after full fragmentation" {
 
 test "oom - returns null on exhaustion" {
     var buffer: [256]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Request more than available
@@ -1125,7 +1150,7 @@ test "oom - returns null on exhaustion" {
 
 test "oom - near exhaustion still works" {
     var buffer: [512]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Allocate until near exhaustion
@@ -1149,7 +1174,7 @@ test "oom - near exhaustion still works" {
 
 test "oom - allocation after oom still works" {
     var buffer: [512]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Cause OOM
@@ -1168,7 +1193,7 @@ test "oom - allocation after oom still works" {
 
 test "free_list - correct binning by size" {
     var buffer: [8192]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Allocate various sizes and free them to populate different bins
@@ -1198,7 +1223,7 @@ test "free_list - correct binning by size" {
 
 test "free_list - traversal consistency" {
     var buffer: [4096]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Create multiple free chunks
@@ -1236,7 +1261,7 @@ test "free_list - traversal consistency" {
 
 test "edge - minimum allocation size" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Allocate minimum size
@@ -1248,7 +1273,7 @@ test "edge - minimum allocation size" {
 
 test "edge - zero length allocation" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Zero-length allocation behavior depends on std.mem.Allocator
@@ -1261,7 +1286,7 @@ test "edge - zero length allocation" {
 
 test "edge - max single allocation" {
     var buffer: [4096]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Get max allocatable size
@@ -1277,7 +1302,7 @@ test "edge - max single allocation" {
 
 test "edge - exact fit allocation" {
     var buffer: [1024]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Allocate exact max size
@@ -1292,7 +1317,7 @@ test "edge - exact fit allocation" {
 
 test "edge - boundary chunk handling" {
     var buffer: [Chunk.min_size * 4]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     // Allocate and free at boundaries
@@ -1317,7 +1342,7 @@ test "edge - boundary chunk handling" {
 
 test "stress - random alloc/free pattern" {
     var buffer: [8192]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     var prng = std.Random.DefaultPrng.init(12345);
@@ -1355,7 +1380,7 @@ test "stress - random alloc/free pattern" {
 
 test "stress - rapid alloc/free cycles" {
     var buffer: [2048]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     for (0..50) |_| {
@@ -1373,7 +1398,7 @@ test "stress - rapid alloc/free cycles" {
 
 test "stress - many small allocations" {
     var buffer: [8192]u8 align(16) = undefined;
-    var alloc = Alloc.init_with_buffer(&buffer);
+    var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
     var allocations: std.ArrayListUnmanaged([]u8) = .empty;
@@ -1403,8 +1428,8 @@ test "fallback - allocation delegates when primary exhausted" {
     var buffer1: [256]u8 align(16) = undefined;
     var buffer2: [256]u8 align(16) = undefined;
 
-    var alloc1 = Alloc.init_with_buffer(&buffer1);
-    var alloc2 = Alloc.init_with_buffer(&buffer2);
+    var alloc1 = try Alloc.init_with_buffer(&buffer1);
+    var alloc2 = try Alloc.init_with_buffer(&buffer2);
 
     // Chain allocators
     alloc1.fallback = &alloc2;
@@ -1433,8 +1458,8 @@ test "fallback - free delegates correctly" {
     var buffer1: [256]u8 align(16) = undefined;
     var buffer2: [512]u8 align(16) = undefined;
 
-    var alloc1 = Alloc.init_with_buffer(&buffer1);
-    var alloc2 = Alloc.init_with_buffer(&buffer2);
+    var alloc1 = try Alloc.init_with_buffer(&buffer1);
+    var alloc2 = try Alloc.init_with_buffer(&buffer2);
 
     alloc1.fallback = &alloc2;
 
@@ -1467,9 +1492,9 @@ test "fallback - chain of allocators" {
     var buffer2: [128]u8 align(16) = undefined;
     var buffer3: [128]u8 align(16) = undefined;
 
-    var alloc1 = Alloc.init_with_buffer(&buffer1);
-    var alloc2 = Alloc.init_with_buffer(&buffer2);
-    var alloc3 = Alloc.init_with_buffer(&buffer3);
+    var alloc1 = try Alloc.init_with_buffer(&buffer1);
+    var alloc2 = try Alloc.init_with_buffer(&buffer2);
+    var alloc3 = try Alloc.init_with_buffer(&buffer3);
 
     // Create chain: alloc1 -> alloc2 -> alloc3
     alloc1.fallback = &alloc2;
