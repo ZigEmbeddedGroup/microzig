@@ -535,9 +535,21 @@ pub fn dbg_log_free_chains(self: *Alloc) void {
 
         while (chunks) |chunk| {
             if (chunk.is_free(self)) {
-                std.log.debug("  0x{x:08} {d:6} {x:08} {x:08} ", .{ @intFromPtr(chunk), chunk.size(), @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+                std.log.debug(
+                    "  0x{x:08} {d:6} {x:08} {x:08} ",
+                    .{
+                        @intFromPtr(chunk),            chunk.size(),
+                        @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free),
+                    },
+                );
             } else {
-                std.log.debug("  0x{x:08} {d:6} {x:08} {x:08} <NOT FREE>", .{ @intFromPtr(chunk), chunk.size(), @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+                std.log.debug(
+                    "  0x{x:08} {d:6} {x:08} {x:08} <NOT FREE>",
+                    .{
+                        @intFromPtr(chunk),            chunk.size(),
+                        @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free),
+                    },
+                );
             }
 
             chunks = chunk.next_free;
@@ -563,9 +575,18 @@ pub fn dbg_log_chunk_list(self: *Alloc) void {
         const chunk: *Chunk = @ptrFromInt(address);
 
         if (chunk.is_free(self)) {
-            std.log.debug("{d:6}  {x:08} {d:6} {d:6} {x:08} {x:08}; ", .{ idx, @intFromPtr(chunk), chunk.size(), chunk.previous_size, @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+            std.log.debug(
+                "{d:6}  {x:08} {d:6} {d:6} {x:08} {x:08}; ",
+                .{
+                    idx,                 @intFromPtr(chunk),            chunk.size(),
+                    chunk.previous_size, @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free),
+                },
+            );
         } else {
-            std.log.debug("{d:6}  {x:08} {d:6} {d:6}; ", .{ idx, @intFromPtr(chunk), chunk.size(), chunk.previous_size });
+            std.log.debug(
+                "{d:6}  {x:08} {d:6} {d:6}; ",
+                .{ idx, @intFromPtr(chunk), chunk.size(), chunk.previous_size },
+            );
         }
 
         address += chunk.size();
@@ -611,19 +632,28 @@ pub fn dbg_integrity_check(self: *Alloc) bool {
         // Check minimum chunk size
         if (chunk_size < Chunk.min_size) {
             valid = false;
-            std.log.debug("Integrity check failed: chunk 0x{x:08} size {d} < min_size {d}\n", .{ address, chunk_size, Chunk.min_size });
+            std.log.debug(
+                "Integrity check failed: chunk 0x{x:08} size {d} < min_size {d}\n",
+                .{ address, chunk_size, Chunk.min_size },
+            );
         }
 
         // Check size alignment
         if (!Chunk.alignment.check(chunk_size)) {
             valid = false;
-            std.log.debug("Integrity check failed: chunk 0x{x:08} size {d} is not properly aligned\n", .{ address, chunk_size });
+            std.log.debug(
+                "Integrity check failed: chunk 0x{x:08} size {d} is not properly aligned\n",
+                .{ address, chunk_size },
+            );
         }
 
         // Verify previous_size chain
         if (chunk.previous_size != previous_size) {
             valid = false;
-            std.log.debug("Integrity check failed: chunk 0x{x:08} previous_size {d} != expected {d}\n", .{ address, chunk.previous_size, previous_size });
+            std.log.debug(
+                "Integrity check failed: chunk 0x{x:08} previous_size {d} != expected {d}\n",
+                .{ address, chunk.previous_size, previous_size },
+            );
         }
 
         previous_size = chunk_size;
@@ -636,7 +666,10 @@ pub fn dbg_integrity_check(self: *Alloc) bool {
     // Check that we ended exactly at high_boundary (not before, not after)
     if (address != self.high_boundary) {
         valid = false;
-        std.log.debug("Integrity check failed: chunk traversal ended at 0x{x:08}, expected 0x{x:08}\n", .{ address, self.high_boundary });
+        std.log.debug(
+            "Integrity check failed: chunk traversal ended at 0x{x:08}, expected 0x{x:08}\n",
+            .{ address, self.high_boundary },
+        );
     }
 
     // Phase 2: Verify free lists integrity.
@@ -654,27 +687,39 @@ pub fn dbg_integrity_check(self: *Alloc) bool {
             // Verify chunk is marked as free
             if (!chunk.is_free(self)) {
                 valid = false;
-                std.log.debug("Integrity check failed: chunk 0x{x:08} on free list {d} is not marked free\n", .{ @intFromPtr(chunk), i });
+                std.log.debug(
+                    "Integrity check failed: chunk 0x{x:08} on free list {d} is not marked free\n",
+                    .{ @intFromPtr(chunk), i },
+                );
             }
 
             // Verify chunk is in the correct size bin
             const expected_bin = free_index_for_size(chunk.size());
             if (expected_bin != i) {
                 valid = false;
-                std.log.debug("Integrity check failed: chunk 0x{x:08} size {d} in bin {d}, expected bin {d}\n", .{ @intFromPtr(chunk), chunk.size(), i, expected_bin });
+                std.log.debug(
+                    "Integrity check failed: chunk 0x{x:08} size {d} in bin {d}, expected bin {d}\n",
+                    .{ @intFromPtr(chunk), chunk.size(), i, expected_bin },
+                );
             }
 
             // Verify prior_free pointer is consistent
             if (chunk.prior_free != prev_in_list) {
                 valid = false;
-                std.log.debug("Integrity check failed: chunk 0x{x:08} prior_free 0x{x:08} != expected 0x{x:08}\n", .{ @intFromPtr(chunk), @intFromPtr(chunk.prior_free), @intFromPtr(prev_in_list) });
+                std.log.debug(
+                    "Integrity check failed: chunk 0x{x:08} prior_free 0x{x:08} != expected 0x{x:08}\n",
+                    .{ @intFromPtr(chunk), @intFromPtr(chunk.prior_free), @intFromPtr(prev_in_list) },
+                );
             }
 
             // Verify chunk exists in the heap (was visited in phase 1)
             // We check if the marker bit is set
             if (chunk.previous_size & 0x01 == 0) {
                 valid = false;
-                std.log.debug("Integrity check failed: chunk 0x{x:08} on free list not found in heap\n", .{@intFromPtr(chunk)});
+                std.log.debug(
+                    "Integrity check failed: chunk 0x{x:08} on free list not found in heap\n",
+                    .{@intFromPtr(chunk)},
+                );
             }
 
             // Clear the marker bit to indicate this chunk is on a free list
@@ -698,7 +743,10 @@ pub fn dbg_integrity_check(self: *Alloc) bool {
         // If still marked (not on free list) but claims to be free
         if (chunk.previous_size & 0x01 != 0 and chunk._size & 0x01 == 0) {
             valid = false;
-            std.log.debug("Integrity check failed: chunk 0x{x:08} is marked free but not on any free list\n", .{address});
+            std.log.debug(
+                "Integrity check failed: chunk 0x{x:08} is marked free but not on any free list\n",
+                .{address},
+            );
         }
 
         // Clear the marker bit
