@@ -106,11 +106,17 @@ pub fn Polled(config: Config) type {
             // Setup request received?
             if (ints.SETUP_REQ != 0) {
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
-                // to an IN on EP0 needs to use PID DATA1, and this line will ensure
-                // that.
+                // to an IN on EP0 needs to use PID DATA1.
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
-                const setup = get_setup_packet();
+                // Clear the status flag (write-one-to-clear)
+                peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
+
+                // The PAC models this buffer as two 32-bit registers.
+                const setup: usb.types.SetupPacket = @bitCast([2]u32{
+                    peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
+                    peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
+                });
 
                 log.debug("setup  {any}", .{setup});
                 controller.on_setup_req(&self.interface, &setup);
@@ -347,27 +353,6 @@ pub fn Polled(config: Config) type {
             // Set available bit
             bufctrl.AVAILABLE_0 = 1;
             bufctrl_ptr.write(bufctrl);
-        }
-
-        /// Returns a received USB setup packet
-        ///
-        /// Side effect: The setup request status flag will be cleared
-        ///
-        /// One can assume that this function is only called if the
-        /// setup request flag is set.
-        fn get_setup_packet() usb.types.SetupPacket {
-            // Clear the status flag (write-one-to-clear)
-            peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
-
-            // This assumes that the setup packet is arriving on EP0, our
-            // control endpoint. Which it should be. We don't have any other
-            // Control endpoints.
-
-            // The PAC models this buffer as two 32-bit registers.
-            return @bitCast([2]u32{
-                peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
-                peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
-            });
         }
 
         fn set_address(_: *usb.DeviceInterface, addr: u7) void {
