@@ -40,8 +40,8 @@ pub var usb_dev: usb.Polled(
         },
         .string_descriptors = &.{
             .from_lang(.English),
-            .from_str("Raspberry Pi"),
-            .from_str("Pico Test Device"),
+            .from_str("MicroZig"),
+            .from_str("ch32v307 Test Device"),
             .from_str("someserial"),
             .from_str("Board CDC"),
         },
@@ -52,7 +52,7 @@ pub var usb_dev: usb.Polled(
             .max_current_ma = 100,
             .Drivers = struct { serial: UsbSerial },
         }},
-        .debug = true,
+        .debug = false,
     },
     .{ .prefer_high_speed = true },
 ) = undefined;

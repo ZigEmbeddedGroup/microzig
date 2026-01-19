@@ -99,13 +99,27 @@ const RES_ACK: u2 = 0;
 const RES_NAK: u2 = 2;
 const RES_STALL: u2 = 3;
 
+const Res = enum(u2) {
+    ACK = 0,
+    NAK = 2,
+    STALL = 3,
+};
+
 const TOG_DATA0: u2 = 0;
 const TOG_DATA1: u2 = 1;
+
+const Tog = enum(u2) {
+    DATA0 = 0,
+    DATA1 = 0b1,
+    DATA2 = 0b10,
+    MDATA = 0b11,
+};
 
 // We use offset-based access for per-EP regs to keep helpers compact.
 const RegU32 = microzig.mmio.Mmio(packed struct(u32) { v: u32 = 0 });
 const RegU16 = microzig.mmio.Mmio(packed struct(u16) { v: u16 = 0 });
 const RegU8 = microzig.mmio.Mmio(packed struct(u8) { v: u8 = 0 });
+pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) { _reserved2: u2 = 0, AUTO: bool = false, TOG: u2 = 0, _reserved0: u1 = 0, RES: u2 = 0 });
 
 fn baseAddr() usize {
     return @intFromPtr(peripherals.USBHS);
@@ -117,6 +131,12 @@ fn mmio_u16(off: usize) *volatile RegU16 {
     return @ptrFromInt(baseAddr() + off);
 }
 fn mmio_u8(off: usize) *volatile RegU8 {
+    return @ptrFromInt(baseAddr() + off);
+}
+fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
+    return @ptrFromInt(baseAddr() + off);
+}
+fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
     return @ptrFromInt(baseAddr() + off);
 }
 
@@ -143,21 +163,24 @@ fn uep_t_len(ep: u4) *volatile RegU16 {
     return mmio_u16(0xD8 + (@as(usize, ep) * 4));
 }
 // TX_CTRL: 0xDA + ep*4, RX_CTRL: 0xDB + ep*4
-pub fn uep_tx_ctrl(ep: u4) *volatile RegU8 {
-    return mmio_u8(0xDA + (@as(usize, ep) * 4));
+pub fn uep_tx_ctrl(ep: u4) *volatile RegCtrl {
+    const ret: *volatile RegCtrl = mmio_tx_ctrl(0xDA + (@as(usize, ep) * 4));
+    return ret;
 }
-fn uep_rx_ctrl(ep: u4) *volatile RegU8 {
-    return mmio_u8(0xDB + (@as(usize, ep) * 4));
+
+fn uep_rx_ctrl(ep: u4) *volatile RegCtrl {
+    return mmio_tx_ctrl(0xDA + (@as(usize, ep) * 4));
 }
 
 fn set_tx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
     // [1:0]=RES, [4:3]=TOG, [5]=AUTO
     std.log.debug("ch32: set_tx_ctrl ep={} res={} tog={} auto={}", .{ ep, res, tog, auto });
-    var v: u8 = 0;
-    v |= @as(u8, res);
-    v |= @as(u8, tog) << 3;
-    if (auto) v |= 1 << 5;
-    uep_tx_ctrl(ep).raw = v;
+    const tx_ctrl: *volatile RegCtrl = uep_tx_ctrl(ep);
+    tx_ctrl.write(.{
+        .RES = res,
+        .TOG = tog,
+        .AUTO = auto,
+    });
 }
 fn set_rx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
     std.log.debug("ch32: set_rx_ctrl ep={} res={} tog={} auto={}", .{ ep, res, tog, auto });
@@ -257,9 +280,9 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             _ = self;
             std.log.debug("ch32: arm_ep0, ACK OUT, NAK IN", .{});
             // EP0 OUT is always ACK with auto-toggle.
-            set_rx_ctrl(0, RES_ACK, TOG_DATA0, true);
+            set_rx_ctrl(0, RES_ACK, TOG_DATA1, true);
             // EP0 IN remains NAK until data is queued.
-            set_tx_ctrl(0, RES_NAK, TOG_DATA0, true);
+            set_tx_ctrl(0, RES_NAK, TOG_DATA1, true);
         }
 
         fn on_bus_reset_local(self: *Self) void {
