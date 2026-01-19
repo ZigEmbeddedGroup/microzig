@@ -255,6 +255,10 @@ pub const startup_logic = struct {
 
         // Enable interrupts.
         csr.mtvec.write(.{ .mode0 = 1, .mode1 = 1, .base = 0 });
+        
+        // We set machine mode (0x3) so the user can enable/disable interrupts
+        // or manage machine/user mode themselves. 
+        // With this at 0 the users main function is forced to run at user level.
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
