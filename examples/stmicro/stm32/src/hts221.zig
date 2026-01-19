@@ -10,6 +10,9 @@ pub const microzig_options: microzig.Options = .{
     .cpu = .{
         .ram_vector_table = true,
     },
+    .hal = if (std.mem.eql(u8, microzig.config.chip_name, "STM32F303VC")) .{
+        .rcc_clock_config = board.rcc_medium_speed,
+    } else .{},
 };
 
 pub fn init() void {
@@ -24,8 +27,8 @@ pub fn init() void {
 pub fn main() !void {
     std.log.info("Starting main", .{});
     const clock = try stm32.systick_timer.clock_device();
-    var i2c1 = board.i2c1();
-    try i2c1.apply();
+    var i2c1 = try board.i2c1();
+    i2c1.apply();
     var device = i2c1.i2c_device();
 
     var hts221 = HTS221.init(&device);

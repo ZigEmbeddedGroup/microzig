@@ -30,13 +30,22 @@ const TimingSpec_Standard = .{
     .t_min_af = 0.05,
 };
 
+const TIMINGR = blk: for (@typeInfo(I2C_Peripherals).@"struct".fields) |field|
+{
+    if (std.mem.eql(u8, "TIMINGR", field.name)) {
+        break :blk field.type;
+    }
+} else @compileError("No TIMINGR register");
+
 const I2C = struct {
     regs: *volatile I2C_Peripherals,
+    timingr: TIMINGR.underlying_type,
 
-    fn compute_presc() ConfigError!struct { f32, u4 } {
+    fn compute_presc(comptime instance: I2C_Type) ConfigError!struct { f32, u4 } {
         // Let first see if we need to prescale.
         // 100Khz = 10us period ~ 5us for SCLL/SCLH
-        const t_sckl = 1_000_000.0 / @as(f32, @floatFromInt(hal.rcc.current_clock.sys_clk));
+        const device_clock = @as(f32, @floatFromInt(hal.rcc.get_clock(enums.to_peripheral(instance))));
+        const t_sckl = 1_000_000.0 / device_clock;
 
         if (t_sckl > 0.1) {
             return .{ t_sckl, 0 };
@@ -110,26 +119,12 @@ const I2C = struct {
     // Interupt,
     // Frequency
     // Others...
-    pub fn apply(i2c: *const I2C) ConfigError!void {
+    pub fn apply(i2c: *const I2C) void {
         const regs = i2c.regs;
-
-        const t_presc, const presc = try compute_presc();
-        const scdel = try compute_setup_time(t_presc);
-        const sdadel = try compute_hold_time(t_presc);
-        const scll = try compute_low_time(t_presc);
-        const sclh = try compute_high_time(t_presc);
 
         regs.CR1.modify(.{ .PE = 0 });
 
-        std.log.info("TIMINGR register: SCEDL {}, SDADEL {}, SCLL {}, SCLH {}\r\n", .{ scdel, sdadel, scll, sclh });
-
-        regs.TIMINGR.modify(.{
-            .PRESC = presc,
-            .SCLDEL = scdel,
-            .SDADEL = sdadel,
-            .SCLL = scll,
-            .SCLH = sclh,
-        });
+        regs.TIMINGR.modify(i2c.timingr);
 
         regs.CR1.modify(.{ .PE = 1 });
     }
@@ -194,9 +189,24 @@ const I2C = struct {
         return i2c.write_blocking_intern(address, false, data);
     }
 
-    pub fn init(comptime instance: I2C_Type) I2C {
+    /// This init should be comptime safe.
+    pub fn init(comptime instance: I2C_Type) ConfigError!I2C {
         hal.rcc.enable_clock(enums.to_peripheral(instance));
-        return .{ .regs = enums.get_regs(I2C_Peripherals, instance) };
+        const t_presc, const presc = try compute_presc(instance);
+        const scdel = try compute_setup_time(t_presc);
+        const sdadel = try compute_hold_time(t_presc);
+        const scll = try compute_low_time(t_presc);
+        const sclh = try compute_high_time(t_presc);
+
+        const timingr: TIMINGR.underlying_type = .{
+            .PRESC = presc,
+            .SCLDEL = scdel,
+            .SDADEL = sdadel,
+            .SCLL = scll,
+            .SCLH = sclh,
+        };
+
+        return .{ .regs = enums.get_regs(I2C_Peripherals, instance), .timingr = timingr };
     }
 };
 
@@ -246,12 +256,12 @@ pub const I2C_Device = struct {
         }
     }
 
-    pub fn apply(i2c: *const I2C_Device) ConfigError!void {
-        try i2c.i2c.apply();
+    pub fn apply(i2c: *const I2C_Device) void {
+        i2c.i2c.apply();
     }
 
-    pub fn init(comptime instance: I2C_Type) I2C_Device {
-        return .{ .i2c = I2C.init(instance) };
+    pub fn init(comptime instance: I2C_Type) ConfigError!I2C_Device {
+        return .{ .i2c = try I2C.init(instance) };
     }
 
     pub fn i2c_device(i2c: *I2C_Device) drivers.I2C_Device {
