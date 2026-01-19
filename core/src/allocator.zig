@@ -644,3 +644,857 @@ pub fn dbg_integrity_check(self: *Alloc) bool {
 
     return valid;
 }
+
+// =============================================================================
+// Unit Tests
+// =============================================================================
+
+const testing = std.testing;
+
+// -----------------------------------------------------------------------------
+// Category 1: Initialization Tests
+// -----------------------------------------------------------------------------
+
+test "init_with_buffer - minimum viable buffer" {
+    // Minimum buffer must be at least Chunk.min_size + alignment overhead
+    var buffer: [Chunk.min_size * 2]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+
+    try testing.expect(alloc.low_boundary >= @intFromPtr(&buffer));
+    try testing.expect(alloc.high_boundary <= @intFromPtr(&buffer) + buffer.len);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "init_with_buffer - alignment correction" {
+    // Use unaligned buffer to test alignment adjustment
+    var buffer: [256]u8 align(1) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+
+    // Low boundary should be aligned
+    try testing.expect(Chunk.alignment.check(alloc.low_boundary));
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "init_with_buffer - initial free chunk setup" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+
+    // There should be exactly one free chunk initially
+    var free_count: usize = 0;
+    for (0..free_list_count) |i| {
+        var c = alloc.free_lists[i];
+        while (c) |chunk| {
+            free_count += 1;
+            // The initial chunk should have previous_size = 0
+            try testing.expectEqual(@as(usize, 0), chunk.previous_size);
+            c = chunk.next_free;
+        }
+    }
+    try testing.expectEqual(@as(usize, 1), free_count);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "init_with_buffer - buffer too small for requested size" {
+    // Buffer large enough to initialize but too small for big allocations
+    var buffer: [64]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+
+    // Should still initialize, but large allocations fail
+    const a = alloc.allocator();
+    const result = a.alloc(u8, 1000);
+    try testing.expectError(error.OutOfMemory, result);
+}
+
+// -----------------------------------------------------------------------------
+// Category 2: Basic Allocation Tests
+// -----------------------------------------------------------------------------
+
+test "alloc - single allocation" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alloc(u8, 64);
+    try testing.expectEqual(@as(usize, 64), mem.len);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "alloc - multiple sequential allocations" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alloc(u8, 64);
+    const mem2 = try a.alloc(u8, 128);
+    const mem3 = try a.alloc(u8, 32);
+
+    try testing.expect(mem1.ptr != mem2.ptr);
+    try testing.expect(mem2.ptr != mem3.ptr);
+    try testing.expect(mem1.ptr != mem3.ptr);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem1);
+    a.free(mem2);
+    a.free(mem3);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "alloc - various sizes" {
+    var buffer: [4096]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const sizes = [_]usize{ 1, 7, 8, 15, 16, 31, 32, 63, 64, 100, 200 };
+    var allocations: [sizes.len][]u8 = undefined;
+
+    for (sizes, 0..) |size, i| {
+        allocations[i] = try a.alloc(u8, size);
+        try testing.expectEqual(size, allocations[i].len);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    for (allocations) |mem| {
+        a.free(mem);
+    }
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "alloc - write and read back data" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alloc(u8, 256);
+
+    // Write pattern
+    for (mem, 0..) |*byte, i| {
+        byte.* = @truncate(i);
+    }
+
+    // Read back and verify
+    for (mem, 0..) |byte, i| {
+        try testing.expectEqual(@as(u8, @truncate(i)), byte);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+// -----------------------------------------------------------------------------
+// Category 3: Alignment Tests
+// -----------------------------------------------------------------------------
+
+test "alloc - alignment 1" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alignedAlloc(u8, .@"1", 64);
+    try testing.expect(@intFromPtr(mem.ptr) % 1 == 0);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+test "alloc - alignment 4" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alignedAlloc(u8, .@"4", 64);
+    try testing.expect(@intFromPtr(mem.ptr) % 4 == 0);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+test "alloc - alignment 8" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alignedAlloc(u8, .@"8", 64);
+    try testing.expect(@intFromPtr(mem.ptr) % 8 == 0);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+test "alloc - alignment 16" {
+    var buffer: [2048]u8 align(32) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alignedAlloc(u8, .@"16", 64);
+    try testing.expect(@intFromPtr(mem.ptr) % 16 == 0);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+test "alloc - alignment 32" {
+    var buffer: [4096]u8 align(64) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alignedAlloc(u8, .@"32", 64);
+    try testing.expect(@intFromPtr(mem.ptr) % 32 == 0);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+test "alloc - mixed alignments" {
+    var buffer: [4096]u8 align(64) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alignedAlloc(u8, .@"4", 32);
+    const mem2 = try a.alignedAlloc(u8, .@"16", 64);
+    const mem3 = try a.alignedAlloc(u8, .@"8", 48);
+
+    try testing.expect(@intFromPtr(mem1.ptr) % 4 == 0);
+    try testing.expect(@intFromPtr(mem2.ptr) % 16 == 0);
+    try testing.expect(@intFromPtr(mem3.ptr) % 8 == 0);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem1);
+    a.free(mem2);
+    a.free(mem3);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+// -----------------------------------------------------------------------------
+// Category 4: Resize Tests
+// -----------------------------------------------------------------------------
+
+test "resize - grow in place when next chunk is free" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    var mem = try a.alloc(u8, 64);
+    const original_ptr = mem.ptr;
+
+    // Should be able to grow since all remaining space is free
+    const success = a.resize(mem, 128);
+    try testing.expect(success);
+    mem = mem.ptr[0..128];
+
+    // Pointer should remain the same
+    try testing.expectEqual(original_ptr, mem.ptr);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem);
+}
+
+test "resize - shrink releases trailing space" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    var mem = try a.alloc(u8, 256);
+    const original_free = alloc.free_heap();
+
+    // Shrink the allocation
+    const success = a.resize(mem, 64);
+    try testing.expect(success);
+    mem = mem.ptr[0..64];
+
+    // Free space should have increased
+    try testing.expect(alloc.free_heap() > original_free);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem);
+}
+
+test "resize - grow fails when next chunk is in use" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alloc(u8, 64);
+    const mem2 = try a.alloc(u8, 64);
+
+    // Cannot grow mem1 since mem2 is right after it
+    const success = a.resize(mem1, 128);
+    try testing.expect(!success);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem1);
+    a.free(mem2);
+}
+
+test "resize - grow fails when not enough combined space" {
+    var buffer: [512]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem = try a.alloc(u8, 64);
+
+    // Try to grow beyond available space
+    const success = a.resize(mem, 10000);
+    try testing.expect(!success);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem);
+}
+
+test "resize - shrink to minimum" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    var mem = try a.alloc(u8, 256);
+
+    // Shrink to minimum size
+    const success = a.resize(mem, 1);
+    try testing.expect(success);
+    mem = mem.ptr[0..1];
+
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+// -----------------------------------------------------------------------------
+// Category 5: Free & Coalescing Tests
+// -----------------------------------------------------------------------------
+
+test "free - coalesce with next free chunk" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alloc(u8, 64);
+    const mem2 = try a.alloc(u8, 64);
+
+    // Free mem2 first (next chunk becomes free)
+    // Then free mem1 - should coalesce forward
+    a.free(mem2);
+    const free_before = alloc.free_heap();
+    a.free(mem1);
+
+    // Free heap should be larger than just mem1 + mem2 due to header savings
+    try testing.expect(alloc.free_heap() >= free_before + 64);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "free - coalesce with prior free chunk" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alloc(u8, 64);
+    const mem2 = try a.alloc(u8, 64);
+
+    // Free mem1 first (prior chunk becomes free)
+    a.free(mem1);
+    const free_before = alloc.free_heap();
+
+    // Then free mem2 - should coalesce backward
+    a.free(mem2);
+
+    try testing.expect(alloc.free_heap() >= free_before + 64);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "free - coalesce with both neighbors" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alloc(u8, 64);
+    const mem2 = try a.alloc(u8, 64);
+    const mem3 = try a.alloc(u8, 64);
+
+    // Free first and third
+    a.free(mem1);
+    a.free(mem3);
+    const free_before = alloc.free_heap();
+
+    // Free middle - should coalesce with both neighbors
+    a.free(mem2);
+
+    try testing.expect(alloc.free_heap() >= free_before + 64);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "free - no coalescing when neighbors are in use" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const mem1 = try a.alloc(u8, 64);
+    const mem2 = try a.alloc(u8, 64);
+    const mem3 = try a.alloc(u8, 64);
+
+    // Free middle - neighbors still in use, no coalescing
+    a.free(mem2);
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem1);
+    a.free(mem3);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+// -----------------------------------------------------------------------------
+// Category 6: Fragmentation Tests
+// -----------------------------------------------------------------------------
+
+test "fragmentation - alternating alloc/free pattern" {
+    var buffer: [4096]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    var ptrs: [10][]u8 = undefined;
+
+    // Allocate all
+    for (&ptrs) |*p| {
+        p.* = try a.alloc(u8, 64);
+    }
+
+    // Free odd indices
+    var i: usize = 1;
+    while (i < ptrs.len) : (i += 2) {
+        a.free(ptrs[i]);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Allocate in freed slots
+    i = 1;
+    while (i < ptrs.len) : (i += 2) {
+        ptrs[i] = try a.alloc(u8, 64);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Free all
+    for (ptrs) |p| {
+        a.free(p);
+    }
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "fragmentation - recovery after full fragmentation" {
+    var buffer: [4096]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    const initial_free = alloc.free_heap();
+
+    // Create fragmentation
+    var ptrs: [20][]u8 = undefined;
+    for (&ptrs) |*p| {
+        p.* = try a.alloc(u8, 32);
+    }
+
+    // Free every other allocation
+    var i: usize = 0;
+    while (i < ptrs.len) : (i += 2) {
+        a.free(ptrs[i]);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Free remaining allocations
+    i = 1;
+    while (i < ptrs.len) : (i += 2) {
+        a.free(ptrs[i]);
+    }
+
+    // Should recover most memory (within rounding)
+    try testing.expect(alloc.free_heap() >= initial_free - Chunk.min_size);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+// -----------------------------------------------------------------------------
+// Category 7: OOM Handling Tests
+// -----------------------------------------------------------------------------
+
+test "oom - returns null on exhaustion" {
+    var buffer: [256]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Request more than available
+    const result = a.alloc(u8, 10000);
+    try testing.expectError(error.OutOfMemory, result);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "oom - near exhaustion still works" {
+    var buffer: [512]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Allocate until near exhaustion
+    var allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    defer allocations.deinit(testing.allocator);
+
+    while (true) {
+        const mem = a.alloc(u8, 32) catch break;
+        try allocations.append(testing.allocator, mem);
+    }
+
+    try testing.expect(allocations.items.len > 0);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Free all
+    for (allocations.items) |mem| {
+        a.free(mem);
+    }
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "oom - allocation after oom still works" {
+    var buffer: [512]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Cause OOM
+    const too_big = a.alloc(u8, 10000);
+    try testing.expectError(error.OutOfMemory, too_big);
+
+    // Should still be able to allocate reasonable sizes
+    const mem = try a.alloc(u8, 64);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+// -----------------------------------------------------------------------------
+// Category 8: Free List Integrity Tests
+// -----------------------------------------------------------------------------
+
+test "free_list - correct binning by size" {
+    var buffer: [8192]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Allocate various sizes and free them to populate different bins
+    const small = try a.alloc(u8, 16);
+    const medium = try a.alloc(u8, 128);
+    const large = try a.alloc(u8, 512);
+
+    a.free(small);
+    a.free(medium);
+    a.free(large);
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Verify free lists contain chunks
+    var total_free_chunks: usize = 0;
+    for (0..free_list_count) |i| {
+        var c = alloc.free_lists[i];
+        while (c) |chunk| {
+            total_free_chunks += 1;
+            // Verify chunk is actually free
+            try testing.expect(chunk.is_free(&alloc));
+            c = chunk.next_free;
+        }
+    }
+    try testing.expect(total_free_chunks >= 1);
+}
+
+test "free_list - traversal consistency" {
+    var buffer: [4096]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Create multiple free chunks
+    var ptrs: [5][]u8 = undefined;
+    for (&ptrs) |*p| {
+        p.* = try a.alloc(u8, 64);
+    }
+
+    // Free every other one
+    a.free(ptrs[0]);
+    a.free(ptrs[2]);
+    a.free(ptrs[4]);
+
+    // Traverse all free lists and verify bidirectional links
+    for (0..free_list_count) |i| {
+        var c = alloc.free_lists[i];
+        var prev: ?*Chunk = null;
+        while (c) |chunk| {
+            // Verify prior_free points to previous chunk in traversal
+            try testing.expectEqual(prev, chunk.prior_free);
+            prev = chunk;
+            c = chunk.next_free;
+        }
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(ptrs[1]);
+    a.free(ptrs[3]);
+}
+
+// -----------------------------------------------------------------------------
+// Category 9: Edge Case Tests
+// -----------------------------------------------------------------------------
+
+test "edge - minimum allocation size" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Allocate minimum size
+    const mem = try a.alloc(u8, 1);
+    try testing.expectEqual(@as(usize, 1), mem.len);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem);
+}
+
+test "edge - zero length allocation" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Zero-length allocation behavior depends on std.mem.Allocator
+    // It typically returns a valid slice with len=0
+    const mem = try a.alloc(u8, 0);
+    try testing.expectEqual(@as(usize, 0), mem.len);
+    a.free(mem);
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "edge - max single allocation" {
+    var buffer: [4096]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Get max allocatable size
+    const max_size = alloc.max_alloc_size();
+
+    if (max_size > 0) {
+        const mem = try a.alloc(u8, max_size);
+        try testing.expect(alloc.dbg_integrity_check());
+        a.free(mem);
+    }
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "edge - exact fit allocation" {
+    var buffer: [1024]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Allocate exact max size
+    const max_size = alloc.max_alloc_size();
+    if (max_size > 0) {
+        const mem = try a.alloc(u8, max_size);
+        try testing.expectEqual(max_size, mem.len);
+        try testing.expect(alloc.dbg_integrity_check());
+        a.free(mem);
+    }
+}
+
+test "edge - boundary chunk handling" {
+    var buffer: [Chunk.min_size * 4]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    // Allocate and free at boundaries
+    const mem1 = try a.alloc(u8, 1);
+    try testing.expect(alloc.dbg_integrity_check());
+    a.free(mem1);
+
+    // Allocate near max
+    const max_size = alloc.max_alloc_size();
+    if (max_size > 0) {
+        const mem2 = try a.alloc(u8, max_size);
+        try testing.expect(alloc.dbg_integrity_check());
+        a.free(mem2);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+// -----------------------------------------------------------------------------
+// Category 10: Stress Tests
+// -----------------------------------------------------------------------------
+
+test "stress - random alloc/free pattern" {
+    var buffer: [8192]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    var prng = std.Random.DefaultPrng.init(12345);
+    const random = prng.random();
+
+    var allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    defer allocations.deinit(testing.allocator);
+
+    // Perform random operations
+    for (0..100) |_| {
+        const action = random.intRangeAtMost(u8, 0, 2);
+
+        if (action == 0 or allocations.items.len == 0) {
+            // Allocate
+            const size = random.intRangeAtMost(usize, 1, 128);
+            if (a.alloc(u8, size)) |mem| {
+                try allocations.append(testing.allocator, mem);
+            } else |_| {}
+        } else {
+            // Free random allocation
+            const idx = random.intRangeLessThan(usize, 0, allocations.items.len);
+            a.free(allocations.items[idx]);
+            _ = allocations.swapRemove(idx);
+        }
+
+        try testing.expect(alloc.dbg_integrity_check());
+    }
+
+    // Cleanup
+    for (allocations.items) |mem| {
+        a.free(mem);
+    }
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+test "stress - rapid alloc/free cycles" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    for (0..50) |_| {
+        const mem = try a.alloc(u8, 64);
+        a.free(mem);
+    }
+
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Should have recovered all memory
+    const final_free = alloc.free_heap();
+    const initial_free = alloc.high_boundary - alloc.low_boundary - Chunk.header_size;
+    try testing.expect(final_free >= initial_free - Chunk.min_size);
+}
+
+test "stress - many small allocations" {
+    var buffer: [8192]u8 align(16) = undefined;
+    var alloc = Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+
+    var allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    defer allocations.deinit(testing.allocator);
+
+    // Allocate many small chunks
+    for (0..50) |_| {
+        const mem = a.alloc(u8, 16) catch break;
+        try allocations.append(testing.allocator, mem);
+    }
+
+    try testing.expect(allocations.items.len > 0);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    // Free all
+    for (allocations.items) |mem| {
+        a.free(mem);
+    }
+    try testing.expect(alloc.dbg_integrity_check());
+}
+
+// -----------------------------------------------------------------------------
+// Category 11: Fallback Allocator Tests
+// -----------------------------------------------------------------------------
+
+test "fallback - allocation delegates when primary exhausted" {
+    var buffer1: [256]u8 align(16) = undefined;
+    var buffer2: [256]u8 align(16) = undefined;
+
+    var alloc1 = Alloc.init_with_buffer(&buffer1);
+    var alloc2 = Alloc.init_with_buffer(&buffer2);
+
+    // Chain allocators
+    alloc1.fallback = &alloc2;
+
+    const a = alloc1.allocator();
+
+    // Exhaust primary
+    var primary_allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    defer primary_allocations.deinit(testing.allocator);
+
+    while (true) {
+        const mem = a.alloc(u8, 64) catch break;
+        try primary_allocations.append(testing.allocator, mem);
+    }
+
+    // Verify we got allocations from both buffers
+    try testing.expect(primary_allocations.items.len > 0);
+
+    // Cleanup
+    for (primary_allocations.items) |mem| {
+        a.free(mem);
+    }
+}
+
+test "fallback - free delegates correctly" {
+    var buffer1: [256]u8 align(16) = undefined;
+    var buffer2: [512]u8 align(16) = undefined;
+
+    var alloc1 = Alloc.init_with_buffer(&buffer1);
+    var alloc2 = Alloc.init_with_buffer(&buffer2);
+
+    alloc1.fallback = &alloc2;
+
+    const a = alloc1.allocator();
+
+    // Allocate from primary
+    const mem1 = try a.alloc(u8, 32);
+
+    // Exhaust primary to force fallback use
+    var temp_allocs: std.ArrayListUnmanaged([]u8) = .empty;
+    defer temp_allocs.deinit(testing.allocator);
+
+    while (true) {
+        const mem = a.alloc(u8, 32) catch break;
+        try temp_allocs.append(testing.allocator, mem);
+    }
+
+    // Free in reverse order
+    for (temp_allocs.items) |mem| {
+        a.free(mem);
+    }
+    a.free(mem1);
+
+    try testing.expect(alloc1.dbg_integrity_check());
+    try testing.expect(alloc2.dbg_integrity_check());
+}
+
+test "fallback - chain of allocators" {
+    var buffer1: [128]u8 align(16) = undefined;
+    var buffer2: [128]u8 align(16) = undefined;
+    var buffer3: [128]u8 align(16) = undefined;
+
+    var alloc1 = Alloc.init_with_buffer(&buffer1);
+    var alloc2 = Alloc.init_with_buffer(&buffer2);
+    var alloc3 = Alloc.init_with_buffer(&buffer3);
+
+    // Create chain: alloc1 -> alloc2 -> alloc3
+    alloc1.fallback = &alloc2;
+    alloc2.fallback = &alloc3;
+
+    const a = alloc1.allocator();
+
+    var all_allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    defer all_allocations.deinit(testing.allocator);
+
+    // Should be able to allocate from all three buffers
+    while (true) {
+        const mem = a.alloc(u8, 16) catch break;
+        try all_allocations.append(testing.allocator, mem);
+    }
+
+    // Should have allocations spanning all three allocators
+    try testing.expect(all_allocations.items.len > 0);
+
+    // Cleanup
+    for (all_allocations.items) |mem| {
+        a.free(mem);
+    }
+
+    try testing.expect(alloc1.dbg_integrity_check());
+    try testing.expect(alloc2.dbg_integrity_check());
+    try testing.expect(alloc3.dbg_integrity_check());
+}

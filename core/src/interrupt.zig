@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig.zig");
 
 /// Unmasks the given interrupt and enables its execution.
@@ -73,6 +74,24 @@ pub const unhandled: Handler = .{
     }.unhandled,
 };
 
+/// No-op mutex for unit testing (avoids interrupt function dependencies)
+pub const TestMutex = struct {
+    pub fn init(params: anytype) TestMutex {
+        _ = params;
+        return .{};
+    }
+    pub fn try_lock(self: *TestMutex) bool {
+        _ = self;
+        return true;
+    }
+    pub fn lock(self: *TestMutex) void {
+        _ = self;
+    }
+    pub fn unlock(self: *TestMutex) void {
+        _ = self;
+    }
+};
+
 /// Return the mutex type to use.  If a target provides its own mutex type
 /// in its HAL, use that; otherwise, use the default `CriticalSectionMutex`.
 ///
@@ -82,7 +101,9 @@ pub const unhandled: Handler = .{
 /// try to lock it (non-blocking) with `const success: bool = aMutex.try_lock();`,
 /// and unlock it with `aMutex.unlock();`.
 ///
-pub const Mutex = if (microzig.config.has_hal and @hasDecl(microzig.hal, "mutex") and @hasDecl(microzig.hal.mutex, "Mutex"))
+pub const Mutex = if (builtin.is_test)
+    TestMutex
+else if (microzig.config.has_hal and @hasDecl(microzig.hal, "mutex") and @hasDecl(microzig.hal.mutex, "Mutex"))
     microzig.hal.mutex.Mutex
 else
     CriticalSectionMutex;
