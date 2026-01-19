@@ -239,12 +239,11 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, pc: usize) ?[*]u8
 
                 const trim_addr = Chunk.alignment.forward(data_addr + needed);
                 const next_addr = @intFromPtr(our_chunk.get_next());
+                const our_address = @intFromPtr(our_chunk);
+                const our_new_size = trim_addr - our_address;
 
-                if (trim_addr + Chunk.min_size < next_addr) {
-                    const our_address = @intFromPtr(our_chunk);
-
-                    const our_new_size = trim_addr - our_address;
-
+                // Only trim if both the shrunk chunk and the new trim chunk are at least min_size
+                if (our_new_size >= Chunk.min_size and trim_addr + Chunk.min_size <= next_addr) {
                     our_chunk._size = our_new_size | 0x01;
 
                     const trim_chunk: *Chunk = @ptrFromInt(trim_addr);
@@ -313,12 +312,11 @@ fn do_resize(ptr: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usi
     const data_addr = @intFromPtr(chunk.data());
     const trim_addr = Chunk.alignment.forward(data_addr + new_len);
     const next_addr = @intFromPtr(chunk.get_next());
+    const our_address = @intFromPtr(chunk);
+    const our_new_size = trim_addr - our_address;
 
-    if (trim_addr + Chunk.min_size < next_addr) {
-        const our_address = @intFromPtr(chunk);
-
-        const our_new_size = trim_addr - our_address;
-
+    // Only trim if both the shrunk chunk and the new trim chunk are at least min_size
+    if (our_new_size >= Chunk.min_size and trim_addr + Chunk.min_size <= next_addr) {
         chunk._size = our_new_size | 0x01;
 
         const trim_chunk: *Chunk = @ptrFromInt(trim_addr);
@@ -393,9 +391,16 @@ pub const Chunk = extern struct {
     prior_free: ?*Chunk = null,
     next_free: ?*Chunk = null,
 
-    const header_size = 2 * @sizeOf(usize);
-    const min_size = header_size + 2 * @sizeOf(?*Chunk);
-    const alignment = Alignment.fromByteUnits(@alignOf(Alloc));
+    /// Size of the chunk header (previous_size and _size fields).
+    /// This is the overhead present in every chunk, both allocated and free.
+    const header_size = @offsetOf(Chunk, "prior_free");
+
+    /// Minimum size of a chunk. Must be large enough to hold the complete
+    /// Chunk struct so that when freed, there's room for the free list pointers.
+    const min_size = @sizeOf(Chunk);
+
+    /// Required alignment for chunk addresses and sizes.
+    const alignment = Alignment.fromByteUnits(@alignOf(Chunk));
 
     /// Returns a pointer to the chunk that contains the given data.
     pub fn from_data(data_slice: []u8, alloc: *Alloc) *Chunk {
@@ -572,89 +577,136 @@ pub fn dbg_log_chunk_list(self: *Alloc) void {
 /// This function is intended for use in a debug build.
 /// It will log any errors to the debug log.
 pub fn dbg_integrity_check(self: *Alloc) bool {
+    self.mutex.lock();
+    defer self.mutex.unlock();
+
     var valid: bool = true;
 
+    // Phase 1: Walk through all chunks linearly and verify basic structure.
+    // We mark each chunk by setting bit 0 of previous_size to 1.
+
     var previous_size: usize = 0;
-
-    // If we skip over memory based on chunk size we should end up exactly at the end of the heap.
-    // Also, each previous_size should match the size of prior chunk.
-
-    // We mark each chunk here by setting the low order bit of the previous size to 1.
-
     var address: usize = self.low_boundary;
+    var chunk_count: usize = 0;
+
     while (address < self.high_boundary) {
         const chunk: *Chunk = @ptrFromInt(address);
+        chunk_count += 1;
 
-        if (chunk.previous_size != previous_size) {
+        // Check address alignment
+        if (!Chunk.alignment.check(address)) {
             valid = false;
-            std.log.debug("Chunk list integrity check failed: chunk 0x{x:08} previous_size {d} != {d}\n", .{ @intFromPtr(chunk), chunk.previous_size, previous_size });
+            std.log.debug("Integrity check failed: chunk 0x{x:08} is not properly aligned\n", .{address});
         }
 
-        previous_size = chunk.size();
-        address += chunk.size();
+        const chunk_size = chunk.size();
 
+        // Check for zero size (would cause infinite loop)
+        if (chunk_size == 0) {
+            valid = false;
+            std.log.debug("Integrity check failed: chunk 0x{x:08} has zero size\n", .{address});
+            break; // Can't continue - would loop forever
+        }
+
+        // Check minimum chunk size
+        if (chunk_size < Chunk.min_size) {
+            valid = false;
+            std.log.debug("Integrity check failed: chunk 0x{x:08} size {d} < min_size {d}\n", .{ address, chunk_size, Chunk.min_size });
+        }
+
+        // Check size alignment
+        if (!Chunk.alignment.check(chunk_size)) {
+            valid = false;
+            std.log.debug("Integrity check failed: chunk 0x{x:08} size {d} is not properly aligned\n", .{ address, chunk_size });
+        }
+
+        // Verify previous_size chain
+        if (chunk.previous_size != previous_size) {
+            valid = false;
+            std.log.debug("Integrity check failed: chunk 0x{x:08} previous_size {d} != expected {d}\n", .{ address, chunk.previous_size, previous_size });
+        }
+
+        previous_size = chunk_size;
+        address += chunk_size;
+
+        // Mark this chunk as visited
         chunk.previous_size |= 0x01;
     }
 
-    if (address > self.high_boundary) {
+    // Check that we ended exactly at high_boundary (not before, not after)
+    if (address != self.high_boundary) {
         valid = false;
-        std.log.debug("Chunk list integrity check failed: address 0x{x:08} > high_boundary 0x{x:08}\n", .{ address, self.high_boundary });
+        std.log.debug("Integrity check failed: chunk traversal ended at 0x{x:08}, expected 0x{x:08}\n", .{ address, self.high_boundary });
     }
 
-    // Every chunk on one of the fre lists should be marked free and should be a valid chunk
-    // reachable by skipping over memory based on chunk size.
-
-    // We clear the low order bit of the previous size to 0 for any free chunks.
+    // Phase 2: Verify free lists integrity.
+    // - Each chunk on a free list must be marked as free
+    // - Each chunk must exist in the chunk list (was visited in phase 1)
+    // - Doubly-linked list pointers must be consistent
+    // - Chunks must be in the correct size bin
+    // We clear the marker bit for chunks we find on free lists.
 
     for (0..free_list_count) |i| {
-        var chunks = self.free_lists[i];
+        var prev_in_list: ?*Chunk = null;
+        var chunk_in_list = self.free_lists[i];
 
-        if (chunks == null) continue;
-
-        while (chunks) |chunk| {
+        while (chunk_in_list) |chunk| {
+            // Verify chunk is marked as free
             if (!chunk.is_free(self)) {
                 valid = false;
-                std.log.debug("Chunk free list integrity check failed: chunk on free list 0x{x:08} is not free\n", .{@intFromPtr(chunk)});
+                std.log.debug("Integrity check failed: chunk 0x{x:08} on free list {d} is not marked free\n", .{ @intFromPtr(chunk), i });
             }
 
-            var found: bool = false;
-
-            var test_address: usize = self.low_boundary;
-            while (test_address < self.high_boundary) {
-                const test_chunk: *Chunk = @ptrFromInt(test_address);
-                test_address += test_chunk.size();
-
-                if (chunk == test_chunk) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
+            // Verify chunk is in the correct size bin
+            const expected_bin = free_index_for_size(chunk.size());
+            if (expected_bin != i) {
                 valid = false;
-                std.log.debug("Chunk free list integrity check failed: chunk on free list 0x{x:08} is not in the chunk list\n", .{@intFromPtr(chunk)});
+                std.log.debug("Integrity check failed: chunk 0x{x:08} size {d} in bin {d}, expected bin {d}\n", .{ @intFromPtr(chunk), chunk.size(), i, expected_bin });
             }
 
+            // Verify prior_free pointer is consistent
+            if (chunk.prior_free != prev_in_list) {
+                valid = false;
+                std.log.debug("Integrity check failed: chunk 0x{x:08} prior_free 0x{x:08} != expected 0x{x:08}\n", .{ @intFromPtr(chunk), @intFromPtr(chunk.prior_free), @intFromPtr(prev_in_list) });
+            }
+
+            // Verify chunk exists in the heap (was visited in phase 1)
+            // We check if the marker bit is set
+            if (chunk.previous_size & 0x01 == 0) {
+                valid = false;
+                std.log.debug("Integrity check failed: chunk 0x{x:08} on free list not found in heap\n", .{@intFromPtr(chunk)});
+            }
+
+            // Clear the marker bit to indicate this chunk is on a free list
             chunk.previous_size &= ~@as(usize, 0x01);
 
-            chunks = chunk.next_free;
+            prev_in_list = chunk;
+            chunk_in_list = chunk.next_free;
         }
     }
 
-    // Make sure any chunk with the low order bit of the previous size set also has the
-    // low order bit of the size set.
-
-    //  Unmark each chunk here by clearing the low order bit of the previous size to 0.
+    // Phase 3: Final verification pass.
+    // Any chunk still marked (bit 0 set) was not on any free list.
+    // If such a chunk claims to be free (_size bit 0 clear), that's an error.
+    // Clear all marker bits.
 
     address = self.low_boundary;
     while (address < self.high_boundary) {
         const chunk: *Chunk = @ptrFromInt(address);
+        const chunk_size = chunk.size();
+
+        // If still marked (not on free list) but claims to be free
         if (chunk.previous_size & 0x01 != 0 and chunk._size & 0x01 == 0) {
             valid = false;
-            std.log.debug("Chunk integrity check failed: Chunk 0x{x:08} in-use chunk marked as free\n", .{@intFromPtr(chunk)});
+            std.log.debug("Integrity check failed: chunk 0x{x:08} is marked free but not on any free list\n", .{address});
         }
+
+        // Clear the marker bit
         chunk.previous_size &= ~@as(usize, 0x01);
-        address += chunk.size();
+
+        // Guard against zero size (shouldn't happen if phase 1 passed, but be safe)
+        if (chunk_size == 0) break;
+        address += chunk_size;
     }
 
     return valid;
