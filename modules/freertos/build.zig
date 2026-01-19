@@ -67,11 +67,9 @@ pub fn build(b: *std.Build) void {
     freertos_lib.addCMacro("configSMP_SPINLOCK_1", "PICO_SPINLOCK_ID_OS2");
 
     freertos_lib.addCMacro("LIB_PICO_MULTICORE", "0");
-    // Set this because otherwise we have to implment exception_set_exclusive_handler (for now we don't use it)
-    freertos_lib.addCMacro("PICO_NO_RAM_VECTOR_TABLE", "0");
 
-    // Should be defined in change in FreeRTOSConfig.h
-    //freertos_lib.addCMacro("configNUMBER_OF_CORES", "1");
+    // Had problems when this was enabled. Microzig but also Pico SDK? dont set VTOR to 0x10000100 for RP2040 at boot even when ram_vector_table is set to false
+    freertos_lib.addCMacro("PICO_NO_RAM_VECTOR_TABLE", "0");
 
     const mod = b.addModule("freertos", .{ .root_source_file = b.path("src/root.zig"), .target = target, .optimize = optimize });
     mod.addImport("freertos_lib", freertos_lib);
