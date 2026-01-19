@@ -263,19 +263,15 @@ pub fn Polled(config: Config) type {
 
             const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].in;
             const ep = self.hardware_endpoint_get_by_address(.in(ep_num));
+            var hw_buf: []align(1) u8 = ep.data_buffer;
 
-            const len = @min(data[0].len, ep.data_buffer.len);
-            switch (chip) {
-                .RP2040 => @memcpy(ep.data_buffer[0..len], data[0][0..len]),
-                .RP2350 => {
-                    const dst: [*]align(4) u32 = @ptrCast(ep.data_buffer.ptr);
-                    const src: [*]align(1) const u32 = @ptrCast(data[0].ptr);
-                    for (0..len / 4) |i|
-                        dst[i] = src[i];
-                    for (0..len % 4) |i|
-                        ep.data_buffer[len - i - 1] = data[0][len - i - 1];
-                },
+            for (data) |src| {
+                const len = @min(src.len, hw_buf.len);
+                dpram_memcpy(hw_buf[0..len], src[0..len]);
+                hw_buf = hw_buf[len..];
             }
+
+            const len: usb.types.Len = @intCast(ep.data_buffer.len - hw_buf.len);
 
             var bufctrl = bufctrl_ptr.read();
             assert(bufctrl.AVAILABLE_0 == 0);
@@ -296,32 +292,36 @@ pub fn Polled(config: Config) type {
             bufctrl.AVAILABLE_0 = 1;
             bufctrl_ptr.write(bufctrl);
 
-            return @intCast(len);
+            return len;
         }
 
+        /// Copies the last sent packet from USB SRAM into the provided buffer.
+        /// Slices in `data` must collectively be long enough to store the full packet.
         fn ep_readv(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
         ) usb.types.Len {
-            log.debug("readv {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
+            var total_len: usize = data[0].len;
+            for (data[1..]) |d| total_len += d.len;
+            log.debug("readv {t} {}", .{ ep_num, total_len });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
             assert(data.len > 0);
 
-            const bufctrl = &buffer_control[@intFromEnum(ep_num)].out.read();
+            const bufctrl = buffer_control[@intFromEnum(ep_num)].out.read();
             const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
             var hw_buf: []align(1) u8 = ep.data_buffer[0..bufctrl.LENGTH_0];
             for (data) |dst| {
                 const len = @min(dst.len, hw_buf.len);
-                // make sure reads from device memory of size 1
-                for (dst[0..len], hw_buf[0..len]) |*d, *s|
-                    @atomicStore(u8, d, @atomicLoad(u8, s, .unordered), .unordered);
+                dpram_memcpy(dst[0..len], hw_buf[0..len]);
+
                 hw_buf = hw_buf[len..];
                 if (hw_buf.len == 0)
                     return @intCast(hw_buf.ptr - ep.data_buffer.ptr);
             }
-            unreachable;
+            log.warn("discarding rx data on ep {t}, {} bytes received", .{ ep_num, bufctrl.LENGTH_0 });
+            return @intCast(total_len);
         }
 
         fn ep_listen(
@@ -359,6 +359,22 @@ pub fn Polled(config: Config) type {
             log.debug("set addr {}", .{addr});
 
             peripherals.USB.ADDR_ENDP.write(.{ .ADDRESS = addr });
+        }
+
+        fn dpram_memcpy(dst: []u8, src: []const u8) void {
+            assert(dst.len == src.len);
+            switch (chip) {
+                .RP2040 => @memcpy(dst, src),
+                .RP2350 => {
+                    // Could be optimized for aligned data, for now just copy
+                    // byte by byte. Atomic operations are used so that
+                    // the compiler does not try to optimize this.
+                    for (dst, src) |*d, *s| {
+                        const tmp = @atomicLoad(u8, s, .unordered);
+                        @atomicStore(u8, d, tmp, .unordered);
+                    }
+                },
+            }
         }
 
         fn hardware_endpoint_get_by_address(self: *@This(), ep: usb.types.Endpoint) *HardwareEndpointData {
