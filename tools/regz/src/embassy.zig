@@ -486,6 +486,7 @@ pub fn load_into_db(io: std.Io, db: *Database, path: []const u8) !void {
 
 /// Reads throught the json data handles the "extends" inheritance.
 fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Allocator, root_json: *std.json.Value) !void {
+    var root_json_clone = std.json.Value{ .object = try root_json.object.clone() };
     var itr = root_json.object.iterator();
     while (itr.next()) |entry| {
         const item_name = entry.key_ptr.*;
@@ -508,7 +509,7 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
             }
 
             // Handle all parents and grandparents of the current child.
-            try resolve_inheritance_recursively(allocator, root_json, item_name, &arr);
+            try resolve_inheritance_recursively(allocator, &root_json_clone, item_name, &arr);
 
             // Replacement items will go here and should be released via the arena extends allocator
             var new_list = std.json.Array.init(extends_allocator);
@@ -516,8 +517,10 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
                 try new_list.append(value);
             }
             try child.object.put(list_name, std.json.Value{ .array = new_list });
+            try root_json_clone.object.put(item_name, child);
         }
     }
+    root_json.* = root_json_clone;
 }
 
 // General function to handle inheritance
