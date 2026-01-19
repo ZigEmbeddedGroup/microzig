@@ -100,12 +100,12 @@ pub const Target = struct {
             from.chip.copy(allocator);
 
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
-		ret.* = from.*;
+        ret.* = from.*;
 
-		inline for(std.meta.fields(DeriveOptions)) |field| {
-			const value = @field(options, field.name);
-			if(value) |val| @field(ret, field.name) = val;
-		}
+        inline for (std.meta.fields(DeriveOptions)) |field| {
+            const value = @field(options, field.name);
+            if (value) |val| @field(ret, field.name) = val;
+        }
         ret.chip = chip;
         return ret;
     }

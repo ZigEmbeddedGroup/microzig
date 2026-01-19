@@ -32,7 +32,7 @@ pub const GPIO = enum(u8) {
         const regs = gpio.get_regs();
 
         const new: u32 = @as(u32, 1) << gpio.get_pin();
-        if(output == 1)
+        if (output == 1)
             regs.PSOR.write_raw(new)
         else
             regs.PCOR.write_raw(new);
@@ -67,7 +67,7 @@ pub const GPIO = enum(u8) {
         return switch (gpio.get_n()) {
             0...4 => |i| @ptrFromInt(base + i * @as(u32, 0x2000)),
             5 => @ptrCast(chip.peripherals.GPIO5), // GPIO5 has a different address
-            else => unreachable
+            else => unreachable,
         };
     }
 

@@ -81,7 +81,7 @@ pub const Port = enum(u3) {
         return switch (port.get_n()) {
             0...4 => |i| @ptrFromInt(base + i * @as(u32, 0x1000)),
             5 => @ptrCast(chip.peripherals.PORT5), // port5 has a different address
-            else => unreachable
+            else => unreachable,
         };
     }
 };

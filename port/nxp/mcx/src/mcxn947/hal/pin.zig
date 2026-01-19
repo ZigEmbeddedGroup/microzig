@@ -56,7 +56,7 @@ pub const Pin = enum(u8) {
         return Configurator.default(pin);
     }
 
-    pub const Config = packed struct (u16) {
+    pub const Config = packed struct(u16) {
         pull: Pull,
         pull_resistor_strength: Strength, // not supported everywhere
         slew_rate: SlewRate, // same
@@ -76,18 +76,7 @@ pub const Pin = enum(u8) {
 
         /// This default config is not pin specific and therefore does not
         /// correspond to the actual pin's default config.
-        pub const Default = Config {
-            .pull = .disabled,
-            .pull_resistor_strength = .low,
-            .slew_rate = .fast,
-            .passive_filter_enabled = false,
-            .open_drain_enabled = false,
-            .drive_strength = .low,
-            .mux = 0,
-            .input_buffer_enabled = false,
-            .invert_input = false,
-            .lock = false
-        };
+        pub const Default = Config{ .pull = .disabled, .pull_resistor_strength = .low, .slew_rate = .fast, .passive_filter_enabled = false, .open_drain_enabled = false, .drive_strength = .low, .mux = 0, .input_buffer_enabled = false, .invert_input = false, .lock = false };
     };
 
     pub const Configurator = struct {
@@ -97,10 +86,7 @@ pub const Pin = enum(u8) {
         // real default value depends on the port and pin
         // we could get it using the reset value provided in the svd
         pub fn default(pin: Pin) Configurator {
-            return .{
-                .pin = pin,
-                .config = .Default
-            };
+            return .{ .pin = pin, .config = .Default };
         }
 
         pub fn set_pull(old: Configurator, pull: Config.Pull) Configurator {

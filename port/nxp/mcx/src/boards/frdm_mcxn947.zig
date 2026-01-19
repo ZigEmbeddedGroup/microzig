@@ -4,7 +4,6 @@ const hal = microzig.hal;
 const FlexComm = hal.FlexComm;
 const Pin = hal.Pin;
 
-
 /// The GPIO corresponding to a led color.
 /// Putting a 0 to a led output enables it and a 1 disables it (see board schematic for why).
 ///
@@ -20,8 +19,6 @@ pub const Led = struct {
     pub const Green = hal.GPIO.num(0, 27);
     pub const Blue = hal.GPIO.num(1, 2);
 };
-
-
 
 /// See `init_debug_console`.
 pub fn init_debug_console_pins() void {
@@ -56,7 +53,7 @@ pub fn init_debug_console_pins() void {
 ///     std.log.debug("====== Starting ======", .{});
 /// ```
 pub fn init_debug_console(led: ?hal.GPIO, writer_buffer: []u8) !void {
-    if(led) |l| {
+    if (led) |l| {
         l.init();
         l.set_direction(.out);
         l.put(1);
@@ -77,23 +74,16 @@ pub const Colors = struct {
     bold: []const u8,
     reset: []const u8,
 
-    pub const Default = Colors {
+    pub const Default = Colors{
         .debug = "\u{001b}[34m", // blue
         .info = "",
         .warn = "\u{001b}[33m", // yellow
         .err = "\u{001b}[31m", // red
         .bold = "\u{001b}[1m",
-        .reset = "\u{001b}[m"
+        .reset = "\u{001b}[m",
     };
 
-    pub const None = Colors {
-        .debug = "",
-        .info = "",
-        .warn = "",
-        .err = "",
-        .bold = "",
-        .reset = ""
-    };
+    pub const None = Colors{ .debug = "", .info = "", .warn = "", .err = "", .bold = "", .reset = "" };
 };
 
 pub var uart_writer: ?FlexComm.LP_UART.Writer = null;
@@ -103,27 +93,22 @@ pub var panic_led: ?hal.GPIO = null;
 /// and append `terminator` at the end of each log (similar to `std.log.defaultLog`).
 pub fn get_log_fn(comptime terminator: []const u8, comptime colors: Colors) @TypeOf(std.log.defaultLog) {
     return struct {
-        pub fn log_fn(
-            comptime level: std.log.Level, 
-            comptime scope: @TypeOf(.EnumLiteral), 
-            comptime format: []const u8, 
-            args: anytype
-        ) void {
+        pub fn log_fn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
             // TODO: log timestamp
-            const color = comptime switch(level) {
+            const color = comptime switch (level) {
                 .debug => colors.debug,
-                .info  => colors.info,
-                .warn  => colors.warn,
-                .err   => colors.err
+                .info => colors.info,
+                .warn => colors.warn,
+                .err => colors.err,
             };
             const level_prefix = comptime "[" ++ colors.bold ++ color ++ level.asText() ++ colors.reset ++ "]";
 
-            const prefix = comptime level_prefix ++ switch(scope) {
+            const prefix = comptime level_prefix ++ switch (scope) {
                 .default => ": ",
-                else => " (" ++ @tagName(scope) ++ "): "
+                else => " (" ++ @tagName(scope) ++ "): ",
             };
 
-            if(uart_writer) |*writer| {
+            if (uart_writer) |*writer| {
                 writer.interface.print(prefix ++ format ++ terminator, args) catch {};
                 writer.interface.flush() catch {};
             }
@@ -144,7 +129,7 @@ pub fn get_log_fn(comptime terminator: []const u8, comptime colors: Colors) @Typ
 /// ```
 pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
-        if(panic_led) |led| led.put(0);
+        if (panic_led) |led| led.put(0);
         return microzig.panic.call(message, first_trace_address);
     }
 }.panicFn);

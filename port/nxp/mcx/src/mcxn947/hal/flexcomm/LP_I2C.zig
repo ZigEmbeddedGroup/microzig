@@ -47,35 +47,14 @@ pub const LP_I2C = enum(u4) {
         scl_glitch_filter: ?u32, // in ns
         // TODO: host request
 
-
         pub const OperatingMode = enum { standard, fast, fastplus, highspeed, ultrafast };
 
-        pub const Default = Config {
-            .baudrate = 100_000,
-            .mode = .standard,
-            .relaxed = false,
-            .enabled = true,
-            .debug = false,
-            .enable_doze = false,
-            .ignore_nack = false,
-            .bus_idle_timeout = null,
-            .pin_low_timeout = null,
-            .sda_glitch_filter = null,
-            .scl_glitch_filter = null
-        };
+        pub const Default = Config{ .baudrate = 100_000, .mode = .standard, .relaxed = false, .enabled = true, .debug = false, .enable_doze = false, .ignore_nack = false, .bus_idle_timeout = null, .pin_low_timeout = null, .sda_glitch_filter = null, .scl_glitch_filter = null };
     };
 
-    pub const Error = error {
-        UnexpectedNack,
-        ArbitrationLost,
-        FifoError,
-        PinLowTimeout,
-        BusBusy
-    };
+    pub const Error = error{ UnexpectedNack, ArbitrationLost, FifoError, PinLowTimeout, BusBusy };
 
-    pub const ConfigError = error {
-        UnsupportedBaudRate
-    };
+    pub const ConfigError = error{UnsupportedBaudRate};
 
     /// Initializes the I2C controller.
     pub fn init(interface: u4, config: Config) ConfigError!LP_I2C {
@@ -84,7 +63,6 @@ pub const LP_I2C = enum(u4) {
         const i2c: LP_I2C = @enumFromInt(interface);
         const regs = i2c.get_regs();
         i2c.reset();
-
 
         regs.MCFGR0.write(.{
             .HREN = .DISABLED, // TODO: host request
@@ -95,7 +73,7 @@ pub const LP_I2C = enum(u4) {
             .CIRFIFO = .DISABLED,
             .RDMO = .DISABLED, // TODO: address match
             .RELAX = @enumFromInt(@intFromBool(config.relaxed)),
-            .ABORT = .DISABLED
+            .ABORT = .DISABLED,
         });
         regs.MCFGR1.write(.{
             .PRESCALE = .DIVIDE_BY_1,
@@ -110,22 +88,22 @@ pub const LP_I2C = enum(u4) {
         const ns_per_cycle = 1_000_000_000 / i2c.get_flexcomm().get_clock();
         regs.MCFGR2.write(.{
             .BUSIDLE = 0, // set later since it depends on `prescale`
-            .FILTSCL = if(config.scl_glitch_filter) |t| @intCast(t / ns_per_cycle) else 0,
-            .FILTSDA = if(config.sda_glitch_filter) |t| @intCast(t / ns_per_cycle) else 0,
+            .FILTSCL = if (config.scl_glitch_filter) |t| @intCast(t / ns_per_cycle) else 0,
+            .FILTSDA = if (config.sda_glitch_filter) |t| @intCast(t / ns_per_cycle) else 0,
         });
 
-        if(config.pin_low_timeout != null) @panic("TODO");
+        if (config.pin_low_timeout != null) @panic("TODO");
         // regs.MCFGR3.write(.{
         // .PINLOW =
         // });
 
         try i2c.set_baudrate(config.mode, config.baudrate);
-        if(config.bus_idle_timeout) |t| {
+        if (config.bus_idle_timeout) |t| {
             const prescaler: u8 = @as(u8, 1) << @intFromEnum(regs.MCFGR1.read().PRESCALE);
             regs.MCFGR2.modify_one("BUSIDLE", @intCast(t / ns_per_cycle / prescaler));
         }
 
-        if(config.enabled) i2c.set_enabled(true);
+        if (config.enabled) i2c.set_enabled(true);
 
         return i2c;
     }
@@ -138,14 +116,7 @@ pub const LP_I2C = enum(u4) {
 
     /// Resets the I2C interface.
     pub fn reset(i2c: LP_I2C) void {
-        i2c.get_regs().MCR.write(.{
-            .RST = .RESET,
-            .MEN = .DISABLED,
-            .DBGEN = .DISABLED,
-            .DOZEN = .DISABLED,
-            .RRF = .RESET,
-            .RTF = .RESET
-        });
+        i2c.get_regs().MCR.write(.{ .RST = .RESET, .MEN = .DISABLED, .DBGEN = .DISABLED, .DOZEN = .DISABLED, .RRF = .RESET, .RTF = .RESET });
         i2c.get_regs().MCR.modify_one("RST", .NOT_RESET);
     }
 
@@ -160,17 +131,17 @@ pub const LP_I2C = enum(u4) {
         const ALF: bool = MSR.ALF == .INT_YES;
         const FEF: bool = MSR.FEF == .INT_YES;
         const PLTF: bool = MSR.PLTF == .INT_YES;
-        if(NDF or ALF or FEF or PLTF) {
+        if (NDF or ALF or FEF or PLTF) {
             // note: this may not clear FLTF flag (see reference manual)
             i2c.clear_flags();
 
             // The sdk resets the fifos for some reason
             // i2c.reset_fifos();
 
-            if(NDF) return error.UnexpectedNack;
-            if(ALF) return error.ArbitrationLost;
-            if(FEF) return error.FifoError;
-            if(PLTF) return error.PinLowTimeout;
+            if (NDF) return error.UnexpectedNack;
+            if (ALF) return error.ArbitrationLost;
+            if (FEF) return error.FifoError;
+            if (PLTF) return error.PinLowTimeout;
         }
         return;
     }
@@ -180,10 +151,7 @@ pub const LP_I2C = enum(u4) {
     }
 
     fn reset_fifos(i2c: LP_I2C) void {
-        i2c.get_regs().MCR.modify(.{
-            .RRF = .NOW_EMPTY,
-            .RTF = .NOW_EMPTY
-        });
+        i2c.get_regs().MCR.modify(.{ .RRF = .NOW_EMPTY, .RTF = .NOW_EMPTY });
     }
 
     fn get_n(i2c: LP_I2C) u4 {
@@ -214,20 +182,16 @@ pub const LP_I2C = enum(u4) {
         // we use the unit of 10ns to avoid floats
         //
         // see the comments above the definition of `sethold` below for more details
-        const max_baudrate: u32,
-        const min_sethold: u32,
-        const min_clk_low: u32,
-        const min_clk_high: u32 = switch(mode) {
+        const max_baudrate: u32, const min_sethold: u32, const min_clk_low: u32, const min_clk_high: u32 = switch (mode) {
             //               baudrate (Hz), sethold (10ns), clk_lo (10ns), clk_hi (10ns)
-            .standard => .{   100_000,      470,            470,           400  },
-            .fast     => .{   400_000,       60,            130,           60   },
-            .fastplus => .{ 1_000_000,      260,             50,           26   },
-            else => @panic("Invalid mode")
+            .standard => .{ 100_000, 470, 470, 400 },
+            .fast => .{ 400_000, 60, 130, 60 },
+            .fastplus => .{ 1_000_000, 260, 50, 26 },
+            else => @panic("Invalid mode"),
         };
         // to convert from 10ns to 1s, we divide by 10^8
         const conv_factor = std.math.pow(u32, 10, 8);
-        if(baudrate > max_baudrate) return error.UnsupportedBaudRate;
-
+        if (baudrate > max_baudrate) return error.UnsupportedBaudRate;
 
         // The variables used here correspond to the ones in NXP's reference manual
         // of the LPI2C module, plus a few others
@@ -251,29 +215,29 @@ pub const LP_I2C = enum(u4) {
         var @"best clk_hi + clk_lo": u7 = 0;
         var best_err: u32 = std.math.maxInt(u32);
 
-        for(0..8) |p| {
+        for (0..8) |p| {
             const prescale: u3 = @intCast(p);
             const scl_latency: u8 = (2 + filt_scl + scl_risetime) >> prescale;
 
-            if((lpi2c_clk_f / baudrate) >> prescale < 2 + scl_latency) break;
+            if ((lpi2c_clk_f / baudrate) >> prescale < 2 + scl_latency) break;
 
             const @"clk_hi + clk_lo": u32 = ((lpi2c_clk_f / baudrate) >> prescale) - 2 - scl_latency;
             // the max available for clk_hi and clk_lo is both 63
-            if(@"clk_hi + clk_lo" > 126) continue; // we need a bigger prescaler
+            if (@"clk_hi + clk_lo" > 126) continue; // we need a bigger prescaler
 
             const computed_baudrate = lpi2c_clk_f / (@"clk_hi + clk_lo" + 2 + scl_latency) << prescale;
-            const err = if(computed_baudrate > baudrate) computed_baudrate - baudrate else baudrate - computed_baudrate;
-            if(computed_baudrate > max_baudrate) continue;
+            const err = if (computed_baudrate > baudrate) computed_baudrate - baudrate else baudrate - computed_baudrate;
+            if (computed_baudrate > max_baudrate) continue;
             // TODO: do we want the smallest or the largest prescaler ?
-            if(err < best_err) {
+            if (err < best_err) {
                 best_err = err;
                 best_prescale = @intCast(prescale);
                 @"best clk_hi + clk_lo" = @intCast(@"clk_hi + clk_lo");
-                if(err == 0) break;
+                if (err == 0) break;
             }
         }
 
-        if(best_prescale == null) return error.UnsupportedBaudRate;
+        if (best_prescale == null) return error.UnsupportedBaudRate;
 
         const prescale = best_prescale.?;
         const sda_latency: u8 = (2 + filt_sda + scl_risetime) >> prescale;
@@ -288,13 +252,13 @@ pub const LP_I2C = enum(u4) {
         // t_low = (clk_lo + 1) × 2^prescale  × lpi2c_clk_t >= min_clk_low
         // <=>                   (clk_lo + 1) × 2^prescale  >= min_clk_low × lpi2c_clk_f  (with `min_clk_low` in seconds)
         const min_low_cycle_count: u32 = @intCast(std.math.divCeil(u64, @as(u64, min_clk_low) * lpi2c_clk_f, conv_factor) catch unreachable);
-        while(((clk_lo + 1) << prescale) < min_low_cycle_count) {
+        while (((clk_lo + 1) << prescale) < min_low_cycle_count) {
             clk_lo += 1;
         }
         const clk_hi: u6 = @intCast(@"best clk_hi + clk_lo" - clk_lo);
 
         assert(((clk_hi + 1 + scl_latency) << prescale) >= @as(u64, min_clk_high) * lpi2c_clk_f / conv_factor);
-        assert(((clk_lo + 1                ) << prescale) >= @as(u64, min_clk_low ) * lpi2c_clk_f / conv_factor);
+        assert(((clk_lo + 1) << prescale) >= @as(u64, min_clk_low) * lpi2c_clk_f / conv_factor);
 
         // corresponds somewhat to t_HD;STA, t_SU;STA and t_SU;STO
         // per I2C spec, we must have
@@ -318,12 +282,7 @@ pub const LP_I2C = enum(u4) {
         // minimize time disabled by disabling here
         const enabled = i2c.disable();
         defer i2c.set_enabled(enabled);
-        regs.MCCR0.write(.{
-            .CLKLO = clk_lo,
-            .CLKHI = clk_hi,
-            .SETHOLD = @intCast(sethold),
-            .DATAVD = @intCast(datavd)
-        });
+        regs.MCCR0.write(.{ .CLKLO = clk_lo, .CLKHI = clk_hi, .SETHOLD = @intCast(sethold), .DATAVD = @intCast(datavd) });
 
         regs.MCFGR1.modify_one("PRESCALE", @enumFromInt(prescale));
     }
@@ -360,9 +319,8 @@ pub const LP_I2C = enum(u4) {
     }
 
     pub fn set_enabled(i2c: LP_I2C, enabled: bool) void {
-        i2c.get_regs().MCR.modify_one("MEN", if(enabled) .ENABLED else .DISABLED);
+        i2c.get_regs().MCR.modify_one("MEN", if (enabled) .ENABLED else .DISABLED);
     }
-
 
     //
     // Read / Write functions
@@ -386,7 +344,7 @@ pub const LP_I2C = enum(u4) {
     }
 
     pub fn get_fifo_counts(i2c: LP_I2C) struct { tx: u8, rx: u8 } {
-        const MFSR  = i2c.get_regs().MFSR.read();
+        const MFSR = i2c.get_regs().MFSR.read();
         return .{ .tx = MFSR.TXCOUNT, .rx = MFSR.RXCOUNT };
     }
 
@@ -395,25 +353,19 @@ pub const LP_I2C = enum(u4) {
     pub fn send_start_blocking(i2c: LP_I2C, address: u7, mode: enum(u2) { write = 0, read = 1 }) Error!void {
         try i2c.wait_for_tx_space();
 
-        i2c.get_regs().MTDR.write(.{
-            .DATA = (@as(u8, address) << 1) | @intFromEnum(mode),
-            .CMD = .GENERATE_START_AND_TRANSMIT_ADDRESS_IN_DATA_7_THROUGH_0
-        });
+        i2c.get_regs().MTDR.write(.{ .DATA = (@as(u8, address) << 1) | @intFromEnum(mode), .CMD = .GENERATE_START_AND_TRANSMIT_ADDRESS_IN_DATA_7_THROUGH_0 });
     }
 
     /// Sends a I2C stop. Blocks until the stop command has been sent.
     pub fn send_stop_blocking(i2c: LP_I2C) Error!void {
         try i2c.wait_for_tx_space();
 
-        i2c.get_regs().MTDR.write(.{
-            .DATA = 0,
-            .CMD = .GENERATE_STOP_CONDITION
-        });
+        i2c.get_regs().MTDR.write(.{ .DATA = 0, .CMD = .GENERATE_STOP_CONDITION });
 
         // wait for the tx fifo to be empty and stop be sent
         var flags = i2c.get_regs().MSR.read();
         try i2c.check_flags();
-        while(flags.SDF != .INT_YES and flags.TDF != .ENABLED) {
+        while (flags.SDF != .INT_YES and flags.TDF != .ENABLED) {
             flags = i2c.get_regs().MSR.read();
             try i2c.check_flags();
         }
@@ -421,46 +373,42 @@ pub const LP_I2C = enum(u4) {
     }
 
     fn wait_for_tx_space(i2c: LP_I2C) Error!void {
-        while(!i2c.can_write()) try i2c.check_flags();
+        while (!i2c.can_write()) try i2c.check_flags();
     }
 
     pub fn send_blocking(i2c: LP_I2C, address: u7, data: []const u8) Error!void {
         const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
 
-        if(i2c.is_bus_busy()) return error.BusBusy;
+        if (i2c.is_bus_busy()) return error.BusBusy;
         i2c.clear_flags();
 
         try i2c.send_start_blocking(address, .write);
 
-        for(data) |c| {
+        for (data) |c| {
             try i2c.wait_for_tx_space();
             MTDR.* = c;
         }
         try i2c.send_stop_blocking();
     }
 
-
     // Follows the linux kernel's approach
     pub const I2C_Msg = struct {
         flags: packed struct(u8) {
             direction: enum(u1) { write = 0, read = 1 },
-            padding: u7 = 0
+            padding: u7 = 0,
             // ten_bit: bool = false
         },
         address: u16,
-        chunks: union {
-            read: []const []u8,
-            write: []const []const u8
-        }
+        chunks: union { read: []const []u8, write: []const []const u8 },
     };
 
     pub fn transfer_blocking(i2c: LP_I2C, messages: []const I2C_Msg) Error!void {
         // TODO: retries
-        if(i2c.is_bus_busy()) return error.BusBusy;
+        if (i2c.is_bus_busy()) return error.BusBusy;
         i2c.clear_flags();
 
-        for(messages) |message| {
-            switch(message.flags.direction) {
+        for (messages) |message| {
+            switch (message.flags.direction) {
                 .read => try i2c.readv_blocking(message),
                 .write => try i2c.writev_blocking(message),
             }
@@ -478,13 +426,13 @@ pub const LP_I2C = enum(u4) {
         const MTDR: *volatile u8 = @ptrCast(&i2c.get_regs().MTDR);
 
         const write_vec = SliceVector([]const u8).init(msg.chunks.write);
-        if(write_vec.size() == 0) return; // other impls return error.NoData
+        if (write_vec.size() == 0) return; // other impls return error.NoData
 
         // TODO: 10 bit addresses support
         try i2c.send_start_blocking(@truncate(msg.address), .write);
 
         var iter = write_vec.iterator();
-        while(iter.next_element()) |element| {
+        while (iter.next_element()) |element| {
             try i2c.wait_for_tx_space();
             MTDR.* = element.value;
         }
@@ -500,7 +448,7 @@ pub const LP_I2C = enum(u4) {
 
         const read_vec = SliceVector([]u8).init(msg.chunks.read);
         var len = read_vec.size();
-        if(len == 0) return; // other impls return error.NoData
+        if (len == 0) return; // other impls return error.NoData
         assert(len <= i2c.get_fifo_sizes().tx * 256); // see comments above the loop below
 
         // TODO: 10 bit addresses support
@@ -512,22 +460,19 @@ pub const LP_I2C = enum(u4) {
         // note that the controller will send a NACK after the last read command
         // if it is not followed by an other read.
         // Reading more than 8 × 256 bytes is therefore currently unimplemented.
-        while(len > 0) {
+        while (len > 0) {
             const chunk_len = @min(256, len);
             len -= chunk_len;
 
             try i2c.wait_for_tx_space();
-            i2c.get_regs().MTDR.write(.{
-                .DATA = @intCast(chunk_len - 1),
-                .CMD = .RECEIVE_DATA_7_THROUGH_0_PLUS_ONE
-            });
+            i2c.get_regs().MTDR.write(.{ .DATA = @intCast(chunk_len - 1), .CMD = .RECEIVE_DATA_7_THROUGH_0_PLUS_ONE });
         }
 
         var iter = read_vec.iterator();
-        while(iter.next_element_ptr()) |element| {
+        while (iter.next_element_ptr()) |element| {
             try i2c.check_flags();
             var mrdr = i2c.get_regs().MRDR.read();
-            while(mrdr.RXEMPTY == .EMPTY) {
+            while (mrdr.RXEMPTY == .EMPTY) {
                 try i2c.check_flags();
                 mrdr = i2c.get_regs().MRDR.read();
             }
@@ -536,49 +481,30 @@ pub const LP_I2C = enum(u4) {
     }
 
     pub fn i2c_device(i2c: LP_I2C) I2C_Device {
-        return .{
-            .ptr = @ptrFromInt(@intFromEnum(i2c)),
-            .vtable = &.{
-                .readv_fn = readv,
-                .writev_fn = writev,
-                .writev_then_readv_fn = writev_then_readv
-            }
-        };
+        return .{ .ptr = @ptrFromInt(@intFromEnum(i2c)), .vtable = &.{ .readv_fn = readv, .writev_fn = writev, .writev_then_readv_fn = writev_then_readv } };
     }
 };
 
 // TODO: check for reserved addresses
 fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8) I2C_Device.Error!void {
     const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
-    const message: LP_I2C.I2C_Msg = .{
-        .address = @intFromEnum(addr),
-        .flags = .{ .direction = .write },
-        .chunks = .{ .write = datagrams }
-    };
-    dev.transfer_blocking(&.{message}) catch |err| switch(err) {
-        LP_I2C.Error.UnexpectedNack,
-        LP_I2C.Error.FifoError,
-        LP_I2C.Error.BusBusy,
-        LP_I2C.Error.ArbitrationLost => {
+    const message: LP_I2C.I2C_Msg = .{ .address = @intFromEnum(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
+    dev.transfer_blocking(&.{message}) catch |err| switch (err) {
+        LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
             std.log.debug("ew: {}\n", .{err});
-            return I2C_Device.Error.UnknownAbort;},
+            return I2C_Device.Error.UnknownAbort;
+        },
         LP_I2C.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
     };
 }
 fn readv(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []u8) I2C_Device.Error!usize {
     const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
-    const message: LP_I2C.I2C_Msg = .{
-        .address = @intFromEnum(addr),
-        .flags = .{ .direction = .write },
-        .chunks = .{ .write = datagrams }
-    };
-    dev.transfer_blocking(&.{message}) catch |err| switch(err) {
-        LP_I2C.Error.UnexpectedNack,
-        LP_I2C.Error.FifoError,
-        LP_I2C.Error.BusBusy,
-        LP_I2C.Error.ArbitrationLost => {
+    const message: LP_I2C.I2C_Msg = .{ .address = @intFromEnum(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
+    dev.transfer_blocking(&.{message}) catch |err| switch (err) {
+        LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
             std.log.debug("er: {}\n", .{err});
-            return I2C_Device.Error.UnknownAbort;},
+            return I2C_Device.Error.UnknownAbort;
+        },
         LP_I2C.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
     };
 
@@ -592,25 +518,12 @@ fn writev_then_readv(
     read_chunks: []const []u8,
 ) I2C_Device.Error!void {
     const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
-    const messages: []const LP_I2C.I2C_Msg = &.{
-        .{
-            .address = @intFromEnum(addr),
-            .flags = .{ .direction = .write },
-            .chunks = .{ .write = write_chunks }
-        },
-        .{
-            .address = @intFromEnum(addr),
-            .flags = .{ .direction = .read },
-            .chunks = .{ .read = read_chunks }
-        }
-    };
-    dev.transfer_blocking(messages) catch |err| switch(err) {
-        LP_I2C.Error.UnexpectedNack,
-        LP_I2C.Error.FifoError,
-        LP_I2C.Error.BusBusy,
-        LP_I2C.Error.ArbitrationLost => {
+    const messages: []const LP_I2C.I2C_Msg = &.{ .{ .address = @intFromEnum(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = write_chunks } }, .{ .address = @intFromEnum(addr), .flags = .{ .direction = .read }, .chunks = .{ .read = read_chunks } } };
+    dev.transfer_blocking(messages) catch |err| switch (err) {
+        LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
             std.log.debug("erw: {}\n", .{err});
-            return I2C_Device.Error.UnknownAbort;},
+            return I2C_Device.Error.UnknownAbort;
+        },
         LP_I2C.Error.PinLowTimeout => return I2C_Device.Error.Timeout,
     };
 }

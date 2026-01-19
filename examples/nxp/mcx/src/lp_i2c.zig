@@ -11,18 +11,18 @@ const LP_I2C = FlexComm.LP_I2C;
 //
 // see section 66.2.3 of the reference manual and the chip's pinout for more details
 fn init_lpi2c_pins() void {
-	// FC3_P0
-	Pin.num(1, 0).configure()
-		.alt(2)
-		.set_pull(.up)
-		.enable_input_buffer()
-		.done();
-	// FC3_P1
-	Pin.num(1, 1).configure()
-		.alt(2)
-		.set_pull(.up)
-		.enable_input_buffer()
-		.done();
+    // FC3_P0
+    Pin.num(1, 0).configure()
+        .alt(2)
+        .set_pull(.up)
+        .enable_input_buffer()
+        .done();
+    // FC3_P1
+    Pin.num(1, 1).configure()
+        .alt(2)
+        .set_pull(.up)
+        .enable_input_buffer()
+        .done();
 }
 
 pub fn main() !void {

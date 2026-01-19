@@ -5,7 +5,6 @@ const chip = microzig.chip;
 const peripherals = chip.peripherals;
 const assert = std.debug.assert;
 
-
 /// A Low-Power Flexible Communications interface (LP FlexComm).
 /// To initialize Uart, SPI or I2C, use `LPUart` or `LPI2c` instead.
 ///
@@ -18,14 +17,8 @@ pub const FlexComm = enum(u4) {
     pub const LP_UART = @import("flexcomm/LP_UART.zig").LP_UART;
     pub const LP_I2C = @import("flexcomm/LP_I2C.zig").LP_I2C;
 
-    pub const Type = enum(u3) {
-        none        = 0,
-        UART        = 1,
-        SPI         = 2,
-        I2C         = 3,
-        @"UART+I2C" = 7
-    };
-    
+    pub const Type = enum(u3) { none = 0, UART = 1, SPI = 2, I2C = 3, @"UART+I2C" = 7 };
+
     pub const RegTy = *volatile chip.types.peripherals.LP_FLEXCOMM0;
     const Registers: [10]RegTy = .{
         peripherals.LP_FLEXCOMM0,
@@ -67,14 +60,14 @@ pub const FlexComm = enum(u4) {
     }
 
     pub const Clock = enum(u3) {
-        none          = 0,
-        PLL           = 1,
-        FRO_12MHz     = 2,
-        fro_hf_div    = 3,
-        clk_1m        = 4,
-        usb_pll       = 5,
+        none = 0,
+        PLL = 1,
+        FRO_12MHz = 2,
+        fro_hf_div = 3,
+        clk_1m = 4,
+        usb_pll = 5,
         lp_oscillator = 6,
-        _,// also no clock
+        _, // also no clock
 
         const ClockTy = @FieldType(@TypeOf(chip.peripherals.SYSCON0.FCCLKSEL[0]).underlying_type, "SEL");
 
@@ -98,7 +91,7 @@ pub const FlexComm = enum(u4) {
             .DIV = @intCast(divider - 1),
             .RESET = .RELEASED,
             .HALT = .RUN,
-            .UNSTAB = .STABLE // read-only field
+            .UNSTAB = .STABLE, // read-only field
         });
         chip.peripherals.SYSCON0.FCCLKSEL[n].modify_one("SEL", clock.to());
     }
@@ -118,18 +111,18 @@ pub const FlexComm = enum(u4) {
     pub fn get_clock(flexcomm: FlexComm) u32 {
         const n = flexcomm.get_n();
         const div = chip.peripherals.SYSCON0.FLEXCOMMCLKDIV[n].read();
-        if(div.HALT == .HALT) return 0;
+        if (div.HALT == .HALT) return 0;
 
         const clock = Clock.from(chip.peripherals.SYSCON0.FCCLKSEL[n].read().SEL);
         // TODO: complete this function (see the sdk's implementation)
-        const freq: u32 = switch(clock) {
+        const freq: u32 = switch (clock) {
             // .PLL   => 1,
-            .FRO_12MHz     => 12_000_000,
+            .FRO_12MHz => 12_000_000,
             // .fro_hf_div => 3,
-            .clk_1m        =>  1_000_000,
+            .clk_1m => 1_000_000,
             // .usb_pll=> 5,
             // .lp_oscillator => 6,
-            else => @panic("TODO")
+            else => @panic("TODO"),
             // else => 0
         };
 
@@ -150,4 +143,3 @@ pub const FlexComm = enum(u4) {
         return @enumFromInt(@intFromEnum(syscon.Module.FC0) + flexcomm.get_n());
     }
 };
-

@@ -43,5 +43,5 @@ pub fn main() !void {
 
     // And to write
     var writer = uart.writer(&.{});
-    try writer.interface.print("Successfully received \"{s}\"\n", .{ message });
+    try writer.interface.print("Successfully received \"{s}\"\n", .{message});
 }
