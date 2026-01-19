@@ -53,10 +53,10 @@ const SPI45SEL = microzig.chip.types.peripherals.rcc_h7.SPI45SEL;
 //clocktree type shortcuts
 const ClockTree = @field(@import("ClockTree"), microzig.config.chip_name);
 const Config = ClockTree.Config;
-const Clock_Output = ClockTree.Clock_Output;
-const Config_Output = ClockTree.Config_Output;
+const ClockOutput = ClockTree.Clock_Output;
+const ConfigOutput = ClockTree.Config_Output;
 
-var current_clk: Clock_Output = blk: {
+var current_clk: ClockOutput = blk: {
     const ret = ClockTree.get_clocks(.{}) catch unreachable;
     break :blk ret.clock;
 };
@@ -83,7 +83,7 @@ pub const MCO_Config = struct {
     mco2_pre: MCOPRE,
 };
 
-pub const Sysclk_Config = struct {
+pub const SYSCLK_Config = struct {
     upscale: bool,
     falsh_latency: u3,
     flash_signal_delay: u2,
@@ -91,14 +91,14 @@ pub const Sysclk_Config = struct {
     clk_src: SW,
 };
 
-pub const D1_Kernel_Config = struct {
+pub const D1_KernelConfig = struct {
     peri_src: PERSEL,
     sdmcc_src: SDMMCSEL,
     octospi_src: FMCSEL,
     fmc_src: FMCSEL,
 };
 
-pub const D2_Kernel_Config = struct {
+pub const D2_KernelConfig = struct {
     //CCIP1R
     spwmi_src: SWPMMISEL,
     dfsdm_src: DFSDMSEL,
@@ -118,7 +118,7 @@ pub const D2_Kernel_Config = struct {
     cec_src: CECSEL,
 };
 
-pub const D3_Kernel_Config = struct {
+pub const D3_KernelConfig = struct {
     lpuart1: LPUARTSEL,
     i2c4_src: I2C4SEL,
     lptim2_src: LPTIM2SEL,
@@ -128,10 +128,38 @@ pub const D3_Kernel_Config = struct {
     sai4b_src: SAIASEL,
     spi6_src: SPI6SEL,
 };
+
+pub const ResetBits = packed struct(u10) {
+    CPU: u1,
+    D1: u1,
+    D2: u1,
+    BOR: u1,
+    PIN: u1,
+    POR: u1,
+    SFT: u1,
+    IWDG1: u1,
+    WWDG1: u1,
+    LPWR: u1,
+};
+
+pub const ResetReason = enum {
+    power_on,
+    pin_rest,
+    brownout,
+    system_reset,
+    cpu_reset,
+    window_watchdog,
+    independent_watchdog,
+    d1_DStandby_exit,
+    d2_DStandby_exit,
+    d1_or_cpu_invalid_mode, //D1 erroneously enters DStandby mode or CPU erroneously enters CStop mode
+    unknown, // probably the RCC.RSR wasn't cleared, preventing reading the reset reason
+};
+
 /// configure clocks
 /// NOTE: this function expects the current clock to be in a valid state and free of glitches in the flash and PWR domains
 /// it is important that any external change (whether manual or caused by hardware events) to the clock tree be restored before calling this function
-pub fn apply(comptime config: Config) !Clock_Output {
+pub fn apply(comptime config: Config) !ClockOutput {
     const clk = comptime ClockTree.get_clocks(config) catch unreachable;
     current_clk = clk.clock;
 
@@ -189,7 +217,7 @@ fn secure_enable(upscale: bool, hsi_div: HSIDIV, trim: ?u7) void {
     set_D1_prescaler(.Div1, .Div1, .Div1);
 }
 
-fn apply_internal(comptime config: Config_Output, upscale: bool) !void {
+fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
     const actual_state = RCC.CR.read();
 
     const d1_core_pre: HPRE = blk: {
@@ -585,7 +613,7 @@ fn apply_internal(comptime config: Config_Output, upscale: bool) !void {
 
     // changing D1 without checking for upscale is safe here, since both VOS and FLASH are configured for maximum HSI(secure_enable clock)
     set_D1_prescaler(d1_core_pre, d1_ahb_pre, d1_apb_pre);
-    set_sysclk(Sysclk_Config{
+    set_sysclk(SYSCLK_Config{
         .clk_src = sysclk,
         .falsh_latency = flantency,
         .flash_signal_delay = flantency,
@@ -673,7 +701,7 @@ fn apply_internal(comptime config: Config_Output, upscale: bool) !void {
         .usb_src = usb_src,
     });
 
-    config_d3_kernel_src(D3_Kernel_Config{
+    config_d3_kernel_src(D3_KernelConfig{
         .adc_src = adc_src,
         .i2c4_src = i2c4_src,
         .lptim2_src = lptim2_src,
@@ -997,7 +1025,7 @@ pub fn set_D3_prescaler(d3_apb: PPRE) void {
     RCC.D3CFGR.modify_one("D3PPRE", d3_apb);
 }
 
-pub fn set_sysclk(config: Sysclk_Config) void {
+pub fn set_sysclk(config: SYSCLK_Config) void {
 
     //if upscaling, set voltage scaling and flash latency before changing sysclock
     //else, set them after changing sysclock
@@ -1038,7 +1066,7 @@ pub fn set_rcc_tim_pre(p: TIMPRE) void {
     RCC.CFGR.modify_one("TIMPRE", p);
 }
 
-pub fn config_d1_kernel_srcs(config: D1_Kernel_Config) void {
+pub fn config_d1_kernel_srcs(config: D1_KernelConfig) void {
     RCC.D1CCIPR.modify(.{
         .FMCSEL = config.fmc_src,
         .OCTOSPISEL = config.octospi_src,
@@ -1047,7 +1075,7 @@ pub fn config_d1_kernel_srcs(config: D1_Kernel_Config) void {
     });
 }
 
-pub fn config_d2_kernel_src(config: D2_Kernel_Config) void {
+pub fn config_d2_kernel_src(config: D2_KernelConfig) void {
     RCC.D2CCIP1R.modify(.{
         .SAI1SEL = config.sai1_src,
         .SAI23SEL = config.sai23_src,
@@ -1070,7 +1098,7 @@ pub fn config_d2_kernel_src(config: D2_Kernel_Config) void {
     });
 }
 
-pub fn config_d3_kernel_src(config: D3_Kernel_Config) void {
+pub fn config_d3_kernel_src(config: D3_KernelConfig) void {
     RCC.D3CCIPR.modify(.{
         .LPUART1SEL = config.lpuart1,
         .I2C4SEL = config.i2c4_src,
@@ -1221,4 +1249,44 @@ pub fn enable_clock(comptime peri: Peripherals) void {
 
 pub fn disable_clock(comptime peri: Peripherals) void {
     set_clock(peri, 0);
+}
+
+pub fn get_reset_bits() ResetBits {
+    const RSR = RCC.RSR.read();
+    return ResetBits{
+        .CPU = RSR.CPURSTF,
+        .D1 = RSR.D1RSTF,
+        .D2 = RSR.D2RSTF,
+        .BOR = RSR.BORRSTF,
+        .PIN = RSR.PINRSTF,
+        .POR = RSR.PORRSTF,
+        .SFT = RSR.SFTRSTF,
+        .IWDG1 = RSR.IWDG1RSTF,
+        .WWDG1 = RSR.WWDG1RSTF,
+        .LPWR = RSR.LPWRRSTF,
+    };
+}
+
+pub fn clear_reset_bits() void {
+    RCC.RSR.modify_one("RMVF", 1);
+    asm volatile ("" ::: .{ .memory = true });
+    RCC.RSR.modify_one("RMVF", 0);
+}
+
+pub fn get_reset_reason() ResetReason {
+    const rst_bits: u10 = @bitCast(get_reset_bits());
+
+    return switch (rst_bits) {
+        0b0000111111 => .power_on,
+        0b0000010001 => .pin_rest,
+        0b0000011001 => .brownout,
+        0b0001010001 => .system_reset,
+        0b0000000001 => .cpu_reset,
+        0b0100010001 => .window_watchdog,
+        0b0010010001 => .independent_watchdog,
+        0b0000000010 => .d1_DStandby_exit,
+        0b0000000100 => .d2_DStandby_exit,
+        0b1000010001 => .d1_or_cpu_invalid_mode,
+        else => .unknown,
+    };
 }
