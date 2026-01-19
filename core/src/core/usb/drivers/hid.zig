@@ -49,9 +49,9 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
             .report_length = .from(@sizeOf(@TypeOf(report_descriptor))),
         };
 
-        pub const handlers = .{
-            .ep_out = "on_rx",
-            .ep_in = "on_tx_ready",
+        pub const handlers: usb.DriverHadlers(@This()) = .{
+            .ep_out = on_rx,
+            .ep_in = on_tx_ready,
         };
 
         device: *usb.DeviceInterface,

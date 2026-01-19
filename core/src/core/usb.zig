@@ -91,6 +91,30 @@ pub const DeviceInterface = struct {
     }
 };
 
+pub fn DriverHadlers(Driver: type) type {
+    const EndpointHandler = fn (*Driver, types.Endpoint.Num) void;
+
+    const Field = std.builtin.Type.StructField;
+    var ret_fields: []const Field = &.{};
+    const desc_fields = @typeInfo(Driver.Descriptor).@"struct".fields;
+    for (desc_fields) |fld| switch (fld.type) {
+        descriptor.Endpoint => ret_fields = ret_fields ++ &[1]Field{.{
+            .alignment = @alignOf(usize),
+            .default_value_ptr = null,
+            .is_comptime = false,
+            .name = fld.name,
+            .type = EndpointHandler,
+        }},
+        else => {},
+    };
+    return @Type(.{ .@"struct" = .{
+        .decls = &.{},
+        .fields = ret_fields,
+        .is_tuple = false,
+        .layout = .auto,
+    } });
+}
+
 pub const Config = struct {
     pub const Configuration = struct {
         num: u8,
@@ -208,17 +232,32 @@ pub fn DeviceController(config: Config) type {
         };
 
         const handlers = blk: {
-            const Handler = struct {
-                driver: []const u8,
-                function: []const u8,
-            };
+            @setEvalBranchQuota(10000);
 
-            var ret: struct { In: [16]Handler, Out: [16]Handler, itf: []const DriverEnum } = .{
-                .In = @splat(.{ .driver = "", .function = "" }),
-                .Out = @splat(.{ .driver = "", .function = "" }),
-                .itf = &.{},
-            };
-            var itf_handlers = ret.itf;
+            const Field = std.builtin.Type.StructField;
+            var drivers_ep: struct {
+                In: [16][]const u8 = @splat(""),
+                Out: [16][]const u8 = @splat(""),
+            } = .{};
+            var handlers_ep: struct {
+                const default_field: Field = .{
+                    .alignment = 1,
+                    .default_value_ptr = null,
+                    .is_comptime = false,
+                    .name = "",
+                    .type = void,
+                };
+                In: [16]Field = @splat(default_field),
+                Out: [16]Field = @splat(default_field),
+            } = .{};
+            var itf_handlers: []const DriverEnum = &.{};
+
+            for (0..16) |i| {
+                const name = std.fmt.comptimePrint("{}", .{i});
+                handlers_ep.In[i].name = name;
+                handlers_ep.Out[i].name = name;
+            }
+
             for (driver_fields) |fld_drv| {
                 const cfg = @field(config_descriptor, fld_drv.name);
                 const fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
@@ -237,22 +276,43 @@ pub fn DeviceController(config: Config) type {
                 for (fields) |fld| {
                     if (fld.type != descriptor.Endpoint) continue;
                     const desc: descriptor.Endpoint = @field(cfg, fld.name);
+                    const tag = @tagName(desc.endpoint.dir);
                     const ep_num = @intFromEnum(desc.endpoint.num);
-                    const handler = &@field(ret, @tagName(desc.endpoint.dir))[ep_num];
-                    const function = @field(fld_drv.type.handlers, fld.name);
-                    if (handler.driver.len != 0 or handler.function.len != 0)
+
+                    const driver = &@field(drivers_ep, tag)[ep_num];
+                    if (driver.*.len != 0)
                         @compileError(std.fmt.comptimePrint(
-                            "ep{} {t}: multiple handlers: {s}.{s} and {s}.{s}",
-                            .{ ep_num, desc.endpoint.dir, handler.driver, handler.function, fld_drv.name, function },
+                            "ep{} {t}: multiple handlers: {s} and {s}",
+                            .{ ep_num, desc.endpoint.dir, driver.*, fld_drv.name },
                         ));
-                    handler.* = .{
-                        .driver = fld_drv.name,
-                        .function = function,
-                    };
+
+                    driver.* = fld_drv.name;
+                    const func = @field(fld_drv.type.handlers, fld.name);
+                    const handler = &@field(handlers_ep, tag)[ep_num];
+                    handler.alignment = @alignOf(@TypeOf(func));
+                    handler.default_value_ptr = &func;
+                    handler.type = @TypeOf(func);
+                    handler.is_comptime = true;
                 }
             }
-            ret.itf = itf_handlers;
-            break :blk ret;
+            break :blk .{
+                .ep_drv = drivers_ep,
+                .ep_han = .{
+                    .In = @Type(.{ .@"struct" = .{
+                        .decls = &.{},
+                        .fields = &handlers_ep.In,
+                        .is_tuple = true,
+                        .layout = .auto,
+                    } }){},
+                    .Out = @Type(.{ .@"struct" = .{
+                        .decls = &.{},
+                        .fields = &handlers_ep.Out,
+                        .is_tuple = true,
+                        .layout = .auto,
+                    } }){},
+                },
+                .itf = itf_handlers,
+            };
         };
 
         /// If not zero, change the device address at the next opportunity.
@@ -305,7 +365,8 @@ pub fn DeviceController(config: Config) type {
         pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint) void {
             log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
 
-            const handler = comptime @field(handlers, @tagName(ep.dir))[@intFromEnum(ep.num)];
+            const driver = comptime @field(handlers.ep_drv, @tagName(ep.dir))[@intFromEnum(ep.num)];
+            const function = comptime @field(handlers.ep_han, @tagName(ep.dir))[@intFromEnum(ep.num)];
 
             if (comptime ep == types.Endpoint.in(.ep0)) {
                 // We use this opportunity to finish the delayed
@@ -334,9 +395,8 @@ pub fn DeviceController(config: Config) type {
             } else if (comptime ep == types.Endpoint.out(.ep0))
                 log.warn("Unhandled packet on ep0 Out", .{});
 
-            if (comptime handler.driver.len != 0) {
-                const drv = &@field(self.driver_data.?, handler.driver);
-                @field(@FieldType(config0.Drivers, handler.driver), handler.function)(drv, ep.num);
+            if (comptime driver.len != 0) {
+                function(&@field(self.driver_data.?, driver), ep.num);
             }
         }
 

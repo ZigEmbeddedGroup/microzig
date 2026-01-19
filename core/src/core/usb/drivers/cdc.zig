@@ -127,10 +127,10 @@ pub fn CdcClassDriver(options: Options) type {
             }
         };
 
-        pub const handlers = .{
-            .ep_notifi = "on_notifi_ready",
-            .ep_out = "on_rx",
-            .ep_in = "on_tx_ready",
+        pub const handlers: usb.DriverHadlers(@This()) = .{
+            .ep_notifi = on_notifi_ready,
+            .ep_out = on_rx,
+            .ep_in = on_tx_ready,
         };
 
         device: *usb.DeviceInterface,
