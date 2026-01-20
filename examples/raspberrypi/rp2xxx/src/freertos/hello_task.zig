@@ -14,8 +14,6 @@ const uart_tx_pin = gpio.num(0);
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-    //.overwrite_hal_interrupts = true,
-    //.interrupts = .{ .PendSV = .{ .naked = freertos.isr_pendsv }, .SysTick = .{ .c = freertos.isr_systick }, .SVCall = .{ .c = freertos.isr_svcall } },
     .cpu = .{
         .ram_vector_table = true,
     },
@@ -77,7 +75,7 @@ export fn multicore_launch_core1(entry: *const fn () callconv(.c) void) callconv
 }
 
 export fn multicore_reset_core1() callconv(.c) void {
-    // TODO
+    // TODO: please implement this in microzig.hal.multicore and call it here
 }
 
 export fn clock_get_hz(_: u32) callconv(.c) u32 {
@@ -97,7 +95,7 @@ export fn exception_set_exclusive_handler(num: c_uint, handler: *const fn () cal
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
-    // very ugly code but good for now
+    // TODO: can this code be simplified?
     if (num == 11) {
         microzig.cpu.ram_vector_table.SVCall = .{ .c = handler };
     } else if (num == 14) {

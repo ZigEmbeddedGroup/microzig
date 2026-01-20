@@ -161,7 +161,8 @@ pub fn build(b: *std.Build) void {
             firmware.app_mod.addImport("net", net_mod);
         }
 
-        // Import freertos module for some examples
+        // Import freertos module for some examples, kind of a hack
+        // probably list of required modules should be specified in each example independently
         if (std.mem.indexOf(u8, example.name, "_freertos-") != null) {
             const freertos_dep = b.dependency("freertos", .{
                 .target = b.resolveTargetQuery(firmware.target.zig_target),

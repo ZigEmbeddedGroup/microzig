@@ -16,12 +16,5 @@
             .path = "../foundation-libc/",
         },
     },
-    .paths = .{
-        "build.zig",
-        "build.zig.zon",
-        "src",
-        // For example...
-        //"LICENSE",
-        //"README.md",
-    },
+    .paths = .{ "build.zig", "build.zig.zon", "src", "picosdk", "config" },
 }
