@@ -68,7 +68,8 @@ pub fn build(b: *std.Build) void {
 
     freertos_lib.addCMacro("LIB_PICO_MULTICORE", "0");
 
-    // Had problems when this was enabled. Microzig but also Pico SDK? dont set VTOR to 0x10000100 for RP2040 at boot even when ram_vector_table is set to false
+    // Had problems when this was enabled.
+    // Microzig but also Pico SDK? dont set VTOR to 0x10000100 for RP2040 at boot even when ram_vector_table is set to false
     freertos_lib.addCMacro("PICO_NO_RAM_VECTOR_TABLE", "0");
 
     const mod = b.addModule("freertos", .{ .root_source_file = b.path("src/root.zig"), .target = target, .optimize = optimize });
