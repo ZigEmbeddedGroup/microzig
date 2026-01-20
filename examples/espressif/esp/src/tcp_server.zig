@@ -47,8 +47,10 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
+// NOTE: Change these to match your setup.
 const SSID = "SSID";
-const AUTH: ?radio.wifi.Config.Auth = null;
+const PASSWORD: []const u8 = "";
+const AUTH_METHOD: radio.wifi.AuthMethod = .none;
 const SERVER_PORT = 3333;
 
 var maybe_netif: ?*lwip.c.netif = null;
@@ -83,11 +85,26 @@ pub fn main() !void {
     try radio.wifi.apply(.{
         .sta = .{
             .ssid = SSID,
-            .auth = AUTH,
+            .password = PASSWORD,
+            .auth_method = AUTH_METHOD,
         },
     });
-
     try radio.wifi.start_blocking();
+
+    {
+        std.log.info("Scanning for access points...", .{});
+        var scan_iter = try radio.wifi.scan(.{.ssid = "Internet"});
+        defer scan_iter.deinit();
+        while (try scan_iter.next()) |record| {
+            std.log.info("Found ap `{s}` RSSI: {} Channel: {}, Auth: {?t}", .{
+                record.ssid,
+                record.rssi,
+                record.primary_channel,
+                record.auth_mode,
+            });
+        }
+    }
+
     try radio.wifi.connect_blocking();
     try lwip.c_err(lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_up, null));
 

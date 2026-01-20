@@ -66,7 +66,7 @@ pub fn init(gpa: Allocator) Allocator.Error!void {
         .Debug => c.WIFI_LOG_VERBOSE,
         else => c.WIFI_LOG_NONE,
     };
-    wifi.c_result(c.esp_wifi_internal_set_log_level(internal_wifi_log_level)) catch {
+    wifi.c_err(c.esp_wifi_internal_set_log_level(internal_wifi_log_level)) catch {
         log.warn("failed to set wifi internal log level", .{});
     };
 }
