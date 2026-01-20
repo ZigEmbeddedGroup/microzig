@@ -93,7 +93,7 @@ pub fn main() !void {
 
     {
         std.log.info("Scanning for access points...", .{});
-        var scan_iter = try radio.wifi.scan(.{.ssid = "Internet"});
+        var scan_iter = try radio.wifi.scan(.{});
         defer scan_iter.deinit();
         while (try scan_iter.next()) |record| {
             std.log.info("Found ap `{s}` RSSI: {} Channel: {}, Auth: {?t}", .{
