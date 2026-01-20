@@ -21,4 +21,12 @@ static inline void multicore_fifo_clear_irq(void) {
     sio_hw->fifo_st = 0xff;
 }
 
+#if NUM_DOORBELLS
+
+static inline void multicore_doorbell_set_other_core(uint doorbell_num) {
+    sio_hw->doorbell_out_set = 1u << doorbell_num;
+}
+
+#endif
+
 #endif

@@ -82,7 +82,10 @@ export fn clock_get_hz(_: u32) callconv(.c) u32 {
     std.log.info("clock_get_hz called", .{});
     // FIXME: this seems to return null
     // return microzig.hal.clock_config.sys_freq.?;
-    return 125_000_000;
+    return switch (microzig.hal.compatibility.chip) {
+        .RP2040 => 125_000_000,
+        .RP2350 => 150_000_000,
+    };
 }
 
 export fn spin_lock_claim(_: c_uint) callconv(.c) void {}

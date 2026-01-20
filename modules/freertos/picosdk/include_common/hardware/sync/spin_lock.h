@@ -38,6 +38,14 @@ __force_inline static void spin_lock_unsafe_blocking(spin_lock_t *lock) {
 #endif
 }
 
+__force_inline static bool spin_try_lock_unsafe(spin_lock_t *lock) {
+#if PICO_USE_SW_SPIN_LOCKS
+    return SW_SPIN_TRY_LOCK(lock);
+#else
+    return *lock;
+#endif
+}
+
 __force_inline static void spin_unlock_unsafe(spin_lock_t *lock) {
 #if PICO_USE_SW_SPIN_LOCKS
     SW_SPIN_LOCK_UNLOCK(lock);
