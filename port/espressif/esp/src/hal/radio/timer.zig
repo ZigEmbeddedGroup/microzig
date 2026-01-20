@@ -80,7 +80,7 @@ pub fn arm(
             tim.deadline = .init_relative(get_time_since_boot(), duration);
             tim.periodic = if (repeat) duration else null;
         } else {
-            log.warn("timer not found based on ets_timer", .{});
+            log.warn("arm: timer not found based on ets_timer", .{});
         }
     }
 
@@ -94,7 +94,7 @@ pub fn disarm(ets_timer: *c.ets_timer) void {
     if (find(ets_timer)) |tim| {
         tim.deadline = .no_deadline;
     } else {
-        log.warn("timer not found based on ets_timer", .{});
+        log.warn("disarm: timer not found based on ets_timer", .{});
     }
 }
 

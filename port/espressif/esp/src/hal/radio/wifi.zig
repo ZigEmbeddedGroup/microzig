@@ -383,11 +383,13 @@ fn apply_station_config(config: Config.Station) ApplyConfigError!void {
         .threshold = .{
             .rssi = -99,
             .authmode = if (config.auth) |auth| @intFromEnum(auth.method) else c.WIFI_AUTH_OPEN,
+            .rssi_5g_adjustment = 0,
         },
         .pmf_cfg = .{
             .capable = true,
             .required = false,
         },
+        .sae_pwe_h2e = 3,
         .failure_retry_cnt = config.failure_retry_cnt,
     };
 
@@ -1158,6 +1160,23 @@ pub const c_patched = struct {
     };
 
     pub const wifi_sta_config_t = extern struct {
+        ssid: [32]u8 = std.mem.zeroes([32]u8),
+        password: [64]u8 = std.mem.zeroes([64]u8),
+        scan_method: c.wifi_scan_method_t = std.mem.zeroes(c.wifi_scan_method_t),
+        bssid_set: bool = std.mem.zeroes(bool),
+        bssid: [6]u8 = std.mem.zeroes([6]u8),
+        channel: u8 = std.mem.zeroes(u8),
+        listen_interval: u16 = std.mem.zeroes(u16),
+        sort_method: c.wifi_sort_method_t = std.mem.zeroes(c.wifi_sort_method_t),
+        threshold: c.wifi_scan_threshold_t = std.mem.zeroes(c.wifi_scan_threshold_t),
+        pmf_cfg: c.wifi_pmf_config_t = std.mem.zeroes(c.wifi_pmf_config_t),
+        packed1: Packed1 = std.mem.zeroes(Packed1),
+        sae_pwe_h2e: c.wifi_sae_pwe_method_t = std.mem.zeroes(c.wifi_sae_pwe_method_t),
+        sae_pk_mode: c.wifi_sae_pk_mode_t = std.mem.zeroes(c.wifi_sae_pk_mode_t),
+        failure_retry_cnt: u8 = std.mem.zeroes(u8),
+        packed2: Packed2 = std.mem.zeroes(Packed2),
+        sae_h2e_identifier: [32]u8 = std.mem.zeroes([32]u8),
+
         // NOTE: maybe a little more imagination
         pub const Packed1 = packed struct {
             rm_enabled: bool,
@@ -1180,23 +1199,6 @@ pub const c_patched = struct {
             he_trig_cqi_feedback_disable: u1,
             he_reserved: u22,
         };
-
-        ssid: [32]u8 = std.mem.zeroes([32]u8),
-        password: [64]u8 = std.mem.zeroes([64]u8),
-        scan_method: c.wifi_scan_method_t = std.mem.zeroes(c.wifi_scan_method_t),
-        bssid_set: bool = std.mem.zeroes(bool),
-        bssid: [6]u8 = std.mem.zeroes([6]u8),
-        channel: u8 = std.mem.zeroes(u8),
-        listen_interval: u16 = std.mem.zeroes(u16),
-        sort_method: c.wifi_sort_method_t = std.mem.zeroes(c.wifi_sort_method_t),
-        threshold: c.wifi_scan_threshold_t = std.mem.zeroes(c.wifi_scan_threshold_t),
-        pmf_cfg: c.wifi_pmf_config_t = std.mem.zeroes(c.wifi_pmf_config_t),
-        packed1: Packed1 = std.mem.zeroes(Packed1),
-        sae_pwe_h2e: c.wifi_sae_pwe_method_t = std.mem.zeroes(c.wifi_sae_pwe_method_t),
-        sae_pk_mode: c.wifi_sae_pk_mode_t = std.mem.zeroes(c.wifi_sae_pk_mode_t),
-        failure_retry_cnt: u8 = std.mem.zeroes(u8),
-        packed2: Packed2 = std.mem.zeroes(Packed2),
-        sae_h2e_identifier: [32]u8 = std.mem.zeroes([32]u8),
     };
 
     pub const wifi_nan_config_t = extern struct {
@@ -1213,4 +1215,24 @@ pub const c_patched = struct {
     };
 
     extern fn esp_wifi_set_config(interface: c.wifi_interface_t, conf: ?*wifi_config_t) c.esp_err_t;
+
+    pub const wifi_ap_record_t = extern struct {
+        bssid: [6]u8 = std.mem.zeroes([6]u8),
+        ssid: [33]u8 = std.mem.zeroes([33]u8),
+        primary: u8 = std.mem.zeroes(u8),
+        second: c.wifi_second_chan_t = std.mem.zeroes(c.wifi_second_chan_t),
+        rssi: i8 = std.mem.zeroes(i8),
+        authmode: c.wifi_auth_mode_t = std.mem.zeroes(c.wifi_auth_mode_t),
+        pairwise_cipher: c.wifi_cipher_type_t = std.mem.zeroes(c.wifi_cipher_type_t),
+        group_cipher: c.wifi_cipher_type_t = std.mem.zeroes(c.wifi_cipher_type_t),
+        ant: c.wifi_ant_t = std.mem.zeroes(c.wifi_ant_t),
+        // TODO
+        packed1: u32 = std.mem.zeroes(u32),
+        country: c.wifi_country_t = std.mem.zeroes(c.wifi_country_t),
+        // TODO
+        he_ap: u8 = std.mem.zeroes(u8),
+        bandwidth: c.wifi_bandwidth_t = std.mem.zeroes(c.wifi_bandwidth_t),
+        vht_ch_freq1: u8 = std.mem.zeroes(u8),
+        vht_ch_freq2: u8 = std.mem.zeroes(u8),
+    };
 };
