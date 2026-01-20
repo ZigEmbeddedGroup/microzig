@@ -19,6 +19,7 @@ pub const microzig_options: microzig.Options = .{
     .cpu = .{
         .interrupt_stack = .{
             .enable = true,
+            .size = 4096,
         },
     },
     .hal = .{

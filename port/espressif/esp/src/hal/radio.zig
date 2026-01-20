@@ -1,3 +1,7 @@
+/// ESP Wi-Fi drivers integration.
+///
+/// Based on https://github.com/esp-rs/esp-hal/tree/main/esp-radio.
+
 const builtin = @import("builtin");
 const std = @import("std");
 const assert = std.debug.assert;

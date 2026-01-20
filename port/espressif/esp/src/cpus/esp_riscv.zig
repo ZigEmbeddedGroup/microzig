@@ -447,7 +447,6 @@ fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void 
         break :blk .{ interrupt_jump_asm, interrupt_c_stubs_asm };
     };
 
-    // adapted from https://github.com/esp-rs/esp-hal/blob/main/esp-riscv-rt/src/lib.rs
     asm volatile (interrupt_jump_asm ++ interrupt_c_stubs_asm ++
             \\trap_common:
             \\    sw t0, 1*4(sp)

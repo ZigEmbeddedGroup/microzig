@@ -18,13 +18,15 @@ const system = @import("system.zig");
 const systimer = @import("systimer.zig");
 
 // How it works?
-// For simple task to task context switches, only necessary registers are
-// saved. But if a higher priority task becomes available during the handling
-// of an interrupt, a task switch is forced by saving the entire state of the
-// task on the stack. What is interresting is that the two context switches are
-// compatible. Voluntary yield can resume a task that was interrupted by force
-// and vice versa. Because of the forced yield, tasks are required to have a
-// minimum stack size available at all times.
+//
+// For task to task context switches, only required registers are
+// saved through the use of inline assembly clobbers. If a higher priority task
+// becomes ready during the handling of an interrupt, a task switch is forced
+// by saving the entire state of the task on the stack. What is interesting is
+// that the two context switches are compatible. Voluntary yield can resume a
+// task that was interrupted by force and vice versa. Because of the forced
+// yield, tasks are required to have a minimum stack size available at all
+// times.
 
 // TODO: stack overflow detection
 // TODO: task joining and deletion
@@ -283,14 +285,13 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
 
 pub fn sleep(duration: time.Duration) void {
     const timeout: TimerTicks = .after(duration);
-    while (!timeout.is_reached()) {
-        yield(.{ .wait = .{
-            .timeout = timeout,
-        } });
-    }
+    while (!timeout.is_reached())
+        yield(.{ .wait = .{ .timeout = timeout } });
 }
 
 inline fn context_switch(prev_context: *Context, next_context: *Context) void {
+    // Clobber all registers (except sp) to restore them after the context
+    // switch.
     asm volatile (
         \\la a2, 1f
         \\sw a2, 0(a0)      # save return pc
@@ -795,6 +796,8 @@ pub const Mutex = struct {
             .after(timeout)
         else
             null;
+
+        assert(mutex.locked != current_task);
 
         while (mutex.locked) |owning_task| {
             if (maybe_timeout_ticks) |timeout_ticks|
