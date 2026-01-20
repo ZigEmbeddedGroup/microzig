@@ -45,8 +45,8 @@ pub fn hello_task(_: ?*anyopaque) callconv(.c) void {
 ///
 /// Some ugly glue code to implement required functions from FreeRTOS and Pico SDK
 /// - This can be improved later
+/// - Some or even all of these could be implemented in freertos module directly?
 /// - Multicore not supported yet - multicore_reset_core1 have to be implemented
-///
 export fn panic_unsupported() callconv(.c) noreturn {
     @panic("not supported");
 }

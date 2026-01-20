@@ -8,10 +8,6 @@
             .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#52822473466cfa5cdd2146d02dae5f924b8552e4",
             .hash = "N-V-__8AAMb4CQGTaQBhmyNrZe5AydR8ZY3met6pGoXDe1MC",
         },
-        .freertos_kernel_community = .{
-            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel-Community-Supported-Ports.git#9ab3b5fb235838b3fc03d4f1cdcfab22007413d2",
-            .hash = "N-V-__8AAPdlHQB-Q5duFJp5D3hmNoJsOsWXr84CsPai1Pk9",
-        },
         .foundationlibc = .{
             .path = "../foundation-libc/",
         },
