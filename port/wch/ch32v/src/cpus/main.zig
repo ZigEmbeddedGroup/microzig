@@ -253,12 +253,20 @@ pub const startup_logic = struct {
             },
         }
 
-        // Enable interrupts.
-        csr.mtvec.write(.{ .mode0 = 1, .mode1 = 1, .base = 0 });
-        
+        // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
+        // jumps to the correct handler regardless of any padding between _reset_vector
+        // and vector_table.
+        const vtable_addr = @intFromPtr(&vector_table);
+        csr.mtvec.write(.{
+            .mode0 = 1, // Interrupt entry for each interrupt
+            .mode1 = 1, // Use absolute addresses
+            .base = @intCast((vtable_addr - 4) >> 2),
+        });
+
         // We set machine mode (0x3) so the user can enable/disable interrupts
         // or manage machine/user mode themselves. 
-        // With this at 0 the users main function is forced to run at user level.
+        // With mpp at 0 the users main function is forced to run at user level.
+        // Also enable interrupts.
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
