@@ -1,6 +1,8 @@
 /// Platform independent network library. Connects lwip with underlying network
 /// link interface.
 const std = @import("std");
+const config = @import("config");
+const Link = @import("link");
 
 const assert = std.debug.assert;
 fn assert_panic(ok: bool, msg: []const u8) void {
@@ -26,13 +28,7 @@ pub const Interface = struct {
 
     netif: lwip.netif = .{},
     dhcp: lwip.dhcp = .{},
-
-    link: struct {
-        ptr: *anyopaque,
-        recv: *const fn (*anyopaque, []u8) anyerror!?struct { usize, usize },
-        send: *const fn (*anyopaque, []u8) anyerror!void,
-        ready: *const fn (*anyopaque) bool,
-    },
+    link: Link,
 
     pub const Options = struct {
         fixed: ?Fixed = null,
@@ -94,7 +90,7 @@ pub const Interface = struct {
         netif.linkoutput = c_netif_linkoutput;
         netif.output = lwip.etharp_output;
         netif.output_ip6 = lwip.ethip6_output;
-        netif.mtu = sz.mtu;
+        netif.mtu = config.mtu;
         netif.flags = lwip.NETIF_FLAG_BROADCAST | lwip.NETIF_FLAG_ETHARP |
             lwip.NETIF_FLAG_ETHERNET | lwip.NETIF_FLAG_IGMP | lwip.NETIF_FLAG_MLD6;
         netif.hwaddr_len = lwip.ETH_HWADDR_LEN;
@@ -104,11 +100,11 @@ pub const Interface = struct {
     fn c_on_netif_status(netif_c: [*c]lwip.netif) callconv(.c) void {
         const netif: *lwip.netif = netif_c;
         const self: *Self = @fieldParentPtr("netif", netif);
-        log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {f}", .{
+        log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {s}", .{
             netif.flags & lwip.NETIF_FLAG_LINK_UP > 0,
             netif.flags & lwip.NETIF_FLAG_UP > 0,
             self.ready(),
-            IPFormatter.new(netif.ip_addr),
+            lwip.ipaddr_ntoa(&netif.ip_addr),
         });
     }
 
@@ -119,12 +115,7 @@ pub const Interface = struct {
         var pbuf: *lwip.pbuf = pbuf_c;
         const self: *Self = @fieldParentPtr("netif", netif);
 
-        if (!self.link.ready(self.link.ptr)) {
-            log.err("linkouput link not ready", .{});
-            return lwip.ERR_MEM; // lwip will try later
-        }
-
-        if (lwip.pbuf_header(pbuf, sz.link_head) != 0) {
+        if (config.pbuf_header_length > 0 and lwip.pbuf_header(pbuf, config.pbuf_header_length) != 0) {
             log.err("can't get pbuf headroom len: {}, tot_len: {} ", .{ pbuf.len, pbuf.tot_len });
             return lwip.ERR_ARG;
         }
@@ -138,9 +129,13 @@ pub const Interface = struct {
             if (pbuf_c.*.next != null) _ = lwip.pbuf_free(pbuf);
         }
 
-        self.link.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
+        self.link.vtable.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
             log.err("link send {}", .{err});
-            return lwip.ERR_ARG;
+            return switch (err) {
+                error.OutOfMemory => lwip.ERR_MEM,
+                error.LinkDown => lwip.ERR_IF,
+                else => lwip.ERR_ARG,
+            };
         };
         return lwip.ERR_OK;
     }
@@ -159,22 +154,22 @@ pub const Interface = struct {
             // get packet buffer of the max size
             const pbuf: *lwip.pbuf = lwip.pbuf_alloc(
                 lwip.PBUF_RAW,
-                sz.pbuf_pool,
+                config.pbuf_length,
                 lwip.PBUF_POOL,
             ) orelse return error.OutOfMemory;
             assert_panic(
-                pbuf.next == null and pbuf.len == pbuf.tot_len and pbuf.len == sz.pbuf_pool,
+                pbuf.next == null and pbuf.len == pbuf.tot_len and pbuf.len == config.pbuf_length,
                 "net.Interface.pool invalid pbuf allocation",
             );
             // receive into that buffer
-            const head, const len = try self.link.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
+            const head, const len = try self.link.vtable.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
                 // no data release packet buffer and exit loop
                 _ = lwip.pbuf_free(pbuf);
                 break;
             };
             errdefer _ = lwip.pbuf_free(pbuf); // netif.input: takes ownership of pbuf on success
             // set payload header and len
-            if (lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
+            if (head > 0 and lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
                 return error.InvalidPbufHead;
             }
             pbuf.len = @intCast(len);
@@ -187,15 +182,23 @@ pub const Interface = struct {
         }
     }
 
-    pub fn log_stats(self: *Self) void {
+    pub fn log_mem_stats(self: *Self) void {
         _ = self;
         const stats = lwip.lwip_stats;
-        log.debug("stats ip_frag: {}", .{stats.ip_frag});
-        log.debug("stats icpmp: {}", .{stats.icmp});
-        log.debug("stats mem: {} ", .{stats.mem});
-        for (stats.memp, 0..) |s, i| {
-            log.debug("stats memp {}: {}", .{ i, s.* });
-        }
+        log.debug("stats mem: {}", .{stats.mem});
+        log.debug("pbuf pool: {}", .{stats.memp[lwip.MEMP_PBUF_POOL].*});
+        log.debug("memp upd pcb:        {}", .{stats.memp[lwip.MEMP_UDP_PCB].*});
+        log.debug("memp tcp pcb:        {}", .{stats.memp[lwip.MEMP_TCP_PCB].*});
+        log.debug("memp tcp listen pcb: {}", .{stats.memp[lwip.MEMP_TCP_PCB_LISTEN].*});
+        log.debug("memp tcp seg:        {}", .{stats.memp[lwip.MEMP_TCP_SEG].*});
+        log.debug("memp reassdata:      {}", .{stats.memp[lwip.MEMP_REASSDATA].*});
+        log.debug("memp frag buf:       {}", .{stats.memp[lwip.MEMP_FRAG_PBUF].*});
+        log.debug("memp igmp group:     {}", .{stats.memp[lwip.MEMP_IGMP_GROUP].*});
+        log.debug("memp sys timeout:    {}", .{stats.memp[lwip.MEMP_SYS_TIMEOUT].*});
+        log.debug("memp nd6 queue:      {}", .{stats.memp[lwip.MEMP_ND6_QUEUE].*});
+        log.debug("memp ip6 reassdata:  {}", .{stats.memp[lwip.MEMP_IP6_REASSDATA].*});
+        log.debug("memp mld6 group:     {}", .{stats.memp[lwip.MEMP_MLD6_GROUP].*});
+        log.debug("memp pbuf:           {}", .{stats.memp[lwip.MEMP_PBUF].*});
     }
 };
 
@@ -562,48 +565,19 @@ fn c_err(res: anytype) Error!void {
     }
 }
 
-const IPFormatter = struct {
-    addr: lwip.ip_addr_t,
+export fn lwip_lock_interrupts(were_enabled: *bool) void {
+    _ = were_enabled;
+}
 
-    pub fn new(addr: lwip.ip_addr_t) IPFormatter {
-        return IPFormatter{ .addr = addr };
-    }
+export fn lwip_unlock_interrupts(enable: bool) void {
+    _ = enable;
+}
 
-    pub fn format(
-        self: IPFormatter,
-        writer: anytype,
-    ) !void {
-        const ip4_addr: *const lwip.ip4_addr_t = @ptrCast(&self.addr);
-        try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(ip4_addr), 0));
-    }
-};
+export fn lwip_assert(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
+    log.err("assert: {s} in file: {s}, line: {}", .{ msg, file, line });
+    @panic("lwip assert");
+}
 
-// required buffer sizes
-const sz = struct {
-    const pbuf_pool = lwip.PBUF_POOL_BUFSIZE; // 1540 = 1500 mtu + ethernet + link head/tail
-    const link_head = lwip.PBUF_LINK_ENCAPSULATION_HLEN; // 22
-    const link_tail = 4; // reserved for the status in recv buffer
-    const ethernet = 14; // layer 2 ethernet header size
-
-    // layer 3 (ip) mtu,
-    const mtu = pbuf_pool - link_head - link_tail - ethernet; // 1500
-
-    // ip v4 sizes
-    const v4 = struct {
-        // headers
-        const ip = 20;
-        const udp = 8;
-        const tcp = 20;
-
-        const payload = struct {
-            const udp = mtu - ip - v4.udp; // 1472
-        };
-    };
-};
-
-// test lwipopts.h config
-comptime {
-    assert(sz.pbuf_pool == 1540);
-    assert(sz.link_head == 22);
-    assert(sz.mtu == 1500);
+export fn lwip_diag(msg: [*c]const u8, file: [*c]const u8, line: c_int) void {
+    log.debug("{s} in file: {s}, line: {}", .{ msg, file, line });
 }

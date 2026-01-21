@@ -97,7 +97,7 @@ fn output_source_line(
     out_tty_config: std.io.tty.Config,
     src_loc: DebugInfo.ResolvedSourceLocation,
 ) !void {
-    var dir = try std.fs.cwd().openDir(src_loc.dir_path, .{});
+    var dir = std.fs.cwd().openDir(src_loc.dir_path, .{}) catch return;
     defer dir.close();
 
     const file = dir.openFile(src_loc.file_path, .{}) catch return;

@@ -979,7 +979,9 @@ const RegisterProperties = struct {
                 null,
             .access = if (node.get_value("access")) |access_str|
                 parse_access(access_str) catch blk: {
-                    log.warn("Failed to parse access string '{s}', it must be one of 'read-value', 'write-only', 'read-write', 'writeOnce', or 'read-writeOnce', defaulting to 'read-write'", .{access_str});
+                    log.warn("Failed to parse access string '{s}', it must be one of 'read-only'," ++
+                        "'write-only', 'write', 'read-write', 'writeOnce', or 'read-writeOnce', " ++
+                        "defaulting to 'read-write'", .{access_str});
                     break :blk .read_write;
                 }
             else

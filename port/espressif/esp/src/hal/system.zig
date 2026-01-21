@@ -124,3 +124,31 @@ pub fn enable_clocks_and_release_reset(mask: PeripheralMask) void {
     clocks_enable_set(mask);
     peripheral_reset_clear(mask);
 }
+
+pub const CPU_Interrupt = enum {
+    cpu_interrupt_0,
+    cpu_interrupt_1,
+    cpu_interrupt_2,
+    cpu_interrupt_3,
+
+    pub fn source(cpu_interrupt: CPU_Interrupt) microzig.cpu.interrupt.Source {
+        return switch (cpu_interrupt) {
+            .cpu_interrupt_0 => .from_cpu_intr0,
+            .cpu_interrupt_1 => .from_cpu_intr1,
+            .cpu_interrupt_2 => .from_cpu_intr2,
+            .cpu_interrupt_3 => .from_cpu_intr3,
+        };
+    }
+
+    pub fn set_pending(cpu_interrupt: CPU_Interrupt, enabled: bool) void {
+        const regs: @TypeOf(&SYSTEM.CPU_INTR_FROM_CPU_0) = switch (cpu_interrupt) {
+            .cpu_interrupt_0 => @ptrCast(&SYSTEM.CPU_INTR_FROM_CPU_0),
+            .cpu_interrupt_1 => @ptrCast(&SYSTEM.CPU_INTR_FROM_CPU_1),
+            .cpu_interrupt_2 => @ptrCast(&SYSTEM.CPU_INTR_FROM_CPU_2),
+            .cpu_interrupt_3 => @ptrCast(&SYSTEM.CPU_INTR_FROM_CPU_3),
+        };
+        regs.write(.{
+            .CPU_INTR_FROM_CPU_0 = @intFromBool(enabled),
+        });
+    }
+};

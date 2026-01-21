@@ -1,0 +1,22 @@
+.{
+    .name = .net,
+    .version = "0.0.0",
+    .fingerprint = 0xf2ea15ff2558583e,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .foundationlibc = .{
+            .path = "../foundation-libc/",
+        },
+        .lwip = .{
+            .path = "../lwip/",
+        },
+        .link = .{
+            .path = "link/",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

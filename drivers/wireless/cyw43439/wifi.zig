@@ -528,8 +528,8 @@ pub fn recv_zc(self: *Self, buffer: []u8) !?struct { usize, usize } {
 ///
 /// Buffer has to be 4 bytes aligned and it will be extended in as_words to the
 /// word boundary!
-pub fn send_zc(self: *Self, buffer: []u8) !void {
-    if (!self.has_credit()) return error.Cyw43NoCredit;
+pub fn send_zc(self: *Self, buffer: []u8) anyerror!void {
+    if (!self.has_credit()) return error.OutOfMemory;
 
     const eth_frame_len = buffer.len - 22;
     // add bus header

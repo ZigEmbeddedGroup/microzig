@@ -254,7 +254,15 @@ pub const startup_logic = struct {
         }
 
         // Enable interrupts.
-        csr.mtvec.write(.{ .mode0 = 1, .mode1 = 1, .base = 0 });
+        // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
+        // jumps to the correct handler regardless of any padding between _reset_vector
+        // and vector_table.
+        const vtable_addr = @intFromPtr(&vector_table);
+        csr.mtvec.write(.{
+            .mode0 = 1, // Interrupt entry for each interrupt
+            .mode1 = 1, // Use absolute addresses
+            .base = @intCast((vtable_addr - 4) >> 2),
+        });
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,

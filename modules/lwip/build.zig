@@ -4,26 +4,40 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const maybe_include_dir = b.option(
+        std.Build.LazyPath,
+        "include_dir",
+        "Configurable include directory for lwip",
+    );
+
     const upstream = b.dependency("lwip", .{});
 
-    const lwip = b.addModule("lwip", .{
-        .target = target,
-        .optimize = optimize,
+    const lwip = b.addLibrary(.{
+        .name = "lwip",
+        .root_module = b.createModule(.{
+            .optimize = optimize,
+            .target = target,
+            .link_libc = false,
+        }),
+        .linkage = .static,
     });
 
-    lwip.addCSourceFiles(.{
+    lwip.root_module.addCSourceFiles(.{
         .root = upstream.path("src"),
         .files = &files,
         .flags = &flags,
     });
-    lwip.addIncludePath(upstream.path("src/include"));
-}
+    lwip.root_module.addIncludePath(upstream.path("src/include"));
 
-// pub fn setup(b: *std.Build, dst: *std.Build.Module) void {
-//     const upstream = b.dependency("lwip", .{});
-//     dst.addIncludePath(upstream.path("src/include"));
-//     dst.addIncludePath(b.path("src/kernel/components/network/include"));
-// }
+    if (maybe_include_dir) |include_dir| {
+        lwip.root_module.addIncludePath(include_dir);
+        lwip.installHeadersDirectory(include_dir, "", .{});
+    }
+
+    lwip.installHeadersDirectory(upstream.path("src/include"), "", .{});
+
+    b.installArtifact(lwip);
+}
 
 const flags = [_][]const u8{ "-std=c99", "-fno-sanitize=undefined" };
 const files = [_][]const u8{
@@ -77,15 +91,15 @@ const files = [_][]const u8{
     "netif/bridgeif_fdb.c",
 
     // sequential APIs
-    // "api/err.c",
-    // "api/api_msg.c",
-    // "api/netifapi.c",
-    // "api/sockets.c",
-    // "api/netbuf.c",
-    // "api/api_lib.c",
-    // "api/tcpip.c",
-    // "api/netdb.c",
-    // "api/if_api.c",
+    "api/err.c",
+    "api/api_msg.c",
+    "api/netifapi.c",
+    "api/sockets.c",
+    "api/netbuf.c",
+    "api/api_lib.c",
+    "api/tcpip.c",
+    "api/netdb.c",
+    "api/if_api.c",
 
     // 6LoWPAN
     "netif/lowpan6.c",
