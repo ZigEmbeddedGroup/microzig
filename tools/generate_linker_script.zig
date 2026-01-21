@@ -268,6 +268,22 @@ pub fn main(init: std.process.Init) !void {
             , .{flash_region_name});
         }
 
+        if (options.eh_frame_no_load) {
+            try writer.interface.writeAll(
+                \\
+                \\  .eh_frame_hdr 0 (INFO) :
+                \\  {
+                \\    KEEP(*(.eh_frame_hdr))
+                \\  }
+                \\
+                \\  .eh_frame 0 (INFO) :
+                \\  {
+                \\    KEEP(*(.eh_frame))
+                \\  }
+                \\
+            );
+        }
+
         try writer.interface.writeAll(
             \\
             \\  microzig_data_load_start = LOADADDR(.data);
