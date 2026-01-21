@@ -106,7 +106,7 @@ pub fn done(gpa: std.mem.Allocator, ets_timer: *c.ets_timer) void {
         timer_list.remove(&tim.node);
         gpa.destroy(tim);
     } else {
-        log.warn("timer not found based on ets_timer", .{});
+        log.warn("done: timer not found based on ets_timer", .{});
     }
 }
 
