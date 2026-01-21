@@ -722,9 +722,9 @@ pub fn clear_events(events: EventSet) void {
 
 /// Internal function. Called by osi layer.
 pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
-    log.debug("esp_event_post {} {?} {}", .{ id, data, data_size });
-
     const event_type: EventType = @enumFromInt(id);
+    log.debug("event received: {t}", .{event_type});
+
     update_sta_state(event_type);
 
     {

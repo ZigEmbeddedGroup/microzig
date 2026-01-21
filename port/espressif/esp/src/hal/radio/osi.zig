@@ -113,10 +113,9 @@ pub fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
 pub fn free(ptr: ?*anyopaque) callconv(.c) void {
     log.debug("free {?}", .{ptr});
 
-    if (ptr == null) {
-        log.warn("ignoring free(null) called by 0x{x}", .{@returnAddress()});
-        return;
-    }
+    // NOTE: The wifi driver calls this function with null sometimes. Just
+    // ignore it.
+    if (ptr == null) return;
 
     const buf_ptr: [*]u8 = @ptrFromInt(@intFromPtr(ptr) - 8);
     const buf_len: *usize = @ptrCast(@alignCast(buf_ptr));
@@ -702,8 +701,7 @@ pub fn esp_event_post(
     data_size: usize,
     ticks_to_wait: u32,
 ) callconv(.c) i32 {
-    _ = base;
-    _ = ticks_to_wait;
+    log.debug("esp_event_post {*} {} {?} {} {}", .{ base, id, data, data_size, ticks_to_wait });
     wifi.on_event_post(id, data, data_size);
     return 0;
 }
