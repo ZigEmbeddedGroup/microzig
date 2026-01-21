@@ -38,7 +38,7 @@ var usb_controller: usb.DeviceController(.{
         .configuration_s = 0,
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
-        .Drivers = struct { hid: HID_Driver },
+        .Drivers = struct { hid: HID_Driver, reset: rp2xxx.usb.ResetDriver(null, 0) },
     }},
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
 }) = .init;
