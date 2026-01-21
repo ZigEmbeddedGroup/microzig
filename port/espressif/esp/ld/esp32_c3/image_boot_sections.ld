@@ -42,35 +42,76 @@ SECTIONS
   .flash.rodata : ALIGN(0x10)
   {
     *(.rodata*)
+    *(.srodata*)
+
+    . = ALIGN(ALIGNOF(.flash.rodata.wifi));
+  } > DROM
+
+  .flash.rodata.wifi : ALIGN(0x10)
+  {
+    *(.rodata_wlog_*.*)
   } > DROM
 
   .ram.text :
   {
+    . = ALIGN(16);
     KEEP(*(.ram_text))
+    KEEP(*(.ram_vectors))
 
     /* TODO: in the case of memory protection there should be some alignment
      * and offset done here (NOLOAD) */
   } > IRAM
 
+  .ram.text.wifi :
+  {
+    . = ALIGN(16);
+    *( .wifi0iram  .wifi0iram.*)
+    *( .wifirxiram  .wifirxiram.*)
+    *( .wifislprxiram  .wifislprxiram.*)
+    *( .wifislpiram  .wifislpiram.*)
+    *( .phyiram  .phyiram.*)
+    *( .iram1  .iram1.*)
+    *( .wifiextrairam.* )
+    *( .coexiram.* )
+  } > IRAM
+
   .ram_data_dummy (NOLOAD) :
   {
     . = ALIGN(ALIGNOF(.ram.text)) + SIZEOF(.ram.text);
+    . = ALIGN(ALIGNOF(.ram.text.wifi)) + SIZEOF(.ram.text.wifi);
   } > DRAM
 
   .data :
   {
+    . = ALIGN(16);
     microzig_data_start = .;
     *(.sdata*)
     *(.data*)
+    . = ALIGN(16);
     microzig_data_end = .;
+  } > DRAM
+
+  .data.wifi :
+  {
+    . = ALIGN(16);
+    *(.dram1*)
   } > DRAM
 
   .bss (NOLOAD) :
   {
+    . = ALIGN(16);
     microzig_bss_start = .;
     *(.sbss*)
     *(.bss*)
+    . = ALIGN(16);
     microzig_bss_end = .;
+  } > DRAM
+
+  .heap (NOLOAD) :
+  {
+    microzig_heap_start = .;
+    . = ORIGIN(DRAM) + LENGTH(DRAM);
+    microzig_heap_end   = .;
   } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
