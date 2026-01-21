@@ -61,11 +61,11 @@ pub fn SliceVector(comptime Slice: type) type {
         @compileError("Slice must have a slice type!");
 
     const item_ptr_attrs: std.builtin.Type.Pointer.Attributes = .{
-        .alignment = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
-        .address_space = type_info.pointer.address_space,
-        .is_const = type_info.pointer.is_const,
-        .is_volatile = type_info.pointer.is_volatile,
-        .is_allowzero = type_info.pointer.is_allowzero,
+        .@"align" = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
+        .@"addrspace" = type_info.pointer.address_space,
+        .@"const" = type_info.pointer.is_const,
+        .@"volatile" = type_info.pointer.is_volatile,
+        .@"allowzero" = type_info.pointer.is_allowzero,
     };
 
     return struct {
@@ -479,7 +479,7 @@ test "SliceVector.Iterator.next_chunk" {
     }
 }
 
-pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
+pub fn dump_stack_trace(trace: *std.builtin.StackTrace, start_index: usize) usize {
     const frame_count = @min(trace.index, trace.instruction_addresses.len);
 
     var frame_index: usize = 0;
@@ -489,7 +489,7 @@ pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
         frame_index = (frame_index + 1) % trace.instruction_addresses.len;
     }) {
         const address = trace.instruction_addresses[frame_index];
-        std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
+        std.log.err("{d: >3}: 0x{X:0>8}", .{ start_index + frame_index, address });
     }
 
     return frame_count;

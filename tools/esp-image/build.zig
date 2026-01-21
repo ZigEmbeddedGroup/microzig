@@ -101,9 +101,6 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const clap = b.dependency("clap", .{});
-    elf2image_exe.root_module.addImport("clap", clap.module("clap"));
-
     const elf2image_test = b.addTest(.{
         .name = "elf2image",
         .root_module = b.createModule(.{

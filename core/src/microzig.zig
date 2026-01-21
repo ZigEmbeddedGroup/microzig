@@ -42,19 +42,15 @@ pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
         std.log.err("panic: {s}", .{message});
 
-        var frame_index: usize = 0;
-        if (@errorReturnTrace()) |trace| frame_index = utilities.dump_stack_trace(trace);
+        var error_trace_count: usize = 0;
+        if (@errorReturnTrace()) |trace| error_trace_count = utilities.dump_stack_trace(trace, 0);
 
         var addr_buf: [20]usize = undefined;
         var stacktrace = std.debug.captureCurrentStackTrace(.{
             .first_address = first_trace_address orelse @returnAddress(),
+            .allow_unsafe_unwind = true,
         }, &addr_buf);
-
-        _ = utilities.dump_stack_trace(&stacktrace);
-        //var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
-        //while (iter.next()) |address| : (frame_index += 1) {
-        //    std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
-        //}
+        _ = utilities.dump_stack_trace(&stacktrace, error_trace_count);
 
         // Attach a breakpoint. this might trigger another panic internally, so
         // only do that if requested.
