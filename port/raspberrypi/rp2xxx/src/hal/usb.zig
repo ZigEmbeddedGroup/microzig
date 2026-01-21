@@ -84,6 +84,11 @@ pub fn Polled(config: Config) type {
     return struct {
         pub const max_supported_packet_size = 64;
         pub const max_supported_bcd_usb: usb.types.U16_Le = .from(0x0110);
+        pub const default_vendor_id: usb.types.U16_Le = .from(0x2E8A);
+        pub const default_product_id: usb.types.U16_Le = switch (chip) {
+            .RP2040 => .from(0x000A),
+            .RP2350 => .from(0x000F),
+        };
 
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
