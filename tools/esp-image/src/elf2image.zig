@@ -11,10 +11,9 @@ var elf_file_reader_buf: [1024]u8 = undefined;
 var elf_file_hashing_buf: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
 var output_writer_buf: [1024]u8 = undefined;
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug_allocator.deinit();
-    const allocator = debug_allocator.allocator();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const allocator = init.gpa;
 
     const args = comptime clap.parseParamsComptime(
         \\--help                                     Show this message
@@ -32,8 +31,8 @@ pub fn main() !void {
         \\
     );
 
-    const stderr = std.fs.File.stderr();
-    var stderr_writer = stderr.writer(&.{});
+    const stderr = std.Io.File.stderr();
+    var stderr_writer = stderr.writer(io, &.{});
 
     var diag: clap.Diagnostic = .{};
     var res = clap.parse(clap.Help, &args, .{
@@ -90,9 +89,9 @@ pub fn main() !void {
 
     const use_segments = res.args.@"use-segments" != 0;
 
-    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
+    const elf_file = try std.Io.Dir.openFileAbsolute(elf_path, .{});
     defer elf_file.close();
-    var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
+    var elf_file_reader = elf_file.reader(io, &elf_file_reader_buf);
 
     var elf_file_hash: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
     {
