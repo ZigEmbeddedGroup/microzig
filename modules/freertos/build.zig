@@ -52,9 +52,7 @@ pub fn build(b: *std.Build) void {
     if (port_name == .RP2040) {
         freertos_lib.addCSourceFiles(.{
             .root = freertos_kernel_dep.path("./portable/ThirdParty/GCC/RP2040/"),
-            .files = &[_][]const u8{
-                "port.c",
-            },
+            .files = &[_][]const u8{ "port.c" },
             .flags = &flags,
         });
 
