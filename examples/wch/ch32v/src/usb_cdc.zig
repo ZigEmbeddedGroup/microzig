@@ -52,7 +52,7 @@ pub var usb_dev: usb.Polled(
             .max_current_ma = 100,
             .Drivers = struct { serial: UsbSerial },
         }},
-        .debug = false,
+        .max_supported_packet_size = 512,
     },
     .{ .prefer_high_speed = true },
 ) = undefined;
@@ -96,9 +96,10 @@ pub fn main() !void {
         if (now.diff(last).to_us() > 1000000) {
             // std.log.info("what {}", .{i});
             std.log.debug("usb drivers available?: {}", .{usb_dev.controller.drivers() != null});
+            run_usb();
             last = now;
         }
-        run_usb();
+        usb_dev.poll();
     }
 }
 
@@ -111,8 +112,9 @@ pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype
 
     var write_buff = text;
     while (write_buff.len > 0) {
+        // std.log.info("USB CDC Demo writing", .{});
         write_buff = write_buff[serial.write(write_buff)..];
-        // _ = serial.flush();
+        _ = serial.flush();
         usb_dev.poll();
     }
 }

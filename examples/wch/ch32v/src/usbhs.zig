@@ -144,7 +144,6 @@ fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
 
 // RX DMA: 0x20 + (ep-1)*4  (EP1..EP15)
 // EP0 has its own dedicated DMA reg.
-// URGENT TODO: FIX EP0 DMA handling!
 fn ep0_dma() *volatile RegU32 {
     return mmio_u32(0x1C);
 }
@@ -316,19 +315,19 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
         // ---- comptime dispatch helpers (required by DeviceController API) ----
 
-        fn call_on_buffer(self: *Self, dir: types.Dir, ep: u4, buf: []u8) void {
+        fn call_on_buffer(self: *Self, dir: types.Dir, ep: u4) void {
             // controller.on_buffer requires comptime ep parameter
             switch (dir) {
                 .In => switch (ep) {
                     inline 0...15 => |i| {
                         const num: types.Endpoint.Num = @enumFromInt(i);
-                        self.controller.on_buffer(&self.interface, .{ .num = num, .dir = .In }, buf);
+                        self.controller.on_buffer(&self.interface, .{ .num = num, .dir = .In });
                     },
                 },
                 .Out => switch (ep) {
                     inline 0...15 => |i| {
                         const num: types.Endpoint.Num = @enumFromInt(i);
-                        self.controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out }, buf);
+                        self.controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out });
                     },
                 },
             }
@@ -365,7 +364,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     set_address(&self.interface, 0);
 
                     self.on_bus_reset_local();
-                    self.controller.on_bus_reset();
+                    self.controller.on_bus_reset(&self.interface);
                     continue;
                 }
 
@@ -375,14 +374,10 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     regs().USB_INT_FG.raw = UIF_SETUP_ACT;
                     if ((fg & UIF_TRANSFER) != 0) regs().USB_INT_FG.raw = UIF_TRANSFER;
 
-                    // const stv = regs().USB_INT_ST.read();
-                    // std.log.debug("ch32: INT_ST={any}", .{stv});
-
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
-                    // std.log.debug("ch32: Setup: {any}", .{setup});
 
                     // After SETUP, EP0 IN data stage starts with DATA1.
-                    set_tx_ctrl(0, RES_NAK, TOG_DATA1, true);
+                    uep_tx_ctrl(0).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA1, .AUTO = true });
                     set_rx_ctrl(0, RES_NAK, TOG_DATA1, true);
 
                     self.controller.on_setup_req(&self.interface, &setup);
@@ -427,7 +422,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     if (ep == 0) {
                         const setup: types.SetupPacket = self.read_setup_from_ep0();
                         std.log.debug("ch32: Setup: {any}", .{setup});
-                        set_tx_ctrl(0, RES_NAK, TOG_DATA1, true);
+                        uep_tx_ctrl(0).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA1 });
                         self.controller.on_setup_req(&self.interface, &setup);
                     }
                 },
@@ -442,7 +437,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 const st_out = self.st(.ep0, .Out);
                 st_out.rx_last_len = len;
                 // stay ACK
-                self.call_on_buffer(.Out, 0, st_out.buf[0..@min(@as(usize, len), st_out.buf.len)]);
+                self.call_on_buffer(.Out, 0);
                 return;
             }
 
@@ -462,7 +457,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             const n = @min(@as(usize, len), st_out.buf.len);
             st_out.rx_last_len = @as(u16, @intCast(n));
 
-            self.call_on_buffer(.Out, ep, st_out.buf[0..n]);
+            self.call_on_buffer(.Out, ep);
         }
 
         // IN => into host from device
@@ -478,7 +473,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             }
 
             // Mark free before calling on_buffer(), so EP0_IN logic can immediately queue next chunk.
-            const sent_len = st_in.tx_last_len;
+            // const sent_len = st_in.tx_last_len;
             st_in.tx_busy = false;
             st_in.tx_last_len = 0;
 
@@ -488,7 +483,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             // std.log.debug("ch32: EP{} IN data: {any}", .{ ep, st_in.buf[0..sent_len] });
             // Notify controller/drivers of IN completion.
 
-            self.call_on_buffer(.In, ep, st_in.buf[0..sent_len]);
+            self.call_on_buffer(.In, ep);
 
             // EP0 OUT must remain ACK
             if (self.controller.tx_slice == null) {
@@ -554,7 +549,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     set_rx_ctrl(ep_i, RES_ACK, TOG_DATA0, true);
                 } else {
                     uep_tx_dma(ep_i).raw = ptr_val;
-                    set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, true);
+                    uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA1, .AUTO = true });
                 }
             }
             std.log.debug("allocation and DMA setup done for ep{}", .{ep_i});
@@ -670,7 +665,6 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             if (st_in.tx_busy) {
                 // do I want to set anything in this case?
                 std.log.warn("ch32: ep_writev called while {} IN endpoint busy, returning 0", .{ep_num});
-                // set_tx_ctrl(ep_i, RES_NAK, TOG_DATA1, true);
                 uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK });
                 return 0;
             }
@@ -694,14 +688,10 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
             // Arm IN
             if (ep_i == 0) {
-                // EP0 IN starts with DATA1 after SETUP
-                // set_tx_ctrl(ep_i, RES_ACK, TOG_DATA1, true);
                 uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
             } else {
-                // set_tx_ctrl(ep_i, RES_ACK, TOG_DATA0, true);
                 uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
             }
-            // set_tx_ctrl(ep_i, RES_ACK, TOG_DATA1, true);
 
             // For ZLP ACK, usb.DeviceInterface.ep_ack() expects ep_writev() returns 0.
             return @as(types.Len, @intCast(w));
