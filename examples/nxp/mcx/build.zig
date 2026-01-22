@@ -13,10 +13,14 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const frdm_mcxa153 = mb.ports.mcx.chips.mcxa153;
+    const frdm_mcxn947 = mb.ports.mcx.chips.mcxn947;
 
     const available_examples = [_]Example{
-        .{ .name = "blinky", .target = frdm_mcxa153, .file = "src/blinky.zig" },
+        .{ .name = "mcxa153_blinky", .target = frdm_mcxa153, .file = "src/mcxa153_blinky.zig" },
+        .{ .name = "mcxn947_blinky", .target = frdm_mcxn947, .file = "src/mcxn947_blinky.zig" },
         .{ .name = "gpio_input", .target = frdm_mcxa153, .file = "src/gpio_input.zig" },
+        .{ .name = "lp_uart", .target = frdm_mcxn947, .file = "src/lp_uart.zig" },
+        .{ .name = "lp_i2c", .target = frdm_mcxn947, .file = "src/lp_i2c.zig" },
     };
 
     for (available_examples) |example| {
@@ -25,7 +29,7 @@ pub fn build(b: *std.Build) void {
             if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example))
                 continue;
 
-        // `add_firmware` basically works like addExecutable, but takes a
+        // `add_firmware` basically works like addExe66.2.366.2.3cutable, but takes a
         // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
         //
         // The target will convey all necessary information on the chip,
