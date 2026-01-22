@@ -17,11 +17,6 @@ pub fn build(b: *std.Build) void { // $ls root_id 24
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
-    // Use GNU objcopy instead of LLVM objcopy to avoid 512MB binary issue.
-    // LLVM objcopy includes LOAD segments for NOLOAD sections, causing the binary
-    // to span from flash (0x0) to RAM (0x20000000) = 512MB of zeros.
-    const gnu_objcopy = b.findProgram(&.{"riscv64-unknown-elf-objcopy"}, &.{}) catch null;
-
     const available_examples = [_]Example{
         // CH32V003
         .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "empty_ch32v003", .file = "src/empty.zig" },
@@ -37,20 +32,20 @@ pub fn build(b: *std.Build) void { // $ls root_id 24
         .{ .target = mb.ports.ch32v.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_empty", .file = "src/empty.zig" },
 
         // CH32V203
-        .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "empty_ch32v203", .file = "src/empty.zig" },
-        .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "blinky_ch32v203", .file = "src/blinky.zig" },
-        .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "blinky_systick_ch32v203", .file = "src/blinky_systick.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.nano_ch32v203, .name = "nano_ch32v203_blinky", .file = "src/board_blinky.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_dma", .file = "src/dma.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_ws2812", .file = "src/ws2812.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_uart_log", .file = "src/uart_log.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_eeprom", .file = "src/i2c_eeprom.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_position_sensor", .file = "src/i2c_position_sensor.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_loopback", .file = "src/spi_loopback.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_flash_w25q", .file = "src/spi_flash_w25q.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_sharp_niceview", .file = "src/sharp_niceview.zig" },
+        // .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "empty_ch32v203", .file = "src/empty.zig" },
+        // .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "blinky_ch32v203", .file = "src/blinky.zig" },
+        // .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "blinky_systick_ch32v203", .file = "src/blinky_systick.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.nano_ch32v203, .name = "nano_ch32v203_blinky", .file = "src/board_blinky.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_dma", .file = "src/dma.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_ws2812", .file = "src/ws2812.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_uart_log", .file = "src/uart_log.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_eeprom", .file = "src/i2c_eeprom.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_i2c_position_sensor", .file = "src/i2c_position_sensor.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_loopback", .file = "src/spi_loopback.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_flash_w25q", .file = "src/spi_flash_w25q.zig" },
+        // .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_sharp_niceview", .file = "src/sharp_niceview.zig" },
 
         // CH32V30x
         .{ .target = mb.ports.ch32v.chips.ch32v303xb, .name = "empty_ch32v303", .file = "src/empty.zig" },

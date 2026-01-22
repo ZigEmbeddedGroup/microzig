@@ -549,7 +549,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     set_rx_ctrl(ep_i, RES_ACK, TOG_DATA0, true);
                 } else {
                     uep_tx_dma(ep_i).raw = ptr_val;
-                    uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA1, .AUTO = true });
+                    uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA0, .AUTO = true });
                 }
             }
             std.log.debug("allocation and DMA setup done for ep{}", .{ep_i});
@@ -663,9 +663,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             assert(st_in.buf.len != 0);
 
             if (st_in.tx_busy) {
-                // do I want to set anything in this case?
                 std.log.warn("ch32: ep_writev called while {} IN endpoint busy, returning 0", .{ep_num});
-                uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK });
                 return 0;
             }
 
@@ -687,7 +685,9 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             st_in.tx_busy = true;
 
             // Arm IN
+            // uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
             if (ep_i == 0) {
+                // EP0 IN starts with DATA1 after SETUP
                 uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
             } else {
                 uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
