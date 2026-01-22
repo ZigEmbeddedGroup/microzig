@@ -263,10 +263,11 @@ pub const startup_logic = struct {
             .base = @intCast((vtable_addr - 4) >> 2),
         });
 
-        // We set machine mode (0x3) so the user can enable/disable interrupts
-        // or manage machine/user mode themselves. 
-        // With mpp at 0 the users main function is forced to run at user level.
-        // Also enable interrupts.
+        // mstatus.mpp determines the privilege level restored by mret.
+        // Set to 0x3 (Machine) so mret returns to Machine mode, allowing the
+        // firmware to manage interrupts and change privilege as needed.
+        // To change execution to User mode set mpp to 0x0 and execute mret.
+        // Enable machine-level interrupts (mie) and set floating-point status (fs) if applicable.
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
