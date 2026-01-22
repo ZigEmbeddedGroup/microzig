@@ -176,8 +176,6 @@ pub fn CdcClassDriver(options: Options) type {
         pub fn write(self: *@This(), data: []const u8) usize {
             const len = @min(self.tx_data.len - self.tx_end, data.len);
 
-            if (len == 0) return 0;
-
             @memcpy(self.tx_data[self.tx_end..][0..len], data[0..len]);
             self.tx_end += @intCast(len);
 
