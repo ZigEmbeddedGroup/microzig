@@ -276,9 +276,6 @@ pub const LinkerScript = struct {
                 /// Place rodata in the first region tagged as ram.
                 ram,
             } = .flash,
-            /// Give .eh_frame and .eh_frame_hdr the status of other elf debug
-            /// sections (to not flash them to the device).
-            eh_frame_no_load: bool = true,
         },
     };
 };
