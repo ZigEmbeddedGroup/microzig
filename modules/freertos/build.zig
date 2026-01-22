@@ -87,16 +87,14 @@ pub fn build(b: *std.Build) void {
     } else if (port_name == .RP2350_ARM or port_name == .RP2350_RISCV) {
         addPicoSDKIncludeDirs(b, freertos_lib, picosdk_root, .RP2350);
     }
-    //freertos_lib.addIncludePath(b.path("picosdk/include_common/"));
-    //if (port_name == .RP2040) {
-    //    freertos_lib.addIncludePath(b.path("picosdk/include_rp2040/"));
-    //} else if (port_name == .RP2350_ARM or port_name == .RP2350_RISCV) {
-    //    freertos_lib.addIncludePath(b.path("picosdk/include_rp2350/"));
 
     // TODO: USE addConfigHeader instead?
     freertos_lib.addCMacro("configSMP_SPINLOCK_0", "PICO_SPINLOCK_ID_OS1");
     freertos_lib.addCMacro("configSMP_SPINLOCK_1", "PICO_SPINLOCK_ID_OS2");
 
+    // Even if we use just one core we must define this so RP2350 port will compile.
+    // It looks like lack of #ifdef LIB_PICO_MULTICORE in RP2350 ARM FreeRTOS port
+    // in place where multicore_doorbell_claim_unused is called
     freertos_lib.addCMacro("LIB_PICO_MULTICORE", "1");
 
     // Had problems when this was enabled.

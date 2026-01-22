@@ -1,7 +1,7 @@
 .{
     .name = .freertos,
     .version = "0.0.0",
-    .fingerprint = 0x5089c38a1e0691c8, // Changing this has security and trust implications.
+    .fingerprint = 0xb81d2ef66274e984,
     .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .freertos_kernel = .{

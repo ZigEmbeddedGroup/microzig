@@ -87,8 +87,8 @@ void irq_set_exclusive_handler(uint num, irq_handler_t handler) {
     uint32_t save = spin_lock_blocking(lock);
     __unused irq_handler_t current = irq_get_vtable_handler(num);
 
-    // TODO: had to comment this asseert out to get FreeRTOS port for RP2350 ARM working
-    // but it us existing assert in PicoSDK - neeed investigation
+    // TODO: had to comment this assert out to get FreeRTOS port for RP2350 ARM working
+    // but it us existing assert in PicoSDK - needs investigation
     
     //hard_assert(current == __unhandled_user_irq || current == handler);
     set_raw_irq_handler_and_unlock(num, handler, save);
