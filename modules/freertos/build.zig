@@ -172,7 +172,7 @@ fn addPicoSDKIncludeDirs(
         addAllIncludeDirs(b, mod, pico_root, "src/rp2040");
     } else if (chip == .RP2350) {
         mod.addCMacro("PICO_RP2350", "1");
-        // Be defualt RP2350 is using software spinlocks because of some errata
+        // By default RP2350 is using software spinlocks because of some errata
         // don't know what it is exactly but we will force hardware spinlocks anyway
         // to simplify compilation of this module
         mod.addCMacro("PICO_USE_SW_SPIN_LOCKS", "0");
