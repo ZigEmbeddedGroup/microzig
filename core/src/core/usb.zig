@@ -159,7 +159,8 @@ pub fn DeviceController(config: Config) type {
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
         const config_descriptor = blk: {
             const max_psize = config.max_supported_packet_size;
-            assert(max_psize == 8 or max_psize == 16 or max_psize == 32 or max_psize == 64);
+            assert(max_psize >= 8);
+            assert(std.math.isPowerOfTwo(max_psize));
 
             var alloc: DescriptorAllocator = .init(config.unique_endpoints);
             var next_string = 4;
