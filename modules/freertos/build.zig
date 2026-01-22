@@ -70,8 +70,8 @@ pub fn build(b: *std.Build) void {
     }
 
     // Add some Pico SDK glue code
-    // TODO: maybee we should use Pico sourcee filee directly?
-    // but curreent way we know what is internaly used by FreeRTOS port
+    // TODO: maybe we should use Pico source files directly?
+    // but current way - we know what is internaly used by FreeRTOS port
     freertos_lib.addCSourceFiles(.{
         .root = b.path("."),
         .files = &[_][]const u8{ "src/picosdk_irq.c", "src/picosdk_exception.c" },
