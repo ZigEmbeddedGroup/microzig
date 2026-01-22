@@ -42,6 +42,11 @@ pub fn hello_task(_: ?*anyopaque) callconv(.c) void {
     }
 }
 
+export fn __unhandled_user_irq() callconv(.c) void {
+    std.log.err("Unhandled IRQ called!", .{});
+    @panic("Unhandled IRQ");
+}
+
 ///
 /// Some ugly glue code to implement required functions from FreeRTOS and Pico SDK
 /// - This can be improved later
@@ -51,31 +56,17 @@ export fn panic_unsupported() callconv(.c) noreturn {
     @panic("not supported");
 }
 
-export fn irq_set_priority(num: c_uint, priority: u8) callconv(.c) void {
-    const p: *volatile u32 = @ptrFromInt(@intFromPtr(&microzig.chip.peripherals.PPB.NVIC_IPR0) + (num >> 2));
-    const shift: u5 = @intCast(8 * (@as(u32, @intCast(num)) & 3));
-    const mask: u32 = @as(u32, 0xff) << shift;
-    p.* = (p.* & ~mask) | (@as(u32, priority) << shift);
-}
-
-export fn irq_set_enabled(_: c_uint, enabled: bool) callconv(.c) void {
-    if (enabled) {
-        microzig.cpu.interrupt.enable(@enumFromInt(0));
-    } else {
-        microzig.cpu.interrupt.disable(@enumFromInt(0));
-    }
-}
-
-export fn irq_set_exclusive_handler(_: u8) callconv(.c) void {
-    panic_unsupported();
-}
-
 export fn multicore_launch_core1(entry: *const fn () callconv(.c) void) callconv(.c) void {
     microzig.hal.multicore.launch_core1(@ptrCast(entry));
 }
 
 export fn multicore_reset_core1() callconv(.c) void {
     // TODO: please implement this in microzig.hal.multicore and call it here
+}
+
+export fn multicore_doorbell_claim_unused(_: c_uint, _: bool) callconv(.c) c_int {
+    // TODO: please implement this in microzig.hal.multicore and call it here
+    return 0;
 }
 
 export fn clock_get_hz(_: u32) callconv(.c) u32 {
@@ -92,21 +83,4 @@ export fn spin_lock_claim(_: c_uint) callconv(.c) void {}
 
 export fn next_striped_spin_lock_num() callconv(.c) c_uint {
     return 16;
-}
-
-export fn exception_set_exclusive_handler(num: c_uint, handler: *const fn () callconv(.c) void) callconv(.c) void {
-    const cs = microzig.interrupt.enter_critical_section();
-    defer cs.leave();
-
-    // TODO: can this code be simplified?
-    if (num == 11) {
-        microzig.cpu.ram_vector_table.SVCall = .{ .c = handler };
-    } else if (num == 14) {
-        microzig.cpu.ram_vector_table.PendSV = .{ .naked = @ptrCast(handler) };
-    } else if (num == 15) {
-        microzig.cpu.ram_vector_table.SysTick = .{ .c = handler };
-    }
-
-    // used in PicoSDK - do we need this?
-    asm volatile ("DMB" ::: .{ .memory = true });
 }
