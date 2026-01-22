@@ -5,7 +5,7 @@ const MicroBuild = microzig.MicroBuild(.{
     .ch32v = true,
 });
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) void { // $ls root_id 24
     // Use GNU objcopy instead of LLVM objcopy to avoid 512MB binary issue.
     // LLVM objcopy includes LOAD segments for NOLOAD sections, causing the binary
     // to span from flash (0x0) to RAM (0x20000000) = 512MB of zeros.

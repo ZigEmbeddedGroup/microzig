@@ -511,7 +511,7 @@ pub fn DeviceController(config: Config) type {
                         device_itf.ep_open(desc);
                 }
 
-                @field(self.driver_data.?, fld_drv.name).init(&cfg, device_itf);
+                // @field(self.driver_data.?, fld_drv.name).init(&cfg, device_itf);
 
                 // Open IN endpoint last so that callbacks can happen
                 inline for (desc_fields) |fld| {
@@ -519,6 +519,7 @@ pub fn DeviceController(config: Config) type {
                     if (comptime fld.type == descriptor.Endpoint and desc.endpoint.dir == .In)
                         device_itf.ep_open(desc);
                 }
+                @field(self.driver_data.?, fld_drv.name) = .init(&cfg, device_itf);
             }
         }
     };

@@ -5,7 +5,7 @@ const hal = microzig.hal;
 const time = hal.time;
 const gpio = hal.gpio;
 
-pub const usb = hal.usb;
+pub const usb = @import("usbhs.zig");
 
 const RCC = microzig.chip.peripherals.RCC;
 const AFIO = microzig.chip.peripherals.AFIO;
@@ -18,7 +18,7 @@ pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
 };
 
-pub const UsbSerial = microzig.core.usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 64 });
+pub const UsbSerial = microzig.core.usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 512 });
 
 pub var usb_dev: usb.Polled(
     microzig.core.usb.Config{
@@ -79,7 +79,7 @@ pub fn main() !void {
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     // Initialize USART2 at 115200 baud
-    usart.apply(.{ .baud_rate = 460800 });
+    usart.apply(.{ .baud_rate = 921600 });
 
     hal.usart.init_logger(usart);
     std.log.info("UART logging initialized.", .{});
@@ -95,6 +95,7 @@ pub fn main() !void {
         const now = time.get_time_since_boot();
         if (now.diff(last).to_us() > 1000000) {
             // std.log.info("what {}", .{i});
+            std.log.debug("usb drivers available?: {}", .{usb_dev.controller.drivers() != null});
             last = now;
         }
         run_usb();
@@ -111,6 +112,7 @@ pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
+        // _ = serial.flush();
         usb_dev.poll();
     }
 }
