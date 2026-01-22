@@ -253,7 +253,6 @@ pub const startup_logic = struct {
             },
         }
 
-        // Enable interrupts.
         // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
         // jumps to the correct handler regardless of any padding between _reset_vector
         // and vector_table.
@@ -263,10 +262,17 @@ pub const startup_logic = struct {
             .mode1 = 1, // Use absolute addresses
             .base = @intCast((vtable_addr - 4) >> 2),
         });
+
+        // mstatus.mpp determines the privilege level restored by mret.
+        // Set to 0x3 (Machine) so mret returns to Machine mode, allowing the
+        // firmware to manage interrupts and change privilege as needed.
+        // To change execution to User mode set mpp to 0x0 and execute mret.
+        // Enable machine-level interrupts (mie) and set floating-point status (fs) if applicable.
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
             .fs = if (cpu_name == .@"qingkev4-rv32imafc") .dirty else .off,
+            .mpp = 0x3,
         });
 
         // Initialize the system.
