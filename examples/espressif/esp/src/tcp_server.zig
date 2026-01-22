@@ -60,7 +60,7 @@ var ip: lwip.c.ip_addr_t = undefined;
 
 extern fn netconn_new_with_proto_and_callback(t: lwip.c.enum_netconn_type, proto: lwip.c.u8_t, callback: ?*const anyopaque) [*c]lwip.c.struct_netconn;
 pub fn main() !void {
-    var heap_allocator: microzig.Allocator = .init_with_heap(16384);
+    var heap_allocator: microzig.Allocator = try .init_with_heap(16384);
     const gpa = heap_allocator.allocator();
 
     try radio.wifi.init(gpa, .{});
