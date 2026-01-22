@@ -111,9 +111,7 @@ pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype
 
     var write_buff = text;
     while (write_buff.len > 0) {
-        // std.log.info("USB CDC Demo writing", .{});
         write_buff = write_buff[serial.write(write_buff)..];
-        // _ = serial.flush();
         usb_dev.poll();
     }
 }
