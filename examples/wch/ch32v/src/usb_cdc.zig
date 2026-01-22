@@ -93,11 +93,10 @@ pub fn main() !void {
     var i: u32 = 0;
     while (true) : (i += 1) {
         const now = time.get_time_since_boot();
-        if (now.diff(last).to_us() > 10000) {
+        if (now.diff(last).to_us() > 500000) {
             // std.log.info("what {}", .{i});
-            // std.log.debug("usb drivers available?: {}", .{usb_dev.controller.drivers() != null});
-            last = now;
             run_usb(i);
+            last = now;
         }
         usb_dev.poll();
     }
@@ -141,7 +140,7 @@ pub fn usb_cdc_read(
 
 pub fn run_usb(i: u32) void {
     if (usb_dev.controller.drivers()) |drivers| {
-        std.log.info("USB CDC Demo transmitting", .{});
+        // std.log.info("USB CDC Demo transmitting", .{});
         usb_cdc_write(&drivers.serial, "This is very very long text sent from ch32 by USB CDC to your device: {s}, {}\r\n", .{ "Hello, World!", i });
 
         // read and print host command if present
@@ -150,5 +149,5 @@ pub fn run_usb(i: u32) void {
             usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
         }
     }
-    usb_dev.poll();
+    // usb_dev.poll();
 }

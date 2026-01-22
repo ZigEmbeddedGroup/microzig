@@ -345,7 +345,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                 const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
                 if (token != TOKEN_SOF) {
-                    std.log.debug("ch32: INT_FG = 0x{x}, token: {}", .{ fg, @as(Token, @enumFromInt(token)) });
+                    // std.log.debug("ch32: INT_FG = 0x{x}, token: {}", .{ fg, @as(Token, @enumFromInt(token)) });
                     did_work = true;
                 }
 
@@ -386,7 +386,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
                 if ((fg & UIF_TRANSFER) != 0) {
                     if (token != TOKEN_SOF) {
-                        std.log.info("ch32: TRANSFER event", .{});
+                        // std.log.info("ch32: TRANSFER event", .{});
                     }
                     // clear transfer
                     regs().USB_INT_FG.raw = UIF_TRANSFER;
@@ -404,14 +404,14 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 // 0x40 => ISO_ACT
             }
             if (did_work) {
-                std.log.info("", .{});
+                // std.log.info("", .{});
             }
         }
 
         fn handle_transfer(self: *Self, ep: u4, token: u2) void {
             if (ep >= cfg.max_endpoints_count) return;
             if (token == TOKEN_SOF) return;
-            std.log.debug("ch32: handle_transfer ep={} token={}", .{ ep, @as(Token, @enumFromInt(token)) });
+            // std.log.debug("ch32: handle_transfer ep={} token={}", .{ ep, @as(Token, @enumFromInt(token)) });
             // std.log.debug("ch32: token={}", .{token});
             switch (token) {
                 TOKEN_OUT => self.handle_out(ep),
@@ -466,8 +466,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             const st_in = self.st(num, .In);
 
             if (!st_in.tx_busy) {
-                std.log.warn("ch32: EP{} IN but not busy, spurious?", .{ep});
-                // @panic("IN but not busy");
+                // std.log.warn("ch32: EP{} IN but not busy, no data to send", .{ep});
                 uep_tx_ctrl(ep).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA0 });
                 return;
             }
