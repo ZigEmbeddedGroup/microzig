@@ -253,7 +253,6 @@ pub const startup_logic = struct {
             },
         }
 
-        // Enable interrupts.
         // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
         // jumps to the correct handler regardless of any padding between _reset_vector
         // and vector_table.
@@ -263,10 +262,17 @@ pub const startup_logic = struct {
             .mode1 = 1, // Use absolute addresses
             .base = @intCast((vtable_addr - 4) >> 2),
         });
+
+        // mstatus.mpp determines the privilege level restored by mret.
+        // Set to 0x3 (Machine) so mret returns to Machine mode, allowing the
+        // firmware to manage interrupts and change privilege as needed.
+        // To change execution to User mode set mpp to 0x0 and execute mret.
+        // Enable machine-level interrupts (mie) and set floating-point status (fs) if applicable.
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
             .fs = if (cpu_name == .@"qingkev4-rv32imafc") .dirty else .off,
+            .mpp = 0x3,
         });
 
         // Initialize the system.
@@ -429,7 +435,7 @@ pub const csr = struct {
 
     /// Machine Mode Status Register
     pub const mstatus = Csr(0x300, packed struct(u32) {
-        pub const Fs = enum(u2) {
+        pub const FS = enum(u2) {
             /// Floating-point unit status
             off = 0b00,
             initial = 0b01,
@@ -440,11 +446,11 @@ pub const csr = struct {
         /// [2:0] Reserved
         reserved0: u3 = 0,
         /// [3] Machine mode interrupt enable
-        mie: u1,
+        mie: u1 = 0,
         /// [6:4] Reserved
         reserved4: u3 = 0,
         /// [7] Interrupt enable state before entering interrupt
-        mpie: u1,
+        mpie: u1 = 0,
         /// [10:8] Reserved
         reserved8: u3 = 0,
         /// [12:11] Privileged mode before entering break
@@ -452,7 +458,7 @@ pub const csr = struct {
         /// [14:13] Floating-point unit status
         /// Valid only for WCH-V4F
         /// NOTE: reserved on other chips
-        fs: Fs = .off,
+        fs: FS = .off,
         /// [31:15] Reserved
         reserved15: u17 = 0,
     });
@@ -467,16 +473,16 @@ pub const csr = struct {
         /// Interrupt or exception entry address mode selection.
         /// 0: Use of the uniform entry address.
         /// 1: Address offset based on interrupt number *4.
-        mode0: u1,
+        mode0: u1 = 0,
         /// [1] Mode 1
         /// Interrupt vector table identifies patterns.
         /// 0: Identification by jump instruction,
         /// limited range, support for non-jump 0 instructions.
         /// 1: Identify by absolute address, support
         /// full range, but must jump.
-        mode1: u1,
+        mode1: u1 = 0,
         /// [31:2] Base address of the interrupt vector table
-        base: u30,
+        base: u30 = 0,
     });
 
     pub const mscratch = riscv32_common.csr.mscratch;
