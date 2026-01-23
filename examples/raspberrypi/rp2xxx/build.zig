@@ -25,9 +25,11 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_board_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
 
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
@@ -158,6 +160,27 @@ pub fn build(b: *std.Build) void {
             });
             const net_mod = net_dep.module("net");
             firmware.app_mod.addImport("net", net_mod);
+        }
+
+        // Import freertos module for some examples, kind of a hack
+        // probably list of required modules should be specified in each example independently
+        if (std.mem.indexOf(u8, example.name, "_freertos-") != null) {
+            var port_name: []const u8 = "Unknown";
+
+            // FIXME: hacky way to select port based on target name (it doesn't take RP2350_RISCV into account)
+            if (std.mem.eql(u8, firmware.target.chip.name, "RP2040")) {
+                port_name = "RP2040";
+            } else {
+                port_name = "RP2350_ARM";
+            }
+
+            const freertos_dep = b.dependency("freertos", .{
+                .target = b.resolveTargetQuery(firmware.target.zig_target),
+                .optimize = optimize,
+                .port_name = port_name,
+            });
+            const freertos_mod = freertos_dep.module("freertos");
+            firmware.app_mod.addImport("freertos", freertos_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
