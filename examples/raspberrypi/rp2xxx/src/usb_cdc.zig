@@ -14,7 +14,8 @@ var usb_controller: usb.DeviceController(.{
     .device_descriptor = .{
         .bcd_usb = USB_Device.max_supported_bcd_usb,
         .device_triple = .from(.Miscellaneous, @enumFromInt(2), @enumFromInt(1)),
-        .max_packet_size0 = USB_Device.max_supported_packet_size,
+        // Can ep0 packet size be larger than 64 bytes?
+        .max_packet_size0 = @min(USB_Device.max_supported_packet_size, 64),
         .vendor = USB_Device.default_vendor_id,
         .product = USB_Device.default_product_id,
         .bcd_device = .from(0x0100),
