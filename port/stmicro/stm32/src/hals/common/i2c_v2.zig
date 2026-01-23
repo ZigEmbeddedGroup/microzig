@@ -189,7 +189,12 @@ const I2C = struct {
         return i2c.write_blocking_intern(address, false, data);
     }
 
-    /// This init should be comptime safe.
+    /// Initialize a given I2C peripheral and compute the
+    /// TIMINGR register base on the clock frequency.
+    /// Be aware that this require FPU.
+    ///
+    /// Note: This can be run at comptime if rcc clock is comptime known
+    /// and remove the need of FPU.
     pub fn init(comptime instance: I2C_Type) ConfigError!I2C {
         hal.rcc.enable_clock(enums.to_peripheral(instance));
         const t_presc, const presc = try compute_presc(instance);

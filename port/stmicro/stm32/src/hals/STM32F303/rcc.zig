@@ -13,7 +13,7 @@ const app = microzig.app;
 
 pub const RCC_Peripheral = @This();
 
-//expose only configurations structs
+// Expose only configurations structs
 pub const Config = clock_tree.Config;
 
 const RCC = microzig.chip.peripherals.RCC;
@@ -51,13 +51,6 @@ pub fn apply() void {
 
     clean_clock();
     select_clock();
-}
-
-fn get_ppll_source() PLLSRC {
-    return if (current_clocks.config.flags.PLLSource) |source|
-        @enumFromInt(@as(u1, @intCast(source.get())))
-    else
-        .HSI_Div2;
 }
 
 fn apply_flash_flash() void {
