@@ -45,14 +45,16 @@ pub const EchoExampleDriver = struct {
     };
 
     device: *usb.DeviceInterface,
-    ep_tx: EP_Num,
+    descriptor: *const Descriptor,
+    tx_ready: std.atomic.Value(bool),
 
     /// This function is called when the host chooses a configuration
     /// that contains this driver. `self` points to undefined memory.
     pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
         self.* = .{
             .device = device,
-            .ep_tx = desc.ep_in.endpoint.num,
+            .descriptor = desc,
+            .tx_ready = .init(false),
         };
         device.ep_listen(
             desc.ep_out.endpoint.num,
@@ -72,24 +74,27 @@ pub const EchoExampleDriver = struct {
     /// Endpoint number is passed as an argument so that it does not need
     /// to be stored in the driver.
     pub fn on_tx_ready(self: *@This(), ep_tx: EP_Num) void {
-        log.info("tx ready", .{});
+        log.info("tx ready ({t})", .{ep_tx});
         // Mark transmission as available
-        @atomicStore(EP_Num, &self.ep_tx, ep_tx, .seq_cst);
+        self.tx_ready.store(true, .seq_cst);
     }
 
     pub fn on_rx(self: *@This(), ep_rx: EP_Num) void {
         var buf: [64]u8 = undefined;
         // Read incoming packet into a local buffer
         const len_rx = self.device.ep_readv(ep_rx, &.{&buf});
-        log.info("Received: {s}", .{buf[0..len_rx]});
+        log.info("Received on {t}: {s}", .{ ep_rx, buf[0..len_rx] });
         // Check if we can transmit
-        const ep_tx = @atomicLoad(EP_Num, &self.ep_tx, .seq_cst);
-        if (ep_tx != .ep0) {
+
+        if (self.tx_ready.load(.seq_cst)) {
             // Mark transmission as not available
-            @atomicStore(EP_Num, &self.ep_tx, .ep0, .seq_cst);
+            self.tx_ready.store(false, .seq_cst);
             // Send received packet
             log.info("Sending {} bytes", .{len_rx});
-            const len_tx = self.device.ep_writev(ep_tx, &.{buf[0..len_rx]});
+            const len_tx = self.device.ep_writev(
+                self.descriptor.ep_in.endpoint.num,
+                &.{buf[0..len_rx]},
+            );
             if (len_tx != len_rx)
                 log.err("Only sent {} bytes", .{len_tx});
         }

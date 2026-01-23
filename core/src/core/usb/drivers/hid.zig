@@ -55,14 +55,12 @@ pub fn HidClassDriver(options: Options, report_descriptor: anytype) type {
         };
 
         device: *usb.DeviceInterface,
-        ep_in: EP_Num,
-        ep_out: EP_Num,
+        descriptor: *const Descriptor,
 
         pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
             self.* = .{
                 .device = device,
-                .ep_in = desc.ep_in.endpoint.num,
-                .ep_out = desc.ep_out.endpoint.num,
+                .descriptor = desc,
             };
         }
 

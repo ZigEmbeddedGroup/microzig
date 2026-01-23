@@ -77,6 +77,7 @@ pub fn CdcClassDriver(options: Options) type {
                 first_string: u8,
                 max_supported_packet_size: usb.types.Len,
             ) @This() {
+                assert(options.max_packet_size <= max_supported_packet_size);
                 const itf_notifi = alloc.next_itf();
                 const itf_data = alloc.next_itf();
                 return .{
@@ -134,21 +135,18 @@ pub fn CdcClassDriver(options: Options) type {
         };
 
         device: *usb.DeviceInterface,
-        ep_notifi: EP_Num,
+        descriptor: *const Descriptor,
         line_coding: LineCoding align(4),
+        notifi_ready: std.atomic.Value(bool),
 
-        /// OUT endpoint on which there is data ready to be read,
-        /// or .ep0 when no data is available.
-        ep_out: EP_Num,
         rx_data: [options.max_packet_size]u8,
         rx_seek: usb.types.Len,
         rx_end: usb.types.Len,
+        rx_ready: std.atomic.Value(bool),
 
-        /// IN endpoint where data can be sent,
-        /// or .ep0 when data is being sent.
-        ep_in: EP_Num,
         tx_data: [options.max_packet_size]u8,
         tx_end: usb.types.Len,
+        tx_ready: std.atomic.Value(bool),
 
         pub fn available(self: *@This()) usb.types.Len {
             return self.rx_end - self.rx_seek;
@@ -162,11 +160,11 @@ pub fn CdcClassDriver(options: Options) type {
             if (self.available() > 0) return len;
 
             // request more data
-            const ep_out = @atomicLoad(EP_Num, &self.ep_out, .seq_cst);
-            if (ep_out != .ep0) {
+            if (self.rx_ready.load(.seq_cst)) {
+                const ep_out = self.descriptor.ep_out.endpoint.num;
+                self.rx_ready.store(false, .seq_cst);
                 self.rx_end = self.device.ep_readv(ep_out, &.{&self.rx_data});
                 self.rx_seek = 0;
-                @atomicStore(EP_Num, &self.ep_out, .ep0, .seq_cst);
                 self.device.ep_listen(ep_out, options.max_packet_size);
             }
 
@@ -190,13 +188,14 @@ pub fn CdcClassDriver(options: Options) type {
             if (self.tx_end == 0)
                 return true;
 
-            const ep_in = @atomicLoad(EP_Num, &self.ep_in, .seq_cst);
-            if (ep_in == .ep0)
+            if (!self.tx_ready.load(.seq_cst))
                 return false;
+            self.tx_ready.store(false, .seq_cst);
 
-            @atomicStore(EP_Num, &self.ep_in, .ep0, .seq_cst);
-
-            assert(self.tx_end == self.device.ep_writev(ep_in, &.{self.tx_data[0..self.tx_end]}));
+            assert(self.tx_end == self.device.ep_writev(
+                self.descriptor.ep_in.endpoint.num,
+                &.{self.tx_data[0..self.tx_end]},
+            ));
             self.tx_end = 0;
             return true;
         }
@@ -204,22 +203,23 @@ pub fn CdcClassDriver(options: Options) type {
         pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
             self.* = .{
                 .device = device,
-                .ep_notifi = desc.ep_notifi.endpoint.num,
+                .descriptor = desc,
                 .line_coding = .{
                     .bit_rate = .from(115200),
                     .stop_bits = .@"1",
                     .parity = .none,
                     .data_bits = 8,
                 },
+                .notifi_ready = .init(true),
 
-                .ep_out = .ep0,
                 .rx_data = undefined,
                 .rx_seek = 0,
                 .rx_end = 0,
+                .rx_ready = .init(false),
 
-                .ep_in = desc.ep_in.endpoint.num,
                 .tx_data = undefined,
                 .tx_end = 0,
+                .tx_ready = .init(true),
             };
             device.ep_listen(desc.ep_out.endpoint.num, options.max_packet_size);
         }
@@ -243,18 +243,21 @@ pub fn CdcClassDriver(options: Options) type {
         }
 
         pub fn on_rx(self: *@This(), ep_num: EP_Num) void {
-            assert(.ep0 == @atomicLoad(EP_Num, &self.ep_out, .seq_cst));
-            @atomicStore(EP_Num, &self.ep_out, ep_num, .seq_cst);
+            if (self.rx_ready.load(.seq_cst))
+                log.warn("{s}({t}) called before buffer was consumed", .{ "on_rx", ep_num });
+            self.rx_ready.store(true, .seq_cst);
         }
 
         pub fn on_tx_ready(self: *@This(), ep_num: EP_Num) void {
-            assert(.ep0 == @atomicLoad(EP_Num, &self.ep_in, .seq_cst));
-            @atomicStore(EP_Num, &self.ep_in, ep_num, .seq_cst);
+            if (self.tx_ready.load(.seq_cst))
+                log.warn("{s}({t}) called before buffer was consumed", .{ "on_tx_ready", ep_num });
+            self.tx_ready.store(true, .seq_cst);
         }
 
         pub fn on_notifi_ready(self: *@This(), ep_num: EP_Num) void {
-            assert(.ep0 == @atomicLoad(EP_Num, &self.ep_notifi, .seq_cst));
-            @atomicStore(EP_Num, &self.ep_notifi, ep_num, .seq_cst);
+            if (self.notifi_ready.load(.seq_cst))
+                log.warn("{s}({t}) called before buffer was consumed", .{ "on_notifi_ready", ep_num });
+            self.notifi_ready.store(true, .seq_cst);
         }
     };
 }
