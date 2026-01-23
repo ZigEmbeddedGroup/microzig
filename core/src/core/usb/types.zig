@@ -407,6 +407,29 @@ pub const SetupPacket = extern struct {
     length: U16_Le,
 };
 
+/// Represents USB or device version, in binary coded decimal.
+pub const Version = extern struct {
+    pub const DigitPair = packed struct(u8) {
+        low: u4,
+        high: u4,
+    };
+
+    low: DigitPair,
+    high: DigitPair,
+
+    pub const v1_0: @This() = .from(1, 0, 0);
+    pub const v1_1: @This() = .from(1, 1, 0);
+    pub const v2_0: @This() = .from(2, 0, 0);
+    pub const v2_1: @This() = .from(2, 1, 0);
+
+    pub fn from(major: u4, minor: u4, revision: u4) @This() {
+        return .{
+            .high = .{ .high = 0, .low = major },
+            .low = .{ .high = minor, .low = revision },
+        };
+    }
+};
+
 /// Represents packet length.
 pub const Len = u11;
 

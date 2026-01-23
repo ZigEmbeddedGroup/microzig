@@ -53,12 +53,14 @@ pub const DescriptorAllocator = struct {
     next_ep_num: [2]u8,
     next_itf_num: u8,
     unique_endpoints: bool,
+    strings: []const []const u8,
 
     pub fn init(unique_endpoints: bool) @This() {
         return .{
             .next_ep_num = @splat(1),
             .next_itf_num = 0,
             .unique_endpoints = unique_endpoints,
+            .strings = &.{},
         };
     }
 
@@ -74,6 +76,25 @@ pub const DescriptorAllocator = struct {
     pub fn next_itf(self: *@This()) u8 {
         defer self.next_itf_num += 1;
         return self.next_itf_num;
+    }
+
+    pub fn string(self: *@This(), str: []const u8) u8 {
+        if (str.len == 0) return 0;
+        // deduplicate
+        for (self.strings, 1..) |s, i| {
+            if (std.mem.eql(u8, s, str))
+                return i;
+        }
+
+        self.strings = self.strings ++ .{str};
+        return @intCast(self.strings.len);
+    }
+
+    pub fn string_descriptors(self: @This(), lang: descriptor.String.Language) []const descriptor.String {
+        var ret: []const descriptor.String = &.{.from_lang(lang)};
+        for (self.strings) |s|
+            ret = ret ++ [1]descriptor.String{.from_str(s)};
+        return ret;
     }
 };
 
@@ -150,24 +171,62 @@ pub fn DriverHadlers(Driver: type) type {
 }
 
 pub const Config = struct {
+    pub const IdStringPair = struct {
+        id: u16,
+        str: []const u8,
+    };
+
     pub const Configuration = struct {
-        num: u8,
-        configuration_s: u8,
+        name: []const u8 = "",
         attributes: descriptor.Configuration.Attributes,
         max_current_ma: u9,
         Drivers: type,
+
+        pub fn Args(self: @This()) type {
+            const fields = @typeInfo(self.Drivers).@"struct".fields;
+            var field_names: [fields.len][:0]const u8 = undefined;
+            var field_types: [fields.len]type = undefined;
+            for (fields, 0..) |fld, i| {
+                field_names[i] = fld.name;
+                const params = @typeInfo(@TypeOf(fld.type.Descriptor.create)).@"fn".params;
+                assert(params.len == 3);
+                assert(params[0].type == *DescriptorAllocator);
+                assert(params[1].type == types.Len);
+                field_types[i] = params[2].type.?;
+            }
+            return Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
+        }
     };
 
-    device_descriptor: descriptor.Device,
-    string_descriptors: []const descriptor.String,
+    /// Usb specification version.
+    bcd_usb: types.Version,
+    /// Class, subclass and protocol of this device.
+    device_triple: types.ClassSubclassProtocol,
+    /// Vendor id and string
+    vendor: IdStringPair,
+    /// Product id and string.
+    product: IdStringPair,
+    /// Device version.
+    bcd_device: types.Version,
+    /// String descriptor 0.
+    language: descriptor.String.Language = .English,
+    /// Serial number string.
+    serial: []const u8,
+    /// Largest packet length the hardware supports. Must be a power of 2 and at least 8.
+    max_supported_packet_size: types.Len,
     /// Currently only a single configuration is supported.
     configurations: []const Configuration,
     /// Only use either IN or OUT on each endpoint. Useful for debugging.
     /// Realistically, it should only be turned off if you are exhausting
     /// the 15 endpoint limit.
     unique_endpoints: bool = true,
-    /// Device specific, either 8, 16, 32 or 64.
-    max_supported_packet_size: types.Len,
+
+    pub fn DriverArgs(self: @This()) type {
+        var field_types: [self.configurations.len]type = undefined;
+        for (self.configurations, &field_types) |cfg, *dst|
+            dst.* = cfg.Args();
+        return std.meta.Tuple(&field_types);
+    }
 };
 
 pub fn validate_controller(T: type) void {
@@ -184,7 +243,7 @@ pub fn validate_controller(T: type) void {
 /// USB device controller
 ///
 /// This code handles usb enumeration and configuration and routes packets to drivers.
-pub fn DeviceController(config: Config) type {
+pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
@@ -202,7 +261,20 @@ pub fn DeviceController(config: Config) type {
             assert(std.math.isPowerOfTwo(max_psize));
 
             var alloc: DescriptorAllocator = .init(config.unique_endpoints);
-            var next_string = 4;
+
+            const desc_device: descriptor.Device = .{
+                .bcd_usb = config.bcd_usb,
+                .device_triple = config.device_triple,
+                .max_packet_size0 = @max(config.max_supported_packet_size, 64),
+                .vendor = .from(config.vendor.id),
+                .product = .from(config.product.id),
+                .bcd_device = config.bcd_device,
+                .manufacturer_s = alloc.string(config.vendor.str),
+                .product_s = alloc.string(config.product.str),
+                .serial_s = alloc.string(config.serial),
+                .num_configurations = config.configurations.len,
+            };
+            const configuration_s = alloc.string(config0.name);
 
             var size = @sizeOf(descriptor.Configuration);
             var field_names: [driver_fields.len][:0]const u8 = undefined;
@@ -215,7 +287,7 @@ pub fn DeviceController(config: Config) type {
 
             for (driver_fields, 0..) |drv, drv_id| {
                 const Descriptors = drv.type.Descriptor;
-                const descriptors = Descriptors.create(&alloc, next_string, max_psize);
+                const descriptors = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
                 assert(@alignOf(Descriptors) == 1);
                 size += @sizeOf(Descriptors);
 
@@ -239,9 +311,6 @@ pub fn DeviceController(config: Config) type {
                     }
 
                     switch (fld.type) {
-                        descriptor.Interface => {
-                            if (desc.interface_s != 0) next_string += 1;
-                        },
                         descriptor.Endpoint => {
                             const ep_dir = @intFromEnum(desc.endpoint.dir);
                             const ep_num = @intFromEnum(desc.endpoint.num);
@@ -265,12 +334,6 @@ pub fn DeviceController(config: Config) type {
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
-            if (next_string != config.string_descriptors.len)
-                @compileError(std.fmt.comptimePrint(
-                    "expected {} string descriptros, got {}",
-                    .{ next_string, config.string_descriptors.len },
-                ));
-
             const Tuple = std.meta.Tuple;
             const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
             var ep_handlers: Tuple(&ep_handlers_types) = undefined;
@@ -285,17 +348,19 @@ pub fn DeviceController(config: Config) type {
             const idx_in = @intFromEnum(types.Dir.In);
             const idx_out = @intFromEnum(types.Dir.Out);
             break :blk .{
+                .device_descriptor = desc_device,
                 .config_descriptor = extern struct {
                     first: descriptor.Configuration = .{
                         .total_length = .from(size),
                         .num_interfaces = alloc.next_itf_num,
-                        .configuration_value = config0.num,
-                        .configuration_s = config0.configuration_s,
+                        .configuration_value = 1,
+                        .configuration_s = configuration_s,
                         .attributes = config0.attributes,
                         .max_current = .from_ma(config0.max_current_ma),
                     },
                     drv: DriverConfig = .{},
                 }{},
+                .string_descriptors = alloc.string_descriptors(config.language),
                 .handlers_itf = itf_handlers,
                 .handlers_ep = struct {
                     In: ep_handlers_types[idx_in] = ep_handlers[idx_in],
@@ -306,6 +371,8 @@ pub fn DeviceController(config: Config) type {
         };
 
         const config_descriptor = descriptor_parse_result.config_descriptor;
+        const device_descriptor = descriptor_parse_result.device_descriptor;
+        const string_descriptors = descriptor_parse_result.string_descriptors;
         const handlers_itf = descriptor_parse_result.handlers_itf;
         const handlers_ep = .{
             .han = descriptor_parse_result.handlers_ep,
@@ -352,7 +419,7 @@ pub fn DeviceController(config: Config) type {
                 else {
                     const limited = data[0..@min(data.len, setup.length.into())];
                     const len = device_itf.ep_writev(.ep0, &.{limited});
-                    assert(len <= config.device_descriptor.max_packet_size0);
+                    assert(len <= device_descriptor.max_packet_size0);
                     self.tx_slice = limited[len..];
                 }
             }
@@ -465,15 +532,15 @@ pub fn DeviceController(config: Config) type {
             const desc_idx: u8 = @truncate(value);
             log.debug("Request for {any} descriptor {}", .{ desc_type, desc_idx });
             return switch (desc_type) {
-                .Device => asBytes(&config.device_descriptor),
-                .DeviceQualifier => asBytes(comptime &config.device_descriptor.qualifier()),
+                .Device => asBytes(&device_descriptor),
+                .DeviceQualifier => asBytes(comptime &device_descriptor.qualifier()),
                 .Configuration => asBytes(&config_descriptor),
-                .String => if (desc_idx < config.string_descriptors.len)
-                    config.string_descriptors[desc_idx].data
+                .String => if (desc_idx < string_descriptors.len)
+                    string_descriptors[desc_idx].data
                 else {
                     log.warn(
                         "Descriptor index ({}) out of range ({})",
-                        .{ desc_idx, config.string_descriptors.len },
+                        .{ desc_idx, string_descriptors.len },
                     );
                     return nak;
                 },

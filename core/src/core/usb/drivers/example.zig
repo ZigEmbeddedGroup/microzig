@@ -9,7 +9,7 @@ pub const EchoExampleDriver = struct {
     pub const Descriptor = extern struct {
         const desc = usb.descriptor;
 
-        example_interface: desc.Interface,
+        itf: desc.Interface,
         ep_out: desc.Endpoint,
         ep_in: desc.Endpoint,
 
@@ -17,18 +17,21 @@ pub const EchoExampleDriver = struct {
         /// of a driver are used, a descriptor will be created for each.
         /// Endpoint numbers are allocated automatically, this function should
         /// use placeholder .ep0 values on all endpoints.
+        /// Third argument can be of any type, it's passed by the user when
+        /// creating the device controller type. Passing arguments this way
+        /// is preffered to making the whole driver generic.
         pub fn create(
             alloc: *usb.DescriptorAllocator,
-            first_string: u8,
             max_supported_packet_size: usb.types.Len,
+            itf_string: []const u8,
         ) @This() {
             return .{
-                .example_interface = .{
+                .itf = .{
                     .interface_number = alloc.next_itf(),
                     .alternate_setting = 0,
                     .num_endpoints = 2,
                     .interface_triple = .vendor_specific,
-                    .interface_s = first_string,
+                    .interface_s = alloc.string(itf_string),
                 },
                 .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
                 .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),

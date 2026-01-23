@@ -7,41 +7,28 @@ const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
 const HID_Driver = usb.drivers.hid.HidClassDriver(
-    .{ .boot_protocol = true, .poll_interval = 0 },
     usb.descriptor.hid.ReportDescriptorKeyboard,
 );
 
 var usb_device: USB_Device = undefined;
 
 var usb_controller: usb.DeviceController(.{
-    .device_descriptor = .{
-        .bcd_usb = USB_Device.max_supported_bcd_usb,
-        .device_triple = .unspecified,
-        .max_packet_size0 = USB_Device.max_supported_packet_size,
-        .vendor = USB_Device.default_vendor_id,
-        .product = USB_Device.default_product_id,
-        .bcd_device = .from(0x0100),
-        .manufacturer_s = 1,
-        .product_s = 2,
-        .serial_s = 3,
-        .num_configurations = 1,
-    },
-    .string_descriptors = &.{
-        .from_lang(.English),
-        .from_str("Raspberry Pi"),
-        .from_str("Pico Test Device"),
-        .from_str("someserial"),
-        .from_str("Boot Keyboard"),
-    },
+    .bcd_usb = USB_Device.max_supported_bcd_usb,
+    .device_triple = .unspecified,
+    .vendor = USB_Device.default_vendor_id,
+    .product = USB_Device.default_product_id,
+    .bcd_device = .from(1, 0, 0),
+    .serial = "someserial",
+    .max_supported_packet_size = USB_Device.max_supported_packet_size,
     .configurations = &.{.{
-        .num = 1,
-        .configuration_s = 0,
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
         .Drivers = struct { hid: HID_Driver, reset: rp2xxx.usb.ResetDriver(null, 0) },
     }},
-    .max_supported_packet_size = USB_Device.max_supported_packet_size,
-}) = .init;
+}, .{.{
+    .hid = .{ .itf_string = "Boot Keyboard", .boot_protocol = true, .poll_interval = 0 },
+    .reset = "",
+}}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});

@@ -72,10 +72,15 @@ pub fn CdcClassDriver(options: Options) type {
             ep_out: desc.Endpoint,
             ep_in: desc.Endpoint,
 
+            const Strings = struct {
+                itf_notifi: []const u8 = "",
+                itf_data: []const u8 = "",
+            };
+
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
-                first_string: u8,
                 max_supported_packet_size: usb.types.Len,
+                strings: Strings,
             ) @This() {
                 assert(options.max_packet_size <= max_supported_packet_size);
                 const itf_notifi = alloc.next_itf();
@@ -94,7 +99,7 @@ pub fn CdcClassDriver(options: Options) type {
                         .alternate_setting = 0,
                         .num_endpoints = 1,
                         .interface_triple = .from(.CDC, .Abstract, .NoneRequired),
-                        .interface_s = first_string,
+                        .interface_s = alloc.string(strings.itf_notifi),
                     },
                     .cdc_header = .{ .bcd_cdc = .from(0x0120) },
                     .cdc_call_mgmt = .{
@@ -120,7 +125,7 @@ pub fn CdcClassDriver(options: Options) type {
                         .alternate_setting = 0,
                         .num_endpoints = 2,
                         .interface_triple = .from(.CDC_Data, .Unused, .NoneRequired),
-                        .interface_s = 0,
+                        .interface_s = alloc.string(strings.itf_data),
                     },
                     .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
                     .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),

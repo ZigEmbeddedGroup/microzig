@@ -83,11 +83,11 @@ pub fn Polled(config: Config) type {
 
     return struct {
         pub const max_supported_packet_size = 64;
-        pub const max_supported_bcd_usb: usb.types.U16_Le = .from(0x0110);
-        pub const default_vendor_id: usb.types.U16_Le = .from(0x2E8A);
-        pub const default_product_id: usb.types.U16_Le = switch (chip) {
-            .RP2040 => .from(0x000A),
-            .RP2350 => .from(0x000F),
+        pub const max_supported_bcd_usb: usb.types.Version = .v1_1;
+        pub const default_vendor_id: usb.Config.IdStringPair = .{ .id = 0x2E8A, .str = "Raspberry Pi" };
+        pub const default_product_id: usb.Config.IdStringPair = switch (chip) {
+            .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
+            .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
         };
 
         const vtable: usb.DeviceInterface.VTable = .{
@@ -441,7 +441,11 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
         pub const Descriptor = extern struct {
             reset_interface: usb.descriptor.Interface,
 
-            pub fn create(alloc: *usb.DescriptorAllocator, _: u8, _: usb.types.Len) @This() {
+            pub fn create(
+                alloc: *usb.DescriptorAllocator,
+                _: usb.types.Len,
+                interface_str: []const u8,
+            ) @This() {
                 return .{ .reset_interface = .{
                     .interface_number = alloc.next_itf(),
                     .alternate_setting = 0,
@@ -451,7 +455,7 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                         @enumFromInt(0x00),
                         @enumFromInt(0x01),
                     ),
-                    .interface_s = 0,
+                    .interface_s = alloc.string(interface_str),
                 } };
             }
         };

@@ -42,7 +42,7 @@ pub const Device = extern struct {
         /// Type of this descriptor, must be `DeviceQualifier`.
         descriptor_type: Type = .DeviceQualifier,
         /// Specification version as Binary Coded Decimal
-        bcd_usb: types.U16_Le,
+        bcd_usb: types.Version,
         /// Class, subclass and protocol of device.
         device_triple: types.ClassSubclassProtocol,
         /// Maximum unit of data this device can move.
@@ -62,7 +62,7 @@ pub const Device = extern struct {
     /// Type of this descriptor, must be `Device`.
     descriptor_type: Type = .Device,
     /// Specification version as Binary Coded Decimal
-    bcd_usb: types.U16_Le,
+    bcd_usb: types.Version,
     /// Class, subclass and protocol of device.
     device_triple: types.ClassSubclassProtocol,
     /// Maximum length of data this device can move.
@@ -72,7 +72,7 @@ pub const Device = extern struct {
     /// ID of product.
     product: types.U16_Le,
     /// Device version number as Binary Coded Decimal.
-    bcd_device: types.U16_Le,
+    bcd_device: types.Version,
     /// Index of manufacturer name in string descriptor table.
     manufacturer_s: u8,
     /// Index of product name in string descriptor table.

@@ -11,35 +11,22 @@ const USB_Serial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = USB_Devi
 var usb_device: USB_Device = undefined;
 
 var usb_controller: usb.DeviceController(.{
-    .device_descriptor = .{
-        .bcd_usb = USB_Device.max_supported_bcd_usb,
-        .device_triple = .unspecified,
-        // Can ep0 packet size be larger than 64 bytes?
-        .max_packet_size0 = @min(USB_Device.max_supported_packet_size, 64),
-        .vendor = USB_Device.default_vendor_id,
-        .product = USB_Device.default_product_id,
-        .bcd_device = .from(0x0100),
-        .manufacturer_s = 1,
-        .product_s = 2,
-        .serial_s = 3,
-        .num_configurations = 1,
-    },
-    .string_descriptors = &.{
-        .from_lang(.English),
-        .from_str("Raspberry Pi"),
-        .from_str("Pico Test Device"),
-        .from_str("someserial"),
-        .from_str("Board CDC"),
-    },
+    .bcd_usb = USB_Device.max_supported_bcd_usb,
+    .device_triple = .unspecified,
+    .vendor = USB_Device.default_vendor_id,
+    .product = USB_Device.default_product_id,
+    .bcd_device = .from(1, 0, 0),
+    .serial = "someserial",
+    .max_supported_packet_size = USB_Device.max_supported_packet_size,
     .configurations = &.{.{
-        .num = 1,
-        .configuration_s = 0,
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
         .Drivers = struct { serial: USB_Serial, reset: rp2xxx.usb.ResetDriver(null, 0) },
     }},
-    .max_supported_packet_size = USB_Device.max_supported_packet_size,
-}) = .init;
+}, .{.{
+    .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
+    .reset = "",
+}}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
