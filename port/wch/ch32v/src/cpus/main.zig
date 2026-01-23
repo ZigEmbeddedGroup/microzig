@@ -285,10 +285,7 @@ pub const startup_logic = struct {
         // and transfer control to it using the `mret` instruction.
         // This is necessary to ensure proper MCU startup after a power-off.
         // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
-        asm volatile (
-            \\la t0, microzig_main
-            \\csrw mepc, t0
-        );
+        csr.mepc.write(@intFromPtr(&microzig_main));
 
         // Return from the interrupt.
         asm volatile ("mret");
