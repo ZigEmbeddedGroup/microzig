@@ -13,7 +13,7 @@ pub const CpuName = enum {
     @"qingkev2-rv32ec",
     @"qingkev3-rv32imac",
     @"qingkev4-rv32imac",
-    @"qingkev4-rv32imafc",
+    @"qingkev4-rv32imacf",
 };
 pub const cpu_name: CpuName = std.meta.stringToEnum(CpuName, microzig.config.cpu_name) orelse @compileError("Unknown CPU name: " ++ microzig.config.cpu_name);
 
@@ -245,7 +245,7 @@ pub const startup_logic = struct {
                 // Enable interrupt nesting and hardware stack.
                 csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .pmtcfg = 0 });
             },
-            .@"qingkev4-rv32imafc" => {
+            .@"qingkev4-rv32imacf" => {
                 // Configure pipelining and instruction prediction.
                 csr.corecfgr.write_raw(0x1f);
                 // Enable interrupt nesting and hardware stack.
@@ -271,7 +271,7 @@ pub const startup_logic = struct {
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
-            .fs = if (cpu_name == .@"qingkev4-rv32imafc") .dirty else .off,
+            .fs = if (cpu_name == .@"qingkev4-rv32imacf") .dirty else .off,
             .mpp = 0x3,
         });
 
