@@ -39,7 +39,7 @@ fn task1(queue: *rtos.Queue(u32)) void {
 }
 
 pub fn main() !void {
-    var heap = microzig.Allocator.init_with_buffer(&heap_buf);
+    var heap = try microzig.Allocator.init_with_buffer(&heap_buf);
     const gpa = heap.allocator();
 
     var buffer: [1]u32 = undefined;
