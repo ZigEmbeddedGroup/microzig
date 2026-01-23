@@ -205,7 +205,7 @@ pub fn DeviceController(config: Config) type {
             var next_string = 4;
 
             var size = @sizeOf(descriptor.Configuration);
-            var field_names: [driver_fields.len + 1][:0]const u8 = undefined;
+            var field_names: [driver_fields.len][:0]const u8 = undefined;
             var field_types: [field_names.len]type = undefined;
             var field_attrs: [field_names.len]StructFieldAttributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
@@ -260,9 +260,9 @@ pub fn DeviceController(config: Config) type {
                         else => {},
                     }
                 }
-                field_names[drv_id + 1] = drv.name;
-                field_types[drv_id + 1] = Descriptors;
-                field_attrs[drv_id + 1] = .{ .default_value_ptr = &descriptors };
+                field_names[drv_id] = drv.name;
+                field_types[drv_id] = Descriptors;
+                field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
             if (next_string != config.string_descriptors.len)
@@ -270,19 +270,6 @@ pub fn DeviceController(config: Config) type {
                     "expected {} string descriptros, got {}",
                     .{ next_string, config.string_descriptors.len },
                 ));
-
-            const desc_cfg: descriptor.Configuration = .{
-                .total_length = .from(size),
-                .num_interfaces = alloc.next_itf_num,
-                .configuration_value = config0.num,
-                .configuration_s = config0.configuration_s,
-                .attributes = config0.attributes,
-                .max_current = .from_ma(config0.max_current_ma),
-            };
-
-            field_names[0] = "__configuration_descriptor";
-            field_types[0] = descriptor.Configuration;
-            field_attrs[0] = .{ .default_value_ptr = &desc_cfg };
 
             const Tuple = std.meta.Tuple;
             const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
@@ -294,10 +281,21 @@ pub fn DeviceController(config: Config) type {
                 }
             }
 
+            const DriverConfig = Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
             const idx_in = @intFromEnum(types.Dir.In);
             const idx_out = @intFromEnum(types.Dir.Out);
             break :blk .{
-                .config_descriptor = Struct(.auto, null, &field_names, &field_types, &field_attrs){},
+                .config_descriptor = extern struct {
+                    first: descriptor.Configuration = .{
+                        .total_length = .from(size),
+                        .num_interfaces = alloc.next_itf_num,
+                        .configuration_value = config0.num,
+                        .configuration_s = config0.configuration_s,
+                        .attributes = config0.attributes,
+                        .max_current = .from_ma(config0.max_current_ma),
+                    },
+                    drv: DriverConfig = .{},
+                }{},
                 .handlers_itf = itf_handlers,
                 .handlers_ep = struct {
                     In: ep_handlers_types[idx_in] = ep_handlers[idx_in],
@@ -418,7 +416,7 @@ pub fn DeviceController(config: Config) type {
                     log.debug("Device setup: {any}", .{request});
                     switch (request) {
                         .GetStatus => {
-                            const attr = config_descriptor.__configuration_descriptor.attributes;
+                            const attr = config_descriptor.first.attributes;
                             const status: types.DeviceStatus = comptime .create(attr.self_powered, false);
                             return std.mem.asBytes(&status);
                         },
@@ -500,7 +498,7 @@ pub fn DeviceController(config: Config) type {
             // We support just one config for now so ignore config index
             self.driver_data = @as(config0.Drivers, undefined);
             inline for (driver_fields) |fld_drv| {
-                const cfg = @field(config_descriptor, fld_drv.name);
+                const cfg = @field(config_descriptor.drv, fld_drv.name);
                 const desc_fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
 
                 // Open OUT endpoint first so that the driver can call ep_listen in init
