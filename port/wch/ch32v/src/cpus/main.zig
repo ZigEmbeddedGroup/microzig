@@ -288,6 +288,9 @@ pub const startup_logic = struct {
         csr.mepc.write(@intFromPtr(&microzig_main));
 
         // Return from the interrupt.
+        // This changes the privilege level to mstatus.mpp, set above. In this case we are in
+        // machine mode and we are switching to machine mode, but normally this could switch us to
+        // user mode.
         asm volatile ("mret");
     }
 
