@@ -60,24 +60,19 @@ pub fn SliceVector(comptime Slice: type) type {
     if (type_info.pointer.size != .slice)
         @compileError("Slice must have a slice type!");
 
-    const item_ptr_info: std.builtin.Type = .{
-        .pointer = .{
-            .alignment = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
-            .size = .one,
-            .child = type_info.pointer.child,
-            .address_space = type_info.pointer.address_space,
-            .is_const = type_info.pointer.is_const,
-            .is_volatile = type_info.pointer.is_volatile,
-            .is_allowzero = type_info.pointer.is_allowzero,
-            .sentinel_ptr = null,
-        },
+    const item_ptr_attrs: std.builtin.Type.Pointer.Attributes = .{
+        .alignment = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
+        .address_space = type_info.pointer.address_space,
+        .is_const = type_info.pointer.is_const,
+        .is_volatile = type_info.pointer.is_volatile,
+        .is_allowzero = type_info.pointer.is_allowzero,
     };
 
     return struct {
         const Vector = @This();
 
         pub const Item = type_info.pointer.child;
-        pub const ItemPtr = @Type(item_ptr_info);
+        pub const ItemPtr = @Pointer(.one, item_ptr_attrs, type_info.pointer.child, null);
 
         /// The slice of slices. The first and the last slice of this slice must
         /// be non-empty or the slice-of-slices must be empty.
@@ -257,21 +252,15 @@ pub fn GenerateInterruptEnum(TagType: type) type {
 
     if (microzig.chip.interrupts.len == 0) return enum {};
 
-    var fields: [microzig.chip.interrupts.len]std.builtin.Type.EnumField = undefined;
+    var field_names: [microzig.chip.interrupts.len][]const u8 = undefined;
+    var field_values: [microzig.chip.interrupts.len]TagType = undefined;
 
-    for (&fields, microzig.chip.interrupts) |*field, interrupt| {
-        field.* = .{
-            .name = interrupt.name,
-            .value = interrupt.index,
-        };
+    for (microzig.chip.interrupts, &field_names, &field_values) |interrupt, *name, *value| {
+        name.* = interrupt.name;
+        value.* = interrupt.index;
     }
 
-    return @Type(.{ .@"enum" = .{
-        .tag_type = TagType,
-        .fields = &fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
+    return @Enum(TagType, .exhaustive, &field_names, &field_values);
 }
 
 pub const Source = struct {
@@ -280,30 +269,38 @@ pub const Source = struct {
 };
 
 pub fn GenerateInterruptOptions(sources: []const Source) type {
-    var ret_fields: []const std.builtin.Type.StructField = &.{};
+    const len = blk: {
+        var len: usize = 0;
+        for (sources) |source| {
+            if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
 
+            for (@typeInfo(source.InterruptEnum).@"enum".fields) |_| {
+                len += 1;
+            }
+        }
+
+        break :blk len;
+    };
+
+    var field_names: [len][]const u8 = undefined;
+    var field_types: [len]type = undefined;
+    var field_attrs: [len]std.builtin.Type.StructField.Attributes = undefined;
+    var idx: usize = 0;
     for (sources) |source| {
         if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
 
         for (@typeInfo(source.InterruptEnum).@"enum".fields) |enum_field| {
-            ret_fields = ret_fields ++ .{std.builtin.Type.StructField{
-                .name = enum_field.name,
-                .type = ?source.HandlerFn,
+            field_names[idx] = enum_field.name;
+            field_types[idx] = ?source.HandlerFn;
+            field_attrs[idx] = .{
                 .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(?source.HandlerFn, null))),
-                .is_comptime = false,
-                .alignment = @alignOf(?source.HandlerFn),
-            }};
+            };
+
+            idx += 1;
         }
     }
 
-    return @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = ret_fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
+    return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
 }
 
 test SliceVector {

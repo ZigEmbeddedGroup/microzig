@@ -69,25 +69,19 @@ pub const ExternalInterrupt = blk: {
 
     if (result_len == 0) break :blk enum {};
 
-    var fields: [result_len]std.builtin.Type.EnumField = undefined;
+    var field_names: [result_len][]const u8 = undefined;
+    var field_values: [result_len]u8 = undefined;
     var field_index: usize = 0;
 
     for (microzig.chip.interrupts) |intr| {
         if (intr.index >= 0) {
-            fields[field_index] = .{
-                .name = intr.name,
-                .value = intr.index,
-            };
+            field_names[field_index] = intr.name;
+            field_values[field_index] = intr.index;
             field_index += 1;
         }
     }
 
-    break :blk @Type(.{ .@"enum" = .{
-        .tag_type = u8,
-        .fields = &fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
+    break :blk @Enum(u8, .exhaustive, field_names, field_values);
 };
 
 /// Machine exceptions.
@@ -105,25 +99,19 @@ pub const Exception = blk: {
 
     if (result_len == 0) break :blk enum {};
 
-    var fields: [result_len]std.builtin.Type.EnumField = undefined;
+    var field_names: [result_len][]const u8 = undefined;
+    var field_values: [result_len]u4 = undefined;
     var field_index: usize = 0;
 
     for (microzig.chip.interrupts) |intr| {
         if (intr.index < 0) {
-            fields[field_index] = .{
-                .name = intr.name,
-                .value = 16 + intr.index, // Cortex-M exceptions are mapped to vector table slots 0 - 15
-            };
+            field_names[field_index] = intr.name;
+            field_values[field_index] = 16 + intr.index; // Cortex-M exceptions are mapped to vector table slots 0 - 15
             field_index += 1;
         }
     }
 
-    break :blk @Type(.{ .@"enum" = .{
-        .tag_type = u4,
-        .fields = &fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
+    break :blk @Enum(u4, .exhaustive, field_names, field_values);
 };
 
 pub const interrupt = struct {

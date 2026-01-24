@@ -144,12 +144,12 @@ pub const ChipFile = struct {
     }
 };
 
-pub fn load_into_db(db: *Database, path: []const u8) !void {
-    var package_dir = try std.fs.cwd().openDir(path, .{});
-    defer package_dir.close();
+pub fn load_into_db(io: std.Io, db: *Database, path: []const u8) !void {
+    var package_dir = try std.Io.Dir.cwd().openDir(io, path, .{});
+    defer package_dir.close(io);
 
-    var data_dir = try package_dir.openDir("data", .{});
-    defer data_dir.close();
+    var data_dir = try package_dir.openDir(io, "data", .{});
+    defer data_dir.close(io);
 
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
@@ -171,17 +171,17 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         register_files.deinit();
     }
 
-    var chips_dir = try data_dir.openDir("chips", .{ .iterate = true });
-    defer chips_dir.close();
+    var chips_dir = try data_dir.openDir(io, "chips", .{ .iterate = true });
+    defer chips_dir.close(io);
 
     var it = chips_dir.iterate();
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
         std.log.info("file: {s}", .{entry.name});
 
-        const chip_file_text = try chips_dir.readFileAlloc(allocator, entry.name, std.math.maxInt(usize));
+        const chip_file_text = try chips_dir.readFileAlloc(io, entry.name, allocator, .unlimited);
         defer allocator.free(chip_file_text);
 
         var scanner = std.json.Scanner.initCompleteInput(allocator, chip_file_text);
@@ -201,8 +201,8 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         try chip_files.append(allocator, chips_file);
     }
 
-    var registers_dir = try data_dir.openDir("registers", .{ .iterate = true });
-    defer registers_dir.close();
+    var registers_dir = try data_dir.openDir(io, "registers", .{ .iterate = true });
+    defer registers_dir.close(io);
 
     //This holds extra data for extended registers
     var extends_list_arena = std.heap.ArenaAllocator.init(allocator);
@@ -210,13 +210,13 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
     const extends_list_allocator = extends_list_arena.allocator();
 
     it = registers_dir.iterate();
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
         std.log.info("file: {s}", .{entry.name});
 
-        const register_file_text = try registers_dir.readFileAlloc(allocator, entry.name, std.math.maxInt(usize));
+        const register_file_text = try registers_dir.readFileAlloc(io, entry.name, allocator, .unlimited);
         defer allocator.free(register_file_text);
 
         var scanner = std.json.Scanner.initCompleteInput(allocator, register_file_text);
@@ -486,6 +486,7 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
 
 /// Reads throught the json data handles the "extends" inheritance.
 fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Allocator, root_json: *std.json.Value) !void {
+    var root_json_clone = std.json.Value{ .object = try root_json.object.clone() };
     var itr = root_json.object.iterator();
     while (itr.next()) |entry| {
         const item_name = entry.key_ptr.*;
@@ -508,7 +509,7 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
             }
 
             // Handle all parents and grandparents of the current child.
-            try resolve_inheritance_recursively(allocator, root_json, item_name, &arr);
+            try resolve_inheritance_recursively(allocator, &root_json_clone, item_name, &arr);
 
             // Replacement items will go here and should be released via the arena extends allocator
             var new_list = std.json.Array.init(extends_allocator);
@@ -516,8 +517,10 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
                 try new_list.append(value);
             }
             try child.object.put(list_name, std.json.Value{ .array = new_list });
+            try root_json_clone.object.put(item_name, child);
         }
     }
+    root_json.* = root_json_clone;
 }
 
 // General function to handle inheritance
