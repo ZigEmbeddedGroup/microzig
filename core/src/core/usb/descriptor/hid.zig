@@ -73,7 +73,8 @@ pub const HID = extern struct {
     /// Type of this descriptor
     descriptor_type: descriptor.Type = .CsDevice,
     /// Numeric expression identifying the HID Class Specification release
-    bcd_hid: types.U16_Le,
+    /// 1.11 seems to be the only one
+    bcd_hid: types.Version = .v1_11,
     /// Numeric expression identifying country code of the localized hardware
     country_code: CountryCode,
     /// Numeric expression specifying the number of class descriptors

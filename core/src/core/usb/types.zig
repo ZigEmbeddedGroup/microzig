@@ -412,20 +412,25 @@ pub const Version = extern struct {
     pub const DigitPair = packed struct(u8) {
         low: u4,
         high: u4,
+
+        pub fn from(value: u7) @This() {
+            return .{ .low = @intCast(value % 10), .high = @intCast(value / 10) };
+        }
     };
 
-    low: DigitPair,
-    high: DigitPair,
+    minor: DigitPair,
+    major: DigitPair,
 
-    pub const v1_0: @This() = .from(1, 0, 0);
-    pub const v1_1: @This() = .from(1, 1, 0);
-    pub const v2_0: @This() = .from(2, 0, 0);
-    pub const v2_1: @This() = .from(2, 1, 0);
+    pub const v1_00: @This() = .from(1, 0);
+    pub const v1_10: @This() = .from(1, 10);
+    pub const v1_11: @This() = .from(1, 11);
+    pub const v2_00: @This() = .from(2, 0);
+    pub const v2_10: @This() = .from(2, 10);
 
-    pub fn from(major: u4, minor: u4, revision: u4) @This() {
+    pub fn from(major: u7, minor: u7) @This() {
         return .{
-            .high = .{ .high = 0, .low = major },
-            .low = .{ .high = minor, .low = revision },
+            .minor = .from(minor),
+            .major = .from(major),
         };
     }
 };

@@ -15,7 +15,7 @@ var usb_controller: usb.DeviceController(.{
     .device_triple = .unspecified,
     .vendor = USB_Device.default_vendor_id,
     .product = USB_Device.default_product_id,
-    .bcd_device = .from(1, 0, 0),
+    .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
     .configurations = &.{.{
@@ -39,7 +39,7 @@ pub const microzig_options = microzig.Options{
     .log_scope_levels = &.{
         .{ .scope = .usb_dev, .level = .warn },
         .{ .scope = .usb_ctrl, .level = .warn },
-        // .{ .scope = .usb_hid, .level = .warn },
+        .{ .scope = .usb_hid, .level = .warn },
     },
     .logFn = rp2xxx.uart.log,
 };

@@ -89,7 +89,6 @@ pub fn Keyboard(options: KeyboardOptions) type {
                         .interface_s = alloc.string(desc_options.itf_string),
                     },
                     .hid = .{
-                        .bcd_hid = .from(0x0111),
                         .country_code = .NotSupported,
                         .num_descriptors = 1,
                         .report_length = .from(@sizeOf(@TypeOf(report_descriptor))),
