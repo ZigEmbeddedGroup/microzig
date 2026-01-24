@@ -496,6 +496,7 @@ pub const csr = struct {
     // 'Value' of an exception, e.g. the address of where a memory access exception occurred.
     pub const mtval = riscv32_common.csr.mtval;
 
+    // Physical memory protection
     pub const pmpcfg0 = riscv32_common.csr.pmpcfg0;
     pub const pmpaddr0 = riscv32_common.csr.pmpaddr0;
     pub const pmpaddr1 = riscv32_common.csr.pmpaddr1;

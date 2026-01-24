@@ -248,7 +248,9 @@ pub inline fn system_init(comptime chip: anytype) void {
 
 pub const csr_types = struct {
     pub const intsyscr = packed struct(u32) {
-        /// [0] HPE enable
+        /// [0] Hardware Prologue/Epilogue (HPE) enable
+        /// NOTE: Probably not supported by the Zig compiler. Would require
+        /// __attribute__((interrupt("WCH-Interrupt-fast"))).
         hwstken: u1,
         /// [1] Interrupt nesting enable
         inesten: u1,
