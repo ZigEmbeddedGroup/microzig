@@ -714,7 +714,7 @@ pub const TimerTicks = enum(u52) {
     pub fn is_reached_by(a: TimerTicks, b: TimerTicks) bool {
         const _a = @intFromEnum(a);
         const _b = @intFromEnum(b);
-        return _b -% _a < std.math.maxInt(u51);
+        return _b -% _a <= std.math.maxInt(u51);
     }
 
     pub fn add_duration(ticks: TimerTicks, duration: time.Duration) TimerTicks {
