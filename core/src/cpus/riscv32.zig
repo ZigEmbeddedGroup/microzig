@@ -14,27 +14,6 @@ pub fn wfe() void {
     asm volatile ("csrs 0x810, 0x1");
 }
 
-pub fn pmp_open_all_space() void {
-    asm volatile (
-        \\
-        // Config entry0 addr to all 1s to make the range cover all space
-        \\li x6, 0xffffffff
-        \\csrw pmpaddr0, x6
-        // Config entry0 cfg to make it NAPOT address mode, and R/W/X okay
-        \\li x6, 0x7f
-        \\csrw pmpcfg0, x6
-        ::: .{ .x6 = true });
-}
-
-pub fn switch_m2u_mode() void {
-    asm volatile (
-        \\la x6, 1f
-        \\csrw mepc, x6
-        \\mret
-        \\1:
-        ::: .{ .x6 = true });
-}
-
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
