@@ -13,7 +13,7 @@ pub const CpuName = enum {
     @"qingkev2-rv32ec",
     @"qingkev3-rv32imac",
     @"qingkev4-rv32imac",
-    @"qingkev4-rv32imafc",
+    @"qingkev4-rv32imacf",
 };
 pub const cpu_name: CpuName = std.meta.stringToEnum(CpuName, microzig.config.cpu_name) orelse @compileError("Unknown CPU name: " ++ microzig.config.cpu_name);
 
@@ -195,7 +195,10 @@ pub inline fn wfi() void {
 }
 
 pub inline fn wfe() void {
+    // We SETEVENT so the wfe immediately wakes and clears any pending events.
+    // This ensures the second one actually stays asleep.
     PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
+    asm volatile ("wfi");
     asm volatile ("wfi");
 }
 
@@ -245,7 +248,7 @@ pub const startup_logic = struct {
                 // Enable interrupt nesting and hardware stack.
                 csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .pmtcfg = 0 });
             },
-            .@"qingkev4-rv32imafc" => {
+            .@"qingkev4-rv32imacf" => {
                 // Configure pipelining and instruction prediction.
                 csr.corecfgr.write_raw(0x1f);
                 // Enable interrupt nesting and hardware stack.
@@ -271,7 +274,7 @@ pub const startup_logic = struct {
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
-            .fs = if (cpu_name == .@"qingkev4-rv32imafc") .dirty else .off,
+            .fs = if (cpu_name == .@"qingkev4-rv32imacf") .dirty else .off,
             .mpp = 0x3,
         });
 
@@ -285,12 +288,12 @@ pub const startup_logic = struct {
         // and transfer control to it using the `mret` instruction.
         // This is necessary to ensure proper MCU startup after a power-off.
         // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
-        asm volatile (
-            \\la t0, microzig_main
-            \\csrw mepc, t0
-        );
+        csr.mepc.write(@intFromPtr(&microzig_main));
 
         // Return from the interrupt.
+        // This changes the privilege level to mstatus.mpp, set above. In this case we are in
+        // machine mode and we are switching to machine mode, but normally this could switch us to
+        // user mode.
         asm volatile ("mret");
     }
 
@@ -395,7 +398,7 @@ fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler 
     return null;
 }
 
-const vector_table = generate_vector_table();
+const vector_table: VectorTable = generate_vector_table();
 
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
@@ -465,7 +468,8 @@ pub const csr = struct {
     pub const misa = Csr(0x301, packed struct(u32) {
         extensions: u26 = 0,
         reserved26: u4 = 0,
-        mxl: u2 = 0,
+        // Machine work length. 1 => 32 bit
+        mxl: u2 = 1,
     });
     /// Machine Mode Exception Base Address Register
     pub const mtvec = Csr(0x305, packed struct(u32) {
@@ -486,16 +490,27 @@ pub const csr = struct {
     });
 
     pub const mscratch = riscv32_common.csr.mscratch;
+    // PC where to `mret` returns to after an interrupt or exception handler runs.
+    // - For interrupts, it's set to the next unexecuted instruction.
+    // - For exceptions, it's set to the instruction that was executing when the exception occured.
+    //   That means that `mepc` might need to be modified if we want to 'recover' from an exception.
     pub const mepc = riscv32_common.csr.mepc;
+    // Cause of the interrupt/exception.
     pub const mcause = riscv32_common.csr.mcause;
+    // 'Value' of an exception, e.g. the address of where a memory access exception occurred.
     pub const mtval = riscv32_common.csr.mtval;
 
+    // Physical memory protection
     pub const pmpcfg0 = riscv32_common.csr.pmpcfg0;
     pub const pmpaddr0 = riscv32_common.csr.pmpaddr0;
     pub const pmpaddr1 = riscv32_common.csr.pmpaddr1;
     pub const pmpaddr2 = riscv32_common.csr.pmpaddr2;
     pub const pmpaddr3 = riscv32_common.csr.pmpaddr3;
 
+    // Hardware floating point registers
+    // NOTE: QingKeV4F only
+    pub const fflags = riscv32_common.csr.fflags;
+    pub const frm = riscv32_common.csr.frm;
     pub const fcsr = Csr(0x003, packed struct(u32) {
         nx: u1 = 0,
         uf: u1 = 0,
@@ -505,9 +520,8 @@ pub const csr = struct {
         frm: u3 = 0,
         reserved8: u24 = 0,
     });
-    pub const fflags = riscv32_common.csr.fflags;
-    pub const frm = riscv32_common.csr.frm;
 
+    // Debug registers
     pub const dcsr = riscv32_common.csr.dcsr;
     pub const dpc = riscv32_common.csr.dpc;
     pub const dscratch0 = riscv32_common.csr.dscratch0;

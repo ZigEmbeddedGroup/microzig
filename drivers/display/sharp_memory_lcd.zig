@@ -241,7 +241,7 @@ pub fn SharpMemory_LCD(comptime config: Config) type {
 }
 
 /// Generate a framebuffer type for the specified dimensions
-fn Framebuffer_Type(comptime width: comptime_int, comptime height: comptime_int) type {
+fn Framebuffer_Type(width: comptime_int, height: comptime_int) type {
     return struct {
         const Self = @This();
 
