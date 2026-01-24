@@ -1,3 +1,7 @@
+///
+/// Processor-specific configuration for WCH QingkeV4F processor
+/// https://riscv.pk/wp-content/uploads/2024/10/QingKeV4_Processor_Manual.pdf
+///
 pub const cpu_frequency = 8_000_000; // 8 MHz
 
 pub const Interrupt = enum(u8) {

@@ -465,7 +465,8 @@ pub const csr = struct {
     pub const misa = Csr(0x301, packed struct(u32) {
         extensions: u26 = 0,
         reserved26: u4 = 0,
-        mxl: u2 = 0,
+        // Machine work length. 1 => 32 bit
+        mxl: u2 = 1,
     });
     /// Machine Mode Exception Base Address Register
     pub const mtvec = Csr(0x305, packed struct(u32) {
@@ -503,6 +504,10 @@ pub const csr = struct {
     pub const pmpaddr2 = riscv32_common.csr.pmpaddr2;
     pub const pmpaddr3 = riscv32_common.csr.pmpaddr3;
 
+    // Hardware floating point registers
+    // NOTE: QingKeV4F only
+    pub const fflags = riscv32_common.csr.fflags;
+    pub const frm = riscv32_common.csr.frm;
     pub const fcsr = Csr(0x003, packed struct(u32) {
         nx: u1 = 0,
         uf: u1 = 0,
@@ -512,9 +517,8 @@ pub const csr = struct {
         frm: u3 = 0,
         reserved8: u24 = 0,
     });
-    pub const fflags = riscv32_common.csr.fflags;
-    pub const frm = riscv32_common.csr.frm;
 
+    // Debug registers
     pub const dcsr = riscv32_common.csr.dcsr;
     pub const dpc = riscv32_common.csr.dpc;
     pub const dscratch0 = riscv32_common.csr.dscratch0;
