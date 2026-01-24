@@ -34,7 +34,6 @@ const systimer = @import("systimer.zig");
 // TODO: direct task signaling
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
-// TODO: better handling if timeout is in the past or very short
 // TODO: support SMP for other esp32 chips with multicore (far future)
 
 const STACK_ALIGN: std.mem.Alignment = .@"16";
