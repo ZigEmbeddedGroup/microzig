@@ -525,16 +525,15 @@ pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ 
                 const task: *Task = @alignCast(@fieldParentPtr("node", node));
                 if (!task.state.alarm_set.is_reached_by(.now())) {
                     rtos_state.timer_queue.prepend(&task.node);
-                    break;
+                    rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
+                    rtos_options.systimer_alarm.set_enabled(true);
+                    if (task.state.alarm_set.is_reached_by(.now()))
+                        continue
+                    else
+                        break;
                 }
                 task.state = .ready;
                 rtos_state.ready_queue.put(task);
-            }
-
-            if (rtos_state.timer_queue.first) |node| {
-                const task: *Task = @alignCast(@fieldParentPtr("node", node));
-                rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
-                rtos_options.systimer_alarm.set_enabled(true);
             } else {
                 rtos_options.systimer_alarm.set_enabled(false);
             }
@@ -566,6 +565,9 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
     if (rtos_state.timer_queue.first == &sleeping_task.node) {
         rtos_options.systimer_alarm.set_target(@intFromEnum(ticks));
         rtos_options.systimer_alarm.set_enabled(true);
+        if (ticks.is_reached_by(.now())) {
+            make_ready(sleeping_task);
+        }
     }
 }
 
