@@ -9,13 +9,16 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 pub const std_options = std.Options{
-    .log_level = .warn,
+    .log_level = .debug,
 };
 
-pub fn main() !void {
-    main_impl() catch |err| switch (err) {
+
+pub fn main(init: std.process.Init) !void {
+    main_impl(init) catch |err| switch (err) {
         error.Explained => std.process.exit(1),
-        else => return err,
+        else => {
+            return err;
+        },
     };
 }
 
@@ -62,9 +65,10 @@ fn print_usage(writer: *std.Io.Writer) !void {
     try writer.flush();
 }
 
-fn parse_args(allocator: Allocator) !Arguments {
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+fn parse_args(init: std.process.Init) !Arguments {
+    const io = init.io;
+    const allocator = init.arena.allocator();
+    const args = try init.minimal.args.toSlice(allocator);
 
     var ret = Arguments{
         .allocator = allocator,
@@ -104,7 +108,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             std.log.err("Unknown argument '{s}'", .{args[i]});
 
             var buf: [80]u8 = undefined;
-            var writer = std.fs.File.stderr().writer(&buf);
+            var writer = std.Io.File.stderr().writer(io, &buf);
             try print_usage(&writer.interface);
             return error.Explained;
         } else if (ret.input_path != null) {
@@ -120,20 +124,20 @@ fn parse_args(allocator: Allocator) !Arguments {
     return ret;
 }
 
-fn main_impl() anyerror!void {
+fn main_impl(init: std.process.Init) anyerror!void {
     defer xml.cleanupParser();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    const io = init.io;
+    const arena = init.arena.allocator();
 
-    const allocator = gpa.allocator();
+    const allocator = init.gpa;
 
-    var args = try parse_args(allocator);
+    var args = try parse_args(init);
     defer args.deinit();
 
     if (args.help) {
         var buf: [80]u8 = undefined;
-        var writer = std.fs.File.stdout().writer(&buf);
+        var writer = std.Io.File.stdout().writer(io, &buf);
         try print_usage(&writer.interface);
         return;
     }
@@ -146,11 +150,11 @@ fn main_impl() anyerror!void {
         return error.Explained;
     };
 
-    var db = try Database.create_from_path(allocator, format, input_path, args.device);
+    var db = try Database.create_from_path(io, allocator, format, input_path, args.device);
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {
-        const patch = try std.fs.cwd().readFileAllocOptions(allocator, patch_path, std.math.maxInt(u64), null, .@"1", 0);
+        const patch = try std.Io.Dir.cwd().readFileAllocOptions(io, patch_path, allocator, .limited(1024 * 1024), .@"1", 0);
         defer allocator.free(patch);
 
         var diags: std.zon.parse.Diagnostics = .{};
@@ -167,10 +171,7 @@ fn main_impl() anyerror!void {
 
     // arch dependent stuff
     {
-        var arena = ArenaAllocator.init(allocator);
-        defer arena.deinit();
-
-        for (try db.get_devices(arena.allocator())) |device| {
+        for (try db.get_devices(arena)) |device| {
             if (device.arch.is_arm()) {
                 const arm = @import("arch/arm.zig");
                 try arm.load_system_interrupts(db, device.id, device.arch);
@@ -182,9 +183,9 @@ fn main_impl() anyerror!void {
         try db.backup(dump_path);
     }
     // output_path is the directory to write files
-    var output_dir = try std.fs.cwd().makeOpenPath(output_path, .{});
-    defer output_dir.close();
+    var output_dir = try std.Io.Dir.cwd().createDirPathOpen(io, output_path, .{});
+    defer output_dir.close(io);
 
-    var fs = FS_Directory.init(output_dir);
+    var fs = FS_Directory.init(io, output_dir);
     try db.to_zig(fs.directory(), .{});
 }

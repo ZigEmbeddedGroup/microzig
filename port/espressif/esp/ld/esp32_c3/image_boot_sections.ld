@@ -115,4 +115,14 @@ SECTIONS
   } > DRAM
 
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
+
+  .eh_frame_hdr 0 (INFO) :
+  {
+    KEEP(*(.eh_frame_hdr))
+  }
+
+  .eh_frame 0 (INFO) :
+  {
+    KEEP(*(.eh_frame))
+  }
 }

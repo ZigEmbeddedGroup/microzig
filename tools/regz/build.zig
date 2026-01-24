@@ -39,7 +39,7 @@ pub fn build(b: *Build) !void {
         }),
         .use_llvm = true,
     });
-    regz.linkLibrary(libxml2_dep.artifact("xml2"));
+    regz.root_module.linkLibrary(libxml2_dep.artifact("xml2"));
     regz.root_module.addImport("zqlite", zqlite);
     b.installArtifact(regz);
 
@@ -66,7 +66,7 @@ pub fn build(b: *Build) !void {
         }),
         .use_llvm = true,
     });
-    tests.linkLibrary(libxml2_dep.artifact("xml2"));
+    tests.root_module.linkLibrary(libxml2_dep.artifact("xml2"));
     tests.root_module.addImport("zqlite", zqlite);
     tests.step.dependOn(&regz.step);
 

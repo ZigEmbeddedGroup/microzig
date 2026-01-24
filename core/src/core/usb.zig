@@ -83,18 +83,18 @@ pub fn DeviceController(config: Config) type {
             var num_ep_out = 1;
 
             var size = @sizeOf(descriptor.Configuration);
-            var fields: [driver_fields.len + 1]std.builtin.Type.StructField = undefined;
-
+            var field_names: [driver_fields.len + 1][]const u8 = undefined;
+            var field_types: [driver_fields.len + 1]type = undefined;
+            var field_attrs: [driver_fields.len + 1]std.builtin.Type.StructField.Attributes = undefined;
             for (driver_fields, 1..) |drv, i| {
                 const payload = drv.type.Descriptor.create(num_interfaces, num_strings, num_ep_in, num_ep_out);
                 const Payload = @TypeOf(payload);
                 size += @sizeOf(Payload);
 
-                fields[i] = .{
-                    .name = drv.name,
-                    .type = Payload,
+                field_names[i] = drv.name;
+                field_types[i] = Payload;
+                field_attrs[i] = .{
                     .default_value_ptr = &payload,
-                    .is_comptime = false,
                     .alignment = 1,
                 };
 
@@ -131,20 +131,14 @@ pub fn DeviceController(config: Config) type {
                 .max_current = .from_ma(config0.max_current_ma),
             };
 
-            fields[0] = .{
-                .name = "__configuration_descriptor",
-                .type = descriptor.Configuration,
+            field_names[0] = "__configuration_descriptor";
+            field_types[0] = descriptor.Configuration;
+            field_attrs[0] = .{
                 .default_value_ptr = &desc_cfg,
-                .is_comptime = false,
                 .alignment = 1,
             };
 
-            break :blk @Type(.{ .@"struct" = .{
-                .decls = &.{},
-                .fields = &fields,
-                .is_tuple = false,
-                .layout = .auto,
-            } }){};
+            break :blk @Struct(.auto, null, &field_names, &field_types, &field_attrs);
         };
 
         /// When the host sets the device address, the acknowledgement

@@ -298,7 +298,7 @@ pub fn build(b: *std.Build) !void {
             }},
         }),
     });
-    unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
+    unit_tests.root_module.addIncludePath(b.path("src/hal/pio/assembler"));
 
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
@@ -331,7 +331,7 @@ fn get_bootrom(b: *std.Build, target: *const microzig.Target, rom: BootROM) std.
     //rom_exe.linkage = .static;
     rom_exe.build_id = .none;
     rom_exe.setLinkerScript(b.path(b.fmt("src/bootroms/{s}/shared/stage2.ld", .{target.chip.name})));
-    rom_exe.addAssemblyFile(b.path(b.fmt("src/bootroms/{s}/{s}.S", .{ target.chip.name, @tagName(rom) })));
+    rom_exe.root_module.addAssemblyFile(b.path(b.fmt("src/bootroms/{s}/{s}.S", .{ target.chip.name, @tagName(rom) })));
     rom_exe.entry = .{ .symbol_name = "_stage2_boot" };
 
     const rom_objcopy = b.addObjCopy(rom_exe.getEmittedBin(), .{

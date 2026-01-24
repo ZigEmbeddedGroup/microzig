@@ -14,15 +14,11 @@ pub const Args = struct {
 
 var writer_buf: [1024]u8 = undefined;
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug_allocator.deinit();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const arena = init.arena.allocator();
 
-    var arena: std.heap.ArenaAllocator = .init(debug_allocator.allocator());
-    defer arena.deinit();
-
-    const allocator = arena.allocator();
-    const args = try std.process.argsAlloc(allocator);
+    const args = try init.minimal.args.toSlice(arena);
     if (args.len < 3 or args.len > 4) {
         return error.UsageError;
     }
@@ -30,17 +26,17 @@ pub fn main() !void {
     const json_args = args[1];
     const output_path = args[2];
 
-    const parsed_args = try std.json.parseFromSliceLeaky(Args, allocator, json_args, .{});
+    const parsed_args = try std.json.parseFromSliceLeaky(Args, arena, json_args, .{});
 
     const maybe_user_linker_script = if (args.len == 4)
-        try std.fs.cwd().readFileAlloc(allocator, args[3], 100 * 1024 * 1024)
+        try std.Io.Dir.cwd().readFileAlloc(io, args[3], arena, .limited(100 * 1024 * 1024))
     else
         null;
 
-    const file = try std.fs.cwd().createFile(output_path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer file.close(io);
 
-    var writer = file.writer(&writer_buf);
+    var writer = file.writer(io, &writer_buf);
     try writer.interface.print(
         \\/*
         \\ * Target CPU:  {[cpu]s}
@@ -54,14 +50,14 @@ pub fn main() !void {
     });
 
     // name all unnamed regions
-    const region_names: [][]const u8 = try allocator.alloc([]const u8, parsed_args.memory_regions.len);
+    const region_names: [][]const u8 = try arena.alloc([]const u8, parsed_args.memory_regions.len);
     {
         var counters: [5]usize = @splat(0);
         for (region_names, parsed_args.memory_regions) |*region_name, region| {
             if (region.name) |name| {
-                region_name.* = try allocator.dupe(u8, name);
+                region_name.* = try arena.dupe(u8, name);
             } else {
-                region_name.* = try std.fmt.allocPrint(allocator, "{s}{}", .{
+                region_name.* = try std.fmt.allocPrint(arena, "{s}{}", .{
                     @tagName(region.tag),
                     counters[@intFromEnum(region.tag)],
                 });
@@ -252,7 +248,7 @@ pub fn main() !void {
             \\
         , .{
             if (!parsed_args.ram_image)
-                try std.fmt.allocPrint(allocator, "{s} AT> {s}", .{ ram_region_name, flash_region_name })
+                try std.fmt.allocPrint(arena, "{s} AT> {s}", .{ ram_region_name, flash_region_name })
             else
                 ram_region_name,
             ram_region_name,
@@ -274,9 +270,20 @@ pub fn main() !void {
 
         try writer.interface.writeAll(
             \\
+            \\  .eh_frame_hdr 0 (INFO) :
+            \\  {
+            \\    KEEP(*(.eh_frame_hdr))
+            \\  }
+            \\
+            \\  .eh_frame 0 (INFO) :
+            \\  {
+            \\    KEEP(*(.eh_frame))
+            \\  }
+            \\
             \\  microzig_data_load_start = LOADADDR(.data);
             \\
         );
+
         switch (parsed_args.cpu_arch) {
             .riscv32, .riscv64 => try writer.interface.writeAll(
                 \\  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);

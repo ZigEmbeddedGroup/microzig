@@ -17,7 +17,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.1
+          version: master
 
       - name: Download and install GitHub CLI
         run: |
@@ -64,8 +64,6 @@ jobs:
           # Generate metadata.json file
           echo "Generating metadata.json"
           echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > website/zig-out/downloads/microzig/metadata.json
-
-
 
       - name: List Contents
         run: tree zig-out
