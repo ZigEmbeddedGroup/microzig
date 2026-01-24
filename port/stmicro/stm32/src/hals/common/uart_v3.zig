@@ -79,7 +79,7 @@ pub fn Uart(comptime index: UART_Type) type {
             // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
             // from the chip
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
-            const usartdiv = @divTrunc(if (index == .USART1) rcc.current_clock.usart1_clk else rcc.current_clock.p1_clk, config.baud_rate);
+            const usartdiv = @divTrunc(rcc.get_clock(enums.to_peripheral(index)), config.baud_rate);
             regs.BRR.raw = @as(u16, @intCast(usartdiv));
             // TODO: We assume the default OVER8=0 configuration above.
 
