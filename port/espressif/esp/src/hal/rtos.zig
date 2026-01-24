@@ -521,22 +521,7 @@ pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ 
 
             rtos_options.systimer_alarm.clear_interrupt();
 
-            while (rtos_state.timer_queue.popFirst()) |node| {
-                const task: *Task = @alignCast(@fieldParentPtr("node", node));
-                if (!task.state.alarm_set.is_reached_by(.now())) {
-                    rtos_state.timer_queue.prepend(&task.node);
-                    rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
-                    rtos_options.systimer_alarm.set_enabled(true);
-                    if (task.state.alarm_set.is_reached_by(.now()))
-                        continue
-                    else
-                        break;
-                }
-                task.state = .ready;
-                rtos_state.ready_queue.put(task);
-            } else {
-                rtos_options.systimer_alarm.set_enabled(false);
-            }
+            sweep_timer_queue();
         }
 
         if (is_a_higher_priority_task_ready()) {
@@ -566,8 +551,27 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
         rtos_options.systimer_alarm.set_target(@intFromEnum(ticks));
         rtos_options.systimer_alarm.set_enabled(true);
         if (ticks.is_reached_by(.now())) {
-            make_ready(sleeping_task);
+            sweep_timer_queue();
         }
+    }
+}
+
+fn sweep_timer_queue() void {
+    while (rtos_state.timer_queue.popFirst()) |node| {
+        const task: *Task = @alignCast(@fieldParentPtr("node", node));
+        if (!task.state.alarm_set.is_reached_by(.now())) {
+            rtos_state.timer_queue.prepend(&task.node);
+            rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
+            rtos_options.systimer_alarm.set_enabled(true);
+            if (task.state.alarm_set.is_reached_by(.now()))
+                continue
+            else
+                break;
+        }
+        task.state = .ready;
+        rtos_state.ready_queue.put(task);
+    } else {
+        rtos_options.systimer_alarm.set_enabled(false);
     }
 }
 
