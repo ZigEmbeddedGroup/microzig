@@ -220,7 +220,7 @@ pub fn make_ready(task: *Task) void {
     switch (task.state) {
         .ready, .running, .scheduled_for_deletion => return,
         .none => {},
-        .alarm_set => |_| {
+        .alarm_set => {
             rtos_state.timer_queue.remove(&task.node);
         },
         .suspended => {
@@ -252,7 +252,7 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
     assert(microzig.cpu.csr.mscratch.read_raw() == 0);
 
     const current_task = rtos_state.current_task;
-    switch (action) {
+    action: switch (action) {
         .reschedule => {
             current_task.state = .ready;
             rtos_state.ready_queue.put(current_task);
@@ -261,6 +261,10 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
             assert(current_task != &idle_task);
 
             if (wait_action.timeout) |timeout| {
+                if (timeout.is_reached_by(.now())) {
+                    continue :action .reschedule;
+                }
+
                 schedule_wake_at(current_task, timeout);
             } else {
                 current_task.state = .suspended;
@@ -285,7 +289,7 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
 
 pub fn sleep(duration: time.Duration) void {
     const timeout: TimerTicks = .after(duration);
-    while (!timeout.is_reached())
+    while (!timeout.is_reached_by(.now()))
         yield(.{ .wait = .{ .timeout = timeout } });
 }
 
@@ -510,14 +514,30 @@ fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) v
 
 pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ .c = struct {
     pub fn handler_fn(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        const cs = enter_critical_section();
-        defer cs.leave();
-
         var status: microzig.cpu.interrupt.Status = .init();
         if (status.is_set(rtos_options.systimer_alarm.interrupt_source())) {
+            const cs = enter_critical_section();
+            defer cs.leave();
+
             rtos_options.systimer_alarm.clear_interrupt();
 
-            sweep_timer_queue_for_timeouts();
+            while (rtos_state.timer_queue.popFirst()) |node| {
+                const task: *Task = @alignCast(@fieldParentPtr("node", node));
+                if (!task.state.alarm_set.is_reached_by(.now())) {
+                    rtos_state.timer_queue.prepend(&task.node);
+                    break;
+                }
+                task.state = .ready;
+                rtos_state.ready_queue.put(task);
+            }
+
+            if (rtos_state.timer_queue.first) |node| {
+                const task: *Task = @alignCast(@fieldParentPtr("node", node));
+                rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
+                rtos_options.systimer_alarm.set_enabled(true);
+            } else {
+                rtos_options.systimer_alarm.set_enabled(false);
+            }
         }
 
         if (is_a_higher_priority_task_ready()) {
@@ -533,7 +553,7 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
     var maybe_node = rtos_state.timer_queue.first;
     while (maybe_node) |node| : (maybe_node = node.next) {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (ticks.is_before(task.state.alarm_set)) {
+        if (ticks.is_reached_by(task.state.alarm_set)) {
             rtos_state.timer_queue.insertBefore(&task.node, &sleeping_task.node);
             break;
         }
@@ -546,29 +566,6 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
     if (rtos_state.timer_queue.first == &sleeping_task.node) {
         rtos_options.systimer_alarm.set_target(@intFromEnum(ticks));
         rtos_options.systimer_alarm.set_enabled(true);
-
-        if (ticks.is_reached())
-            sweep_timer_queue_for_timeouts();
-    }
-}
-
-fn sweep_timer_queue_for_timeouts() void {
-    while (rtos_state.timer_queue.popFirst()) |node| {
-        const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (!task.state.alarm_set.is_reached()) {
-            rtos_state.timer_queue.prepend(&task.node);
-            break;
-        }
-        task.state = .ready;
-        rtos_state.ready_queue.put(task);
-    }
-
-    if (rtos_state.timer_queue.first) |node| {
-        const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
-        rtos_options.systimer_alarm.set_enabled(true);
-    } else {
-        rtos_options.systimer_alarm.set_enabled(false);
     }
 }
 
@@ -709,14 +706,10 @@ pub const TimerTicks = enum(u52) {
         return TimerTicks.now().add_duration(duration);
     }
 
-    pub fn is_reached(ticks: TimerTicks) bool {
-        return ticks.is_before(.now());
-    }
-
-    pub fn is_before(a: TimerTicks, b: TimerTicks) bool {
+    pub fn is_reached_by(a: TimerTicks, b: TimerTicks) bool {
         const _a = @intFromEnum(a);
         const _b = @intFromEnum(b);
-        return _a < _b or _b -% _a < _a;
+        return _b -% _a < std.math.maxInt(u51);
     }
 
     pub fn add_duration(ticks: TimerTicks, duration: time.Duration) TimerTicks {
@@ -801,7 +794,7 @@ pub const Mutex = struct {
 
         while (mutex.locked) |owning_task| {
             if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached())
+                if (timeout_ticks.is_reached_by(.now()))
                     return error.Timeout;
 
             // Owning task inherits the priority of the current task if it the
@@ -897,7 +890,7 @@ pub const Semaphore = struct {
 
         while (sem.current_value <= 0) {
             if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached())
+                if (timeout_ticks.is_reached_by(.now()))
                     return error.Timeout;
 
             sem.wait_queue.wait(rtos_state.current_task, maybe_timeout_ticks);
@@ -962,7 +955,7 @@ pub const TypeErasedQueue = struct {
             if (n >= min) return n;
 
             if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached())
+                if (timeout_ticks.is_reached_by(.now()))
                     return n;
 
             q.putters.wait(rtos_state.current_task, maybe_timeout_ticks);
@@ -1024,7 +1017,7 @@ pub const TypeErasedQueue = struct {
             if (n >= min) return n;
 
             if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached())
+                if (timeout_ticks.is_reached_by(.now()))
                     return n;
 
             q.getters.wait(rtos_state.current_task, maybe_timeout_ticks);

@@ -106,9 +106,6 @@ pub const Unit = enum(u1) {
         OP.modify(.{ .TIMER_UNIT0_UPDATE = 1 });
         while (OP.read().TIMER_UNIT0_VALUE_VALID != 1) {}
 
-        // Read LO, HI, then LO again, check that LO returns the same value. This accounts for the case
-        // when an interrupt may happen between reading HI and LO values, and this function may get
-        // called from the ISR. In this case, the repeated read will return consistent values.
         var lo_start = LO.read().TIMER_UNIT0_VALUE_LO; // 32 bits
         while (true) {
             const lo = lo_start;
@@ -202,7 +199,7 @@ pub const Alarm = enum(u2) {
     pub fn clear_interrupt(self: Alarm) void {
         switch (self) {
             .alarm0 => SYSTIMER.INT_CLR.modify(.{ .TARGET0_INT_CLR = 1 }),
-            .alarm1 => SYSTIMER.INT_CLR.modify(.{ .TARGET2_INT_CLR = 1 }),
+            .alarm1 => SYSTIMER.INT_CLR.modify(.{ .TARGET1_INT_CLR = 1 }),
             .alarm2 => SYSTIMER.INT_CLR.modify(.{ .TARGET2_INT_CLR = 1 }),
         }
     }
