@@ -1,5 +1,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
+const assert = std.debug.assert;
 const EP_Num = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_hid);
 
@@ -23,8 +24,8 @@ pub fn HidClassDriver(report_descriptor: anytype) type {
                 alloc: *usb.DescriptorAllocator,
                 max_supported_packet_size: usb.types.Len,
                 options: Options,
-            ) @This() {
-                return .{
+            ) usb.DescriptorCreateResult(@This()) {
+                return .{ .descriptor = .{
                     .interface = .{
                         .interface_number = alloc.next_itf(),
                         .alternate_setting = 0,
@@ -39,7 +40,7 @@ pub fn HidClassDriver(report_descriptor: anytype) type {
                     .hid = hid_descriptor,
                     .ep_out = .interrupt(alloc.next_ep(.Out), max_supported_packet_size, options.poll_interval),
                     .ep_in = .interrupt(alloc.next_ep(.In), max_supported_packet_size, options.poll_interval),
-                };
+                } };
             }
         };
 
@@ -58,7 +59,8 @@ pub fn HidClassDriver(report_descriptor: anytype) type {
         device: *usb.DeviceInterface,
         descriptor: *const Descriptor,
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []const u8) void {
+            assert(data.len == 0);
             self.* = .{
                 .device = device,
                 .descriptor = desc,

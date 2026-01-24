@@ -98,6 +98,14 @@ pub const DescriptorAllocator = struct {
     }
 };
 
+pub fn DescriptorCreateResult(Descriptor: type) type {
+    return struct {
+        descriptor: Descriptor,
+        alloc_bytes: usize = 0,
+        alloc_align: ?usize = null,
+    };
+}
+
 /// USB Device interface
 /// Any device implementation used with DeviceController must implement those functions
 pub const DeviceInterface = struct {
@@ -284,10 +292,17 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
             var itf_handlers: []const DriverEnum = &.{};
+            var driver_alloc_types: [driver_fields.len]type = undefined;
+            var driver_alloc_attrs: [driver_fields.len]StructFieldAttributes = @splat(.{});
 
             for (driver_fields, 0..) |drv, drv_id| {
                 const Descriptors = drv.type.Descriptor;
-                const descriptors = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
+                const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
+                const descriptors = result.descriptor;
+
+                driver_alloc_types[drv_id] = [result.alloc_bytes]u8;
+                driver_alloc_attrs[drv_id].@"align" = result.alloc_align;
+
                 assert(@alignOf(Descriptors) == 1);
                 size += @sizeOf(Descriptors);
 
@@ -367,6 +382,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                     Out: ep_handlers_types[idx_out] = ep_handlers[idx_out],
                 }{},
                 .drivers_ep = ep_handler_drivers,
+                .DriverAlloc = Struct(.auto, null, &field_names, &driver_alloc_types, &driver_alloc_attrs),
             };
         };
 
@@ -378,6 +394,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             .han = descriptor_parse_result.handlers_ep,
             .drv = descriptor_parse_result.drivers_ep,
         };
+        const DriverAlloc = descriptor_parse_result.DriverAlloc;
 
         /// If not zero, change the device address at the next opportunity.
         /// Necessary because when the host sets the device address,
@@ -389,6 +406,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
         tx_slice: ?[]const u8,
         /// Driver state
         driver_data: ?config0.Drivers,
+        ///
+        driver_alloc: DriverAlloc,
 
         /// Initial values
         pub const init: @This() = .{
@@ -396,6 +415,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             .cfg_num = 0,
             .tx_slice = null,
             .driver_data = null,
+            .driver_alloc = undefined,
         };
 
         /// Returns a pointer to the drivers
@@ -575,7 +595,11 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         device_itf.ep_open(desc);
                 }
 
-                @field(self.driver_data.?, fld_drv.name).init(&cfg, device_itf);
+                @field(self.driver_data.?, fld_drv.name).init(
+                    &cfg,
+                    device_itf,
+                    &@field(self.driver_alloc, fld_drv.name),
+                );
 
                 // Open IN endpoint last so that callbacks can happen
                 inline for (desc_fields) |fld| {

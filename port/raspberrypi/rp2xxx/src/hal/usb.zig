@@ -445,8 +445,8 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                 alloc: *usb.DescriptorAllocator,
                 _: usb.types.Len,
                 interface_str: []const u8,
-            ) @This() {
-                return .{ .reset_interface = .{
+            ) usb.DescriptorCreateResult(@This()) {
+                return .{ .descriptor = .{ .reset_interface = .{
                     .interface_number = alloc.next_itf(),
                     .alternate_setting = 0,
                     .num_endpoints = 0,
@@ -456,11 +456,12 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                         @enumFromInt(0x01),
                     ),
                     .interface_s = alloc.string(interface_str),
-                } };
+                } } };
             }
         };
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
+            assert(data.len == 0);
             _ = desc;
             _ = device;
             self.* = .{};

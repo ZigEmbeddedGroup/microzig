@@ -1,5 +1,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
+const assert = std.debug.assert;
 const EP_Num = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_echo);
 
@@ -13,28 +14,33 @@ pub const EchoExampleDriver = struct {
         ep_out: desc.Endpoint,
         ep_in: desc.Endpoint,
 
-        /// This function is used during descriptor creation. If multiple instances
-        /// of a driver are used, a descriptor will be created for each.
-        /// Endpoint numbers are allocated automatically, this function should
-        /// use placeholder .ep0 values on all endpoints.
+        /// This function is used during descriptor creation. Endpoint and
+        /// interface numbers are allocated through the `alloc` parameter.
         /// Third argument can be of any type, it's passed by the user when
-        /// creating the device controller type. Passing arguments this way
-        /// is preffered to making the whole driver generic.
+        /// creating the device controller type. If multiple instances of
+        /// a driver are used, this function is called for each, with different
+        /// arguments. Passing arguments through this function is preffered to
+        /// making the whole driver generic.
         pub fn create(
             alloc: *usb.DescriptorAllocator,
             max_supported_packet_size: usb.types.Len,
             itf_string: []const u8,
-        ) @This() {
+        ) usb.DescriptorCreateResult(@This()) {
             return .{
-                .itf = .{
-                    .interface_number = alloc.next_itf(),
-                    .alternate_setting = 0,
-                    .num_endpoints = 2,
-                    .interface_triple = .vendor_specific,
-                    .interface_s = alloc.string(itf_string),
+                .descriptor = .{
+                    .itf = .{
+                        .interface_number = alloc.next_itf(),
+                        .alternate_setting = 0,
+                        .num_endpoints = 2,
+                        .interface_triple = .vendor_specific,
+                        .interface_s = alloc.string(itf_string),
+                    },
+                    .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
+                    .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),
                 },
-                .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
-                .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),
+                // Buffers whose length is only known after creating the
+                // descriptor can be allocated at this stage.
+                .alloc_bytes = max_supported_packet_size,
             };
         }
     };
@@ -49,14 +55,18 @@ pub const EchoExampleDriver = struct {
 
     device: *usb.DeviceInterface,
     descriptor: *const Descriptor,
+    packet_buffer: []u8,
     tx_ready: std.atomic.Value(bool),
 
     /// This function is called when the host chooses a configuration
     /// that contains this driver. `self` points to undefined memory.
-    pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+    /// `data` is of the length specified in `Descriptor.create()`.
+    pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
+        assert(data.len == desc.ep_in.max_packet_size.into());
         self.* = .{
             .device = device,
             .descriptor = desc,
+            .packet_buffer = data,
             .tx_ready = .init(false),
         };
         device.ep_listen(

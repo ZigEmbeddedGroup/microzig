@@ -6,7 +6,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
-const USB_Serial = usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = USB_Device.max_supported_packet_size });
+const USB_Serial = usb.drivers.cdc.CdcClassDriver;
 
 var usb_device: USB_Device = undefined;
 
