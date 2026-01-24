@@ -1,73 +1,44 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
-const EP_Num = usb.types.Endpoint.Num;
-const log = std.log.scoped(.usb_hid);
 
-pub const KeyboardOptions = struct {
-    boot_protocol: bool = true,
+const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
+
+pub const InInterruptOptions = struct {
+    subclass: ClassCode.Subclass(),
+    protocol: ClassCode.Protocol(),
+    Report: type,
+    report_descriptor: []const u8,
 };
 
-pub fn Keyboard(options: KeyboardOptions) type {
+/// HID reports over a single IN endpoint
+pub fn InInterruptDriver(options: InInterruptOptions) type {
+    const log = std.log.scoped(.usb_hid_int_driver);
+
     return struct {
-        pub const report_descriptor = usb.descriptor.hid.ReportDescriptorKeyboard;
-
-        pub const Modifiers = packed struct(u8) {
-            lctrl: bool,
-            lshift: bool,
-            lalt: bool,
-            lgui: bool,
-            rctrl: bool,
-            rshift: bool,
-            ralt: bool,
-            rgui: bool,
-
-            pub const none: @This() = @bitCast(@as(u8, 0));
-        };
-
-        pub const Code = enum(u8) {
-            // Codes taken from https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
-            // zig fmt: off
-                reserved = 0x00, error_roll_over, post_fail, error_undefined,
-                a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
-                @"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9", @"0",
-                enter, escape, delete, tab, space,
-                @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
-                caps_lock,
-                f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
-                print_screen, scroll_lock, pause, insert, home, page_up, delete_forward, end, page_down,
-                right_arrow, left_arrow, down_arrow, up_arrow, num_lock,
-                kpad_div, kpad_mul, kpad_sub, kpad_add, kpad_enter,
-                kpad_1, kpad_2, kpad_3, kpad_4, kpad_5, kpad_6, kpad_7, kpad_8, kpad_9, kpad_0,
-                kpad_delete, @"non_us_\\", application, power, @"kpad_=",
-                f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24,
-                lctrl = 224, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
-                // zig fmt: on
+        pub const RequestType = enum(u8) {
+            GetReport = 0x01,
+            GetIdle = 0x02,
+            GetProtocol = 0x03,
+            SetReport = 0x09,
+            SetIdle = 0x0a,
+            SetProtocol = 0x0b,
             _,
         };
 
-        pub const Report = extern struct {
-            modifiers: Modifiers,
-            reserved: u8 = 0,
-            keys: [6]Code,
-
-            comptime {
-                assert(@sizeOf(@This()) == 8);
-            }
-
-            pub const empty: @This() = .{ .modifiers = .none, .keys = @splat(.reserved) };
-        };
+        const Report = options.Report;
 
         pub const Descriptor = extern struct {
             const desc = usb.descriptor;
 
             interface: desc.Interface,
-            hid: desc.hid.HID,
+            hid: desc.HID,
             ep_in: desc.Endpoint,
 
             pub const Options = struct {
                 itf_string: []const u8 = "",
                 poll_interval: u8,
+                country_code: desc.HID.CountryCode = .NotSupported,
             };
 
             pub fn create(
@@ -75,27 +46,23 @@ pub fn Keyboard(options: KeyboardOptions) type {
                 max_supported_packet_size: usb.types.Len,
                 desc_options: Options,
             ) usb.DescriptorCreateResult(@This()) {
-                _ = max_supported_packet_size;
+                assert(@sizeOf(Report) <= max_supported_packet_size);
                 return .{ .descriptor = .{
                     .interface = .{
                         .interface_number = alloc.next_itf(),
                         .alternate_setting = 0,
                         .num_endpoints = 1,
-                        .interface_triple = .from(
-                            .HID,
-                            if (options.boot_protocol) .Boot else .Unspecified,
-                            if (options.boot_protocol) .Boot else .None,
-                        ),
+                        .interface_triple = .from(.HID, options.subclass, options.protocol),
                         .interface_s = alloc.string(desc_options.itf_string),
                     },
                     .hid = .{
-                        .country_code = .NotSupported,
+                        .country_code = desc_options.country_code,
                         .num_descriptors = 1,
-                        .report_length = .from(@sizeOf(@TypeOf(report_descriptor))),
+                        .report_length = .from(options.report_descriptor.len),
                     },
                     .ep_in = .interrupt(
                         alloc.next_ep(.In),
-                        if (options.boot_protocol) 8 else unreachable,
+                        @sizeOf(Report),
                         desc_options.poll_interval,
                     ),
                 } };
@@ -111,7 +78,7 @@ pub fn Keyboard(options: KeyboardOptions) type {
         tx_ready: std.atomic.Value(bool),
 
         pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []const u8) void {
-            log.debug("Keyboard init", .{});
+            log.debug("InInterruptDriver init", .{});
             assert(data.len == 0);
             self.* = .{
                 .device = device,
@@ -123,16 +90,16 @@ pub fn Keyboard(options: KeyboardOptions) type {
         pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             switch (setup.request_type.type) {
                 .Standard => {
-                    const hid_desc_type: usb.descriptor.hid.HID.Type = @enumFromInt(setup.value.into() >> 8);
+                    const hid_desc_type: usb.descriptor.HID.CsType = @enumFromInt(setup.value.into() >> 8);
                     const request_code: usb.types.SetupRequest = @enumFromInt(setup.request);
 
                     if (request_code == .GetDescriptor and hid_desc_type == .HID)
                         return std.mem.asBytes(&self.descriptor.hid)
                     else if (request_code == .GetDescriptor and hid_desc_type == .Report)
-                        return std.mem.asBytes(&report_descriptor);
+                        return options.report_descriptor;
                 },
                 .Class => {
-                    const hid_request_type: usb.descriptor.hid.RequestType = @enumFromInt(setup.request);
+                    const hid_request_type: RequestType = @enumFromInt(setup.request);
                     switch (hid_request_type) {
                         .SetIdle => {
                             // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/454
@@ -173,7 +140,7 @@ pub fn Keyboard(options: KeyboardOptions) type {
             return usb.nak;
         }
 
-        pub fn on_tx_ready(self: *@This(), ep: EP_Num) void {
+        pub fn on_tx_ready(self: *@This(), ep: usb.types.Endpoint.Num) void {
             log.debug("tx ready ({t})", .{ep});
             self.tx_ready.store(true, .seq_cst);
         }

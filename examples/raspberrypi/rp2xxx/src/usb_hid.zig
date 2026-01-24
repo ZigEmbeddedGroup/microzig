@@ -6,7 +6,59 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
-const Keyboard = usb.drivers.hid.Keyboard(.{});
+
+pub const Modifiers = packed struct(u8) {
+    lctrl: bool,
+    lshift: bool,
+    lalt: bool,
+    lgui: bool,
+    rctrl: bool,
+    rshift: bool,
+    ralt: bool,
+    rgui: bool,
+
+    pub const none: @This() = @bitCast(@as(u8, 0));
+};
+
+pub const Code = enum(u8) {
+    // Codes taken from https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
+    // zig fmt: off
+    reserved = 0x00, error_roll_over, post_fail, error_undefined,
+    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
+    @"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9", @"0",
+    enter, escape, delete, tab, space,
+    @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
+    caps_lock,
+    f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
+    print_screen, scroll_lock, pause, insert, home, page_up, delete_forward, end, page_down,
+    right_arrow, left_arrow, down_arrow, up_arrow, num_lock,
+    kpad_div, kpad_mul, kpad_sub, kpad_add, kpad_enter,
+    kpad_1, kpad_2, kpad_3, kpad_4, kpad_5, kpad_6, kpad_7, kpad_8, kpad_9, kpad_0,
+    kpad_delete, @"non_us_\\", application, power, @"kpad_=",
+    f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24,
+    lctrl = 224, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
+    // zig fmt: on
+    _,
+};
+
+pub const KeyboardReport = extern struct {
+    modifiers: Modifiers,
+    reserved: u8 = 0,
+    keys: [6]Code,
+
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == 8);
+    }
+
+    pub const empty: @This() = .{ .modifiers = .none, .keys = @splat(.reserved) };
+};
+
+const Keyboard = usb.drivers.hid.InInterruptDriver(.{
+    .subclass = .Boot,
+    .protocol = .Boot,
+    .report_descriptor = &usb.descriptor.hid.ReportDescriptorKeyboard,
+    .Report = KeyboardReport,
+});
 
 var usb_device: USB_Device = undefined;
 
@@ -65,7 +117,7 @@ pub fn main() !void {
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
-    const message: []const Keyboard.Code = &.{ .h, .e, .l, .l, .o, .space, .w, .o, .r, .l, .d, .caps_lock, .enter };
+    const message: []const Code = &.{ .h, .e, .l, .l, .o, .space, .w, .o, .r, .l, .d, .caps_lock, .enter };
     var idx: usize = 0;
 
     while (true) {

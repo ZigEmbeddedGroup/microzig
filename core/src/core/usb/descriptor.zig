@@ -305,3 +305,77 @@ pub const BOS = struct {
         return .{ .data = header ++ data };
     }
 };
+
+// Class-specific descriptors
+
+/// USB HID descriptor
+pub const HID = extern struct {
+    /// HID country codes
+    pub const CountryCode = enum(u8) {
+        NotSupported = 0,
+        Arabic,
+        Belgian,
+        CanadianBilingual,
+        CanadianFrench,
+        CzechRepublic,
+        Danish,
+        Finnish,
+        French,
+        German,
+        Greek,
+        Hebrew,
+        Hungary,
+        International,
+        Italian,
+        JapanKatakana,
+        Korean,
+        LatinAmerica,
+        NetherlandsDutch,
+        Norwegian,
+        PersianFarsi,
+        Poland,
+        Portuguese,
+        Russia,
+        Slovakia,
+        Spanish,
+        Swedish,
+        SwissFrench,
+        SwissGerman,
+        Switzerland,
+        Taiwan,
+        TurkishQ,
+        Uk,
+        Us,
+        Yugoslavia,
+        TurkishF,
+        _,
+    };
+
+    /// Class-specific descriptor type
+    pub const CsType = enum(u8) {
+        HID = 0x21,
+        Report = 0x22,
+        Physical = 0x23,
+        _,
+    };
+
+    comptime {
+        assert(@alignOf(@This()) == 1);
+        assert(@sizeOf(@This()) == 9);
+    }
+
+    length: u8 = @sizeOf(@This()),
+    /// Type of this descriptor
+    descriptor_type: Type = .CsDevice,
+    /// Numeric expression identifying the HID Class Specification release
+    /// 1.11 seems to be the only one
+    bcd_hid: types.Version = .v1_11,
+    /// Numeric expression identifying country code of the localized hardware
+    country_code: CountryCode,
+    /// Numeric expression specifying the number of class descriptors
+    num_descriptors: u8,
+    /// Type of HID class report
+    report_type: CsType = .Report,
+    /// The total size of the Report descriptor
+    report_length: types.U16_Le,
+};
