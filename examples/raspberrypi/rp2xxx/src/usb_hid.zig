@@ -53,12 +53,99 @@ pub const KeyboardReport = extern struct {
     pub const empty: @This() = .{ .modifiers = .none, .keys = @splat(.reserved) };
 };
 
+const hid = usb.descriptor.hid;
+
 const Keyboard = usb.drivers.hid.InInterruptDriver(.{
     .subclass = .Boot,
     .protocol = .Boot,
-    .report_descriptor = &usb.descriptor.hid.ReportDescriptorKeyboard,
+    .report_descriptor = &.{
+        .{ .global_usage_page = .desktop },
+        .{ .local_usage = hid.DesktopUsage.keyboard[0] },
+        .{ .main_collection = .Application },
+        // Input: modifier key bitmap
+        .{ .data = .{
+            .usage = .{ .global_page = .keyboard },
+            .usage_range = .{ 0xE0, 0xE7 },
+            .count = 8,
+            .Child = bool,
+            .dir = .In,
+            .type = .dynamic,
+        } },
+        // Reserved 8 bits
+        .{ .data_static = .{ .In, u8 } },
+        // Output: indicator LEDs
+        .{ .data = .{
+            .usage = .{ .global_page = .led },
+            .usage_range = .{ 1, 5 },
+            .count = 5,
+            .Child = bool,
+            .dir = .Out,
+            .type = .dynamic,
+        } },
+        // Padding
+        .{ .data_static = .{ .Out, u3 } },
+        // Input: up to 6 pressed key codes
+        .{ .data = .{
+            .usage = .{ .global_page = .keyboard },
+            .usage_range = .{ 0x00, 0xff },
+            .count = 6,
+            .Child = u8,
+            .dir = .In,
+            .type = .selector,
+        } },
+        // End
+        .main_collection_end,
+    },
     .Report = KeyboardReport,
 });
+
+comptime {
+    const fido = usb.drivers.hid.ReportItem.create_report(&.{
+        .{ .global_usage_page = .fido },
+        .{ .local_usage = hid.FidoAllianceUsage.u2fhid[0] },
+        .{ .main_collection = .Application },
+        .{ .data = .{
+            .usage = .{ .local = hid.FidoAllianceUsage.data_in[0] },
+            .count = 64,
+            .Child = u8,
+            .dir = .In,
+            .type = .dynamic,
+        } },
+        .{ .data = .{
+            .usage = .{ .local = hid.FidoAllianceUsage.data_out[0] },
+            .count = 64,
+            .Child = u8,
+            .dir = .Out,
+            .type = .dynamic,
+        } },
+        .main_collection_end,
+    });
+
+    const generic = usb.drivers.hid.ReportItem.create_report(&.{
+        .{ .global_usage_page = .vendor },
+        .{ .local_usage = 1 },
+        .{ .main_collection = .Application },
+        .{ .data = .{
+            .usage = .{ .local = 2 },
+            .count = 64,
+            .Child = u8,
+            .dir = .In,
+            .type = .dynamic,
+        } },
+        .{ .data = .{
+            .usage = .{ .local = 3 },
+            .count = 64,
+            .Child = u8,
+            .dir = .Out,
+            .type = .dynamic,
+        } },
+        .main_collection_end,
+    });
+
+    std.debug.assert(std.mem.eql(u8, generic, &hid.ReportDescriptorGenericInOut));
+    std.debug.assert(std.mem.eql(u8, fido, &hid.ReportDescriptorFidoU2f));
+    std.debug.assert(std.mem.eql(u8, Keyboard.report_descriptor, &hid.ReportDescriptorKeyboard));
+}
 
 var usb_device: USB_Device = undefined;
 

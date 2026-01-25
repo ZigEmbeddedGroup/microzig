@@ -65,7 +65,7 @@ pub const UsageTable = struct {
     pub const keyboard: [1]u8 = "\x07".*;
     pub const led: [1]u8 = "\x08".*;
     pub const fido: [2]u8 = "\xD0\xF1".*;
-    pub const vendor: [2]u8 = "\x00\xFF".*;
+    pub const vendor: [2]u8 = "\xFF\x00".*;
 };
 
 pub const FidoAllianceUsage = struct {
@@ -255,15 +255,15 @@ pub const ReportDescriptorFidoU2f = hid_usage_page(2, UsageTable.fido) //
     ++ hid_usage(1, FidoAllianceUsage.data_in) //
     ++ hid_logical_min(1, "\x00".*) //
     ++ hid_logical_max(2, "\xff\x00".*) //
-    ++ hid_report_size(1, "\x08".*) //
     ++ hid_report_count(1, "\x40".*) //
+    ++ hid_report_size(1, "\x08".*) //
     ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
     // Usage Data Out
     ++ hid_usage(1, FidoAllianceUsage.data_out) //
     ++ hid_logical_min(1, "\x00".*) //
     ++ hid_logical_max(2, "\xff\x00".*) //
-    ++ hid_report_size(1, "\x08".*) //
     ++ hid_report_count(1, "\x40".*) //
+    ++ hid_report_size(1, "\x08".*) //
     ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
     // End
     ++ hid_collection_end();
@@ -275,15 +275,15 @@ pub const ReportDescriptorGenericInOut = hid_usage_page(2, UsageTable.vendor) //
     ++ hid_usage(1, "\x02".*) //
     ++ hid_logical_min(1, "\x00".*) //
     ++ hid_logical_max(2, "\xff\x00".*) //
-    ++ hid_report_size(1, "\x08".*) //
     ++ hid_report_count(1, "\x40".*) //
+    ++ hid_report_size(1, "\x08".*) //
     ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
     // Usage Data Out
     ++ hid_usage(1, "\x03".*) //
     ++ hid_logical_min(1, "\x00".*) //
     ++ hid_logical_max(2, "\xff\x00".*) //
-    ++ hid_report_size(1, "\x08".*) //
     ++ hid_report_count(1, "\x40".*) //
+    ++ hid_report_size(1, "\x08".*) //
     ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
     // End
     ++ hid_collection_end();
@@ -296,8 +296,8 @@ pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
     ++ hid_collection(.Application) //
     // Input: modifier key bitmap
     ++ hid_usage_page(1, UsageTable.keyboard) //
-    ++ hid_usage_min(1, "\xe0".*) //
-    ++ hid_usage_max(1, "\xe7".*) //
+    ++ hid_usage_min(2, "\xe0\x00".*) //
+    ++ hid_usage_max(2, "\xe7\x00".*) //
     ++ hid_logical_min(1, "\x00".*) //
     ++ hid_logical_max(1, "\x01".*) //
     ++ hid_report_count(1, "\x08".*) //
@@ -311,6 +311,8 @@ pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
     ++ hid_usage_page(1, UsageTable.led) //
     ++ hid_usage_min(1, "\x01".*) //
     ++ hid_usage_max(1, "\x05".*) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(1, "\x01".*) //
     ++ hid_report_count(1, "\x05".*) //
     ++ hid_report_size(1, "\x01".*) //
     ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
