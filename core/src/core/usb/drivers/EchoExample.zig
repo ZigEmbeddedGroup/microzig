@@ -1,4 +1,4 @@
-///! This is an example driver that sends any data received on ep2 to ep1.const std = @import("std");
+///! This is an example driver that sends any data received on ep2 to ep1.
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
@@ -96,8 +96,8 @@ pub fn on_rx(self: *@This(), ep_rx: EP_Num) void {
     // Read incoming packet into a local buffer
     const len_rx = self.device.ep_readv(ep_rx, &.{&buf});
     log.info("Received on {t}: {s}", .{ ep_rx, buf[0..len_rx] });
-    // Check if we can transmit
 
+    // Check if we can transmit
     if (self.tx_ready.load(.seq_cst)) {
         // Mark transmission as not available
         self.tx_ready.store(false, .seq_cst);

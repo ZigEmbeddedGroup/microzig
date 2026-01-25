@@ -184,7 +184,7 @@ pub fn main() !void {
                 idx = 0;
             }
 
-            if (drivers.keyboard.receive_repeort()) |report|
+            if (drivers.keyboard.receive_report()) |report|
                 pins.led.put(@intFromBool(report.caps_lock));
         }
     }
