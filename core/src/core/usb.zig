@@ -484,9 +484,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         // device_itf.ep_listen(.ep0, 0);
                         self.tx_slice = null;
 
-                        // None of the drivers so far are using the ACK phase
-                        // if (self.driver_last) |drv|
-                        //     self.driver_class_control(device_itf, drv, .Ack, &self.setup_packet);
+                        // W could call an ACK phase callback here,
+                        // but none of the drivers so far need it.
                     }
                 }
             } else if (comptime ep == types.Endpoint.out(.ep0))
