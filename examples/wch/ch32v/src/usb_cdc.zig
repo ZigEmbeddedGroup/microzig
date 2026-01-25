@@ -17,7 +17,7 @@ const mco_pin = gpio.Pin.init(0, 8); // PA9
 
 pub const my_interrupts: microzig.cpu.InterruptOptions = .{
     // .TIM2 = time.tim2_handler,
-    .USBHS = usb.usbhs_interrupt_handler,
+    .USBHS = usbhs_interrupt_handler,
 };
 
 pub const microzig_options = microzig.Options{
@@ -25,6 +25,11 @@ pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
     .interrupts = my_interrupts,
 };
+
+pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
+    usb_dev.poll();
+    // std.log.debug("usb isr called", .{});
+}
 
 pub const UsbSerial = microzig.core.usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 512 });
 
@@ -103,7 +108,7 @@ pub fn main() !void {
     std.log.info("Initializing USB device.", .{});
 
     usb_dev = .init();
-    // microzig.cpu.interrupt.enable(.USBHS);
+    microzig.cpu.interrupt.enable(.USBHS);
 
     var last = time.get_time_since_boot();
     var i: u32 = 0;
@@ -115,7 +120,9 @@ pub fn main() !void {
             i += 1;
             last = now;
         }
+        microzig.cpu.interrupt.disable(.USBHS);
         usb_dev.poll();
+        microzig.cpu.interrupt.enable(.USBHS);
     }
 }
 
@@ -125,11 +132,14 @@ var usb_tx_buff: [1024]u8 = undefined;
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
 pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype) void {
     const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
+    std.log.debug("usb_cdc_write len={}", .{text.len});
 
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
-        usb_dev.poll();
+        // microzig.cpu.interrupt.disable(.USBHS);
+        // usb_dev.poll();
+        // microzig.cpu.interrupt.enable(.USBHS);
     }
 }
 
@@ -184,7 +194,12 @@ pub fn run_usb(i: u32) void {
         if (message.len > 0) {
             usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
         }
-        _ = drivers.*.serial.flush();
+        const flushed = drivers.*.serial.flush();
+        if (!flushed) {
+            std.log.debug("cdc flush blocked (ep_in busy)", .{});
+        }
     }
+    // microzig.cpu.interrupt.disable(.USBHS);
     // usb_dev.poll();
+    // microzig.cpu.interrupt.enable(.USBHS);
 }

@@ -117,11 +117,21 @@ const Tog = enum(u2) {
     MDATA = 0b11,
 };
 
+fn toggle_next(tog: u2) u2 {
+    return if (tog == TOG_DATA0) TOG_DATA1 else TOG_DATA0;
+}
+
 // We use offset-based access for per-EP regs to keep helpers compact.
 const RegU32 = microzig.mmio.Mmio(packed struct(u32) { v: u32 = 0 });
 const RegU16 = microzig.mmio.Mmio(packed struct(u16) { v: u16 = 0 });
 const RegU8 = microzig.mmio.Mmio(packed struct(u8) { v: u8 = 0 });
-pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) { _reserved2: u2 = 0, AUTO: bool = false, TOG: u2 = 0, _reserved0: u1 = 0, RES: u2 = 0 });
+pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
+    RES: u2 = 0,
+    _reserved0: u1 = 0,
+    TOG: u2 = 0,
+    AUTO: bool = false,
+    _reserved1: u2 = 0,
+});
 
 fn baseAddr() usize {
     return @intFromPtr(peripherals.USBHS);
@@ -170,7 +180,7 @@ pub fn uep_tx_ctrl(ep: u4) *volatile RegCtrl {
 }
 
 fn uep_rx_ctrl(ep: u4) *volatile RegCtrl {
-    return mmio_tx_ctrl(0xDA + (@as(usize, ep) * 4));
+    return mmio_rx_ctrl(0xDB + (@as(usize, ep) * 4));
 }
 
 fn set_tx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
@@ -190,6 +200,14 @@ fn set_rx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
         .TOG = tog,
         .AUTO = auto,
     });
+}
+
+fn current_rx_tog(ep: u4) u2 {
+    return uep_rx_ctrl(ep).read().TOG;
+}
+
+fn current_tx_tog(ep: u4) u2 {
+    return uep_tx_ctrl(ep).read().TOG;
 }
 
 fn fmt_slice(dest: []u8, msg: []const u8) []const u8 {
@@ -280,10 +298,10 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
         fn arm_ep0_out_always(self: *Self) void {
             _ = self;
             // std.log.debug("ch32: arm_ep0, ACK OUT, NAK IN", .{});
-            // EP0 OUT is always ACK with auto-toggle.
-            set_rx_ctrl(0, RES_ACK, TOG_DATA1, true);
+            // EP0 OUT is always ACK.
+            set_rx_ctrl(0, RES_ACK, TOG_DATA0, false);
             // EP0 IN remains NAK until data is queued.
-            set_tx_ctrl(0, RES_NAK, TOG_DATA1, true);
+            set_tx_ctrl(0, RES_NAK, TOG_DATA0, false);
         }
 
         fn on_bus_reset_local(self: *Self) void {
@@ -298,8 +316,8 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             // Default: NAK all non-EP0 endpoints.
             for (1..cfg.max_endpoints_count) |i| {
                 const e: u4 = @as(u4, @intCast(i));
-                set_rx_ctrl(e, RES_NAK, TOG_DATA0, true);
-                set_tx_ctrl(e, RES_NAK, TOG_DATA0, true);
+                set_rx_ctrl(e, RES_NAK, TOG_DATA0, false);
+                set_tx_ctrl(e, RES_NAK, TOG_DATA0, false);
             }
 
             // EP0 special.
@@ -377,8 +395,8 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
 
                     // After SETUP, EP0 IN data stage starts with DATA1.
-                    uep_tx_ctrl(0).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA1, .AUTO = true });
-                    set_rx_ctrl(0, RES_NAK, TOG_DATA1, true);
+                    set_tx_ctrl(0, RES_NAK, TOG_DATA1, false);
+                    set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
 
                     self.controller.on_setup_req(&self.interface, &setup);
                     continue;
@@ -422,7 +440,8 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     if (ep == 0) {
                         const setup: types.SetupPacket = self.read_setup_from_ep0();
                         std.log.debug("ch32: Setup: {any}", .{setup});
-                        uep_tx_ctrl(0).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA1 });
+                        set_tx_ctrl(0, RES_NAK, TOG_DATA1, false);
+                        set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
                         self.controller.on_setup_req(&self.interface, &setup);
                     }
                 },
@@ -431,11 +450,19 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
         fn handle_out(self: *Self, ep: u4) void {
             const len: u16 = regs().USB_RX_LEN.read().R16_USB_RX_LEN;
+            const stv = regs().USB_INT_ST.read();
+            const rx_ctrl = uep_rx_ctrl(ep).read();
+            std.log.debug(
+                "ch32: OUT ep{} len={} tog_ok={} rx_res={} rx_tog={}",
+                .{ ep, len, stv.RB_UIS_TOG_OK, rx_ctrl.RES, rx_ctrl.TOG },
+            );
             // std.log.info("ch32: EP{} OUT received {} bytes", .{ ep, len });
             // EP0 OUT is always armed; accept status ZLP.
             if (ep == 0) {
                 const st_out = self.st(.ep0, .Out);
                 st_out.rx_last_len = len;
+                const next = toggle_next(current_rx_tog(0));
+                set_rx_ctrl(0, RES_ACK, next, false);
                 // stay ACK
                 self.call_on_buffer(.Out, 0);
                 return;
@@ -452,8 +479,8 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
             // Disarm immediately (NAK) to regain ownership.
             st_out.rx_armed = false;
-            // set_rx_ctrl(ep, RES_NAK, TOG_DATA0, true);
-            uep_tx_ctrl(ep).modify(.{ .RES = RES_NAK });
+            const next = toggle_next(current_rx_tog(ep));
+            set_rx_ctrl(ep, RES_NAK, next, false);
 
             const n = @min(@as(usize, len), st_out.buf.len);
             st_out.rx_last_len = @as(u16, @intCast(n));
@@ -465,15 +492,23 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
         fn handle_in(self: *Self, ep: u4) void {
             const num: types.Endpoint.Num = @enumFromInt(ep);
             const st_in = self.st(num, .In);
+            const stv = regs().USB_INT_ST.read();
+            const tx_ctrl = uep_tx_ctrl(ep).read();
+            std.log.debug(
+                "ch32: IN ep{} busy={} tog_ok={} tx_res={} tx_tog={}",
+                .{ ep, st_in.tx_busy, stv.RB_UIS_TOG_OK, tx_ctrl.RES, tx_ctrl.TOG },
+            );
 
             if (!st_in.tx_busy) {
-                uep_tx_ctrl(ep).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA0 });
+                set_tx_ctrl(ep, RES_NAK, current_tx_tog(ep), false);
                 return;
             }
 
             // Mark free before calling on_buffer(), so EP0_IN logic can immediately queue next chunk.
             st_in.tx_busy = false;
             st_in.tx_last_len = 0;
+            const next = toggle_next(current_tx_tog(ep));
+            set_tx_ctrl(ep, RES_NAK, next, false);
 
             // Notify controller/drivers of IN completion.
             self.call_on_buffer(.In, ep);
@@ -534,10 +569,10 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 if (e.dir == .Out) {
                     uep_rx_dma(ep_i).raw = ptr_val;
                     uep_max_len(ep_i).raw = mps;
-                    set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, true);
+                    set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
                 } else {
                     uep_tx_dma(ep_i).raw = ptr_val;
-                    uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA0, .AUTO = true });
+                    set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
                 }
             }
             std.log.debug("allocation and DMA setup done for ep{}", .{ep_i});
@@ -598,7 +633,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             uep_max_len(ep_i).raw = @as(u16, @intCast(limit));
 
             asm volatile ("");
-            set_rx_ctrl(ep_i, RES_ACK, TOG_DATA0, true);
+            set_rx_ctrl(ep_i, RES_ACK, current_rx_tog(ep_i), false);
             std.log.debug("finished ep_listen for ep{}", .{ep_num});
         }
 
@@ -661,7 +696,23 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             st_in.tx_busy = true;
             // Arm IN
 
-            uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
+            // if (ep_num != .ep0) {
+            const tx_before = uep_tx_ctrl(ep_i).read();
+            std.log.debug(
+                "ch32: ep_writev ep{} len={} tx_res={} tx_tog={}",
+                .{ ep_i, w, tx_before.RES, tx_before.TOG },
+            );
+            // }
+
+            set_tx_ctrl(ep_i, RES_ACK, current_tx_tog(ep_i), false);
+
+            // if (ep_num != .ep0) {
+            const tx_after = uep_tx_ctrl(ep_i).read();
+            std.log.debug(
+                "ch32: ep_writev ep{} armed tx_res={} tx_tog={}",
+                .{ ep_i, tx_after.RES, tx_after.TOG },
+            );
+            // }
 
             // For ZLP ACK, usb.DeviceInterface.ep_ack() expects ep_writev() returns 0.
             return @as(types.Len, @intCast(w));
