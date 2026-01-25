@@ -2,12 +2,18 @@ const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 
+/// Reports are a list of tagged ?i32 values. Encoding is variable-length.
 pub const ReportItem = union(enum) {
     pub const Header = packed struct(u8) {
-        pub const Length = enum(u2) { zero = 0, one = 1, two = 2, four = 3 };
+        pub const Payload = enum(u2) {
+            null = 0,
+            i8 = 1,
+            i16 = 2,
+            i32 = 3,
+        };
         pub const Type = enum(u2) { main = 0, global = 1, local = 2, _ };
 
-        len: Length,
+        len: Payload,
         type: Type,
         tag: u4,
     };
@@ -106,33 +112,33 @@ pub const ReportItem = union(enum) {
     main_input: InputOutput,
     main_output: InputOutput,
     main_collection: Collection,
-    main_feature: []const u8,
+    main_feature: ?i32,
     main_collection_end,
 
     // global items
     global_usage_page: UsagePage,
     global_logical_min: i32,
     global_logical_max: i32,
-    global_physical_min: []const u8,
-    global_physical_max: []const u8,
-    global_unit_exponent: []const u8,
-    global_unit: []const u8,
+    global_physical_min: ?i32,
+    global_physical_max: ?i32,
+    global_unit_exponent: ?i32,
+    global_unit: ?i32,
     global_report_size: u31,
     global_report_id: u31,
     global_report_count: u31,
-    global_push: []const u8,
-    global_pop: []const u8,
+    global_push: ?i32,
+    global_pop: ?i32,
 
     // local items
     local_usage: i32,
     local_usage_min: i32,
     local_usage_max: i32,
-    local_designator_index: []const u8,
-    local_designator_min: []const u8,
-    local_designator_max: []const u8,
-    local_string_index: []const u8,
-    local_string_min: []const u8,
-    local_string_max: []const u8,
+    local_designator_index: ?i32,
+    local_designator_min: ?i32,
+    local_designator_max: ?i32,
+    local_string_index: ?i32,
+    local_string_min: ?i32,
+    local_string_max: ?i32,
     local_delimiter,
 
     // helpers
@@ -154,9 +160,10 @@ pub const ReportItem = union(enum) {
         return .{ .local_usage = usage.local() };
     }
 
-    pub fn encode_int(int: i32) []const u8 {
+    pub fn encode_int(int_opt: ?i32) []const u8 {
         const asBytes = std.mem.asBytes;
         const toLittle = std.mem.nativeToLittle;
+        const int = int_opt orelse return "";
         return if (std.math.cast(i8, int)) |result|
             &.{@bitCast(result)}
         else if (std.math.cast(i16, int)) |result|
@@ -166,11 +173,11 @@ pub const ReportItem = union(enum) {
     }
 
     pub fn header(self: @This(), length: usize) ?Header {
-        const len: Header.Length = switch (length) {
-            0 => .zero,
-            1 => .one,
-            2 => .two,
-            4 => .four,
+        const len: Header.Payload = switch (length) {
+            0 => .null,
+            1 => .i8,
+            2 => .i16,
+            4 => .i32,
             else => unreachable,
         };
         const typ: Header.Type, const tag: u4 = switch (self) {
@@ -268,9 +275,8 @@ pub const ReportItem = union(enum) {
                 inline else => |payload| blk: {
                     const data: []const u8 = switch (@TypeOf(payload)) {
                         void => "",
-                        []const u8 => payload,
                         Collection, UsagePage => encode_int(@intFromEnum(payload)),
-                        u31, i32 => encode_int(payload),
+                        u31, i32, ?i32 => encode_int(payload),
                         InputOutput => &.{@bitCast(payload)},
                         else => |T| @compileError(@typeName(T) ++ " cannot be turned into a HID report"),
                     };
