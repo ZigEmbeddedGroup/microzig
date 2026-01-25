@@ -185,7 +185,7 @@ pub fn write(self: *@This(), data: []const u8) usize {
     return len;
 }
 
-/// Returns true if flush operation succeded.
+/// Flushes tx buffer. Returns true if there is no more buffered data.
 pub fn flush(self: *@This()) bool {
     if (self.tx_end == 0)
         return true;
