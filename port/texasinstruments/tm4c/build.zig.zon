@@ -12,7 +12,6 @@
         },
     },
     .paths = .{
-        "README.md",
         "build.zig",
         "build.zig.zon",
         "src",
