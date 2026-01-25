@@ -41,7 +41,7 @@ pub const Code = enum(u8) {
     _,
 };
 
-pub const KeyboardReport = extern struct {
+pub const KeyboardInReport = extern struct {
     modifiers: Modifiers,
     reserved: u8 = 0,
     keys: [6]Code,
@@ -53,7 +53,14 @@ pub const KeyboardReport = extern struct {
     pub const empty: @This() = .{ .modifiers = .none, .keys = @splat(.reserved) };
 };
 
-const Keyboard = usb.drivers.hid.InInterruptDriver(.{
+pub const KeyboardOutReport = packed struct(u8) {
+    num_lock: bool,
+    caps_lock: bool,
+    scroll_lock: bool,
+    padding: u5 = 0,
+};
+
+const Keyboard = usb.drivers.hid.InterruptDriver(.{
     .subclass = .Boot,
     .protocol = .Boot,
     .report_descriptor = &.{
@@ -94,7 +101,8 @@ const Keyboard = usb.drivers.hid.InInterruptDriver(.{
         // End
         .main_collection_end,
     },
-    .Report = KeyboardReport,
+    .InReport = KeyboardInReport,
+    .OutReport = KeyboardOutReport,
 });
 
 var usb_device: USB_Device = undefined;
@@ -128,7 +136,7 @@ pub const microzig_options = microzig.Options{
     .log_scope_levels = &.{
         .{ .scope = .usb_dev, .level = .warn },
         .{ .scope = .usb_ctrl, .level = .warn },
-        .{ .scope = .usb_hid, .level = .warn },
+        .{ .scope = .usb_hid_int_driver, .level = .warn },
     },
     .logFn = rp2xxx.uart.log,
 };
@@ -174,8 +182,10 @@ pub fn main() !void {
             } else {
                 old = new;
                 idx = 0;
-                pins.led.toggle();
             }
+
+            if (drivers.keyboard.receive_repeort()) |report|
+                pins.led.put(@intFromBool(report.caps_lock));
         }
     }
 }

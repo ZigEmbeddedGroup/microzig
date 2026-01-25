@@ -293,14 +293,16 @@ pub const ReportItem = union(enum) {
 
 const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
 
-pub const InInterruptOptions = struct {
+pub const InterruptDriverOptions = struct {
     subclass: ClassCode.Subclass(),
     protocol: ClassCode.Protocol(),
-    Report: type,
+    InReport: type,
+    OutReport: type,
     report_descriptor: []const ?ReportItem,
 };
 
-pub fn InInterruptDriver(options: InInterruptOptions) type {
+/// HID Driver with an IN and OUT endpoint
+pub fn InterruptDriver(options: InterruptDriverOptions) type {
     const log = std.log.scoped(.usb_hid_int_driver);
 
     return struct {
@@ -316,7 +318,8 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
 
         pub const report_descriptor = ReportItem.create_report(options.report_descriptor);
 
-        const Report = options.Report;
+        const OutReport = options.OutReport;
+        const InReport = options.InReport;
 
         pub const Descriptor = extern struct {
             const desc = usb.descriptor;
@@ -337,7 +340,8 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
                 max_supported_packet_size: usb.types.Len,
                 desc_options: Options,
             ) usb.DescriptorCreateResult(@This()) {
-                assert(@sizeOf(Report) <= max_supported_packet_size);
+                assert(@sizeOf(InReport) <= max_supported_packet_size);
+                assert(@sizeOf(OutReport) <= max_supported_packet_size);
                 return .{ .descriptor = .{
                     .interface = .{
                         .interface_number = alloc.next_itf(),
@@ -353,12 +357,12 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
                     },
                     .ep_out = .interrupt(
                         alloc.next_ep(.Out),
-                        @sizeOf(Report),
+                        @sizeOf(OutReport),
                         desc_options.poll_interval,
                     ),
                     .ep_in = .interrupt(
                         alloc.next_ep(.In),
-                        @sizeOf(Report),
+                        @sizeOf(InReport),
                         desc_options.poll_interval,
                     ),
                 } };
@@ -373,14 +377,16 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
         device: *usb.DeviceInterface,
         descriptor: *const Descriptor,
         tx_ready: std.atomic.Value(bool),
+        rx_ready: std.atomic.Value(bool),
 
         pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []const u8) void {
-            log.debug("InInterruptDriver init", .{});
+            log.debug("init", .{});
             assert(data.len == 0);
             self.* = .{
                 .device = device,
                 .descriptor = desc,
                 .tx_ready = .init(true),
+                .rx_ready = .init(false),
             };
             self.device.ep_listen(
                 self.descriptor.ep_out.endpoint.num,
@@ -389,6 +395,7 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
         }
 
         pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+            log.debug("class_request {any}", .{setup});
             switch (setup.request_type.type) {
                 .Standard => {
                     const hid_desc_type: usb.descriptor.HID.CsType = @enumFromInt(setup.value.into() >> 8);
@@ -447,16 +454,11 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
         }
 
         pub fn on_rx(self: *@This(), ep: usb.types.Endpoint.Num) void {
-            var buf: [@sizeOf(Report)]u8 = undefined;
-            const len = self.device.ep_readv(ep, &.{&buf});
-            log.warn("rx {any}", .{buf[0..len]});
-            self.device.ep_listen(
-                self.descriptor.ep_out.endpoint.num,
-                @intCast(self.descriptor.ep_out.max_packet_size.into()),
-            );
+            log.debug("rx ({t})", .{ep});
+            self.rx_ready.store(true, .seq_cst);
         }
 
-        pub fn send_report(self: *@This(), report: *const Report) bool {
+        pub fn send_report(self: *@This(), report: *const InReport) bool {
             if (!self.tx_ready.load(.seq_cst)) return false;
 
             self.tx_ready.store(false, .seq_cst);
@@ -469,6 +471,21 @@ pub fn InInterruptDriver(options: InInterruptOptions) type {
             log.debug("sent report {} {any}", .{ len, report });
 
             return true;
+        }
+
+        pub fn receive_repeort(self: *@This()) ?OutReport {
+            if (!self.rx_ready.load(.seq_cst)) return null;
+
+            self.rx_ready.store(false, .seq_cst);
+
+            var report: OutReport = undefined;
+            const ep_num = self.descriptor.ep_out.endpoint.num;
+            const len = self.device.ep_readv(ep_num, &.{std.mem.asBytes(&report)});
+            self.device.ep_listen(ep_num, @intCast(self.descriptor.ep_out.max_packet_size.into()));
+
+            log.debug("received report {} {any}", .{ len, report });
+
+            return report;
         }
     };
 }
