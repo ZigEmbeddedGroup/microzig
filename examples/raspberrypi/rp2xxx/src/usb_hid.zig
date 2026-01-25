@@ -53,14 +53,12 @@ pub const KeyboardReport = extern struct {
     pub const empty: @This() = .{ .modifiers = .none, .keys = @splat(.reserved) };
 };
 
-const hid = usb.descriptor.hid;
-
 const Keyboard = usb.drivers.hid.InInterruptDriver(.{
     .subclass = .Boot,
     .protocol = .Boot,
     .report_descriptor = &.{
         .{ .global_usage_page = .desktop },
-        .{ .local_usage = hid.DesktopUsage.keyboard[0] },
+        .local_usage_enum(.{ .desktop = .keyboard }),
         .{ .main_collection = .Application },
         // Input: modifier key bitmap
         .{ .data = .{
@@ -102,17 +100,17 @@ const Keyboard = usb.drivers.hid.InInterruptDriver(.{
 comptime {
     const fido = usb.drivers.hid.ReportItem.create_report(&.{
         .{ .global_usage_page = .fido },
-        .{ .local_usage = hid.FidoAllianceUsage.u2fhid[0] },
+        .local_usage_enum(.{ .fido = .u2fhid }),
         .{ .main_collection = .Application },
         .{ .data = .{
-            .usage = .{ .local = hid.FidoAllianceUsage.data_in[0] },
+            .usage = .{ .local = .{ .fido = .data_in } },
             .count = 64,
             .Child = u8,
             .dir = .In,
             .type = .dynamic,
         } },
         .{ .data = .{
-            .usage = .{ .local = hid.FidoAllianceUsage.data_out[0] },
+            .usage = .{ .local = .{ .fido = .data_out } },
             .count = 64,
             .Child = u8,
             .dir = .Out,
@@ -126,14 +124,14 @@ comptime {
         .{ .local_usage = 1 },
         .{ .main_collection = .Application },
         .{ .data = .{
-            .usage = .{ .local = 2 },
+            .usage = .{ .local_raw = 2 },
             .count = 64,
             .Child = u8,
             .dir = .In,
             .type = .dynamic,
         } },
         .{ .data = .{
-            .usage = .{ .local = 3 },
+            .usage = .{ .local_raw = 3 },
             .count = 64,
             .Child = u8,
             .dir = .Out,
@@ -142,9 +140,9 @@ comptime {
         .main_collection_end,
     });
 
-    std.debug.assert(std.mem.eql(u8, generic, &hid.ReportDescriptorGenericInOut));
-    std.debug.assert(std.mem.eql(u8, fido, &hid.ReportDescriptorFidoU2f));
-    std.debug.assert(std.mem.eql(u8, Keyboard.report_descriptor, &hid.ReportDescriptorKeyboard));
+    std.debug.assert(std.mem.eql(u8, generic, &usb.descriptor.hid.ReportDescriptorGenericInOut));
+    std.debug.assert(std.mem.eql(u8, fido, &usb.descriptor.hid.ReportDescriptorFidoU2f));
+    std.debug.assert(std.mem.eql(u8, Keyboard.report_descriptor, &usb.descriptor.hid.ReportDescriptorKeyboard));
 }
 
 var usb_device: USB_Device = undefined;

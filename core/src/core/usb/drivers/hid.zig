@@ -32,6 +32,35 @@ pub const ReportItem = union(enum) {
         _,
     };
 
+    pub const Usage = union(UsagePage) {
+        pub const Desktop = enum(i32) {
+            keyboard = 0x06,
+        };
+
+        pub const Keyboard = enum(i32) {};
+
+        pub const Led = enum(i32) {};
+
+        pub const Fido = enum(i32) {
+            u2fhid = 0x01,
+            data_in = 0x20,
+            data_out = 0x21,
+        };
+
+        desktop: Desktop,
+        keyboard: Keyboard,
+        led: Led,
+        fido: Fido,
+        vendor: i32,
+
+        pub fn local(self: @This()) i32 {
+            return switch (self) {
+                inline else => |x| @intFromEnum(x),
+                .vendor => |x| x,
+            };
+        }
+    };
+
     pub const InputOutput = packed struct(i8) {
         constant: bool = false, // HID_DATA/HID_CONSTANT
         variable: bool = false, // HID_ARRAY/HID_VARIABLE
@@ -47,22 +76,22 @@ pub const ReportItem = union(enum) {
         pub const static: @This() = .{ .constant = true };
     };
 
-    pub const Usage = union(enum) {
-        global_page: UsagePage,
-        local: i32,
-
-        pub fn report(self: @This()) ReportItem {
-            return switch (self) {
-                .global_page => |page| .{ .global_usage_page = page },
-                .local => |val| .{ .local_usage = val },
-            };
-        }
-    };
-
     pub const Data = struct {
         pub const Type = enum { dynamic, selector };
 
-        usage: Usage,
+        usage: union(enum) {
+            global_page: UsagePage,
+            local: Usage,
+            local_raw: i32,
+
+            pub fn report(self: @This()) ReportItem {
+                return switch (self) {
+                    .global_page => |page| .{ .global_usage_page = page },
+                    .local => |usage| .local_usage_enum(usage),
+                    .local_raw => |val| .{ .local_usage = val },
+                };
+            }
+        },
         usage_range: ?[2]i32 = null,
         logical_range: ?[2]i32 = null,
         count: u31,
@@ -105,6 +134,7 @@ pub const ReportItem = union(enum) {
     local_delimiter,
 
     // helpers
+    usage_page_and_local: Usage,
     global_logical_range: [2]i32,
     global_report_type: type,
     local_usage_range: [2]i32,
@@ -116,6 +146,10 @@ pub const ReportItem = union(enum) {
             .In => .{ .main_input = payload },
             .Out => .{ .main_output = payload },
         };
+    }
+
+    pub fn local_usage_enum(usage: Usage) @This() {
+        return .{ .local_usage = usage.local() };
     }
 
     pub fn encode_int(int: i32) []const u8 {
@@ -218,12 +252,16 @@ pub const ReportItem = union(enum) {
                     .{ .global_report_type = [info.count]info.Child },
                     .main_io(info.dir, switch (info.type) {
                         .dynamic => .dynamic,
-                        .selector =>  .selector
+                        .selector => .selector,
                     }),
                 }),
                 .data_static => |info| create_report(&.{
                     .{ .global_report_type = info[1] },
                     .main_io(info[0], .static),
+                }),
+                .usage_page_and_local => |usage| create_report(&.{
+                    .{ .global_usage_page = usage },
+                    .{ .local_usage = usage.local() },
                 }),
                 inline else => |payload| blk: {
                     const data: []const u8 = switch (@TypeOf(payload)) {
