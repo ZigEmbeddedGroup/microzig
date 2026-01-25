@@ -6,7 +6,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
-const USB_Serial = usb.drivers.Cdc;
+const USB_Serial = usb.drivers.CDC;
 
 var usb_device: USB_Device = undefined;
 
