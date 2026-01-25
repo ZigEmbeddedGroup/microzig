@@ -96,7 +96,7 @@ pub const CdcClassDriver = struct {
                         .interface_triple = .from(.CDC, .Abstract, .NoneRequired),
                         .interface_s = alloc.string(strings.itf_notifi),
                     },
-                    .cdc_header = .{ .bcd_cdc = .from(0x0120) },
+                    .cdc_header = .{ .bcd_cdc = .from(1, 20) },
                     .cdc_call_mgmt = .{
                         .capabilities = .none,
                         .data_interface = itf_data,
