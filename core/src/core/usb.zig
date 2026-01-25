@@ -47,8 +47,6 @@ pub fn Struct(
     } });
 }
 
-const drivers_alias = drivers;
-
 pub const DescriptorAllocator = struct {
     next_ep_num: [2]u8,
     next_itf_num: u8,

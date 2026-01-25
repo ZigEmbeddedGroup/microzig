@@ -236,12 +236,7 @@ pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]con
     return switch (mgmt_request) {
         .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding
         .GetLineCoding => std.mem.asBytes(&self.line_coding),
-        .SetControlLineState => blk: {
-            // const DTR_BIT = 1;
-            // self.is_ready = (setup.value & DTR_BIT) != 0;
-            // self.line_state = @intCast(setup.value & 0xFF);
-            break :blk usb.ack;
-        },
+        .SetControlLineState => usb.ack,
         .SendBreak => usb.ack,
         else => usb.nak,
     };
