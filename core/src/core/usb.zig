@@ -100,7 +100,7 @@ pub fn DescriptorCreateResult(Descriptor: type) type {
     return struct {
         descriptor: Descriptor,
         /// If not null, a slice of this length will be passed
-        /// to dirver's init function.
+        /// to driver's init function.
         alloc_bytes: ?usize = null,
         /// Null means natural alignment
         alloc_align: ?usize = null,
