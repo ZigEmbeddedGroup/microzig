@@ -24,7 +24,7 @@ pub const ReportItem = union(enum) {
     };
 
     pub const UsagePage = enum(i32) {
-        desktop = 0x01,
+        generic_desktop = 0x01,
         keyboard = 0x07,
         led = 0x08,
         fido = @as(i16, @bitCast(@as(u16, 0xF1D0))),
@@ -33,21 +33,23 @@ pub const ReportItem = union(enum) {
     };
 
     pub const Usage = union(UsagePage) {
-        pub const Desktop = enum(i32) {
+        pub const GenericDesktop = enum(i32) {
             keyboard = 0x06,
+            _,
         };
 
-        pub const Keyboard = enum(i32) {};
-
-        pub const Led = enum(i32) {};
+        pub const Keyboard = enum(i32) { _ };
+        pub const Led = enum(i32) { _ };
+        pub const Button = enum(i32) { _ };
 
         pub const Fido = enum(i32) {
             u2fhid = 0x01,
             data_in = 0x20,
             data_out = 0x21,
+            _,
         };
 
-        desktop: Desktop,
+        generic_desktop: GenericDesktop,
         keyboard: Keyboard,
         led: Led,
         fido: Fido,

@@ -57,8 +57,8 @@ const Keyboard = usb.drivers.hid.InInterruptDriver(.{
     .subclass = .Boot,
     .protocol = .Boot,
     .report_descriptor = &.{
-        .{ .global_usage_page = .desktop },
-        .local_usage_enum(.{ .desktop = .keyboard }),
+        .{ .global_usage_page = .generic_desktop },
+        .local_usage_enum(.{ .generic_desktop = .keyboard }),
         .{ .main_collection = .Application },
         // Input: modifier key bitmap
         .{ .data = .{
