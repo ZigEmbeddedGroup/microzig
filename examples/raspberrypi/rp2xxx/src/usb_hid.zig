@@ -25,7 +25,7 @@ pub const Code = enum(u8) {
     // zig fmt: off
     reserved = 0x00, error_roll_over, post_fail, error_undefined,
     a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
-    @"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9", @"0",
+    top_1, top_2, top_3, top_4, top_5, top_6, top_7, top_8, top_9, top_0,
     enter, escape, delete, tab, space,
     @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
     caps_lock,
