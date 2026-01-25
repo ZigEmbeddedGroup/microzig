@@ -75,6 +75,8 @@ pub const Descriptor = extern struct {
         max_supported_packet_size: usb.types.Len,
         strings: Strings,
     ) usb.DescriptorCreateResult(@This()) {
+        // Endpoint and interface numbers are allocated through the `alloc` parameter,
+        // so that multiple instances of this driver can coexist.
         const itf_notifi = alloc.next_itf();
         const itf_data = alloc.next_itf();
         return .{
