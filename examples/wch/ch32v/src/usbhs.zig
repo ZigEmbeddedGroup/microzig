@@ -431,7 +431,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
         fn handle_out(self: *Self, ep: u4) void {
             const len: u16 = regs().USB_RX_LEN.read().R16_USB_RX_LEN;
-            std.log.info("ch32: EP{} OUT received {} bytes", .{ ep, len });
+            // std.log.info("ch32: EP{} OUT received {} bytes", .{ ep, len });
             // EP0 OUT is always armed; accept status ZLP.
             if (ep == 0) {
                 const st_out = self.st(.ep0, .Out);
@@ -446,13 +446,14 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
 
             // Only read if previously armed (ep_listen)
             if (!st_out.rx_armed) {
-                set_rx_ctrl(ep, RES_NAK, TOG_DATA0, true);
+                // set_rx_ctrl(ep, RES_NAK, TOG_DATA0, true);
                 return;
             }
 
             // Disarm immediately (NAK) to regain ownership.
             st_out.rx_armed = false;
-            set_rx_ctrl(ep, RES_NAK, TOG_DATA0, true);
+            // set_rx_ctrl(ep, RES_NAK, TOG_DATA0, true);
+            uep_tx_ctrl(ep).modify(.{ .RES = RES_NAK });
 
             const n = @min(@as(usize, len), st_out.buf.len);
             st_out.rx_last_len = @as(u16, @intCast(n));
@@ -466,28 +467,16 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             const st_in = self.st(num, .In);
 
             if (!st_in.tx_busy) {
-                // std.log.warn("ch32: EP{} IN but not busy, no data to send", .{ep});
                 uep_tx_ctrl(ep).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA0 });
                 return;
             }
 
             // Mark free before calling on_buffer(), so EP0_IN logic can immediately queue next chunk.
-            // const sent_len = st_in.tx_last_len;
             st_in.tx_busy = false;
             st_in.tx_last_len = 0;
 
-            // std.log.info("ch32: EP{} IN completed, sent {} bytes, TOG={}", .{ ep, sent_len, uep_tx_ctrl(ep).read().TOG });
-            // var buf: [256]u8 = undefined;
-            // const str = fmt_slice(buf[0..], st_in.buf[0..sent_len]);
-            // std.log.debug("ch32: EP{} IN data: {any}", .{ ep, st_in.buf[0..sent_len] });
             // Notify controller/drivers of IN completion.
-
             self.call_on_buffer(.In, ep);
-
-            // EP0 OUT must remain ACK
-            if (self.controller.tx_slice == null) {
-                if (ep == 0) self.arm_ep0_out_always();
-            }
         }
 
         // ---- VTable functions ------------------------------------------------
@@ -517,7 +506,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                     std.log.warn("ch32: EP0 DMA is null!", .{});
                 }
                 if (out_st.buf.len == 0 and in_st.buf.len == 0) {
-                    // this should probably be fixed at 64 bytes for EP0?
+                    // this should probably be fixed at 64 bytes for EP0 for HS?
                     const buf = self.endpoint_alloc(64);
                     out_st.buf = buf;
                     in_st.buf = buf;
@@ -545,7 +534,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 if (e.dir == .Out) {
                     uep_rx_dma(ep_i).raw = ptr_val;
                     uep_max_len(ep_i).raw = mps;
-                    set_rx_ctrl(ep_i, RES_ACK, TOG_DATA0, true);
+                    set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, true);
                 } else {
                     uep_tx_dma(ep_i).raw = ptr_val;
                     uep_tx_ctrl(ep_i).modify(.{ .RES = RES_NAK, .TOG = TOG_DATA0, .AUTO = true });
@@ -558,7 +547,6 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             // Enable endpoint direction in UEP_CONFIG bitmaps.
             var cfg_raw: u32 = regs().UEP_CONFIG__UHOST_CTRL.raw;
             if (e.num != .ep0) {
-                // if (e.dir == .In) cfg_raw |= (@as(u32, 1) << ep_i) else cfg_raw |= (@as(u32, 1) << (16 + ep_i));
                 if (e.dir == .In) cfg_raw |= (@as(u32, 1) << ep_i) else cfg_raw |= (@as(u32, 1) << (16 + @as(u5, ep_i)));
             }
             regs().UEP_CONFIG__UHOST_CTRL.raw = cfg_raw;
@@ -566,7 +554,6 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             // Endpoint type ISO marking (optional, only if you use ISO).
             if (e.num != .ep0 and desc.attributes.transfer_type == .Isochronous) {
                 var type_raw: u32 = regs().UEP_TYPE.raw;
-                // if (e.dir == .In) type_raw |= (@as(u32, 1) << ep_i) else type_raw |= (@as(u32, 1) << (16 + ep_i));
                 if (e.dir == .In) type_raw |= (@as(u32, 1) << ep_i) else type_raw |= (@as(u32, 1) << (16 + @as(u5, ep_i)));
                 regs().UEP_TYPE.raw = type_raw;
             }
@@ -587,7 +574,7 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
             if (ep_num == .ep0) {
                 const st0 = self.st(.ep0, .Out);
                 st0.rx_limit = @as(u16, @intCast(len));
-                set_rx_ctrl(0, RES_ACK, TOG_DATA0, true);
+                // set_rx_ctrl(0, RES_ACK, TOG_DATA0, true);
                 return;
             }
 
@@ -596,7 +583,6 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 @panic("ep_listen called for invalid endpoint");
 
             const st_out = self.st(ep_num, .Out);
-            // std.log.debug("ep_listen: st_out buf len={}, st_out.rx_armed={}", .{ st_out.buf.len, st_out.rx_armed });
             if (st_out.buf.len == 0)
                 @panic("ep_listen called for endpoint with no buffer allocated");
 
@@ -646,12 +632,6 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
         }
 
         fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.Len {
-            std.log.info("ch32: ep_writev called for {}", .{ep_num});
-            // for (vec) |chunk| {
-            // std.log.debug("ch32: ep_writev data chunk len={}", .{chunk.len});
-            // std.log.debug("ch32: chunk: {any}", .{chunk});
-            // }
-
             const self: *Self = @fieldParentPtr("interface", itf);
             assert(vec.len > 0);
 
@@ -674,23 +654,14 @@ pub fn Polled(controller_config: usb.Config, comptime cfg: Config) type {
                 @memcpy(st_in.buf[w .. w + n], chunk[0..n]);
                 w += n;
             }
-            // std.log.debug("ch32: Writing chunk of len={}", .{w});
-
-            asm volatile ("");
 
             uep_t_len(ep_i).raw = @as(u16, @intCast(w));
 
             st_in.tx_last_len = @as(u16, @intCast(w));
             st_in.tx_busy = true;
-
             // Arm IN
-            // uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
-            if (ep_i == 0) {
-                // EP0 IN starts with DATA1 after SETUP
-                uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
-            } else {
-                uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
-            }
+
+            uep_tx_ctrl(ep_i).modify(.{ .RES = RES_ACK, .TOG = TOG_DATA1 });
 
             // For ZLP ACK, usb.DeviceInterface.ep_ack() expects ep_writev() returns 0.
             return @as(types.Len, @intCast(w));

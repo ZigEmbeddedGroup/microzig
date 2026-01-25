@@ -86,6 +86,73 @@ pub fn enable_afio_clock() void {
     RCC.APB2PCENR.modify(.{ .AFIOEN = 1 });
 }
 
+const PLL2MUL = enum(u4) {
+    PLL2_MUL_2_5 = 0,
+    PLL2_MUL_12_5 = 0b0001,
+    PLL2_MUL_4 = 0b0010,
+    PLL2_MUL_5 = 0b0011,
+    PLL2_MUL_6 = 0b0100,
+    PLL2_MUL_7 = 0b0101,
+    PLL2_MUL_8 = 0b0110,
+    PLL2_MUL_9 = 0b0111,
+    PLL2_MUL_10 = 0b1000,
+    PLL2_MUL_11 = 0b1001,
+    PLL2_MUL_12 = 0b1010,
+    PLL2_MUL_13 = 0b1011,
+    PLL2_MUL_14 = 0b1100,
+    PLL2_MUL_15 = 0b1101,
+    PLL2_MUL_16 = 0b1110,
+    PLL2_MUL_20 = 0b1111,
+};
+
+fn prediv(div: u4) u4 {
+    return div - 1;
+}
+
+const PREDIV = enum(u4) {
+    DIV1 = 0b0000,
+    DIV2 = 0b0001,
+    DIV3 = 0b0010,
+    DIV4 = 0b0011,
+    DIV5 = 0b0100,
+    DIV6 = 0b0101,
+    DIV7 = 0b0110,
+    DIV8 = 0b0111,
+    DIV9 = 0b1000,
+    DIV10 = 0b1001,
+    DIV11 = 0b1010,
+    DIV12 = 0b1011,
+    DIV13 = 0b1100,
+    DIV14 = 0b1101,
+    DIV15 = 0b1110,
+    DIV16 = 0b1111,
+};
+
+const PLL = enum {
+    PLL1, //
+    PLL2,
+    PLL3,
+};
+
+/// Start a PLL and wait for it to stabilize
+///
+pub fn start_pll(pll: PLL) void {
+    switch (pll) {
+        .PLL1 => {
+            RCC.CTLR.modify(.{ .PLLON = 1 });
+            while (RCC.CTLR.read().PLLRDY == 0) {}
+        },
+        .PLL2 => {
+            RCC.CTLR.modify(.{ .PLL2ON = 1 });
+            while (RCC.CTLR.read().PLL2RDY == 0) {}
+        },
+        .PLL3 => {
+            RCC.CTLR.modify(.{ .PLL3ON = 1 });
+            while (RCC.CTLR.read().PLL3RDY == 0) {}
+        },
+    }
+}
+
 // ============================================================================
 // Clock Configuration System
 // ============================================================================
@@ -232,7 +299,7 @@ fn init_from_hsi(target_freq: u32) void {
 
 /// Initialize clocks from HSE to reach target frequency
 /// Assumes hse_freq and target_freq have been validated at compile time
-fn init_from_hse(hse_freq: u32, target_freq: u32) void {
+fn init_from_hse(hse_freq: u32, comptime target_freq: u32) void {
     // Enable HSE
     RCC.CTLR.modify(.{ .HSEON = 1 });
 
@@ -267,14 +334,47 @@ fn init_from_hse(hse_freq: u32, target_freq: u32) void {
         RCC.CFGR0.modify(.{ .SW = 2 });
         while (RCC.CFGR0.read().SWS != 2) {}
     } else if (target_freq == 144_000_000) {
+        // TODO: Handle the chip specific clock config for PLLMUL, this is for the v307
         RCC.CFGR0.modify(.{
             .HPRE = 0, // AHB prescaler = 1
             .PPRE2 = 0, // APB2 prescaler = 1
-            .PPRE1 = 4, // APB1 prescaler = 2
+            .PPRE1 = 0b101, // APB1 prescaler = 2
             .PLLSRC = 1, // PLL source = HSE
             .PLLXTPRE = 0, // HSE not divided before PLL
-            .PLLMUL = 15, // PLL multiplier = 18
+            .PLLMUL = 0, // PLL multiplier = 18
         });
+
+        // // // coefficients, not reg vals
+        // const prediv2: u32 = 2;
+        // const pll2mul: u32 = 9;
+        // const prediv1: u32 = 1;
+        // const pllmul: u32 = 8;
+
+        // const sysclk = ((8_000_000 / prediv2) * pll2mul / prediv1) * pllmul;
+
+        // if (sysclk != target_freq) {
+        //     // const std = @import("std");
+        //     // @compileError(std.fmt.comptimePrint("Warning: Target frequency {} Hz does not match calculated system clock of {} Hz\n", .{ target_freq, sysclk }));
+        //     // _ = sysclk;
+        // }
+
+        // RCC.CFGR0.modify(.{
+        //     .HPRE = 1, // AHB prescaler = 1
+        //     .PPRE2 = 0, // APB2 prescaler = 1
+        //     .PPRE1 = 0b101, // APB1 prescaler = 2
+        //     .PLLSRC = 1, // PLL source = HSE
+        //     .PLLMUL = 0b0000,
+        // });
+
+        // RCC.CFGR2.modify(.{
+        //     .PLL2MUL = @intFromEnum(@as(PLL2MUL, .PLL2_MUL_9)), // PLL2MUL = 9
+        //     .PREDIV2 = prediv(prediv2), // PREDIV2 = 4
+        //     .PREDIV1 = @intFromEnum(@as(PREDIV, .DIV1)), // HSE not divided before PLL
+        // });
+        // RCC.CTLR.modify(.{ .PLL2ON = 1 });
+        // while (RCC.CTLR.read().PLL2RDY == 0) {}
+
+        // RCC.CFGR2.modify(.{ .PREDIV1SRC = 1 });
 
         // Enable PLL
         RCC.CTLR.modify(.{ .PLLON = 1 });
@@ -354,7 +454,9 @@ pub fn get_freqs() ClockSpeeds {
             // PLL multiplication factor: PLLMUL bits + 2
             // Special case: if result is 17, it's actually 18
             var pllmul: u32 = @as(u32, pllmul_bits) + 2;
-            if (pllmul == 17) pllmul = 18;
+            // TODO: Handle chip specific clock config
+            // if (pllmul == 17) pllmul = 18;
+            if (@as(u32, pllmul_bits) == 0) pllmul = 18;
 
             if (pllsrc == 0) {
                 // PLL source is HSI
@@ -418,7 +520,7 @@ pub fn get_freqs() ClockSpeeds {
 /// selects whether the USBHS 48MHz clock comes from the system PLL clock or the USB PHY,
 /// and enables the AHB clock gate for USBHS.
 ///
-/// Note: The SVD you're using names bit31 as `USBFSSRC`, but the reference manual
+/// Note: The SVD names bit31 as `USBFSSRC`, but the reference manual
 /// describes it as `USBHSSRC` ("USBHS 48MHz clock source selection").
 /// We write the SVD field, but treat it as USBHS 48MHz source select.
 pub const UsbHsClockConfig = struct {
@@ -471,7 +573,7 @@ const HSPLLSRC = enum(u2) {
 
 /// Enable + configure USBHS clocks.
 ///
-/// This does *not* reconfigure the system PLL to 48MHz; it only selects between:
+/// Selects USBHS Clock source, options are:
 /// - "PLL CLK" 48MHz source (cfg.use_phy_48mhz = false), or
 /// - "USB PHY" 48MHz source (cfg.use_phy_48mhz = true and cfg.has_hs_phy = true),
 ///   in which case it also configures the PHY PLL reference (USBHSCLK/USBHSPLLSRC/USBHSDIV)
@@ -565,18 +667,6 @@ pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
         .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
     });
 
-    // RCC.CFGR2.raw = (1 << 31 | 1 << 24 | 1 << 28 | 1 << 30);
-
-    // RCC.CFGR2.modify(.{
-    //     .USBHSPLLSRC = switch (cfg.ref_source) {
-    //         .hse => 0,
-    //         .hsi => 1,
-    //     },
-    //     .USBHSDIV = 1,
-    //     .USBHSCLK = 1,
-    //     .USBHSPLL = 1,
-    //     .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
-    // });
     RCC.AHBPCENR.modify(.{ .USBHS_EN = 1 });
 }
 

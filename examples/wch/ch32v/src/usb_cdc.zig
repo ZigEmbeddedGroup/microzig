@@ -13,9 +13,17 @@ const AFIO = microzig.chip.peripherals.AFIO;
 const usart = hal.usart.instance.USART1;
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
 
+const mco_pin = gpio.Pin.init(0, 8); // PA9
+
+pub const my_interrupts: microzig.cpu.InterruptOptions = .{
+    // .TIM2 = time.tim2_handler,
+    .USBHS = usb.usbhs_interrupt_handler,
+};
+
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = hal.usart.log,
+    .interrupts = my_interrupts,
 };
 
 pub const UsbSerial = microzig.core.usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 512 });
@@ -61,15 +69,12 @@ pub fn main() !void {
     // Board brings up clocks and time
     microzig.board.init();
     microzig.hal.init();
-
+    // RCC.CFGR0.modify(.{ .MCO = 0b0100 });
     // Enable peripheral clocks for USART2 and GPIOA
     RCC.APB2PCENR.modify(.{
         .IOPAEN = 1, // Enable GPIOA clock
         .AFIOEN = 1, // Enable AFIO clock
         .USART1EN = 1, // Enable USART1 clock
-    });
-    RCC.APB1PCENR.modify(.{
-        .USART2EN = 1, // Enable USART2 clock
     });
 
     // Ensure USART2 is NOT remapped (default PA2/PA3, not PD5/PD6)
@@ -78,8 +83,19 @@ pub fn main() !void {
     // Configure PA2 as alternate function push-pull for USART2 TX
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
+    // mco_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
+
     // Initialize USART2 at 115200 baud
     usart.apply(.{ .baud_rate = 921600 });
+    comptime {
+        const sysclk: comptime_float = 144_000_000;
+        const hb: comptime_float = 1.0;
+        const pb2: comptime_float = 1.0;
+        const pclk = (sysclk / hb) / pb2;
+        if (!usart.validate_baudrate(921600, pclk, 1.0)) {
+            @compileError("Bad baud rate");
+        }
+    }
 
     hal.usart.init_logger(usart);
     std.log.info("UART logging initialized.", .{});
@@ -91,11 +107,12 @@ pub fn main() !void {
 
     var last = time.get_time_since_boot();
     var i: u32 = 0;
-    while (true) : (i += 1) {
+    while (true) {
         const now = time.get_time_since_boot();
-        if (now.diff(last).to_us() > 500000) {
+        if (now.diff(last).to_us() > 100000) {
             // std.log.info("what {}", .{i});
             run_usb(i);
+            i += 1;
             last = now;
         }
         usb_dev.poll();
@@ -136,16 +153,38 @@ pub fn usb_cdc_read(
     return usb_rx_buff[0..total_read];
 }
 
+fn intToHexChar(i: u4) u8 {
+    // Ensure the input is within the 0-15 range
+    std.debug.assert(i <= 15);
+
+    const base: u8 = if (i < 10) '0' else 'A';
+    const offset: u8 = if (i < 10) 0 else 10;
+    return @intCast(@as(u8, @intCast(base)) + @as(u8, @intCast(i)) - offset);
+}
+
 pub fn run_usb(i: u32) void {
     if (usb_dev.controller.drivers()) |drivers| {
         // std.log.info("USB CDC Demo transmitting", .{});
-        usb_cdc_write(&drivers.serial, "This is very very long text sent from ch32 by USB CDC to your device: {s}, {}\r\n", .{ "Hello, World!", i });
+        // var buf: [512]u8 = undefined;
+        // for (buf[0..511], 0..) |*b, idx| {
+        //     const char = @as(u8, @intCast(idx % 26)) + 'A';
+        //     b.* = char;
+        // }
+        // buf[0] = intToHexChar(@as(u4, @intCast(i % 16)));
+        // buf[1] = ' ';
+        // buf[30] = '\r';
+        // buf[31] = '\n';
+        // usb_cdc_write(&drivers.serial, "This is very very long text sent from ch32 by USB CDC to your device: {s}, {}\r\n", .{ "Hello, World!", i });
+        // usb_cdc_write(&drivers.serial, "{s}", .{buf[0..32]});
+        const freqs = hal.clocks.get_freqs();
+        usb_cdc_write(&drivers.serial, "what {}: sysclk {}, hclk {}, pclk1 {}, pclk2 {}\r\n", .{ i, freqs.sysclk, freqs.hclk, freqs.pclk1, freqs.pclk2 });
 
         // read and print host command if present
         const message = usb_cdc_read(&drivers.serial);
         if (message.len > 0) {
             usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
         }
+        _ = drivers.*.serial.flush();
     }
     // usb_dev.poll();
 }

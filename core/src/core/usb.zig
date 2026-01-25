@@ -363,7 +363,7 @@ pub fn DeviceController(config: Config) type {
 
         /// Called by the device implementation when a packet has been sent or received.
         pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint) void {
-            log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
+            // log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
 
             const driver = comptime @field(handlers.ep_drv, @tagName(ep.dir))[@intFromEnum(ep.num)];
             const function = comptime @field(handlers.ep_han, @tagName(ep.dir))[@intFromEnum(ep.num)];

@@ -245,6 +245,40 @@ pub const USART = enum(u2) {
         regs.BRR.write_raw(@intCast(brr_value));
     }
 
+    pub fn calc_usartdiv(baud_rate: u32, pclk: u32) u32 {
+        // Calculate baud rate divisor for 16x oversampling
+        const oversample = 16;
+        // Formula: BRR = (25 * PCLK) / (4 * baud_rate)
+        const integerdivider = (25 * pclk) / (4 * baud_rate);
+
+        const mantissa = integerdivider / 100;
+        const fraction_part = integerdivider - (100 * mantissa);
+
+        const fraction = ((fraction_part * oversample + 50) / 100) & 0x0F;
+        const brr_value = (mantissa << 4) | fraction;
+        return brr_value;
+    }
+    pub fn validate_baudrate(self: @This(), comptime baud_rate: u32, comptime pclk: comptime_float, comptime tol: comptime_float) bool {
+        _ = self;
+        // const oversample: comptime_float = 16;
+        const baud_rate_f: comptime_float = @floatFromInt(baud_rate);
+        const brr = calc_usartdiv(baud_rate, pclk);
+        const div: comptime_float = @as(comptime_float, @floatFromInt(brr));
+        if (div == 0) {
+            @compileError("how it zero?");
+        }
+        const baud_rate_actual = pclk / div;
+
+        const err = 100.0 * ((baud_rate_actual - baud_rate_f) / baud_rate_f);
+        if (@abs(err) >= tol) {
+            @compileLog(std.fmt.comptimePrint("pclk = {}, baud_rate = {}, brr = {}, div = {}, err = {}", .{ pclk, baud_rate, brr, div, err }));
+            @compileLog(std.fmt.comptimePrint("Baud rate error too high for the given system clock", .{}));
+            @compileLog(std.fmt.comptimePrint("Desired: {}", .{baud_rate}));
+            @compileLog(std.fmt.comptimePrint("Actual: {}", .{baud_rate_actual}));
+            @compileLog(std.fmt.comptimePrint("Error: {}", .{err}));
+        }
+        return @abs(err) < tol;
+    }
     /// Check if transmit data register is empty (can write)
     pub inline fn is_writeable(usart: USART) bool {
         return usart.get_regs().STATR.read().TXE == 1;

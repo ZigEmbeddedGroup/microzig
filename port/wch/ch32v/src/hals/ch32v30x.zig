@@ -24,7 +24,7 @@ pub fn init() void {
     time.init();
     clocks.init(.{
         .hse_frequency = 8_000_000,
-        .target_frequency = 48_000_000,
+        .target_frequency = 144_000_000,
         .source = .hse,
     }); // 8 MHz external crystal
     clocks.enable_usbhs_clock(.{
