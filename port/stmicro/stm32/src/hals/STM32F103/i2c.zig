@@ -101,29 +101,52 @@ pub const Instances = enums.I2C_Type;
 pub const I2C = struct {
     regs: *volatile I2C_Peripheral,
     fn validate_pclk(pclk: usize, mode: Mode) !void {
-        if (pclk > 50_000_000) return comptime_fail_or_error("pclk needs to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
+        if (pclk > 50_000_000)
+            return comptime_fail_or_error(
+                "pclk needs to be < 50'000'000, is {}",
+                .{pclk},
+                ConfigError.PCLKOverflow,
+            );
         switch (mode) {
             .standard => {
-                if (pclk < 2_000_000) return comptime_fail_or_error("pclk needs to be >= 2_000_000 in standard mode", .{}, ConfigError.PCLKUnderflow);
+                if (pclk < 2_000_000)
+                    return comptime_fail_or_error(
+                        "pclk needs to be >= 2_000_000 in standard mode, is {}",
+                        .{pclk},
+                        ConfigError.PCLKUnderflow,
+                    );
             },
             .fast => {
-                if (pclk < 4_000_000) return comptime_fail_or_error("pclk needs to be >= 4_000_000 in fast mode", .{}, ConfigError.PCLKUnderflow);
+                if (pclk < 4_000_000)
+                    return comptime_fail_or_error(
+                        "pclk needs to be >= 4_000_000 in fast mode, is {}",
+                        .{pclk},
+                        ConfigError.PCLKUnderflow,
+                    );
             },
         }
     }
 
     fn validate_speed(speed: usize, mode: Mode) !void {
-        if (speed == 0) return comptime_fail_or_error("Invalid I2C speed", .{}, ConfigError.SpeedUnderflow);
+        if (speed == 0)
+            return comptime_fail_or_error("Invalid I2C speed (0)", .{}, ConfigError.SpeedUnderflow);
+
         switch (mode) {
             .standard => {
-                if (speed > 100_000) {
-                    return comptime_fail_or_error("speed: {d} is too high for standard mode", .{speed}, ConfigError.SpeedOverflow);
-                }
+                if (speed > 100_000)
+                    return comptime_fail_or_error(
+                        "speed: {d} is too high for standard mode",
+                        .{speed},
+                        ConfigError.SpeedOverflow,
+                    );
             },
             .fast => {
-                if (speed > 400_000) {
-                    return comptime_fail_or_error("speed: {d} is too high for fast mode", .{speed}, ConfigError.SpeedOverflow);
-                }
+                if (speed > 400_000)
+                    return comptime_fail_or_error(
+                        "speed: {d} is too high for fast mode",
+                        .{speed},
+                        ConfigError.SpeedOverflow,
+                    );
             },
         }
     }
@@ -135,7 +158,12 @@ pub const I2C = struct {
         };
 
         const Trise = calc_Trise(pclk, Tmax);
-        if ((Trise == 0) or (Trise > 63)) return comptime_fail_or_error("I2C config error: rise time invalid", .{}, ConfigError.InvalidTrise);
+        if ((Trise == 0) or (Trise > 63))
+            return comptime_fail_or_error(
+                "I2C config error: rise time invalid for plk {} and mode {any}",
+                .{ pclk, mode },
+                ConfigError.InvalidTrise,
+            );
         return Trise;
     }
 
@@ -146,7 +174,8 @@ pub const I2C = struct {
         const CCR = calc_CCR(pclk, speed, duty);
         switch (config.mode) {
             .fast => {
-                if (CCR < 4) return comptime_fail_or_error("Invalid CCR", .{}, ConfigError.InvalidCCR);
+                if (CCR < 4)
+                    return comptime_fail_or_error("Invalid CCR", .{}, ConfigError.InvalidCCR);
             },
             else => {},
         }

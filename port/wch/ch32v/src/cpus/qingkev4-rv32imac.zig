@@ -1,3 +1,7 @@
+///
+/// Processor-specific configuration for WCH QingkeV4 processor
+/// https://riscv.pk/wp-content/uploads/2024/10/QingKeV4_Processor_Manual.pdf
+///
 pub const cpu_frequency = 8_000_000; // 8 MHz
 
 pub const Interrupt = enum(u8) {
@@ -200,7 +204,9 @@ pub inline fn system_init(comptime chip: anytype) void {
 
 pub const csr_types = struct {
     pub const intsyscr = packed struct(u32) {
-        /// [0] HPE enable
+        /// [0] Hardware Prologue/Epilogue (HPE) enable
+        /// NOTE: Probably not supported by the Zig compiler. Would require
+        /// __attribute__((interrupt("WCH-Interrupt-fast"))).
         hwstken: u1,
         /// [1] Interrupt nesting enable
         inesten: u1,

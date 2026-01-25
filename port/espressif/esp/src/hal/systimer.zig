@@ -4,7 +4,7 @@ const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
 
 const system = @import("system.zig");
 
-pub fn ticks_per_us() u64 {
+pub fn ticks_per_us() u52 {
     return 16;
 }
 
@@ -69,7 +69,7 @@ pub const Unit = enum(u1) {
         }
     }
 
-    pub fn write(self: Unit, value: u64) void {
+    pub fn write(self: Unit, value: u52) void {
         const LOAD: @TypeOf(&SYSTIMER.UNIT0_LOAD) = switch (self) {
             .unit0 => &SYSTIMER.UNIT0_LOAD,
             .unit1 => @ptrCast(&SYSTIMER.UNIT1_LOAD),
@@ -83,12 +83,12 @@ pub const Unit = enum(u1) {
             .unit1 => @ptrCast(&SYSTIMER.UNIT1_VALUE_HI),
         };
 
-        LO.write(.{ .TIMER_UNIT0_LOAD_LO = value & 0xffff_ffff });
-        HI.write(.{ .TIMER_UNIT0_LOAD_HI = value >> 32 });
+        LO.write(.{ .TIMER_UNIT0_LOAD_LO = @truncate(value) });
+        HI.write(.{ .TIMER_UNIT0_LOAD_HI = @truncate(value >> 32) });
         LOAD.write(.{ .TIMER_UNIT0_LOAD = 1 });
     }
 
-    pub fn read(self: Unit) u64 {
+    pub fn read(self: Unit) u52 {
         const OP: @TypeOf(&SYSTIMER.UNIT0_OP) = switch (self) {
             .unit0 => &SYSTIMER.UNIT0_OP,
             .unit1 => @ptrCast(&SYSTIMER.UNIT1_OP),
@@ -115,7 +115,7 @@ pub const Unit = enum(u1) {
             const hi = HI.read().TIMER_UNIT0_VALUE_HI;
             lo_start = LO.read().TIMER_UNIT0_VALUE_LO;
 
-            if (lo_start == lo) return (@as(u64, hi) << 32) | lo;
+            if (lo_start == lo) return (@as(u52, hi) << 32) | lo;
         }
     }
 };
@@ -183,6 +183,14 @@ pub const Alarm = enum(u2) {
         });
     }
 
+    pub fn interrupt_source(self: Alarm) microzig.cpu.interrupt.Source {
+        return switch (self) {
+            .alarm0 => .systimer_target0,
+            .alarm1 => .systimer_target1,
+            .alarm2 => .systimer_target2,
+        };
+    }
+
     pub fn set_interrupt_enabled(self: Alarm, enable: bool) void {
         switch (self) {
             .alarm0 => SYSTIMER.INT_ENA.modify(.{ .TARGET0_INT_ENA = @intFromBool(enable) }),
@@ -194,7 +202,7 @@ pub const Alarm = enum(u2) {
     pub fn clear_interrupt(self: Alarm) void {
         switch (self) {
             .alarm0 => SYSTIMER.INT_CLR.modify(.{ .TARGET0_INT_CLR = 1 }),
-            .alarm1 => SYSTIMER.INT_CLR.modify(.{ .TARGET2_INT_CLR = 1 }),
+            .alarm1 => SYSTIMER.INT_CLR.modify(.{ .TARGET1_INT_CLR = 1 }),
             .alarm2 => SYSTIMER.INT_CLR.modify(.{ .TARGET2_INT_CLR = 1 }),
         }
     }
