@@ -232,13 +232,7 @@ pub const startup_logic = struct {
             \\mv sp, %[eos]
 
             // Initialize the system.
-            \\jal _system_init
-
-            // Return from the interrupt.
-            // This changes the privilege level to mstatus.mpp, set above. In this case we are in
-            // machine mode and we are switching to machine mode, but normally this could switch us to
-            // user mode.
-            \\mret
+            \\j _system_init
             :
             : [eos] "r" (comptime microzig.utilities.get_end_of_stack()),
         );
@@ -274,7 +268,7 @@ pub const startup_logic = struct {
         );
     }
 
-    export fn _system_init() callconv(.c) void {
+    export fn _system_init() callconv(.c) noreturn {
         // NOTE: this can only be called once. Otherwise, we get a linker error for duplicate symbols
         startup_logic.initialize_system_memories();
 
@@ -325,6 +319,13 @@ pub const startup_logic = struct {
         // This is necessary to ensure proper MCU startup after a power-off.
         // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
         csr.mepc.write(@intFromPtr(&microzig_main));
+
+        // Return from the interrupt.
+        // This changes the privilege level to mstatus.mpp, set above. In this case we are in
+        // machine mode and we are switching to machine mode, but normally this could switch us to
+        // user mode.
+        asm volatile ("mret");
+        unreachable;
     }
 
     export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
