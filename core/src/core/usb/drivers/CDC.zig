@@ -1,7 +1,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
-const EP_Num = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_cdc);
 
 pub const ManagementRequestType = enum(u8) {
@@ -246,19 +245,19 @@ pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]con
     };
 }
 
-pub fn on_rx(self: *@This(), ep_num: EP_Num) void {
+pub fn on_rx(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
     if (self.rx_ready.load(.seq_cst))
         log.warn("{s}({t}) called before buffer was consumed", .{ "on_rx", ep_num });
     self.rx_ready.store(true, .seq_cst);
 }
 
-pub fn on_tx_ready(self: *@This(), ep_num: EP_Num) void {
+pub fn on_tx_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
     if (self.tx_ready.load(.seq_cst))
         log.warn("{s}({t}) called before buffer was consumed", .{ "on_tx_ready", ep_num });
     self.tx_ready.store(true, .seq_cst);
 }
 
-pub fn on_notifi_ready(self: *@This(), ep_num: EP_Num) void {
+pub fn on_notifi_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
     if (self.notifi_ready.load(.seq_cst))
         log.warn("{s}({t}) called before buffer was consumed", .{ "on_notifi_ready", ep_num });
     self.notifi_ready.store(true, .seq_cst);

@@ -2,7 +2,6 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
-const EP_Num = usb.types.Endpoint.Num;
 const log = std.log.scoped(.usb_echo);
 
 /// The descriptors need to have the same memory layout as the sent data.
@@ -85,13 +84,13 @@ pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]con
 /// Each endpoint (as defined in the descriptor) has its own handler.
 /// Endpoint number is passed as an argument so that it does not need
 /// to be stored in the driver.
-pub fn on_tx_ready(self: *@This(), ep_tx: EP_Num) void {
+pub fn on_tx_ready(self: *@This(), ep_tx: usb.types.Endpoint.Num) void {
     log.info("tx ready ({t})", .{ep_tx});
     // Mark transmission as available
     self.tx_ready.store(true, .seq_cst);
 }
 
-pub fn on_rx(self: *@This(), ep_rx: EP_Num) void {
+pub fn on_rx(self: *@This(), ep_rx: usb.types.Endpoint.Num) void {
     var buf: [64]u8 = undefined;
     // Read incoming packet into a local buffer
     const len_rx = self.device.ep_readv(ep_rx, &.{&buf});
