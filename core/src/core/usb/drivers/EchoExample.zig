@@ -46,7 +46,7 @@ pub const Descriptor = extern struct {
 /// This is a mapping from endpoint descriptor field names to handler
 /// function names. Counterintuitively, usb devices send data on 'in'
 /// endpoints and receive on 'out' endpoints.
-pub const handlers: usb.DriverHadlers(@This()) = .{
+pub const handlers: usb.DriverHandlers(@This()) = .{
     .ep_in = on_tx_ready,
     .ep_out = on_rx,
 };

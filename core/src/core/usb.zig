@@ -163,7 +163,7 @@ pub fn EndpointHandler(Driver: type) type {
     return fn (*Driver, types.Endpoint.Num) void;
 }
 
-pub fn DriverHadlers(Driver: type) type {
+pub fn DriverHandlers(Driver: type) type {
     var field_names: []const [:0]const u8 = &.{};
 
     const desc_fields = @typeInfo(Driver.Descriptor).@"struct".fields;

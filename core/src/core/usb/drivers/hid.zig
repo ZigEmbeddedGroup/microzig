@@ -369,7 +369,7 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
             }
         };
 
-        pub const handlers: usb.DriverHadlers(@This()) = .{
+        pub const handlers: usb.DriverHandlers(@This()) = .{
             .ep_in = on_tx_ready,
             .ep_out = on_rx,
         };

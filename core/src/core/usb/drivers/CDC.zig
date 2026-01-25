@@ -128,7 +128,7 @@ pub const Descriptor = extern struct {
     }
 };
 
-pub const handlers: usb.DriverHadlers(@This()) = .{
+pub const handlers: usb.DriverHandlers(@This()) = .{
     .ep_notifi = on_notifi_ready,
     .ep_out = on_rx,
     .ep_in = on_tx_ready,
