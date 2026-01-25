@@ -33,6 +33,7 @@ const port_list: []const struct {
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
+    .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
 };
 
 const exe_targets: []const std.Target.Query = &.{
@@ -87,6 +88,7 @@ pub const PortSelect = struct {
     stm32: bool = false,
     ch32v: bool = false,
     msp430: bool = false,
+    tm4c: bool = false,
 
     pub const all: PortSelect = blk: {
         var ret: PortSelect = undefined;
