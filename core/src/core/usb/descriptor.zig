@@ -3,11 +3,9 @@ const types = @import("types.zig");
 const assert = std.debug.assert;
 
 pub const cdc = @import("descriptor/cdc.zig");
-pub const hid = @import("descriptor/hid.zig");
 
 test "descriptor tests" {
     _ = cdc;
-    _ = hid;
 }
 
 pub const Type = enum(u8) {
