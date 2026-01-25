@@ -1,4 +1,4 @@
-///! This is an example driver that sends any data received on ep2 to ep1.
+//! This is an example driver that sends any data received on ep2 to ep1.
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
