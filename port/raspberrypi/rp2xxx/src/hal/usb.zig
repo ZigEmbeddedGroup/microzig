@@ -366,11 +366,13 @@ pub fn Polled(config: Config) type {
             peripherals.USB.ADDR_ENDP.write(.{ .ADDRESS = addr });
         }
 
+        /// On the RP2350 @memcpy uses unaligned accesses,
+        /// which only work on SRAM and fault on peripheral memory.
         fn dpram_memcpy(dst: []u8, src: []const u8) void {
-            assert(dst.len == src.len);
             switch (chip) {
                 .RP2040 => @memcpy(dst, src),
                 .RP2350 => {
+                    assert(dst.len == src.len);
                     // Could be optimized for aligned data, for now just copy
                     // byte by byte. Atomic operations are used so that
                     // the compiler does not try to optimize this.
