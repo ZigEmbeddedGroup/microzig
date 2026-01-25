@@ -462,8 +462,7 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
             }
         };
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
-            assert(data.len == 0);
+        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
             _ = desc;
             _ = device;
             self.* = .{};

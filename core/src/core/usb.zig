@@ -101,7 +101,10 @@ pub const DescriptorAllocator = struct {
 pub fn DescriptorCreateResult(Descriptor: type) type {
     return struct {
         descriptor: Descriptor,
-        alloc_bytes: usize = 0,
+        /// If not null, a slice of this length will be passed
+        /// to dirver's init function.
+        alloc_bytes: ?usize = null,
+        /// Null means natural alignment
         alloc_align: ?usize = null,
     };
 }
@@ -292,16 +295,22 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
             var itf_handlers: []const DriverEnum = &.{};
-            var driver_alloc_types: [driver_fields.len]type = undefined;
-            var driver_alloc_attrs: [driver_fields.len]StructFieldAttributes = @splat(.{});
+            var driver_alloc_names: []const [:0]const u8 = &.{};
+            var driver_alloc_types: []const type = &.{};
+            var driver_alloc_attrs: []const StructFieldAttributes = &.{};
 
             for (driver_fields, 0..) |drv, drv_id| {
                 const Descriptors = drv.type.Descriptor;
                 const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
                 const descriptors = result.descriptor;
 
-                driver_alloc_types[drv_id] = [result.alloc_bytes]u8;
-                driver_alloc_attrs[drv_id].@"align" = result.alloc_align;
+                if (result.alloc_bytes) |len| {
+                    driver_alloc_names = driver_alloc_names ++ &[1][:0]const u8{drv.name};
+                    driver_alloc_types = driver_alloc_types ++ &[1]type{[len]u8};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[1]StructFieldAttributes{.{ .@"align" = result.alloc_align }};
+                } else {
+                    assert(result.alloc_align == null);
+                }
 
                 assert(@alignOf(Descriptors) == 1);
                 size += @sizeOf(Descriptors);
@@ -382,7 +391,13 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                     Out: ep_handlers_types[idx_out] = ep_handlers[idx_out],
                 }{},
                 .drivers_ep = ep_handler_drivers,
-                .DriverAlloc = Struct(.auto, null, &field_names, &driver_alloc_types, &driver_alloc_attrs),
+                .DriverAlloc = Struct(
+                    .auto,
+                    null,
+                    driver_alloc_names,
+                    driver_alloc_types[0..driver_alloc_attrs.len],
+                    driver_alloc_attrs[0..driver_alloc_attrs.len],
+                ),
             };
         };
 
@@ -595,11 +610,12 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         device_itf.ep_open(desc);
                 }
 
-                @field(self.driver_data.?, fld_drv.name).init(
-                    &cfg,
-                    device_itf,
-                    &@field(self.driver_alloc, fld_drv.name),
-                );
+                const drv = &@field(self.driver_data.?, fld_drv.name);
+                // Don't pass empty slices around
+                if (@hasField(@TypeOf(self.driver_alloc), fld_drv.name))
+                    drv.init(&cfg, device_itf, &@field(self.driver_alloc, fld_drv.name))
+                else
+                    drv.init(&cfg, device_itf);
 
                 // Open IN endpoint last so that callbacks can happen
                 inline for (desc_fields) |fld| {

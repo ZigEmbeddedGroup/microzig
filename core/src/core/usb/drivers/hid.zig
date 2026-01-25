@@ -379,9 +379,8 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
         tx_ready: std.atomic.Value(bool),
         rx_ready: std.atomic.Value(bool),
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []const u8) void {
+        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
             log.debug("init", .{});
-            assert(data.len == 0);
             self.* = .{
                 .device = device,
                 .descriptor = desc,
@@ -473,7 +472,7 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
             return true;
         }
 
-        pub fn receive_repeort(self: *@This()) ?OutReport {
+        pub fn receive_report(self: *@This()) ?OutReport {
             if (!self.rx_ready.load(.seq_cst)) return null;
 
             self.rx_ready.store(false, .seq_cst);
