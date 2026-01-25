@@ -21,6 +21,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_features_add = std.Target.riscv.featureSet(&.{
             .c,
             .m,
+            .zicsr,
+            .zifencei,
         }),
         .os_tag = .freestanding,
         .abi = .eabi,
