@@ -220,21 +220,61 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() callconv(.naked) void {
-        // Set global pointer.
         asm volatile (
+            \\
+            // Set global pointer.
             \\.option push
             \\.option norelax
             \\la gp, __global_pointer$
             \\.option pop
-        );
+            \\
+            // Set stack pointer.
+            \\mv sp, %[eos]
 
-        // Set stack pointer.
-        const eos = comptime microzig.utilities.get_end_of_stack();
-        asm volatile ("mv sp, %[eos]"
+            // Initialize the system.
+            \\jal _system_init
+
+            // Return from the interrupt.
+            // This changes the privilege level to mstatus.mpp, set above. In this case we are in
+            // machine mode and we are switching to machine mode, but normally this could switch us to
+            // user mode.
+            \\mret
             :
-            : [eos] "r" (@as(u32, @intFromPtr(eos))),
+            : [eos] "r" (comptime microzig.utilities.get_end_of_stack()),
+        );
+    }
+
+    inline fn initialize_system_memories() void {
+        // Clear .bss section.
+        asm volatile (
+            \\    li a0, 0
+            \\    la a1, microzig_bss_start
+            \\    la a2, microzig_bss_end
+            \\    beq a1, a2, clear_bss_done
+            \\clear_bss_loop:
+            \\    sw a0, 0(a1)
+            \\    addi a1, a1, 4
+            \\    blt a1, a2, clear_bss_loop
+            \\clear_bss_done:
         );
 
+        // Copy .data from FLASH to RAM.
+        asm volatile (
+            \\    la a0, microzig_data_load_start
+            \\    la a1, microzig_data_start
+            \\    la a2, microzig_data_end
+            \\copy_data_loop:
+            \\    beq a1, a2, copy_done
+            \\    lw a3, 0(a0)
+            \\    sw a3, 0(a1)
+            \\    addi a0, a0, 4
+            \\    addi a1, a1, 4
+            \\    bne a1, a2, copy_data_loop
+            \\copy_done:
+        );
+    }
+
+    export fn _system_init() callconv(.c) void {
         // NOTE: this can only be called once. Otherwise, we get a linker error for duplicate symbols
         startup_logic.initialize_system_memories();
 
@@ -278,57 +318,13 @@ pub const startup_logic = struct {
             .mpp = 0x3,
         });
 
-        // Initialize the system.
-        @export(&startup_logic._system_init, .{ .name = "_system_init" });
-        asm volatile (
-            \\jal _system_init
-        );
+        cpu_impl.system_init(microzig.chip);
 
         // Load the address of the `microzig_main` function into the `mepc` register
         // and transfer control to it using the `mret` instruction.
         // This is necessary to ensure proper MCU startup after a power-off.
         // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
         csr.mepc.write(@intFromPtr(&microzig_main));
-
-        // Return from the interrupt.
-        // This changes the privilege level to mstatus.mpp, set above. In this case we are in
-        // machine mode and we are switching to machine mode, but normally this could switch us to
-        // user mode.
-        asm volatile ("mret");
-    }
-
-    inline fn initialize_system_memories() void {
-        // Clear .bss section.
-        asm volatile (
-            \\    li a0, 0
-            \\    la a1, microzig_bss_start
-            \\    la a2, microzig_bss_end
-            \\    beq a1, a2, clear_bss_done
-            \\clear_bss_loop:
-            \\    sw a0, 0(a1)
-            \\    addi a1, a1, 4
-            \\    blt a1, a2, clear_bss_loop
-            \\clear_bss_done:
-        );
-
-        // Copy .data from FLASH to RAM.
-        asm volatile (
-            \\    la a0, microzig_data_load_start
-            \\    la a1, microzig_data_start
-            \\    la a2, microzig_data_end
-            \\copy_data_loop:
-            \\    beq a1, a2, copy_done
-            \\    lw a3, 0(a0)
-            \\    sw a3, 0(a1)
-            \\    addi a0, a0, 4
-            \\    addi a1, a1, 4
-            \\    bne a1, a2, copy_data_loop
-            \\copy_done:
-        );
-    }
-
-    fn _system_init() callconv(.c) void {
-        cpu_impl.system_init(microzig.chip);
     }
 
     export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
