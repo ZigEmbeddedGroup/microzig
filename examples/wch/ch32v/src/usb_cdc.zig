@@ -31,6 +31,13 @@ pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention)
     // std.log.debug("usb isr called", .{});
 }
 
+fn usb_poll() void {
+    // Polled backend: keep this as a safety net for missed IRQ edges.
+    microzig.cpu.interrupt.disable(.USBHS);
+    usb_dev.poll();
+    microzig.cpu.interrupt.enable(.USBHS);
+}
+
 pub const UsbSerial = microzig.core.usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 512 });
 
 pub var usb_dev: usb.Polled(
@@ -120,9 +127,7 @@ pub fn main() !void {
             i += 1;
             last = now;
         }
-        microzig.cpu.interrupt.disable(.USBHS);
-        usb_dev.poll();
-        microzig.cpu.interrupt.enable(.USBHS);
+        usb_poll();
     }
 }
 
@@ -137,9 +142,7 @@ pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
-        // microzig.cpu.interrupt.disable(.USBHS);
-        // usb_dev.poll();
-        // microzig.cpu.interrupt.enable(.USBHS);
+        usb_poll();
     }
 }
 
@@ -175,17 +178,7 @@ fn intToHexChar(i: u4) u8 {
 pub fn run_usb(i: u32) void {
     if (usb_dev.controller.drivers()) |drivers| {
         // std.log.info("USB CDC Demo transmitting", .{});
-        // var buf: [512]u8 = undefined;
-        // for (buf[0..511], 0..) |*b, idx| {
-        //     const char = @as(u8, @intCast(idx % 26)) + 'A';
-        //     b.* = char;
-        // }
-        // buf[0] = intToHexChar(@as(u4, @intCast(i % 16)));
-        // buf[1] = ' ';
-        // buf[30] = '\r';
-        // buf[31] = '\n';
-        // usb_cdc_write(&drivers.serial, "This is very very long text sent from ch32 by USB CDC to your device: {s}, {}\r\n", .{ "Hello, World!", i });
-        // usb_cdc_write(&drivers.serial, "{s}", .{buf[0..32]});
+
         const freqs = hal.clocks.get_freqs();
         usb_cdc_write(&drivers.serial, "what {}: sysclk {}, hclk {}, pclk1 {}, pclk2 {}\r\n", .{ i, freqs.sysclk, freqs.hclk, freqs.pclk1, freqs.pclk2 });
 
@@ -194,12 +187,9 @@ pub fn run_usb(i: u32) void {
         if (message.len > 0) {
             usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
         }
-        const flushed = drivers.*.serial.flush();
-        if (!flushed) {
-            std.log.debug("cdc flush blocked (ep_in busy)", .{});
-        }
+        // const flushed = drivers.*.serial.flush();
+        // if (!flushed) {
+        //     std.log.debug("cdc flush blocked (ep_in busy)", .{});
+        // }
     }
-    // microzig.cpu.interrupt.disable(.USBHS);
-    // usb_dev.poll();
-    // microzig.cpu.interrupt.enable(.USBHS);
 }
