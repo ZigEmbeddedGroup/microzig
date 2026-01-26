@@ -68,16 +68,16 @@ const zig_queries =
 const zig_highlights: []const dvui.TextEntryWidget.SyntaxHighlight = blk: {
     @setEvalBranchQuota(20000);
     break :blk &.{
-        .{ .name = "keyword", .opts = .{ .color_text = dvui.Color.fromHex("EF2F27") } },      // Red - Statement
-        .{ .name = "string", .opts = .{ .color_text = dvui.Color.fromHex("98BC37") } },       // BrightGreen
-        .{ .name = "comment", .opts = .{ .color_text = dvui.Color.fromHex("918175") } },      // BrightBlack
-        .{ .name = "number", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } },       // Magenta
-        .{ .name = "type", .opts = .{ .color_text = dvui.Color.fromHex("FBB829") } },         // Yellow
-        .{ .name = "function", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } },     // Cyan
-        .{ .name = "variable", .opts = .{ .color_text = dvui.Color.fromHex("FCE8C3") } },     // BrightWhite (foreground)
-        .{ .name = "constant", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } },     // Magenta
-        .{ .name = "operator", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } },     // Cyan
-        .{ .name = "punctuation", .opts = .{ .color_text = dvui.Color.fromHex("BAA67F") } },  // White
+        .{ .name = "keyword", .opts = .{ .color_text = dvui.Color.fromHex("EF2F27") } }, // Red - Statement
+        .{ .name = "string", .opts = .{ .color_text = dvui.Color.fromHex("98BC37") } }, // BrightGreen
+        .{ .name = "comment", .opts = .{ .color_text = dvui.Color.fromHex("918175") } }, // BrightBlack
+        .{ .name = "number", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } }, // Magenta
+        .{ .name = "type", .opts = .{ .color_text = dvui.Color.fromHex("FBB829") } }, // Yellow
+        .{ .name = "function", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } }, // Cyan
+        .{ .name = "variable", .opts = .{ .color_text = dvui.Color.fromHex("FCE8C3") } }, // BrightWhite (foreground)
+        .{ .name = "constant", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } }, // Magenta
+        .{ .name = "operator", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } }, // Cyan
+        .{ .name = "punctuation", .opts = .{ .color_text = dvui.Color.fromHex("BAA67F") } }, // White
     };
 };
 
@@ -205,7 +205,7 @@ pub fn show(w: *RegzWindow) !void {
         }
 
         // Process only read-only events (selection, copy, navigation, scroll)
-        processReadOnlyEvents(&te);
+        process_read_only_events(&te);
         te.draw();
     } else {
         // Fallback to plain textLayout when tree-sitter unavailable
@@ -333,7 +333,7 @@ fn show_file_tree_recursive(
 }
 
 /// Process events for read-only text display (allows selection, copy, navigation, scroll)
-fn processReadOnlyEvents(te: *dvui.TextEntryWidget) void {
+fn process_read_only_events(te: *dvui.TextEntryWidget) void {
     const evts = dvui.events();
     for (evts) |*e| {
         if (!te.matchEvent(e))
@@ -362,11 +362,11 @@ fn processReadOnlyEvents(te: *dvui.TextEntryWidget) void {
                 // Allow navigation: arrows, home, end, page up/down
                 if ((ke.action == .down or ke.action == .repeat) and
                     (ke.matchBind("char_left") or ke.matchBind("char_right") or
-                    ke.matchBind("char_up") or ke.matchBind("char_down") or
-                    ke.matchBind("word_left") or ke.matchBind("word_right") or
-                    ke.matchBind("line_start") or ke.matchBind("line_end") or
-                    ke.matchBind("text_start") or ke.matchBind("text_end") or
-                    ke.matchBind("page_up") or ke.matchBind("page_down")))
+                        ke.matchBind("char_up") or ke.matchBind("char_down") or
+                        ke.matchBind("word_left") or ke.matchBind("word_right") or
+                        ke.matchBind("line_start") or ke.matchBind("line_end") or
+                        ke.matchBind("text_start") or ke.matchBind("text_end") or
+                        ke.matchBind("page_up") or ke.matchBind("page_down")))
                 {
                     te.processEvent(e);
                     continue;
