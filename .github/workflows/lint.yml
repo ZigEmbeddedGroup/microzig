@@ -167,81 +167,65 @@ jobs:
             // Change to pr directory
             process.chdir('pr');
 
-            // Helper function to resolve review threads using GraphQL
-            async function resolveReviewThreads(reviewId) {
+            // Helper function to delete all existing bot review comments
+            async function deleteExistingBotComments() {
               try {
-                // Get all review comments for this review
-                const comments = await github.rest.pulls.listCommentsForReview({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.issue.number,
-                  review_id: reviewId
-                });
-
-                if (comments.data.length === 0) {
-                  console.log(`No comments found for review ${reviewId}`);
-                  return;
-                }
-
-                // Get all review threads for this PR
-                const query = `
-                  query($owner: String!, $repo: String!, $prNumber: Int!) {
-                    repository(owner: $owner, name: $repo) {
-                      pullRequest(number: $prNumber) {
-                        reviewThreads(first: 100) {
-                          nodes {
-                            id
-                            isResolved
-                            comments(first: 10) {
-                              nodes {
-                                databaseId
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
+                // List all review comments on this PR
+                const comments = await github.paginate(
+                  github.rest.pulls.listReviewComments,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: context.issue.number,
+                    per_page: 100
                   }
-                `;
+                );
 
-                const result = await github.graphql(query, {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  prNumber: context.issue.number
-                });
+                // Filter to only bot comments with our marker
+                const botComments = comments.filter(c =>
+                  c.user.login === 'github-actions[bot]'
+                );
 
-                const threads = result.repository.pullRequest.reviewThreads.nodes;
-                const commentIds = new Set(comments.data.map(c => c.id));
+                console.log(`Found ${botComments.length} existing bot review comment(s) to delete`);
 
-                // Find and resolve threads that contain comments from this review
-                for (const thread of threads) {
-                  if (thread.isResolved) continue;
-
-                  const hasReviewComment = thread.comments.nodes.some(c => 
-                    commentIds.has(c.databaseId)
-                  );
-
-                  if (hasReviewComment) {
-                    try {
-                      await github.graphql(`
-                        mutation($threadId: ID!) {
-                          resolveReviewThread(input: {threadId: $threadId}) {
-                            thread {
-                              id
-                            }
-                          }
-                        }
-                      `, {
-                        threadId: thread.id
-                      });
-                      console.log(`Resolved thread ${thread.id}`);
-                    } catch (error) {
-                      console.log(`Could not resolve thread ${thread.id}: ${error.message}`);
-                    }
+                // Delete each bot comment
+                for (const comment of botComments) {
+                  try {
+                    await github.rest.pulls.deleteReviewComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      comment_id: comment.id
+                    });
+                    console.log(`Deleted comment ${comment.id}`);
+                  } catch (error) {
+                    console.log(`Could not delete comment ${comment.id}: ${error.message}`);
                   }
                 }
               } catch (error) {
-                console.log(`Error resolving threads for review ${reviewId}: ${error.message}`);
+                console.log(`Error deleting bot comments: ${error.message}`);
+              }
+            }
+
+            // Helper function to find and update or delete bot issue comment
+            async function findBotIssueComment() {
+              try {
+                const comments = await github.paginate(
+                  github.rest.issues.listComments,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    per_page: 100
+                  }
+                );
+
+                return comments.find(c =>
+                  c.user.login === 'github-actions[bot]' &&
+                  c.body && c.body.includes('<!-- lint-review -->')
+                );
+              } catch (error) {
+                console.log(`Error finding bot comment: ${error.message}`);
+                return null;
               }
             }
 
@@ -252,101 +236,49 @@ jobs:
 
             const content = fs.readFileSync('lint_results.json', 'utf8').trim();
 
-            // Get all existing bot reviews
-            const existingReviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            const botReviews = existingReviews.data.filter(review =>
-              review.user.login === 'github-actions[bot]' &&
-              review.body && review.body.includes('<!-- lint-review -->')
-            );
-
             // Check if there are filtered issues
             const hasFilteredIssues = fs.existsSync('filtered_issues.txt');
             const filteredContent = hasFilteredIssues ? fs.readFileSync('filtered_issues.txt', 'utf8') : '';
 
-            if ((!content || content === '[]') && !hasFilteredIssues) {
-              console.log('No lint issues found');
-
-              // Dismiss all existing bot reviews and resolve their conversations
-              for (const review of botReviews) {
-                if (review.state !== 'DISMISSED') {
-                  // Resolve threads first
-                  await resolveReviewThreads(review.id);
-
-                  // Only dismiss reviews that can be dismissed (APPROVED or CHANGES_REQUESTED)
-                  // COMMENTED reviews cannot be dismissed via the API
-                  if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
-                    try {
-                      await github.rest.pulls.dismissReview({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        pull_number: context.issue.number,
-                        review_id: review.id,
-                        message: 'All lint issues have been resolved'
-                      });
-                      console.log(`Dismissed ${review.state} review ${review.id} and resolved conversations`);
-                    } catch (error) {
-                      console.log(`Could not dismiss review ${review.id}: ${error.message}`);
-                    }
-                  } else {
-                    console.log(`Skipped dismissing ${review.state} review ${review.id} (only threads resolved)`);
-                  }
-                }
-              }
-
-              return;
-            }
-
             const issues = content && content !== '[]' ? JSON.parse(content) : [];
 
-            // Create hash of current issues to check if review needs updating
+            // Create hash of current issues to detect changes
             const issuesHash = crypto.createHash('md5')
               .update(JSON.stringify(issues.map(i => `${i.file}:${i.line}:${i.message}`)) + filteredContent)
               .digest('hex')
               .substring(0, 8);
 
-            // Check if any existing review has the same issues
-            const matchingReview = botReviews.find(review => 
-              review.body.includes(`<!-- lint-hash:${issuesHash} -->`)
-            );
+            // Find existing bot comment
+            const existingComment = await findBotIssueComment();
 
-            if (matchingReview) {
-              console.log('Review already exists with same issues, skipping');
+            // Check if the existing comment already has the same hash
+            if (existingComment && existingComment.body.includes(`<!-- lint-hash:${issuesHash} -->`)) {
+              console.log('Comment already exists with same issues, skipping');
               return;
             }
 
-            // Dismiss ALL existing bot reviews and resolve their conversations
-            for (const review of botReviews) {
-              if (review.state !== 'DISMISSED') {
-                // Resolve threads first
-                await resolveReviewThreads(review.id);
+            // Delete all existing bot review comments (inline comments)
+            await deleteExistingBotComments();
 
-                // Only dismiss reviews that can be dismissed (APPROVED or CHANGES_REQUESTED)
-                // COMMENTED reviews cannot be dismissed via the API
-                if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
-                  try {
-                    await github.rest.pulls.dismissReview({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      pull_number: context.issue.number,
-                      review_id: review.id,
-                      message: 'Updating with new lint results'
-                    });
-                    console.log(`Dismissed ${review.state} review ${review.id} and resolved conversations`);
-                  } catch (error) {
-                    console.log(`Could not dismiss review ${review.id}: ${error.message}`);
-                  }
-                } else {
-                  console.log(`Skipped dismissing ${review.state} review ${review.id} (only threads resolved)`);
+            // If no issues, delete the summary comment and return
+            if (issues.length === 0 && !hasFilteredIssues) {
+              console.log('No lint issues found');
+              if (existingComment) {
+                try {
+                  await github.rest.issues.deleteComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: existingComment.id
+                  });
+                  console.log('Deleted existing lint comment (no issues remaining)');
+                } catch (error) {
+                  console.log(`Could not delete comment: ${error.message}`);
                 }
               }
+              return;
             }
 
-            // Prepare review comments (only for issues on changed lines)
+            // Prepare inline review comments
             const reviewComments = [];
             const issuesByFile = {};
 
@@ -364,52 +296,61 @@ jobs:
               });
             }
 
-            // Create review body with summary
+            // Create summary comment body
             const totalIssues = issues.length;
             const fileCount = Object.keys(issuesByFile).length;
 
-            let reviewBody = `## 🔍 Lint Results\n\n`;
+            let commentBody = `## Lint Results\n\n`;
 
             if (totalIssues > 0) {
-              reviewBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} on changed lines in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
+              commentBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} on changed lines in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
 
               for (const [file, fileIssues] of Object.entries(issuesByFile)) {
-                reviewBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
+                commentBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
               }
+            } else {
+              commentBody += `No issues on changed lines.\n`;
             }
 
-            reviewBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
+            commentBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
 
-            // Determine review event type
-            const reviewEvent = totalIssues > 0 ? 'REQUEST_CHANGES' : 'COMMENT';
-
+            // Update or create the summary comment
             try {
-              const review = await github.rest.pulls.createReview({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number,
-                commit_id: context.payload.pull_request.head.sha,
-                body: reviewBody,
-                event: reviewEvent,
-                comments: reviewComments
-              });
-
-              console.log(`Created review with ${reviewComments.length} inline comment(s)`);
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: commentBody
+                });
+                console.log('Updated existing lint summary comment');
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: commentBody
+                });
+                console.log('Created new lint summary comment');
+              }
             } catch (error) {
-              console.error(`Failed to create review:`, error.message);
+              console.error(`Failed to update/create summary comment: ${error.message}`);
+            }
 
-              // Fallback: try to create review without comments if there's an error
+            // Create inline review comments if there are issues
+            if (reviewComments.length > 0) {
               try {
-                await github.rest.pulls.createReview({
+                const review = await github.rest.pulls.createReview({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: context.issue.number,
                   commit_id: context.payload.pull_request.head.sha,
-                  body: reviewBody + '\n\n⚠️ Could not attach inline comments due to an error.',
-                  event: reviewEvent
+                  event: 'COMMENT',
+                  comments: reviewComments
                 });
-                console.log('Created review without inline comments as fallback');
-              } catch (fallbackError) {
-                console.error('Fallback review creation also failed:', fallbackError.message);
+
+                console.log(`Created review with ${reviewComments.length} inline comment(s)`);
+              } catch (error) {
+                console.error(`Failed to create inline comments: ${error.message}`);
               }
             }
