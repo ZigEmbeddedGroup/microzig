@@ -7,6 +7,7 @@ show_window: bool = true,
 path: []const u8,
 vfs: VirtualFilesystem,
 selected_file: ?VirtualFilesystem.ID = null,
+displayed_file: ?VirtualFilesystem.ID = null,
 
 const RegzWindow = @This();
 const std = @import("std");
@@ -16,6 +17,69 @@ const regz = @import("regz");
 const VirtualFilesystem = regz.VirtualFilesystem;
 
 const dvui = @import("dvui");
+
+// Tree-sitter Zig language parser
+extern fn tree_sitter_zig() callconv(.c) *dvui.c.TSLanguage;
+
+// Zig syntax highlighting queries (based on tree-sitter-zig highlights.scm)
+const zig_queries =
+    \\; Variables
+    \\(identifier) @variable
+    \\
+    \\; Types
+    \\(builtin_type) @type
+    \\
+    \\; Functions
+    \\(builtin_identifier) @function
+    \\(call_expression function: (identifier) @function)
+    \\(function_declaration name: (identifier) @function)
+    \\
+    \\; Keywords
+    \\["asm" "defer" "errdefer" "test" "error" "const" "var"] @keyword
+    \\["struct" "union" "enum" "opaque"] @keyword
+    \\["async" "await" "suspend" "nosuspend" "resume"] @keyword
+    \\"fn" @keyword
+    \\["and" "or" "orelse"] @keyword
+    \\"return" @keyword
+    \\["if" "else" "switch"] @keyword
+    \\["for" "while" "break" "continue"] @keyword
+    \\["usingnamespace" "export"] @keyword
+    \\["try" "catch"] @keyword
+    \\["volatile" "allowzero" "noalias" "addrspace" "align" "callconv" "linksection" "pub" "inline" "noinline" "extern" "comptime" "packed" "threadlocal"] @keyword
+    \\
+    \\; Literals
+    \\(character) @string
+    \\(string) @string
+    \\(multiline_string) @string
+    \\(integer) @number
+    \\(float) @number
+    \\(boolean) @constant
+    \\["null" "unreachable" "undefined"] @constant
+    \\
+    \\; Comments
+    \\(comment) @comment
+    \\
+    \\; Punctuation
+    \\["[" "]" "(" ")" "{" "}"] @punctuation
+    \\[";" "." "," ":" "=>" "->"] @punctuation
+;
+
+// Srcery colorscheme (https://srcery-colors.github.io)
+const zig_highlights: []const dvui.TextEntryWidget.SyntaxHighlight = blk: {
+    @setEvalBranchQuota(20000);
+    break :blk &.{
+        .{ .name = "keyword", .opts = .{ .color_text = dvui.Color.fromHex("EF2F27") } }, // Red - Statement
+        .{ .name = "string", .opts = .{ .color_text = dvui.Color.fromHex("98BC37") } }, // BrightGreen
+        .{ .name = "comment", .opts = .{ .color_text = dvui.Color.fromHex("918175") } }, // BrightBlack
+        .{ .name = "number", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } }, // Magenta
+        .{ .name = "type", .opts = .{ .color_text = dvui.Color.fromHex("FBB829") } }, // Yellow
+        .{ .name = "function", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } }, // Cyan
+        .{ .name = "variable", .opts = .{ .color_text = dvui.Color.fromHex("FCE8C3") } }, // BrightWhite (foreground)
+        .{ .name = "constant", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } }, // Magenta
+        .{ .name = "operator", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } }, // Cyan
+        .{ .name = "punctuation", .opts = .{ .color_text = dvui.Color.fromHex("BAA67F") } }, // White
+    };
+};
 
 var count: usize = 0;
 
@@ -116,14 +180,44 @@ pub fn show(w: *RegzWindow) !void {
         );
     }
 
-    const scroll_arena = dvui.scrollArea(@src(), .{}, .{});
-    defer scroll_arena.deinit();
+    if (dvui.useTreeSitter) {
+        var te: dvui.TextEntryWidget = undefined;
+        te.init(@src(), .{
+            .multiline = true,
+            .cache_layout = true,
+            .text = .{ .internal = .{ .limit = 10_000_000 } },
+            .tree_sitter = .{
+                .language = tree_sitter_zig(),
+                .queries = zig_queries,
+                .highlights = zig_highlights,
+                .log_captures = false,
+            },
+        }, .{ .expand = .both });
+        defer te.deinit();
 
-    var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal, .font_style = .body });
-    defer tl.deinit();
+        if (w.selected_file) |id| {
+            // Update text when file selection changes
+            if (w.displayed_file != id or dvui.firstFrame(te.data().id)) {
+                te.textSet(w.vfs.get_content(id), false);
+                te.textLayout.selection.moveCursor(0, false);
+                w.displayed_file = id;
+            }
+        }
 
-    if (w.selected_file) |id|
-        tl.addText(w.vfs.get_content(id), .{});
+        // Process only read-only events (selection, copy, navigation, scroll)
+        process_read_only_events(&te);
+        te.draw();
+    } else {
+        // Fallback to plain textLayout when tree-sitter unavailable
+        const scroll_arena = dvui.scrollArea(@src(), .{}, .{});
+        defer scroll_arena.deinit();
+
+        var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
+        defer tl.deinit();
+
+        if (w.selected_file) |id|
+            tl.addText(w.vfs.get_content(id), .{});
+    }
 }
 
 fn show_file_tree(
@@ -234,6 +328,65 @@ fn show_file_tree_recursive(
                     std.log.info("Clicked: {s}", .{name});
                 }
             },
+        }
+    }
+}
+
+/// Process events for read-only text display (allows selection, copy, navigation, scroll)
+fn process_read_only_events(te: *dvui.TextEntryWidget) void {
+    const evts = dvui.events();
+    for (evts) |*e| {
+        if (!te.matchEvent(e))
+            continue;
+
+        // Let scroll handle events first
+        te.scroll.scroll.?.processEvent(e);
+        if (e.handled) continue;
+
+        switch (e.evt) {
+            .key => |ke| {
+                // Allow copy
+                if (ke.action == .down and ke.matchBind("copy")) {
+                    e.handle(@src(), te.data());
+                    te.copy();
+                    continue;
+                }
+
+                // Allow select all
+                if (ke.action == .down and ke.matchBind("select_all")) {
+                    e.handle(@src(), te.data());
+                    te.textLayout.selection.selectAll();
+                    continue;
+                }
+
+                // Allow navigation: arrows, home, end, page up/down
+                if ((ke.action == .down or ke.action == .repeat) and
+                    (ke.matchBind("char_left") or ke.matchBind("char_right") or
+                        ke.matchBind("char_up") or ke.matchBind("char_down") or
+                        ke.matchBind("word_left") or ke.matchBind("word_right") or
+                        ke.matchBind("line_start") or ke.matchBind("line_end") or
+                        ke.matchBind("text_start") or ke.matchBind("text_end") or
+                        ke.matchBind("page_up") or ke.matchBind("page_down")))
+                {
+                    te.processEvent(e);
+                    continue;
+                }
+
+                // Allow tab navigation between widgets
+                if ((ke.action == .down or ke.action == .repeat) and
+                    (ke.matchBind("next_widget") or ke.matchBind("prev_widget")))
+                {
+                    te.processEvent(e);
+                    continue;
+                }
+            },
+            // Allow all mouse events for selection
+            .mouse => {
+                te.processEvent(e);
+            },
+            // Block text input events
+            .text => {},
+            else => {},
         }
     }
 }
