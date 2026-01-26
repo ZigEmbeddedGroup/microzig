@@ -44,7 +44,7 @@ pub const theme: dvui.Theme = blk: {
         .font_mono = .find(.{ .family = "Vera" }),
 
         .focus = cyan,
-        .text_select = xgray5,  // Visual selection background in srcery-vim
+        .text_select = xgray5, // Visual selection background in srcery-vim
         .fill = black,
         .text = bright_white,
         .border = bright_black,
