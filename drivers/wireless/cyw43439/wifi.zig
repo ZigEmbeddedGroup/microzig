@@ -13,13 +13,13 @@ bus: *Bus,
 request_id: u16 = 0,
 credit: u8 = 0,
 tx_sequence: u8 = 0,
-bus_status: ?BusStatus = null,
 log_state: LogState = .{},
 
 event_log: EventLog = .{},
 join_state: JoinState = .none,
 scan_state: ScanState = .none,
 scan_result: ?ScanResult = null,
+err: ?anyerror = null,
 
 const ioctl_request_bytes_len = 1024;
 
@@ -214,6 +214,7 @@ pub fn init(self: *Self, opt: InitOptions) !void {
         try self.set_var("assoc_listen", &.{0x0a});
         try self.set_cmd(.set_gmode, &.{1}); // auto
         try self.set_cmd(.set_band, &.{0}); // any
+        // try self.set_cmd(.set_pm, &.{2});// power mode
     }
 
     self.log_init();
@@ -330,7 +331,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
     var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
     var delay: usize = 0;
     while (delay < ioctl.response_wait) {
-        const rsp = try self.read(&bytes) orelse {
+        const rsp, _ = try self.read(&bytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
             continue;
@@ -372,6 +373,8 @@ pub const JoinOptions = struct {
 };
 
 pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !JoinPoller {
+    self.err = null;
+
     var buf: [64]u8 = @splat(0); // space for 10 addresses
     // Enable multicast
     {
@@ -498,18 +501,18 @@ pub const JoinPoller = struct {
 
     pub fn wait(jp: *JoinPoller, wait_ms: u32) !void {
         var delay: u32 = 0;
-        while (delay < wait_ms) {
-            if (!try jp.poll()) return;
+        while (delay < wait_ms and try jp.poll()) {
             jp.parent.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
         }
+        if (jp.parent.join_state == .joined) return;
         return error.Cyw43JoinTimeout;
     }
 };
 
 pub fn poll(self: *Self) !void {
     var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
-    const rsp = try self.read(&bytes) orelse return;
+    const rsp, _ = try self.read(&bytes) orelse return;
     switch (rsp.sdp.channel()) {
         .event => self.handle_event(rsp),
         else => self.log_response(rsp),
@@ -577,6 +580,11 @@ fn handle_event(self: *Self, rsp: ioctl.Response) void {
         log.debug("state changed old: {}, new: {}", .{ self.join_state, new_state });
         log.debug("event log: {}", .{self.event_log});
     }
+    if (self.join_state == .joining and new_state == .disjoined) {
+        event_log.err() catch |err| {
+            self.err = err;
+        };
+    }
     self.join_state = new_state;
 }
 
@@ -620,6 +628,7 @@ const ScanParams = extern struct {
 
 /// Init scan and return poller
 pub fn scan(self: *Self) !ScanPoller {
+    self.err = null;
     // Params can be used to choose active/passive scan type or to set specific
     // ssid to scan for.
     var params: ScanParams = .{};
@@ -715,11 +724,14 @@ fn sleep_ms(self: Self, delay: u32) void {
 ///
 /// Layer 2 header+payload position is passed to the caller. First return
 /// argument is start of that data in the buffer second is length.
-pub fn recv_zc(self: *Self, buffer: []u8) !struct { usize, usize } {
+pub fn recv_zc(self: *Self, buffer: []u8) !struct { usize, usize, bool } {
     while (true) {
-        const rsp = try self.read(buffer) orelse return .{ 0, 0 };
+        const rsp, const rx_ready = try self.read(buffer) orelse return .{ 0, 0, false };
         switch (rsp.sdp.channel()) {
-            .data => return rsp.data_pos(),
+            .data => {
+                const head, const len = rsp.data_pos();
+                return .{ head, len, rx_ready };
+            },
             .event => self.handle_event(rsp),
             else => self.log_response(rsp),
         }
@@ -754,24 +766,28 @@ pub fn has_credit(self: *Self) bool {
     return self.tx_sequence != self.credit and (self.credit -% self.tx_sequence) & 0x80 == 0;
 }
 
-// Read packet from the wifi chip. Assuming that this is used in the loop
-// until it returns null. That way we can cache status from previous read.
-fn read(self: *Self, buffer: []u8) !?ioctl.Response {
-    if (self.bus_status == null) self.read_bus_status();
-    const status = self.bus_status.?;
-    self.bus_status = null;
+// Read packet from the WiFi chip. Returns bus response and indication if there
+// is more data packets available. Returns null if there are no packets ready.
+fn read(self: *Self, buffer: []u8) !?struct { ioctl.Response, bool } {
+    var status = self.read_bus_status();
+    defer {
+        if (status.f2_interrupt and !status.f2_packet_available and self.join_state != .none) {
+            // Reading all packets clears interrupt, notify upstream that it is
+            // cleared now.
+            self.bus.spi.irq_cleared();
+        }
+    }
     if (status.f2_packet_available and status.packet_length > 0) {
         const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
         const words = as_words(buffer, words_len);
-
         self.bus.read(.wlan, 0, status.packet_length, words);
-        // last word is status
-        self.bus_status = @bitCast(words[words.len - 1]);
         // parse response
         const rsp = try ioctl.response(mem.sliceAsBytes(words)[0..status.packet_length]);
+        // last word is status
+        status = @bitCast(words[words.len - 1]);
         // update credit
         self.credit = rsp.sdp.credit;
-        return rsp;
+        return .{ rsp, status.f2_packet_available };
     }
     return null;
 }
@@ -783,8 +799,8 @@ fn as_words(bytes: []u8, len: usize) []u32 {
     return words;
 }
 
-fn read_bus_status(self: *Self) void {
-    self.bus_status = @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
+fn read_bus_status(self: *Self) BusStatus {
+    return @bitCast(self.bus.read_int(u32, .bus, Bus.reg.status));
 }
 
 pub fn gpio_enable(self: *Self, pin: u2) void {

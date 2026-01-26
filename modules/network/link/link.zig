@@ -29,6 +29,7 @@ pub const RecvResponse = struct {
     head: usize = 0,
     len: usize = 0,
     link_state: LinkState = .up,
+    next_packet_available: ?bool = null,
 };
 
 pub const Error = error{

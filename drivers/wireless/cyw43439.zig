@@ -65,11 +65,13 @@ pub fn scan_result(self: *Self) ?WiFi.ScanResult {
 /// buffer where is received ethernet packet. If `len` is zero there is no packet.
 pub fn recv_zc(ptr: *anyopaque, buffer: []u8) anyerror!Link.RecvResponse {
     const self: *Self = @ptrCast(@alignCast(ptr));
-    const head, const len = try self.wifi.recv_zc(buffer);
+    const head, const len, const next_packet_available = try self.wifi.recv_zc(buffer);
+    if (self.wifi.err) |err| return err;
     return .{
         .head = head,
         .len = len,
         .link_state = if (self.is_joined()) .up else .down,
+        .next_packet_available = next_packet_available,
     };
 }
 

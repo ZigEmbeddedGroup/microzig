@@ -92,6 +92,7 @@ pub const Cmd = enum(u32) {
     set_auth = 22,
     set_ssid = 26,
     set_antdiv = 64,
+    set_pm = 86,
     set_gmode = 110,
     set_wsec = 134,
     set_band = 142,

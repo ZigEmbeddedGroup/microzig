@@ -100,3 +100,8 @@ ncat -lkv -p 9998 --exec /bin/cat
 ```
 
 This example will send various TCP payload sizes. When the payload is too big for the TCP send buffer out of memory error will be raised on send.
+
+## irq.zig
+
+Similar to simple pong example but in interrupt mode. Link layer (cyw43) interrupts when there is available data packet to read. 
+Now when `nic.poll` is called only when there is data packet available there is need to call `nic.tick` periodically to run lwip internal timers. 

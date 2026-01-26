@@ -515,7 +515,10 @@ pub const WiFi = struct {
     pub const ready = Chip.ready;
 
     const Spi = @import("cyw43439_pio_spi.zig");
-    pub const Options = Chip.InitOptions;
+    pub const Options = struct {
+        enable_irq: bool = false,
+        country: Chip.InitOptions.Country = .{},
+    };
 
     spi: Spi = undefined,
     chip: Chip = .{}, // cyw43 chip interface
@@ -524,15 +527,81 @@ pub const WiFi = struct {
         self.spi = try Spi.init(.{});
         try self.chip.init(
             .{
-                .ptr = &self.spi,
+                .ptr = self,
                 .vtable = &.{
-                    .read = Spi.read,
-                    .write = Spi.write,
+                    .read = Self.read,
+                    .write = Self.write,
+                    .irq_cleared = if (opt.enable_irq) Self.irq_cleared else null,
                 },
             },
             hal.time.sleep_ms,
-            opt,
+            .{ .country = opt.country },
         );
+        if (opt.enable_irq) {
+            self.set_irq_enabled(true);
+        }
         return &self.chip;
+    }
+
+    fn write(ptr: *anyopaque, words: []u32) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+
+        // Disable interrupts during spi communication
+        const enabled = self.is_irq_enabled();
+        if (enabled) self.set_irq_enabled(false);
+        defer if (enabled) self.set_irq_enabled(true);
+
+        self.spi.write(words);
+    }
+
+    fn read(ptr: *anyopaque, words: []u32) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+
+        // Disable interrupts during spi communication
+        const enabled = self.is_irq_enabled();
+        if (enabled) self.set_irq_enabled(false);
+        defer if (enabled) self.set_irq_enabled(true);
+
+        self.spi.read(words);
+    }
+
+    fn irq_cleared(ptr: *anyopaque) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        self.set_irq_enabled(true);
+    }
+
+    fn set_irq_enabled(self: *Self, enable: bool) void {
+        self.spi.pins.io.set_irq_enabled(.{ .high = 1 }, enable);
+    }
+
+    // Returns true if this is source of interrupt
+    pub fn disable_irq_if(self: *Self, trg: hal.gpio.IrqTrigger) bool {
+        if (trg.pin == self.spi.pins.io and trg.events.high == 1) {
+            self.set_irq_enabled(false);
+            return true;
+        }
+        return false;
+    }
+
+    pub fn disable_irq(self: *Self) void {
+        self.set_irq_enabled(false);
+    }
+
+    fn is_irq_enabled(self: *Self) bool {
+        const events = irq_enabled_events(self.spi.pins.io);
+        return events.high == 1;
+    }
+
+    fn irq_enabled_events(pin: hal.gpio.Pin) hal.gpio.IrqEvents {
+        const core_num = microzig.hal.get_cpu_id();
+        const IO_BANK0 = microzig.chip.peripherals.IO_BANK0;
+        const ints_base: [*]volatile u32 = switch (core_num) {
+            0 => @ptrCast(&IO_BANK0.PROC0_INTE0),
+            else => @ptrCast(&IO_BANK0.PROC1_INTE0),
+        };
+        const pin_num = @intFromEnum(pin);
+        const bits: u4 = @truncate(ints_base[pin_num >> 3] & 0xF);
+        const events: hal.gpio.IrqEvents = @bitCast(bits);
+        return events;
     }
 };
