@@ -2129,17 +2129,17 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     .idx = add_interrupt.idx,
                 });
             },
-            .create_enum_and_apply => |create_enum_patch| {
+            .add_enum_and_apply => |add_enum_patch| {
                 // First, create the enum (same as add_enum)
-                const struct_id = try db.get_struct_ref(create_enum_patch.parent);
+                const struct_id = try db.get_struct_ref(add_enum_patch.parent);
 
                 const enum_id = try db.create_enum(struct_id, .{
-                    .name = create_enum_patch.@"enum".name,
-                    .description = create_enum_patch.@"enum".description,
-                    .size_bits = create_enum_patch.@"enum".bitsize,
+                    .name = add_enum_patch.@"enum".name,
+                    .description = add_enum_patch.@"enum".description,
+                    .size_bits = add_enum_patch.@"enum".bitsize,
                 });
 
-                for (create_enum_patch.@"enum".fields) |enum_field| {
+                for (add_enum_patch.@"enum".fields) |enum_field| {
                     try db.add_enum_field(enum_id, .{
                         .name = enum_field.name,
                         .description = enum_field.description,
@@ -2148,7 +2148,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                 }
 
                 // Then, apply to all specified fields (same as set_enum_type)
-                for (create_enum_patch.apply_to) |field_ref| {
+                for (add_enum_patch.apply_to) |field_ref| {
                     const field_name, const register_ref = try get_ref_last_component(field_ref);
                     const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
                     try db.set_register_field_enum_id(register_id, field_name, enum_id);
@@ -2171,7 +2171,7 @@ test "all" {
     _ = svd;
 }
 
-test "create_enum_and_apply patch creates enum and applies to fields" {
+test "add_enum_and_apply patch creates enum and applies to fields" {
     const allocator = std.testing.allocator;
 
     var db = try Database.create(allocator);
@@ -2217,11 +2217,11 @@ test "create_enum_and_apply patch creates enum and applies to fields" {
         .offset_bits = 0,
     });
 
-    // Apply the create_enum_and_apply patch
+    // Apply the add_enum_and_apply patch
     const patch_zon: [:0]const u8 =
         \\.{
         \\    .{
-        \\        .create_enum_and_apply = .{
+        \\        .add_enum_and_apply = .{
         \\            .parent = "types.peripherals.TEST_PERIPHERAL",
         \\            .@"enum" = .{
         \\                .name = "TestMode",
@@ -2271,7 +2271,7 @@ test "create_enum_and_apply patch creates enum and applies to fields" {
     try std.testing.expectEqual(enum_info.id, fields2[0].enum_id.?);
 }
 
-test "create_enum_and_apply patch with empty apply_to list" {
+test "add_enum_and_apply patch with empty apply_to list" {
     const allocator = std.testing.allocator;
 
     var db = try Database.create(allocator);
@@ -2287,7 +2287,7 @@ test "create_enum_and_apply patch with empty apply_to list" {
     const patch_zon: [:0]const u8 =
         \\.{
         \\    .{
-        \\        .create_enum_and_apply = .{
+        \\        .add_enum_and_apply = .{
         \\            .parent = "types.peripherals.TEST_PERIPHERAL",
         \\            .@"enum" = .{
         \\                .name = "UnusedEnum",
@@ -2315,7 +2315,7 @@ test "create_enum_and_apply patch with empty apply_to list" {
     try std.testing.expectEqual(@as(u8, 4), enum_info.size_bits);
 }
 
-test "create_enum_and_apply patch with invalid field reference" {
+test "add_enum_and_apply patch with invalid field reference" {
     const allocator = std.testing.allocator;
 
     var db = try Database.create(allocator);
@@ -2330,7 +2330,7 @@ test "create_enum_and_apply patch with invalid field reference" {
     const patch_zon: [:0]const u8 =
         \\.{
         \\    .{
-        \\        .create_enum_and_apply = .{
+        \\        .add_enum_and_apply = .{
         \\            .parent = "types.peripherals.TEST_PERIPHERAL",
         \\            .@"enum" = .{
         \\                .name = "TestEnum",

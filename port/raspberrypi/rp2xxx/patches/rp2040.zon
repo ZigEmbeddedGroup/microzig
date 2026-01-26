@@ -1,6 +1,6 @@
 .{
     .{
-        .create_enum_and_apply = .{
+        .add_enum_and_apply = .{
             .parent = "types.peripherals.PADS_BANK0",
             .@"enum" = .{
                 .name = "DriveStrength",
@@ -47,7 +47,7 @@
         },
     },
     .{
-        .create_enum_and_apply = .{
+        .add_enum_and_apply = .{
             .parent = "types.peripherals.USB_DPRAM",
             .@"enum" = .{
                 .name = "EndpointType",
@@ -94,7 +94,7 @@
         },
     },
     .{
-        .create_enum_and_apply = .{
+        .add_enum_and_apply = .{
             .parent = "types.peripherals.DMA",
             .@"enum" = .{
                 .name = "DataSize",
@@ -122,7 +122,7 @@
         },
     },
     .{
-        .create_enum_and_apply = .{
+        .add_enum_and_apply = .{
             .parent = "types.peripherals.DMA",
             .@"enum" = .{
                 .name = "Dreq",
