@@ -84,74 +84,93 @@ jobs:
 
             console.log(`Found ${rawIssues.length} total lint issue(s)`);
 
-            // Get diff with line numbers
             const baseSha = '${{ github.event.pull_request.base.sha }}';
             const headSha = '${{ github.event.pull_request.head.sha }}';
 
-            // Parse diff to get changed line numbers per file
+            // Get the list of files actually changed in this PR
+            let changedFiles;
+            try {
+              const changedFilesOutput = execSync(
+                `git diff --name-only --diff-filter=d ${baseSha} ${headSha}`,
+                { encoding: 'utf8' }
+              );
+              changedFiles = new Set(changedFilesOutput.trim().split('\n').filter(f => f));
+              console.log(`PR contains ${changedFiles.size} changed file(s)`);
+            } catch (error) {
+              console.log(`Could not get changed files: ${error.message}`);
+              changedFiles = new Set();
+            }
+
+            // Parse diff to get added/modified line numbers per file
+            // We parse the actual diff content to find lines starting with '+' (additions)
             const changedLines = {};
 
-            for (const issue of rawIssues) {
-              const file = issue.file;
+            for (const file of changedFiles) {
+              if (!file.endsWith('.zig')) continue;
 
-              if (!changedLines[file]) {
-                try {
-                  // Get the diff for this specific file
-                  const diff = execSync(
-                    `git diff --unified=0 ${baseSha} ${headSha} -- "${file}"`,
-                    { encoding: 'utf8' }
-                  );
+              try {
+                // Get the diff with context to properly track line numbers
+                const diff = execSync(
+                  `git diff --unified=0 ${baseSha} ${headSha} -- "${file}"`,
+                  { encoding: 'utf8' }
+                );
 
-                  // Parse the diff to extract changed line numbers
-                  const lines = new Set();
-                  const diffLines = diff.split('\n');
+                const lines = new Set();
+                const diffLines = diff.split('\n');
+                let currentNewLine = 0;
 
-                  for (const line of diffLines) {
-                    // Match the @@ -start,count +start,count @@ format
-                    const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
-                    if (match) {
-                      const startLine = parseInt(match[1]);
-                      const count = match[2] ? parseInt(match[2]) : 1;
+                for (const line of diffLines) {
+                  // Match the @@ -oldStart,oldCount +newStart,newCount @@ format
+                  const hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+                  if (hunkMatch) {
+                    currentNewLine = parseInt(hunkMatch[1]);
+                    const count = hunkMatch[2] !== undefined ? parseInt(hunkMatch[2]) : 1;
 
-                      // Add all changed lines in this hunk
-                      for (let i = 0; i < count; i++) {
-                        lines.add(startLine + i);
-                      }
+                    // With --unified=0, the count represents actual added lines
+                    // Add all lines in this range as they are additions
+                    for (let i = 0; i < count; i++) {
+                      lines.add(currentNewLine + i);
                     }
+                    continue;
                   }
-
-                  changedLines[file] = lines;
-                  console.log(`File ${file}: ${lines.size} changed line(s)`);
-                } catch (error) {
-                  console.log(`Could not get diff for ${file}: ${error.message}`);
-                  changedLines[file] = new Set();
                 }
+
+                changedLines[file] = lines;
+                if (lines.size > 0) {
+                  console.log(`File ${file}: ${lines.size} added/modified line(s): ${[...lines].slice(0, 10).join(', ')}${lines.size > 10 ? '...' : ''}`);
+                }
+              } catch (error) {
+                console.log(`Could not get diff for ${file}: ${error.message}`);
+                changedLines[file] = new Set();
               }
             }
 
-            // Filter issues to only those on changed lines
+            // Filter issues to only those:
+            // 1. In files that are part of this PR
+            // 2. On lines that were actually added/modified
             const filteredIssues = rawIssues.filter(issue => {
-              const fileLines = changedLines[issue.file] || new Set();
-              const isOnChangedLine = fileLines.has(issue.line);
-              if (!isOnChangedLine) {
-                console.log(`Filtered out: ${issue.file}:${issue.line} (not on changed line)`);
+              // First check: is this file even in the PR?
+              if (!changedFiles.has(issue.file)) {
+                console.log(`Filtered out: ${issue.file}:${issue.line} (file not in PR)`);
+                return false;
               }
-              return isOnChangedLine;
+
+              // Second check: is this line actually changed?
+              const fileLines = changedLines[issue.file] || new Set();
+              if (!fileLines.has(issue.line)) {
+                console.log(`Filtered out: ${issue.file}:${issue.line} (line not changed)`);
+                return false;
+              }
+
+              return true;
             });
 
             // Save filtered issues
             fs.writeFileSync('lint_results.json', JSON.stringify(filteredIssues, null, 2));
 
-            // Create summary of filtered issues
             const filtered = rawIssues.length - filteredIssues.length;
             if (filtered > 0) {
-              console.log(`Filtered out ${filtered} issue(s) on unchanged lines`);
-
-              const filteredOut = rawIssues.filter(issue => !filteredIssues.includes(issue));
-              const summary = filteredOut.map(i => `${i.file}:${i.line}: ${i.message}`).join('\n');
-              fs.writeFileSync('filtered_issues.txt', 
-                `The following ${filtered} issue(s) exist but are not on lines changed in this PR:\n\n${summary}`
-              );
+              console.log(`Filtered out ${filtered} issue(s) not on changed lines`);
             }
 
             console.log(`Kept ${filteredIssues.length} issue(s) on changed lines for inline comments`);
