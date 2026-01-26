@@ -61,6 +61,19 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    const tree_sitter_zig_dep = b.lazyDependency("tree_sitter_zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    if (tree_sitter_zig_dep) |tsd| {
+        exe_mod.addIncludePath(tsd.path("src"));
+        exe_mod.addCSourceFiles(.{
+            .root = tsd.path(""),
+            .files = &.{"src/parser.c"},
+            .flags = &.{"-std=c11"},
+        });
+    }
+
     const exe = b.addExecutable(.{
         .name = "sorcerer",
         .root_module = exe_mod,

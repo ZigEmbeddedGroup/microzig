@@ -5,6 +5,7 @@ const serial = @import("serial");
 const regz = @import("regz");
 const RegisterSchemaUsage = @import("RegisterSchemaUsage.zig");
 const RegzWindow = @import("RegzWindow.zig");
+const SrceryTheme = @import("SrceryTheme.zig");
 
 const window_icon_png = @embedFile("zig-favicon.png");
 
@@ -56,13 +57,8 @@ pub fn AppInit(win: *dvui.Window) !void {
     state.orig_content_scale = win.content_scale;
     //try dvui.addFont("NOTO", @embedFile("../src/fonts/NotoSansKR-Regular.ttf"), null);
 
-    if (false) {
-        // If you need to set a theme based on the users preferred color scheme, do it here
-        win.theme = switch (win.backend.preferredColorScheme() orelse .light) {
-            .light => dvui.Theme.builtin.adwaita_light,
-            .dark => dvui.Theme.builtin.adwaita_dark,
-        };
-    }
+    // Use Srcery color scheme
+    win.theme = SrceryTheme.theme;
     std.log.info("starting...", .{});
     const register_schema_file = try std.fs.cwd().openFile(state.register_schema_path, .{});
     defer register_schema_file.close();
@@ -125,7 +121,7 @@ pub fn frame() !dvui.App.Result {
     var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both, .style = .window });
     defer scroll.deinit();
 
-    var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal, .font_style = .title_4 });
+    var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
     const lorem = "This is a dvui.App example that can compile on multiple backends.";
     tl.addText(lorem, .{});
     tl.addText("\n\n", .{});
