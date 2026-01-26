@@ -84,74 +84,93 @@ jobs:
 
             console.log(`Found ${rawIssues.length} total lint issue(s)`);
 
-            // Get diff with line numbers
             const baseSha = '${{ github.event.pull_request.base.sha }}';
             const headSha = '${{ github.event.pull_request.head.sha }}';
 
-            // Parse diff to get changed line numbers per file
+            // Get the list of files actually changed in this PR
+            let changedFiles;
+            try {
+              const changedFilesOutput = execSync(
+                `git diff --name-only --diff-filter=d ${baseSha} ${headSha}`,
+                { encoding: 'utf8' }
+              );
+              changedFiles = new Set(changedFilesOutput.trim().split('\n').filter(f => f));
+              console.log(`PR contains ${changedFiles.size} changed file(s)`);
+            } catch (error) {
+              console.log(`Could not get changed files: ${error.message}`);
+              changedFiles = new Set();
+            }
+
+            // Parse diff to get added/modified line numbers per file
+            // We parse the actual diff content to find lines starting with '+' (additions)
             const changedLines = {};
 
-            for (const issue of rawIssues) {
-              const file = issue.file;
+            for (const file of changedFiles) {
+              if (!file.endsWith('.zig')) continue;
 
-              if (!changedLines[file]) {
-                try {
-                  // Get the diff for this specific file
-                  const diff = execSync(
-                    `git diff --unified=0 ${baseSha} ${headSha} -- "${file}"`,
-                    { encoding: 'utf8' }
-                  );
+              try {
+                // Get the diff with context to properly track line numbers
+                const diff = execSync(
+                  `git diff --unified=0 ${baseSha} ${headSha} -- "${file}"`,
+                  { encoding: 'utf8' }
+                );
 
-                  // Parse the diff to extract changed line numbers
-                  const lines = new Set();
-                  const diffLines = diff.split('\n');
+                const lines = new Set();
+                const diffLines = diff.split('\n');
+                let currentNewLine = 0;
 
-                  for (const line of diffLines) {
-                    // Match the @@ -start,count +start,count @@ format
-                    const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
-                    if (match) {
-                      const startLine = parseInt(match[1]);
-                      const count = match[2] ? parseInt(match[2]) : 1;
+                for (const line of diffLines) {
+                  // Match the @@ -oldStart,oldCount +newStart,newCount @@ format
+                  const hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+                  if (hunkMatch) {
+                    currentNewLine = parseInt(hunkMatch[1]);
+                    const count = hunkMatch[2] !== undefined ? parseInt(hunkMatch[2]) : 1;
 
-                      // Add all changed lines in this hunk
-                      for (let i = 0; i < count; i++) {
-                        lines.add(startLine + i);
-                      }
+                    // With --unified=0, the count represents actual added lines
+                    // Add all lines in this range as they are additions
+                    for (let i = 0; i < count; i++) {
+                      lines.add(currentNewLine + i);
                     }
+                    continue;
                   }
-
-                  changedLines[file] = lines;
-                  console.log(`File ${file}: ${lines.size} changed line(s)`);
-                } catch (error) {
-                  console.log(`Could not get diff for ${file}: ${error.message}`);
-                  changedLines[file] = new Set();
                 }
+
+                changedLines[file] = lines;
+                if (lines.size > 0) {
+                  console.log(`File ${file}: ${lines.size} added/modified line(s): ${[...lines].slice(0, 10).join(', ')}${lines.size > 10 ? '...' : ''}`);
+                }
+              } catch (error) {
+                console.log(`Could not get diff for ${file}: ${error.message}`);
+                changedLines[file] = new Set();
               }
             }
 
-            // Filter issues to only those on changed lines
+            // Filter issues to only those:
+            // 1. In files that are part of this PR
+            // 2. On lines that were actually added/modified
             const filteredIssues = rawIssues.filter(issue => {
-              const fileLines = changedLines[issue.file] || new Set();
-              const isOnChangedLine = fileLines.has(issue.line);
-              if (!isOnChangedLine) {
-                console.log(`Filtered out: ${issue.file}:${issue.line} (not on changed line)`);
+              // First check: is this file even in the PR?
+              if (!changedFiles.has(issue.file)) {
+                console.log(`Filtered out: ${issue.file}:${issue.line} (file not in PR)`);
+                return false;
               }
-              return isOnChangedLine;
+
+              // Second check: is this line actually changed?
+              const fileLines = changedLines[issue.file] || new Set();
+              if (!fileLines.has(issue.line)) {
+                console.log(`Filtered out: ${issue.file}:${issue.line} (line not changed)`);
+                return false;
+              }
+
+              return true;
             });
 
             // Save filtered issues
             fs.writeFileSync('lint_results.json', JSON.stringify(filteredIssues, null, 2));
 
-            // Create summary of filtered issues
             const filtered = rawIssues.length - filteredIssues.length;
             if (filtered > 0) {
-              console.log(`Filtered out ${filtered} issue(s) on unchanged lines`);
-
-              const filteredOut = rawIssues.filter(issue => !filteredIssues.includes(issue));
-              const summary = filteredOut.map(i => `${i.file}:${i.line}: ${i.message}`).join('\n');
-              fs.writeFileSync('filtered_issues.txt', 
-                `The following ${filtered} issue(s) exist but are not on lines changed in this PR:\n\n${summary}`
-              );
+              console.log(`Filtered out ${filtered} issue(s) not on changed lines`);
             }
 
             console.log(`Kept ${filteredIssues.length} issue(s) on changed lines for inline comments`);
@@ -167,81 +186,65 @@ jobs:
             // Change to pr directory
             process.chdir('pr');
 
-            // Helper function to resolve review threads using GraphQL
-            async function resolveReviewThreads(reviewId) {
+            // Helper function to delete all existing bot review comments
+            async function deleteExistingBotComments() {
               try {
-                // Get all review comments for this review
-                const comments = await github.rest.pulls.listCommentsForReview({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.issue.number,
-                  review_id: reviewId
-                });
-
-                if (comments.data.length === 0) {
-                  console.log(`No comments found for review ${reviewId}`);
-                  return;
-                }
-
-                // Get all review threads for this PR
-                const query = `
-                  query($owner: String!, $repo: String!, $prNumber: Int!) {
-                    repository(owner: $owner, name: $repo) {
-                      pullRequest(number: $prNumber) {
-                        reviewThreads(first: 100) {
-                          nodes {
-                            id
-                            isResolved
-                            comments(first: 10) {
-                              nodes {
-                                databaseId
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
+                // List all review comments on this PR
+                const comments = await github.paginate(
+                  github.rest.pulls.listReviewComments,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: context.issue.number,
+                    per_page: 100
                   }
-                `;
+                );
 
-                const result = await github.graphql(query, {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  prNumber: context.issue.number
-                });
+                // Filter to only bot comments with our marker
+                const botComments = comments.filter(c =>
+                  c.user.login === 'github-actions[bot]'
+                );
 
-                const threads = result.repository.pullRequest.reviewThreads.nodes;
-                const commentIds = new Set(comments.data.map(c => c.id));
+                console.log(`Found ${botComments.length} existing bot review comment(s) to delete`);
 
-                // Find and resolve threads that contain comments from this review
-                for (const thread of threads) {
-                  if (thread.isResolved) continue;
-
-                  const hasReviewComment = thread.comments.nodes.some(c => 
-                    commentIds.has(c.databaseId)
-                  );
-
-                  if (hasReviewComment) {
-                    try {
-                      await github.graphql(`
-                        mutation($threadId: ID!) {
-                          resolveReviewThread(input: {threadId: $threadId}) {
-                            thread {
-                              id
-                            }
-                          }
-                        }
-                      `, {
-                        threadId: thread.id
-                      });
-                      console.log(`Resolved thread ${thread.id}`);
-                    } catch (error) {
-                      console.log(`Could not resolve thread ${thread.id}: ${error.message}`);
-                    }
+                // Delete each bot comment
+                for (const comment of botComments) {
+                  try {
+                    await github.rest.pulls.deleteReviewComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      comment_id: comment.id
+                    });
+                    console.log(`Deleted comment ${comment.id}`);
+                  } catch (error) {
+                    console.log(`Could not delete comment ${comment.id}: ${error.message}`);
                   }
                 }
               } catch (error) {
-                console.log(`Error resolving threads for review ${reviewId}: ${error.message}`);
+                console.log(`Error deleting bot comments: ${error.message}`);
+              }
+            }
+
+            // Helper function to find and update or delete bot issue comment
+            async function findBotIssueComment() {
+              try {
+                const comments = await github.paginate(
+                  github.rest.issues.listComments,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    per_page: 100
+                  }
+                );
+
+                return comments.find(c =>
+                  c.user.login === 'github-actions[bot]' &&
+                  c.body && c.body.includes('<!-- lint-review -->')
+                );
+              } catch (error) {
+                console.log(`Error finding bot comment: ${error.message}`);
+                return null;
               }
             }
 
@@ -252,101 +255,49 @@ jobs:
 
             const content = fs.readFileSync('lint_results.json', 'utf8').trim();
 
-            // Get all existing bot reviews
-            const existingReviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            const botReviews = existingReviews.data.filter(review =>
-              review.user.login === 'github-actions[bot]' &&
-              review.body && review.body.includes('<!-- lint-review -->')
-            );
-
             // Check if there are filtered issues
             const hasFilteredIssues = fs.existsSync('filtered_issues.txt');
             const filteredContent = hasFilteredIssues ? fs.readFileSync('filtered_issues.txt', 'utf8') : '';
 
-            if ((!content || content === '[]') && !hasFilteredIssues) {
-              console.log('No lint issues found');
-
-              // Dismiss all existing bot reviews and resolve their conversations
-              for (const review of botReviews) {
-                if (review.state !== 'DISMISSED') {
-                  // Resolve threads first
-                  await resolveReviewThreads(review.id);
-
-                  // Only dismiss reviews that can be dismissed (APPROVED or CHANGES_REQUESTED)
-                  // COMMENTED reviews cannot be dismissed via the API
-                  if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
-                    try {
-                      await github.rest.pulls.dismissReview({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        pull_number: context.issue.number,
-                        review_id: review.id,
-                        message: 'All lint issues have been resolved'
-                      });
-                      console.log(`Dismissed ${review.state} review ${review.id} and resolved conversations`);
-                    } catch (error) {
-                      console.log(`Could not dismiss review ${review.id}: ${error.message}`);
-                    }
-                  } else {
-                    console.log(`Skipped dismissing ${review.state} review ${review.id} (only threads resolved)`);
-                  }
-                }
-              }
-
-              return;
-            }
-
             const issues = content && content !== '[]' ? JSON.parse(content) : [];
 
-            // Create hash of current issues to check if review needs updating
+            // Create hash of current issues to detect changes
             const issuesHash = crypto.createHash('md5')
               .update(JSON.stringify(issues.map(i => `${i.file}:${i.line}:${i.message}`)) + filteredContent)
               .digest('hex')
               .substring(0, 8);
 
-            // Check if any existing review has the same issues
-            const matchingReview = botReviews.find(review => 
-              review.body.includes(`<!-- lint-hash:${issuesHash} -->`)
-            );
+            // Find existing bot comment
+            const existingComment = await findBotIssueComment();
 
-            if (matchingReview) {
-              console.log('Review already exists with same issues, skipping');
+            // Check if the existing comment already has the same hash
+            if (existingComment && existingComment.body.includes(`<!-- lint-hash:${issuesHash} -->`)) {
+              console.log('Comment already exists with same issues, skipping');
               return;
             }
 
-            // Dismiss ALL existing bot reviews and resolve their conversations
-            for (const review of botReviews) {
-              if (review.state !== 'DISMISSED') {
-                // Resolve threads first
-                await resolveReviewThreads(review.id);
+            // Delete all existing bot review comments (inline comments)
+            await deleteExistingBotComments();
 
-                // Only dismiss reviews that can be dismissed (APPROVED or CHANGES_REQUESTED)
-                // COMMENTED reviews cannot be dismissed via the API
-                if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
-                  try {
-                    await github.rest.pulls.dismissReview({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      pull_number: context.issue.number,
-                      review_id: review.id,
-                      message: 'Updating with new lint results'
-                    });
-                    console.log(`Dismissed ${review.state} review ${review.id} and resolved conversations`);
-                  } catch (error) {
-                    console.log(`Could not dismiss review ${review.id}: ${error.message}`);
-                  }
-                } else {
-                  console.log(`Skipped dismissing ${review.state} review ${review.id} (only threads resolved)`);
+            // If no issues, delete the summary comment and return
+            if (issues.length === 0 && !hasFilteredIssues) {
+              console.log('No lint issues found');
+              if (existingComment) {
+                try {
+                  await github.rest.issues.deleteComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: existingComment.id
+                  });
+                  console.log('Deleted existing lint comment (no issues remaining)');
+                } catch (error) {
+                  console.log(`Could not delete comment: ${error.message}`);
                 }
               }
+              return;
             }
 
-            // Prepare review comments (only for issues on changed lines)
+            // Prepare inline review comments
             const reviewComments = [];
             const issuesByFile = {};
 
@@ -364,52 +315,61 @@ jobs:
               });
             }
 
-            // Create review body with summary
+            // Create summary comment body
             const totalIssues = issues.length;
             const fileCount = Object.keys(issuesByFile).length;
 
-            let reviewBody = `## 🔍 Lint Results\n\n`;
+            let commentBody = `## Lint Results\n\n`;
 
             if (totalIssues > 0) {
-              reviewBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} on changed lines in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
+              commentBody += `Found **${totalIssues}** issue${totalIssues !== 1 ? 's' : ''} on changed lines in **${fileCount}** file${fileCount !== 1 ? 's' : ''}:\n\n`;
 
               for (const [file, fileIssues] of Object.entries(issuesByFile)) {
-                reviewBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
+                commentBody += `- **${file}**: ${fileIssues.length} issue${fileIssues.length !== 1 ? 's' : ''}\n`;
               }
+            } else {
+              commentBody += `No issues on changed lines.\n`;
             }
 
-            reviewBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
+            commentBody += `\n<!-- lint-review -->\n<!-- lint-hash:${issuesHash} -->`;
 
-            // Determine review event type
-            const reviewEvent = totalIssues > 0 ? 'REQUEST_CHANGES' : 'COMMENT';
-
+            // Update or create the summary comment
             try {
-              const review = await github.rest.pulls.createReview({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number,
-                commit_id: context.payload.pull_request.head.sha,
-                body: reviewBody,
-                event: reviewEvent,
-                comments: reviewComments
-              });
-
-              console.log(`Created review with ${reviewComments.length} inline comment(s)`);
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: commentBody
+                });
+                console.log('Updated existing lint summary comment');
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: commentBody
+                });
+                console.log('Created new lint summary comment');
+              }
             } catch (error) {
-              console.error(`Failed to create review:`, error.message);
+              console.error(`Failed to update/create summary comment: ${error.message}`);
+            }
 
-              // Fallback: try to create review without comments if there's an error
+            // Create inline review comments if there are issues
+            if (reviewComments.length > 0) {
               try {
-                await github.rest.pulls.createReview({
+                const review = await github.rest.pulls.createReview({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: context.issue.number,
                   commit_id: context.payload.pull_request.head.sha,
-                  body: reviewBody + '\n\n⚠️ Could not attach inline comments due to an error.',
-                  event: reviewEvent
+                  event: 'COMMENT',
+                  comments: reviewComments
                 });
-                console.log('Created review without inline comments as fallback');
-              } catch (fallbackError) {
-                console.error('Fallback review creation also failed:', fallbackError.message);
+
+                console.log(`Created review with ${reviewComments.length} inline comment(s)`);
+              } catch (error) {
+                console.error(`Failed to create inline comments: ${error.message}`);
               }
             }
