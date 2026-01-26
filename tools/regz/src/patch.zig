@@ -45,6 +45,14 @@ pub const Patch = union(enum) {
         name: []const u8,
         description: ?[]const u8 = null,
     },
+    /// Creates a new enum type in the specified parent struct and applies it
+    /// to all the specified field references. This is a convenience patch that
+    /// combines `add_enum` with multiple `set_enum_type` operations.
+    create_enum_and_apply: struct {
+        parent: []const u8,
+        @"enum": Type.Enum,
+        apply_to: []const []const u8,
+    },
 
     pub fn from_json_str(allocator: Allocator, json_str: []const u8) !std.json.Parsed(Patch) {
         return std.json.parseFromSlice(Patch, allocator, json_str, .{});
