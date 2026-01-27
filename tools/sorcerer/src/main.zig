@@ -502,6 +502,9 @@ fn search_chips_window() void {
         var te = dvui.textEntry(@src(), .{
             .text = .{ .buffer = &state.chip_search_query },
         }, .{ .expand = .horizontal });
+        if (dvui.firstFrame(te.data().id)) {
+            dvui.focusWidget(te.data().id, null, null);
+        }
         te.deinit();
     }
 
@@ -896,6 +899,9 @@ fn search_boards_window() void {
         var te = dvui.textEntry(@src(), .{
             .text = .{ .buffer = &state.board_search_query },
         }, .{ .expand = .horizontal });
+        if (dvui.firstFrame(te.data().id)) {
+            dvui.focusWidget(te.data().id, null, null);
+        }
         te.deinit();
     }
 
@@ -1099,6 +1105,9 @@ fn search_targets_window() void {
         var te = dvui.textEntry(@src(), .{
             .text = .{ .buffer = &state.target_search_query },
         }, .{ .expand = .horizontal });
+        if (dvui.firstFrame(te.data().id)) {
+            dvui.focusWidget(te.data().id, null, null);
+        }
         te.deinit();
     }
 

@@ -13,6 +13,10 @@ chip_info: ?ChipInfo = null,
 loaded_patches: std.StringArrayHashMapUnmanaged(LoadedPatchFile) = .{},
 selected_patch: ?SelectedPatch = null,
 patches_loaded: bool = false,
+format: regz.Database.Format,
+device: ?[]const u8,
+patch_detail_tab: PatchDetailTab = .fields,
+cached_diff: ?CachedDiff = null,
 
 pub const View = enum {
     code_generation,
@@ -36,6 +40,28 @@ pub const SelectedPatch = struct {
     patch_index: usize,
 };
 
+pub const PatchDetailTab = enum {
+    fields,
+    diff,
+};
+
+pub const DiffLine = struct {
+    kind: enum { context, added, removed },
+    text: []const u8,
+};
+
+pub const CachedDiff = struct {
+    file_index: usize,
+    patch_index: usize,
+    file_diffs: []const FileDiff,
+    error_message: ?[]const u8 = null,
+};
+
+pub const FileDiff = struct {
+    filename: []const u8,
+    lines: []const DiffLine,
+};
+
 const RegzWindow = @This();
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -43,11 +69,15 @@ const Allocator = std.mem.Allocator;
 const regz = @import("regz");
 const VirtualFilesystem = regz.VirtualFilesystem;
 const RegisterSchemaUsage = @import("RegisterSchemaUsage.zig");
+const diffz = @import("diffz");
 
 const dvui = @import("dvui");
 
 // Tree-sitter Zig language parser
 extern fn tree_sitter_zig() callconv(.c) *dvui.c.TSLanguage;
+
+// Tree-sitter Diff language parser
+extern fn tree_sitter_diff() callconv(.c) *dvui.c.TSLanguage;
 
 // Zig syntax highlighting queries (based on tree-sitter-zig highlights.scm)
 const zig_queries =
@@ -109,6 +139,42 @@ const zig_highlights: []const dvui.TextEntryWidget.SyntaxHighlight = blk: {
     };
 };
 
+// Diff syntax highlighting queries (based on tree-sitter-diff highlights.scm)
+const diff_queries =
+    \\; Additions - green
+    \\(new_file) @diff.plus
+    \\(addition) @diff.plus
+    \\
+    \\; Deletions - red
+    \\(old_file) @diff.minus
+    \\(deletion) @diff.minus
+    \\
+    \\; Headers and metadata
+    \\(block) @diff.header
+    \\(location) @diff.location
+    \\(filename) @string
+    \\(index) @keyword
+    \\(commit) @constant
+    \\
+    \\; Context lines - default
+    \\(context) @diff.context
+;
+
+// Diff colorscheme
+const diff_highlights: []const dvui.TextEntryWidget.SyntaxHighlight = blk: {
+    @setEvalBranchQuota(20000);
+    break :blk &.{
+        .{ .name = "diff.plus", .opts = .{ .color_text = dvui.Color.fromHex("98BC37") } }, // Green for additions
+        .{ .name = "diff.minus", .opts = .{ .color_text = dvui.Color.fromHex("EF2F27") } }, // Red for deletions
+        .{ .name = "diff.header", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } }, // Cyan for headers
+        .{ .name = "diff.location", .opts = .{ .color_text = dvui.Color.fromHex("E02C6D") } }, // Magenta for location
+        .{ .name = "diff.context", .opts = .{ .color_text = dvui.Color.fromHex("FCE8C3") } }, // Default for context
+        .{ .name = "string", .opts = .{ .color_text = dvui.Color.fromHex("FBB829") } }, // Yellow for filenames
+        .{ .name = "keyword", .opts = .{ .color_text = dvui.Color.fromHex("0AAEB3") } }, // Cyan for index
+        .{ .name = "constant", .opts = .{ .color_text = dvui.Color.fromHex("918175") } }, // Gray for commit
+    };
+};
+
 var count: usize = 0;
 
 pub fn create(
@@ -146,6 +212,8 @@ pub fn create(
         .path = path,
         .vfs = .init(gpa),
         .chip_info = chip_info,
+        .format = format,
+        .device = device,
     };
 
     try db.to_zig(window.vfs.dir(), .{});
@@ -524,6 +592,13 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
 
     const patch = patches[sel.patch_index];
 
+    // Invalidate cache if selected patch changed
+    if (w.cached_diff) |cached| {
+        if (cached.file_index != sel.file_index or cached.patch_index != sel.patch_index) {
+            w.cached_diff = null;
+        }
+    }
+
     var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
         .expand = .both,
         .padding = dvui.Rect.all(8),
@@ -536,14 +611,499 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
     });
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
-    switch (patch) {
-        .override_arch => |p| show_override_arch_widget(p),
-        .set_device_property => |p| show_set_device_property_widget(p),
-        .add_enum => |p| show_add_enum_widget(p, arena),
-        .set_enum_type => |p| show_set_enum_type_widget(p),
-        .add_interrupt => |p| show_add_interrupt_widget(p),
-        .add_enum_and_apply => |p| show_add_enum_and_apply_widget(p, arena),
+    // Tab bar
+    {
+        var tab_bar = dvui.box(@src(), .{ .dir = .horizontal }, .{
+            .expand = .horizontal,
+            .padding = dvui.Rect.all(2),
+        });
+        defer tab_bar.deinit();
+
+        // Fields tab button
+        const fields_selected = w.patch_detail_tab == .fields;
+        if (dvui.button(@src(), "Fields", .{}, .{
+            .background = fields_selected,
+            .border = if (fields_selected) dvui.Rect.all(1) else dvui.Rect.all(0),
+            .padding = dvui.Rect.all(4),
+        })) {
+            w.patch_detail_tab = .fields;
+        }
+
+        // Diff tab button
+        const diff_selected = w.patch_detail_tab == .diff;
+        if (dvui.button(@src(), "Diff", .{}, .{
+            .background = diff_selected,
+            .border = if (diff_selected) dvui.Rect.all(1) else dvui.Rect.all(0),
+            .padding = dvui.Rect.all(4),
+        })) {
+            w.patch_detail_tab = .diff;
+        }
     }
+
+    _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
+
+    // Tab content
+    switch (w.patch_detail_tab) {
+        .fields => {
+            switch (patch) {
+                .override_arch => |p| show_override_arch_widget(p),
+                .set_device_property => |p| show_set_device_property_widget(p),
+                .add_enum => |p| show_add_enum_widget(p, arena),
+                .set_enum_type => |p| show_set_enum_type_widget(p),
+                .add_interrupt => |p| show_add_interrupt_widget(p),
+                .add_enum_and_apply => |p| show_add_enum_and_apply_widget(p, arena),
+            }
+        },
+        .diff => {
+            w.show_patch_diff(arena, sel, patch);
+        },
+    }
+}
+
+fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+    // Check if cache is valid
+    if (w.cached_diff) |cached| {
+        if (cached.file_index == sel.file_index and cached.patch_index == sel.patch_index) {
+            // Display cached diff
+            if (cached.error_message) |err| {
+                _ = dvui.label(@src(), "Error computing diff: {s}", .{err}, .{
+                    .color_text = dvui.Color.fromHex("EF2F27"),
+                });
+                return;
+            }
+
+            w.display_diff(cached.file_diffs, sel);
+            return;
+        }
+    }
+
+    // Compute new diff
+    w.compute_patch_diff(arena, sel, patch);
+
+    // Display the newly computed diff
+    if (w.cached_diff) |cached| {
+        if (cached.error_message) |err| {
+            _ = dvui.label(@src(), "Error computing diff: {s}", .{err}, .{
+                .color_text = dvui.Color.fromHex("EF2F27"),
+            });
+            return;
+        }
+
+        w.display_diff(cached.file_diffs, sel);
+    }
+}
+
+fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch) void {
+    if (file_diffs.len == 0) {
+        _ = dvui.label(@src(), "No changes detected", .{}, .{});
+        return;
+    }
+
+    // Build unified diff format text
+    var diff_text: std.ArrayList(u8) = .{};
+    defer diff_text.deinit(w.gpa);
+
+    for (file_diffs) |fd| {
+        // Unified diff file headers
+        diff_text.appendSlice(w.gpa, "--- a/") catch continue;
+        diff_text.appendSlice(w.gpa, fd.filename) catch continue;
+        diff_text.append(w.gpa, '\n') catch continue;
+        diff_text.appendSlice(w.gpa, "+++ b/") catch continue;
+        diff_text.appendSlice(w.gpa, fd.filename) catch continue;
+        diff_text.append(w.gpa, '\n') catch continue;
+
+        // Hunk header (simplified - just use @@ -1 +1 @@)
+        diff_text.appendSlice(w.gpa, "@@ -1 +1 @@\n") catch continue;
+
+        // Diff lines
+        for (fd.lines) |line| {
+            const prefix: u8 = switch (line.kind) {
+                .context => ' ',
+                .added => '+',
+                .removed => '-',
+            };
+            diff_text.append(w.gpa, prefix) catch continue;
+            diff_text.appendSlice(w.gpa, line.text) catch continue;
+            diff_text.append(w.gpa, '\n') catch continue;
+        }
+        diff_text.append(w.gpa, '\n') catch continue;
+    }
+
+    // Copy button at the top
+    if (dvui.button(@src(), "Copy Diff", .{}, .{})) {
+        dvui.clipboardTextSet(diff_text.items);
+    }
+
+    _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
+
+    // Create unique ID based on selected patch to force widget recreation
+    const id_extra = sel.file_index * 1000 + sel.patch_index;
+
+    if (dvui.useTreeSitter) {
+        var te: dvui.TextEntryWidget = undefined;
+        te.init(@src(), .{
+            .multiline = true,
+            .cache_layout = true,
+            .text = .{ .internal = .{ .limit = 10_000_000 } },
+            .tree_sitter = .{
+                .language = tree_sitter_diff(),
+                .queries = diff_queries,
+                .highlights = diff_highlights,
+                .log_captures = false,
+            },
+        }, .{ .expand = .both, .id_extra = id_extra });
+        defer te.deinit();
+
+        // Always set text content on first frame of this widget (unique per patch)
+        if (dvui.firstFrame(te.data().id)) {
+            te.textSet(diff_text.items, false);
+            te.textLayout.selection.moveCursor(0, false);
+        }
+
+        // Process only read-only events
+        process_read_only_events(&te);
+        te.draw();
+    } else {
+        // Fallback without tree-sitter - use colored labels
+        for (file_diffs, 0..) |fd, file_idx| {
+            _ = dvui.label(@src(), "--- {s}", .{fd.filename}, .{
+                .id_extra = file_idx * 2,
+                .font = .{ .weight = .bold },
+                .color_text = dvui.Color.fromHex("FBB829"),
+            });
+
+            for (fd.lines, 0..) |line, line_idx| {
+                const prefix: []const u8 = switch (line.kind) {
+                    .context => " ",
+                    .added => "+",
+                    .removed => "-",
+                };
+                const color = switch (line.kind) {
+                    .context => dvui.Color.fromHex("FCE8C3"),
+                    .added => dvui.Color.fromHex("98BC37"),
+                    .removed => dvui.Color.fromHex("EF2F27"),
+                };
+                _ = dvui.label(@src(), "{s}{s}", .{ prefix, line.text }, .{
+                    .id_extra = file_idx * 10000 + line_idx,
+                    .color_text = color,
+                });
+            }
+
+            _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 }, .id_extra = file_idx * 2 + 1 });
+        }
+    }
+}
+
+fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+    _ = patch; // We'll get the patch from the loaded patches instead
+    // Use window's persistent arena for cached data
+    const arena = w.arena.allocator();
+
+    // Create TWO fresh databases:
+    // 1. before_db - with all patches BEFORE the selected one applied
+    // 2. after_db - with all patches UP TO AND INCLUDING the selected one applied
+
+    // Create before database
+    var before_db = regz.Database.create_from_path(w.gpa, w.format, w.path, w.device) catch |err| {
+        w.cached_diff = .{
+            .file_index = sel.file_index,
+            .patch_index = sel.patch_index,
+            .file_diffs = &.{},
+            .error_message = std.fmt.allocPrint(arena, "Failed to create before database: {s}", .{@errorName(err)}) catch "Failed to create database",
+        };
+        return;
+    };
+    defer before_db.destroy();
+
+    // Create after database
+    var after_db = regz.Database.create_from_path(w.gpa, w.format, w.path, w.device) catch |err| {
+        w.cached_diff = .{
+            .file_index = sel.file_index,
+            .patch_index = sel.patch_index,
+            .file_diffs = &.{},
+            .error_message = std.fmt.allocPrint(arena, "Failed to create after database: {s}", .{@errorName(err)}) catch "Failed to create database",
+        };
+        return;
+    };
+    defer after_db.destroy();
+
+    // Apply patches to both databases
+    // For before_db: apply all patches from files [0..sel.file_index) and patches [0..sel.patch_index) from sel.file_index
+    // For after_db: apply all patches from files [0..sel.file_index] and patches [0..sel.patch_index] from sel.file_index
+    const keys = w.loaded_patches.keys();
+    const values = w.loaded_patches.values();
+
+    for (keys, values, 0..) |_, loaded, file_idx| {
+        const patches = loaded.patches orelse continue;
+
+        for (patches, 0..) |p, patch_idx| {
+            const is_before_selected = (file_idx < sel.file_index) or
+                (file_idx == sel.file_index and patch_idx < sel.patch_index);
+            const is_selected_or_before = (file_idx < sel.file_index) or
+                (file_idx == sel.file_index and patch_idx <= sel.patch_index);
+
+            // Serialize this patch
+            var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
+            const patch_array: []const regz.Patch = &.{p};
+            std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer) catch continue;
+            const zon_text = temp_arena.dupeZ(u8, zon_buf.written()) catch continue;
+
+            var diags: std.zon.parse.Diagnostics = .{};
+
+            // Apply to before_db if this patch comes before the selected one
+            if (is_before_selected) {
+                before_db.apply_patch(zon_text, &diags) catch continue;
+            }
+
+            // Apply to after_db if this patch is the selected one or comes before it
+            if (is_selected_or_before) {
+                diags = .{};
+                after_db.apply_patch(zon_text, &diags) catch continue;
+            }
+        }
+    }
+
+    // Generate code for before state
+    var before_vfs: VirtualFilesystem = .init(w.gpa);
+    defer before_vfs.deinit();
+
+    before_db.to_zig(before_vfs.dir(), .{}) catch |err| {
+        w.cached_diff = .{
+            .file_index = sel.file_index,
+            .patch_index = sel.patch_index,
+            .file_diffs = &.{},
+            .error_message = std.fmt.allocPrint(arena, "Failed to generate before code: {s}", .{@errorName(err)}) catch "Failed to generate code",
+        };
+        return;
+    };
+
+    // Generate code for after state
+    var after_vfs: VirtualFilesystem = .init(w.gpa);
+    defer after_vfs.deinit();
+
+    after_db.to_zig(after_vfs.dir(), .{}) catch |err| {
+        w.cached_diff = .{
+            .file_index = sel.file_index,
+            .patch_index = sel.patch_index,
+            .file_diffs = &.{},
+            .error_message = std.fmt.allocPrint(arena, "Failed to generate after code: {s}", .{@errorName(err)}) catch "Failed to generate code",
+        };
+        return;
+    };
+
+    // Compare files and build diffs (before vs after)
+    var file_diffs: std.ArrayList(FileDiff) = .{};
+
+    // Recursively compare all files
+    compare_vfs_files(arena, &before_vfs, &after_vfs, &file_diffs, .root, "") catch {
+        w.cached_diff = .{
+            .file_index = sel.file_index,
+            .patch_index = sel.patch_index,
+            .file_diffs = &.{},
+            .error_message = "Failed to compare files",
+        };
+        return;
+    };
+
+    w.cached_diff = .{
+        .file_index = sel.file_index,
+        .patch_index = sel.patch_index,
+        .file_diffs = file_diffs.toOwnedSlice(arena) catch &.{},
+    };
+}
+
+fn compare_vfs_files(
+    arena: Allocator,
+    original_vfs: *VirtualFilesystem,
+    patched_vfs: *VirtualFilesystem,
+    file_diffs: *std.ArrayList(FileDiff),
+    dir_id: VirtualFilesystem.ID,
+    path_prefix: []const u8,
+) !void {
+    const children = try original_vfs.get_children(arena, dir_id);
+
+    for (children) |entry| {
+        const name = original_vfs.get_name(entry.id);
+        const full_path = if (path_prefix.len > 0)
+            try std.fmt.allocPrint(arena, "{s}/{s}", .{ path_prefix, name })
+        else
+            try arena.dupe(u8, name);
+
+        switch (entry.kind) {
+            .directory => {
+                // Find corresponding directory in patched VFS and recurse
+                const patched_children = patched_vfs.get_children(arena, .root) catch continue;
+                for (patched_children) |patched_entry| {
+                    if (patched_entry.kind == .directory) {
+                        const patched_name = patched_vfs.get_name(patched_entry.id);
+                        if (std.mem.eql(u8, patched_name, name)) {
+                            try compare_vfs_files(arena, original_vfs, patched_vfs, file_diffs, entry.id, full_path);
+                            break;
+                        }
+                    }
+                }
+            },
+            .file => {
+                const original_content = original_vfs.get_content(entry.id);
+
+                // Find corresponding file in patched VFS by full path
+                const patched_id = patched_vfs.get_file(full_path) catch continue;
+                if (patched_id == null) continue;
+
+                const patched_content = patched_vfs.get_content(patched_id.?);
+
+                // Skip if content is identical
+                if (std.mem.eql(u8, original_content, patched_content)) continue;
+
+                // Compute line diff (original -> patched)
+                const diff_lines = compute_line_diff(arena, original_content, patched_content) catch continue;
+
+                if (diff_lines.len > 0) {
+                    try file_diffs.append(arena, .{
+                        .filename = full_path,
+                        .lines = diff_lines,
+                    });
+                }
+            },
+        }
+    }
+}
+
+fn compute_line_diff(arena: Allocator, old_content: []const u8, new_content: []const u8) ![]const DiffLine {
+    var result: std.ArrayList(DiffLine) = .{};
+
+    // Split content into lines
+    var old_lines: std.ArrayList([]const u8) = .{};
+    var new_lines: std.ArrayList([]const u8) = .{};
+
+    var old_iter = std.mem.splitScalar(u8, old_content, '\n');
+    while (old_iter.next()) |line| {
+        try old_lines.append(arena, line);
+    }
+
+    var new_iter = std.mem.splitScalar(u8, new_content, '\n');
+    while (new_iter.next()) |line| {
+        try new_lines.append(arena, line);
+    }
+
+    // Use simple LCS-based diff for lines (no character encoding limitation)
+    // Compute LCS indices
+    const lcs = try compute_lcs(arena, old_lines.items, new_lines.items);
+
+    // Generate diff from LCS
+    var old_idx: usize = 0;
+    var new_idx: usize = 0;
+    var lcs_idx: usize = 0;
+
+    while (old_idx < old_lines.items.len or new_idx < new_lines.items.len) {
+        // Check if current positions match LCS
+        const old_in_lcs = lcs_idx < lcs.len and old_idx == lcs[lcs_idx].old_idx;
+        const new_in_lcs = lcs_idx < lcs.len and new_idx == lcs[lcs_idx].new_idx;
+
+        if (old_in_lcs and new_in_lcs) {
+            // Common line (context)
+            try result.append(arena, .{
+                .kind = .context,
+                .text = try arena.dupe(u8, old_lines.items[old_idx]),
+            });
+            old_idx += 1;
+            new_idx += 1;
+            lcs_idx += 1;
+        } else if (old_idx < old_lines.items.len and !old_in_lcs) {
+            // Line only in old (removed)
+            try result.append(arena, .{
+                .kind = .removed,
+                .text = try arena.dupe(u8, old_lines.items[old_idx]),
+            });
+            old_idx += 1;
+        } else if (new_idx < new_lines.items.len and !new_in_lcs) {
+            // Line only in new (added)
+            try result.append(arena, .{
+                .kind = .added,
+                .text = try arena.dupe(u8, new_lines.items[new_idx]),
+            });
+            new_idx += 1;
+        } else {
+            // Should not happen, but handle gracefully
+            break;
+        }
+    }
+
+    return result.toOwnedSlice(arena);
+}
+
+const LCS_Entry = struct {
+    old_idx: usize,
+    new_idx: usize,
+};
+
+fn compute_lcs(arena: Allocator, old_lines: []const []const u8, new_lines: []const []const u8) ![]const LCS_Entry {
+    const m = old_lines.len;
+    const n = new_lines.len;
+
+    if (m == 0 or n == 0) return &.{};
+
+    // Build DP table (space optimized - only need previous row)
+    // dp[j] = length of LCS ending at new_lines[j-1]
+    var prev_row = try arena.alloc(usize, n + 1);
+    var curr_row = try arena.alloc(usize, n + 1);
+    @memset(prev_row, 0);
+    @memset(curr_row, 0);
+
+    for (old_lines, 0..) |old_line, i| {
+        for (new_lines, 0..) |new_line, j| {
+            if (std.mem.eql(u8, old_line, new_line)) {
+                curr_row[j + 1] = prev_row[j] + 1;
+            } else {
+                curr_row[j + 1] = @max(prev_row[j + 1], curr_row[j]);
+            }
+        }
+        // Swap rows
+        const tmp = prev_row;
+        prev_row = curr_row;
+        curr_row = tmp;
+        @memset(curr_row, 0);
+        _ = i;
+    }
+
+    // Backtrack to find LCS (need full table for this)
+    // Rebuild full table for backtracking
+    var dp = try arena.alloc([]usize, m + 1);
+    for (dp, 0..) |*row, i| {
+        row.* = try arena.alloc(usize, n + 1);
+        @memset(row.*, 0);
+        _ = i;
+    }
+
+    for (old_lines, 0..) |old_line, i| {
+        for (new_lines, 0..) |new_line, j| {
+            if (std.mem.eql(u8, old_line, new_line)) {
+                dp[i + 1][j + 1] = dp[i][j] + 1;
+            } else {
+                dp[i + 1][j + 1] = @max(dp[i][j + 1], dp[i + 1][j]);
+            }
+        }
+    }
+
+    // Backtrack
+    var lcs_result: std.ArrayList(LCS_Entry) = .{};
+    var i = m;
+    var j = n;
+    while (i > 0 and j > 0) {
+        if (std.mem.eql(u8, old_lines[i - 1], new_lines[j - 1])) {
+            try lcs_result.append(arena, .{ .old_idx = i - 1, .new_idx = j - 1 });
+            i -= 1;
+            j -= 1;
+        } else if (dp[i - 1][j] > dp[i][j - 1]) {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+
+    // Reverse since we built it backwards
+    std.mem.reverse(LCS_Entry, lcs_result.items);
+    return lcs_result.toOwnedSlice(arena);
 }
 
 fn show_override_arch_widget(p: anytype) void {
@@ -881,4 +1441,126 @@ fn process_read_only_events(te: *dvui.TextEntryWidget) void {
             else => {},
         }
     }
+}
+
+// Unit tests for line diff computation
+const testing = std.testing;
+
+test "compute_line_diff - no changes" {
+    const allocator = testing.allocator;
+    const content = "line1\nline2\nline3\n";
+    const result = try compute_line_diff(allocator, content, content);
+    defer allocator.free(result);
+    for (result) |line| {
+        allocator.free(line.text);
+    }
+
+    // All lines should be context (unchanged)
+    try testing.expectEqual(4, result.len);
+    for (result) |line| {
+        try testing.expectEqual(DiffLine.Kind.context, line.kind);
+    }
+}
+
+test "compute_line_diff - simple addition" {
+    const allocator = testing.allocator;
+    const old = "line1\nline3\n";
+    const new = "line1\nline2\nline3\n";
+    const result = try compute_line_diff(allocator, old, new);
+    defer {
+        for (result) |line| allocator.free(line.text);
+        allocator.free(result);
+    }
+
+    // Should have: context(line1), added(line2), context(line3), context("")
+    try testing.expectEqual(4, result.len);
+    try testing.expectEqual(DiffLine.Kind.context, result[0].kind);
+    try testing.expectEqualStrings("line1", result[0].text);
+    try testing.expectEqual(DiffLine.Kind.added, result[1].kind);
+    try testing.expectEqualStrings("line2", result[1].text);
+    try testing.expectEqual(DiffLine.Kind.context, result[2].kind);
+    try testing.expectEqualStrings("line3", result[2].text);
+}
+
+test "compute_line_diff - simple removal" {
+    const allocator = testing.allocator;
+    const old = "line1\nline2\nline3\n";
+    const new = "line1\nline3\n";
+    const result = try compute_line_diff(allocator, old, new);
+    defer {
+        for (result) |line| allocator.free(line.text);
+        allocator.free(result);
+    }
+
+    // Should have: context(line1), removed(line2), context(line3), context("")
+    try testing.expectEqual(4, result.len);
+    try testing.expectEqual(DiffLine.Kind.context, result[0].kind);
+    try testing.expectEqualStrings("line1", result[0].text);
+    try testing.expectEqual(DiffLine.Kind.removed, result[1].kind);
+    try testing.expectEqualStrings("line2", result[1].text);
+    try testing.expectEqual(DiffLine.Kind.context, result[2].kind);
+    try testing.expectEqualStrings("line3", result[2].text);
+}
+
+test "compute_line_diff - line modification" {
+    const allocator = testing.allocator;
+    const old = "line1\nold_line\nline3\n";
+    const new = "line1\nnew_line\nline3\n";
+    const result = try compute_line_diff(allocator, old, new);
+    defer {
+        for (result) |line| allocator.free(line.text);
+        allocator.free(result);
+    }
+
+    // Should have: context(line1), removed(old_line), added(new_line), context(line3), context("")
+    try testing.expectEqual(5, result.len);
+    try testing.expectEqual(DiffLine.Kind.context, result[0].kind);
+    try testing.expectEqual(DiffLine.Kind.removed, result[1].kind);
+    try testing.expectEqualStrings("old_line", result[1].text);
+    try testing.expectEqual(DiffLine.Kind.added, result[2].kind);
+    try testing.expectEqualStrings("new_line", result[2].text);
+    try testing.expectEqual(DiffLine.Kind.context, result[3].kind);
+}
+
+test "compute_line_diff - enum value change" {
+    const allocator = testing.allocator;
+    const old =
+        \\const Enum = enum {
+        \\    value_a,
+        \\    value_b,
+        \\    _,
+        \\};
+    ;
+    const new =
+        \\const Enum = enum {
+        \\    value_a,
+        \\    value_b,
+        \\};
+    ;
+    const result = try compute_line_diff(allocator, old, new);
+    defer {
+        for (result) |line| allocator.free(line.text);
+        allocator.free(result);
+    }
+
+    // Print result for debugging
+    std.debug.print("\nDiff result ({d} lines):\n", .{result.len});
+    for (result) |line| {
+        const prefix: u8 = switch (line.kind) {
+            .context => ' ',
+            .added => '+',
+            .removed => '-',
+        };
+        std.debug.print("{c}{s}\n", .{ prefix, line.text });
+    }
+
+    // Find the removed "_," line
+    var found_removed = false;
+    for (result) |line| {
+        if (line.kind == .removed and std.mem.eql(u8, std.mem.trim(u8, line.text, " \t"), "_,")) {
+            found_removed = true;
+            break;
+        }
+    }
+    try testing.expect(found_removed);
 }
