@@ -15,6 +15,7 @@ const atdf = @import("atdf.zig");
 const embassy = @import("embassy.zig");
 const targetdb = @import("targetdb.zig");
 const gen = @import("gen.zig");
+const analysis = @import("analysis.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
 const Arch = @import("arch.zig").Arch;
@@ -2166,6 +2167,7 @@ pub fn to_zig(db: *Database, output_dir: Directory, opts: ToZigOptions) !void {
 
 test "all" {
     @setEvalBranchQuota(2000);
+    _ = analysis;
     _ = atdf;
     _ = gen;
     _ = svd;
