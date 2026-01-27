@@ -100,13 +100,11 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
-    //run_cmd.addArg("--register-schemas");
 
     // I only want the path to the register schema file, not the lazy path,
     // because I want to be able to refresh it with `zig build` while sorcerer
     // is running. Sorcerer will watch the file for changes and update itself
     // automatically.
-    //run_cmd.addArg(b.getInstallPath(.prefix, register_schema_install.dest_rel_path));
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
@@ -124,7 +122,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
 
-    // Standalone diff test
+    // Diff algorithm unit tests
     const diff_test_mod = b.createModule(.{
         .root_source_file = b.path("src/test_diff.zig"),
         .target = target,
@@ -132,15 +130,12 @@ pub fn build(b: *std.Build) void {
     });
     diff_test_mod.addImport("diffz", diffz_dep.module("diffz"));
 
-    const diff_test_exe = b.addExecutable(.{
-        .name = "test_diff",
+    const diff_tests = b.addTest(.{
         .root_module = diff_test_mod,
     });
-    b.installArtifact(diff_test_exe);
 
-    const run_diff_test = b.addRunArtifact(diff_test_exe);
-    const diff_test_step = b.step("test-diff", "Run diff algorithm test");
-    diff_test_step.dependOn(&run_diff_test.step);
+    const run_diff_tests = b.addRunArtifact(diff_tests);
+    test_step.dependOn(&run_diff_tests.step);
 }
 
 const TargetWithPath = struct {

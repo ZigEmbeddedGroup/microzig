@@ -1,45 +1,6 @@
 const std = @import("std");
 const diffz = @import("diffz");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    const old =
-        \\const Enum = enum {
-        \\    value_a,
-        \\    value_b,
-        \\    _,
-        \\};
-    ;
-    const new =
-        \\const Enum = enum {
-        \\    value_a,
-        \\    value_b,
-        \\};
-    ;
-
-    std.debug.print("=== OLD ===\n{s}\n", .{old});
-    std.debug.print("=== NEW ===\n{s}\n", .{new});
-
-    const result = try compute_line_diff(allocator, old, new);
-    defer {
-        for (result) |line| allocator.free(line.text);
-        allocator.free(result);
-    }
-
-    std.debug.print("\n=== DIFF RESULT ({d} lines) ===\n", .{result.len});
-    for (result) |line| {
-        const prefix: u8 = switch (line.kind) {
-            .context => ' ',
-            .added => '+',
-            .removed => '-',
-        };
-        std.debug.print("{c}{s}\n", .{ prefix, line.text });
-    }
-}
-
 const DiffLine = struct {
     kind: Kind,
     text: []const u8,
@@ -64,8 +25,6 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
     while (new_iter.next()) |line| {
         try new_lines.append(arena, line);
     }
-
-    std.debug.print("\nOld has {d} lines, New has {d} lines\n", .{ old_lines.items.len, new_lines.items.len });
 
     // Encode lines as single characters for diffz (line-mode diffing)
     var line_to_char: std.StringHashMap(u8) = .init(arena);
@@ -101,30 +60,9 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
         }
     }
 
-    std.debug.print("Old chars: ", .{});
-    for (old_chars.items) |c| std.debug.print("{d} ", .{c});
-    std.debug.print("\nNew chars: ", .{});
-    for (new_chars.items) |c| std.debug.print("{d} ", .{c});
-    std.debug.print("\n", .{});
-
-    std.debug.print("Char to line mapping:\n", .{});
-    for (char_to_line.items, 0..) |line, i| {
-        std.debug.print("  {d}: '{s}'\n", .{ i + 1, line });
-    }
-
     // Run diffz on the encoded character sequences
     const dmp: diffz = .{ .diff_timeout = 0 };
-    const diffs = dmp.diff(arena, old_chars.items, new_chars.items, false) catch {
-        std.debug.print("diffz failed!\n", .{});
-        return result.toOwnedSlice(arena);
-    };
-
-    std.debug.print("\nDiffz returned {d} chunks:\n", .{diffs.items.len});
-    for (diffs.items) |d| {
-        std.debug.print("  op={s} text_len={d} bytes: ", .{ @tagName(d.operation), d.text.len });
-        for (d.text) |c| std.debug.print("{d} ", .{c});
-        std.debug.print("\n", .{});
-    }
+    const diffs = try dmp.diff(arena, old_chars.items, new_chars.items, false);
 
     // Decode diffs back to lines
     for (diffs.items) |d| {
@@ -144,4 +82,191 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
     }
 
     return result.toOwnedSlice(arena);
+}
+
+fn expectDiffLines(result: []const DiffLine, expected: []const DiffLine) !void {
+    try std.testing.expectEqual(expected.len, result.len);
+    for (result, expected) |actual, exp| {
+        try std.testing.expectEqual(exp.kind, actual.kind);
+        try std.testing.expectEqualStrings(exp.text, actual.text);
+    }
+}
+
+test "remove non-exhaustive marker from enum" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const old =
+        \\const Enum = enum {
+        \\    value_a,
+        \\    value_b,
+        \\    _,
+        \\};
+    ;
+    const new =
+        \\const Enum = enum {
+        \\    value_a,
+        \\    value_b,
+        \\};
+    ;
+
+    const result = try compute_line_diff(allocator, old, new);
+
+    try expectDiffLines(result, &.{
+        .{ .kind = .context, .text = "const Enum = enum {" },
+        .{ .kind = .context, .text = "    value_a," },
+        .{ .kind = .context, .text = "    value_b," },
+        .{ .kind = .removed, .text = "    _," },
+        .{ .kind = .context, .text = "};" },
+    });
+}
+
+test "add line to content" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const old =
+        \\line1
+        \\line2
+    ;
+    const new =
+        \\line1
+        \\line2
+        \\line3
+    ;
+
+    const result = try compute_line_diff(allocator, old, new);
+
+    try expectDiffLines(result, &.{
+        .{ .kind = .context, .text = "line1" },
+        .{ .kind = .context, .text = "line2" },
+        .{ .kind = .added, .text = "line3" },
+    });
+}
+
+test "modify line in content" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const old =
+        \\line1
+        \\old_line
+        \\line3
+    ;
+    const new =
+        \\line1
+        \\new_line
+        \\line3
+    ;
+
+    const result = try compute_line_diff(allocator, old, new);
+
+    try expectDiffLines(result, &.{
+        .{ .kind = .context, .text = "line1" },
+        .{ .kind = .removed, .text = "old_line" },
+        .{ .kind = .added, .text = "new_line" },
+        .{ .kind = .context, .text = "line3" },
+    });
+}
+
+test "identical content produces all context lines" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const content =
+        \\line1
+        \\line2
+        \\line3
+    ;
+
+    const result = try compute_line_diff(allocator, content, content);
+
+    try expectDiffLines(result, &.{
+        .{ .kind = .context, .text = "line1" },
+        .{ .kind = .context, .text = "line2" },
+        .{ .kind = .context, .text = "line3" },
+    });
+}
+
+test "empty old content shows all lines as added" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const old = "";
+    const new =
+        \\line1
+        \\line2
+    ;
+
+    const result = try compute_line_diff(allocator, old, new);
+
+    try expectDiffLines(result, &.{
+        .{ .kind = .removed, .text = "" },
+        .{ .kind = .added, .text = "line1" },
+        .{ .kind = .added, .text = "line2" },
+    });
+}
+
+test "empty new content shows all lines as removed" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const old =
+        \\line1
+        \\line2
+    ;
+    const new = "";
+
+    const result = try compute_line_diff(allocator, old, new);
+
+    try expectDiffLines(result, &.{
+        .{ .kind = .removed, .text = "line1" },
+        .{ .kind = .removed, .text = "line2" },
+        .{ .kind = .added, .text = "" },
+    });
+}
+
+test "duplicate lines are handled correctly" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const old =
+        \\a
+        \\b
+        \\a
+        \\b
+    ;
+    const new =
+        \\a
+        \\a
+        \\b
+        \\b
+    ;
+
+    const result = try compute_line_diff(allocator, old, new);
+
+    // The exact diff output depends on the diffz algorithm
+    // Just verify we get a valid result with the right total lines
+    var context_count: usize = 0;
+    var added_count: usize = 0;
+    var removed_count: usize = 0;
+
+    for (result) |line| {
+        switch (line.kind) {
+            .context => context_count += 1,
+            .added => added_count += 1,
+            .removed => removed_count += 1,
+        }
+    }
+
+    // We should have some context and the added/removed should balance
+    try std.testing.expect(context_count > 0);
+    try std.testing.expectEqual(added_count, removed_count);
 }
