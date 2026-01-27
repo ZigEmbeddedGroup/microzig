@@ -106,22 +106,27 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_exe_unit_tests.step);
 }
 
-fn get_targets(mb: *MicroBuild) []const *const microzig.Target {
+const TargetWithPath = struct {
+    target: *const microzig.Target,
+    path: []const u8,
+};
+
+fn get_targets(mb: *MicroBuild) []const TargetWithPath {
     @setEvalBranchQuota(50000);
-    var ret: std.array_list.Managed(*const microzig.Target) = .init(mb.builder.allocator);
+    var ret: std.array_list.Managed(TargetWithPath) = .init(mb.builder.allocator);
     inline for (@typeInfo(@FieldType(MicroBuild, "ports")).@"struct".fields) |field| {
-        recursively_collect_targets(@field(mb.ports, field.name), &ret) catch @panic("OOM");
+        recursively_collect_targets(@field(mb.ports, field.name), field.name, &ret) catch @panic("OOM");
     }
 
     return ret.toOwnedSlice() catch unreachable;
 }
 
-fn recursively_collect_targets(field: anytype, targets: *std.array_list.Managed(*const microzig.Target)) !void {
+fn recursively_collect_targets(field: anytype, path: []const u8, targets: *std.array_list.Managed(TargetWithPath)) !void {
     const Type = @TypeOf(field);
 
     switch (Type) {
         *const microzig.Target, *microzig.Target => {
-            try targets.append(field);
+            try targets.append(.{ .target = field, .path = path });
             return;
         },
         else => {},
@@ -134,7 +139,8 @@ fn recursively_collect_targets(field: anytype, targets: *std.array_list.Managed(
     }
 
     inline for (type_info.@"struct".fields) |child_field| {
-        try recursively_collect_targets(@field(field, child_field.name), targets);
+        const new_path = std.fmt.allocPrint(targets.allocator, "{s}.{s}", .{ path, child_field.name }) catch @panic("OOM");
+        try recursively_collect_targets(@field(field, child_field.name), new_path, targets);
     }
 }
 
@@ -288,7 +294,8 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
     var boards: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Board)) = .init(b.allocator);
     var locations: LazyPathHashMap(RegisterSchemaUsage.Location) = .init(b.allocator);
 
-    for (targets) |t| {
+    for (targets) |twp| {
+        const t = twp.target;
         const lazy_path = switch (t.chip.register_definition) {
             .targetdb => |targetdb| blk: {
                 try deduped_targets.put(targetdb.path, .targetdb);
@@ -312,12 +319,14 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
         if (chips.getEntry(lazy_path)) |entry| {
             try entry.value_ptr.append(b.allocator, .{
                 .name = t.chip.name,
+                .target_name = twp.path,
                 .patch_files = patch_files,
             });
         } else {
             var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .{};
             try chip_list.append(b.allocator, .{
                 .name = t.chip.name,
+                .target_name = twp.path,
                 .patch_files = patch_files,
             });
             try chips.put(lazy_path, chip_list);

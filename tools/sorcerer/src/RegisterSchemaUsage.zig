@@ -13,6 +13,7 @@ pub const Format = enum {
 
 pub const Chip = struct {
     name: []const u8,
+    target_name: []const u8 = "",
     patch_files: []const PatchFile = &.{},
 };
 
