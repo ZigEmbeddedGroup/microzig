@@ -311,7 +311,7 @@ fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
 fn show_patches(w: *RegzWindow, arena: Allocator) void {
     // Load patches on first view
     if (!w.patches_loaded) {
-        w.loadPatchFiles();
+        w.load_patch_files();
         w.patches_loaded = true;
     }
 
@@ -331,7 +331,7 @@ fn show_patches(w: *RegzWindow, arena: Allocator) void {
         var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .vertical });
         defer scroll.deinit();
 
-        w.showPatchTree(arena);
+        w.show_patch_tree(arena);
     }
 
     // Right panel: Patch details
@@ -339,18 +339,18 @@ fn show_patches(w: *RegzWindow, arena: Allocator) void {
         var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
         defer scroll.deinit();
 
-        w.showPatchDetails(arena);
+        w.show_patch_details(arena);
     }
 }
 
-fn loadPatchFiles(w: *RegzWindow) void {
+fn load_patch_files(w: *RegzWindow) void {
     const chip = w.chip_info orelse return;
 
     // Use window's arena for persistent storage across frames
     const alloc = w.arena.allocator();
 
     for (chip.patch_files) |pf| {
-        const path_result = constructPatchPath(alloc, pf);
+        const path_result = construct_patch_path(alloc, pf);
         const path = path_result orelse continue;
 
         const is_editable = switch (pf) {
@@ -405,14 +405,14 @@ fn loadPatchFiles(w: *RegzWindow) void {
     }
 }
 
-fn constructPatchPath(arena: Allocator, pf: RegisterSchemaUsage.PatchFile) ?[]const u8 {
+fn construct_patch_path(arena: Allocator, pf: RegisterSchemaUsage.PatchFile) ?[]const u8 {
     return switch (pf) {
         .src_path => |sp| std.fs.path.join(arena, &.{ sp.build_root, sp.sub_path }) catch null,
         .dependency => |dp| std.fs.path.join(arena, &.{ dp.build_root, dp.sub_path }) catch null,
     };
 }
 
-fn showPatchTree(w: *RegzWindow, arena: Allocator) void {
+fn show_patch_tree(w: *RegzWindow, arena: Allocator) void {
     if (w.loaded_patches.count() == 0) {
         _ = dvui.label(@src(), "No patch files", .{}, .{});
         return;
@@ -458,7 +458,7 @@ fn showPatchTree(w: *RegzWindow, arena: Allocator) void {
                     var op_branch = tree.branch(@src(), .{}, .{ .id_extra = patch_idx });
                     defer op_branch.deinit();
 
-                    const patch_label = getPatchLabel(patch, arena);
+                    const patch_label = get_patch_label(patch, arena);
                     _ = dvui.label(@src(), "{s}", .{patch_label}, .{});
 
                     if (op_branch.button.clicked()) {
@@ -470,7 +470,7 @@ fn showPatchTree(w: *RegzWindow, arena: Allocator) void {
     }
 }
 
-fn getPatchLabel(patch: regz.Patch, arena: Allocator) []const u8 {
+fn get_patch_label(patch: regz.Patch, arena: Allocator) []const u8 {
     return switch (patch) {
         .override_arch => |p| std.fmt.allocPrint(arena, "override_arch: {s}", .{p.device_name}) catch "override_arch",
         .set_device_property => |p| std.fmt.allocPrint(arena, "set_device_property: {s}", .{p.key}) catch "set_device_property",
@@ -481,7 +481,7 @@ fn getPatchLabel(patch: regz.Patch, arena: Allocator) []const u8 {
     };
 }
 
-fn showPatchDetails(w: *RegzWindow, arena: Allocator) void {
+fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
     // Empty state - no patches available
     if (w.loaded_patches.count() == 0) {
         var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
@@ -531,43 +531,43 @@ fn showPatchDetails(w: *RegzWindow, arena: Allocator) void {
     defer vbox.deinit();
 
     // Header with patch type
-    _ = dvui.label(@src(), "Patch Type: {s}", .{getPatchLabel(patch, arena)}, .{
+    _ = dvui.label(@src(), "Patch Type: {s}", .{get_patch_label(patch, arena)}, .{
         .font = .{ .weight = .bold },
     });
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
     switch (patch) {
-        .override_arch => |p| showOverrideArchWidget(p),
-        .set_device_property => |p| showSetDevicePropertyWidget(p),
-        .add_enum => |p| showAddEnumWidget(p, arena),
-        .set_enum_type => |p| showSetEnumTypeWidget(p),
-        .add_interrupt => |p| showAddInterruptWidget(p),
-        .add_enum_and_apply => |p| showAddEnumAndApplyWidget(p, arena),
+        .override_arch => |p| show_override_arch_widget(p),
+        .set_device_property => |p| show_set_device_property_widget(p),
+        .add_enum => |p| show_add_enum_widget(p, arena),
+        .set_enum_type => |p| show_set_enum_type_widget(p),
+        .add_interrupt => |p| show_add_interrupt_widget(p),
+        .add_enum_and_apply => |p| show_add_enum_and_apply_widget(p, arena),
     }
 }
 
-fn showOverrideArchWidget(p: anytype) void {
-    labeledField("Device Name", p.device_name);
-    labeledField("Architecture", @tagName(p.arch));
+fn show_override_arch_widget(p: anytype) void {
+    labeled_field("Device Name", p.device_name);
+    labeled_field("Architecture", @tagName(p.arch));
 }
 
-fn showSetDevicePropertyWidget(p: anytype) void {
-    labeledField("Device Name", p.device_name);
-    labeledField("Key", p.key);
-    labeledField("Value", p.value);
-    if (p.description) |desc| labeledField("Description", desc);
+fn show_set_device_property_widget(p: anytype) void {
+    labeled_field("Device Name", p.device_name);
+    labeled_field("Key", p.key);
+    labeled_field("Value", p.value);
+    if (p.description) |desc| labeled_field("Description", desc);
 }
 
-fn showAddEnumWidget(p: anytype, arena: Allocator) void {
-    labeledField("Parent", p.parent);
-    showEnumDetails(p.@"enum", arena);
+fn show_add_enum_widget(p: anytype, arena: Allocator) void {
+    labeled_field("Parent", p.parent);
+    show_enum_details(p.@"enum", arena);
 }
 
-fn showEnumDetails(e: anytype, arena: Allocator) void {
-    labeledField("Name", e.name);
-    if (e.description) |d| labeledField("Description", d);
+fn show_enum_details(e: anytype, arena: Allocator) void {
+    labeled_field("Name", e.name);
+    if (e.description) |d| labeled_field("Description", d);
     const bitsize_str = std.fmt.allocPrint(arena, "{d}", .{e.bitsize}) catch "?";
-    labeledField("Bit Size", bitsize_str);
+    labeled_field("Bit Size", bitsize_str);
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
@@ -635,23 +635,23 @@ fn showEnumDetails(e: anytype, arena: Allocator) void {
     }
 }
 
-fn showSetEnumTypeWidget(p: anytype) void {
-    labeledField("Of", p.of);
-    labeledField("To", p.to orelse "(null)");
+fn show_set_enum_type_widget(p: anytype) void {
+    labeled_field("Of", p.of);
+    labeled_field("To", p.to orelse "(null)");
 }
 
-fn showAddInterruptWidget(p: anytype) void {
-    labeledField("Device Name", p.device_name);
+fn show_add_interrupt_widget(p: anytype) void {
+    labeled_field("Device Name", p.device_name);
     var buf: [32]u8 = undefined;
     const idx_str = std.fmt.bufPrint(&buf, "{d}", .{p.idx}) catch "?";
-    labeledField("Index", idx_str);
-    labeledField("Name", p.name);
-    if (p.description) |d| labeledField("Description", d);
+    labeled_field("Index", idx_str);
+    labeled_field("Name", p.name);
+    if (p.description) |d| labeled_field("Description", d);
 }
 
-fn showAddEnumAndApplyWidget(p: anytype, arena: Allocator) void {
-    labeledField("Parent", p.parent);
-    showEnumDetails(p.@"enum", arena);
+fn show_add_enum_and_apply_widget(p: anytype, arena: Allocator) void {
+    labeled_field("Parent", p.parent);
+    show_enum_details(p.@"enum", arena);
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
@@ -667,7 +667,7 @@ fn showAddEnumAndApplyWidget(p: anytype, arena: Allocator) void {
     }
 }
 
-fn labeledField(label_text: []const u8, value: []const u8) void {
+fn labeled_field(label_text: []const u8, value: []const u8) void {
     // Use hash of label text as unique ID to avoid duplicate widget IDs
     const label_hash = std.hash.Wyhash.hash(0, label_text);
 

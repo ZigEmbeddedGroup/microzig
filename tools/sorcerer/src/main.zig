@@ -522,7 +522,7 @@ fn search_chips_window() void {
             if (me.action != .press) continue;
             if (grid.pointToCell(me.p)) |cell| {
                 // Decode row_num to find which chip was clicked
-                if (findChipByRow(query, cell.row_num)) |result| {
+                if (find_chip_by_row(query, cell.row_num)) |result| {
                     break :blk result;
                 }
             }
@@ -538,7 +538,7 @@ fn search_chips_window() void {
         const chip = rsu.chips[clicked.chip_idx];
 
         // Count how many targets have this chip name
-        const target_count = countTargetsForChip(chip.name);
+        const target_count = count_targets_for_chip(chip.name);
 
         if (target_count > 1) {
             // Show target selection popup
@@ -547,7 +547,7 @@ fn search_chips_window() void {
             state.show_search_chips_window = false;
         } else {
             // Open directly
-            openChipTarget(clicked.rsu_idx, clicked.chip_idx);
+            open_chip_target(clicked.rsu_idx, clicked.chip_idx);
             state.show_search_chips_window = false;
         }
     }
@@ -579,7 +579,7 @@ fn search_chips_window() void {
                 if (row_num >= max_results) break :outer;
 
                 // Filter by search query (case-insensitive)
-                if (!containsIgnoreCase(chip.name, query)) {
+                if (!contains_ignore_case(chip.name, query)) {
                     continue;
                 }
 
@@ -627,7 +627,7 @@ fn search_chips_window() void {
     }
 }
 
-fn containsIgnoreCase(haystack: []const u8, needle: []const u8) bool {
+fn contains_ignore_case(haystack: []const u8, needle: []const u8) bool {
     if (needle.len > haystack.len) return false;
 
     var i: usize = 0;
@@ -643,7 +643,7 @@ fn containsIgnoreCase(haystack: []const u8, needle: []const u8) bool {
     return false;
 }
 
-fn findChipByRow(query: []const u8, target_row: usize) ?ChipLocation {
+fn find_chip_by_row(query: []const u8, target_row: usize) ?ChipLocation {
     // No results if no query
     if (query.len == 0) return null;
 
@@ -660,7 +660,7 @@ fn findChipByRow(query: []const u8, target_row: usize) ?ChipLocation {
                 if (row_num >= max_results) break :outer;
 
                 // Apply same filter
-                if (!containsIgnoreCase(chip.name, query)) {
+                if (!contains_ignore_case(chip.name, query)) {
                     continue;
                 }
 
@@ -680,7 +680,7 @@ fn findChipByRow(query: []const u8, target_row: usize) ?ChipLocation {
     return null;
 }
 
-fn countTargetsForChip(chip_name: []const u8) usize {
+fn count_targets_for_chip(chip_name: []const u8) usize {
     const rsus = state.register_schema_usages orelse return 0;
     var count: usize = 0;
     for (rsus.value) |rsu| {
@@ -693,7 +693,7 @@ fn countTargetsForChip(chip_name: []const u8) usize {
     return count;
 }
 
-fn openChipTarget(rsu_idx: usize, chip_idx: usize) void {
+fn open_chip_target(rsu_idx: usize, chip_idx: usize) void {
     const rsus = state.register_schema_usages orelse return;
     if (rsu_idx >= rsus.value.len) return;
 
@@ -755,7 +755,7 @@ fn target_selection_window() void {
             const me = e.evt.mouse;
             if (me.action != .press) continue;
             if (grid.pointToCell(me.p)) |cell| {
-                if (findTargetByRow(state.selected_chip_name, cell.row_num)) |result| {
+                if (find_target_by_row(state.selected_chip_name, cell.row_num)) |result| {
                     break :blk result;
                 }
             }
@@ -764,7 +764,7 @@ fn target_selection_window() void {
     };
 
     if (row_clicked) |clicked| {
-        openChipTarget(clicked.rsu_idx, clicked.chip_idx);
+        open_chip_target(clicked.rsu_idx, clicked.chip_idx);
         state.show_target_selection_window = false;
     }
 
@@ -795,7 +795,7 @@ fn target_selection_window() void {
     }
 }
 
-fn findTargetByRow(chip_name: []const u8, target_row: usize) ?TargetLocation {
+fn find_target_by_row(chip_name: []const u8, target_row: usize) ?TargetLocation {
     const rsus = state.register_schema_usages orelse return null;
     var row_num: usize = 0;
 
@@ -851,7 +851,7 @@ fn rsu_target_selection_window() void {
 
     if (row_clicked) |chip_idx| {
         if (chip_idx < rsu.chips.len) {
-            openChipTarget(rsu_idx, chip_idx);
+            open_chip_target(rsu_idx, chip_idx);
             state.show_rsu_target_selection_window = false;
             state.selected_rsu_idx = null;
         }
@@ -915,7 +915,7 @@ fn search_boards_window() void {
             const me = e.evt.mouse;
             if (me.action != .press) continue;
             if (grid.pointToCell(me.p)) |cell| {
-                if (findBoardByRow(query, cell.row_num)) |result| {
+                if (find_board_by_row(query, cell.row_num)) |result| {
                     break :blk result;
                 }
             }
@@ -924,7 +924,7 @@ fn search_boards_window() void {
     };
 
     if (row_clicked) |clicked| {
-        openBoard(clicked.rsu_idx, clicked.board_idx);
+        open_board(clicked.rsu_idx, clicked.board_idx);
         state.show_search_boards_window = false;
     }
 
@@ -955,7 +955,7 @@ fn search_boards_window() void {
                 if (row_num >= max_results) break :outer;
 
                 // Filter by search query (case-insensitive)
-                if (!containsIgnoreCase(board.name, query)) {
+                if (!contains_ignore_case(board.name, query)) {
                     continue;
                 }
 
@@ -1003,7 +1003,7 @@ fn search_boards_window() void {
     }
 }
 
-fn findBoardByRow(query: []const u8, target_row: usize) ?BoardLocation {
+fn find_board_by_row(query: []const u8, target_row: usize) ?BoardLocation {
     // No results if no query
     if (query.len == 0) return null;
 
@@ -1020,7 +1020,7 @@ fn findBoardByRow(query: []const u8, target_row: usize) ?BoardLocation {
                 if (row_num >= max_results) break :outer;
 
                 // Apply same filter
-                if (!containsIgnoreCase(board.name, query)) {
+                if (!contains_ignore_case(board.name, query)) {
                     continue;
                 }
 
@@ -1040,7 +1040,7 @@ fn findBoardByRow(query: []const u8, target_row: usize) ?BoardLocation {
     return null;
 }
 
-fn openBoard(rsu_idx: usize, board_idx: usize) void {
+fn open_board(rsu_idx: usize, board_idx: usize) void {
     const rsus = state.register_schema_usages orelse return;
     if (rsu_idx >= rsus.value.len) return;
 
@@ -1118,7 +1118,7 @@ fn search_targets_window() void {
             const me = e.evt.mouse;
             if (me.action != .press) continue;
             if (grid.pointToCell(me.p)) |cell| {
-                if (findTargetByQueryRow(query, cell.row_num)) |result| {
+                if (find_target_by_query_row(query, cell.row_num)) |result| {
                     break :blk result;
                 }
             }
@@ -1127,7 +1127,7 @@ fn search_targets_window() void {
     };
 
     if (row_clicked) |clicked| {
-        openChipTarget(clicked.rsu_idx, clicked.chip_idx);
+        open_chip_target(clicked.rsu_idx, clicked.chip_idx);
         state.show_search_targets_window = false;
     }
 
@@ -1150,7 +1150,7 @@ fn search_targets_window() void {
                 if (row_num >= max_results) break :outer;
 
                 // Filter by search query on target_name (case-insensitive)
-                if (!containsIgnoreCase(chip.target_name, query)) {
+                if (!contains_ignore_case(chip.target_name, query)) {
                     continue;
                 }
 
@@ -1192,7 +1192,7 @@ fn search_targets_window() void {
     }
 }
 
-fn findTargetByQueryRow(query: []const u8, target_row: usize) ?TargetLocation {
+fn find_target_by_query_row(query: []const u8, target_row: usize) ?TargetLocation {
     // No results if no query
     if (query.len == 0) return null;
 
@@ -1206,7 +1206,7 @@ fn findTargetByQueryRow(query: []const u8, target_row: usize) ?TargetLocation {
                 if (row_num >= max_results) break :outer;
 
                 // Apply same filter
-                if (!containsIgnoreCase(chip.target_name, query)) {
+                if (!contains_ignore_case(chip.target_name, query)) {
                     continue;
                 }
 
