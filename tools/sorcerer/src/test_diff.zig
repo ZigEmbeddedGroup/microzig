@@ -84,7 +84,7 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
     return result.toOwnedSlice(arena);
 }
 
-fn expectDiffLines(result: []const DiffLine, expected: []const DiffLine) !void {
+fn expect_diff_lines(result: []const DiffLine, expected: []const DiffLine) !void {
     try std.testing.expectEqual(expected.len, result.len);
     for (result, expected) |actual, exp| {
         try std.testing.expectEqual(exp.kind, actual.kind);
@@ -113,7 +113,7 @@ test "remove non-exhaustive marker from enum" {
 
     const result = try compute_line_diff(allocator, old, new);
 
-    try expectDiffLines(result, &.{
+    try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "const Enum = enum {" },
         .{ .kind = .context, .text = "    value_a," },
         .{ .kind = .context, .text = "    value_b," },
@@ -139,7 +139,7 @@ test "add line to content" {
 
     const result = try compute_line_diff(allocator, old, new);
 
-    try expectDiffLines(result, &.{
+    try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "line1" },
         .{ .kind = .context, .text = "line2" },
         .{ .kind = .added, .text = "line3" },
@@ -164,7 +164,7 @@ test "modify line in content" {
 
     const result = try compute_line_diff(allocator, old, new);
 
-    try expectDiffLines(result, &.{
+    try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "line1" },
         .{ .kind = .removed, .text = "old_line" },
         .{ .kind = .added, .text = "new_line" },
@@ -185,7 +185,7 @@ test "identical content produces all context lines" {
 
     const result = try compute_line_diff(allocator, content, content);
 
-    try expectDiffLines(result, &.{
+    try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "line1" },
         .{ .kind = .context, .text = "line2" },
         .{ .kind = .context, .text = "line3" },
@@ -205,7 +205,7 @@ test "empty old content shows all lines as added" {
 
     const result = try compute_line_diff(allocator, old, new);
 
-    try expectDiffLines(result, &.{
+    try expect_diff_lines(result, &.{
         .{ .kind = .removed, .text = "" },
         .{ .kind = .added, .text = "line1" },
         .{ .kind = .added, .text = "line2" },
@@ -225,7 +225,7 @@ test "empty new content shows all lines as removed" {
 
     const result = try compute_line_diff(allocator, old, new);
 
-    try expectDiffLines(result, &.{
+    try expect_diff_lines(result, &.{
         .{ .kind = .removed, .text = "line1" },
         .{ .kind = .removed, .text = "line2" },
         .{ .kind = .added, .text = "" },

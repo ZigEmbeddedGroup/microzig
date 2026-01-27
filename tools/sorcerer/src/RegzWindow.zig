@@ -988,7 +988,7 @@ fn compute_line_diff(arena: Allocator, old_content: []const u8, new_content: []c
 
     // Use simple LCS-based diff for lines (no character encoding limitation)
     // Compute LCS indices
-    const lcs = try computeLCS(arena, old_lines.items, new_lines.items);
+    const lcs = try compute_lcs(arena, old_lines.items, new_lines.items);
 
     // Generate diff from LCS
     var old_idx: usize = 0;
@@ -1032,12 +1032,12 @@ fn compute_line_diff(arena: Allocator, old_content: []const u8, new_content: []c
     return result.toOwnedSlice(arena);
 }
 
-const LCSEntry = struct {
+const LCS_Entry = struct {
     old_idx: usize,
     new_idx: usize,
 };
 
-fn computeLCS(arena: Allocator, old_lines: []const []const u8, new_lines: []const []const u8) ![]const LCSEntry {
+fn compute_lcs(arena: Allocator, old_lines: []const []const u8, new_lines: []const []const u8) ![]const LCS_Entry {
     const m = old_lines.len;
     const n = new_lines.len;
 
@@ -1086,7 +1086,7 @@ fn computeLCS(arena: Allocator, old_lines: []const []const u8, new_lines: []cons
     }
 
     // Backtrack
-    var lcs_result: std.ArrayList(LCSEntry) = .{};
+    var lcs_result: std.ArrayList(LCS_Entry) = .{};
     var i = m;
     var j = n;
     while (i > 0 and j > 0) {
@@ -1102,7 +1102,7 @@ fn computeLCS(arena: Allocator, old_lines: []const []const u8, new_lines: []cons
     }
 
     // Reverse since we built it backwards
-    std.mem.reverse(LCSEntry, lcs_result.items);
+    std.mem.reverse(LCS_Entry, lcs_result.items);
     return lcs_result.toOwnedSlice(arena);
 }
 
