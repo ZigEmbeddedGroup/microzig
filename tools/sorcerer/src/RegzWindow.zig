@@ -9,10 +9,31 @@ vfs: VirtualFilesystem,
 selected_file: ?VirtualFilesystem.ID = null,
 displayed_file: ?VirtualFilesystem.ID = null,
 active_view: View = .code_generation,
+chip_info: ?ChipInfo = null,
+loaded_patches: std.StringArrayHashMapUnmanaged(LoadedPatchFile) = .{},
+selected_patch: ?SelectedPatch = null,
+patches_loaded: bool = false,
 
 pub const View = enum {
     code_generation,
     patches,
+};
+
+pub const ChipInfo = struct {
+    name: []const u8,
+    patch_files: []const RegisterSchemaUsage.PatchFile,
+};
+
+pub const LoadedPatchFile = struct {
+    path: []const u8,
+    patches: ?[]const regz.Patch,
+    parse_error: ?[]const u8 = null,
+    is_editable: bool,
+};
+
+pub const SelectedPatch = struct {
+    file_index: usize,
+    patch_index: usize,
 };
 
 const RegzWindow = @This();
@@ -21,6 +42,7 @@ const Allocator = std.mem.Allocator;
 
 const regz = @import("regz");
 const VirtualFilesystem = regz.VirtualFilesystem;
+const RegisterSchemaUsage = @import("RegisterSchemaUsage.zig");
 
 const dvui = @import("dvui");
 
@@ -94,6 +116,7 @@ pub fn create(
     format: regz.Database.Format,
     path: []const u8,
     device: ?[]const u8,
+    chip_info: ?ChipInfo,
 ) !*RegzWindow {
     const window = try gpa.create(RegzWindow);
     errdefer gpa.destroy(window);
@@ -122,6 +145,7 @@ pub fn create(
         .arena = arena,
         .path = path,
         .vfs = .init(gpa),
+        .chip_info = chip_info,
     };
 
     try db.to_zig(window.vfs.dir(), .{});
@@ -132,6 +156,9 @@ pub fn create(
 }
 
 pub fn destroy(w: *RegzWindow) void {
+    // Clean up loaded patches hashmap (strings are in w.arena, freed below)
+    w.loaded_patches.deinit(w.gpa);
+
     w.vfs.deinit();
     w.arena.deinit();
     w.db.destroy();
@@ -203,7 +230,7 @@ pub fn show(w: *RegzWindow) !void {
 
     switch (w.active_view) {
         .code_generation => w.show_code_generation(arena.allocator()),
-        .patches => w.show_patches(),
+        .patches => w.show_patches(arena.allocator()),
     }
 }
 
@@ -281,15 +308,379 @@ fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
     }
 }
 
-fn show_patches(w: *RegzWindow) void {
-    _ = w;
+fn show_patches(w: *RegzWindow, arena: Allocator) void {
+    // Load patches on first view
+    if (!w.patches_loaded) {
+        w.loadPatchFiles();
+        w.patches_loaded = true;
+    }
+
+    var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .both });
+    defer hbox.deinit();
+
+    // Left panel: Patch tree
+    {
+        var left_box = dvui.box(@src(), .{ .dir = .vertical }, .{
+            .expand = .vertical,
+            .background = true,
+            .border = dvui.Rect.all(1),
+            .padding = dvui.Rect.all(4),
+        });
+        defer left_box.deinit();
+
+        var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .vertical });
+        defer scroll.deinit();
+
+        w.showPatchTree(arena);
+    }
+
+    // Right panel: Patch details
+    {
+        var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+        defer scroll.deinit();
+
+        w.showPatchDetails(arena);
+    }
+}
+
+fn loadPatchFiles(w: *RegzWindow) void {
+    const chip = w.chip_info orelse return;
+
+    // Use window's arena for persistent storage across frames
+    const alloc = w.arena.allocator();
+
+    for (chip.patch_files) |pf| {
+        const path_result = constructPatchPath(alloc, pf);
+        const path = path_result orelse continue;
+
+        const is_editable = switch (pf) {
+            .src_path => true,
+            .dependency => false,
+        };
+
+        // Read and parse ZON file
+        const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+            const owned_path = alloc.dupe(u8, path) catch continue;
+            const error_msg = std.fmt.allocPrint(alloc, "Failed to open file: {s}", .{@errorName(err)}) catch continue;
+            w.loaded_patches.put(w.gpa, owned_path, .{
+                .path = owned_path,
+                .patches = null,
+                .parse_error = error_msg,
+                .is_editable = is_editable,
+            }) catch {};
+            continue;
+        };
+        defer file.close();
+
+        const content = file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0) catch |err| {
+            const owned_path = alloc.dupe(u8, path) catch continue;
+            const error_msg = std.fmt.allocPrint(alloc, "Failed to read file: {s}", .{@errorName(err)}) catch continue;
+            w.loaded_patches.put(w.gpa, owned_path, .{
+                .path = owned_path,
+                .patches = null,
+                .parse_error = error_msg,
+                .is_editable = is_editable,
+            }) catch {};
+            continue;
+        };
+
+        const patches = std.zon.parse.fromSlice([]const regz.Patch, alloc, content, null, .{}) catch |err| {
+            const owned_path = alloc.dupe(u8, path) catch continue;
+            const error_msg = std.fmt.allocPrint(alloc, "Failed to parse ZON: {s}", .{@errorName(err)}) catch continue;
+            w.loaded_patches.put(w.gpa, owned_path, .{
+                .path = owned_path,
+                .patches = null,
+                .parse_error = error_msg,
+                .is_editable = is_editable,
+            }) catch {};
+            continue;
+        };
+
+        const owned_path = alloc.dupe(u8, path) catch continue;
+        w.loaded_patches.put(w.gpa, owned_path, .{
+            .path = owned_path,
+            .patches = patches,
+            .is_editable = is_editable,
+        }) catch {};
+    }
+}
+
+fn constructPatchPath(arena: Allocator, pf: RegisterSchemaUsage.PatchFile) ?[]const u8 {
+    return switch (pf) {
+        .src_path => |sp| std.fs.path.join(arena, &.{ sp.build_root, sp.sub_path }) catch null,
+        .dependency => |dp| std.fs.path.join(arena, &.{ dp.build_root, dp.sub_path }) catch null,
+    };
+}
+
+fn showPatchTree(w: *RegzWindow, arena: Allocator) void {
+    if (w.loaded_patches.count() == 0) {
+        _ = dvui.label(@src(), "No patch files", .{}, .{});
+        return;
+    }
+
+    var tree = dvui.TreeWidget.tree(@src(), .{}, .{
+        .background = true,
+        .padding = dvui.Rect.all(4),
+    });
+    defer tree.deinit();
+
+    var file_idx: usize = 0;
+    for (w.loaded_patches.keys(), w.loaded_patches.values()) |path, loaded| {
+        defer file_idx += 1;
+
+        var branch = tree.branch(@src(), .{ .expanded = true }, .{ .id_extra = file_idx });
+        defer branch.deinit();
+
+        // File icon and name
+        const icon = if (loaded.parse_error != null) dvui.entypo.warning else dvui.entypo.documents;
+        dvui.icon(@src(), "FileIcon", icon, .{}, .{ .gravity_y = 0.5 });
+
+        const basename = std.fs.path.basename(path);
+        const editable_suffix: []const u8 = if (loaded.is_editable) "" else " (read-only)";
+        _ = dvui.label(@src(), "{s}{s}", .{ basename, editable_suffix }, .{});
+
+        // Expander arrow
+        dvui.icon(
+            @src(),
+            "DropIcon",
+            if (branch.expanded) dvui.entypo.triangle_down else dvui.entypo.triangle_right,
+            .{},
+            .{ .gravity_y = 0.5, .gravity_x = 1.0 },
+        );
+
+        if (branch.expander(@src(), .{ .indent = 14 }, .{ .margin = .{ .x = 14 } })) {
+            if (loaded.parse_error) |err| {
+                _ = dvui.label(@src(), "Error: {s}", .{err}, .{
+                    .color_text = dvui.Color.fromHex("EF2F27"),
+                });
+            } else if (loaded.patches) |patches| {
+                for (patches, 0..) |patch, patch_idx| {
+                    var op_branch = tree.branch(@src(), .{}, .{ .id_extra = patch_idx });
+                    defer op_branch.deinit();
+
+                    const patch_label = getPatchLabel(patch, arena);
+                    _ = dvui.label(@src(), "{s}", .{patch_label}, .{});
+
+                    if (op_branch.button.clicked()) {
+                        w.selected_patch = .{ .file_index = file_idx, .patch_index = patch_idx };
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn getPatchLabel(patch: regz.Patch, arena: Allocator) []const u8 {
+    return switch (patch) {
+        .override_arch => |p| std.fmt.allocPrint(arena, "override_arch: {s}", .{p.device_name}) catch "override_arch",
+        .set_device_property => |p| std.fmt.allocPrint(arena, "set_device_property: {s}", .{p.key}) catch "set_device_property",
+        .add_enum => |p| std.fmt.allocPrint(arena, "add_enum: {s}", .{p.@"enum".name}) catch "add_enum",
+        .set_enum_type => |p| std.fmt.allocPrint(arena, "set_enum_type: {s}", .{p.of}) catch "set_enum_type",
+        .add_interrupt => |p| std.fmt.allocPrint(arena, "add_interrupt: {s}", .{p.name}) catch "add_interrupt",
+        .add_enum_and_apply => |p| std.fmt.allocPrint(arena, "add_enum_and_apply: {s}", .{p.@"enum".name}) catch "add_enum_and_apply",
+    };
+}
+
+fn showPatchDetails(w: *RegzWindow, arena: Allocator) void {
+    // Empty state - no patches available
+    if (w.loaded_patches.count() == 0) {
+        var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
+            .expand = .both,
+            .padding = dvui.Rect.all(16),
+        });
+        defer vbox.deinit();
+
+        _ = dvui.label(@src(), "No patches available for this target.", .{}, .{});
+        _ = dvui.label(@src(), "To add patches, create a patch file manually.", .{}, .{});
+        return;
+    }
+
+    const sel = w.selected_patch orelse {
+        var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
+            .expand = .both,
+            .padding = dvui.Rect.all(16),
+        });
+        defer vbox.deinit();
+
+        _ = dvui.label(@src(), "Select a patch to view details", .{}, .{});
+        return;
+    };
+
+    const keys = w.loaded_patches.keys();
+    if (sel.file_index >= keys.len) return;
+
+    const path = keys[sel.file_index];
+    const loaded = w.loaded_patches.get(path) orelse return;
+
+    if (loaded.parse_error != null) {
+        _ = dvui.label(@src(), "Cannot display details: file has parse errors", .{}, .{
+            .color_text = dvui.Color.fromHex("EF2F27"),
+        });
+        return;
+    }
+
+    const patches = loaded.patches orelse return;
+    if (sel.patch_index >= patches.len) return;
+
+    const patch = patches[sel.patch_index];
+
     var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
         .expand = .both,
         .padding = dvui.Rect.all(8),
     });
     defer vbox.deinit();
 
-    _ = dvui.label(@src(), "Patches view - coming soon", .{}, .{});
+    // Header with patch type
+    _ = dvui.label(@src(), "Patch Type: {s}", .{getPatchLabel(patch, arena)}, .{
+        .font = .{ .weight = .bold },
+    });
+    _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
+
+    switch (patch) {
+        .override_arch => |p| showOverrideArchWidget(p),
+        .set_device_property => |p| showSetDevicePropertyWidget(p),
+        .add_enum => |p| showAddEnumWidget(p, arena),
+        .set_enum_type => |p| showSetEnumTypeWidget(p),
+        .add_interrupt => |p| showAddInterruptWidget(p),
+        .add_enum_and_apply => |p| showAddEnumAndApplyWidget(p, arena),
+    }
+}
+
+fn showOverrideArchWidget(p: anytype) void {
+    labeledField("Device Name", p.device_name);
+    labeledField("Architecture", @tagName(p.arch));
+}
+
+fn showSetDevicePropertyWidget(p: anytype) void {
+    labeledField("Device Name", p.device_name);
+    labeledField("Key", p.key);
+    labeledField("Value", p.value);
+    if (p.description) |desc| labeledField("Description", desc);
+}
+
+fn showAddEnumWidget(p: anytype, arena: Allocator) void {
+    labeledField("Parent", p.parent);
+    showEnumDetails(p.@"enum", arena);
+}
+
+fn showEnumDetails(e: anytype, arena: Allocator) void {
+    labeledField("Name", e.name);
+    if (e.description) |d| labeledField("Description", d);
+    const bitsize_str = std.fmt.allocPrint(arena, "{d}", .{e.bitsize}) catch "?";
+    labeledField("Bit Size", bitsize_str);
+
+    _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
+
+    if (e.fields.len > 0) {
+        _ = dvui.label(@src(), "Fields:", .{}, .{
+            .font = .{ .weight = .bold },
+            .color_text = dvui.Color.fromHex("FBB829"),
+        });
+
+        _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 4 } });
+
+        // Table for enum fields
+        const header_style: dvui.GridWidget.CellStyle = .{
+            .cell_opts = .{
+                .border = .{ .y = 0, .h = 1, .x = 0, .w = 0 },
+            },
+        };
+
+        // Column widths: Name (120 fixed), Value (60 fixed), Description (proportional -1)
+        var col_widths: [3]f32 = .{ 0, 0, 0 };
+        var grid = dvui.grid(@src(), .{ .col_widths = &col_widths }, .{}, .{
+            .expand = .both,
+            .background = true,
+            .padding = dvui.Rect.all(4),
+        });
+        defer grid.deinit();
+
+        // Layout: fixed 120 for Name, fixed 60 for Value, rest for Description
+        dvui.columnLayoutProportional(&.{ 120, 60, -1 }, &col_widths, grid.data().contentRect().w);
+
+        // Table headers
+        dvui.gridHeading(@src(), grid, 0, "Name", .fixed, header_style);
+        dvui.gridHeading(@src(), grid, 1, "Value", .fixed, header_style);
+        dvui.gridHeading(@src(), grid, 2, "Description", .fixed, header_style);
+
+        // Table rows
+        for (e.fields, 0..) |field, row_num| {
+            var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+
+            // Name column
+            {
+                defer cell_num.col_num += 1;
+                var cell = grid.bodyCell(@src(), cell_num, .{});
+                defer cell.deinit();
+                dvui.labelNoFmt(@src(), field.name, .{}, .{});
+            }
+
+            // Value column
+            {
+                defer cell_num.col_num += 1;
+                var cell = grid.bodyCell(@src(), cell_num, .{});
+                defer cell.deinit();
+                const value_str = std.fmt.allocPrint(arena, "{d}", .{field.value}) catch "?";
+                dvui.labelNoFmt(@src(), value_str, .{}, .{});
+            }
+
+            // Description column
+            {
+                defer cell_num.col_num += 1;
+                var cell = grid.bodyCell(@src(), cell_num, .{});
+                defer cell.deinit();
+                dvui.labelNoFmt(@src(), field.description orelse "", .{}, .{});
+            }
+        }
+    }
+}
+
+fn showSetEnumTypeWidget(p: anytype) void {
+    labeledField("Of", p.of);
+    labeledField("To", p.to orelse "(null)");
+}
+
+fn showAddInterruptWidget(p: anytype) void {
+    labeledField("Device Name", p.device_name);
+    var buf: [32]u8 = undefined;
+    const idx_str = std.fmt.bufPrint(&buf, "{d}", .{p.idx}) catch "?";
+    labeledField("Index", idx_str);
+    labeledField("Name", p.name);
+    if (p.description) |d| labeledField("Description", d);
+}
+
+fn showAddEnumAndApplyWidget(p: anytype, arena: Allocator) void {
+    labeledField("Parent", p.parent);
+    showEnumDetails(p.@"enum", arena);
+
+    _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
+
+    if (p.apply_to.len > 0) {
+        _ = dvui.label(@src(), "Apply To:", .{}, .{
+            .font = .{ .weight = .bold },
+            .color_text = dvui.Color.fromHex("FBB829"),
+        });
+
+        for (p.apply_to, 0..) |target, i| {
+            _ = dvui.label(@src(), "  {s}", .{target}, .{ .id_extra = i });
+        }
+    }
+}
+
+fn labeledField(label_text: []const u8, value: []const u8) void {
+    // Use hash of label text as unique ID to avoid duplicate widget IDs
+    const label_hash = std.hash.Wyhash.hash(0, label_text);
+
+    var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{
+        .expand = .horizontal,
+        .id_extra = label_hash,
+    });
+    defer hbox.deinit();
+
+    _ = dvui.label(@src(), "{s}:", .{label_text}, .{
+        .color_text = dvui.Color.fromHex("FBB829"),
+    });
+    _ = dvui.label(@src(), " {s}", .{value}, .{});
 }
 
 fn save_to_directory(w: *RegzWindow, folder_path: []const u8) !void {
