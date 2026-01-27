@@ -74,6 +74,25 @@ pub fn build(b: *std.Build) void {
         });
     }
 
+    const tree_sitter_diff_dep = b.lazyDependency("tree_sitter_diff", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    if (tree_sitter_diff_dep) |tsd| {
+        exe_mod.addIncludePath(tsd.path("src"));
+        exe_mod.addCSourceFiles(.{
+            .root = tsd.path(""),
+            .files = &.{"src/parser.c"},
+            .flags = &.{"-std=c11"},
+        });
+    }
+
+    const diffz_dep = b.dependency("diffz", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe_mod.addImport("diffz", diffz_dep.module("diffz"));
+
     const exe = b.addExecutable(.{
         .name = "sorcerer",
         .root_module = exe_mod,
@@ -104,6 +123,24 @@ pub fn build(b: *std.Build) void {
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
+
+    // Standalone diff test
+    const diff_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/test_diff.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    diff_test_mod.addImport("diffz", diffz_dep.module("diffz"));
+
+    const diff_test_exe = b.addExecutable(.{
+        .name = "test_diff",
+        .root_module = diff_test_mod,
+    });
+    b.installArtifact(diff_test_exe);
+
+    const run_diff_test = b.addRunArtifact(diff_test_exe);
+    const diff_test_step = b.step("test-diff", "Run diff algorithm test");
+    diff_test_step.dependOn(&run_diff_test.step);
 }
 
 const TargetWithPath = struct {

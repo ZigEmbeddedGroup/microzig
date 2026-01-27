@@ -17,6 +17,14 @@
             .url = "git+https://github.com/tree-sitter-grammars/tree-sitter-zig#6479aa13f32f701c383083d8b28360ebd682fb7d",
             .hash = "tree_sitter_zig-1.1.2-AAAAAJ57XACsD_XBHC4i6G6rnCsZ1dZj7CLRTC09toEB",
         },
+        .tree_sitter_diff = .{
+            .url = "git+https://github.com/tree-sitter-grammars/tree-sitter-diff#2520c3f934b3179bb540d23e0ef45f75304b5fed",
+            .hash = "N-V-__8AAAULEwDDBPj9cGOTHPT1iE6oZabnwo70bstgVEf_",
+        },
+        .diffz = .{
+            .url = "git+https://github.com/ziglibs/diffz#a20dd1f11b10819a6f570f98b42e1c91e3704357",
+            .hash = "diffz-0.0.1-G2tlIQrOAQCfH15jdyaLyrMgV8eGPouFhkCeYFTmJaLk",
+        },
     },
     .minimum_zig_version = "0.15.2",
     .fingerprint = 0x5f77e0bc82473a35,
