@@ -196,6 +196,61 @@ fn find_target_location(b: *std.Build, lazy_path: LazyPath) RegisterSchemaUsage.
     };
 }
 
+fn convert_patch_files(b: *std.Build, patch_files: []const LazyPath) ![]const RegisterSchemaUsage.PatchFile {
+    var result: std.ArrayList(RegisterSchemaUsage.PatchFile) = .{};
+    for (patch_files) |patch_file| {
+        const converted: RegisterSchemaUsage.PatchFile = switch (patch_file) {
+            .src_path => |src_path| .{
+                .src_path = .{
+                    .build_root = get_build_root(b, src_path.owner),
+                    .sub_path = src_path.sub_path,
+                },
+            },
+            .dependency => |dep| .{
+                .dependency = .{
+                    .build_root = get_build_root(b, dep.dependency.builder),
+                    .sub_path = dep.sub_path,
+                    .dep_name = find_dep_name(b, dep.dependency),
+                },
+            },
+            else => continue,
+        };
+        try result.append(b.allocator, converted);
+    }
+    return result.toOwnedSlice(b.allocator);
+}
+
+fn find_dep_name(b: *std.Build, dependency: *std.Build.Dependency) []const u8 {
+    const build_root = get_build_root(b, dependency.builder);
+    const root = @import("root");
+    const packages = root.dependencies.packages;
+    const package_hash = inline for (@typeInfo(packages).@"struct".decls) |decl| {
+        const package = @field(packages, decl.name);
+        if (!@hasDecl(package, "build_root"))
+            continue;
+
+        if (std.mem.eql(u8, package.build_root, build_root)) {
+            break decl.name;
+        }
+    } else unreachable;
+
+    inline for (@typeInfo(packages).@"struct".decls) |decl| {
+        const package = @field(packages, decl.name);
+        if (!@hasDecl(package, "deps"))
+            continue;
+
+        for (package.deps) |dep| {
+            const name = dep[0];
+            const dep_package_hash = dep[1];
+            if (std.mem.eql(u8, package_hash, dep_package_hash)) {
+                return name;
+            }
+        }
+    }
+
+    unreachable;
+}
+
 fn get_build_root(b: *std.Build, owner: *std.Build) []const u8 {
     var it = b.graph.dependency_cache.iterator();
     return while (it.next()) |entry| {
@@ -252,14 +307,18 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
             },
         };
 
+        const patch_files = try convert_patch_files(b, t.chip.patch_files);
+
         if (chips.getEntry(lazy_path)) |entry| {
             try entry.value_ptr.append(b.allocator, .{
                 .name = t.chip.name,
+                .patch_files = patch_files,
             });
         } else {
             var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .{};
             try chip_list.append(b.allocator, .{
                 .name = t.chip.name,
+                .patch_files = patch_files,
             });
             try chips.put(lazy_path, chip_list);
         }
