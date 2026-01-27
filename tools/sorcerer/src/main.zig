@@ -119,10 +119,6 @@ pub fn frame() !dvui.App.Result {
 
             try open_register_schema_submenu(m);
 
-            if (dvui.menuItemLabel(@src(), "Close Menu", .{}, .{ .expand = .horizontal }) != null) {
-                m.close();
-            }
-
             if (dvui.backend.kind != .web) {
                 if (dvui.menuItemLabel(@src(), "Exit", .{}, .{ .expand = .horizontal }) != null) {
                     return .close;
