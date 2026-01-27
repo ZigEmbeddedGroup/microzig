@@ -20,15 +20,13 @@ pub const Spi = struct {
     }
 
     pub fn irq_cleared(self: *@This()) void {
-        if (self.vtable.irq_cleared) |handler| {
-            handler(self.ptr);
-        }
+        self.vtable.irq_cleared(self.ptr);
     }
 
     pub const VTable = struct {
         read: *const fn (*anyopaque, []u32) void,
         write: *const fn (*anyopaque, []u32) void,
-        irq_cleared: ?*const fn (*anyopaque) void = null,
+        irq_cleared: *const fn (*anyopaque) void,
     };
 };
 

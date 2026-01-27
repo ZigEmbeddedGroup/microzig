@@ -516,28 +516,30 @@ pub const WiFi = struct {
 
     const Spi = @import("cyw43439_pio_spi.zig");
     pub const Options = struct {
-        enable_irq: bool = false,
+        handle_irq: bool = false,
         country: Chip.InitOptions.Country = .{},
     };
 
     spi: Spi = undefined,
     chip: Chip = .{}, // cyw43 chip interface
+    handle_irq: bool = false,
 
     pub fn init(self: *Self, opt: Options) !*Chip {
         self.spi = try Spi.init(.{});
+        self.handle_irq = opt.handle_irq;
         try self.chip.init(
             .{
                 .ptr = self,
                 .vtable = &.{
                     .read = Self.read,
                     .write = Self.write,
-                    .irq_cleared = if (opt.enable_irq) Self.irq_cleared else null,
+                    .irq_cleared = Self.irq_cleared,
                 },
             },
             hal.time.sleep_ms,
             .{ .country = opt.country },
         );
-        if (opt.enable_irq) {
+        if (opt.handle_irq) {
             self.set_irq_enabled(true);
         }
         return &self.chip;
@@ -567,6 +569,7 @@ pub const WiFi = struct {
 
     fn irq_cleared(ptr: *anyopaque) void {
         const self: *Self = @ptrCast(@alignCast(ptr));
+        if (!self.handle_irq) return;
         self.set_irq_enabled(true);
     }
 
@@ -588,6 +591,7 @@ pub const WiFi = struct {
     }
 
     fn is_irq_enabled(self: *Self) bool {
+        if (!self.handle_irq) return false;
         const events = irq_enabled_events(self.spi.pins.io);
         return events.high == 1;
     }
