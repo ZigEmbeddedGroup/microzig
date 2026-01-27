@@ -593,15 +593,14 @@ fn handle_scan_event(self: *Self, rsp: ioctl.Response) void {
         log.err("fail to parse event scan result {}", .{err});
         return;
     };
-    if (res.info.ssid_len == 0) return; // skip zero length ssid
-    const info = &res.info;
+    if (res.ssid_len == 0) return; // skip zero length ssid
     self.scan_result = .{};
     const sr = &self.scan_result.?;
-    sr.ssid_buf = info.ssid;
-    sr.ap_mac = info.bssid;
-    sr.ssid = sr.ssid_buf[0..info.ssid_len];
+    sr.ssid_buf = res.ssid;
+    sr.ap_mac = res.bssid;
+    sr.ssid = sr.ssid_buf[0..res.ssid_len];
     sr.security = security;
-    sr.channel = info.channel;
+    sr.channel = res.channel;
 }
 
 const ScanParams = extern struct {
