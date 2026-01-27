@@ -8,6 +8,12 @@ path: []const u8,
 vfs: VirtualFilesystem,
 selected_file: ?VirtualFilesystem.ID = null,
 displayed_file: ?VirtualFilesystem.ID = null,
+active_view: View = .code_generation,
+
+pub const View = enum {
+    code_generation,
+    patches,
+};
 
 const RegzWindow = @This();
 const std = @import("std");
@@ -147,6 +153,61 @@ pub fn show(w: *RegzWindow) !void {
 
     float.dragAreaSet(dvui.windowHeader("Regz", w.title, &w.show_window));
 
+    // Menu bar
+    {
+        var menubar = dvui.box(@src(), .{ .dir = .horizontal }, .{
+            .expand = .horizontal,
+            .background = true,
+        });
+        defer menubar.deinit();
+
+        var m = dvui.menu(@src(), .horizontal, .{});
+        defer m.deinit();
+
+        if (dvui.menuItemLabel(@src(), "File", .{ .submenu = true }, .{})) |r| {
+            var fw = dvui.floatingMenu(@src(), .{ .from = r }, .{});
+            defer fw.deinit();
+
+            if (dvui.menuItemLabel(@src(), "Save As...", .{}, .{ .expand = .horizontal }) != null) {
+                m.close();
+                if (dvui.dialogNativeFolderSelect(dvui.currentWindow().arena(), .{
+                    .title = "Save Generated Code To...",
+                }) catch null) |folder_path| {
+                    w.save_to_directory(folder_path) catch |err| {
+                        std.log.err("Failed to save: {}", .{err});
+                    };
+                }
+            }
+
+            if (dvui.menuItemLabel(@src(), "Close", .{}, .{ .expand = .horizontal }) != null) {
+                w.show_window = false;
+                m.close();
+            }
+        }
+
+        if (dvui.menuItemLabel(@src(), "View", .{ .submenu = true }, .{})) |r| {
+            var fw = dvui.floatingMenu(@src(), .{ .from = r }, .{});
+            defer fw.deinit();
+
+            if (dvui.menuItemLabel(@src(), "Code Generation", .{}, .{ .expand = .horizontal }) != null) {
+                w.active_view = .code_generation;
+                m.close();
+            }
+
+            if (dvui.menuItemLabel(@src(), "Patches", .{}, .{ .expand = .horizontal }) != null) {
+                w.active_view = .patches;
+                m.close();
+            }
+        }
+    }
+
+    switch (w.active_view) {
+        .code_generation => w.show_code_generation(arena.allocator()),
+        .patches => w.show_patches(),
+    }
+}
+
+fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
     var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .both });
     defer hbox.deinit();
 
@@ -154,8 +215,8 @@ pub fn show(w: *RegzWindow) !void {
         const scroll_arena = dvui.scrollArea(@src(), .{}, .{});
         defer scroll_arena.deinit();
 
-        try w.show_file_tree(
-            arena.allocator(),
+        w.show_file_tree(
+            arena,
             @src(),
             .{},
             .{
@@ -177,7 +238,7 @@ pub fn show(w: *RegzWindow) !void {
                     .alpha = 0.15,
                 },
             },
-        );
+        ) catch {};
     }
 
     if (dvui.useTreeSitter) {
@@ -217,6 +278,46 @@ pub fn show(w: *RegzWindow) !void {
 
         if (w.selected_file) |id|
             tl.addText(w.vfs.get_content(id), .{});
+    }
+}
+
+fn show_patches(w: *RegzWindow) void {
+    _ = w;
+    var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
+        .expand = .both,
+        .padding = dvui.Rect.all(8),
+    });
+    defer vbox.deinit();
+
+    _ = dvui.label(@src(), "Patches view - coming soon", .{}, .{});
+}
+
+fn save_to_directory(w: *RegzWindow, folder_path: []const u8) !void {
+    var output_dir = try std.fs.cwd().makeOpenPath(folder_path, .{});
+    defer output_dir.close();
+
+    try w.save_vfs_recursive(output_dir, .root);
+}
+
+fn save_vfs_recursive(w: *RegzWindow, output_dir: std.fs.Dir, parent_id: VirtualFilesystem.ID) !void {
+    const children = try w.vfs.get_children(w.gpa, parent_id);
+    defer w.gpa.free(children);
+
+    for (children) |entry| {
+        const name = w.vfs.get_name(entry.id);
+        switch (entry.kind) {
+            .directory => {
+                var subdir = try output_dir.makeOpenPath(name, .{});
+                defer subdir.close();
+                try w.save_vfs_recursive(subdir, entry.id);
+            },
+            .file => {
+                const content = w.vfs.get_content(entry.id);
+                const file = try output_dir.createFile(name, .{});
+                defer file.close();
+                try file.writeAll(content);
+            },
+        }
     }
 }
 

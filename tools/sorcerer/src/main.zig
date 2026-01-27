@@ -49,6 +49,7 @@ const State = struct {
     register_schema_usages: ?std.json.Parsed([]const RegisterSchemaUsage) = null,
     regz_windows: std.StringArrayHashMapUnmanaged(*RegzWindow) = .{},
     show_from_microzig_window: bool = false,
+    show_stats_window: bool = true,
 };
 
 // Runs before the first frame, after backend and dvui.Window.init()
@@ -116,72 +117,27 @@ pub fn frame() !dvui.App.Result {
                 }
             }
         }
-    }
 
-    var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both, .style = .window });
-    defer scroll.deinit();
+        if (dvui.menuItemLabel(@src(), "View", .{ .submenu = true }, .{})) |r| {
+            var fw = dvui.floatingMenu(@src(), .{ .from = r }, .{});
+            defer fw.deinit();
 
-    var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
-    const lorem = "This is a dvui.App example that can compile on multiple backends.";
-    tl.addText(lorem, .{});
-    tl.addText("\n\n", .{});
-    tl.format("Current backend: {s}", .{@tagName(dvui.backend.kind)}, .{});
-    if (dvui.backend.kind == .web) {
-        tl.format(" : {s}", .{if (dvui.backend.wasm.wasm_about_webgl2() == 1) "webgl2" else "webgl (no mipmaps)"}, .{});
-    }
+            const stats_label = if (state.show_stats_window) "Hide Statistics" else "Show Statistics";
+            if (dvui.menuItemLabel(@src(), stats_label, .{}, .{ .expand = .horizontal }) != null) {
+                state.show_stats_window = !state.show_stats_window;
+                m.close();
+            }
 
-    tl.deinit();
-
-    var tl2 = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
-
-    tl2.addText(
-        \\DVUI
-        \\- paints the entire window
-        \\- can show floating windows and dialogs
-        \\- rest of the window is a scroll area
-    , .{});
-    tl2.addText("\n\n", .{});
-    tl2.addText("Framerate is variable and adjusts as needed for input events and animations.", .{});
-    tl2.addText("\n\n", .{});
-    tl2.addText("Framerate is capped by vsync.", .{});
-    tl2.addText("\n\n", .{});
-    tl2.addText("Cursor is always being set by dvui.", .{});
-    tl2.addText("\n\n", .{});
-
-    if (dvui.useFreeType) {
-        tl2.addText("Fonts are being rendered by FreeType 2.", .{});
-    } else {
-        tl2.addText("Fonts are being rendered by stb_truetype.", .{});
-    }
-    tl2.deinit();
-
-    const label = if (dvui.Examples.show_demo_window) "Hide Demo Window" else "Show Demo Window";
-    if (dvui.button(@src(), label, .{}, .{ .tag = "show-demo-btn" })) {
-        dvui.Examples.show_demo_window = !dvui.Examples.show_demo_window;
-    }
-
-    if (dvui.button(@src(), "Debug Window", .{}, .{})) {
-        dvui.toggleDebugWindow();
-    }
-
-    {
-        var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{});
-        defer hbox.deinit();
-        dvui.label(@src(), "Pinch Zoom or Scale", .{}, .{});
-        if (dvui.buttonIcon(@src(), "plus", dvui.entypo.plus, .{}, .{}, .{})) {
-            dvui.currentWindow().content_scale *= 1.1;
-        }
-
-        if (dvui.buttonIcon(@src(), "minus", dvui.entypo.minus, .{}, .{}, .{})) {
-            dvui.currentWindow().content_scale /= 1.1;
-        }
-
-        if (dvui.currentWindow().content_scale != state.orig_content_scale) {
-            if (dvui.button(@src(), "Reset Scale", .{}, .{})) {
-                dvui.currentWindow().content_scale = state.orig_content_scale;
+            const demo_label = if (dvui.Examples.show_demo_window) "Hide Demo Window" else "Show Demo Window";
+            if (dvui.menuItemLabel(@src(), demo_label, .{}, .{ .expand = .horizontal }) != null) {
+                dvui.Examples.show_demo_window = !dvui.Examples.show_demo_window;
+                m.close();
             }
         }
     }
+
+    // Stats floating window
+    show_stats_window();
 
     dvui.Examples.demo();
 
@@ -191,6 +147,97 @@ pub fn frame() !dvui.App.Result {
         try regz_window.show();
 
     return .ok;
+}
+
+fn show_stats_window() void {
+    if (!state.show_stats_window)
+        return;
+
+    if (state.register_schema_usages == null)
+        return;
+
+    const rsus = state.register_schema_usages.?.value;
+    const stats = compute_stats(rsus);
+
+    var float = dvui.floatingWindow(@src(), .{ .open_flag = &state.show_stats_window }, .{
+        .min_size_content = .{ .w = 250, .h = 200 },
+        .tag = "stats_window",
+    });
+    defer float.deinit();
+
+    float.dragAreaSet(dvui.windowHeader("MicroZig Statistics", "", &state.show_stats_window));
+
+    var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+    defer scroll.deinit();
+
+    var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
+    defer tl.deinit();
+
+    tl.format("Register Schemas: {d}\n", .{rsus.len}, .{});
+    tl.format("Total Chips: {d}\n", .{stats.total_chips}, .{});
+    tl.format("Total Boards: {d}\n", .{stats.total_boards}, .{});
+    tl.format("Unique Ports: {d}\n", .{stats.unique_ports}, .{});
+    tl.format("Chips with Patches: {d}\n\n", .{stats.chips_with_patches}, .{});
+
+    tl.addText("Formats:\n", .{ .font = .{ .weight = .bold } });
+    tl.format("  SVD: {d}\n", .{stats.svd_count}, .{});
+    tl.format("  ATDF: {d}\n", .{stats.atdf_count}, .{});
+    tl.format("  Embassy: {d}\n", .{stats.embassy_count}, .{});
+    tl.format("  TargetDB: {d}\n", .{stats.targetdb_count}, .{});
+}
+
+const Stats = struct {
+    total_chips: usize,
+    total_boards: usize,
+    unique_ports: usize,
+    chips_with_patches: usize,
+    svd_count: usize,
+    atdf_count: usize,
+    embassy_count: usize,
+    targetdb_count: usize,
+};
+
+fn compute_stats(rsus: []const RegisterSchemaUsage) Stats {
+    var stats: Stats = .{
+        .total_chips = 0,
+        .total_boards = 0,
+        .unique_ports = 0,
+        .chips_with_patches = 0,
+        .svd_count = 0,
+        .atdf_count = 0,
+        .embassy_count = 0,
+        .targetdb_count = 0,
+    };
+
+    var ports_seen = std.StringHashMap(void).init(gpa);
+    defer ports_seen.deinit();
+
+    for (rsus) |rsu| {
+        stats.total_chips += rsu.chips.len;
+        stats.total_boards += rsu.boards.len;
+
+        for (rsu.chips) |chip| {
+            if (chip.patch_files.len > 0) {
+                stats.chips_with_patches += 1;
+            }
+        }
+
+        const port_name = switch (rsu.location) {
+            .src_path => |loc| loc.port_name,
+            .dependency => |loc| loc.port_name,
+        };
+        ports_seen.put(port_name, {}) catch {};
+
+        switch (rsu.format) {
+            .svd => stats.svd_count += 1,
+            .atdf => stats.atdf_count += 1,
+            .embassy => stats.embassy_count += 1,
+            .targetdb => stats.targetdb_count += 1,
+        }
+    }
+
+    stats.unique_ports = ports_seen.count();
+    return stats;
 }
 
 fn open_register_schema_submenu(m: *dvui.MenuWidget) !void {
