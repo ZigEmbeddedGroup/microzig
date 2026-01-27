@@ -301,12 +301,15 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
                 try deduped_targets.put(targetdb.path, .targetdb);
                 break :blk targetdb.path;
             },
+            .embassy => |embassy| blk: {
+                try deduped_targets.put(embassy.path, .embassy);
+                break :blk embassy.path;
+            },
             inline else => |lazy_path| blk: {
                 try deduped_targets.put(lazy_path, switch (t.chip.register_definition) {
                     .svd => .svd,
-                    .embassy => .embassy,
                     .atdf => .atdf,
-                    .targetdb => unreachable,
+                    .embassy, .targetdb => unreachable,
                     .zig => continue,
                 });
 

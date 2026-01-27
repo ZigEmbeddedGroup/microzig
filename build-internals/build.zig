@@ -142,8 +142,11 @@ pub const Chip = struct {
         /// Use the provided file directly as the chip file.
         zig: LazyPath,
 
-        /// Path to embassy stm32-data directory
-        embassy: LazyPath,
+        /// Path to embassy stm32-data directory with optional device filter
+        embassy: struct {
+            path: LazyPath,
+            device: ?[]const u8 = null,
+        },
 
         /// Single device from TI targetdb
         targetdb: struct {
