@@ -620,7 +620,7 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, 
                 db.destroy();
             }
 
-            try embassy.load_into_db(db, path);
+            try embassy.load_into_db(db, path, device);
             break :blk db;
         },
         .targetdb => blk: {
