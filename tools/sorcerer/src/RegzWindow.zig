@@ -955,8 +955,8 @@ fn load_patch_files(w: *RegzWindow) void {
         }) catch {};
     }
 
-    // Invalidate cached analysis since patches were applied
-    w.cached_analysis = null;
+    // Regenerate VFS and invalidate caches since patches were applied
+    w.on_database_changed();
 }
 
 fn construct_patch_path(arena: Allocator, pf: RegisterSchemaUsage.PatchFile) ?[]const u8 {
@@ -2159,8 +2159,8 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
     // Apply the patch to the database so analysis reflects the change
     try apply_single_patch(w.db, arena, patch);
 
-    // Invalidate cached analysis so it gets re-evaluated
-    w.cached_analysis = null;
+    // Refresh all views that depend on the database
+    w.on_database_changed();
 }
 
 /// Delete a patch from a patch file
@@ -2230,8 +2230,30 @@ fn rebuild_database_with_patches(w: *RegzWindow) void {
         }
     }
 
+    // Refresh all views that depend on the database
+    w.on_database_changed();
+}
+
+/// Called when the database changes (patches added/deleted)
+/// Regenerates VFS and invalidates all cached views
+fn on_database_changed(w: *RegzWindow) void {
+    // Regenerate the virtual file system with new code
+    // Deinit old VFS and create new one
+    w.vfs.deinit();
+    w.vfs = .init(w.gpa);
+    w.db.to_zig(w.vfs.dir(), .{}) catch |err| {
+        std.log.err("Failed to regenerate code: {}", .{err});
+    };
+
+    // Reset displayed file to force refresh in code view
+    w.displayed_file = null;
+    w.selected_file = null;
+
     // Invalidate cached analysis
     w.cached_analysis = null;
+
+    // Invalidate cached diff
+    w.cached_diff = null;
 }
 
 /// Create an add_enum_and_apply patch from an equivalence group
