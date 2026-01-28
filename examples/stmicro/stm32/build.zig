@@ -46,6 +46,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_timer_capture", .file = "src/stm32f1xx/timer_capture.zig" },
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_rtc", .file = "src/stm32f1xx/rtc.zig" },
         .{ .target = stm32.chips.STM32F103CB, .name = "STM32F1xx_EXTI", .file = "src/stm32f1xx/EXTI.zig" },
+
+        .{ .target = stm32.chips.STM32H723VG, .name = "STM32H723_rcc", .file = "src/stm32h723/rcc.zig" },
     };
 
     for (available_examples) |example| {
