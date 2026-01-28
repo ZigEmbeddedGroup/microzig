@@ -23,6 +23,28 @@ debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, 
 
 Than you can ping that address from the your host computer and see responses.
 
+## scan.zig
+
+Scans for WiFi networks and reports each found network. If open network is found it connects to that network. Reports WiFi chip join state.
+
+```
+================ STARTING NEW LOGGER ================
+[0.930822] debug (main): scaning wifi networks
+[0.945470] debug (main):   found ssid: SUN2000-NS235G001306, channel: 1, open: false, ap mac 3820283fbffa
+[1.095437] debug (main):   found ssid: my-net-1            , channel: 6, open: false, ap mac 18e829c4ec78
+[1.115025] debug (main):   found ssid: my-net-2            , channel: 6, open: true , ap mac 1ae829c4ec78
+[1.185040] debug (main):   found ssid: my-net-2            , channel: 6, open: true , ap mac 7283c23179d7
+[1.214764] debug (main):   found ssid: my-net-1            , channel: 6, open: false, ap mac 7683c23179d7
+[1.625584] debug (main):   found ssid: NVRE82242483        , channel: 13, open: false, ap mac e0baad364a3d
+[1.665162] debug (main): joining to: my-net-2
+[2.543121] debug (main): join state .joined
+[5.017620] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.207.170
+[20.673675] debug (lwip): netif status callback is_link_up: false, is_up: true, ready: false, ip: 192.168.207.170
+[20.683811] debug (main): join state changed .disjoined
+[30.386339] debug (lwip): netif status callback is_link_up: true, is_up: true, ready: true, ip: 192.168.207.170
+[30.396295] debug (main): join state changed .joined
+```
+Here I turned off my-net-2 access point, and bring it back after few seconds.
 
 ## udp.zig
 
@@ -78,3 +100,8 @@ ncat -lkv -p 9998 --exec /bin/cat
 ```
 
 This example will send various TCP payload sizes. When the payload is too big for the TCP send buffer out of memory error will be raised on send.
+
+## irq.zig
+
+Similar to simple pong example but in interrupt mode. Link layer (cyw43) interrupts when there is available data packet to read. 
+Now when `nic.poll` is called only when there is data packet available there is need to call `nic.tick` periodically to run lwip internal timers. 

@@ -27,10 +27,6 @@ const cyw43spi_program = blk: {
         \\in pins, 1     side 1
         \\jmp y-- lp2    side 0
         \\
-        \\; wait for event and irq host
-        \\wait 1 pin 0   side 0
-        \\irq 0          side 0
-        \\
         \\.wrap
     , .{}).get_program_by_name("cyw43spi");
 };
@@ -71,7 +67,7 @@ pub fn init(config: Config) !Self {
     // IO pin setup
     pio.gpio_init(pins.io);
     pins.io.set_output_disabled(false);
-    pins.io.set_pull(.disabled);
+    pins.io.set_pull(.down);
     pins.io.set_schmitt_trigger_enabled(true);
     try pio.set_input_sync_bypass(pins.io);
     pins.io.set_drive_strength(.@"12mA");
@@ -123,8 +119,7 @@ pub fn init(config: Config) !Self {
     };
 }
 
-pub fn read(ptr: *anyopaque, words: []u32) void {
-    const self: *Self = @ptrCast(@alignCast(ptr));
+pub fn read(self: *Self, words: []u32) void {
     self.pins.cs.put(0);
     defer self.pins.cs.put(1);
 
@@ -138,8 +133,7 @@ pub fn read(ptr: *anyopaque, words: []u32) void {
 
 // By default it sends status after each read/write.
 // ref: datasheet 'Table 6. gSPI Registers' status enable has default 1
-pub fn write(ptr: *anyopaque, words: []u32) void {
-    const self: *Self = @ptrCast(@alignCast(ptr));
+pub fn write(self: *Self, words: []u32) void {
     self.pins.cs.put(0);
     defer self.pins.cs.put(1);
 
