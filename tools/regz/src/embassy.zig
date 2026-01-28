@@ -144,7 +144,7 @@ pub const ChipFile = struct {
     }
 };
 
-pub fn load_into_db(db: *Database, path: []const u8) !void {
+pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void {
     var package_dir = try std.fs.cwd().openDir(path, .{});
     defer package_dir.close();
 
@@ -179,6 +179,14 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         if (entry.kind != .file)
             continue;
 
+        // Filter to specific device if requested
+        if (device) |d| {
+            const chip_name = entry.name[0 .. entry.name.len - ".json".len];
+            if (!std.mem.eql(u8, d, chip_name)) {
+                continue;
+            }
+        }
+
         std.log.info("file: {s}", .{entry.name});
 
         const chip_file_text = try chips_dir.readFileAlloc(allocator, entry.name, std.math.maxInt(usize));
@@ -199,6 +207,11 @@ pub fn load_into_db(db: *Database, path: []const u8) !void {
         errdefer chips_file.deinit();
 
         try chip_files.append(allocator, chips_file);
+    }
+
+    // Error if device was specified but not found
+    if (device != null and chip_files.items.len == 0) {
+        return error.DeviceMissing;
     }
 
     var registers_dir = try data_dir.openDir("registers", .{ .iterate = true });

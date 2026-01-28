@@ -416,7 +416,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addFileArg(file);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
-                .embassy => |path| blk: {
+                .embassy => |embassy| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
                     regz_run.addArg("--format");
@@ -430,7 +430,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         regz_run.addFileArg(patch_file);
                     }
 
-                    regz_run.addDirectoryArg(path);
+                    if (embassy.device) |device| {
+                        regz_run.addArg("--device");
+                        regz_run.addArg(device);
+                    }
+
+                    regz_run.addDirectoryArg(embassy.path);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
                 .targetdb => |targetdb| blk: {
