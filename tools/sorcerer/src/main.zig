@@ -284,7 +284,8 @@ fn open_register_schema_submenu(m: *dvui.MenuWidget) !void {
                     };
 
                     const path = try gpa.dupe(u8, f);
-                    const new_window = try RegzWindow.create(gpa, format, path, null, null);
+                    const register_schemas = if (state.register_schema_usages) |rsu| rsu.value else null;
+                    const new_window = try RegzWindow.create(gpa, format, path, null, null, register_schemas);
                     errdefer new_window.destroy();
 
                     try state.regz_windows.put(gpa, f, new_window);
@@ -403,7 +404,8 @@ fn from_microzig_menu() void {
             else
                 null;
 
-            const new_window = RegzWindow.create(gpa, format, path, null, chip_info) catch unreachable;
+            const rsus = if (state.register_schema_usages) |r| r.value else null;
+            const new_window = RegzWindow.create(gpa, format, path, null, chip_info, rsus) catch unreachable;
 
             state.regz_windows.put(gpa, path, new_window) catch {
                 new_window.destroy();
@@ -721,7 +723,7 @@ fn open_chip_target(rsu_idx: usize, chip_idx: usize) void {
         .patch_files = chip.patch_files,
     };
 
-    const new_window = RegzWindow.create(gpa, format, path, chip.name, chip_info) catch return;
+    const new_window = RegzWindow.create(gpa, format, path, chip.name, chip_info, rsus.value) catch return;
 
     state.regz_windows.put(gpa, path, new_window) catch {
         new_window.destroy();
@@ -1073,7 +1075,7 @@ fn open_board(rsu_idx: usize, board_idx: usize) void {
         .targetdb => .targetdb,
     };
 
-    const new_window = RegzWindow.create(gpa, format, path, null, chip_info) catch return;
+    const new_window = RegzWindow.create(gpa, format, path, null, chip_info, rsus.value) catch return;
 
     state.regz_windows.put(gpa, path, new_window) catch {
         new_window.destroy();
