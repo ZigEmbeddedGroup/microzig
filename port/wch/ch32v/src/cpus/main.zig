@@ -282,7 +282,26 @@ pub const startup_logic = struct {
         @export(&startup_logic._system_init, .{ .name = "_system_init" });
         asm volatile (
             \\jal _system_init
-        );
+            // We have clobber all caller-saved registers
+            ::: .{
+                .x1 = true,
+                .x5 = true,
+                .x6 = true,
+                .x7 = true,
+                .x10 = true,
+                .x11 = true,
+                .x12 = true,
+                .x13 = true,
+                .x14 = true,
+                .x15 = true,
+                .x16 = true,
+                .x17 = true,
+                .x28 = true,
+                .x29 = true,
+                .x30 = true,
+                .x31 = true,
+                .memory = true,
+            });
 
         // Load the address of the `microzig_main` function into the `mepc` register
         // and transfer control to it using the `mret` instruction.
@@ -309,7 +328,7 @@ pub const startup_logic = struct {
             \\    addi a1, a1, 4
             \\    blt a1, a2, clear_bss_loop
             \\clear_bss_done:
-        );
+            ::: .{ .x10 = true, .x11 = true, .x12 = true });
 
         // Copy .data from FLASH to RAM.
         asm volatile (
@@ -324,7 +343,7 @@ pub const startup_logic = struct {
             \\    addi a1, a1, 4
             \\    bne a1, a2, copy_data_loop
             \\copy_done:
-        );
+            ::: .{ .x10 = true, .x11 = true, .x12 = true, .x13 = true });
     }
 
     fn _system_init() callconv(.c) void {
