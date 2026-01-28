@@ -373,4 +373,3 @@ test "zon serialize multiple patches - raw output" {
     std.debug.print("Has '}} }}' pattern: {}\n", .{has_double_close});
     std.debug.print("Has '.{{ .{{' pattern: {}\n", .{has_inline_open});
 }
-
