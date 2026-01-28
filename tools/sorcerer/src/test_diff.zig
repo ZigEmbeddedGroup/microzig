@@ -270,3 +270,107 @@ test "duplicate lines are handled correctly" {
     try std.testing.expect(context_count > 0);
     try std.testing.expectEqual(added_count, removed_count);
 }
+
+// ============================================================================
+// ZON serialization tests
+// ============================================================================
+
+// Test types that mimic the Patch structure
+const TestEnumField = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    value: u32,
+};
+
+const TestEnum = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    bitsize: u8,
+    fields: []const TestEnumField = &.{},
+};
+
+const TestPatch = union(enum) {
+    add_enum_and_apply: struct {
+        parent: []const u8,
+        @"enum": TestEnum,
+        apply_to: []const []const u8,
+    },
+};
+
+test "zon serialize single patch - raw output" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const patch = TestPatch{ .add_enum_and_apply = .{
+        .parent = "types.peripherals.TEST",
+        .@"enum" = .{
+            .name = "TestEnum",
+            .description = null,
+            .bitsize = 2,
+            .fields = &.{
+                .{ .name = "val0", .description = null, .value = 0 },
+                .{ .name = "val1", .description = null, .value = 1 },
+            },
+        },
+        .apply_to = &.{
+            "types.peripherals.TEST.REG1.FIELD",
+            "types.peripherals.TEST.REG2.FIELD",
+        },
+    } };
+
+    const patches: []const TestPatch = &.{patch};
+
+    var zon_buf: std.Io.Writer.Allocating = .init(allocator);
+    try std.zon.stringify.serialize(patches, .{}, &zon_buf.writer);
+
+    const output = zon_buf.written();
+    std.debug.print("\n=== Raw ZON output (single patch) ===\n{s}\n=== End ===\n", .{output});
+
+    // Check that the output contains expected content
+    try std.testing.expect(std.mem.indexOf(u8, output, "add_enum_and_apply") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output, "TestEnum") != null);
+}
+
+test "zon serialize multiple patches - raw output" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const patch1 = TestPatch{ .add_enum_and_apply = .{
+        .parent = "types.peripherals.TEST1",
+        .@"enum" = .{
+            .name = "Enum1",
+            .description = null,
+            .bitsize = 2,
+            .fields = &.{},
+        },
+        .apply_to = &.{},
+    } };
+
+    const patch2 = TestPatch{ .add_enum_and_apply = .{
+        .parent = "types.peripherals.TEST2",
+        .@"enum" = .{
+            .name = "Enum2",
+            .description = null,
+            .bitsize = 2,
+            .fields = &.{},
+        },
+        .apply_to = &.{},
+    } };
+
+    const patches: []const TestPatch = &.{ patch1, patch2 };
+
+    var zon_buf: std.Io.Writer.Allocating = .init(allocator);
+    try std.zon.stringify.serialize(patches, .{}, &zon_buf.writer);
+
+    const output = zon_buf.written();
+    std.debug.print("\n=== Raw ZON output (multiple patches) ===\n{s}\n=== End ===\n", .{output});
+
+    // Check for problematic patterns
+    const has_double_close = std.mem.indexOf(u8, output, "} }") != null;
+    const has_inline_open = std.mem.indexOf(u8, output, ".{ .{") != null;
+    std.debug.print("Has '}} }}' pattern: {}\n", .{has_double_close});
+    std.debug.print("Has '.{{ .{{' pattern: {}\n", .{has_inline_open});
+}
+
