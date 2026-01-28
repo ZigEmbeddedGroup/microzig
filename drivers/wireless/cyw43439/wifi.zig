@@ -349,7 +349,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
                         }
                         return 0;
                     }
-                    self.log_response(rsp);
+                    log.err("command {} failed with status {}", .{ cdc.cmd, cdc.status });
                     return error.Cyw43InvalidCommandStatus;
                 }
             },
