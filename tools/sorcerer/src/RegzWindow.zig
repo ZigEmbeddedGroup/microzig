@@ -1384,13 +1384,47 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     const values = w.loaded_patches.values();
 
     for (keys, values, 0..) |_, loaded, file_idx| {
-        const patches = loaded.patches orelse continue;
+        const orig_count = if (loaded.patches) |p| p.len else 0;
 
-        for (patches, 0..) |p, patch_idx| {
+        // Process original patches (excluding deleted ones)
+        if (loaded.patches) |patches| {
+            for (patches, 0..) |p, patch_idx| {
+                if (loaded.is_patch_deleted(patch_idx)) continue;
+
+                const is_before_selected = (file_idx < sel.file_index) or
+                    (file_idx == sel.file_index and patch_idx < sel.patch_index);
+                const is_selected_or_before = (file_idx < sel.file_index) or
+                    (file_idx == sel.file_index and patch_idx <= sel.patch_index);
+
+                // Serialize this patch
+                var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
+                const patch_array: []const regz.Patch = &.{p};
+                std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer) catch continue;
+                const zon_text = temp_arena.dupeZ(u8, zon_buf.written()) catch continue;
+
+                var diags: std.zon.parse.Diagnostics = .{};
+
+                // Apply to before_db if this patch comes before the selected one
+                if (is_before_selected) {
+                    before_db.apply_patch(zon_text, &diags) catch continue;
+                }
+
+                // Apply to after_db if this patch is the selected one or comes before it
+                if (is_selected_or_before) {
+                    diags = .{};
+                    after_db.apply_patch(zon_text, &diags) catch continue;
+                }
+            }
+        }
+
+        // Process pending patches
+        for (loaded.pending_patches.items, 0..) |p, pending_idx| {
+            const full_idx = orig_count + pending_idx;
+
             const is_before_selected = (file_idx < sel.file_index) or
-                (file_idx == sel.file_index and patch_idx < sel.patch_index);
+                (file_idx == sel.file_index and full_idx < sel.patch_index);
             const is_selected_or_before = (file_idx < sel.file_index) or
-                (file_idx == sel.file_index and patch_idx <= sel.patch_index);
+                (file_idx == sel.file_index and full_idx <= sel.patch_index);
 
             // Serialize this patch
             var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
@@ -2437,14 +2471,22 @@ fn save_all_patches(w: *RegzWindow, arena: Allocator) !void {
         }
     }
 
-    // All validations passed, write files
+    // All validations passed, write files and reload
+    const alloc = w.arena.allocator();
     for (w.loaded_patches.keys()) |path| {
         const loaded = w.loaded_patches.getPtr(path) orelse continue;
         if (!loaded.is_dirty) continue;
 
         try w.write_patch_file(path, loaded.*);
 
-        // Clear dirty flag and reset state
+        // Reload patches from the saved file to update loaded.patches
+        const file = try std.fs.cwd().openFile(path, .{});
+        defer file.close();
+        const content = try file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0);
+        const new_patches = std.zon.parse.fromSlice([]const regz.Patch, alloc, content, null, .{}) catch null;
+
+        // Update the loaded state
+        loaded.patches = new_patches;
         loaded.is_dirty = false;
         loaded.pending_patches.clearRetainingCapacity();
         loaded.deleted_patch_indices.clearRetainingCapacity();
