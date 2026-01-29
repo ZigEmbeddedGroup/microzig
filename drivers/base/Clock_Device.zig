@@ -18,18 +18,31 @@ ptr: *anyopaque,
 /// Virtual table for the digital i/o functions.
 vtable: *const VTable,
 
-/// API
+/// Object created by make_timeout to perform to hold
+/// a duration.
+pub const Timeout = struct {
+    clock: Clock_Device,
+    time: mdf.time.Absolute,
+
+    pub fn is_reached(self: @This()) bool {
+        return self.clock.is_reached(self.time);
+    }
+
+    pub fn diff(self: @This()) mdf.time.Duration {
+        return self.time.diff(self.clock.get_time_since_boot());
+    }
+};
+
 pub fn is_reached(td: Clock_Device, time: mdf.time.Absolute) bool {
     const now = td.get_time_since_boot();
     return time.is_reached_by(now);
 }
 
-pub fn make_timeout(td: Clock_Device, timeout: mdf.time.Duration) mdf.time.Absolute {
-    return @as(mdf.time.Absolute, @enumFromInt(td.get_time_since_boot().to_us() + timeout.to_us()));
-}
-
-pub fn make_timeout_us(td: Clock_Device, timeout_us: u64) mdf.time.Absolute {
-    return @as(mdf.time.Absolute, @enumFromInt(td.get_time_since_boot().to_us() + timeout_us));
+pub fn make_timeout(td: Clock_Device, timeout: mdf.time.Duration) Timeout {
+    return .{
+        .clock = td,
+        .time = td.get_time_since_boot().add_duration(timeout),
+    };
 }
 
 pub fn sleep_ms(td: Clock_Device, time_ms: u32) void {
@@ -44,8 +57,8 @@ pub fn sleep_us(td: Clock_Device, time_us: u64) void {
     }
 
     // Otherwise, fall back to polling
-    const end_time = td.make_timeout_us(time_us);
-    while (!td.is_reached(end_time)) {}
+    const end_time = td.make_timeout(.from_us(time_us));
+    while (!end_time.is_reached()) {}
 }
 
 /// VTable methods
@@ -116,17 +129,17 @@ test Test_Device {
     ttd.elapse_time(2);
     try std.testing.expectEqual(2, td.get_time_since_boot().to_us());
 
-    try std.testing.expect(!td.is_reached(@enumFromInt(4)));
+    // Time reached
+    try std.testing.expect(!td.is_reached(.from_us(3)));
     ttd.elapse_time(2);
-    try std.testing.expect(td.is_reached(@enumFromInt(4)));
+    try std.testing.expect(td.is_reached(.from_us(3)));
 
     // Timeouts
-    try std.testing.expectEqual(
-        54,
-        @intFromEnum(td.make_timeout(mdf.time.Duration.from_us(50))),
-    );
-    ttd.elapse_time(50);
-    try std.testing.expectEqual(104, @intFromEnum(td.make_timeout_us(50)));
+    const timeout = td.make_timeout(.from_us(50));
+    ttd.elapse_time(40);
+    try std.testing.expectEqual(mdf.time.Duration.from_us(10), timeout.diff());
+    ttd.elapse_time(10);
+    try std.testing.expect(timeout.is_reached());
 
     try std.testing.expectEqual(0, ttd.get_total_sleep_time());
     td.sleep_ms(1000);
