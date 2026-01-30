@@ -162,10 +162,10 @@ fn print_list_table(allocator: Allocator, port_filter: ?[]const u8) !void {
     defer seen_chips.deinit();
 
     // Print header
-    stdout.print("{s:<24} {s:<24} {s}\n", .{ "CHIP", "PORT", "BOARD" }) catch |err| return handle_write_error(err);
-    stdout.print("{s:-<24} {s:-<24} {s:-<32}\n", .{ "", "", "" }) catch |err| return handle_write_error(err);
+    stdout.print("{s:<24} {s}\n", .{ "CHIP", "PORT" }) catch |err| return handle_write_error(err);
+    stdout.print("{s:-<24} {s:-<24}\n", .{ "", "" }) catch |err| return handle_write_error(err);
 
-    // Print entries (deduplicated by chip name)
+    // Print entries (one line per unique chip)
     for (schemas.schemas) |schema| {
         const port_name = get_port_name(schema.location);
 
@@ -183,15 +183,7 @@ fn print_list_table(allocator: Allocator, port_filter: ?[]const u8) !void {
             }
             seen_chips.put(chip.name, {}) catch {};
 
-            const board_name = if (schema.boards.len > 0) schema.boards[0].name else "-";
-            stdout.print("{s:<24} {s:<24} {s}\n", .{ chip.name, port_name, board_name }) catch |err| return handle_write_error(err);
-
-            // Print additional boards for same chip
-            if (schema.boards.len > 1) {
-                for (schema.boards[1..]) |board| {
-                    stdout.print("{s:<24} {s:<24} {s}\n", .{ "", "", board.name }) catch |err| return handle_write_error(err);
-                }
-            }
+            stdout.print("{s:<24} {s}\n", .{ chip.name, port_name }) catch |err| return handle_write_error(err);
         }
     }
     stdout.flush() catch |err| return handle_write_error(err);
@@ -212,6 +204,10 @@ fn print_list_json(allocator: Allocator, port_filter: ?[]const u8) !void {
     var entries: std.ArrayList(JsonEntry) = .{};
     defer entries.deinit(allocator);
 
+    // Track seen chip names to deduplicate
+    var seen_chips = std.StringHashMap(void).init(allocator);
+    defer seen_chips.deinit();
+
     for (schemas.schemas) |schema| {
         const port_name = get_port_name(schema.location);
 
@@ -223,12 +219,16 @@ fn print_list_json(allocator: Allocator, port_filter: ?[]const u8) !void {
         }
 
         for (schema.chips) |chip| {
+            // Skip if we've already added this chip name
+            if (seen_chips.contains(chip.name)) {
+                continue;
+            }
+            seen_chips.put(chip.name, {}) catch {};
+
             try entries.append(allocator, .{
                 .chip = chip.name,
-                .target = chip.target_name,
                 .port = port_name,
                 .format = @tagName(schema.format),
-                .boards = schema.boards,
             });
         }
     }
@@ -246,10 +246,8 @@ fn print_list_json(allocator: Allocator, port_filter: ?[]const u8) !void {
 
 const JsonEntry = struct {
     chip: []const u8,
-    target: []const u8,
     port: []const u8,
     format: []const u8,
-    boards: []const RegisterSchemaUsage.Board,
 };
 
 fn get_port_name(location: RegisterSchemaUsage.Location) []const u8 {
