@@ -559,16 +559,20 @@ fn generate_zig_schema_literal(allocator: std.mem.Allocator, schemas: []const Re
         try writer.writeAll("        .location = ");
         switch (schema.location) {
             .src_path => |src| {
+                const sub_path = try normalize_path(allocator, src.sub_path);
+                const build_root = try normalize_path(allocator, src.build_root);
                 try writer.writeAll(".{ .src_path = .{\n");
                 try writer.print("            .port_name = \"{s}\",\n", .{src.port_name});
-                try writer.print("            .sub_path = \"{s}\",\n", .{src.sub_path});
-                try writer.print("            .build_root = \"{s}\",\n", .{src.build_root});
+                try writer.print("            .sub_path = \"{s}\",\n", .{sub_path});
+                try writer.print("            .build_root = \"{s}\",\n", .{build_root});
                 try writer.writeAll("        } },\n");
             },
             .dependency => |dep| {
+                const sub_path = try normalize_path(allocator, dep.sub_path);
+                const build_root = try normalize_path(allocator, dep.build_root);
                 try writer.writeAll(".{ .dependency = .{\n");
-                try writer.print("            .sub_path = \"{s}\",\n", .{dep.sub_path});
-                try writer.print("            .build_root = \"{s}\",\n", .{dep.build_root});
+                try writer.print("            .sub_path = \"{s}\",\n", .{sub_path});
+                try writer.print("            .build_root = \"{s}\",\n", .{build_root});
                 try writer.print("            .dep_name = \"{s}\",\n", .{dep.dep_name});
                 try writer.print("            .port_name = \"{s}\",\n", .{dep.port_name});
                 try writer.writeAll("        } },\n");
