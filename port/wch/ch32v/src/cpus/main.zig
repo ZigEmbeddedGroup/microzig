@@ -220,21 +220,25 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() callconv(.naked) void {
-        // Set global pointer.
         asm volatile (
+            \\
+            // Set global pointer.
             \\.option push
             \\.option norelax
             \\la gp, __global_pointer$
             \\.option pop
-        );
+            \\
+            // Set stack pointer.
+            \\mv sp, %[eos]
 
-        // Set stack pointer.
-        const eos = comptime microzig.utilities.get_end_of_stack();
-        asm volatile ("mv sp, %[eos]"
+            // Initialize the system.
+            \\j _system_init
             :
-            : [eos] "r" (@as(u32, @intFromPtr(eos))),
+            : [eos] "r" (comptime microzig.utilities.get_end_of_stack()),
         );
+    }
 
+    export fn _system_init() callconv(.c) noreturn {
         // NOTE: this can only be called once. Otherwise, we get a linker error for duplicate symbols
         startup_logic.initialize_system_memories();
 
@@ -278,11 +282,7 @@ pub const startup_logic = struct {
             .mpp = 0x3,
         });
 
-        // Initialize the system.
-        @export(&startup_logic._system_init, .{ .name = "_system_init" });
-        asm volatile (
-            \\jal _system_init
-        );
+        cpu_impl.system_init(microzig.chip);
 
         // Load the address of the `microzig_main` function into the `mepc` register
         // and transfer control to it using the `mret` instruction.
@@ -295,6 +295,7 @@ pub const startup_logic = struct {
         // machine mode and we are switching to machine mode, but normally this could switch us to
         // user mode.
         asm volatile ("mret");
+        unreachable;
     }
 
     inline fn initialize_system_memories() void {
@@ -325,10 +326,6 @@ pub const startup_logic = struct {
             \\    bne a1, a2, copy_data_loop
             \\copy_done:
         );
-    }
-
-    fn _system_init() callconv(.c) void {
-        cpu_impl.system_init(microzig.chip);
     }
 
     export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
