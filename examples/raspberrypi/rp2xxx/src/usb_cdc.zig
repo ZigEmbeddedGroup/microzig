@@ -23,8 +23,6 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
-    // GM: Technically a tuple, but would they ever support more than one configuration? this is
-    // config0.
     .configurations = &.{.{
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
@@ -32,7 +30,6 @@ var usb_controller: usb.DeviceController(.{
     }},
 }, .{.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
-    // Is the reset driver used at all?
     .reset = "",
 }}) = .init;
 
@@ -79,8 +76,7 @@ pub fn main() !void {
         // You can now poll for USB events
         usb_device.poll(&usb_controller);
 
-        // GM: The if is just to get a pointer to the driver if it's setup and null otherwise
-        // The type here is the anonymous struct above with two fields: serial and reset.
+        // Ensure that the host as finished enumerating our USB device
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {

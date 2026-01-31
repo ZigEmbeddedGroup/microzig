@@ -267,7 +267,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
-        // GM: This is likely because in practice only configuration 0 is selected by the host?
+        // We only support one configuration
         const config0 = config.configurations[0];
         // GM: Fields of the drivers struct are the separate drivers
         const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
@@ -587,6 +587,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             }
         }
 
+        // Return the appropriate descriptor type as determined by the top 8 bits of the value.
         fn get_descriptor(value: u16) ?[]const u8 {
             const asBytes = std.mem.asBytes;
             const desc_type: descriptor.Type = @enumFromInt(value >> 8);

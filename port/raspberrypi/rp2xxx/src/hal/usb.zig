@@ -119,13 +119,13 @@ pub fn Polled(config: Config) type {
                 // Clear the status flag (write-one-to-clear)
                 peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
-                // The PAC models this buffer as two 32-bit registers.
+                // The SVD exposes this buffer as two 32-bit registers.
                 const setup: usb.types.SetupPacket = @bitCast([2]u32{
                     peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
                     peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
                 });
 
-                log.debug("setup  {any}", .{setup});
+                log.debug("setup {any}", .{setup});
                 controller.on_setup_req(&self.interface, &setup);
             }
 

@@ -53,6 +53,7 @@ pub const LineCoding = extern struct {
     };
 };
 
+// This struct bundles all the descriptors CDC needs into one Configuration.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
 
@@ -79,7 +80,7 @@ pub const Descriptor = extern struct {
     /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
     /// by the user when creating the device controller type. If multiple instances of a driver
     /// are used, this function is called for each, with different arguments. Passing arguments
-    /// through this function is preffered to making the whole driver generic.
+    /// through this function is preferred to making the whole driver generic.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
         max_supported_packet_size: usb.types.Len,
