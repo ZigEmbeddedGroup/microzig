@@ -3,8 +3,7 @@ const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_cdc);
 
-// GM: If this is 'standard' CDC stuff, then shouldn't it go into (lowercase) cdc.zig? e.g. outside
-// of the driver? So it would be accessed through usb.descriptor.cdc.ManagementRequestType.
+/// CDC PSTN Subclass Management Element Requests
 pub const ManagementRequestType = enum(u8) {
     SetCommFeature = 0x02,
     GetCommFeature = 0x03,
@@ -29,6 +28,7 @@ pub const ManagementRequestType = enum(u8) {
     _,
 };
 
+/// Line coding structure for SetLineCoding/GetLineCoding requests
 pub const LineCoding = extern struct {
     pub const StopBits = enum(u8) { @"1" = 0, @"1.5" = 1, @"2" = 2, _ };
     pub const Parity = enum(u8) {
@@ -46,9 +46,9 @@ pub const LineCoding = extern struct {
     data_bits: u8,
 
     pub const init: @This() = .{
-        .bit_rate = 115200,
-        .stop_bits = 0,
-        .parity = 0,
+        .bit_rate = .from(115200),
+        .stop_bits = .@"1",
+        .parity = .none,
         .data_bits = 8,
     };
 };
@@ -224,12 +224,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
     self.* = .{
         .device = device,
         .descriptor = desc,
-        .line_coding = .{
-            .bit_rate = .from(115200),
-            .stop_bits = .@"1",
-            .parity = .none,
-            .data_bits = 8,
-        },
+        .line_coding = .init,
         .notifi_ready = .init(true),
 
         // OK so `init` provides a data buffer, which we split in half for rx and tx data.
