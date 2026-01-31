@@ -11,6 +11,7 @@ pub const usbhs = @import("./usbhs.zig");
 /// HSI (High Speed Internal) oscillator frequency
 /// This is the fixed internal RC oscillator frequency for CH32V30x
 pub const hsi_frequency: u32 = 8_000_000; // 8 MHz
+pub const hse_frequency: u32 = 8_000_000; // 8 MHz
 
 /// Default interrupt handlers provided by the HAL
 pub const default_interrupts: microzig.cpu.InterruptOptions = .{
@@ -23,12 +24,12 @@ pub fn init() void {
     // Configure TIM2 timing driver
     time.init();
     clocks.init(.{
-        .hse_frequency = 8_000_000,
-        .target_frequency = 144_000_000,
         .source = .hse,
+        .hse_frequency = hse_frequency,
+        .target_frequency = 48_000_000,
     }); // 8 MHz external crystal
     clocks.enable_usbhs_clock(.{
-        .ref_source_hz = 8_000_000,
+        .ref_source_hz = hse_frequency,
         .ref_source = .hse,
     });
 }
