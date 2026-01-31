@@ -26,8 +26,10 @@ const HardwareEndpointData = struct {
 };
 
 const rp2xxx_buffers = struct {
-    // Address 0x100-0xfff (3840 bytes) can be used for data buffers
-    const USB_DPRAM_DATA_BUFFER_BASE = 0x50100100;
+    // Address 0x100-0xfff (3840 bytes) can be used for data buffers.
+    // The first 0x100 bytes are registers (last one at offset 0xfc), the rest is available for
+    // endpoint data buffers.
+    const USB_DPRAM_DATA_BUFFER_BASE = @intFromPtr(peripherals.USB_DPRAM) + 0x100;
 
     const CTRL_EP_BUFFER_SIZE = 64;
 
