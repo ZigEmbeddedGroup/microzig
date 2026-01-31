@@ -4,10 +4,9 @@ const microzig = @import("microzig");
 const hal = microzig.hal;
 const time = hal.time;
 const gpio = hal.gpio;
+const usb = microzig.core.usb;
 
-pub const usb = hal.usbhs;
-
-const USB_Serial = microzig.core.usb.drivers.CDC;
+const USB_Serial = usb.drivers.CDC;
 
 const RCC = microzig.chip.peripherals.RCC;
 const AFIO = microzig.chip.peripherals.AFIO;
@@ -16,11 +15,6 @@ const PFIC = microzig.chip.peripherals.PFIC;
 const usart = hal.usart.instance.USART1;
 
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
-const mco_pin = gpio.Pin.init(0, 8); // PA9
-
-pub const my_interrupts: microzig.cpu.InterruptOptions = .{
-    .USBHS = usbhs_interrupt_handler,
-};
 
 pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
@@ -30,18 +24,9 @@ pub const microzig_options = microzig.Options{
         .{ .scope = .usb_ctrl, .level = .warn },
         .{ .scope = .usb_cdc, .level = .warn },
     },
-    .interrupts = my_interrupts,
 };
 
-pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {}
-
-fn usb_poll() void {
-    // microzig.cpu.interrupt.disable(.USBHS);
-    usb_dev.poll(false, &usb_controller);
-    // microzig.cpu.interrupt.enable(.USBHS);
-}
-
-const USBController = microzig.core.usb.DeviceController(.{
+const USBController = usb.DeviceController(.{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
     .vendor = .{ .id = 0x2E8A, .str = "MicroZig" },
@@ -58,7 +43,7 @@ const USBController = microzig.core.usb.DeviceController(.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});
 
-pub var usb_dev: usb.Polled(
+pub var usb_dev: hal.usbhs.Polled(
     .{ .prefer_high_speed = true },
 ) = undefined;
 
@@ -68,33 +53,19 @@ pub fn main() !void {
     // Board brings up clocks and time
     microzig.board.init();
     microzig.hal.init();
-    // RCC.CFGR0.modify(.{ .MCO = 0b0100 });
-    // Enable peripheral clocks for USART2 and GPIOA
+
+    // Enable peripheral clocks for USART1 and GPIOA
     RCC.APB2PCENR.modify(.{
         .IOPAEN = 1, // Enable GPIOA clock
         .AFIOEN = 1, // Enable AFIO clock
         .USART1EN = 1, // Enable USART1 clock
     });
 
-    // Ensure USART2 is NOT remapped (default PA2/PA3, not PD5/PD6)
-    AFIO.PCFR1.modify(.{ .USART2_RM = 0 });
-
-    // Configure PA2 as alternate function push-pull for USART2 TX
+    // Configure TX pin as alternate function push-pull
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
-    // mco_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
-
-    // Initialize USART2 at 115200 baud
-    usart.apply(.{ .baud_rate = 921600 });
-    comptime {
-        const sysclk: comptime_float = 144_000_000;
-        const hb: comptime_float = 1.0;
-        const pb2: comptime_float = 1.0;
-        const pclk = (sysclk / hb) / pb2;
-        if (!usart.validate_baudrate(921600, pclk, 1.0)) {
-            @compileError("Bad baud rate");
-        }
-    }
+    // Initialize USART1 at 115200 baud
+    usart.apply(.{ .baud_rate = 115200 });
 
     hal.usart.init_logger(usart);
     std.log.info("UART logging initialized.", .{});
@@ -102,8 +73,7 @@ pub fn main() !void {
     std.log.info("Initializing USB device.", .{});
 
     usb_dev = .init();
-    // microzig.cpu.interrupt.enable(.USBHS);
-    PFIC.IPRIOR70 = 255;
+
     var i: u32 = 0;
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
@@ -125,7 +95,7 @@ pub fn main() !void {
                 usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
             }
         }
-        usb_poll();
+        usb_dev.poll(false, &usb_controller);
     }
 }
 
@@ -139,7 +109,7 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
         while (!serial.flush())
-            usb_poll();
+            usb_dev.poll(false, &usb_controller);
     }
 }
 
