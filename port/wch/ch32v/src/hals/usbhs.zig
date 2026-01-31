@@ -3,7 +3,7 @@
 
 const std = @import("std");
 const assert = std.debug.assert;
-const log = std.log.scoped(.ch32_usbhs);
+const log = std.log.scoped(.usb_dev);
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;

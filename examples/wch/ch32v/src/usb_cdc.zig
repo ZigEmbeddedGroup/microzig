@@ -14,25 +14,26 @@ const AFIO = microzig.chip.peripherals.AFIO;
 const PFIC = microzig.chip.peripherals.PFIC;
 
 const usart = hal.usart.instance.USART1;
-const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
 
+const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
 const mco_pin = gpio.Pin.init(0, 8); // PA9
 
 pub const my_interrupts: microzig.cpu.InterruptOptions = .{
-    // .TIM2 = time.tim2_handler,
     .USBHS = usbhs_interrupt_handler,
 };
 
 pub const microzig_options = microzig.Options{
-    .log_level = .debug,
     .logFn = hal.usart.log,
+    .log_level = .debug,
+    .log_scope_levels = &.{
+        .{ .scope = .usb_dev, .level = .warn },
+        .{ .scope = .usb_ctrl, .level = .warn },
+        .{ .scope = .usb_cdc, .level = .warn },
+    },
     .interrupts = my_interrupts,
 };
 
-pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
-    // usb_dev.poll(true);
-    // std.log.debug("usb isr called", .{});
-}
+pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {}
 
 fn usb_poll() void {
     // microzig.cpu.interrupt.disable(.USBHS);
