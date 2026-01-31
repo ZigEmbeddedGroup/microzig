@@ -40,7 +40,6 @@ const EpState = struct {
     rx_last_len: u16 = 0, // valid until ep_readv() consumes it
     // IN:
     tx_busy: bool = false,
-    tx_last_len: u16 = 0,
 };
 
 fn PerEndpointArray(comptime N: comptime_int) type {
@@ -282,7 +281,6 @@ pub fn Polled(comptime cfg: Config) type {
                 self.endpoints[i][@intFromEnum(types.Dir.Out)].rx_armed = false;
                 self.endpoints[i][@intFromEnum(types.Dir.Out)].rx_last_len = 0;
                 self.endpoints[i][@intFromEnum(types.Dir.In)].tx_busy = false;
-                self.endpoints[i][@intFromEnum(types.Dir.In)].tx_last_len = 0;
             }
 
             // Default: NAK all non-EP0 endpoints.
@@ -326,6 +324,7 @@ pub fn Polled(comptime cfg: Config) type {
         // ---- Poll loop -------------------------------------------------------
 
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
+            _ = in_isr;
             while (true) {
                 const fg: u8 = regs().USB_INT_FG.raw;
                 if (fg == 0) break;
@@ -337,13 +336,6 @@ pub fn Polled(comptime cfg: Config) type {
                 if ((fg & UIF_SUSPEND) != 0) {
                     // acknowledge SUSPEND but ignore
                     regs().USB_INT_FG.raw = UIF_SUSPEND;
-                }
-                const stv = regs().USB_INT_ST.read();
-                const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
-                const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
-                if (token != TOKEN_SOF) {
-                    if (false)
-                        log.debug("in isr: {}, fg: {}, EN: {}", .{ in_isr, fg, regs().USB_INT_EN.raw });
                 }
 
                 if (fg & UIF_FIFO_OV != 0) {
@@ -379,15 +371,11 @@ pub fn Polled(comptime cfg: Config) type {
                 if ((fg & UIF_TRANSFER) != 0) {
                     // clear transfer
                     regs().USB_INT_FG.raw = UIF_TRANSFER;
-
+                    const stv = regs().USB_INT_ST.read();
+                    const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
+                    const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
                     self.handle_transfer(ep, token, controller);
                 }
-
-                // 0x4 => SUSPEND
-                // 0x5 => SUSPEND | RESET
-                // 0x8 => HST_SOF
-                // 0x10 => FIFO_OV
-                // 0x40 => ISO_ACT
             }
         }
 
@@ -462,7 +450,6 @@ pub fn Polled(comptime cfg: Config) type {
 
             // Mark free before calling on_buffer(), so EP0_IN logic can immediately queue next chunk.
             st_in.tx_busy = false;
-            st_in.tx_last_len = 0;
             const next = toggle_next(current_tx_tog(ep));
             set_tx_ctrl(ep, RES_NAK, next, false);
 
@@ -647,7 +634,6 @@ pub fn Polled(comptime cfg: Config) type {
 
             uep_t_len(ep_i).raw = @as(u16, @intCast(w));
 
-            st_in.tx_last_len = @as(u16, @intCast(w));
             st_in.tx_busy = true;
             // Arm IN
 
@@ -685,7 +671,7 @@ pub fn Polled(comptime cfg: Config) type {
                 .RB_UC_SPEED_TYPE = speed_type(cfg),
             });
 
-            // Enable source interrupts (we poll flags; NVIC off)
+            // Enable source interrupts (we poll these flags, interrupt disabled)
             regs().USB_INT_EN.modify(.{
                 .RB_U_1WIRE_MODE = 1, // actually SETUP_ACT?
                 .RB_UIE_BUS_RST__RB_UIE_DETECT = 1,
@@ -695,20 +681,13 @@ pub fn Polled(comptime cfg: Config) type {
                 // .RB_UIE_HST_SOF = 1,
                 .RB_UIE_DEV_NAK = 1,
             });
-
-            // regs().USB_INT_ST.modify(.{ .RB_UIS_IS_NAK = 1 });
-
-            // Set some defaults, just in case
-            // regs().USB_DEV_AD.modify(.{ .MASK_USB_ADDR = 0 });
-            // regs().UEP_CONFIG__UHOST_CTRL.write_raw(0);
-            // regs().UEP_TYPE.write_raw(0);
-            // regs().UEP_BUF_MOD.write_raw(0);
         }
     };
 }
 
+///! Skeleton ISR
 pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
     const fg = regs().USB_INT_FG.raw;
-    // log.warn("USBHS interrupt handler called, flags: {}", .{fg});
-    regs().USB_INT_FG.raw = fg; // clear all
+    regs().USB_INT_FG.raw = fg;
+    @panic("Don't Enable USBHS Interrupt, Not yet supported!");
 }
