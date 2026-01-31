@@ -16,19 +16,12 @@ pub fn build(b: *Build) !void {
         .iconv = false,
     });
 
-    const sqlite3_dep = b.dependency("sqlite3", .{
-        .target = target,
-        .optimize = .ReleaseSafe,
-    });
-    const sqlite3_lib = sqlite3_dep.artifact("sqlite3");
-
     const zqlite_dep = b.dependency("zqlite", .{
         .target = target,
         .optimize = optimize,
     });
 
     const zqlite = zqlite_dep.module("zqlite");
-    zqlite.linkLibrary(sqlite3_lib);
 
     const regz = b.addExecutable(.{
         .name = "regz",
