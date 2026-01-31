@@ -274,7 +274,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             const desc_device: descriptor.Device = .{
                 .bcd_usb = config.bcd_usb,
                 .device_triple = config.device_triple,
-                .max_packet_size0 = @max(config.max_supported_packet_size, 64),
+                .max_packet_size0 = @min(config.max_supported_packet_size, 64),
                 .vendor = .from(config.vendor.id),
                 .product = .from(config.product.id),
                 .bcd_device = config.bcd_device,

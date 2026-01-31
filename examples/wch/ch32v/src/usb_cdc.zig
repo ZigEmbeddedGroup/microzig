@@ -7,8 +7,11 @@ const gpio = hal.gpio;
 
 pub const usb = @import("usbhs.zig");
 
+const USB_Serial = microzig.core.usb.drivers.CDC;
+
 const RCC = microzig.chip.peripherals.RCC;
 const AFIO = microzig.chip.peripherals.AFIO;
+const PFIC = microzig.chip.peripherals.PFIC;
 
 const usart = hal.usart.instance.USART1;
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
@@ -27,55 +30,38 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
-    usb_dev.poll();
+    // usb_dev.poll(true);
     // std.log.debug("usb isr called", .{});
 }
 
 fn usb_poll() void {
-    // Polled backend: keep this as a safety net for missed IRQ edges.
-    microzig.cpu.interrupt.disable(.USBHS);
-    usb_dev.poll();
-    microzig.cpu.interrupt.enable(.USBHS);
+    // microzig.cpu.interrupt.disable(.USBHS);
+    usb_dev.poll(false, &usb_controller);
+    // microzig.cpu.interrupt.enable(.USBHS);
 }
 
-pub const UsbSerial = microzig.core.usb.drivers.cdc.CdcClassDriver(.{ .max_packet_size = 512 });
+const USBController = microzig.core.usb.DeviceController(.{
+    .bcd_usb = .v2_00,
+    .device_triple = .unspecified,
+    .vendor = .{ .id = 0x2E8A, .str = "MicroZig" },
+    .product = .{ .id = 0x000A, .str = "ch32v307 Test Device" },
+    .bcd_device = .v1_00,
+    .serial = "someserial",
+    .max_supported_packet_size = 512,
+    .configurations = &.{.{
+        .attributes = .{ .self_powered = false },
+        .max_current_ma = 50,
+        .Drivers = struct { serial: USB_Serial },
+    }},
+}, .{.{
+    .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
+}});
 
 pub var usb_dev: usb.Polled(
-    microzig.core.usb.Config{
-        .device_descriptor = .{
-            .bcd_usb = .from(0x0200),
-            .device_triple = .{
-                .class = .Miscellaneous,
-                .subclass = 2,
-                .protocol = 1,
-            },
-            .max_packet_size0 = 64,
-            .vendor = .from(0x2E8A),
-            .product = .from(0x000A),
-            .bcd_device = .from(0x0100),
-            .manufacturer_s = 1,
-            .product_s = 2,
-            .serial_s = 3,
-            .num_configurations = 1,
-        },
-        .string_descriptors = &.{
-            .from_lang(.English),
-            .from_str("MicroZig"),
-            .from_str("ch32v307 Test Device"),
-            .from_str("someserial"),
-            .from_str("Board CDC"),
-        },
-        .configurations = &.{.{
-            .num = 1,
-            .configuration_s = 0,
-            .attributes = .{ .self_powered = true },
-            .max_current_ma = 100,
-            .Drivers = struct { serial: UsbSerial },
-        }},
-        .max_supported_packet_size = 512,
-    },
     .{ .prefer_high_speed = true },
 ) = undefined;
+
+var usb_controller: USBController = .init;
 
 pub fn main() !void {
     // Board brings up clocks and time
@@ -115,14 +101,14 @@ pub fn main() !void {
     std.log.info("Initializing USB device.", .{});
 
     usb_dev = .init();
-    microzig.cpu.interrupt.enable(.USBHS);
-
+    // microzig.cpu.interrupt.enable(.USBHS);
+    PFIC.IPRIOR70 = 255;
     var last = time.get_time_since_boot();
     var i: u32 = 0;
+
     while (true) {
         const now = time.get_time_since_boot();
-        if (now.diff(last).to_us() > 100000) {
-            // std.log.info("what {}", .{i});
+        if (now.diff(last).to_us() > 100_000) {
             run_usb(i);
             i += 1;
             last = now;
@@ -135,10 +121,8 @@ var usb_tx_buff: [1024]u8 = undefined;
 
 // Transfer data to host
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
-pub fn usb_cdc_write(serial: *UsbSerial, comptime fmt: []const u8, args: anytype) void {
+pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
     const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
-    std.log.debug("usb_cdc_write len={}", .{text.len});
-
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
@@ -151,7 +135,7 @@ var usb_rx_buff: [1024]u8 = undefined;
 // Receive data from host
 // NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
 pub fn usb_cdc_read(
-    serial: *UsbSerial,
+    serial: *USB_Serial,
 ) []const u8 {
     var total_read: usize = 0;
     var read_buff: []u8 = usb_rx_buff[0..];
@@ -176,20 +160,15 @@ fn intToHexChar(i: u4) u8 {
 }
 
 pub fn run_usb(i: u32) void {
-    if (usb_dev.controller.drivers()) |drivers| {
-        // std.log.info("USB CDC Demo transmitting", .{});
-
+    // _ = i;
+    if (usb_controller.drivers()) |drivers| {
         const freqs = hal.clocks.get_freqs();
-        usb_cdc_write(&drivers.serial, "what {}: sysclk {}, hclk {}, pclk1 {}, pclk2 {}\r\n", .{ i, freqs.sysclk, freqs.hclk, freqs.pclk1, freqs.pclk2 });
+        usb_cdc_write(&drivers.serial, "what {}: sysclk {}, hclk {}, pclk1 {}, PFIC.IPRIOR70 {}\r\n", .{ i, freqs.sysclk, freqs.hclk, freqs.pclk1, PFIC.IPRIOR70 });
 
         // read and print host command if present
         const message = usb_cdc_read(&drivers.serial);
         if (message.len > 0) {
             usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
         }
-        // const flushed = drivers.*.serial.flush();
-        // if (!flushed) {
-        //     std.log.debug("cdc flush blocked (ep_in busy)", .{});
-        // }
     }
 }

@@ -374,11 +374,6 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
             .ep_out = on_rx,
         };
 
-        pub const handlers: usb.DriverHadlers(@This()) = .{
-            .ep_out = on_rx,
-            .ep_in = on_tx_ready,
-        };
-
         device: *usb.DeviceInterface,
         descriptor: *const Descriptor,
         tx_ready: std.atomic.Value(bool),
