@@ -5,7 +5,7 @@ const hal = microzig.hal;
 const time = hal.time;
 const gpio = hal.gpio;
 
-pub const usb = @import("usbhs.zig");
+pub const usb = hal.usbhs;
 
 const USB_Serial = microzig.core.usb.drivers.CDC;
 
@@ -103,15 +103,26 @@ pub fn main() !void {
     usb_dev = .init();
     // microzig.cpu.interrupt.enable(.USBHS);
     PFIC.IPRIOR70 = 255;
-    var last = time.get_time_since_boot();
     var i: u32 = 0;
+    var old: u64 = time.get_time_since_boot().to_us();
+    var new: u64 = 0;
 
     while (true) {
-        const now = time.get_time_since_boot();
-        if (now.diff(last).to_us() > 100_000) {
-            run_usb(i);
-            i += 1;
-            last = now;
+        if (usb_controller.drivers()) |drivers| {
+            new = time.get_time_since_boot().to_us();
+            if (new - old > 500000) {
+                old = new;
+                i += 1;
+                std.log.info("cdc test: {}", .{i});
+
+                usb_cdc_write(&drivers.serial, "This is very very very very very very very very long text sent from ch32v30x by USB CDC to your device: {}\r\n", .{i});
+            }
+
+            // read and print host command if present
+            const message = usb_cdc_read(&drivers.serial);
+            if (message.len > 0) {
+                usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
+            }
         }
         usb_poll();
     }
@@ -126,7 +137,8 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
-        usb_poll();
+        while (!serial.flush())
+            usb_poll();
     }
 }
 
@@ -148,27 +160,4 @@ pub fn usb_cdc_read(
     }
 
     return usb_rx_buff[0..total_read];
-}
-
-fn intToHexChar(i: u4) u8 {
-    // Ensure the input is within the 0-15 range
-    std.debug.assert(i <= 15);
-
-    const base: u8 = if (i < 10) '0' else 'A';
-    const offset: u8 = if (i < 10) 0 else 10;
-    return @intCast(@as(u8, @intCast(base)) + @as(u8, @intCast(i)) - offset);
-}
-
-pub fn run_usb(i: u32) void {
-    // _ = i;
-    if (usb_controller.drivers()) |drivers| {
-        const freqs = hal.clocks.get_freqs();
-        usb_cdc_write(&drivers.serial, "what {}: sysclk {}, hclk {}, pclk1 {}, PFIC.IPRIOR70 {}\r\n", .{ i, freqs.sysclk, freqs.hclk, freqs.pclk1, PFIC.IPRIOR70 });
-
-        // read and print host command if present
-        const message = usb_cdc_read(&drivers.serial);
-        if (message.len > 0) {
-            usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
-        }
-    }
 }
