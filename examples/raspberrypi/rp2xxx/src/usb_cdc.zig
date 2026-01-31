@@ -8,8 +8,13 @@ const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
 const USB_Serial = usb.drivers.CDC;
 
+// GM: This is just a handle to the usb peripheral in the USB HAL for this chip.
 var usb_device: USB_Device = undefined;
 
+// GM: This tells how to route packets to the appropriate driver? But how?
+// This is a type constructor, which takes a config and 'driver args'.
+// The driver args have fields that match the fields in the Drivers, so it must be a way for the
+// controller to know how to form calls to some handler for the driver?
 var usb_controller: usb.DeviceController(.{
     .bcd_usb = USB_Device.max_supported_bcd_usb,
     .device_triple = .unspecified,
@@ -18,6 +23,8 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
+    // GM: Technically a tuple, but would they ever support more than one configuration? this is
+    // config0.
     .configurations = &.{.{
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
@@ -25,6 +32,7 @@ var usb_controller: usb.DeviceController(.{
     }},
 }, .{.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
+    // Is the reset driver used at all?
     .reset = "",
 }}) = .init;
 
@@ -71,6 +79,8 @@ pub fn main() !void {
         // You can now poll for USB events
         usb_device.poll(&usb_controller);
 
+        // GM: The if is just to get a pointer to the driver if it's setup and null otherwise
+        // The type here is the anonymous struct above with two fields: serial and reset.
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {
@@ -93,8 +103,9 @@ pub fn main() !void {
 
 var usb_tx_buff: [1024]u8 = undefined;
 
-// Transfer data to host
-// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
+/// Transfer data to host
+/// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be
+/// handled
 pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
     var tx = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
@@ -109,11 +120,10 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
 
 var usb_rx_buff: [1024]u8 = undefined;
 
-// Receive data from host
-// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
-pub fn usb_cdc_read(
-    serial: *USB_Serial,
-) []const u8 {
+/// Receive data from host
+/// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every
+/// read operation
+pub fn usb_cdc_read(serial: *USB_Serial) []const u8 {
     var rx_len: usize = 0;
 
     while (true) {

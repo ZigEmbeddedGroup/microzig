@@ -3,6 +3,8 @@ const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_cdc);
 
+// GM: If this is 'standard' CDC stuff, then shouldn't it go into (lowercase) cdc.zig? e.g. outside
+// of the driver? So it would be accessed through usb.descriptor.cdc.ManagementRequestType.
 pub const ManagementRequestType = enum(u8) {
     SetCommFeature = 0x02,
     GetCommFeature = 0x03,
@@ -70,6 +72,14 @@ pub const Descriptor = extern struct {
         itf_data: []const u8 = "",
     };
 
+    // GM: Why does this method return a DescriptorCreateResult of This?
+    // Couldn't the verification function instead have just make sure that
+    // those fields were present?
+    /// This function is used during descriptor creation. Endpoint and interface numbers are
+    /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
+    /// by the user when creating the device controller type. If multiple instances of a driver
+    /// are used, this function is called for each, with different arguments. Passing arguments
+    /// through this function is preffered to making the whole driver generic.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
         max_supported_packet_size: usb.types.Len,
@@ -130,6 +140,10 @@ pub const Descriptor = extern struct {
     }
 };
 
+// GM: Is 'notifi' just a typo? or does it mean something to USB.
+// These are supposed to be a map from endpoint descriptor field names to the handler.
+// IN and OUT make sense in USB parlance (they are transaction types), but I
+// don't know what concept that notify is supposed to map to.
 pub const handlers: usb.DriverHandlers(@This()) = .{
     .ep_notifi = on_notifi_ready,
     .ep_out = on_rx,
@@ -202,6 +216,7 @@ pub fn flush(self: *@This()) bool {
     return true;
 }
 
+// Called when the host selects a configuration.
 pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
     const len_half = @divExact(data.len, 2);
     assert(len_half == desc.ep_in.max_packet_size.into());
@@ -217,6 +232,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
         },
         .notifi_ready = .init(true),
 
+        // OK so `init` provides a data buffer, which we split in half for rx and tx data.
         .rx_data = data[0..len_half],
         .rx_seek = 0,
         .rx_end = 0,
@@ -229,6 +245,9 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
     device.ep_listen(desc.ep_out.endpoint.num, @intCast(self.rx_data.len));
 }
 
+// Is this basically a class-specific sort of message, e.g. CDC specific? how
+// does the USB 'ingress' know to route to this? Is it just anything on
+// endpoint 0?
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
     const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
     log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });

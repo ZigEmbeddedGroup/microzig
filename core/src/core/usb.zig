@@ -20,15 +20,16 @@ pub const StructFieldAttributes = struct {
     default_value_ptr: ?*const anyopaque = null,
 };
 
-/// Meant to make transition to zig 0.16 easier
+/// Helper to create a struct, wrapping around @Type, meant to make transition to zig 0.16 easier
 pub fn Struct(
-    comptime layout: std.builtin.Type.ContainerLayout,
-    comptime BackingInt: ?type,
-    comptime field_names: []const [:0]const u8,
-    comptime field_types: *const [field_names.len]type,
-    comptime field_attrs: *const [field_names.len]StructFieldAttributes,
+    layout: std.builtin.Type.ContainerLayout,
+    BackingInt: ?type,
+    field_names: []const [:0]const u8,
+    field_types: *const [field_names.len]type,
+    field_attrs: *const [field_names.len]StructFieldAttributes,
 ) type {
-    comptime var fields: []const std.builtin.Type.StructField = &.{};
+    var fields: []const std.builtin.Type.StructField = &.{};
+    // Iterate over the names, field types, and attributes, creating a new struct field entry
     for (field_names, field_types, field_attrs) |n, T, a| {
         fields = fields ++ &[1]std.builtin.Type.StructField{.{
             .name = n,
@@ -47,6 +48,7 @@ pub fn Struct(
     } });
 }
 
+// What does this do? It lets you iterate through interfaces and endpoints?
 pub const DescriptorAllocator = struct {
     next_ep_num: [2]u8,
     next_itf_num: u8,
@@ -96,6 +98,7 @@ pub const DescriptorAllocator = struct {
     }
 };
 
+/// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
 pub fn DescriptorCreateResult(Descriptor: type) type {
     return struct {
         descriptor: Descriptor,
@@ -108,7 +111,7 @@ pub fn DescriptorCreateResult(Descriptor: type) type {
 }
 
 /// USB Device interface
-/// Any device implementation used with DeviceController must implement those functions
+/// Any device implementation used with DeviceController must implement these functions
 pub const DeviceInterface = struct {
     pub const VTable = struct {
         ep_writev: *const fn (*DeviceInterface, types.Endpoint.Num, []const []const u8) types.Len,
@@ -191,16 +194,24 @@ pub const Config = struct {
         max_current_ma: u9,
         Drivers: type,
 
+        /// Generate A struct with a field for each field in Drivers, where the type is the third
+        /// arg of the Drivers' Descriptor's 'create' method.
         pub fn Args(self: @This()) type {
             const fields = @typeInfo(self.Drivers).@"struct".fields;
             var field_names: [fields.len][:0]const u8 = undefined;
             var field_types: [fields.len]type = undefined;
             for (fields, 0..) |fld, i| {
+                // Collect field names
                 field_names[i] = fld.name;
+                // Collect the type info  for the Descriptor.create function parameter
                 const params = @typeInfo(@TypeOf(fld.type.Descriptor.create)).@"fn".params;
+                // Ensure it takes 3 parameters
                 assert(params.len == 3);
+                // The first is a descriptor allocator?
                 assert(params[0].type == *DescriptorAllocator);
+                // The second is usb.types.Len
                 assert(params[1].type == types.Len);
+                // And save the type of the third
                 field_types[i] = params[2].type.?;
             }
             return Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
@@ -256,8 +267,11 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
+        // GM: This is likely because in practice only configuration 0 is selected by the host?
         const config0 = config.configurations[0];
+        // GM: Fields of the drivers struct are the separate drivers
         const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
+        // GM: Make an enum from the field names in the struct?
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
 
         /// This parses the drivers' descriptors and creates:
@@ -297,11 +311,18 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var driver_alloc_types: []const type = &.{};
             var driver_alloc_attrs: []const StructFieldAttributes = &.{};
 
+            // GM: For each driver listed in the config.config0
             for (driver_fields, 0..) |drv, drv_id| {
+                // GM: So drv (the field).type is the type of the Driver, e.g. CDC.zig. The
+                // Descriptor field is grabbed.
+                // GM: Shouldn't this be singular?
                 const Descriptors = drv.type.Descriptor;
+                // Call the create method on the descriptor, which wraps it with the allow stuff.
                 const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
+                // Get the descriptor instance from the result.
                 const descriptors = result.descriptor;
 
+                // GM: If they have alloc_bytes, then we can get the name and stuff?
                 if (result.alloc_bytes) |len| {
                     driver_alloc_names = driver_alloc_names ++ &[1][:0]const u8{drv.name};
                     driver_alloc_types = driver_alloc_types ++ &[1]type{[len]u8};
@@ -313,9 +334,15 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 assert(@alignOf(Descriptors) == 1);
                 size += @sizeOf(Descriptors);
 
+                // GM: Go over all the fields in the descriptor
+                // That is itf, ep_out, and ep_in for the EchoExample driver. It's a lot more for
+                // the CDC driver. What do these field? Are they events or something? transaction
+                // types?
+                // Wel,, they have types defined in usb, so they are a mix of things
                 for (@typeInfo(Descriptors).@"struct".fields, 0..) |fld, desc_num| {
                     const desc = @field(descriptors, fld.name);
 
+                    // For the first field ONLY
                     if (desc_num == 0) {
                         const itf_start, const itf_count = switch (fld.type) {
                             descriptor.InterfaceAssociation => .{ desc.first_interface, desc.interface_count },
@@ -332,6 +359,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         itf_handlers = itf_handlers ++ &[1]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
                     }
 
+                    // GM: Ok, here we have Endpoints and InterfaceAssociations. What about
+                    // Interfaces, Headers, etc?
                     switch (fld.type) {
                         descriptor.Endpoint => {
                             const ep_dir = @intFromEnum(desc.endpoint.dir);
