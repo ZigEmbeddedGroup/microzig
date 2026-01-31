@@ -3,7 +3,8 @@ const builtin = @import("builtin");
 const dvui = @import("dvui");
 const serial = @import("serial");
 const regz = @import("regz");
-const RegisterSchemaUsage = @import("RegisterSchemaUsage.zig");
+const schemas = @import("schemas");
+const RegisterSchemaUsage = @import("RegisterSchemaUsage");
 const RegzWindow = @import("RegzWindow.zig");
 const SrceryTheme = @import("SrceryTheme.zig");
 
@@ -45,8 +46,6 @@ var state: State = .{};
 
 const State = struct {
     orig_content_scale: f32 = 1.0,
-    register_schema_path: []const u8 = "./zig-out/data/register_schemas.json",
-    register_schema_usages: ?std.json.Parsed([]const RegisterSchemaUsage) = null,
     regz_windows: std.StringArrayHashMapUnmanaged(*RegzWindow) = .{},
     show_from_microzig_window: bool = false,
     show_stats_window: bool = true,
@@ -68,27 +67,10 @@ const State = struct {
 // - runs between win.begin()/win.end()
 pub fn AppInit(win: *dvui.Window) !void {
     state.orig_content_scale = win.content_scale;
-    //try dvui.addFont("NOTO", @embedFile("../src/fonts/NotoSansKR-Regular.ttf"), null);
 
     // Use Srcery color scheme
     win.theme = SrceryTheme.theme;
     std.log.info("starting...", .{});
-    const register_schema_file = try std.fs.cwd().openFile(state.register_schema_path, .{});
-    defer register_schema_file.close();
-
-    const text = try register_schema_file.readToEndAlloc(gpa, 1024 * 1024);
-    defer gpa.free(text);
-
-    state.register_schema_usages = try std.json.parseFromSlice([]const RegisterSchemaUsage, gpa, text, .{
-        .allocate = .alloc_always,
-    });
-
-    //var it = try serial.list();
-    //defer it.deinit();
-    //while (try it.next()) |info| {
-    //    tl2.addText(try arena.allocator().dupe(u8, info.display_name), .{});
-    //    tl2.addText("\n\n", .{});
-    //}
 }
 
 // Run as app is shutting down before dvui.Window.deinit()
@@ -166,10 +148,7 @@ fn show_stats_window() void {
     if (!state.show_stats_window)
         return;
 
-    if (state.register_schema_usages == null)
-        return;
-
-    const rsus = state.register_schema_usages.?.value;
+    const rsus = schemas.schemas;
     const stats = compute_stats(rsus);
 
     var float = dvui.floatingWindow(@src(), .{ .open_flag = &state.show_stats_window }, .{
@@ -284,8 +263,7 @@ fn open_register_schema_submenu(m: *dvui.MenuWidget) !void {
                     };
 
                     const path = try gpa.dupe(u8, f);
-                    const register_schemas = if (state.register_schema_usages) |rsu| rsu.value else null;
-                    const new_window = try RegzWindow.create(gpa, format, path, null, null, register_schemas);
+                    const new_window = try RegzWindow.create(gpa, format, path, null, null, schemas.schemas);
                     errdefer new_window.destroy();
 
                     try state.regz_windows.put(gpa, f, new_window);
@@ -370,7 +348,7 @@ fn from_microzig_menu() void {
 
     if (row_clicked) |row_num| {
         std.log.info("clicked row: {}", .{row_num});
-        const register_schema = state.register_schema_usages.?.value[row_num];
+        const register_schema = schemas.schemas[row_num];
 
         // Check if there are multiple chips/targets for this register schema
         if (register_schema.chips.len > 1) {
@@ -404,8 +382,7 @@ fn from_microzig_menu() void {
             else
                 null;
 
-            const rsus = if (state.register_schema_usages) |r| r.value else null;
-            const new_window = RegzWindow.create(gpa, format, path, null, chip_info, rsus) catch unreachable;
+            const new_window = RegzWindow.create(gpa, format, path, null, chip_info, schemas.schemas) catch unreachable;
 
             state.regz_windows.put(gpa, path, new_window) catch {
                 new_window.destroy();
@@ -423,57 +400,55 @@ fn from_microzig_menu() void {
 
     highlight_style.processEvents(grid);
 
-    if (state.register_schema_usages) |rsus| {
-        for (rsus.value, 0..) |rsu, row_num| {
-            var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
-            switch (rsu.location) {
-                .src_path => |src| {
-                    {
-                        defer cell_num.col_num += 1;
-                        var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
-                        defer cell.deinit();
+    for (schemas.schemas, 0..) |rsu, row_num| {
+        var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+        switch (rsu.location) {
+            .src_path => |src| {
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell.deinit();
 
-                        dvui.labelNoFmt(@src(), src.port_name, .{}, .{});
-                    }
-                    {
-                        defer cell_num.col_num += 1;
-                        var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
-                        defer cell.deinit();
+                    dvui.labelNoFmt(@src(), src.port_name, .{}, .{});
+                }
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell.deinit();
 
-                        dvui.labelNoFmt(@src(), "", .{}, .{});
-                    }
-                    {
-                        defer cell_num.col_num += 1;
-                        var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
-                        defer cell.deinit();
+                    dvui.labelNoFmt(@src(), "", .{}, .{});
+                }
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell.deinit();
 
-                        dvui.labelNoFmt(@src(), src.sub_path, .{}, .{});
-                    }
-                },
-                .dependency => |dep| {
-                    {
-                        defer cell_num.col_num += 1;
-                        var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
-                        defer cell.deinit();
+                    dvui.labelNoFmt(@src(), src.sub_path, .{}, .{});
+                }
+            },
+            .dependency => |dep| {
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell.deinit();
 
-                        dvui.labelNoFmt(@src(), dep.port_name, .{}, .{});
-                    }
-                    {
-                        defer cell_num.col_num += 1;
-                        var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
-                        defer cell.deinit();
+                    dvui.labelNoFmt(@src(), dep.port_name, .{}, .{});
+                }
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell.deinit();
 
-                        dvui.labelNoFmt(@src(), dep.dep_name, .{}, .{});
-                    }
-                    {
-                        defer cell_num.col_num += 1;
-                        var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
-                        defer cell.deinit();
+                    dvui.labelNoFmt(@src(), dep.dep_name, .{}, .{});
+                }
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell.deinit();
 
-                        dvui.labelNoFmt(@src(), dep.sub_path, .{}, .{});
-                    }
-                },
-            }
+                    dvui.labelNoFmt(@src(), dep.sub_path, .{}, .{});
+                }
+            },
         }
     }
 }
@@ -532,9 +507,9 @@ fn search_chips_window() void {
     };
 
     if (row_clicked) |clicked| {
-        const rsus = state.register_schema_usages orelse return;
-        if (clicked.rsu_idx >= rsus.value.len) return;
-        const rsu = rsus.value[clicked.rsu_idx];
+        const rsus = schemas.schemas;
+        if (clicked.rsu_idx >= rsus.len) return;
+        const rsu = rsus[clicked.rsu_idx];
         if (clicked.chip_idx >= rsu.chips.len) return;
         const chip = rsu.chips[clicked.chip_idx];
 
@@ -567,9 +542,9 @@ fn search_chips_window() void {
 
     const max_results: usize = 50;
 
-    if (state.register_schema_usages) |rsus| {
+    {
         var row_num: usize = 0;
-        outer: for (rsus.value) |rsu| {
+        outer: for (schemas.schemas) |rsu| {
             const port_name = switch (rsu.location) {
                 .src_path => |loc| loc.port_name,
                 .dependency => |loc| loc.port_name,
@@ -653,9 +628,9 @@ fn find_chip_by_row(query: []const u8, target_row: usize) ?ChipLocation {
 
     const max_results: usize = 50;
 
-    if (state.register_schema_usages) |rsus| {
+    {
         var row_num: usize = 0;
-        outer: for (rsus.value, 0..) |rsu, rsu_idx| {
+        outer: for (schemas.schemas, 0..) |rsu, rsu_idx| {
             for (rsu.chips, 0..) |chip, chip_idx| {
                 // Limit to max results
                 if (row_num >= max_results) break :outer;
@@ -682,9 +657,9 @@ fn find_chip_by_row(query: []const u8, target_row: usize) ?ChipLocation {
 }
 
 fn count_targets_for_chip(chip_name: []const u8) usize {
-    const rsus = state.register_schema_usages orelse return 0;
+    const rsus = schemas.schemas;
     var count: usize = 0;
-    for (rsus.value) |rsu| {
+    for (rsus) |rsu| {
         for (rsu.chips) |chip| {
             if (std.mem.eql(u8, chip.name, chip_name)) {
                 count += 1;
@@ -695,10 +670,10 @@ fn count_targets_for_chip(chip_name: []const u8) usize {
 }
 
 fn open_chip_target(rsu_idx: usize, chip_idx: usize) void {
-    const rsus = state.register_schema_usages orelse return;
-    if (rsu_idx >= rsus.value.len) return;
+    const rsus = schemas.schemas;
+    if (rsu_idx >= rsus.len) return;
 
-    const rsu = rsus.value[rsu_idx];
+    const rsu = rsus[rsu_idx];
     if (chip_idx >= rsu.chips.len) return;
 
     const chip = rsu.chips[chip_idx];
@@ -723,7 +698,7 @@ fn open_chip_target(rsu_idx: usize, chip_idx: usize) void {
         .patch_files = chip.patch_files,
     };
 
-    const new_window = RegzWindow.create(gpa, format, path, chip.name, chip_info, rsus.value) catch return;
+    const new_window = RegzWindow.create(gpa, format, path, chip.name, chip_info, rsus) catch return;
 
     state.regz_windows.put(gpa, path, new_window) catch {
         new_window.destroy();
@@ -773,10 +748,10 @@ fn target_selection_window() void {
 
     highlight_style.processEvents(grid);
 
-    const rsus = state.register_schema_usages orelse return;
+    const rsus = schemas.schemas;
     var row_num: usize = 0;
 
-    for (rsus.value) |rsu| {
+    for (rsus) |rsu| {
         for (rsu.chips) |chip| {
             if (!std.mem.eql(u8, chip.name, state.selected_chip_name)) {
                 continue;
@@ -797,10 +772,10 @@ fn target_selection_window() void {
 }
 
 fn find_target_by_row(chip_name: []const u8, target_row: usize) ?TargetLocation {
-    const rsus = state.register_schema_usages orelse return null;
+    const rsus = schemas.schemas;
     var row_num: usize = 0;
 
-    for (rsus.value, 0..) |rsu, rsu_idx| {
+    for (rsus, 0..) |rsu, rsu_idx| {
         for (rsu.chips, 0..) |chip, chip_idx| {
             if (!std.mem.eql(u8, chip.name, chip_name)) {
                 continue;
@@ -820,9 +795,9 @@ fn rsu_target_selection_window() void {
         return;
 
     const rsu_idx = state.selected_rsu_idx orelse return;
-    const rsus = state.register_schema_usages orelse return;
-    if (rsu_idx >= rsus.value.len) return;
-    const rsu = rsus.value[rsu_idx];
+    const rsus = schemas.schemas;
+    if (rsu_idx >= rsus.len) return;
+    const rsu = rsus[rsu_idx];
 
     var float = dvui.floatingWindow(@src(), .{ .open_flag = &state.show_rsu_target_selection_window }, .{
         .min_size_content = .{ .w = 400, .h = 300 },
@@ -946,9 +921,9 @@ fn search_boards_window() void {
 
     const max_results: usize = 50;
 
-    if (state.register_schema_usages) |rsus| {
+    {
         var row_num: usize = 0;
-        outer: for (rsus.value) |rsu| {
+        outer: for (schemas.schemas) |rsu| {
             const port_name = switch (rsu.location) {
                 .src_path => |loc| loc.port_name,
                 .dependency => |loc| loc.port_name,
@@ -1016,9 +991,9 @@ fn find_board_by_row(query: []const u8, target_row: usize) ?BoardLocation {
 
     const max_results: usize = 50;
 
-    if (state.register_schema_usages) |rsus| {
+    {
         var row_num: usize = 0;
-        outer: for (rsus.value, 0..) |rsu, rsu_idx| {
+        outer: for (schemas.schemas, 0..) |rsu, rsu_idx| {
             for (rsu.boards, 0..) |board, board_idx| {
                 // Limit to max results
                 if (row_num >= max_results) break :outer;
@@ -1045,10 +1020,10 @@ fn find_board_by_row(query: []const u8, target_row: usize) ?BoardLocation {
 }
 
 fn open_board(rsu_idx: usize, board_idx: usize) void {
-    const rsus = state.register_schema_usages orelse return;
-    if (rsu_idx >= rsus.value.len) return;
+    const rsus = schemas.schemas;
+    if (rsu_idx >= rsus.len) return;
 
-    const rsu = rsus.value[rsu_idx];
+    const rsu = rsus[rsu_idx];
     if (board_idx >= rsu.boards.len) return;
 
     // Boards don't have their own chip info, so we use the first chip from the schema if available
@@ -1075,7 +1050,7 @@ fn open_board(rsu_idx: usize, board_idx: usize) void {
         .targetdb => .targetdb,
     };
 
-    const new_window = RegzWindow.create(gpa, format, path, null, chip_info, rsus.value) catch return;
+    const new_window = RegzWindow.create(gpa, format, path, null, chip_info, rsus) catch return;
 
     state.regz_windows.put(gpa, path, new_window) catch {
         new_window.destroy();
@@ -1149,9 +1124,9 @@ fn search_targets_window() void {
 
     const max_results: usize = 50;
 
-    if (state.register_schema_usages) |rsus| {
+    {
         var row_num: usize = 0;
-        outer: for (rsus.value) |rsu| {
+        outer: for (schemas.schemas) |rsu| {
             for (rsu.chips) |chip| {
                 // Limit to max results
                 if (row_num >= max_results) break :outer;
@@ -1205,9 +1180,9 @@ fn find_target_by_query_row(query: []const u8, target_row: usize) ?TargetLocatio
 
     const max_results: usize = 50;
 
-    if (state.register_schema_usages) |rsus| {
+    {
         var row_num: usize = 0;
-        outer: for (rsus.value, 0..) |rsu, rsu_idx| {
+        outer: for (schemas.schemas, 0..) |rsu, rsu_idx| {
             for (rsu.chips, 0..) |chip, chip_idx| {
                 // Limit to max results
                 if (row_num >= max_results) break :outer;

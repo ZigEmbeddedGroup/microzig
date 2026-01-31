@@ -14,14 +14,9 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
     const register_schemas = get_register_schemas(b, mb) catch @panic("OOM");
     const write_files = b.addWriteFiles();
-    const register_schema = write_files.add("register_schemas.json", std.json.Stringify.valueAlloc(b.allocator, register_schemas, .{}) catch @panic("OOM"));
-    const register_schema_install = b.addInstallFile(register_schema, "data/register_schemas.json");
-    b.getInstallStep().dependOn(&register_schema_install.step);
 
-    const dvui_dep = b.dependency("dvui", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    // Generate Zig file with embedded schemas (used by both CLI and GUI)
+    const register_schema_zig = write_files.add("register_schemas.zig", generate_zig_schema_literal(b.allocator, register_schemas) catch @panic("OOM"));
 
     const regz_dep = mz_dep.builder.dependency("tools/regz", .{
         .target = target,
@@ -32,13 +27,63 @@ pub fn build(b: *std.Build) void {
         .optimize = .ReleaseSafe,
     });
 
+    const regz_mod = regz_dep.module("regz");
+
+    // Shared module for RegisterSchemaUsage (used by both schemas_mod and cli_mod)
+    const register_schema_usage_mod = b.createModule(.{
+        .root_source_file = b.path("src/RegisterSchemaUsage.zig"),
+    });
+
+    // Create schemas module from generated Zig file
+    const schemas_mod = b.createModule(.{
+        .root_source_file = register_schema_zig,
+        .imports = &.{
+            .{ .name = "RegisterSchemaUsage", .module = register_schema_usage_mod },
+        },
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CLI executable
+    // ─────────────────────────────────────────────────────────────────────────
+    const cli_mod = b.createModule(.{
+        .root_source_file = b.path("src/cli.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "regz", .module = regz_mod },
+            .{ .name = "schemas", .module = schemas_mod },
+            .{ .name = "RegisterSchemaUsage", .module = register_schema_usage_mod },
+        },
+    });
+
+    const cli_exe = b.addExecutable(.{
+        .name = "sorcerer-cli",
+        .root_module = cli_mod,
+    });
+    b.installArtifact(cli_exe);
+
+    const run_cli_cmd = b.addRunArtifact(cli_exe);
+    run_cli_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cli_cmd.addArgs(args);
+    }
+    const run_cli_step = b.step("run-cli", "Run the CLI tool");
+    run_cli_step.dependOn(&run_cli_cmd.step);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GUI executable
+    // ─────────────────────────────────────────────────────────────────────────
+    const dvui_dep = b.dependency("dvui", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const serial_dep = b.dependency("serial", .{
         .target = target,
         .optimize = optimize,
     });
 
     const dvui_mod = dvui_dep.module("dvui_sdl3");
-    const regz_mod = regz_dep.module("regz");
     const serial_mod = serial_dep.module("serial");
 
     const exe_mod = b.createModule(.{
@@ -57,6 +102,14 @@ pub fn build(b: *std.Build) void {
             .{
                 .name = "serial",
                 .module = serial_mod,
+            },
+            .{
+                .name = "schemas",
+                .module = schemas_mod,
+            },
+            .{
+                .name = "RegisterSchemaUsage",
+                .module = register_schema_usage_mod,
             },
         },
     });
@@ -111,7 +164,7 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("run", "Run the GUI app");
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
@@ -368,9 +421,16 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
         }
 
         if (t.board) |board| if (boards.getEntry(lazy_path)) |entry| {
-            try entry.value_ptr.append(b.allocator, .{
-                .name = board.name,
-            });
+            // Check if this board name already exists (deduplicate by name)
+            const board_exists = for (entry.value_ptr.items) |existing_board| {
+                if (std.mem.eql(u8, existing_board.name, board.name)) break true;
+            } else false;
+
+            if (!board_exists) {
+                try entry.value_ptr.append(b.allocator, .{
+                    .name = board.name,
+                });
+            }
         } else {
             var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .{};
             try board_list.append(b.allocator, .{
@@ -417,4 +477,115 @@ fn get_port_name(path: []const u8) []const u8 {
     }
 
     unreachable;
+}
+
+/// Generate a Zig source file containing the register schemas as compile-time constants.
+fn generate_zig_schema_literal(allocator: std.mem.Allocator, schemas: []const RegisterSchemaUsage) ![]const u8 {
+    var buf: std.ArrayList(u8) = .{};
+    const writer = buf.writer(allocator);
+
+    // Helper to normalize paths (convert backslashes to forward slashes for Windows compatibility)
+    const normalize_path = struct {
+        fn call(alloc: std.mem.Allocator, path: []const u8) ![]const u8 {
+            const result = try alloc.alloc(u8, path.len);
+            for (path, 0..) |c, i| {
+                result[i] = if (c == '\\') '/' else c;
+            }
+            return result;
+        }
+    }.call;
+
+    try writer.writeAll(
+        \\// Auto-generated file - do not edit manually.
+        \\// Generated by tools/sorcerer/build.zig
+        \\
+        \\const RegisterSchemaUsage = @import("RegisterSchemaUsage");
+        \\
+        \\pub const schemas: []const RegisterSchemaUsage = &.{
+        \\
+    );
+
+    for (schemas) |schema| {
+        try writer.writeAll("    .{\n");
+
+        // Format
+        try writer.print("        .format = .{s},\n", .{@tagName(schema.format)});
+
+        // Chips
+        try writer.writeAll("        .chips = &.{\n");
+        for (schema.chips) |chip| {
+            try writer.writeAll("            .{\n");
+            try writer.print("                .name = \"{s}\",\n", .{chip.name});
+            try writer.print("                .target_name = \"{s}\",\n", .{chip.target_name});
+            // Patch files
+            if (chip.patch_files.len > 0) {
+                try writer.writeAll("                .patch_files = &.{\n");
+                for (chip.patch_files) |patch_file| {
+                    switch (patch_file) {
+                        .src_path => |src| {
+                            const sub_path = try normalize_path(allocator, src.sub_path);
+                            const build_root = try normalize_path(allocator, src.build_root);
+                            try writer.writeAll("                    .{ .src_path = .{\n");
+                            try writer.print("                        .sub_path = \"{s}\",\n", .{sub_path});
+                            try writer.print("                        .build_root = \"{s}\",\n", .{build_root});
+                            try writer.writeAll("                    } },\n");
+                        },
+                        .dependency => |dep| {
+                            const sub_path = try normalize_path(allocator, dep.sub_path);
+                            const build_root = try normalize_path(allocator, dep.build_root);
+                            try writer.writeAll("                    .{ .dependency = .{\n");
+                            try writer.print("                        .sub_path = \"{s}\",\n", .{sub_path});
+                            try writer.print("                        .build_root = \"{s}\",\n", .{build_root});
+                            try writer.print("                        .dep_name = \"{s}\",\n", .{dep.dep_name});
+                            try writer.writeAll("                    } },\n");
+                        },
+                    }
+                }
+                try writer.writeAll("                },\n");
+            }
+            try writer.writeAll("            },\n");
+        }
+        try writer.writeAll("        },\n");
+
+        // Boards
+        try writer.writeAll("        .boards = &.{");
+        for (schema.boards, 0..) |board, i| {
+            if (i > 0) try writer.writeAll(", ");
+            try writer.print(".{{ .name = \"{s}\" }}", .{board.name});
+        }
+        try writer.writeAll("},\n");
+
+        // Location
+        try writer.writeAll("        .location = ");
+        switch (schema.location) {
+            .src_path => |src| {
+                const sub_path = try normalize_path(allocator, src.sub_path);
+                const build_root = try normalize_path(allocator, src.build_root);
+                try writer.writeAll(".{ .src_path = .{\n");
+                try writer.print("            .port_name = \"{s}\",\n", .{src.port_name});
+                try writer.print("            .sub_path = \"{s}\",\n", .{sub_path});
+                try writer.print("            .build_root = \"{s}\",\n", .{build_root});
+                try writer.writeAll("        } },\n");
+            },
+            .dependency => |dep| {
+                const sub_path = try normalize_path(allocator, dep.sub_path);
+                const build_root = try normalize_path(allocator, dep.build_root);
+                try writer.writeAll(".{ .dependency = .{\n");
+                try writer.print("            .sub_path = \"{s}\",\n", .{sub_path});
+                try writer.print("            .build_root = \"{s}\",\n", .{build_root});
+                try writer.print("            .dep_name = \"{s}\",\n", .{dep.dep_name});
+                try writer.print("            .port_name = \"{s}\",\n", .{dep.port_name});
+                try writer.writeAll("        } },\n");
+            },
+        }
+
+        try writer.writeAll("    },\n");
+    }
+
+    try writer.writeAll(
+        \\};
+        \\
+    );
+
+    return buf.toOwnedSlice(allocator);
 }
