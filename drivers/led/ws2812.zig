@@ -18,7 +18,7 @@ pub fn WS2812(options: struct {
 
         dev: options.Datagram_Device,
         clock_dev: options.Clock_Device,
-        next_write_time: ?mdf.time.Absolute = null,
+        next_write_time: ?mdf.base.Clock_Device.Timeout = null,
         buffer: [buffer_size]u8 = undefined,
 
         /// Initializes the driver.
@@ -36,9 +36,8 @@ pub fn WS2812(options: struct {
 
             // ensures that a reset takes place between writes
             if (self.next_write_time) |next_write_time| {
-                const now = self.clock_dev.get_time_since_boot();
-                if (!next_write_time.is_reached_by(now)) {
-                    self.clock_dev.sleep_us(next_write_time.diff(now).to_us());
+                if (!next_write_time.is_reached()) {
+                    self.clock_dev.sleep_us(next_write_time.diff().to_us());
                 }
             }
 
@@ -63,7 +62,7 @@ pub fn WS2812(options: struct {
 
             try self.dev.write(self.buffer[0..i]);
 
-            self.next_write_time = self.clock_dev.make_timeout_us(300);
+            self.next_write_time = self.clock_dev.make_timeout(.from_us(300));
         }
     };
 }

@@ -10,6 +10,7 @@
             .hash = "ssd1306_font_8x8-0.0.0-oGb_cERcAAA6NJzWDOMepgnY6r4blNEHjpkldDaRAui5",
         },
         .net = .{ .path = "../../../modules/network/" },
+        .freertos = .{ .path = "../../../modules/freertos/" },
     },
     .paths = .{
         "README.md",

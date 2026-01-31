@@ -31,7 +31,7 @@ pub const SPI = struct {
     nss: ?*Digital_IO,
 
     pub fn apply(self: *const SPI, config: Config) Error!void {
-        const clk = hal.rcc.get_spi_clk(self.instance);
+        const clk = hal.rcc.get_clock(self.instance);
 
         const divider = (clk / config.max_frequency) + 1;
 

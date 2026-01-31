@@ -119,6 +119,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zcb,
                 .zcmp,
                 .zbkb,
+                .zicsr,
                 .zifencei,
             }),
             .os_tag = .freestanding,

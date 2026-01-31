@@ -1,0 +1,24 @@
+.{
+    .name = .freertos,
+    .version = "0.0.0",
+    .fingerprint = 0xb81d2ef66274e984,
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{
+        .freertos_kernel = .{
+            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#52822473466cfa5cdd2146d02dae5f924b8552e4",
+            .hash = "N-V-__8AAMb4CQGTaQBhmyNrZe5AydR8ZY3met6pGoXDe1MC",
+        },
+        .freertos_kernel_community = .{
+            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel-Community-Supported-Ports.git#9ab3b5fb235838b3fc03d4f1cdcfab22007413d2",
+            .hash = "N-V-__8AAPdlHQB-Q5duFJp5D3hmNoJsOsWXr84CsPai1Pk9",
+        },
+        .picosdk = .{
+            .url = "https://github.com/raspberrypi/pico-sdk/releases/download/2.2.0/pico-sdk-2.2.0.tar.gz",
+            .hash = "N-V-__8AAJZDcwFLNdIEF1wutjiH14f8fSET5jNORZIZKCaM",
+        },
+        .foundationlibc = .{
+            .path = "../foundation-libc/",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src", "config" },
+}

@@ -4,6 +4,20 @@ const microzig = @import("microzig");
 const cpu_config = @import("cpu-config");
 const riscv32_common = @import("riscv32-common");
 
+const interrupt_stack_options = microzig.options.cpu.interrupt_stack;
+
+pub const CPU_Options = struct {
+    /// If not enabled, interrupts will use same stack. Otherwise, the
+    /// interrupt handler will switch to a custom stack after pushing the
+    /// TrapFrame. Nested interrupts use the interrupt stack as well. This
+    /// feature uses mscratch to store the old stack pointer. While not in
+    /// an interrupt, mscratch must be zero.
+    interrupt_stack: struct {
+        enable: bool = false,
+        size: usize = 4096,
+    } = .{},
+};
+
 pub const Exception = enum(u5) {
     InstructionFault = 0x1,
     IllegalInstruction = 0x2,
@@ -48,7 +62,14 @@ pub const Interrupt = enum(u5) {
     interrupt31 = 31,
 };
 
-pub const InterruptHandler = *const fn (*TrapFrame) callconv(.c) void;
+pub const InterruptHandler = union(enum) {
+    /// No state is saved. Do everything yourself. Interrupts are disabled
+    /// while it is executing.
+    naked: *const fn () callconv(.naked) void,
+    /// State pushed on the stack. Handler can be interrupted by higher
+    /// priority interrupts.
+    c: *const fn (*TrapFrame) callconv(.c) void,
+};
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
@@ -57,8 +78,16 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
 
 pub const interrupt = struct {
     pub const globally_enabled = riscv32_common.interrupt.globally_enabled;
-    pub const enable_interrupts = riscv32_common.interrupt.enable_interrupts;
-    pub const disable_interrupts = riscv32_common.interrupt.disable_interrupts;
+
+    pub fn enable_interrupts() void {
+        fence();
+        csr.mstatus.set(.{ .mie = 1 });
+    }
+
+    pub fn disable_interrupts() void {
+        csr.mstatus.clear(.{ .mie = 1 });
+        fence();
+    }
 
     const INTERRUPT_CORE0 = microzig.chip.peripherals.INTERRUPT_CORE0;
 
@@ -226,10 +255,32 @@ pub const interrupt = struct {
         const base: usize = @intFromPtr(&INTERRUPT_CORE0.MAC_INTR_MAP);
         return @ptrFromInt(base + @sizeOf(u32) * @as(usize, @intFromEnum(source)));
     }
+
+    pub const Status = struct {
+        reg: u61,
+
+        pub fn init() Status {
+            return .{
+                .reg = INTERRUPT_CORE0.INTR_STATUS_REG_0.raw |
+                    (@as(u61, INTERRUPT_CORE0.INTR_STATUS_REG_1.raw) << 32),
+            };
+        }
+
+        pub fn is_set(status: Status, source: Source) bool {
+            return status.reg & (@as(u61, 1) << @intFromEnum(source)) != 0;
+        }
+    };
+
+    pub fn expect_handler(comptime int: Interrupt, comptime expected_handler: InterruptHandler) void {
+        const actual_handler = @field(microzig.options.interrupts, @tagName(int));
+        if (!std.meta.eql(actual_handler, expected_handler))
+            @compileError(std.fmt.comptimePrint("interrupt {t} not set to the expected handler", .{int}));
+    }
 };
 
 pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
+pub const fence = riscv32_common.fence;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
@@ -320,6 +371,10 @@ fn init_interrupts() void {
         .mode = .vectored,
         .base = @intCast(@intFromPtr(&_vector_table) >> 2),
     });
+
+    if (interrupt_stack_options.enable) {
+        csr.mscratch.write_raw(0);
+    }
 }
 
 pub const TrapFrame = extern struct {
@@ -339,314 +394,122 @@ pub const TrapFrame = extern struct {
     a5: usize,
     a6: usize,
     a7: usize,
-    s0: usize,
-    s1: usize,
-    s2: usize,
-    s3: usize,
-    s4: usize,
-    s5: usize,
-    s6: usize,
-    s7: usize,
-    s8: usize,
-    s9: usize,
-    s10: usize,
-    s11: usize,
-    gp: usize,
-    tp: usize,
-    sp: usize,
-    pc: usize,
-    mstatus: usize,
-    mcause: usize,
-    mtval: usize,
 };
 
-fn _vector_table() align(256) linksection(".ram_text") callconv(.naked) void {
-    comptime {
-        // TODO: make a better default exception handler
-        @export(
-            microzig.options.interrupts.Exception orelse &unhandled,
-            .{ .name = "_exception_handler" },
-        );
+/// Statically allocated interrupt stack of the requested size. Used when the
+/// interrupt stack option is enabled.
+pub var interrupt_stack: [std.mem.alignForward(usize, interrupt_stack_options.size, 16)]u8 align(16) linksection(".ram_vectors") = undefined;
 
-        for (std.meta.fieldNames(Interrupt)) |field_name| {
-            @export(
-                @field(microzig.options.interrupts, field_name) orelse &unhandled,
-                .{ .name = std.fmt.comptimePrint("_{s}_handler", .{field_name}) },
-            );
+fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void {
+    const interrupt_jump_asm, const interrupt_c_stubs_asm = comptime blk: {
+        var interrupt_jump_asm: []const u8 = "";
+        var interrupt_c_stubs_asm: []const u8 = "";
+
+        for (std.meta.fieldNames(InterruptOptions)) |field_name| {
+            const handler: InterruptHandler = @field(microzig.options.interrupts, field_name) orelse .{ .c = &unhandled };
+            switch (handler) {
+                .naked => |naked_handler| {
+                    @export(naked_handler, .{
+                        .name = std.fmt.comptimePrint("_{s}_handler_naked", .{field_name}),
+                    });
+
+                    interrupt_jump_asm = interrupt_jump_asm ++ std.fmt.comptimePrint(
+                        \\.balign 4
+                        \\    j _{s}_handler_naked
+                        \\
+                    , .{field_name});
+                },
+                .c => |c_handler| {
+                    @export(c_handler, .{
+                        .name = std.fmt.comptimePrint("_{s}_handler_c", .{field_name}),
+                    });
+
+                    interrupt_jump_asm = interrupt_jump_asm ++ std.fmt.comptimePrint(
+                        \\.balign 4
+                        \\    j _{s}_stub
+                        \\
+                    , .{field_name});
+
+                    interrupt_c_stubs_asm = interrupt_c_stubs_asm ++ std.fmt.comptimePrint(
+                        \\_{[name]s}_stub:
+                        \\    addi sp, sp, -16*4
+                        \\    sw ra, 0(sp)
+                        \\    la ra, _{[name]s}_handler_c
+                        \\    j trap_common
+                        \\
+                    , .{ .name = field_name });
+                },
+            }
         }
 
-        @export(&_update_priority, .{ .name = "_update_priority" });
-        @export(&_restore_priority, .{ .name = "_restore_priority" });
-    }
+        @export(&_handle_interrupt, .{ .name = "_handle_interrupt" });
 
-    const interrupts_jump_asm = comptime blk: {
-        var s: []const u8 = &.{};
-        for (1..32) |i| {
-            s = s ++ std.fmt.comptimePrint(
-                \\.balign 4
-                \\    j interrupt{}
-                \\
-            , .{i});
-        }
-        break :blk s;
+        break :blk .{ interrupt_jump_asm, interrupt_c_stubs_asm };
     };
 
-    // adapted from https://github.com/esp-rs/esp-hal/blob/main/esp-riscv-rt/src/lib.rs
-    asm volatile (
-        \\    j exception
-        \\
-    ++ interrupts_jump_asm ++
-        \\exception:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _exception_handler
-        \\    j trap_common
-        \\interrupt1:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt1_handler
-        \\    j trap_common
-        \\interrupt2:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt2_handler
-        \\    j trap_common
-        \\interrupt3:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt3_handler
-        \\    j trap_common
-        \\interrupt4:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt4_handler
-        \\    j trap_common
-        \\interrupt5:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt5_handler
-        \\    j trap_common
-        \\interrupt6:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt6_handler
-        \\    j trap_common
-        \\interrupt7:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt7_handler
-        \\    j trap_common
-        \\interrupt8:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt8_handler
-        \\    j trap_common
-        \\interrupt9:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt9_handler
-        \\    j trap_common
-        \\interrupt10:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt10_handler
-        \\    j trap_common
-        \\interrupt11:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt11_handler
-        \\    j trap_common
-        \\interrupt12:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt12_handler
-        \\    j trap_common
-        \\interrupt13:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt13_handler
-        \\    j trap_common
-        \\interrupt14:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt14_handler
-        \\    j trap_common
-        \\interrupt15:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt15_handler
-        \\    j trap_common
-        \\interrupt16:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt16_handler
-        \\    j trap_common
-        \\interrupt17:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt17_handler
-        \\    j trap_common
-        \\interrupt18:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt18_handler
-        \\    j trap_common
-        \\interrupt19:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt19_handler
-        \\    j trap_common
-        \\interrupt20:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt20_handler
-        \\    j trap_common
-        \\interrupt21:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt21_handler
-        \\    j trap_common
-        \\interrupt22:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt22_handler
-        \\    j trap_common
-        \\interrupt23:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt23_handler
-        \\    j trap_common
-        \\interrupt24:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt24_handler
-        \\    j trap_common
-        \\interrupt25:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt25_handler
-        \\    j trap_common
-        \\interrupt26:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt26_handler
-        \\    j trap_common
-        \\interrupt27:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt27_handler
-        \\    j trap_common
-        \\interrupt28:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt28_handler
-        \\    j trap_common
-        \\interrupt29:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt29_handler
-        \\    j trap_common
-        \\interrupt30:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt30_handler
-        \\    j trap_common
-        \\interrupt31:
-        \\    addi sp, sp, -35*4
-        \\    sw ra, 0(sp)
-        \\    la ra, _interrupt31_handler
-        \\    j trap_common
-        \\trap_common:
-        \\    sw t0, 1*4(sp)
-        \\    sw t1, 2*4(sp)
-        \\    sw t2, 3*4(sp)
-        \\    sw t3, 4*4(sp)
-        \\    sw t4, 5*4(sp)
-        \\    sw t5, 6*4(sp)
-        \\    sw t6, 7*4(sp)
-        \\    sw a0, 8*4(sp)
-        \\    sw a1, 9*4(sp)
-        \\    sw a2, 10*4(sp)
-        \\    sw a3, 11*4(sp)
-        \\    sw a4, 12*4(sp)
-        \\    sw a5, 13*4(sp)
-        \\    sw a6, 14*4(sp)
-        \\    sw a7, 15*4(sp)
-        \\    sw s0, 16*4(sp)
-        \\    sw s1, 17*4(sp)
-        \\    sw s2, 18*4(sp)
-        \\    sw s3, 19*4(sp)
-        \\    sw s4, 20*4(sp)
-        \\    sw s5, 21*4(sp)
-        \\    sw s6, 22*4(sp)
-        \\    sw s7, 23*4(sp)
-        \\    sw s8, 24*4(sp)
-        \\    sw s9, 25*4(sp)
-        \\    sw s10, 26*4(sp)
-        \\    sw s11, 27*4(sp)
-        \\    sw gp, 28*4(sp)
-        \\    sw tp, 29*4(sp)
-        \\    addi t1, sp, 35*4  # what sp was on entry to trap
-        \\    sw t1, 30*4(sp)
-        \\    csrrs t1, mepc, x0
-        \\    sw t1, 31*4(sp)
-        \\    csrrs t1, mstatus, x0
-        \\    sw t1, 32*4(sp)
-        \\    csrrs t1, mcause, x0
-        \\    sw t1, 33*4(sp)
-        \\    csrrs t1, mtval, x0
-        \\    sw t1, 34*4(sp)
-        \\
-        \\    mv s0, ra       # Save address of handler function
-        \\
-        \\    jal ra, _update_priority
-        \\    mv s1, a0       # Save the return of _update_priority
-        \\
-        \\    mv a0, sp       # Pass a pointer to TrapFrame to the handler function
-        \\    jalr ra, s0     # Call the handler function
-        \\
-        \\    mv a0, s1       # Pass stored priority to _restore_priority
-        \\    jal ra, _restore_priority
-        \\
-        \\    lw t1, 31*4(sp)
-        \\    csrrw x0, mepc, t1
-        \\
-        \\    lw t1, 32*4(sp)
-        \\    csrrw x0, mstatus, t1
-        \\
-        \\    lw ra, 0*4(sp)
-        \\    lw t0, 1*4(sp)
-        \\    lw t1, 2*4(sp)
-        \\    lw t2, 3*4(sp)
-        \\    lw t3, 4*4(sp)
-        \\    lw t4, 5*4(sp)
-        \\    lw t5, 6*4(sp)
-        \\    lw t6, 7*4(sp)
-        \\    lw a0, 8*4(sp)
-        \\    lw a1, 9*4(sp)
-        \\    lw a2, 10*4(sp)
-        \\    lw a3, 11*4(sp)
-        \\    lw a4, 12*4(sp)
-        \\    lw a5, 13*4(sp)
-        \\    lw a6, 14*4(sp)
-        \\    lw a7, 15*4(sp)
-        \\    lw s0, 16*4(sp)
-        \\    lw s1, 17*4(sp)
-        \\    lw s2, 18*4(sp)
-        \\    lw s3, 19*4(sp)
-        \\    lw s4, 20*4(sp)
-        \\    lw s5, 21*4(sp)
-        \\    lw s6, 22*4(sp)
-        \\    lw s7, 23*4(sp)
-        \\    lw s8, 24*4(sp)
-        \\    lw s9, 25*4(sp)
-        \\    lw s10, 26*4(sp)
-        \\    lw s11, 27*4(sp)
-        \\    lw gp, 28*4(sp)
-        \\    lw tp, 29*4(sp)
-        \\    lw sp, 30*4(sp) # This removes the frame we allocated from the stack
-        \\
-        \\    mret
+    asm volatile (interrupt_jump_asm ++ interrupt_c_stubs_asm ++
+            \\trap_common:
+            \\    sw t0, 1*4(sp)
+            \\    sw t1, 2*4(sp)
+            \\    sw t2, 3*4(sp)
+            \\    sw t3, 4*4(sp)
+            \\    sw t4, 5*4(sp)
+            \\    sw t5, 6*4(sp)
+            \\    sw t6, 7*4(sp)
+            \\    sw a0, 8*4(sp)
+            \\    sw a1, 9*4(sp)
+            \\    sw a2, 10*4(sp)
+            \\    sw a3, 11*4(sp)
+            \\    sw a4, 12*4(sp)
+            \\    sw a5, 13*4(sp)
+            \\    sw a6, 14*4(sp)
+            \\    sw a7, 15*4(sp)
+            \\
+            \\    mv a0, sp       # Pass a pointer to TrapFrame to the handler function
+            \\    mv a1, ra       # Save address of handler function
+            \\
+        ++ (if (interrupt_stack_options.enable)
+            // switch to interrupt stack if not nested
+            \\    csrr t0, mscratch
+            \\    bnez t0, 1f
+            \\    csrw mscratch, sp
+            \\    la sp, %[interrupt_stack_top]
+            \\    jal ra, _handle_interrupt
+            \\    csrrw sp, mscratch, x0
+            \\    j 2f
+            \\1:
+            \\    jal ra, _handle_interrupt
+            \\2:
+            \\
+        else
+            \\    jal ra, _handle_interrupt
+            \\
+        ) ++
+            \\
+            \\    lw ra, 0*4(sp)
+            \\    lw t0, 1*4(sp)
+            \\    lw t1, 2*4(sp)
+            \\    lw t2, 3*4(sp)
+            \\    lw t3, 4*4(sp)
+            \\    lw t4, 5*4(sp)
+            \\    lw t5, 6*4(sp)
+            \\    lw t6, 7*4(sp)
+            \\    lw a0, 8*4(sp)
+            \\    lw a1, 9*4(sp)
+            \\    lw a2, 10*4(sp)
+            \\    lw a3, 11*4(sp)
+            \\    lw a4, 12*4(sp)
+            \\    lw a5, 13*4(sp)
+            \\    lw a6, 14*4(sp)
+            \\    lw a7, 15*4(sp)
+            \\
+            \\    addi sp, sp, 16*4 # This removes the frame we allocated from the stack
+            \\
+            \\    mret
+        :
+        : [interrupt_stack_top] "i" (if (interrupt_stack_options.enable)
+            interrupt_stack[interrupt_stack.len..].ptr
+          else {}),
     );
 }
 
@@ -657,36 +520,58 @@ fn unhandled(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
         std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
     } else {
         const exception: Exception = @enumFromInt(mcause.code);
-        std.log.err("exception {s} occurred!", .{@tagName(exception)});
+        std.log.err("unhandled exception {s} occurred at {x}!", .{ @tagName(exception), csr.mepc.read_raw() });
+
+        switch (exception) {
+            .InstructionFault => std.log.err("faulting address: {x}", .{csr.mtval.read_raw()}),
+            .LoadFault => std.log.err("faulting address: {x}", .{csr.mtval.read_raw()}),
+            else => {},
+        }
     }
 
     @panic("unhandled trap");
 }
 
-fn _update_priority() linksection(".ram_text") callconv(.c) u32 {
+fn _handle_interrupt(
+    trap_frame: *TrapFrame,
+    handler: *const fn (*TrapFrame) callconv(.c) void,
+) linksection(".ram_text") callconv(.c) void {
     const mcause = csr.mcause.read();
 
-    const prev_priority = interrupt.get_priority_threshold();
-
     if (mcause.is_interrupt != 0) {
-        // this is an interrupt (can also be exception in which case we don't enable interrupts).
+        // interrupt
 
         const int: Interrupt = @enumFromInt(mcause.code);
         const priority = interrupt.get_priority(int);
 
+        // low priority interrupts can be preempted by higher priority interrupts
         if (@intFromEnum(priority) < 15) {
-            // allow higher priority interrupts to preempt this one
+            const mepc = csr.mepc.read_raw();
+            const mstatus = csr.mstatus.read_raw();
+            const mtval = csr.mtval.read_raw();
+
+            const prev_thresh = interrupt.get_priority_threshold();
             interrupt.set_priority_threshold(@enumFromInt(@intFromEnum(priority) + 1));
+
             interrupt.enable_interrupts();
+
+            handler(trap_frame);
+
+            interrupt.disable_interrupts();
+
+            interrupt.set_priority_threshold(prev_thresh);
+
+            csr.mepc.write_raw(mepc);
+            csr.mstatus.write_raw(mstatus);
+            csr.mtval.write_raw(mtval);
+            csr.mcause.write(mcause);
+        } else {
+            handler(trap_frame);
         }
+    } else {
+        // exception
+        handler(trap_frame);
     }
-
-    return @intFromEnum(prev_priority);
-}
-
-fn _restore_priority(priority_raw: u32) linksection(".ram_text") callconv(.c) void {
-    interrupt.disable_interrupts();
-    interrupt.set_priority_threshold(@enumFromInt(priority_raw));
 }
 
 pub const csr = struct {

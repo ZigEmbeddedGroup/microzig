@@ -1,9 +1,37 @@
 const std = @import("std");
 
 pub const microzig = @import("microzig");
+const RCC = microzig.chip.peripherals.RCC;
 
 pub const hal = microzig.hal;
-pub const rcc = hal.rcc;
+const rcc = hal.rcc;
+
+pub const rcc_high_speed: rcc.Config = .{
+    .PRESCALERUSB = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+    .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+    .APB1CLKDivider = .RCC_HCLK_DIV2,
+    .PLLSource = .RCC_PLLSOURCE_HSE,
+    .PLLMUL = .RCC_PLL_MUL9,
+    .flags = .{
+        .HSEByPass = true,
+        .HSEOscillator = true,
+        .USART1Used_ForRCC = true,
+        .I2C1Used_ForRCC = true,
+    },
+};
+
+pub const rcc_medium_speed: rcc.Config = .{
+    .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
+    .APB1CLKDivider = .RCC_HCLK_DIV2,
+    .PLLSource = .RCC_PLLSOURCE_HSE,
+    .PLLMUL = .RCC_PLL_MUL6,
+    .flags = .{
+        .HSEByPass = true,
+        .HSEOscillator = true,
+        .USART1Used_ForRCC = true,
+        .I2C1Used_ForRCC = true,
+    },
+};
 
 pub const uart_logger = hal.uart.UARTLogger(.USART1);
 
@@ -21,13 +49,7 @@ pub const leds_config = (hal.pins.GlobalConfiguration{
 });
 
 pub fn init() void {
-    rcc.enable_hse(8_000_000);
-    rcc.enable_pll(.HSE, .Div1, .Mul5) catch {
-        @panic("PLL faile to enable");
-    };
-    rcc.select_pll_for_sysclk() catch {
-        @panic("Faile to select sysclk");
-    };
+    rcc.apply();
 }
 
 // Init should come first or the baud_rate would be too fast for the default HSI.
@@ -39,12 +61,12 @@ pub fn init_log() void {
         },
     }).apply();
     uart_logger.init(.{
-        .baud_rate = 115200,
+        .baud_rate = 9600,
         .dma = hal.dma.DMA1_Channel4.get_channel(),
     });
 }
 
-pub fn i2c1() hal.i2c.I2C_Device {
+pub fn i2c1() !hal.i2c.I2C_Device {
     _ = (hal.pins.GlobalConfiguration{
         .GPIOB = .{
             // I2C
@@ -57,5 +79,5 @@ pub fn i2c1() hal.i2c.I2C_Device {
         },
     }).apply();
 
-    return hal.i2c.I2C_Device.init(.I2C1);
+    return try hal.i2c.I2C_Device.init(.I2C1);
 }
