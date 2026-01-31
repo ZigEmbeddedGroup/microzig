@@ -27,10 +27,7 @@ pub const Config = struct {
     use_interrupts: bool = false,
 };
 
-const Regs = @TypeOf(peripherals.USBHS);
-pub fn regs() Regs {
-    return peripherals.USBHS;
-}
+const Regs = peripherals.USBHS;
 
 const EpState = struct {
     buf: []align(4) u8 = &[_]u8{},
@@ -246,9 +243,9 @@ pub fn Polled(comptime cfg: Config) type {
             self.arm_ep0_out_always();
 
             // Connect pull-up to signal device ready
-            regs().USB_CTRL.modify(.{ .RB_UC_DEV_PU_EN = 1 });
+            Regs.USB_CTRL.modify(.{ .RB_UC_DEV_PU_EN = 1 });
 
-            regs().USB_CTRL.modify(.{
+            Regs.USB_CTRL.modify(.{
                 .RB_UC_CLR_ALL = 0,
             });
 
@@ -326,27 +323,27 @@ pub fn Polled(comptime cfg: Config) type {
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
             while (true) {
-                const fg: u8 = regs().USB_INT_FG.raw;
+                const fg: u8 = Regs.USB_INT_FG.raw;
                 if (fg == 0) break;
 
                 if ((fg & UIF_HST_SOF) != 0) {
                     // acknowledge SOF but ignore
-                    regs().USB_INT_FG.raw = UIF_HST_SOF;
+                    Regs.USB_INT_FG.raw = UIF_HST_SOF;
                 }
                 if ((fg & UIF_SUSPEND) != 0) {
                     // acknowledge SUSPEND but ignore
-                    regs().USB_INT_FG.raw = UIF_SUSPEND;
+                    Regs.USB_INT_FG.raw = UIF_SUSPEND;
                 }
 
                 if (fg & UIF_FIFO_OV != 0) {
                     log.warn("FIFO overflow!", .{});
-                    regs().USB_INT_FG.raw = UIF_FIFO_OV;
+                    Regs.USB_INT_FG.raw = UIF_FIFO_OV;
                 }
 
                 if ((fg & UIF_BUS_RST) != 0) {
                     log.info("bus reset\n\n\n", .{});
                     // clear
-                    regs().USB_INT_FG.raw = UIF_BUS_RST;
+                    Regs.USB_INT_FG.raw = UIF_BUS_RST;
 
                     // address back to 0
                     set_address(&self.interface, 0);
@@ -357,7 +354,7 @@ pub fn Polled(comptime cfg: Config) type {
 
                 if ((fg & UIF_SETUP_ACT) != 0) {
                     log.info("SETUP received", .{});
-                    regs().USB_INT_FG.raw = UIF_SETUP_ACT;
+                    Regs.USB_INT_FG.raw = UIF_SETUP_ACT;
 
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
 
@@ -370,8 +367,8 @@ pub fn Polled(comptime cfg: Config) type {
 
                 if ((fg & UIF_TRANSFER) != 0) {
                     // clear transfer
-                    regs().USB_INT_FG.raw = UIF_TRANSFER;
-                    const stv = regs().USB_INT_ST.read();
+                    Regs.USB_INT_FG.raw = UIF_TRANSFER;
+                    const stv = Regs.USB_INT_ST.read();
                     const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                     const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
                     self.handle_transfer(ep, token, controller);
@@ -400,8 +397,8 @@ pub fn Polled(comptime cfg: Config) type {
         }
 
         fn handle_out(self: *Self, ep: u4, controller: anytype) void {
-            const len: u16 = regs().USB_RX_LEN.read().R16_USB_RX_LEN;
-            const stv = regs().USB_INT_ST.read();
+            const len: u16 = Regs.USB_RX_LEN.read().R16_USB_RX_LEN;
+            const stv = Regs.USB_INT_ST.read();
             const rx_ctrl = uep_rx_ctrl(ep).read();
             log.debug(
                 "OUT ep{} len={} tog_ok={} rx_res={} rx_tog={}",
@@ -461,7 +458,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         fn set_address(_: *usb.DeviceInterface, addr: u7) void {
             log.info("set_address {}", .{addr});
-            regs().USB_DEV_AD.modify(.{ .MASK_USB_ADDR = addr });
+            Regs.USB_DEV_AD.modify(.{ .MASK_USB_ADDR = addr });
         }
 
         fn ep_open(itf: *usb.DeviceInterface, desc_ptr: *const descriptor.Endpoint) void {
@@ -490,7 +487,7 @@ pub fn Polled(comptime cfg: Config) type {
                     in_st.buf = buf;
 
                     const ptr_val = @as(u32, @intCast(@intFromPtr(buf.ptr)));
-                    log.info("Setting EP0 DMA buffer at {x}, len={}", .{ ptr_val, buf.len });
+                    log.debug("Setting EP0 DMA buffer at {x}, len={}", .{ ptr_val, buf.len });
                     ep0_dma().raw = ptr_val;
                     uep_max_len(0).raw = @intCast(64);
                 } else {
@@ -524,17 +521,17 @@ pub fn Polled(comptime cfg: Config) type {
 
             // Enable endpoint direction in UEP_CONFIG bitmaps.
             // TODO: make this a function, too ugly here
-            var cfg_raw: u32 = regs().UEP_CONFIG__UHOST_CTRL.raw;
+            var cfg_raw: u32 = Regs.UEP_CONFIG__UHOST_CTRL.raw;
             if (e.num != .ep0) {
                 if (e.dir == .In) cfg_raw |= (@as(u32, 1) << ep_i) else cfg_raw |= (@as(u32, 1) << (16 + @as(u5, ep_i)));
             }
-            regs().UEP_CONFIG__UHOST_CTRL.raw = cfg_raw;
+            Regs.UEP_CONFIG__UHOST_CTRL.raw = cfg_raw;
 
             // Endpoint type ISO marking (only for ISO endpoints).
             if (e.num != .ep0 and desc.attributes.transfer_type == .Isochronous) {
-                var type_raw: u32 = regs().UEP_TYPE.raw;
+                var type_raw: u32 = Regs.UEP_TYPE.raw;
                 if (e.dir == .In) type_raw |= (@as(u32, 1) << ep_i) else type_raw |= (@as(u32, 1) << (16 + @as(u5, ep_i)));
-                regs().UEP_TYPE.raw = type_raw;
+                Regs.UEP_TYPE.raw = type_raw;
             }
 
             // EP0 OUT always ACK
@@ -647,10 +644,10 @@ pub fn Polled(comptime cfg: Config) type {
 
         fn usbhd_hw_init() void {
             // Reset SIE and clear FIFO
-            regs().UHOST_CTRL.raw = 0;
-            regs().UHOST_CTRL.modify(.{ .RB_UH_PHY_SUSPENDM = 1 });
-            regs().USB_CTRL.raw = 0; // not sure if writing zero then val is ok?
-            regs().USB_CTRL.modify(.{
+            Regs.UHOST_CTRL.raw = 0;
+            Regs.UHOST_CTRL.modify(.{ .RB_UH_PHY_SUSPENDM = 1 });
+            Regs.USB_CTRL.raw = 0; // not sure if writing zero then val is ok?
+            Regs.USB_CTRL.modify(.{
                 .RB_UC_CLR_ALL = 1,
                 .RB_UC_RST_SIE = 1,
                 .RB_UC_INT_BUSY = 1,
@@ -661,18 +658,18 @@ pub fn Polled(comptime cfg: Config) type {
                 asm volatile ("nop");
             }
 
-            regs().USB_CTRL.modify(.{
+            Regs.USB_CTRL.modify(.{
                 .RB_UC_RST_SIE = 0,
             });
 
-            regs().USB_CTRL.modify(.{
+            Regs.USB_CTRL.modify(.{
                 .RB_UC_DMA_EN = 1,
                 .RB_UC_INT_BUSY = 1,
                 .RB_UC_SPEED_TYPE = speed_type(cfg),
             });
 
             // Enable source interrupts (we poll these flags, interrupt disabled)
-            regs().USB_INT_EN.modify(.{
+            Regs.USB_INT_EN.modify(.{
                 .RB_U_1WIRE_MODE = 1, // actually SETUP_ACT?
                 .RB_UIE_BUS_RST__RB_UIE_DETECT = 1,
                 .RB_UIE_TRANSFER = 1,
@@ -687,7 +684,7 @@ pub fn Polled(comptime cfg: Config) type {
 
 ///! Skeleton ISR
 pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
-    const fg = regs().USB_INT_FG.raw;
-    regs().USB_INT_FG.raw = fg;
+    const fg = Regs.USB_INT_FG.raw;
+    Regs.USB_INT_FG.raw = fg;
     @panic("Don't Enable USBHS Interrupt, Not yet supported!");
 }
