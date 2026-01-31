@@ -413,7 +413,10 @@ pub fn get_freqs() ClockSpeeds {
     };
 }
 
-/// USBHS/USBHD clock helper.
+// ============================================================================
+// Enable + configure USBHS clocks.
+// ============================================================================
+
 /// This configures RCC_CFGR2 fields for the USBHS PHY PLL reference (if present),
 /// selects whether the USBHS 48MHz clock comes from the system PLL clock or the USB PHY,
 /// and enables the AHB clock gate for USBHS.
@@ -464,10 +467,6 @@ const HSPLLSRC = enum(u2) {
     hse = 0,
     hsi = 1,
 };
-
-// ============================================================================
-// Enable + configure USBHS clocks.
-// ============================================================================
 
 /// Selects USBHS Clock source, options are:
 /// - "PLL CLK" 48MHz source (cfg.use_phy_48mhz = false), or
