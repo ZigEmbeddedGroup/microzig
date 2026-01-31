@@ -7,10 +7,8 @@ const gpio = hal.gpio;
 const RCC = microzig.chip.peripherals.RCC;
 const AFIO = microzig.chip.peripherals.AFIO;
 
-// TODO: Get usart from board config
-
-const usart = hal.usart.instance.USART1;
-const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
+const usart = hal.usart.instance.USART2;
+const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
@@ -20,17 +18,18 @@ pub const microzig_options = microzig.Options{
 pub fn main() !void {
     // Board brings up clocks and time
     microzig.board.init();
-    microzig.hal.init();
 
     // Enable peripheral clocks for USART2 and GPIOA
     RCC.APB2PCENR.modify(.{
         .IOPAEN = 1, // Enable GPIOA clock
         .AFIOEN = 1, // Enable AFIO clock
-        .USART1EN = 1, // Enable USART1 clock
     });
     RCC.APB1PCENR.modify(.{
         .USART2EN = 1, // Enable USART2 clock
     });
+
+    // Ensure USART2 is NOT remapped (default PA2/PA3, not PD5/PD6)
+    AFIO.PCFR1.modify(.{ .USART2_RM = 0 });
 
     // Configure PA2 as alternate function push-pull for USART2 TX
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
@@ -39,14 +38,10 @@ pub fn main() !void {
     usart.apply(.{ .baud_rate = 115200 });
 
     hal.usart.init_logger(usart);
-    std.log.info("UART logging initialized.", .{});
-    var last = time.get_time_since_boot();
+
     var i: u32 = 0;
     while (true) : (i += 1) {
-        const now = time.get_time_since_boot();
-        if (now.diff(last).to_us() > 500000) {
-            std.log.info("what {}", .{i});
-            last = now;
-        }
+        std.log.info("what {}", .{i});
+        time.sleep_ms(1000);
     }
 }
