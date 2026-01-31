@@ -66,8 +66,8 @@ fn PerEndpoint(T: type) type {
 const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
 const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
-const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMimo) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
+const EndpointControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Code
@@ -239,8 +239,9 @@ pub fn Polled(config: Config) type {
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
-            ep_open(&self.interface, &.control(.in(.ep0), max_supported_packet_size));
-            ep_open(&self.interface, &.control(.out(.ep0), max_supported_packet_size));
+            // Set up endpoints.
+            self.interface.ep_open(&.control(.in(.ep0), max_supported_packet_size));
+            self.interface.ep_open(&.control(.out(.ep0), max_supported_packet_size));
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
