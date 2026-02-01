@@ -62,12 +62,8 @@ fn PerEndpoint(T: type) type {
     };
 }
 
-// It would be nice to instead generate those arrays automatically with a regz patch.
-const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
-const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
-
-const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
-const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMimo) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
+const buffer_control: *volatile [16]PerEndpoint(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL)) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
+const endpoint_control: *volatile [15]PerEndpoint(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL)) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Code

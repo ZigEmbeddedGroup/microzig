@@ -15,48 +15,10 @@ const NUM_BANK0_GPIOS = switch (chip) {
     .RP2350 => 48,
 };
 
-pub const Function =
-    switch (chip) {
-        .RP2040 => enum(u5) {
-            xip = 0,
-            spi,
-            uart,
-            i2c,
-            pwm,
-            sio,
-            pio0,
-            pio1,
-            gpck,
-            usb,
-            disabled = 0x1f,
-        },
-        .RP2350 => enum(u5) {
-            hstx = 0,
-            spi,
-            uart,
-            i2c,
-            pwm,
-            sio,
-            pio0,
-            pio1,
-            pio2,
-            gpck, // Also QMI_CS1 and Trace
-            usb,
-            uart_alt,
-            disabled = 0x1f,
-        },
-    };
 
 pub const Direction = enum(u1) {
     in,
     out,
-};
-
-pub const Override = enum(u2) {
-    normal,
-    invert,
-    low,
-    high,
 };
 
 pub const SlewRate = enum(u1) {
@@ -64,6 +26,8 @@ pub const SlewRate = enum(u1) {
     fast,
 };
 
+pub const Function = microzig.chip.types.peripherals.IO_BANK0.Function;
+pub const Override = microzig.chip.types.peripherals.IO_BANK0.Override;
 pub const DriveStrength = microzig.chip.types.peripherals.PADS_BANK0.DriveStrength;
 
 pub const Pull = enum {
@@ -259,37 +223,10 @@ pub const Mask =
 pub const Pin = enum(u6) {
     _,
 
-    pub const Regs =
-        switch (chip) {
-            .RP2040 => extern struct {
-                status: @TypeOf(IO_BANK0.GPIO0_STATUS),
-                ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                    FUNCSEL: Function,
-                    reserved8: u3 = 0,
-                    OUTOVER: Override,
-                    reserved12: u2 = 0,
-                    OEOVER: Override,
-                    reserved16: u2 = 0,
-                    INOVER: Override,
-                    reserved28: u10 = 0,
-                    IRQOVER: Override,
-                    padding: u2 = 0,
-                }),
-            },
-            .RP2350 => extern struct {
-                status: @TypeOf(IO_BANK0.GPIO0_STATUS),
-                ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                    FUNCSEL: Function,
-                    reserved12: u7 = 0,
-                    OUTOVER: Override,
-                    OEOVER: Override,
-                    INOVER: Override,
-                    reserved28: u10 = 0,
-                    IRQOVER: Override,
-                    padding: u2 = 0,
-                }),
-            },
-        };
+    pub const Regs = struct {
+        status: @TypeOf(IO_BANK0.GPIO0_STATUS),
+        ctrl: @TypeOf(IO_BANK0.GPIO0_CTRL),
+    };
 
     pub const RegsArray = switch (chip) {
         .RP2040 => *volatile [30]Regs,
