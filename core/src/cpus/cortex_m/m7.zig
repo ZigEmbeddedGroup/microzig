@@ -9,7 +9,7 @@ pub const SystemControlBlock = extern struct {
     /// CPUID Base Register
     CPUID: u32,
     /// Interrupt Control and State Register
-    ICSR: mmio.Mmio(packed struct(u32) {
+    ICSR: mmio.OldMmio(packed struct(u32) {
         VECTACTIVE: u9,
         reserved0: u2 = 0,
         RETTOBASE: u1,
@@ -28,7 +28,7 @@ pub const SystemControlBlock = extern struct {
     /// Vector Table Offset Register
     VTOR: u32,
     /// Application Interrupt and Reset Control Register
-    AIRCR: mmio.Mmio(packed struct(u32) {
+    AIRCR: mmio.OldMmio(packed struct(u32) {
         /// Reserved for Debug use. Must be written as 0.
         VECTRESET: u1, // WO
         /// Reserved for Debug use. Must be written as 0.
@@ -47,7 +47,7 @@ pub const SystemControlBlock = extern struct {
     /// System Control Register
     SCR: u32,
     /// Configuration Control Register
-    CCR: mmio.Mmio(packed struct(u32) {
+    CCR: mmio.OldMmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,
         reserved0: u1 = 0,
@@ -67,7 +67,7 @@ pub const SystemControlBlock = extern struct {
     }),
 
     /// System Handler Priority Register 1 (SHPR1)
-    SHPR1: mmio.Mmio(packed struct(u32) {
+    SHPR1: mmio.OldMmio(packed struct(u32) {
         /// Priority of system handler 4, MemManage
         PRI_4: u8,
         /// Priority of system handler 5, BusFault
@@ -79,7 +79,7 @@ pub const SystemControlBlock = extern struct {
     }),
 
     /// System Handler Priority Register 2 (SHPR2)
-    SHPR2: mmio.Mmio(packed struct(u32) {
+    SHPR2: mmio.OldMmio(packed struct(u32) {
         /// Reserved bits [23:0]
         reserved0: u24 = 0,
         /// Priority of system handler 11, SVCall
@@ -87,7 +87,7 @@ pub const SystemControlBlock = extern struct {
     }),
 
     /// System Handler Priority Register 3 (SHPR3)
-    SHPR3: mmio.Mmio(packed struct(u32) {
+    SHPR3: mmio.OldMmio(packed struct(u32) {
         /// Reserved bits [15:0]
         reserved0: u16 = 0,
         /// Priority of system handler 14, PendSV
@@ -97,9 +97,9 @@ pub const SystemControlBlock = extern struct {
     }),
 
     /// System Handler Contol and State Register
-    SHCSR: mmio.Mmio(shared.scb.SHCSR),
+    SHCSR: mmio.OldMmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register
-    CFSR: mmio.Mmio(packed struct(u32) {
+    CFSR: mmio.OldMmio(packed struct(u32) {
         /// MemManage Fault Register.
         MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
@@ -114,7 +114,7 @@ pub const SystemControlBlock = extern struct {
     /// UsageFault Status Register
     UFSR: u32,
     /// HardFault Status Register
-    HFSR: mmio.Mmio(shared.scb.HFSR),
+    HFSR: mmio.OldMmio(shared.scb.HFSR),
     /// MemManage Fault Address Register
     MMAR: u32,
     /// BusFault Address Register
@@ -170,7 +170,7 @@ pub const NestedVectorInterruptController = extern struct {
 
 pub const MemoryProtectionUnit = extern struct {
     /// MPU Type Register
-    TYPE: mmio.Mmio(packed struct(u32) {
+    TYPE: mmio.OldMmio(packed struct(u32) {
         SEPARATE: u1,
         reserved0: u7 = 0,
         DREGION: u8,
@@ -178,14 +178,14 @@ pub const MemoryProtectionUnit = extern struct {
         reserved1: u8 = 0,
     }),
     /// MPU Control Register
-    CTRL: mmio.Mmio(packed struct(u32) {
+    CTRL: mmio.OldMmio(packed struct(u32) {
         ENABLE: u1,
         HFNMIENA: u1,
         PRIVDEFENA: u1,
         padding: u29 = 0,
     }),
     /// MPU RNRber Register
-    RNR: mmio.Mmio(packed struct(u32) {
+    RNR: mmio.OldMmio(packed struct(u32) {
         REGION: u8,
         padding: u24 = 0,
     }),
@@ -206,13 +206,13 @@ pub const MemoryProtectionUnit = extern struct {
     /// MPU Alias 3 Region Attribute and Size Register
     RASR_A3: RASR_Register,
 
-    pub const RBAR_Register = mmio.Mmio(packed struct(u32) {
+    pub const RBAR_Register = mmio.OldMmio(packed struct(u32) {
         REGION: u4,
         VALID: u1,
         ADDR: u27,
     });
 
-    pub const RASR_Register = mmio.Mmio(packed struct(u32) {
+    pub const RASR_Register = mmio.OldMmio(packed struct(u32) {
         /// Region enable bit
         ENABLE: u1,
         /// Region Size
@@ -239,7 +239,7 @@ pub const MemoryProtectionUnit = extern struct {
 
 pub const DebugRegisters = extern struct {
     /// Debyg Halting Control and Status Register
-    DHCSR: mmio.Mmio(packed struct {
+    DHCSR: mmio.OldMmio(packed struct {
         reserved0: u6 = 0,
         S_RESET_ST: u1,
         S_RETIRE_ST: u1,
@@ -258,18 +258,18 @@ pub const DebugRegisters = extern struct {
     }),
     /// Debug Core Register Selector Register
     /// TODO: Reserved have values ? see armv7-m reference manual
-    DCRSR: mmio.Mmio(packed struct {
+    DCRSR: mmio.OldMmio(packed struct {
         reserved0: u15 = 0,
         REGWnR: u1,
         reserved1: u9 = 0,
         REGSEL: u7,
     }),
     /// Debug Core Register Data Register
-    DCRDR: mmio.Mmio(packed struct {
+    DCRDR: mmio.OldMmio(packed struct {
         DBGTMP: u32,
     }),
     /// Debug exception and Monitor Control Register
-    DEMCR: mmio.Mmio(packed struct {
+    DEMCR: mmio.OldMmio(packed struct {
         reserved0: u7 = 0,
         TRCENA: u1,
         reserved1: u4 = 0,
@@ -292,7 +292,7 @@ pub const DebugRegisters = extern struct {
 
 pub const ITM = extern struct {
     /// Stimulus Port Registers (0-255)
-    STIM: [256]mmio.Mmio(packed union {
+    STIM: [256]mmio.OldMmio(packed union {
         WRITE_U8: u8,
         WRITE_U16: u16,
         WRITE_U32: u32,
@@ -305,21 +305,21 @@ pub const ITM = extern struct {
     reserved0: [640]u32, // Padding to 0xE00
 
     /// Trace Enable Registers (0-7)
-    TER: [8]mmio.Mmio(packed struct(u32) {
+    TER: [8]mmio.OldMmio(packed struct(u32) {
         STIMENA: u32, // Enable bits for stimulus ports
     }),
 
     reserved1: [10]u32, // Padding to 0xE40
 
     /// Trace Privilege Register
-    TPR: mmio.Mmio(packed struct(u32) {
+    TPR: mmio.OldMmio(packed struct(u32) {
         PRIVMASK: u32, // Privilege mask for stimulus ports
     }),
 
     reserved2: [15]u32, // Padding to 0xE80
 
     /// Trace Control Register
-    TCR: mmio.Mmio(packed struct(u32) {
+    TCR: mmio.OldMmio(packed struct(u32) {
         ITMENA: u1, // ITM enable
         TSENA: u1, // Local timestamp enable
         SYNCENA: u1, // Sync packet enable
@@ -337,28 +337,28 @@ pub const ITM = extern struct {
 
 pub const TPIU = extern struct {
     /// Supported Parallel Port Sizes Register
-    SSPSR: mmio.Mmio(packed struct(u32) {
+    SSPSR: mmio.OldMmio(packed struct(u32) {
         SWIDTH: u32,
     }),
     /// Current Parallel Port Size Register
-    CSPSR: mmio.Mmio(packed struct(u32) {
+    CSPSR: mmio.OldMmio(packed struct(u32) {
         CWIDTH: u32,
     }),
     reserved0: [2]u32,
     /// Asynchronous Clock Prescaler Register
-    ACPR: mmio.Mmio(packed struct(u32) {
+    ACPR: mmio.OldMmio(packed struct(u32) {
         SWOSCALER: u16,
         padding: u16 = 0,
     }),
     reserved1: [55]u32,
     /// Selected Pin Protocol Register
-    SPPR: mmio.Mmio(packed struct(u32) {
+    SPPR: mmio.OldMmio(packed struct(u32) {
         TXMODE: u2,
         padding: u30 = 0,
     }),
     reserved2: [524]u32,
     /// TPIU Type Register
-    TYPE: mmio.Mmio(packed struct(u32) {
+    TYPE: mmio.OldMmio(packed struct(u32) {
         reserved0: u6 = 0,
         FIFOSZ: u3,
         PTINVALID: u1,
@@ -371,7 +371,7 @@ pub const TPIU = extern struct {
 };
 
 pub const FloatingPointUnit = extern struct {
-    FPCCR: mmio.Mmio(packed struct(u32) {
+    FPCCR: mmio.OldMmio(packed struct(u32) {
         LSPACT: u1,
         USER: u1,
         S: u1,

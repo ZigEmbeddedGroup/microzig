@@ -15,7 +15,6 @@ const NUM_BANK0_GPIOS = switch (chip) {
     .RP2350 => 48,
 };
 
-
 pub const Direction = enum(u1) {
     in,
     out,

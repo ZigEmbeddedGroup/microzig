@@ -1,6 +1,8 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+pub const OldMmio = Mmio;
+
 pub fn Mmio(comptime PackedT: type) type {
     @setEvalBranchQuota(2_000);
 

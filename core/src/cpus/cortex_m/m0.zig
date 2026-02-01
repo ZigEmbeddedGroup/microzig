@@ -9,7 +9,7 @@ pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
-    ICSR: mmio.Mmio(packed struct(u32) {
+    ICSR: mmio.OldMmio(packed struct(u32) {
         /// Contains the active exception number:
         /// 0 = Thread mode
         /// Nonzero = The exception number[a] of the currently active exception.
@@ -79,7 +79,7 @@ pub const SystemControlBlock = extern struct {
     }),
     reserved0: u32 = 0,
     /// Application Interrupt and Reset Control Register.
-    AIRCR: mmio.Mmio(packed struct {
+    AIRCR: mmio.OldMmio(packed struct {
         reserved0: u1 = 0,
         /// Reserved for debug use. This bit reads as 0. When writing to the register you must
         /// write 0 to this bit, otherwise behavior is Unpredictable.
@@ -101,7 +101,7 @@ pub const SystemControlBlock = extern struct {
         VECTKEY: u16,
     }),
     /// System Control Register.
-    SCR: mmio.Mmio(packed struct(u32) {
+    SCR: mmio.OldMmio(packed struct(u32) {
         reserved0: u1 = 0,
         /// Indicates sleep-on-exit when returning from Handler mode to Thread mode:
         /// 0 = do not sleep when returning to Thread mode.
@@ -130,7 +130,7 @@ pub const SystemControlBlock = extern struct {
         reserved2: u27 = 0,
     }),
     /// Configuration Control Register.
-    CCR: mmio.Mmio(packed struct(u32) {
+    CCR: mmio.OldMmio(packed struct(u32) {
         reserved0: u3 = 0,
         /// Always reads as one, indicates that all unaligned accesses generate a HardFault.
         UNALIGN_TRP: u1,
