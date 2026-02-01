@@ -32,17 +32,33 @@ pub fn Mmio(comptime PackedT: type, access: MmioAccess(PackedT)) type {
     _ = access;
     @setEvalBranchQuota(2_000);
 
-    const size = @bitSizeOf(PackedT);
-    if ((size % 8) != 0)
-        @compileError("size must be divisible by 8!");
+    const IntT, const reg_fields = switch (@typeInfo(PackedT)) {
+        .@"struct" => |info| .{ switch (info.layout) {
+            .@"packed" => info.backing_integer.?,
+            else => @compileError("Struct must be packed"),
+        }, info.fields },
+        else => @compileError("Unsupported type: " ++ @typeName(PackedT)),
+    };
+    _ = reg_fields;
 
-    if (!std.math.isPowerOfTwo(size / 8))
-        @compileError("size must encode a power of two number of bytes!");
+    if (@bitSizeOf(PackedT) != 8 * @sizeOf(PackedT))
+        @compileError("Size in bits must be divisible by 8");
 
-    const IntT = std.meta.Int(.unsigned, size);
+    if (!std.math.isPowerOfTwo(@sizeOf(PackedT)))
+        @compileError("Size in bytes must be a power of two");
 
-    if (@sizeOf(PackedT) != (size / 8))
-        @compileError(std.fmt.comptimePrint("IntT and PackedT must have the same size!, they are {} and {} bytes respectively", .{ size / 8, @sizeOf(PackedT) }));
+    if (@alignOf(PackedT) != @sizeOf(PackedT))
+        @compileError("PackedT must be naturally aligned");
+
+    if (@sizeOf(IntT) != @sizeOf(PackedT)) @compileError(std.fmt.comptimePrint(
+        "IntT and PackedT must have the same size, they are {} and {} bytes respectively",
+        .{ @sizeOf(IntT), @sizeOf(PackedT) },
+    ));
+
+    if (@bitSizeOf(IntT) != @bitSizeOf(PackedT)) @compileError(std.fmt.comptimePrint(
+        "IntT and PackedT must have the same bitsize, they are {} and {} bits respectively",
+        .{ @bitSizeOf(IntT), @bitSizeOf(PackedT) },
+    ));
 
     return extern struct {
         const Self = @This();
@@ -56,9 +72,6 @@ pub fn Mmio(comptime PackedT: type, access: MmioAccess(PackedT)) type {
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
-            comptime {
-                assert(@bitSizeOf(PackedT) == @bitSizeOf(IntT));
-            }
             addr.write_raw(@bitCast(val));
         }
 
