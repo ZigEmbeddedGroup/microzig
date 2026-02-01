@@ -129,7 +129,7 @@ pub const SPI = enum(u2) {
         });
 
         // this also enables using all 16 words
-        regs.USER.write_raw(0);
+        regs.USER.raw = 0;
 
         regs.CLK_GATE.modify(.{
             .MST_CLK_ACTIVE = 1,
@@ -143,11 +143,11 @@ pub const SPI = enum(u2) {
         });
 
         // this also disables all cs lines
-        regs.MISC.write_raw(0);
+        regs.MISC.raw = 0;
 
-        regs.SLAVE.write_raw(0);
+        regs.SLAVE.raw = 0;
 
-        regs.CLOCK.write_raw(config.get_clock_config());
+        regs.CLOCK.raw = config.get_clock_config();
 
         regs.DMA_INT_CLR.modify(.{
             .TRANS_DONE_INT_CLR = 1,

@@ -178,7 +178,7 @@ pub const I2C = enum(u1) {
         }
 
         // Write clock configuration
-        regs.CKCFGR.write_raw(ccr);
+        regs.CKCFGR.raw = ccr;
 
         // Enable peripheral first
         i2c.enable();
@@ -231,7 +231,7 @@ pub const I2C = enum(u1) {
     /// Send 7-bit address with direction bit
     inline fn send_address(i2c: I2C, addr: Address, direction: enum { write, read }) void {
         const addr_byte = @as(u8, @intFromEnum(addr)) << 1 | @intFromBool(direction == .read);
-        i2c.get_regs().DATAR.write_raw(addr_byte);
+        i2c.get_regs().DATAR.raw = addr_byte;
     }
 
     /// Common wait for STAR1/STAR2 flag with timeout
@@ -330,7 +330,7 @@ pub const I2C = enum(u1) {
             try i2c.wait_flag_star1("TxE", 1, deadline);
 
             // Write data to DATAR
-            regs.DATAR.write_raw(element.value);
+            regs.DATAR.raw = element.value;
         }
 
         // Wait for BTF (Byte Transfer Finished) - ensures last byte is transmitted

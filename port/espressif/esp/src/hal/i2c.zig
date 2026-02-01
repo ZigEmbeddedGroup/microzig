@@ -147,13 +147,13 @@ pub const I2C = struct {
         self.reset();
 
         // Disable all I2C interrupts
-        regs.INT_ENA.write_raw(0);
+        regs.INT_ENA.raw = 0;
 
         // Clear all I2C interrupts
         self.clear_interrupts();
 
         // Configure controller
-        regs.CTR.write_raw(0);
+        regs.CTR.raw = 0;
         regs.CTR.modify(.{
             .MS_MODE = 1, // Set I2C controller to master mode
             .SDA_FORCE_OUT = 1, // Use open drain output for SDA
@@ -236,7 +236,7 @@ pub const I2C = struct {
     fn reset_command_list(self: I2C) void {
         // Reset all command registers
         for (0..self.get_regs().COMD.len) |i|
-            self.get_regs().COMD[@intCast(i)].write_raw(0);
+            self.get_regs().COMD[@intCast(i)].raw = 0;
     }
 
     /// Set the filter threshold in clock cycles
@@ -343,7 +343,7 @@ pub const I2C = struct {
 
     /// Clear all interrupts
     inline fn clear_interrupts(self: I2C) void {
-        self.get_regs().INT_CLR.write_raw(0x3ffff);
+        self.get_regs().INT_CLR.raw = 0x3ffff;
     }
 
     inline fn start_transmission(self: I2C) void {

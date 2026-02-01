@@ -295,13 +295,13 @@ fn isr_common(self: *Self) void {
             // If we have no more data, fill the TX FIFO with zeros
 
             while (self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
-                self.regs.IC_DATA_CMD.write_raw(0);
+                self.regs.IC_DATA_CMD.raw = 0;
             }
         } else {
             // Fill the TX FIFO with data from the transfer buffer
 
             while (self.transfer_index < self.transfer_length and self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
-                self.regs.IC_DATA_CMD.write_raw(@intCast(self.transfer_buffer[self.transfer_index]));
+                self.regs.IC_DATA_CMD.raw = @intCast(self.transfer_buffer[self.transfer_index]);
                 self.transfer_index += 1;
             }
         }

@@ -72,11 +72,7 @@ pub fn Mmio(comptime PackedT: type, access: MmioAccess(PackedT)) type {
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
-            addr.write_raw(@bitCast(val));
-        }
-
-        pub inline fn write_raw(addr: *volatile Self, val: IntT) void {
-            addr.raw = val;
+            addr.raw = @bitCast(val);
         }
 
         /// Set field `field_name` of this register to `value`.

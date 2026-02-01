@@ -51,14 +51,15 @@ pub fn init() void {
     rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
+    // Consider patching the svd
     switch (version) {
         .nrf51 => {
             rtc.TASKS_CLEAR = 1;
             rtc.TASKS_START = 1;
         },
         .nrf52 => {
-            rtc.TASKS_CLEAR.write_raw(1);
-            rtc.TASKS_START.write_raw(1);
+            rtc.TASKS_CLEAR.raw = 1;
+            rtc.TASKS_START.raw = 1;
         },
     }
 
@@ -70,6 +71,7 @@ pub fn init() void {
 /// the elapsed time.
 pub fn rtc_interrupt() callconv(.c) void {
     switch (version) {
+        // Consider patching the svd
         .nrf51 => {
             if (rtc.EVENTS_OVRFLW == 1) {
                 rtc.EVENTS_OVRFLW = 0;
@@ -83,12 +85,12 @@ pub fn rtc_interrupt() callconv(.c) void {
         },
         .nrf52 => {
             if (rtc.EVENTS_OVRFLW.raw == 1) {
-                rtc.EVENTS_OVRFLW.write_raw(0);
+                rtc.EVENTS_OVRFLW.raw = 0;
                 next_period();
             }
 
             if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
-                rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
+                rtc.EVENTS_COMPARE[COMPARE_INDEX].raw = 0;
                 next_period();
             }
         },

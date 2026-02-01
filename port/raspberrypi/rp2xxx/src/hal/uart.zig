@@ -213,7 +213,7 @@ pub const UART = enum(u1) {
         });
         var tx_remaining = src.len;
         while (tx_remaining > 0 and uart.is_writeable()) {
-            uart_regs.UARTDR.write_raw(src[src.len - tx_remaining]);
+            uart_regs.UARTDR.raw = src[src.len - tx_remaining];
             tx_remaining -= 1;
         }
         uart_regs.UARTCR.modify(.{
@@ -306,7 +306,7 @@ pub const UART = enum(u1) {
                 while (!uart.is_writeable()) {
                     try deadline.check(time.get_time_since_boot());
                 }
-                uart_regs.UARTDR.write_raw(payload[offset]);
+                uart_regs.UARTDR.raw = payload[offset];
                 offset += 1;
             }
         }
