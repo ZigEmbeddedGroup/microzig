@@ -61,36 +61,38 @@ pub fn Mmio(comptime PackedT: type, access: MmioAccess(PackedT)) type {
     ));
 
     return extern struct {
-        const Self = @This();
-
         raw: IntT,
 
         pub const underlying_type = PackedT;
 
-        pub inline fn read(addr: *volatile Self) PackedT {
-            return @bitCast(addr.raw);
+        pub inline fn read(self: *volatile @This()) PackedT {
+            return @bitCast(self.raw);
         }
 
-        pub inline fn write(addr: *volatile Self, val: PackedT) void {
-            addr.raw = @bitCast(val);
+        pub inline fn write(self: *volatile @This(), val: PackedT) void {
+            self.raw = @bitCast(val);
         }
 
         /// Set field `field_name` of this register to `value`.
         /// A one-field version of modify(), more helpful if `field_name` is comptime calculated.
-        pub inline fn modify_one(addr: *volatile Self, comptime field_name: []const u8, value: @FieldType(underlying_type, field_name)) void {
-            var val = read(addr);
+        pub inline fn modify_one(
+            self: *volatile @This(),
+            comptime field_name: []const u8,
+            value: @FieldType(underlying_type, field_name),
+        ) void {
+            var val = self.read();
             @field(val, field_name) = value;
-            write(addr, val);
+            self.write(val);
         }
 
         /// For each `.Field = value` entry of `fields`:
         /// Set field `Field` of this register to `value`.
-        pub inline fn modify(addr: *volatile Self, fields: anytype) void {
-            var val = read(addr);
+        pub inline fn modify(self: *volatile @This(), fields: anytype) void {
+            var val = self.read();
             inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
             }
-            write(addr, val);
+            self.write(val);
         }
     };
 }
