@@ -1147,7 +1147,7 @@ fn write_register(
             register.size_bits,
         });
 
-        try write_fields(db, arena, fields, register.size_bits, register_reset, writer);
+        try write_fields_and_access(db, arena, fields, register.size_bits, register_reset, writer);
         try writer.writeAll("}),\n");
     } else if (array_prefix.len != 0) {
         try writer.print("{f}: {s}u{},\n", .{
@@ -1193,7 +1193,7 @@ fn get_field_default(field: Database.StructField, maybe_register_reset: ?Registe
     return (register_reset.value & field_mask) >> @intCast(field.offset_bits);
 }
 
-fn write_fields(
+fn write_fields_and_access(
     db: *Database,
     arena: Allocator,
     fields: []const Database.StructField,
@@ -1235,6 +1235,19 @@ fn write_fields(
 
     var offset: u64 = 0;
 
+    const AccessType = enum {
+        read_only,
+        read_write,
+    };
+
+    const RegAndAccess = union(enum) {
+        normal: struct { []const u8, AccessType },
+        reserved: u8,
+        padding,
+    };
+
+    var access: std.ArrayList(RegAndAccess) = .empty;
+
     for (expanded_fields.items) |field| {
         log.debug("next field: offset={} field.offset_bits={}", .{ offset, field.offset_bits });
         if (offset > field.offset_bits) {
@@ -1260,6 +1273,7 @@ fn write_fields(
         if (offset < field.offset_bits) {
             try writer.print("reserved{}: u{} = 0,\n", .{ field.offset_bits, field.offset_bits - offset });
             offset = field.offset_bits;
+            try access.append(arena, .{ .reserved = field.offset_bits });
         }
         assert(offset == field.offset_bits);
 
@@ -1330,6 +1344,8 @@ fn write_fields(
 
         log.debug("adding size bits to offset: offset={} field.size_bits={}", .{ offset, field.size_bits });
         offset += field.size_bits;
+
+        try access.append(arena, .{ .normal = .{ field.name, .read_write } });
     }
 
     log.debug("before padding: offset={} register_size_bits={}", .{ offset, register_size_bits });
@@ -1337,9 +1353,18 @@ fn write_fields(
     if (offset < register_size_bits) {
         log.debug("writing padding", .{});
         try writer.print("padding: u{} = 0,\n", .{register_size_bits - offset});
+        try access.append(arena, .padding);
     } else {
         log.debug("No padding", .{});
     }
+
+    try writer.writeAll("}, .{\n");
+
+    for (access.items) |it| switch (it) {
+        .normal => |data| try writer.print(".{s} = .{t},\n", data),
+        .reserved => |num| try writer.print(".reserved{} = .read_only,\n", .{num}),
+        .padding => try writer.writeAll(".padding = .read_only,\n"),
+    };
 
     try out_writer.writeAll(buf.written());
 }
@@ -1794,6 +1819,8 @@ test "gen.peripheral instantiation" {
         },
     }, &vfs);
 }
+
+// TODO: Adapt tests to new Mmio
 
 test "gen.peripherals with a shared type" {
     var db = try tests.peripherals_with_shared_type(std.testing.allocator);

@@ -1,9 +1,35 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-pub const OldMmio = Mmio;
+pub fn OldMmio(comptime PackedT: type) type {
+    var access: MmioAccess(PackedT) = undefined;
+    for (@typeInfo(PackedT).@"struct".fields) |fld|
+        @field(access, fld.name) = .read_write;
+    return Mmio(PackedT, access);
+}
 
-pub fn Mmio(comptime PackedT: type) type {
+pub const Access = enum {
+    read_only,
+    read_write,
+};
+
+pub fn MmioAccess(comptime PackedT: type) type {
+    @setEvalBranchQuota(20_000);
+    const info = @typeInfo(PackedT).@"struct";
+    var field_names: [info.fields.len][:0]const u8 = undefined;
+    for (&field_names, info.fields) |*dst, src|
+        dst.* = src.name;
+    return @import("../src/core/usb.zig").Struct(
+        .auto,
+        null,
+        &field_names,
+        &@splat(Access),
+        &@splat(.{}),
+    );
+}
+
+pub fn Mmio(comptime PackedT: type, access: MmioAccess(PackedT)) type {
+    _ = access;
     @setEvalBranchQuota(2_000);
 
     const size = @bitSizeOf(PackedT);
