@@ -22,10 +22,21 @@ pub const Header = extern struct {
     descriptor_subtype: SubType = .Header,
     // USB Class Definitions for Communication Devices Specification release
     // number in binary-coded decimal. Typically 0x01_10.
-    bcd_cdc: types.U16Le,
+    bcd_cdc: types.Version = .v1_10,
 };
 
 pub const CallManagement = extern struct {
+    pub const Capabilities = packed struct(u8) {
+        handles_call_mgmt: bool,
+        call_mgmt_over_data: bool,
+        reserved: u6 = 0,
+
+        pub const none: @This() = .{
+            .handles_call_mgmt = false,
+            .call_mgmt_over_data = false,
+        };
+    };
+
     comptime {
         assert(@alignOf(@This()) == 1);
         assert(@sizeOf(@This()) == 5);
@@ -37,12 +48,27 @@ pub const CallManagement = extern struct {
     // Subtype of this descriptor, must be `CallManagement`.
     descriptor_subtype: SubType = .CallManagement,
     // Capabilities. Should be 0x00 for use as a serial device.
-    capabilities: u8,
+    capabilities: Capabilities,
     // Data interface number.
     data_interface: u8,
 };
 
 pub const AbstractControlModel = extern struct {
+    pub const Capabilities = packed struct(u8) {
+        /// Device supports the request combination of Set_Comm_Feature,
+        /// Clear_Comm_Feature, and Get_Comm_Feature
+        comm_feature: bool,
+        /// Device supports the request combination of
+        /// Set_Line_Coding, Set_Control_Line_State, Get_Line_Coding,
+        /// and the notification Serial_State
+        line_coding: bool,
+        /// Device supports the request Send_Break
+        send_break: bool,
+        /// Device supports the notification Network_Connection
+        network_connection: bool,
+        reserved: u4 = 0,
+    };
+
     comptime {
         assert(@alignOf(@This()) == 1);
         assert(@sizeOf(@This()) == 4);
@@ -54,7 +80,7 @@ pub const AbstractControlModel = extern struct {
     // Subtype of this descriptor, must be `AbstractControlModel`.
     descriptor_subtype: SubType = .AbstractControlModel,
     // Capabilities. Should be 0x02 for use as a serial device.
-    capabilities: u8,
+    capabilities: Capabilities,
 };
 
 pub const Union = extern struct {

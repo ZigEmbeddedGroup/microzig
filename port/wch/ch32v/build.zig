@@ -113,7 +113,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_ch32v003_base: BaseChip = .{
         .name = "CH32V003", // <name/> from SVD
-        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .e, .c, .xwchc }),
+        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .e, .c, .xwchc, .zicsr, .zifencei }),
         .cpu_name = .@"qingkev2-rv32ec",
         .cpu_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
         .hal_file = b.path("src/hals/ch32v003.zig"),
@@ -122,7 +122,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_ch32v103_base: BaseChip = .{
         .name = "CH32V103", // <name/> from SVD
-        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .i, .m, .a, .c, .xwchc }),
+        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .i, .m, .a, .c, .xwchc, .zicsr, .zifencei }),
         .cpu_name = .@"qingkev3-rv32imac",
         .cpu_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
         .hal_file = b.path("src/hals/ch32v103.zig"),
@@ -131,7 +131,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_ch32v20x_base: BaseChip = .{
         .name = "CH32V20x", // <name/> from SVD
-        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .i, .m, .a, .c, .xwchc }),
+        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .i, .m, .a, .c, .xwchc, .zicsr, .zifencei }),
         .cpu_name = .@"qingkev4-rv32imac",
         .cpu_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
         .hal_file = b.path("src/hals/ch32v20x.zig"),
@@ -140,9 +140,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_ch32v30x_base: BaseChip = .{
         .name = "CH32V30x", // <name/> from SVD
-        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .i, .m, .a, .f, .c, .xwchc }),
-        .cpu_name = .@"qingkev4-rv32imafc",
-        .cpu_file = b.path("src/cpus/qingkev4-rv32imafc.zig"),
+        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .i, .m, .a, .c, .f, .xwchc, .zicsr, .zifencei }),
+        .cpu_name = .@"qingkev4-rv32imacf",
+        .cpu_file = b.path("src/cpus/qingkev4-rv32imacf.zig"),
         .hal_file = b.path("src/hals/ch32v30x.zig"),
         .svd = b.path("src/chips/ch32v30x.svd"),
     };

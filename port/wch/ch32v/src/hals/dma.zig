@@ -13,18 +13,18 @@ const drivers = mdf.base;
 const hal = microzig.hal;
 
 const DMA1 = microzig.chip.peripherals.DMA1;
-const DmaRegs = microzig.chip.types.peripherals.DMA1;
+const DMA_Regs = microzig.chip.types.peripherals.DMA1;
 
 // TODO: There are two DMA peripherals and a different number of channels
 // available. Further, some registers are shared between channels e.g. INTR and
 // INTFR.
 pub const Regs = extern struct {
-    INTFR: *volatile @FieldType(DmaRegs, "INTFR"),
-    INTFCR: *volatile @FieldType(DmaRegs, "INTFCR"),
-    CFGR: *volatile @FieldType(DmaRegs, "CFGR1"),
-    CNTR: *volatile @FieldType(DmaRegs, "CNTR1"),
-    PADDR: *volatile @FieldType(DmaRegs, "PADDR1"),
-    MADDR: *volatile @FieldType(DmaRegs, "MADDR1"),
+    INTFR: *volatile @FieldType(DMA_Regs, "INTFR"),
+    INTFCR: *volatile @FieldType(DMA_Regs, "INTFCR"),
+    CFGR: *volatile @FieldType(DMA_Regs, "CFGR1"),
+    CNTR: *volatile @FieldType(DMA_Regs, "CNTR1"),
+    PADDR: *volatile @FieldType(DMA_Regs, "PADDR1"),
+    MADDR: *volatile @FieldType(DMA_Regs, "MADDR1"),
 };
 
 /// Represents a peripheral register for DMA transfers

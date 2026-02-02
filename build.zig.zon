@@ -33,6 +33,7 @@
         .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
         .@"port/texasinstruments/msp430" = .{ .path = "port/texasinstruments/msp430", .lazy = true },
+        .@"port/texasinstruments/tm4c" = .{ .path = "port/texasinstruments/tm4c", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
 
         // used for creating package tarballs
