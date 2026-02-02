@@ -162,6 +162,8 @@ pub fn get_board_id() [8]u8 {
     return board_id.?;
 }
 
+pub const extra_ram_load_sections = .{ "scratch_x", "scratch_y" };
+
 test "hal tests" {
     _ = pio;
     _ = usb;
