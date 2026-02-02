@@ -60,8 +60,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2040",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2040/hardware_regs/RP2040.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
+                .{ .name = "FLASH", .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .name = "RAM", .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
+                .{ .name = "SCRATCH_X", .tag = .ram, .offset = 0x20040000, .length = 4 * 1024, .access = .rwx },
+                .{ .name = "SCRATCH_Y", .tag = .ram, .offset = 0x20041000, .length = 4 * 1024, .access = .rwx },
             },
             .patch_files = &.{b.path("patches/rp2040.zon")},
         },
@@ -69,6 +71,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .linker_script = .{
             .file = b.path("ld/rp2040/sections.ld"),
         },
+    };
+
+    const chip_rp2350_memory_regions = [_]microzig.MemoryRegion{
+        .{ .name = "FLASH", .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+        .{ .name = "RAM", .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+        .{ .name = "SCRATCH_X", .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+        .{ .name = "SCRATCH_Y", .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
     };
 
     const chip_rp2350_arm: microzig.Target = .{
@@ -86,13 +95,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
-            .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
-                // TODO: maybe these can be used for stacks
-                .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
-                .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
-            },
+            .memory_regions = &chip_rp2350_memory_regions,
             .patch_files = &.{b.path("patches/rp2350.zon")},
         },
         .hal = hal,
@@ -138,13 +141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
-            .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
-                // TODO: maybe these can be used for stacks
-                .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
-                .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
-            },
+            .memory_regions = &chip_rp2350_memory_regions,
             .patch_files = &.{
                 b.path("patches/rp2350.zon"),
                 b.path("patches/rp2350_hazard3.zon"),
