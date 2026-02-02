@@ -55,20 +55,12 @@ pub const Access = struct {
     pub const reserved: @This() = .{ .read = .garbage, .write = .ignored };
 };
 
-/// If a field is not null, it contains the name of one of the registers
-/// that prevent this capability, so that a nice error message can be displayed.
-const Capabilities = struct {
-    /// If null, register can be read from.
-    read: ?[:0]const u8 = null,
-    /// If null, register can be written to.
-    write: ?[:0]const u8 = null,
-    /// If null, register can have bits set by a write operation.
-    set_mask: ?[:0]const u8 = null,
-    /// If null, register can have bits cleared by a write operation.
-    clear_mask: ?[:0]const u8 = null,
-    /// If null, register can have bits toggled by a write operation.
-    toggle_mask: ?[:0]const u8 = null,
-};
+fn check_type_has_all_fields(T: type, fields: anytype) void {
+    inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
+        if (!@hasField(T, field.name))
+            @compileError("Field " ++ field.name ++ " not present in " ++ @typeName(T));
+    }
+}
 
 pub fn MmioAccess(comptime PackedT: type) type {
     @setEvalBranchQuota(20_000);
@@ -119,59 +111,24 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
         raw: IntT,
 
         pub const underlying_type = PackedT;
-        const capabilities: Capabilities = blk: {
-            var ret: Capabilities = .{};
-            for (reg_fields) |field| {
-                const a: Access = @field(access_type, field.name);
-                switch (a.read) {
-                    .normal, .garbage => {},
-                    .special, .illegal => ret.read = field.name,
-                }
-                switch (a.write) {
-                    .normal => {
-                        ret.set_mask = field.name;
-                        ret.clear_mask = field.name;
-                        ret.toggle_mask = field.name;
-                    },
-                    .ignored => {},
-                    .set_mask => {
-                        ret.write = field.name;
-                        ret.clear_mask = field.name;
-                        ret.toggle_mask = field.name;
-                    },
-                    .clear_mask => {
-                        ret.write = field.name;
-                        ret.set_mask = field.name;
-                        ret.toggle_mask = field.name;
-                    },
-                    .toggle_mask => {
-                        ret.write = field.name;
-                        ret.set_mask = field.name;
-                        ret.clear_mask = field.name;
-                    },
-                    .special, .illegal => {
-                        ret.write = field.name;
-                        ret.set_mask = field.name;
-                        ret.clear_mask = field.name;
-                        ret.toggle_mask = field.name;
-                    },
-                }
-                break :blk ret;
-            }
-        };
+        const all_zeros: PackedT = @bitCast(@as(IntT, 0));
 
         pub inline fn read(self: *volatile @This()) PackedT {
-            if (capabilities.read) |name|
-                reg_type_op_error(name, "reading from the register");
-
+            comptime for (reg_fields) |field|
+                switch (@field(access_type, field.name).read) {
+                    .normal, .garbage, .special => {},
+                    .illegal => reg_type_op_error(field.name, "reading from any fields of the register"),
+                };
             return @bitCast(self.raw);
         }
 
-        pub inline fn write(self: *volatile @This(), val: PackedT) void {
-            if (capabilities.write) |name|
-                reg_type_op_error(name, "writing to the register");
-
-            self.raw = @bitCast(val);
+        pub inline fn write(self: *volatile @This(), w: PackedT) void {
+            comptime for (reg_fields) |field|
+                switch (@field(access_type, field.name).write) {
+                    .normal, .ignored, .set_mask, .clear_mask, .toggle_mask, .special => {},
+                    .illegal => reg_type_op_error(field.name, "writing to any fields of the register"),
+                };
+            self.raw = @bitCast(w);
         }
 
         /// Set field `field_name` of this register to `value`.
@@ -181,74 +138,95 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
             comptime field_name: []const u8,
             value: @FieldType(underlying_type, field_name),
         ) void {
-            if (capabilities.read) |name|
-                reg_type_op_error(name, "modifying this register by read-modify-write");
-            if (capabilities.write) |name|
-                reg_type_op_error(name, "modifying this register by read-modify-write");
-
-            if (@field(access_type, field_name).write != .normal)
-                reg_type_op_error(field_name, "modifying this field by read-modify-write");
-
-            var val: PackedT = @bitCast(self.raw);
-            @field(val, field_name) = value;
-            self.raw = @bitCast(val);
+            // Replace with @Struct when migrating to zig 0.16
+            var fields: @import("core/usb.zig").Struct(
+                .auto,
+                null,
+                &.{field_name},
+                &.{@TypeOf(value)},
+                &.{.{}},
+            ) = undefined;
+            @field(fields, field_name) = value;
+            self.modify(fields);
         }
 
         /// For each `.Field = value` entry of `fields`:
         /// Set field `Field` of this register to `value`.
         /// This is implemented using read-modify-write.
         pub inline fn modify(self: *volatile @This(), fields: anytype) void {
-            if (capabilities.read) |name|
-                reg_type_op_error(name, "modifying this register by read-modify-write");
-            if (capabilities.write) |name|
-                reg_type_op_error(name, "modifying this register by read-modify-write");
+            check_type_has_all_fields(PackedT, fields);
+            const Fields = @TypeOf(fields);
 
-            self.modify_passed_value_and_write(
-                @bitCast(@as(IntT, 0)),
-                fields,
-                .normal,
-                "modifying this field by read-modify-write",
-            );
+            const r = self.read();
+            var w: PackedT = undefined;
+            inline for (reg_fields) |field| {
+                const access = @field(access_type, field.name);
+                @field(w, field.name) = if (@hasField(Fields, field.name))
+                    // Overwrite this field
+                    if (access.write == .normal and (access.read == .normal or access.read == .garbage))
+                        @field(fields, field.name)
+                    else
+                        reg_type_op_error(field.name, "modifying this field by read-modify-write")
+                else switch (access.write) {
+                    // Leave field unchanged
+                    .normal => if (access.read == .normal)
+                        @field(r, field.name)
+                    else
+                        // This should actually be:
+                        // reg_type_op_error(field.name, "modifying any field in this register by read-modify-write")
+                        @field(all_zeros, field.name),
+                    // Preserve old functionality
+                    .ignored => @field(r, field.name),
+                    // Write zeros so that nothing happens
+                    .set_mask, .clear_mask, .toggle_mask => @field(all_zeros, field.name),
+                    else => reg_type_op_error(field.name, "modifying any field in this register by read-modify-write"),
+                };
+            }
+            self.write(w);
         }
 
         pub inline fn set_mask(self: *volatile @This(), fields: anytype) void {
-            if (capabilities.set_mask) |name|
-                reg_type_op_error(name, "setting bits in this register by masking");
+            check_type_has_all_fields(PackedT, fields);
+            const Fields = @TypeOf(fields);
 
-            self.modify_passed_value_and_write(
-                @bitCast(@as(IntT, 0)),
-                fields,
-                .set_mask,
-                "setting bits in this field by masking",
-            );
+            var w: PackedT = undefined;
+            inline for (reg_fields) |field| {
+                const access = @field(access_type, field.name);
+                @field(w, field.name) = if (@hasField(Fields, field.name))
+                    // Set bits in this field
+                    if (access.write == .set_mask)
+                        @field(fields, field.name)
+                    else
+                        reg_type_op_error(field.name, "setting bits of this field by masking")
+                else switch (access.write) {
+                    // Write zeros so that nothing happens
+                    .ignored, .set_mask, .clear_mask, .toggle_mask => @field(all_zeros, field.name),
+                    else => reg_type_op_error(field.name, "setting bits of any field in this register by masking"),
+                };
+            }
+            self.write(w);
         }
 
         pub inline fn clear_mask(self: *volatile @This(), fields: anytype) void {
-            if (capabilities.clear_mask) |name|
-                reg_type_op_error(name, "clearing bits in this register by masking");
+            check_type_has_all_fields(PackedT, fields);
+            const Fields = @TypeOf(fields);
 
-            self.modify_passed_value_and_write(
-                @bitCast(@as(IntT, 0)),
-                fields,
-                .clear_mask,
-                "clearing bits in this field by masking",
-            );
-        }
-
-        inline fn modify_passed_value_and_write(
-            self: *volatile @This(),
-            initial: PackedT,
-            fields: anytype,
-            allowed_write_access: Access.Write,
-            comptime action: [:0]const u8,
-        ) void {
-            var val = initial;
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-                if (@field(access_type, field.name).write != allowed_write_access)
-                    reg_type_op_error(field.name, action);
-                @field(val, field.name) = @field(fields, field.name);
+            var w: PackedT = undefined;
+            inline for (reg_fields) |field| {
+                const access = @field(access_type, field.name);
+                @field(w, field.name) = if (@hasField(Fields, field.name))
+                    // Clear bits in this field
+                    if (access.write == .clear_mask)
+                        @field(fields, field.name)
+                    else
+                        reg_type_op_error(field.name, "clearing bits of this field by masking")
+                else switch (access.write) {
+                    // Write zeros so that nothing happens
+                    .ignored, .set_mask, .clear_mask, .toggle_mask => @field(all_zeros, field.name),
+                    else => reg_type_op_error(field.name, "clearing bits of any field in this register by masking"),
+                };
             }
-            self.raw = @bitCast(val);
+            self.write(w);
         }
 
         fn reg_type_op_error(comptime reg_name: [:0]const u8, comptime action: []const u8) noreturn {
