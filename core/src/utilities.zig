@@ -40,7 +40,7 @@ pub inline fn initialize_system_memories(which: enum {
         @memset(bss_start[0..bss_len], 0);
     }
 
-    if (@hasDecl(microzig.hal, "extra_ram_load_sections")) {
+    if (microzig.hal != void and @hasDecl(microzig.hal, "extra_ram_load_sections")) {
         inline for (microzig.hal.extra_ram_load_sections) |section_name| {
             const section = struct {
                 const start = @extern(*anyopaque, .{ .name = std.fmt.comptimePrint("microzig_{s}_start", .{section_name}) });
