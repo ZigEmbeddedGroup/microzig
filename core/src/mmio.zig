@@ -2,9 +2,13 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 pub fn OldMmio(comptime PackedT: type) type {
+    const startsWith = std.mem.startsWith;
+
     var access: MmioAccess(PackedT) = undefined;
-    for (@typeInfo(PackedT).@"struct".fields) |fld|
-        @field(access, fld.name) = .read_write;
+    for (@typeInfo(PackedT).@"struct".fields) |fld| {
+        const read_only = startsWith(u8, fld.name, "reserved") or startsWith(u8, fld.name, "padding");
+        @field(access, fld.name) = if (read_only) .read_only else .read_write;
+    }
     return Mmio(PackedT, access);
 }
 
