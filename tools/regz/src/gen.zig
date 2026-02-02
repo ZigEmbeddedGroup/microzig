@@ -1235,13 +1235,11 @@ fn write_fields_and_access(
 
     var offset: u64 = 0;
 
-    const AccessType = enum {
-        read_only,
-        read_write,
-    };
-
     const RegAndAccess = union(enum) {
-        normal: struct { []const u8, AccessType },
+        normal: struct {
+            name: []const u8,
+            access: ?Database.Access,
+        },
         reserved: u8,
         padding,
     };
@@ -1345,7 +1343,7 @@ fn write_fields_and_access(
         log.debug("adding size bits to offset: offset={} field.size_bits={}", .{ offset, field.size_bits });
         offset += field.size_bits;
 
-        try access.append(arena, .{ .normal = .{ field.name, .read_write } });
+        try access.append(arena, .{ .normal = .{ .name = field.name, .access = field.access } });
     }
 
     log.debug("before padding: offset={} register_size_bits={}", .{ offset, register_size_bits });
@@ -1361,9 +1359,16 @@ fn write_fields_and_access(
     try writer.writeAll("}, .{\n");
 
     for (access.items) |it| switch (it) {
-        .normal => |data| try writer.print(".{s} = .{t},\n", data),
-        .reserved => |num| try writer.print(".reserved{} = .read_only,\n", .{num}),
-        .padding => try writer.writeAll(".padding = .read_only,\n"),
+        .normal => |data| {
+            const access_str = switch (data.access orelse .read_write) {
+                .read_write_once, .read_write => "read_write",
+                .read_only => "read_only",
+                .write_only, .write_once => "write_only",
+            };
+            try writer.print(".{s} = .{s},\n", .{ data.name, access_str });
+        },
+        .reserved => |num| try writer.print(".reserved{} = .reserved,\n", .{num}),
+        .padding => try writer.writeAll(".padding = .reserved,\n"),
     };
 
     try out_writer.writeAll(buf.written());

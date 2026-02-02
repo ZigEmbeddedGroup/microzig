@@ -17,8 +17,10 @@ pub fn OldMmio(comptime PackedT: type) type {
 pub const Access = struct {
     /// Effect of reading the field
     pub const Read = enum {
-        /// Reading does not affect the field value.
-        unaffected,
+        /// Reading returns the currently stored field value and does not affect it.
+        normal,
+        /// Reading is not an error, but the returned value is meaningless.
+        garbage,
         /// Reading changes the field value in an implementation-defined way.
         special,
         /// This register should never be read from.
@@ -47,9 +49,10 @@ pub const Access = struct {
     read: Read,
     write: Write,
 
-    pub const read_only: @This() = .{ .read = .unaffected, .write = .ignored };
-    pub const read_write: @This() = .{ .read = .unaffected, .write = .normal };
-    pub const write_only: @This() = .{ .read = .illegal, .write = .normal };
+    pub const read_only: @This() = .{ .read = .normal, .write = .ignored };
+    pub const read_write: @This() = .{ .read = .normal, .write = .normal };
+    pub const write_only: @This() = .{ .read = .garbage, .write = .normal };
+    pub const reserved: @This() = .{ .read = .garbage, .write = .ignored };
 };
 
 /// If a field is not null, it contains the name of one of the registers
@@ -121,7 +124,7 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
             for (reg_fields) |field| {
                 const a: Access = @field(access_type, field.name);
                 switch (a.read) {
-                    .unaffected => {},
+                    .normal, .garbage => {},
                     .special, .illegal => ret.read = field.name,
                 }
                 switch (a.write) {
@@ -178,7 +181,9 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
             comptime field_name: []const u8,
             value: @FieldType(underlying_type, field_name),
         ) void {
-            if (capabilities.read orelse capabilities.write) |name|
+            if (capabilities.read) |name|
+                reg_type_op_error(name, "modifying this register by read-modify-write");
+            if (capabilities.write) |name|
                 reg_type_op_error(name, "modifying this register by read-modify-write");
 
             if (@field(access_type, field_name).write != .normal)
@@ -193,7 +198,9 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
         /// Set field `Field` of this register to `value`.
         /// This is implemented using read-modify-write.
         pub inline fn modify(self: *volatile @This(), fields: anytype) void {
-            if (capabilities.read orelse capabilities.write) |name|
+            if (capabilities.read) |name|
+                reg_type_op_error(name, "modifying this register by read-modify-write");
+            if (capabilities.write) |name|
                 reg_type_op_error(name, "modifying this register by read-modify-write");
 
             self.modify_passed_value_and_write(
