@@ -1365,7 +1365,7 @@ fn write_fields_and_access(
                 .read_only => "read_only",
                 .write_only, .write_once => "write_only",
             };
-            try writer.print(".{s} = .{s},\n", .{ data.name, access_str });
+            try writer.print(".{f} = .{s},\n", .{ std.zig.fmtId(data.name), access_str });
         },
         .reserved => |num| try writer.print(".reserved{} = .reserved,\n", .{num}),
         .padding => try writer.writeAll(".padding = .reserved,\n"),

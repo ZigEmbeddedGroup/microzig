@@ -72,7 +72,7 @@ pub const lfclk = struct {
                 while (CLOCK.EVENTS_DONE == 0) {}
             },
             .nrf52 => {
-                CLOCK.TASKS_CAL.raw(1);
+                CLOCK.TASKS_CAL.raw = 1;
                 while (CLOCK.EVENTS_DONE.raw == 0) {}
             },
         }

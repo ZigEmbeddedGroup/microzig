@@ -69,7 +69,6 @@ pub inline fn system_init(comptime chip: anytype) void {
     // RCC->CFGR0 &= (uint32_t)0xF8FF0000;
     RCC.CFGR0.modify(.{
         .SW = 0,
-        .SWS = 0,
         .HPRE = 0,
         .ADCPRE = 0,
         .MCO = 0,

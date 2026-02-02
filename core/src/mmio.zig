@@ -135,7 +135,7 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
         /// A one-field version of modify(), more helpful if `field_name` is comptime calculated.
         pub inline fn modify_one(
             self: *volatile @This(),
-            comptime field_name: []const u8,
+            comptime field_name: [:0]const u8,
             value: @FieldType(underlying_type, field_name),
         ) void {
             // Replace with @Struct when migrating to zig 0.16
@@ -154,6 +154,7 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
         /// Set field `Field` of this register to `value`.
         /// This is implemented using read-modify-write.
         pub inline fn modify(self: *volatile @This(), fields: anytype) void {
+            @setEvalBranchQuota(10_000);
             check_type_has_all_fields(PackedT, fields);
             const Fields = @TypeOf(fields);
 
@@ -186,6 +187,7 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
         }
 
         pub inline fn set_mask(self: *volatile @This(), fields: anytype) void {
+            @setEvalBranchQuota(10_000);
             check_type_has_all_fields(PackedT, fields);
             const Fields = @TypeOf(fields);
 
@@ -208,6 +210,7 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
         }
 
         pub inline fn clear_mask(self: *volatile @This(), fields: anytype) void {
+            @setEvalBranchQuota(10_000);
             check_type_has_all_fields(PackedT, fields);
             const Fields = @TypeOf(fields);
 
