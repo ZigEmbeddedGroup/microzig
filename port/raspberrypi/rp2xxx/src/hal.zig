@@ -39,6 +39,7 @@ pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
+pub const sections = @import("hal/sections.zig");
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
