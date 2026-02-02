@@ -40,6 +40,22 @@ pub inline fn initialize_system_memories(which: enum {
         @memset(bss_start[0..bss_len], 0);
     }
 
+    if (@hasDecl(microzig.hal, "extra_ram_load_sections")) {
+        inline for (microzig.hal.extra_ram_load_sections) |section_name| {
+            const section = struct {
+                const start = @extern(*anyopaque, .{ .name = std.fmt.comptimePrint("microzig_{s}_start", .{section_name}) });
+                const end = @extern(*anyopaque, .{ .name = std.fmt.comptimePrint("microzig_{s}_end", .{section_name}) });
+                const load_start = @extern(*anyopaque, .{ .name = std.fmt.comptimePrint("microzig_{s}_load_start", .{section_name}) });
+            };
+            const start: [*]u8 = @ptrCast(section.start);
+            const end: [*]u8 = @ptrCast(section.end);
+            const len = @intFromPtr(end) - @intFromPtr(start);
+            const src: [*]const u8 = @ptrCast(&section.load_start);
+
+            @memcpy(start[0..len], src[0..len]);
+        }
+    }
+
     // load .data from flash
     if (which != .bss_only) {
         const data_start: [*]u8 = @ptrCast(&sections.microzig_data_start);
