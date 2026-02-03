@@ -468,12 +468,17 @@ const HSPLLSRC = enum(u2) {
     hsi = 1,
 };
 
+// TODO: USBFS Clock helper, don't just tag on USBHS
+
+// TODO: ch32v30x 144MHz config
+
 /// Selects USBHS Clock source, options are:
 /// - "PLL CLK" 48MHz source (cfg.use_phy_48mhz = false), or
 /// - "USB PHY" 48MHz source (cfg.use_phy_48mhz = true),
 ///   in which case it also configures the PHY PLL reference (USBHSCLK/USBHSPLLSRC/USBHSDIV)
 ///   and enables the PHY internal PLL (USBHSPLL).
 pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
+    RCC.CFGR0.modify(.{ .USBPRE = 0 });
     // Turn on the AHB clock gate for the USBHS peripheral block.
 
     // If caller prefers PLL CLK, set PLL CLK selection and keep PHY PLL off.
@@ -554,7 +559,10 @@ pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
         .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
     });
 
-    RCC.AHBPCENR.modify(.{ .USBHS_EN = 1 });
+    RCC.AHBPCENR.modify(.{
+        .USBHS_EN = 1,
+        .OTG_EN = 1,
+    });
 }
 
 // ============================================================================

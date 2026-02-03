@@ -5,7 +5,7 @@ const hal = microzig.hal;
 const time = hal.time;
 const gpio = hal.gpio;
 const usb = microzig.core.usb;
-
+const usbfs = hal.usbfs;
 const USB_Serial = usb.drivers.CDC;
 
 const RCC = microzig.chip.peripherals.RCC;
@@ -15,6 +15,9 @@ const PFIC = microzig.chip.peripherals.PFIC;
 const usart = hal.usart.instance.USART1;
 
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
+const func_pin = gpio.Pin.init(0, 10); // PA10
+const tog_pin = gpio.Pin.init(0, 14);
+const mco_pin = gpio.Pin.init(0, 8);
 
 pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
@@ -33,7 +36,7 @@ const USBController = usb.DeviceController(.{
     .product = .{ .id = 0x000A, .str = "ch32v307 Test Device" },
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = 512,
+    .max_supported_packet_size = 64,
     .configurations = &.{.{
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
@@ -43,29 +46,60 @@ const USBController = usb.DeviceController(.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});
 
-pub var usb_dev: hal.usbhs.Polled(
-    .{ .prefer_high_speed = true },
+pub var usb_dev: usbfs.Polled(
+    .{ .prefer_high_speed = false },
 ) = undefined;
 
 var usb_controller: USBController = .init;
 
-pub fn main() !void {
-    // Board brings up clocks and time
-    microzig.board.init();
-    microzig.hal.init();
+const pin_config = hal.pins.GlobalConfiguration{
+    .GPIOA = .{
+        .PIN10 = .{
+            .name = "func",
+            .mode = .{ .output = .general_purpose_push_pull },
+        },
+        .PIN14 = .{
+            .name = "tog",
+            .mode = .{ .output = .general_purpose_push_pull },
+        },
+    },
+};
+var pins: *hal.pins.Pins(pin_config) = undefined;
 
+pub fn main() !void {
     // Enable peripheral clocks for USART1 and GPIOA
     RCC.APB2PCENR.modify(.{
         .IOPAEN = 1, // Enable GPIOA clock
+        .IOPCEN = 1,
         .AFIOEN = 1, // Enable AFIO clock
         .USART1EN = 1, // Enable USART1 clock
     });
+    // Board brings up clocks and time
+    var p = pin_config.apply();
+    pins = &p;
+    func_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
+    tog_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
+    mco_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
+    // RCC.CFGR0.modify(.{ .MCO = 0b0100 });
+
+    func_pin.put(0);
+    tog_pin.put(0);
+
+    microzig.board.init();
+    microzig.hal.init();
+    // Enable peripheral clocks for USART1 and GPIOA
+    RCC.APB2PCENR.modify(.{
+        .IOPAEN = 1, // Enable GPIOA clock
+        .IOPCEN = 1,
+        .AFIOEN = 1, // Enable AFIO clock
+        .USART1EN = 1, // Enable USART1 clock
+    });
     // Configure TX pin as alternate function push-pull
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     // Initialize USART1 at 115200 baud
-    usart.apply(.{ .baud_rate = 115200 });
+    usart.apply(.{ .baud_rate = 921600 });
 
     hal.usart.init_logger(usart);
     std.log.info("UART logging initialized.", .{});
@@ -78,6 +112,16 @@ pub fn main() !void {
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
+    // const pin: gpio.Pin = .{ .number = 8, .port = 0 };
+
+    tog_pin.put(1);
+    time.delay_us(1000);
+    time.delay_us(1500);
+    tog_pin.put(1);
+    tog_pin.put(0);
+    tog_pin.put(1);
+    time.delay_us(1000);
+    tog_pin.put(0);
     while (true) {
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
@@ -95,7 +139,13 @@ pub fn main() !void {
                 usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
             }
         }
+        // pins.tog.toggle();
+        // pins.tog.toggle();
+        // tog_pin.put(1);
         usb_dev.poll(false, &usb_controller);
+        // tog_pin.put(0);
+        // pins.tog.toggle();
+        // pins.tog.toggle();
     }
 }
 
@@ -108,8 +158,11 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
-        while (!serial.flush())
+        while (!serial.flush()) {
+            // pins.tog.put(0);
             usb_dev.poll(false, &usb_controller);
+            // pins.tog.put(1);
+        }
     }
 }
 

@@ -7,6 +7,7 @@ pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
 const std = @import("std");
 pub const usbhs = @import("./usbhs.zig");
+pub const usbfs = @import("usbfs.zig");
 
 /// HSI (High Speed Internal) oscillator frequency
 /// This is the fixed internal RC oscillator frequency for CH32V30x
