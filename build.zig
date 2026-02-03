@@ -33,6 +33,7 @@ const port_list: []const struct {
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
+    .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
 };
 
 const exe_targets: []const std.Target.Query = &.{
@@ -87,6 +88,7 @@ pub const PortSelect = struct {
     stm32: bool = false,
     ch32v: bool = false,
     msp430: bool = false,
+    tm4c: bool = false,
 
     pub const all: PortSelect = blk: {
         var ret: PortSelect = undefined;
@@ -414,7 +416,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addFileArg(file);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
-                .embassy => |path| blk: {
+                .embassy => |embassy| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
                     regz_run.addArg("--format");
@@ -428,7 +430,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         regz_run.addFileArg(patch_file);
                     }
 
-                    regz_run.addDirectoryArg(path);
+                    if (embassy.device) |device| {
+                        regz_run.addArg("--device");
+                        regz_run.addArg(device);
+                    }
+
+                    regz_run.addDirectoryArg(embassy.path);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
                 .targetdb => |targetdb| blk: {

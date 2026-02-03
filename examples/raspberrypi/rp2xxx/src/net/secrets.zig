@@ -1,4 +1,4 @@
-const net = @import("lwip/net.zig");
+const net = @import("net");
 const microzig = @import("microzig");
 const JoinOptions = microzig.hal.drivers.WiFi.Chip.JoinOptions;
 

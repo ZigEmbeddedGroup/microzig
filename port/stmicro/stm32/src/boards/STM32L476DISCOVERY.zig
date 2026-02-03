@@ -201,7 +201,7 @@ pub const Lcd = struct {
     }
 };
 
-pub fn i2c1() hal.i2c.I2C_Device {
+pub fn i2c1() !hal.i2c.I2C_Device {
     _ = (hal.pins.GlobalConfiguration{
         .GPIOB = .{
             // I2C
@@ -214,7 +214,7 @@ pub fn i2c1() hal.i2c.I2C_Device {
         },
     }).apply();
 
-    return hal.i2c.I2C_Device.init(.I2C1);
+    return try hal.i2c.I2C_Device.init(.I2C1);
 }
 
 pub const uart_logger = hal.uart.UARTLogger(.USART2);

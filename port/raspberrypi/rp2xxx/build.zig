@@ -11,6 +11,7 @@ chips: struct {
 
 boards: struct {
     adafruit: struct {
+        feather_rp2350: *const microzig.Target,
         metro_rp2350: *const microzig.Target,
     },
     raspberrypi: struct {
@@ -118,6 +119,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zcb,
                 .zcmp,
                 .zbkb,
+                .zicsr,
                 .zifencei,
             }),
             .os_tag = .freestanding,
@@ -167,6 +169,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .boards = .{
             .adafruit = .{
+                .feather_rp2350 = chip_rp2350_arm.derive(.{
+                    .board = .{
+                        .name = "Adafruit Faether RP2350",
+                        .url = "https://www.adafruit.com/product/6000",
+                        .root_source_file = b.path("src/boards/adafruit_feather_rp2350.zig"),
+                    },
+                }),
                 .metro_rp2350 = chip_rp2350_arm.derive(.{
                     .board = .{
                         .name = "Adafruit Metro RP2350",

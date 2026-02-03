@@ -14,7 +14,8 @@ pub fn build(b: *std.Build) void {
     const stm32 = mb.ports.stm32;
 
     const available_examples = [_]Example{
-        .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
+        .{ .target = stm32.boards.stm32f303nucleo, .name = "STM32F303nucleo_Blinky", .file = "src/blinky.zig" },
+        .{ .target = stm32.boards.stm32f3discovery, .name = "STM32F3discovery", .file = "src/blinky.zig" },
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
         // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f429zit6u, .name = "stm32f429zit6u", .file = "src/blinky.zig" },
@@ -25,7 +26,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_Lcd", .file = "src/stm32l476/lcd.zig" },
         .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_Blinky", .file = "src/blinky.zig" },
         .{ .target = stm32.boards.stm32l476discovery, .name = "STM32L476Discovery_HTS221", .file = "src/hts221.zig" },
-
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_blink", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1xx_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_adc", .file = "src/stm32f1xx/adc.zig" },

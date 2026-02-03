@@ -16,14 +16,20 @@ pub fn build(b: *std.Build) void {
 
     const specific_examples: []const Example = &.{
         // RaspberryPi Boards:
+        .{ .target = raspberrypi.pico, .name = "pico_board_blinky", .file = "src/board_blinky.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_multicore", .file = "src/blinky_core1.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_board_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
 
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
@@ -38,6 +44,11 @@ pub fn build(b: *std.Build) void {
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
         .{ .target = raspberrypi.pico2_riscv, .name = "pico2_riscv_always_on_timer", .file = "src/rp2350_only/always_on_timer.zig" },
+
+        // Adafruit boards
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_multicore", .file = "src/blinky_core1.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.metro_rp2350, .name = "adafruit_metro_rp2350_blinky", .file = "src/board_blinky.zig" },
 
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040_matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
@@ -136,26 +147,40 @@ pub fn build(b: *std.Build) void {
             .imports = example.imports,
         });
 
+        // Import net module for some examples
         if (std.mem.indexOf(u8, example.name, "_net-") != null) {
-            const target = b.resolveTargetQuery(firmware.target.zig_target);
-            const foundation_dep = b.dependency("foundationlibc", .{
-                .target = target,
+            const net_dep = b.dependency("net", .{
+                .target = b.resolveTargetQuery(firmware.target.zig_target),
                 .optimize = optimize,
+                .mtu = 1500,
+                // Cyw43 driver requires 22 bytes of header and 4 bytes of footer.
+                // header + ethernet + mtu + footer = 22 + 14 + 1500 + 4 = 1540
+                .pbuf_length = 1540,
+                .pbuf_header_length = 22,
             });
-            const lwip_dep = b.dependency("lwip", .{
-                .target = target,
-                .optimize = optimize,
-            });
-            const lwip_mod = lwip_dep.module("lwip");
-            // link libc
-            lwip_mod.linkLibrary(foundation_dep.artifact("foundation"));
-            // add path to the configuration, lwipopts.h
-            lwip_mod.addIncludePath(b.path("src/net/lwip/include"));
-            // add c import paths
-            for (lwip_mod.include_dirs.items) |dir| {
-                firmware.app_mod.include_dirs.append(b.allocator, dir) catch @panic("out of memory");
+            const net_mod = net_dep.module("net");
+            firmware.app_mod.addImport("net", net_mod);
+        }
+
+        // Import freertos module for some examples, kind of a hack
+        // probably list of required modules should be specified in each example independently
+        if (std.mem.indexOf(u8, example.name, "_freertos-") != null) {
+            var port_name: []const u8 = "Unknown";
+
+            // FIXME: hacky way to select port based on target name (it doesn't take RP2350_RISCV into account)
+            if (std.mem.eql(u8, firmware.target.chip.name, "RP2040")) {
+                port_name = "RP2040";
+            } else {
+                port_name = "RP2350_ARM";
             }
-            firmware.app_mod.addImport("lwip", lwip_mod);
+
+            const freertos_dep = b.dependency("freertos", .{
+                .target = b.resolveTargetQuery(firmware.target.zig_target),
+                .optimize = optimize,
+                .port_name = port_name,
+            });
+            const freertos_mod = freertos_dep.module("freertos");
+            firmware.app_mod.addImport("freertos", freertos_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`

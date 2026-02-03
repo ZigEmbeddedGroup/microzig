@@ -76,7 +76,7 @@ fn init() !void {
     i2c0.apply(i2c.Config{ .clock_config = rp2xxx.clock_config });
 
     rp2xxx.uart.init_logger(uart);
-    pin_config.apply();
+    _ = pin_config.apply();
 
     std.log.info("Hello from mlx90640", .{});
 

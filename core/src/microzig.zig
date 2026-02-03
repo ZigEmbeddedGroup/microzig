@@ -116,4 +116,5 @@ pub fn hang() noreturn {
 
 test {
     _ = utilities;
+    _ = Allocator;
 }

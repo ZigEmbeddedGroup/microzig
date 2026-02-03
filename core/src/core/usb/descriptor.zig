@@ -3,11 +3,9 @@ const types = @import("types.zig");
 const assert = std.debug.assert;
 
 pub const cdc = @import("descriptor/cdc.zig");
-pub const hid = @import("descriptor/hid.zig");
 
 test "descriptor tests" {
     _ = cdc;
-    _ = hid;
 }
 
 pub const Type = enum(u8) {
@@ -17,7 +15,8 @@ pub const Type = enum(u8) {
     Interface = 0x04,
     Endpoint = 0x05,
     DeviceQualifier = 0x06,
-    InterfaceAssociation = 0x0b,
+    InterfaceAssociation = 0x0B,
+    BOS = 0x0F,
     CsDevice = 0x21,
     CsConfig = 0x22,
     CsString = 0x23,
@@ -29,22 +28,6 @@ pub const Type = enum(u8) {
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
 pub const Device = extern struct {
-    /// Class, subclass and protocol of device.
-    pub const DeviceTriple = extern struct {
-        /// Class of device, giving a broad functional area.
-        class: types.ClassCode,
-        /// Subclass of device, refining the class.
-        subclass: u8,
-        /// Protocol within the subclass.
-        protocol: u8,
-
-        pub const unspecified: @This() = .{
-            .class = .Unspecified,
-            .subclass = 0,
-            .protocol = 0,
-        };
-    };
-
     /// USB Device Qualifier Descriptor
     /// This descriptor is a subset of the DeviceDescriptor
     pub const Qualifier = extern struct {
@@ -57,9 +40,9 @@ pub const Device = extern struct {
         /// Type of this descriptor, must be `DeviceQualifier`.
         descriptor_type: Type = .DeviceQualifier,
         /// Specification version as Binary Coded Decimal
-        bcd_usb: types.U16Le,
+        bcd_usb: types.Version,
         /// Class, subclass and protocol of device.
-        device_triple: DeviceTriple,
+        device_triple: types.ClassSubclassProtocol,
         /// Maximum unit of data this device can move.
         max_packet_size0: u8,
         /// Number of configurations supported by this device.
@@ -77,17 +60,17 @@ pub const Device = extern struct {
     /// Type of this descriptor, must be `Device`.
     descriptor_type: Type = .Device,
     /// Specification version as Binary Coded Decimal
-    bcd_usb: types.U16Le,
+    bcd_usb: types.Version,
     /// Class, subclass and protocol of device.
-    device_triple: DeviceTriple,
+    device_triple: types.ClassSubclassProtocol,
     /// Maximum length of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
-    vendor: types.U16Le,
+    vendor: types.U16_Le,
     /// ID of product.
-    product: types.U16Le,
+    product: types.U16_Le,
     /// Device version number as Binary Coded Decimal.
-    bcd_device: types.U16Le,
+    bcd_device: types.Version,
     /// Index of manufacturer name in string descriptor table.
     manufacturer_s: u8,
     /// Index of product name in string descriptor table.
@@ -144,7 +127,7 @@ pub const Configuration = extern struct {
     /// Total length of all descriptors in this configuration, concatenated.
     /// This will include this descriptor, plus at least one interface
     /// descriptor, plus each interface descriptor's endpoint descriptors.
-    total_length: types.U16Le,
+    total_length: types.U16_Le,
     /// Number of interface descriptors in this configuration.
     num_interfaces: u8,
     /// Number to use when requesting this configuration via a
@@ -167,13 +150,13 @@ pub const String = struct {
 
     data: []const u8,
 
-    pub fn from_lang(lang: Language) @This() {
+    pub fn from_lang(comptime lang: Language) @This() {
         const ret: *const extern struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .String,
-            lang: types.U16Le,
+            lang: types.U16_Le,
         } = comptime &.{ .lang = .from(@intFromEnum(lang)) };
-        return .{ .data = @ptrCast(ret) };
+        return .{ .data = std.mem.asBytes(ret) };
     }
 
     pub fn from_str(comptime string: []const u8) @This() {
@@ -221,10 +204,37 @@ pub const Endpoint = extern struct {
     /// control the transfer type using the values from `TransferType`.
     attributes: Attributes,
     /// Maximum packet size this endpoint can accept/produce.
-    max_packet_size: types.U16Le,
+    max_packet_size: types.U16_Le,
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
+
+    pub fn control(ep: types.Endpoint, max_packet_size: types.Len) @This() {
+        return .{
+            .endpoint = ep,
+            .attributes = .{ .transfer_type = .Control, .usage = .data },
+            .max_packet_size = .from(max_packet_size),
+            .interval = 0, // Unused for bulk endpoints
+        };
+    }
+
+    pub fn bulk(ep: types.Endpoint, max_packet_size: types.Len) @This() {
+        return .{
+            .endpoint = ep,
+            .attributes = .{ .transfer_type = .Bulk, .usage = .data },
+            .max_packet_size = .from(max_packet_size),
+            .interval = 0, // Unused for bulk endpoints
+        };
+    }
+
+    pub fn interrupt(ep: types.Endpoint, max_packet_size: types.Len, poll_interval: u8) @This() {
+        return .{
+            .endpoint = ep,
+            .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
+            .max_packet_size = .from(max_packet_size),
+            .interval = poll_interval,
+        };
+    }
 };
 
 /// Description of an interface within a configuration.
@@ -245,12 +255,8 @@ pub const Interface = extern struct {
     alternate_setting: u8,
     /// Number of endpoint descriptors in this interface.
     num_endpoints: u8,
-    /// Interface class code, distinguishing the type of interface.
-    interface_class: u8,
-    /// Interface subclass code, refining the class of interface.
-    interface_subclass: u8,
-    /// Protocol within the interface class/subclass.
-    interface_protocol: u8,
+    /// Interface class, subclass and protocol.
+    interface_triple: types.ClassSubclassProtocol,
     /// Index of interface name within string descriptor table.
     interface_s: u8,
 };
@@ -279,4 +285,95 @@ pub const InterfaceAssociation = extern struct {
     function_protocol: u8,
     // Index of the string descriptor describing the associated interfaces.
     function: u8,
+};
+
+pub const BOS = struct {
+    pub const Object = union(enum) {};
+
+    data: []const u8,
+
+    pub fn from(comptime objects: []const Object) @This() {
+        const data: []const u8 = "";
+        const header: []const u8 = std.mem.asBytes(&extern struct {
+            length: u8 = @sizeOf(@This()),
+            descriptor_type: Type = .BOS,
+            total_length: types.U16_Le = .from(@sizeOf(@This()) + data.len),
+            num_descriptors: u8 = @intCast(objects.len),
+        }{});
+        return .{ .data = header ++ data };
+    }
+};
+
+// Class-specific descriptors
+
+/// USB HID descriptor
+pub const HID = extern struct {
+    /// HID country codes
+    pub const CountryCode = enum(u8) {
+        NotSupported = 0,
+        Arabic,
+        Belgian,
+        CanadianBilingual,
+        CanadianFrench,
+        CzechRepublic,
+        Danish,
+        Finnish,
+        French,
+        German,
+        Greek,
+        Hebrew,
+        Hungary,
+        International,
+        Italian,
+        JapanKatakana,
+        Korean,
+        LatinAmerica,
+        NetherlandsDutch,
+        Norwegian,
+        PersianFarsi,
+        Poland,
+        Portuguese,
+        Russia,
+        Slovakia,
+        Spanish,
+        Swedish,
+        SwissFrench,
+        SwissGerman,
+        Switzerland,
+        Taiwan,
+        TurkishQ,
+        Uk,
+        Us,
+        Yugoslavia,
+        TurkishF,
+        _,
+    };
+
+    /// Class-specific descriptor type
+    pub const CsType = enum(u8) {
+        HID = 0x21,
+        Report = 0x22,
+        Physical = 0x23,
+        _,
+    };
+
+    comptime {
+        assert(@alignOf(@This()) == 1);
+        assert(@sizeOf(@This()) == 9);
+    }
+
+    length: u8 = @sizeOf(@This()),
+    /// Type of this descriptor
+    descriptor_type: Type = .CsDevice,
+    /// Numeric expression identifying the HID Class Specification release
+    /// 1.11 seems to be the only one
+    bcd_hid: types.Version = .v1_11,
+    /// Numeric expression identifying country code of the localized hardware
+    country_code: CountryCode,
+    /// Numeric expression specifying the number of class descriptors
+    num_descriptors: u8,
+    /// Type of HID class report
+    report_type: CsType = .Report,
+    /// The total size of the Report descriptor
+    report_length: types.U16_Le,
 };

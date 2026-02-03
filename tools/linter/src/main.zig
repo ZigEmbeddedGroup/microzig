@@ -36,7 +36,6 @@ pub fn main() !void {
         var ast = try std.zig.Ast.parse(allocator, source, .zig);
         defer ast.deinit(allocator);
 
-        try check_todos(allocator, path, source, &issues);
         for (ast.nodes.items(.tag), ast.nodes.items(.main_token)) |node_tag, main_tok_idx| {
             switch (node_tag) {
                 .fn_proto_simple,

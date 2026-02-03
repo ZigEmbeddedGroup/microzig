@@ -28,8 +28,6 @@ const pin_config = hal.pins.GlobalConfiguration{
     },
 };
 
-const pins = pin_config.pins();
-
 // ---- UART Configuration --------------------------------
 
 const baud_rate = 115200;
@@ -46,7 +44,7 @@ pub fn main() !void {
 
     // --- Set up GPIO -------------------------------
 
-    pin_config.apply();
+    _ = pin_config.apply();
 
     // --- Set up UART -------------------------------
 
@@ -73,7 +71,7 @@ pub fn main() !void {
     const Allocator = microzig.Allocator;
 
     // Create an instance of that type.
-    var heap_allocator = Allocator.init_with_heap(1024);
+    var heap_allocator = try Allocator.init_with_heap(1024);
 
     // Get an std.mem.Allocator from the heap allocator.
     const allocator = heap_allocator.allocator();

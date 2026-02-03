@@ -1425,7 +1425,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C011D6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C011D6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1450,7 +1453,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C011F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C011F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1475,7 +1481,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C011F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C011F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1500,7 +1509,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C011J4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C011J4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1525,7 +1537,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C011J6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C011J6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1550,7 +1565,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1575,7 +1593,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1600,7 +1621,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1625,7 +1649,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1650,7 +1677,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1675,7 +1705,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1700,7 +1733,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1725,7 +1761,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32C031K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32C031K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1750,7 +1789,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1775,7 +1817,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -1800,7 +1845,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -1825,7 +1873,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1850,7 +1901,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1875,7 +1929,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -1900,7 +1957,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F030RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F030RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -1925,7 +1985,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -1950,7 +2013,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -1975,7 +2041,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031E6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031E6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2000,7 +2069,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2025,7 +2097,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2050,7 +2125,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2075,7 +2153,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2100,7 +2181,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2125,7 +2209,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F031K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F031K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2150,7 +2237,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F038C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F038C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2175,7 +2265,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F038E6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F038E6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2200,7 +2293,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F038F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F038F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2225,7 +2321,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F038G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F038G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2250,7 +2349,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F038K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F038K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2275,7 +2377,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2300,7 +2405,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2325,7 +2433,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2350,7 +2461,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2375,7 +2489,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2400,7 +2517,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2425,7 +2545,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2450,7 +2573,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2475,7 +2601,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F042T6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F042T6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2500,7 +2629,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F048C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F048C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2525,7 +2657,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F048G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F048G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2550,7 +2685,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F048T6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F048T6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2575,7 +2713,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2600,7 +2741,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2625,7 +2769,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2650,7 +2797,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2675,7 +2825,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2700,7 +2853,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2725,7 +2881,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051R4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051R4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -2750,7 +2909,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2775,7 +2937,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2800,7 +2965,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F051T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F051T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2825,7 +2993,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F058C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F058C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2850,7 +3021,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F058R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F058R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2875,7 +3049,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F058T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F058T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -2900,7 +3077,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F070C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F070C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2925,7 +3105,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F070CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F070CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -2950,7 +3133,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F070F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F070F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -2975,7 +3161,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F070RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F070RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3000,7 +3189,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F071C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F071C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3025,7 +3217,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F071CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F071CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3050,7 +3245,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F071RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F071RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3075,7 +3273,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F071V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F071V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3100,7 +3301,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F071VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F071VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3125,7 +3329,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F072C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F072C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3150,7 +3357,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F072CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F072CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3175,7 +3385,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F072R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F072R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3200,7 +3413,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F072RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F072RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3225,7 +3441,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F072V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F072V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3250,7 +3469,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F072VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F072VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3275,7 +3497,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F078CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F078CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3300,7 +3525,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F078RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F078RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3325,7 +3553,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F078VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F078VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3350,7 +3581,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F091CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F091CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3375,7 +3609,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F091CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F091CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3400,7 +3637,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F091RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F091RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3425,7 +3665,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F091RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F091RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3450,7 +3693,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F091VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F091VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3475,7 +3721,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F091VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F091VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3500,7 +3749,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F098CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F098CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3525,7 +3777,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F098RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F098RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3550,7 +3805,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F098VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F098VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3575,7 +3833,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -3600,7 +3861,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -3625,7 +3889,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3650,7 +3917,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3675,7 +3945,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100R4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100R4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -3700,7 +3973,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -3725,7 +4001,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3750,7 +4029,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3775,7 +4057,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3800,7 +4085,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -3825,7 +4113,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -3850,7 +4141,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -3875,7 +4169,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -3900,7 +4197,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -3925,7 +4225,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -3950,7 +4253,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -3975,7 +4281,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -4000,7 +4309,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -4025,7 +4337,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F100ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F100ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4050,7 +4365,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -4075,7 +4393,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -4100,7 +4421,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -4125,7 +4449,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -4150,7 +4477,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101R4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101R4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -4175,7 +4505,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -4200,7 +4533,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -4225,7 +4561,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -4250,7 +4589,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -4275,7 +4617,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -4300,7 +4645,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4325,7 +4673,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101RF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101RF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4351,7 +4702,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4377,7 +4731,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101T4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101T4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -4402,7 +4759,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101T6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101T6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -4427,7 +4787,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -4452,7 +4815,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101TB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101TB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -4477,7 +4843,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -4502,7 +4871,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -4527,7 +4899,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -4552,7 +4927,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -4577,7 +4955,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4602,7 +4983,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101VF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101VF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4628,7 +5012,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4654,7 +5041,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -4679,7 +5069,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -4704,7 +5097,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4729,7 +5125,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101ZF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101ZF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4755,7 +5154,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F101ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F101ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -4781,7 +5183,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -4806,7 +5211,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -4831,7 +5239,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -4856,7 +5267,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -4881,7 +5295,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102R4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102R4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -4906,7 +5323,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -4931,7 +5351,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -4956,7 +5379,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F102RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F102RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -4981,7 +5407,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -5010,7 +5439,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -5039,7 +5471,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -5068,7 +5503,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -5097,7 +5535,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103R4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103R4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -5126,7 +5567,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -5155,7 +5599,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -5184,7 +5631,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -5213,7 +5663,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -5242,7 +5695,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -5271,7 +5727,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5300,7 +5759,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103RF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103RF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5330,7 +5792,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5360,7 +5825,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103T4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103T4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -5389,7 +5857,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103T6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103T6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -5418,7 +5889,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -5447,7 +5921,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103TB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103TB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -5476,7 +5953,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -5505,7 +5985,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -5534,7 +6017,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -5563,7 +6049,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -5592,7 +6081,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5621,7 +6113,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103VF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103VF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5651,7 +6146,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5681,7 +6179,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -5710,7 +6211,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -5739,7 +6243,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5768,7 +6275,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103ZF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103ZF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5798,7 +6308,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F103ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F103ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -5828,7 +6341,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F105R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F105R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -5853,7 +6369,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F105RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F105RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -5878,7 +6397,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F105RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F105RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -5903,7 +6425,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F105V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F105V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -5928,7 +6453,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F105VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F105VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -5953,7 +6481,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F105VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F105VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -5978,7 +6509,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F107RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F107RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -6003,7 +6537,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F107RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F107RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6028,7 +6565,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F107VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F107VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -6053,7 +6593,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F107VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F107VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6078,7 +6621,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -6104,7 +6650,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6130,7 +6679,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6156,7 +6708,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205RF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205RF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xC0000, .access = .rx },
@@ -6182,7 +6737,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6208,7 +6766,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -6234,7 +6795,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6260,7 +6824,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6286,7 +6853,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205VF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205VF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xC0000, .access = .rx },
@@ -6312,7 +6882,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6338,7 +6911,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6364,7 +6940,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6390,7 +6969,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205ZF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205ZF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xC0000, .access = .rx },
@@ -6416,7 +6998,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F205ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F205ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6442,7 +7027,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207IC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207IC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6468,7 +7056,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6494,7 +7085,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207IF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207IF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xC0000, .access = .rx },
@@ -6520,7 +7114,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6546,7 +7143,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6572,7 +7172,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6598,7 +7201,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207VF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207VF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xC0000, .access = .rx },
@@ -6624,7 +7230,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6650,7 +7259,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -6676,7 +7288,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6702,7 +7317,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207ZF",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207ZF",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xC0000, .access = .rx },
@@ -6728,7 +7346,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F207ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F207ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6754,7 +7375,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F215RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F215RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6780,7 +7404,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F215RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F215RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6806,7 +7433,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F215VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F215VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6832,7 +7462,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F215VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F215VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6858,7 +7491,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F215ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F215ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6884,7 +7520,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F215ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F215ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6910,7 +7549,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F217IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F217IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6936,7 +7578,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F217IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F217IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -6962,7 +7607,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F217VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F217VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -6988,7 +7636,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F217VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F217VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -7014,7 +7665,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F217ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F217ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -7040,7 +7694,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F217ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F217ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -7067,7 +7724,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F301C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F301C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7093,7 +7753,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F301C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F301C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7119,7 +7782,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F301K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F301K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7145,7 +7811,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F301K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F301K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7171,7 +7840,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F301R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F301R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7197,7 +7869,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F301R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F301R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7223,7 +7898,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7249,7 +7927,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7275,7 +7956,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -7301,7 +7985,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -7327,7 +8014,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7353,7 +8043,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7379,7 +8072,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7405,7 +8101,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7431,7 +8130,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -7457,7 +8159,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -7483,7 +8188,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -7509,7 +8217,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -7535,7 +8246,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -7561,7 +8275,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -7587,7 +8304,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -7613,7 +8333,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -7639,7 +8362,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -7665,7 +8391,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F302ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F302ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -7691,7 +8420,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7718,7 +8450,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7745,7 +8480,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -7772,7 +8510,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -7799,7 +8540,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7826,7 +8570,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7853,7 +8600,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -7880,7 +8630,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -7907,7 +8660,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -7934,7 +8690,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -7961,7 +8720,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -7988,7 +8750,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -8015,7 +8780,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -8042,7 +8810,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8069,7 +8840,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -8096,7 +8870,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -8123,7 +8900,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -8150,7 +8930,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F303ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F303ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -8177,7 +8960,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F318C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F318C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8203,7 +8989,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F318K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F318K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8229,7 +9018,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F328C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F328C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8256,7 +9048,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -8283,7 +9078,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -8310,7 +9108,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8337,7 +9138,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -8364,7 +9168,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -8391,7 +9198,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8418,7 +9228,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -8445,7 +9258,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F334R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F334R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8472,7 +9288,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F358CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F358CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8499,7 +9318,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F358RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F358RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8526,7 +9348,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F358VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F358VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8553,7 +9378,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8579,7 +9407,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -8605,7 +9436,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8631,7 +9465,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8657,7 +9494,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -8683,7 +9523,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8709,7 +9552,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -8735,7 +9581,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -8761,7 +9610,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F373VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F373VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8787,7 +9639,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F378CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F378CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8813,7 +9668,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F378RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F378RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8839,7 +9697,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F378VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F378VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8865,7 +9726,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F398VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F398VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -8892,7 +9756,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -8918,7 +9785,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -8944,7 +9814,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401CD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401CD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -8970,7 +9843,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -8996,7 +9872,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -9022,7 +9901,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -9048,7 +9930,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -9074,7 +9959,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9100,7 +9988,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -9126,7 +10017,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -9152,7 +10046,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x60000, .access = .rx },
@@ -9178,7 +10075,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F401VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F401VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9204,7 +10104,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F405OE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F405OE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9232,7 +10135,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F405OG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F405OG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9260,7 +10166,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F405RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F405RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9288,7 +10197,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F405VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F405VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9316,7 +10228,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F405ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F405ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9344,7 +10259,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F407IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F407IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9372,7 +10290,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F407IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F407IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9400,7 +10321,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F407VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F407VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9428,7 +10352,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F407VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F407VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9456,7 +10383,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F407ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F407ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9484,7 +10414,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F407ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F407ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9512,7 +10445,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F410C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F410C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -9538,7 +10474,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F410CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F410CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -9564,7 +10503,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F410R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F410R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -9590,7 +10532,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F410RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F410RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -9616,7 +10561,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F410T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F410T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -9642,7 +10590,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F410TB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F410TB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -9668,7 +10619,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F411CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F411CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -9694,7 +10648,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F411CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F411CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9720,7 +10677,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F411RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F411RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -9746,7 +10706,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F411RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F411RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9772,7 +10735,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F411VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F411VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -9798,7 +10764,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F411VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F411VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9824,7 +10793,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9850,7 +10822,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9876,7 +10851,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9902,7 +10880,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9928,7 +10909,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -9954,7 +10938,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -9980,7 +10967,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -10006,7 +10996,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F412ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F412ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10032,7 +11025,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10058,7 +11054,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413CH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413CH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10084,7 +11083,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413MG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413MG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10110,7 +11112,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413MH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413MH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10136,7 +11141,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10162,7 +11170,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413RH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413RH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10188,7 +11199,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10214,7 +11228,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413VH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413VH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10240,7 +11257,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10266,7 +11286,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F413ZH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F413ZH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10292,7 +11315,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F415OG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F415OG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10319,7 +11345,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F415RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F415RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10346,7 +11375,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F415VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F415VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10373,7 +11405,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F415ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F415ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10400,7 +11435,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F417IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F417IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -10427,7 +11465,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F417IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F417IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10454,7 +11495,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F417VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F417VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -10481,7 +11525,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F417VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F417VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10508,7 +11555,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F417ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F417ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -10535,7 +11585,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F417ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F417ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10562,7 +11615,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F423CH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F423CH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10588,7 +11644,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F423MH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F423MH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10614,7 +11673,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F423RH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F423RH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10640,7 +11702,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F423VH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F423VH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10666,7 +11731,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F423ZH",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F423ZH",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x180000, .access = .rx },
@@ -10692,7 +11760,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10719,7 +11790,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10748,7 +11822,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10775,7 +11852,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10804,7 +11884,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10831,7 +11914,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10860,7 +11946,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10887,7 +11976,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F427ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F427ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10916,7 +12008,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10943,7 +12038,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -10972,7 +12070,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429BE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429BE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -10999,7 +12100,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11026,7 +12130,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11055,7 +12162,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -11082,7 +12192,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11109,7 +12222,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11138,7 +12254,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -11165,7 +12284,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11192,7 +12314,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11221,7 +12346,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -11248,7 +12376,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11275,7 +12406,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11304,7 +12438,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -11331,7 +12468,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11358,7 +12498,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F429ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F429ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11387,7 +12530,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11416,7 +12562,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11443,7 +12592,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11472,7 +12624,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11499,7 +12654,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11528,7 +12686,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11555,7 +12716,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F437ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F437ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11584,7 +12748,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11613,7 +12780,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11640,7 +12810,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11669,7 +12842,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11696,7 +12872,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11725,7 +12904,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11752,7 +12934,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11781,7 +12966,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11808,7 +12996,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11837,7 +13028,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11864,7 +13058,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F439ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F439ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -11893,7 +13090,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -11919,7 +13119,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -11945,7 +13148,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -11971,7 +13177,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -11997,7 +13206,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -12023,7 +13235,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12049,7 +13264,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -12075,7 +13293,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F446ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F446ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12101,7 +13322,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469AE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469AE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12128,7 +13352,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12155,7 +13382,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12184,7 +13414,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469BE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469BE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12211,7 +13444,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12238,7 +13474,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12267,7 +13506,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12294,7 +13536,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12321,7 +13566,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12350,7 +13598,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12377,7 +13628,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12404,7 +13658,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12433,7 +13690,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12460,7 +13720,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12487,7 +13750,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12516,7 +13782,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12543,7 +13812,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12570,7 +13842,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F469ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F469ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12599,7 +13874,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12626,7 +13904,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12655,7 +13936,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12682,7 +13966,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12711,7 +13998,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12738,7 +14028,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12767,7 +14060,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12794,7 +14090,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12823,7 +14122,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12850,7 +14152,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12879,7 +14184,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12906,7 +14214,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F479ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F479ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -12935,7 +14246,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722IC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722IC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -12962,7 +14276,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -12989,7 +14306,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -13016,7 +14336,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13043,7 +14366,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -13070,7 +14396,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13097,7 +14426,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -13124,7 +14456,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F722ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F722ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13151,7 +14486,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F723IC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F723IC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -13178,7 +14516,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F723IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F723IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13205,7 +14546,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F723VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F723VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -13232,7 +14576,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F723VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F723VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13259,7 +14606,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F723ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F723ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -13286,7 +14636,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F723ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F723ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13313,7 +14666,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F730I8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F730I8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -13340,7 +14696,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F730R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F730R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -13367,7 +14726,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F730V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F730V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -13394,7 +14756,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F730Z8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F730Z8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -13421,7 +14786,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F732IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F732IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13448,7 +14816,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F732RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F732RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13475,7 +14846,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F732VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F732VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13502,7 +14876,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F732ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F732ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13529,7 +14906,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F733IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F733IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13556,7 +14936,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F733VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F733VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13583,7 +14966,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F733ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F733ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13610,7 +14996,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F745IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F745IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13637,7 +15026,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F745IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F745IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13664,7 +15056,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F745VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F745VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13691,7 +15086,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F745VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F745VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13718,7 +15116,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F745ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F745ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13745,7 +15146,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F745ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F745ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13772,7 +15176,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746BE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746BE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13799,7 +15206,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13826,7 +15236,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13853,7 +15266,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13880,7 +15296,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13907,7 +15326,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13934,7 +15356,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -13961,7 +15386,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -13988,7 +15416,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -14015,7 +15446,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F746ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F746ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14042,7 +15476,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F750N8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F750N8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -14069,7 +15506,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F750V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F750V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -14096,7 +15536,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F750Z8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F750Z8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -14123,7 +15566,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F756BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F756BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14150,7 +15596,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F756IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F756IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14177,7 +15626,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F756NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F756NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14204,7 +15656,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F756VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F756VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14231,7 +15686,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F756ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F756ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14258,7 +15716,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14285,7 +15746,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14312,7 +15776,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14339,7 +15806,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14366,7 +15836,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14393,7 +15866,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14420,7 +15896,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14447,7 +15926,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14474,7 +15956,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14501,7 +15986,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F765ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F765ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14528,7 +16016,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14555,7 +16046,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14582,7 +16076,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14609,7 +16106,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14636,7 +16136,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14663,7 +16166,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14690,7 +16196,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14717,7 +16226,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14744,7 +16256,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14771,7 +16286,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F767ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F767ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14798,7 +16316,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F768AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F768AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14825,7 +16346,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14852,7 +16376,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14879,7 +16406,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14906,7 +16436,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14933,7 +16466,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -14960,7 +16496,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -14987,7 +16526,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -15014,7 +16556,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F769NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F769NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15041,7 +16586,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F777BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F777BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15068,7 +16616,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F777II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F777II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15095,7 +16646,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F777NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F777NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15122,7 +16676,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F777VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F777VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15149,7 +16706,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F777ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F777ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15176,7 +16736,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F778AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F778AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15203,7 +16766,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F779AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F779AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15230,7 +16796,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F779BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F779BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15257,7 +16826,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F779II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F779II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15284,7 +16856,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32F779NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32F779NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -15310,7 +16885,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G030C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G030C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15335,7 +16913,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G030C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G030C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15360,7 +16941,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G030F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G030F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15385,7 +16969,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G030J6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G030J6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15410,7 +16997,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G030K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G030K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15435,7 +17025,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G030K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G030K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15460,7 +17053,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -15485,7 +17081,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15510,7 +17109,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15535,7 +17137,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -15560,7 +17165,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15585,7 +17193,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031F8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031F8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15610,7 +17221,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -15635,7 +17249,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15660,7 +17277,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031G8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031G8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15685,7 +17305,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031J4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031J4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -15710,7 +17333,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031J6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031J6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15735,7 +17361,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -15760,7 +17389,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15785,7 +17417,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15810,7 +17445,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G031Y8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G031Y8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15835,7 +17473,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15860,7 +17501,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15885,7 +17529,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15910,7 +17557,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041F8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041F8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15935,7 +17585,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -15960,7 +17613,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041G8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041G8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -15985,7 +17641,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041J6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041J6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16010,7 +17669,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16035,7 +17697,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16060,7 +17725,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G041Y8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G041Y8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16085,7 +17753,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G050C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G050C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16110,7 +17781,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G050C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G050C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16135,7 +17809,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G050F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G050F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16160,7 +17837,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G050K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G050K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16185,7 +17865,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G050K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G050K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16210,7 +17893,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16235,7 +17921,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16260,7 +17949,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16285,7 +17977,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051F8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051F8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16310,7 +18005,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16335,7 +18033,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051G8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051G8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16360,7 +18061,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16385,7 +18089,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G051K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G051K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16410,7 +18117,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16435,7 +18145,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16460,7 +18173,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16485,7 +18201,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061F8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061F8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16510,7 +18229,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16535,7 +18257,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061G8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061G8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16560,7 +18285,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16585,7 +18313,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G061K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G061K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16610,7 +18341,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G070CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G070CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16635,7 +18369,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G070KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G070KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16660,7 +18397,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G070RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G070RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16685,7 +18425,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16710,7 +18453,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16735,7 +18481,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16760,7 +18509,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071EB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071EB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16785,7 +18537,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16810,7 +18565,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071G8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071G8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16835,7 +18593,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071GB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071GB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16860,7 +18621,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16885,7 +18649,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16910,7 +18677,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -16935,7 +18705,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -16960,7 +18733,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -16985,7 +18761,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G071RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G071RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17010,7 +18789,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G081CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G081CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17035,7 +18817,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G081EB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G081EB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17060,7 +18845,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G081GB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G081GB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17085,7 +18873,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G081KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G081KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17110,7 +18901,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G081RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G081RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17135,7 +18929,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B0CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B0CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17161,7 +18958,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B0KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B0KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17187,7 +18987,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B0RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B0RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17213,7 +19016,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B0VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B0VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17239,7 +19045,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17264,7 +19073,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17289,7 +19101,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17315,7 +19130,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17340,7 +19158,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17365,7 +19186,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17391,7 +19215,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1MB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1MB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17416,7 +19243,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17441,7 +19271,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17467,7 +19300,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17493,7 +19329,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17518,7 +19357,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17543,7 +19385,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17569,7 +19414,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -17594,7 +19442,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17619,7 +19470,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0B1VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0B1VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17645,7 +19499,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17670,7 +19527,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17696,7 +19556,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17721,7 +19584,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17747,7 +19613,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17772,7 +19641,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17798,7 +19670,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17824,7 +19699,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17849,7 +19727,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17875,7 +19756,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17900,7 +19784,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G0C1VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G0C1VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -17927,7 +19814,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -17953,7 +19843,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -17979,7 +19872,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18005,7 +19901,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -18031,7 +19930,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -18057,7 +19959,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18083,7 +19988,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431M6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431M6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -18109,7 +20017,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431M8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431M8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -18135,7 +20046,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431MB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431MB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18161,7 +20075,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -18187,7 +20104,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -18213,7 +20133,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18239,7 +20162,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431V6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431V6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -18265,7 +20191,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -18291,7 +20220,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G431VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G431VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18317,7 +20249,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G441CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G441CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18343,7 +20278,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G441KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G441KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18369,7 +20307,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G441MB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G441MB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18395,7 +20336,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G441RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G441RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18421,7 +20365,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G441VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G441VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18447,7 +20394,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18473,7 +20423,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18499,7 +20452,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18525,7 +20481,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18551,7 +20510,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18577,7 +20539,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18603,7 +20568,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18629,7 +20597,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18655,7 +20626,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18681,7 +20655,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G471VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G471VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18707,7 +20684,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18733,7 +20713,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18759,7 +20742,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18785,7 +20771,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473MB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473MB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18811,7 +20800,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18837,7 +20829,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18863,7 +20858,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473PB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473PB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18889,7 +20887,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473PC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473PC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18915,7 +20916,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473PE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473PE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -18941,7 +20945,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473QB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473QB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -18967,7 +20974,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -18993,7 +21003,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19019,7 +21032,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19045,7 +21061,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19071,7 +21090,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19097,7 +21119,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19123,7 +21148,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19149,7 +21177,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G473VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G473VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19175,7 +21206,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19201,7 +21235,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19227,7 +21264,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19253,7 +21293,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474MB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474MB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19279,7 +21322,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19305,7 +21351,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19331,7 +21380,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474PB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474PB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19357,7 +21409,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474PC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474PC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19383,7 +21438,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474PE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474PE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19409,7 +21467,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474QB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474QB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19435,7 +21496,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19461,7 +21525,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19487,7 +21554,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19513,7 +21583,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19539,7 +21612,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19565,7 +21641,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -19591,7 +21670,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19617,7 +21699,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G474VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G474VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19643,7 +21728,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G483CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G483CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19669,7 +21757,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G483ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G483ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19695,7 +21786,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G483PE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G483PE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19721,7 +21815,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G483QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G483QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19747,7 +21844,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G483RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G483RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19773,7 +21873,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G483VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G483VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19799,7 +21902,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G484CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G484CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19825,7 +21931,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G484ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G484ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19851,7 +21960,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G484PE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G484PE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19877,7 +21989,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G484QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G484QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19903,7 +22018,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G484RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G484RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19929,7 +22047,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G484VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G484VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -19955,7 +22076,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -19981,7 +22105,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20007,7 +22134,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20033,7 +22163,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20059,7 +22192,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20085,7 +22221,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20111,7 +22250,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20137,7 +22279,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20163,7 +22308,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20189,7 +22337,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G491VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G491VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20215,7 +22366,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G4A1CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G4A1CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20241,7 +22395,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G4A1KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G4A1KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20267,7 +22424,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G4A1ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G4A1ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20293,7 +22453,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G4A1RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G4A1RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20319,7 +22482,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32G4A1VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32G4A1VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20345,7 +22511,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H503CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H503CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -20370,7 +22539,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H503EB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H503EB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -20395,7 +22567,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H503KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H503KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -20420,7 +22595,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H503RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H503RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -20445,7 +22623,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -20471,7 +22652,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20497,7 +22681,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523HE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523HE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20523,7 +22710,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -20549,7 +22739,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20575,7 +22768,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -20601,7 +22797,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20627,7 +22826,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -20653,7 +22855,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H523ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H523ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20679,7 +22884,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H533CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H533CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20705,7 +22913,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H533HE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H533HE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20731,7 +22942,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H533RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H533RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20757,7 +22971,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H533VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H533VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20783,7 +23000,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H533ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H533ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -20809,7 +23029,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20835,7 +23058,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -20861,7 +23087,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20887,7 +23116,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -20913,7 +23145,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20939,7 +23174,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -20965,7 +23203,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -20991,7 +23232,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21017,7 +23261,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -21043,7 +23290,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H562ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H562ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21069,7 +23319,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -21095,7 +23348,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21121,7 +23377,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -21147,7 +23406,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21173,7 +23435,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563MI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563MI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21199,7 +23464,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -21225,7 +23493,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21251,7 +23522,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -21277,7 +23551,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21303,7 +23580,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -21329,7 +23609,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H563ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H563ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21355,7 +23638,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H573AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H573AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21381,7 +23667,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H573II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H573II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21407,7 +23696,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H573MI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H573MI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21433,7 +23725,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H573RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H573RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21459,7 +23754,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H573VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H573VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21485,7 +23783,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H573ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H573ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -21511,7 +23812,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H723VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H723VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21542,7 +23846,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H723VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H723VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21573,7 +23880,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H723ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H723ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21604,7 +23914,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H723ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H723ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21635,7 +23948,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725AE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725AE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21662,7 +23978,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21689,7 +24008,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725IE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725IE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21716,7 +24038,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21743,7 +24068,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21770,7 +24098,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21797,7 +24128,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21824,7 +24158,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21851,7 +24188,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21878,7 +24218,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H725ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H725ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21905,7 +24248,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H730AB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H730AB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21932,7 +24278,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H730IB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H730IB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21959,7 +24308,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H730VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H730VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -21986,7 +24338,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H730ZB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H730ZB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22013,7 +24368,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H733VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H733VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22040,7 +24398,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H733ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H733ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22067,7 +24428,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H735AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H735AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22094,7 +24458,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H735IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H735IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22121,7 +24488,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H735RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H735RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22148,7 +24518,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H735VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H735VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22175,7 +24548,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H735ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H735ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22202,7 +24578,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22231,7 +24610,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22260,7 +24642,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22289,7 +24674,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22318,7 +24706,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22347,7 +24738,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22376,7 +24770,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22405,7 +24802,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22434,7 +24834,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742XG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742XG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22463,7 +24866,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22492,7 +24898,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22521,7 +24930,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H742ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H742ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22550,7 +24962,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22578,7 +24993,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22606,7 +25024,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22634,7 +25055,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22662,7 +25086,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22690,7 +25117,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22718,7 +25148,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22746,7 +25179,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22774,7 +25210,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743XG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743XG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22802,7 +25241,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22830,7 +25272,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22858,7 +25303,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H743ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H743ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22886,7 +25334,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22914,7 +25365,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22942,7 +25396,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22970,7 +25427,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -22998,7 +25458,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745XG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745XG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23026,7 +25489,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23054,7 +25520,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23082,7 +25551,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H745ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H745ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23110,7 +25582,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23138,7 +25613,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23166,7 +25644,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747BG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747BG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23194,7 +25675,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23222,7 +25706,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23250,7 +25737,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23278,7 +25768,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747XG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747XG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23306,7 +25799,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23334,7 +25830,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H747ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H747ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23362,7 +25861,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H750IB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H750IB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23389,7 +25891,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H750VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H750VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23416,7 +25921,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H750XB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H750XB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23443,7 +25951,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H750ZB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H750ZB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23470,7 +25981,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H753AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H753AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23498,7 +26012,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H753BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H753BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23526,7 +26043,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H753II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H753II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23554,7 +26074,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H753VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H753VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23582,7 +26105,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H753XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H753XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23610,7 +26136,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H753ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H753ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23638,7 +26167,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H755BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H755BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23666,7 +26198,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H755II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H755II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23694,7 +26229,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H755XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H755XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23722,7 +26260,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H755ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H755ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23750,7 +26291,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H757AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H757AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23778,7 +26322,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H757BI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H757BI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23806,7 +26353,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H757II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H757II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23834,7 +26384,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H757XI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H757XI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23862,7 +26415,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H757ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H757ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23890,7 +26446,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23919,7 +26478,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23948,7 +26510,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3IG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3IG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -23977,7 +26542,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24006,7 +26574,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3LG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3LG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24035,7 +26606,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3LI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3LI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24064,7 +26638,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3NG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3NG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24093,7 +26670,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24122,7 +26702,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24151,7 +26734,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24180,7 +26766,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24209,7 +26798,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24238,7 +26830,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24267,7 +26862,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24296,7 +26894,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7A3ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7A3ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24325,7 +26926,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B0AB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B0AB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24353,7 +26957,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B0IB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B0IB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24381,7 +26988,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B0RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B0RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24409,7 +27019,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B0VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B0VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24437,7 +27050,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B0ZB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B0ZB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24465,7 +27081,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24494,7 +27113,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3II",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3II",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24523,7 +27145,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3LI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3LI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24552,7 +27177,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24581,7 +27209,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24610,7 +27241,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24639,7 +27273,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24668,7 +27305,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7B3ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7B3ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x10000, .access = .rwx },
@@ -24697,7 +27337,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R3A8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R3A8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24727,7 +27370,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R3I8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R3I8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24757,7 +27403,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R3L8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R3L8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24787,7 +27436,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R3R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R3R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24817,7 +27469,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R3V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R3V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24847,7 +27502,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R3Z8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R3Z8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24877,7 +27535,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R7A8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R7A8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24907,7 +27568,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R7I8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R7I8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24937,7 +27601,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R7L8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R7L8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24967,7 +27634,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7R7Z8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7R7Z8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -24997,7 +27667,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S3A8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S3A8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25027,7 +27700,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S3I8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S3I8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25057,7 +27733,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S3L8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S3L8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25087,7 +27766,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S3R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S3R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25117,7 +27799,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S3V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S3V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25147,7 +27832,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S3Z8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S3Z8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25177,7 +27865,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S7A8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S7A8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25207,7 +27898,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S7I8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S7I8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25237,7 +27931,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S7L8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S7L8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25267,7 +27964,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32H7S7Z8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32H7S7Z8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "ITCM", .tag = .ram, .offset = 0x0, .length = 0x30000, .access = .rwx },
@@ -25296,7 +27996,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L010C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L010C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -25321,7 +28024,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L010F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L010F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25346,7 +28052,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L010K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L010K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25371,7 +28080,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L010K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L010K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -25396,7 +28108,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L010R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L010R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -25421,7 +28136,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L010RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L010RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -25446,7 +28164,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011D3",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011D3",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x2000, .access = .rx },
@@ -25471,7 +28192,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011D4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011D4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25496,7 +28220,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011E3",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011E3",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x2000, .access = .rx },
@@ -25521,7 +28248,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011E4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011E4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25546,7 +28276,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011F3",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011F3",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x2000, .access = .rx },
@@ -25571,7 +28304,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25596,7 +28332,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011G3",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011G3",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x2000, .access = .rx },
@@ -25621,7 +28360,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25646,7 +28388,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011K3",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011K3",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x2000, .access = .rx },
@@ -25671,7 +28416,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L011K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L011K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25696,7 +28444,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L021D4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L021D4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25721,7 +28472,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L021F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L021F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25746,7 +28500,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L021G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L021G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25771,7 +28528,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L021K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L021K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25796,7 +28556,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25821,7 +28584,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -25846,7 +28612,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031E4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031E4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25871,7 +28640,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031E6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031E6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -25896,7 +28668,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25921,7 +28696,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -25946,7 +28724,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031G4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031G4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -25971,7 +28752,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -25996,7 +28780,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -26021,7 +28808,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L031K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L031K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26046,7 +28836,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L041C4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L041C4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -26071,7 +28864,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L041C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L041C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26096,7 +28892,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L041E6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L041E6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26121,7 +28920,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L041F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L041F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26146,7 +28948,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L041G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L041G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26171,7 +28976,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L041K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L041K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26196,7 +29004,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26221,7 +29032,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26246,7 +29060,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26271,7 +29088,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26296,7 +29116,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26321,7 +29144,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26346,7 +29172,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051T6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051T6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26371,7 +29200,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L051T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L051T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26396,7 +29228,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26421,7 +29256,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26446,7 +29284,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26471,7 +29312,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26496,7 +29340,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26521,7 +29368,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26546,7 +29396,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052T6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052T6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26571,7 +29424,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L052T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L052T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26596,7 +29452,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L053C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L053C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26621,7 +29480,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L053C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L053C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26646,7 +29508,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L053R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L053R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -26671,7 +29536,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L053R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L053R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26696,7 +29564,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L062C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L062C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26721,7 +29592,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L062K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L062K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26746,7 +29620,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L063C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L063C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26771,7 +29648,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L063R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L063R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26796,7 +29676,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26821,7 +29704,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -26846,7 +29732,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071CZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071CZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -26871,7 +29760,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -26896,7 +29788,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -26921,7 +29816,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071KZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071KZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -26946,7 +29844,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -26971,7 +29872,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071RZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071RZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -26996,7 +29900,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -27021,7 +29928,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27046,7 +29956,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L071VZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L071VZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27071,7 +29984,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27096,7 +30012,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072CZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072CZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27121,7 +30040,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27146,7 +30068,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072KZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072KZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27171,7 +30096,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27196,7 +30124,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072RZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072RZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27221,7 +30152,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -27246,7 +30180,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27271,7 +30208,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L072VZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L072VZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27296,7 +30236,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27321,7 +30264,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073CZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073CZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27346,7 +30292,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27371,7 +30320,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073RZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073RZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27396,7 +30348,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -27421,7 +30376,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27446,7 +30404,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L073VZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L073VZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27471,7 +30432,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L081CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L081CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27496,7 +30460,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L081CZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L081CZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27521,7 +30488,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L081KZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L081KZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27546,7 +30516,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L082CZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L082CZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27571,7 +30544,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L082KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L082KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27596,7 +30572,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L082KZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L082KZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27621,7 +30600,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27646,7 +30628,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083CZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083CZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27671,7 +30656,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27696,7 +30684,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083RZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083RZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27721,7 +30712,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -27746,7 +30740,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27771,7 +30768,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L083VZ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L083VZ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -27796,7 +30796,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -27821,7 +30824,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100C6-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100C6-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -27846,7 +30852,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -27871,7 +30880,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100R8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100R8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -27896,7 +30908,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27921,7 +30936,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100RB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100RB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -27946,7 +30964,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L100RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L100RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -27971,7 +30992,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -27996,7 +31020,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151C6-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151C6-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -28021,7 +31048,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28046,7 +31076,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151C8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151C8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28071,7 +31104,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28096,7 +31132,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151CB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151CB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28121,7 +31160,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28146,7 +31188,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28171,7 +31216,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151QD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151QD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -28197,7 +31245,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28223,7 +31274,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -28248,7 +31302,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151R6-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151R6-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -28273,7 +31330,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28298,7 +31358,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151R8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151R8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28323,7 +31386,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28348,7 +31414,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151RB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151RB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28373,7 +31442,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28398,7 +31470,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151RC-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151RC-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28423,7 +31498,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -28449,7 +31527,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28475,7 +31556,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151UC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151UC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28500,7 +31584,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28525,7 +31612,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151V8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151V8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28550,7 +31640,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28575,7 +31668,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28600,7 +31696,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28625,7 +31724,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VC-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VC-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28650,7 +31752,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -28676,7 +31781,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VD-X",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VD-X",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -28702,7 +31810,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28728,7 +31839,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28753,7 +31867,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -28779,7 +31896,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L151ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L151ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28805,7 +31925,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -28830,7 +31953,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152C6-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152C6-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -28855,7 +31981,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28880,7 +32009,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152C8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152C8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -28905,7 +32037,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28930,7 +32065,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152CB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152CB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -28955,7 +32093,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -28980,7 +32121,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29005,7 +32149,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152QD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152QD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29031,7 +32178,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29057,7 +32207,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -29082,7 +32235,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152R6-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152R6-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -29107,7 +32263,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -29132,7 +32291,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152R8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152R8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -29157,7 +32319,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -29182,7 +32347,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152RB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152RB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -29207,7 +32375,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29232,7 +32403,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152RC-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152RC-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29257,7 +32431,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29283,7 +32460,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29309,7 +32489,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152UC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152UC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29334,7 +32517,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152V8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152V8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -29359,7 +32545,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152V8-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152V8-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -29384,7 +32573,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -29409,7 +32601,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VB-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VB-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -29434,7 +32629,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29459,7 +32657,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VC-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VC-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29484,7 +32685,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29510,7 +32714,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VD-X",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VD-X",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29536,7 +32743,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29562,7 +32772,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29587,7 +32800,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29613,7 +32829,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L152ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L152ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29639,7 +32858,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29664,7 +32886,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162QD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162QD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29690,7 +32915,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29715,7 +32943,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162RC-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162RC-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29740,7 +32971,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162RD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162RD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29766,7 +33000,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29792,7 +33029,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29817,7 +33057,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162VC-A",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162VC-A",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29842,7 +33085,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162VD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162VD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29868,7 +33114,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162VD-X",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162VD-X",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29894,7 +33143,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29920,7 +33172,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29945,7 +33200,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162ZD",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162ZD",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x30000, .access = .rx },
@@ -29971,7 +33229,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L162ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L162ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -29998,7 +33259,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -30026,7 +33290,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30054,7 +33321,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -30082,7 +33352,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30110,7 +33383,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -30138,7 +33414,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30166,7 +33445,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412T8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412T8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -30194,7 +33476,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L412TB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L412TB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30222,7 +33507,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L422CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L422CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30250,7 +33538,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L422KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L422KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30278,7 +33569,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L422RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L422RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30306,7 +33600,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L422TB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L422TB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30334,7 +33631,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30362,7 +33662,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30390,7 +33693,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30418,7 +33724,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30446,7 +33755,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30474,7 +33786,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30502,7 +33817,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L431VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L431VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30530,7 +33848,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L432KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L432KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30558,7 +33879,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L432KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L432KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30586,7 +33910,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L433CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L433CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30614,7 +33941,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L433CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L433CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30642,7 +33972,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L433RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L433RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -30670,7 +34003,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L433RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L433RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30698,7 +34034,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L433VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L433VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30726,7 +34065,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L442KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L442KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30754,7 +34096,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L443CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L443CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30782,7 +34127,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L443RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L443RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30810,7 +34158,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L443VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L443VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30838,7 +34189,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L451CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L451CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30866,7 +34220,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L451CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L451CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -30894,7 +34251,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L451RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L451RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30922,7 +34282,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L451RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L451RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -30950,7 +34313,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L451VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L451VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -30978,7 +34344,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L451VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L451VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31006,7 +34375,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L452CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L452CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31034,7 +34406,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L452CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L452CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31062,7 +34437,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L452RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L452RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31090,7 +34468,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L452RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L452RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31118,7 +34499,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L452VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L452VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31146,7 +34530,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L452VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L452VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31174,7 +34561,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L462CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L462CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31202,7 +34592,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L462RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L462RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31230,7 +34623,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L462VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L462VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31258,7 +34654,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31290,7 +34689,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31322,7 +34724,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31354,7 +34759,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31386,7 +34794,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31418,7 +34829,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31450,7 +34864,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31482,7 +34899,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L471ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L471ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31514,7 +34934,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L475RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L475RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -31546,7 +34969,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L475RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L475RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31578,7 +35004,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L475RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L475RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31610,7 +35039,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L475VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L475VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -31642,7 +35074,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L475VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L475VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31674,7 +35109,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L475VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L475VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31706,7 +35144,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476JE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476JE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31738,7 +35179,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476JG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476JG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31770,7 +35214,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31802,7 +35249,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476MG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476MG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31834,7 +35284,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31866,7 +35319,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31898,7 +35354,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -31930,7 +35389,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -31962,7 +35424,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -31994,7 +35459,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -32026,7 +35494,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32058,7 +35529,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32090,7 +35564,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32122,7 +35599,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L476ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L476ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32154,7 +35634,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L486JG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L486JG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32182,7 +35665,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L486QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L486QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32210,7 +35696,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L486RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L486RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32238,7 +35727,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L486VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L486VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32266,7 +35758,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L486ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L486ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32294,7 +35789,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496AE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496AE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32323,7 +35821,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32352,7 +35853,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32381,7 +35885,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32410,7 +35917,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32439,7 +35949,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32468,7 +35981,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32497,7 +36013,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32526,7 +36045,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496WG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496WG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32555,7 +36077,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -32584,7 +36109,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L496ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L496ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32613,7 +36141,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4A6AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4A6AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32642,7 +36173,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4A6QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4A6QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32671,7 +36205,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4A6RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4A6RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32700,7 +36237,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4A6VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4A6VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32729,7 +36269,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4A6ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4A6ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32758,7 +36301,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5AE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5AE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32784,7 +36330,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -32810,7 +36359,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32836,7 +36388,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -32862,7 +36417,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32888,7 +36446,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -32914,7 +36475,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32940,7 +36504,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -32966,7 +36533,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -32992,7 +36562,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33018,7 +36591,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -33044,7 +36620,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4P5ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4P5ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33070,7 +36649,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4Q5AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4Q5AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33096,7 +36678,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4Q5CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4Q5CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33122,7 +36707,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4Q5QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4Q5QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33148,7 +36736,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4Q5RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4Q5RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33174,7 +36765,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4Q5VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4Q5VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33200,7 +36794,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4Q5ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4Q5ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33226,7 +36823,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33252,7 +36852,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33278,7 +36881,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33304,7 +36910,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33330,7 +36939,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33356,7 +36968,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33382,7 +36997,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33408,7 +37026,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R5ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R5ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33434,7 +37055,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R7AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R7AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33460,7 +37084,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R7VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R7VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33486,7 +37113,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R7ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R7ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33512,7 +37142,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R9AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R9AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33538,7 +37171,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R9AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R9AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33564,7 +37200,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R9VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R9VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33590,7 +37229,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R9VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R9VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33616,7 +37258,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R9ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R9ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -33642,7 +37287,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4R9ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4R9ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33668,7 +37316,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S5AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S5AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33694,7 +37345,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S5QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S5QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33720,7 +37374,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S5VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S5VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33746,7 +37403,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S5ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S5ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33772,7 +37432,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S7AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S7AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33798,7 +37461,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S7VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S7VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33824,7 +37490,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S7ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S7ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33850,7 +37519,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S9AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S9AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33876,7 +37548,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S9VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S9VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33902,7 +37577,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L4S9ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L4S9ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -33928,7 +37606,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -33954,7 +37635,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -33980,7 +37664,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34006,7 +37693,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552QC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552QC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34032,7 +37722,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34058,7 +37751,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34084,7 +37780,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34110,7 +37809,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34136,7 +37838,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34162,7 +37867,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552ZC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552ZC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34188,7 +37896,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L552ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L552ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34214,7 +37925,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L562CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L562CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34240,7 +37954,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L562ME",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L562ME",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34266,7 +37983,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L562QE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L562QE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34292,7 +38012,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L562RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L562RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34318,7 +38041,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L562VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L562VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34344,7 +38070,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32L562ZE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32L562ZE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -34369,7 +38098,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031C6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031C6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -34394,7 +38126,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34419,7 +38154,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031F4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031F4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -34444,7 +38182,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031F6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031F6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -34469,7 +38210,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031F8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031F8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34494,7 +38238,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031G6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031G6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -34519,7 +38266,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031G8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031G8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34544,7 +38294,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031K4",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031K4",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x4000, .access = .rx },
@@ -34569,7 +38322,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031K6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031K6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -34594,7 +38350,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34619,7 +38378,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031R6",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031R6",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x8000, .access = .rx },
@@ -34644,7 +38406,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U031R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U031R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34669,7 +38434,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34694,7 +38462,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -34719,7 +38490,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34744,7 +38518,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073H8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073H8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34769,7 +38546,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073HB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073HB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -34794,7 +38574,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073HC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073HC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34819,7 +38602,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073K8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073K8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34844,7 +38630,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073KB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073KB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -34869,7 +38658,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34894,7 +38686,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073M8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073M8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34919,7 +38714,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073MB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073MB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -34944,7 +38742,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -34969,7 +38770,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073R8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073R8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -34994,7 +38798,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -35019,7 +38826,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U073RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U073RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35044,7 +38854,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U083CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U083CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35069,7 +38882,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U083HC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U083HC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35094,7 +38910,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U083KC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U083KC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35119,7 +38938,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U083MC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U083MC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35144,7 +38966,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U083RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U083RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35170,7 +38995,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -35198,7 +39026,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -35226,7 +39057,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35254,7 +39088,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535JE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535JE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35282,7 +39119,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535NC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535NC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -35310,7 +39150,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35338,7 +39181,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535RB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535RB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -35366,7 +39212,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -35394,7 +39243,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35422,7 +39274,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -35450,7 +39305,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U535VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U535VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35478,7 +39336,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U545CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U545CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35506,7 +39367,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U545JE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U545JE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35534,7 +39398,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U545NE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U545NE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35562,7 +39429,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U545RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U545RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35590,7 +39460,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U545VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U545VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -35618,7 +39491,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575AG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575AG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35647,7 +39523,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -35676,7 +39555,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35705,7 +39587,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575CI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575CI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -35734,7 +39619,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575OG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575OG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35763,7 +39651,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575OI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575OI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -35792,7 +39683,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575QG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575QG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35821,7 +39715,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -35850,7 +39747,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35879,7 +39779,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -35908,7 +39811,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35937,7 +39843,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -35966,7 +39875,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575ZG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575ZG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -35995,7 +39907,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U575ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U575ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36024,7 +39939,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36053,7 +39971,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585CI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585CI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36082,7 +40003,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585OI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585OI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36111,7 +40035,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36140,7 +40067,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36169,7 +40099,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36198,7 +40131,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U585ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U585ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36227,7 +40163,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595AI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595AI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36257,7 +40196,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595AJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595AJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36287,7 +40229,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36317,7 +40262,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595QJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595QJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36347,7 +40295,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595RI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595RI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36377,7 +40328,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595RJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595RJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36407,7 +40361,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36437,7 +40394,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36467,7 +40427,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36497,7 +40460,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U595ZJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U595ZJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36527,7 +40493,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599BJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599BJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36557,7 +40526,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599NI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599NI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36587,7 +40559,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599NJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599NJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36617,7 +40592,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36647,7 +40625,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36677,7 +40658,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36707,7 +40691,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U599ZJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U599ZJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36737,7 +40724,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A5AJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A5AJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36767,7 +40757,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A5QI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A5QI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -36797,7 +40790,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A5QJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A5QJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36827,7 +40823,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A5RJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A5RJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36857,7 +40856,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A5VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A5VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36887,7 +40889,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A5ZJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A5ZJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36917,7 +40922,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A9BJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A9BJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36947,7 +40955,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A9NJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A9NJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -36977,7 +40988,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A9VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A9VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37007,7 +41021,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5A9ZJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5A9ZJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37037,7 +41054,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F7VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F7VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37068,7 +41088,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F7VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F7VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37099,7 +41122,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F9BJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F9BJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37130,7 +41156,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F9NJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F9NJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37161,7 +41190,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F9VI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F9VI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37192,7 +41224,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F9VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F9VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37223,7 +41258,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F9ZI",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F9ZI",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37254,7 +41292,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5F9ZJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5F9ZJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37285,7 +41326,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5G7VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5G7VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37316,7 +41360,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5G9BJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5G9BJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37347,7 +41394,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5G9NJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5G9NJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37378,7 +41428,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5G9VJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5G9VJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37409,7 +41462,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32U5G9ZJ",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32U5G9ZJ",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x200000, .access = .rx },
@@ -37440,7 +41496,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB10CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB10CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x50000, .access = .rx },
@@ -37470,7 +41529,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB15CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB15CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x50000, .access = .rx },
@@ -37500,7 +41562,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB30CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB30CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37530,7 +41595,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB35CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB35CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -37560,7 +41628,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB35CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB35CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37590,7 +41661,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB50CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB50CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37620,7 +41694,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -37650,7 +41727,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37680,7 +41760,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37710,7 +41793,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55RC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55RC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -37740,7 +41826,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55RE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55RE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37770,7 +41859,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55RG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55RG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37800,7 +41892,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55VC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55VC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -37830,7 +41925,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55VE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55VE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37860,7 +41958,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55VG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55VG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37890,7 +41991,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WB55VY",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WB55VY",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0xA0000, .access = .rx },
@@ -37920,7 +42024,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA50KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA50KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37946,7 +42053,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA50KG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA50KG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -37972,7 +42082,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA52CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA52CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -37998,7 +42111,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA52CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA52CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38024,7 +42140,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA52KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA52KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -38050,7 +42169,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA52KG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA52KG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38076,7 +42198,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA54CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA54CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -38102,7 +42227,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA54CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA54CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38128,7 +42256,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA54KE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA54KE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -38154,7 +42285,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA54KG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA54KG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38180,7 +42314,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA55CE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA55CE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -38206,7 +42343,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA55CG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA55CG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38232,7 +42372,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA55HE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA55HE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -38258,7 +42401,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA55HG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA55HG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38284,7 +42430,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA55UE",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA55UE",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x80000, .access = .rx },
@@ -38310,7 +42459,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WBA55UG",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WBA55UG",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x100000, .access = .rx },
@@ -38335,7 +42487,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WL54CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WL54CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38358,7 +42513,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WL54JC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WL54JC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38381,7 +42539,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WL55CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WL55CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38404,7 +42565,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WL55JC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WL55JC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38427,7 +42591,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE4C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE4C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -38450,7 +42617,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE4CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE4CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -38473,7 +42643,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE4CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE4CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38496,7 +42669,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE4J8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE4J8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -38519,7 +42695,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE4JB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE4JB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -38542,7 +42721,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE4JC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE4JC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38565,7 +42747,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE5C8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE5C8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -38588,7 +42773,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE5CB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE5CB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -38611,7 +42799,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE5CC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE5CC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
@@ -38634,7 +42825,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE5J8",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE5J8",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x10000, .access = .rx },
@@ -38657,7 +42851,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE5JB",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE5JB",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x20000, .access = .rx },
@@ -38680,7 +42877,10 @@ pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) 
         .chip = .{
             .name = "STM32WLE5JC",
             .register_definition = .{
-                .embassy = embassy,
+                .embassy = .{
+                    .path = embassy,
+                    .device = "STM32WLE5JC",
+                },
             },
             .memory_regions = &.{
                 .{ .name = "BANK_1", .tag = .flash, .offset = 0x8000000, .length = 0x40000, .access = .rx },
