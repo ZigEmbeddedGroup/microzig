@@ -19,6 +19,7 @@ pub const cpu_frequency = clock_config.target_frequency;
 pub fn init() void {
     ch32v.clocks.init(clock_config);
     ch32v.time.init();
+    ch32v.clocks.enable_usbfs_clock();
 }
 
 pub const pin_config = ch32v.pins.GlobalConfiguration{

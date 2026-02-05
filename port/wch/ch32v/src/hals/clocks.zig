@@ -36,6 +36,8 @@ const peripheral = enum {
     // AHB peripherals
     DMA1,
     DMA2,
+    USBHS,
+    USBOTG,
 
     // APB2 peripherals
     USART1,
@@ -60,9 +62,12 @@ pub fn enable_peripheral_clock(p: peripheral) void {
         // AHB peripherals
         .DMA1 => RCC.AHBPCENR.modify(.{ .DMA1EN = 1 }),
         .DMA2 => RCC.AHBPCENR.modify(.{ .DMA2EN = 1 }),
+        .USBHS => RCC.AHBPCENR.modify(.{ .USBHS_EN = 1 }),
+        .USBOTG => RCC.AHBPCENR.modify(.{ .OTG_EN = 1 }),
 
         // APB2 peripherals (high-speed bus)
-        .USART1 => RCC.APB2PCENR.modify(.{ .USART1EN = 1 }),
+        .USART1,
+        => RCC.APB2PCENR.modify(.{ .USART1EN = 1 }),
         .SPI1 => RCC.APB2PCENR.modify(.{ .SPI1EN = 1 }),
         .ADC1 => RCC.APB2PCENR.modify(.{ .ADC1EN = 1 }),
         .ADC2 => RCC.APB2PCENR.modify(.{ .ADC2EN = 1 }),
@@ -413,6 +418,26 @@ pub fn get_freqs() ClockSpeeds {
     };
 }
 
+// TODO: USBFS Clock helper, don't just tag on USBHS
+// ============================================================================
+// Enable + configure USBFS/OTG clocks.
+// ============================================================================
+pub fn enable_usbfs_clock() void {
+    const sys_clock = get_sysclk();
+    switch (sys_clock) {
+        48_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 0 }),
+        96_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 1 }),
+        144_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 2 }),
+        else => @panic("Unsupported sysclock for USB OTG"),
+    }
+
+    RCC.CFGR2.modify(.{
+        .USBFSSRC = 1,
+    });
+
+    // Enable the AHB clock gate for the USBFS peripheral block.
+    enable_peripheral_clock(.USBOTG);
+}
 // ============================================================================
 // Enable + configure USBHS clocks.
 // ============================================================================
@@ -468,8 +493,6 @@ const HSPLLSRC = enum(u2) {
     hsi = 1,
 };
 
-// TODO: USBFS Clock helper, don't just tag on USBHS
-
 // TODO: ch32v30x 144MHz config
 
 /// Selects USBHS Clock source, options are:
@@ -479,7 +502,6 @@ const HSPLLSRC = enum(u2) {
 ///   and enables the PHY internal PLL (USBHSPLL).
 pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
     RCC.CFGR0.modify(.{ .USBPRE = 0 });
-    // Turn on the AHB clock gate for the USBHS peripheral block.
 
     // If caller prefers PLL CLK, set PLL CLK selection and keep PHY PLL off.
     if (!cfg.use_phy_48mhz) {
@@ -559,10 +581,8 @@ pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
         .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
     });
 
-    RCC.AHBPCENR.modify(.{
-        .USBHS_EN = 1,
-        .OTG_EN = 1,
-    });
+    enable_peripheral_clock(.USBHS);
+    enable_peripheral_clock(.USBOTG);
 }
 
 // ============================================================================
