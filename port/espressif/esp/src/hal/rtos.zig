@@ -41,7 +41,9 @@ const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 32 * @sizeOf(usize));
 
 pub const Options = struct {
     enable: bool = false,
-    Priority: type = enum(u8) {
+    /// The priority enum to be used by the RTOS. Must define idle, lowest and
+    /// highest priorities.
+    Priority: type = enum(u5) {
         idle = 0,
         lowest = 1,
         _,
@@ -55,7 +57,14 @@ pub const Options = struct {
     yield_interrupt: microzig.cpu.Interrupt = .interrupt31,
 
     paint_stack_byte: ?u8 = null,
+    /// Disable the use of buckets (one linked list per priority) for the ready
+    /// queue. Buckets use a maximum of 260 bytes, but offer a massive speedup.
+    /// Buckets are disabled automatically if there are more than 32 priorities
+    /// (the priority enum has a tag type bigger than u5).
+    ready_queue_force_no_buckets: bool = false,
 };
+
+const ready_queue_use_buckets = !rtos_options.ready_queue_force_no_buckets and @bitSizeOf(@typeInfo(Priority).@"enum".tag_type) <= 5;
 
 var main_task: Task = .{
     .name = "main",
@@ -78,9 +87,10 @@ var idle_task: Task = .{
 var rtos_state: RTOS_State = undefined;
 pub const RTOS_State = struct {
     ready_queue: ReadyPriorityQueue = .{},
-    timer_queue: std.DoublyLinkedList = .{},
-    suspended_list: std.DoublyLinkedList = .{},
-    scheduled_for_deletion_list: std.DoublyLinkedList = .{},
+    timer_queue: LinkedList(.{
+        .use_last = true,
+        .use_prev = true,
+    }) = .{},
 
     /// The task in .running state. Safe to access outside of critical section
     /// as it is always the same for the currently executing task.
@@ -93,11 +103,14 @@ pub fn init() void {
     comptime {
         if (!microzig.options.cpu.interrupt_stack.enable)
             @compileError("rtos requires the interrupt stack cpu option to be enabled");
+        if (@typeInfo(rtos_options.Priority).@"enum".is_exhaustive)
+            @compileError("rtos priority enum must be non-exhaustive");
+
         microzig.cpu.interrupt.expect_handler(rtos_options.general_purpose_interrupt, general_purpose_interrupt_handler);
         microzig.cpu.interrupt.expect_handler(rtos_options.yield_interrupt, yield_interrupt_handler);
     }
 
-    const cs = microzig.interrupt.enter_critical_section();
+    const cs = enter_critical_section();
     defer cs.leave();
 
     rtos_state = .{
@@ -218,12 +231,9 @@ pub fn spawn(
 pub fn make_ready(task: *Task) void {
     switch (task.state) {
         .ready, .running, .scheduled_for_deletion => return,
-        .none => {},
+        .none, .suspended => {},
         .alarm_set => {
             rtos_state.timer_queue.remove(&task.node);
-        },
-        .suspended => {
-            rtos_state.suspended_list.remove(&task.node);
         },
     }
 
@@ -263,18 +273,15 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
                 if (timeout.is_reached_by(.now())) {
                     continue :action .reschedule;
                 }
-
                 schedule_wake_at(current_task, timeout);
             } else {
                 current_task.state = .suspended;
-                rtos_state.suspended_list.append(&current_task.node);
             }
         },
         .delete => {
             assert(current_task != &idle_task and current_task != &main_task);
 
             current_task.state = .scheduled_for_deletion;
-            rtos_state.scheduled_for_deletion_list.append(&current_task.node);
         },
     }
 
@@ -351,10 +358,10 @@ pub fn yield_from_isr() void {
 }
 
 pub fn is_a_higher_priority_task_ready() bool {
-    return if (rtos_state.ready_queue.peek_top()) |top_ready_task|
-        @intFromEnum(top_ready_task.priority) > @intFromEnum(rtos_state.current_task.priority)
-    else
-        false;
+    const cs = enter_critical_section();
+    defer cs.leave();
+
+    return @intFromEnum(rtos_state.ready_queue.max_ready_priority() orelse .idle) > @intFromEnum(rtos_state.current_task.priority);
 }
 
 pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
@@ -537,7 +544,7 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
     while (maybe_node) |node| : (maybe_node = node.next) {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
         if (ticks.is_reached_by(task.state.alarm_set)) {
-            rtos_state.timer_queue.insertBefore(&task.node, &sleeping_task.node);
+            rtos_state.timer_queue.insert_before(&task.node, &sleeping_task.node);
             break;
         }
     } else {
@@ -556,13 +563,15 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
 }
 
 fn sweep_timer_queue() void {
-    while (rtos_state.timer_queue.popFirst()) |node| {
+    var now: TimerTicks = .now();
+    while (rtos_state.timer_queue.pop()) |node| {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (!task.state.alarm_set.is_reached_by(.now())) {
+        if (!task.state.alarm_set.is_reached_by(now)) {
             rtos_state.timer_queue.prepend(&task.node);
             rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
             rtos_options.systimer_alarm.set_enabled(true);
-            if (task.state.alarm_set.is_reached_by(.now()))
+            now = .now();
+            if (task.state.alarm_set.is_reached_by(now))
                 continue
             else
                 break;
@@ -574,28 +583,10 @@ fn sweep_timer_queue() void {
     }
 }
 
-pub fn log_tasks_info() void {
-    const cs = microzig.interrupt.enter_critical_section();
+pub fn log_task_info(task: *Task) void {
+    const cs = enter_critical_section();
     defer cs.leave();
 
-    log_task_info(get_current_task());
-
-    const list: []const ?*std.DoublyLinkedList.Node = &.{
-        rtos_state.ready_queue.inner.first,
-        rtos_state.timer_queue.first,
-        rtos_state.suspended_list.first,
-        rtos_state.scheduled_for_deletion_list.first,
-    };
-    for (list) |first| {
-        var it: ?*std.DoublyLinkedList.Node = first;
-        while (it) |node| : (it = node.next) {
-            const task: *Task = @alignCast(@fieldParentPtr("node", node));
-            log_task_info(task);
-        }
-    }
-}
-
-fn log_task_info(task: *Task) void {
     if (rtos_options.paint_stack_byte) |paint_byte| {
         const stack_usage = for (task.stack, 0..) |byte, i| {
             if (byte != paint_byte) {
@@ -630,7 +621,7 @@ pub const Task = struct {
     state: State = .none,
 
     /// Node used for rtos internal lists.
-    node: std.DoublyLinkedList.Node = .{},
+    node: LinkedListNode = .{},
 
     /// Task specific semaphore (required by the wifi driver)
     semaphore: Semaphore = .init(0, 1),
@@ -662,15 +653,62 @@ pub const Context = extern struct {
     }
 };
 
-pub const ReadyPriorityQueue = struct {
+pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
+    const ReadySet = std.EnumSet(Priority);
+
+    ready: ReadySet = .initEmpty(),
+    lists: std.EnumArray(Priority, LinkedList(.{
+        .use_last = true,
+        .use_prev = false,
+    })) = .initFill(.{}),
+
+    pub fn max_ready_priority(pq: *ReadyPriorityQueue) ?Priority {
+        const raw_prio = pq.ready.bits.findLastSet() orelse return null;
+        return ReadySet.Indexer.keyForIndex(raw_prio);
+    }
+
+    pub fn pop(pq: *ReadyPriorityQueue, maybe_more_than_prio: ?Priority) ?*Task {
+        const prio = pq.max_ready_priority() orelse return null;
+        if (maybe_more_than_prio) |more_than_prio| {
+            if (@intFromEnum(prio) <= @intFromEnum(more_than_prio)) {
+                return null;
+            }
+        }
+
+        const bucket = pq.lists.getPtr(prio);
+
+        // We know there is at least one task ready.
+        const task: *Task = @alignCast(@fieldParentPtr("node", bucket.pop().?));
+
+        // If there aren't any more tasks inside the current bucket, unset the
+        // ready bit.
+        if (bucket.first == null) {
+            pq.ready.remove(prio);
+        }
+
+        return task;
+    }
+
+    pub fn put(pq: *ReadyPriorityQueue, new_task: *Task) void {
+        pq.lists.getPtr(new_task.priority).append(&new_task.node);
+        pq.ready.setPresent(new_task.priority, true);
+    }
+} else struct {
     inner: std.DoublyLinkedList = .{},
 
-    pub fn peek_top(pq: *ReadyPriorityQueue) ?*Task {
+    fn peek_top(pq: *ReadyPriorityQueue) ?*Task {
         if (pq.inner.first) |first_node| {
             return @alignCast(@fieldParentPtr("node", first_node));
         } else {
             return null;
         }
+    }
+
+    pub fn max_ready_priority(pq: *ReadyPriorityQueue) ?Priority {
+        return if (pq.peek_top()) |task|
+            task.priority
+        else
+            null;
     }
 
     pub fn pop(pq: *ReadyPriorityQueue, maybe_more_than_prio: ?Priority) ?*Task {
@@ -1114,5 +1152,101 @@ pub fn Queue(Elem: type) type {
         pub fn capacity(q: *const Self) usize {
             return @divExact(q.type_erased.buffer.len, @sizeOf(Elem));
         }
+    };
+}
+
+pub const LinkedListNode = struct {
+    prev: ?*LinkedListNode = null,
+    next: ?*LinkedListNode = null,
+};
+
+pub const LinkedListCapabilities = struct {
+    use_last: bool = true,
+    use_prev: bool = true,
+};
+
+pub fn LinkedList(comptime caps: LinkedListCapabilities) type {
+    return struct {
+        const Self = @This();
+
+        first: ?*LinkedListNode = null,
+        last: if (caps.use_last) ?*LinkedListNode else noreturn = null,
+
+        pub const append = if (caps.use_last) struct {
+            fn append(ll: *Self, node: *LinkedListNode) void {
+                if (caps.use_prev) node.prev = ll.last;
+                node.next = null;
+                if (ll.last) |last| {
+                    if (caps.use_prev) node.prev = last;
+                    last.next = node;
+                    ll.last = node;
+                } else {
+                    ll.first = node;
+                    ll.last = node;
+                }
+            }
+        }.append else @compileError("linked list does not support append");
+
+        pub fn prepend(ll: *Self, node: *LinkedListNode) void {
+            if (caps.use_prev) {
+                node.prev = null;
+                if (ll.first) |first| {
+                    first.prev = node;
+                }
+            }
+            node.next = ll.first;
+            if (caps.use_last and ll.first == null) {
+                ll.last = node;
+            }
+            ll.first = node;
+        }
+
+        pub fn pop(ll: *Self) ?*LinkedListNode {
+            if (ll.first) |first| {
+                ll.first = first.next;
+                if (caps.use_last) {
+                    if (ll.last == first) {
+                        ll.last = null;
+                    }
+                }
+                return first;
+            } else return null;
+        }
+
+        pub const insert_before = if (caps.use_prev) struct {
+            pub fn insert_before(ll: *Self, existing_node: *LinkedListNode, new_node: *LinkedListNode) void {
+                new_node.next = existing_node;
+                if (existing_node.prev) |prev_node| {
+                    // Intermediate node.
+                    new_node.prev = prev_node;
+                    prev_node.next = new_node;
+                } else {
+                    // First element of the list.
+                    new_node.prev = null;
+                    ll.first = new_node;
+                }
+                existing_node.prev = new_node;
+            }
+        }.insert_before else @compileError("linked list does not support insert_before");
+
+        pub const remove = if (caps.use_prev) struct {
+            pub fn remove(ll: *Self, node: *LinkedListNode) void {
+                if (node.prev) |prev_node| {
+                    // Intermediate node.
+                    prev_node.next = node.next;
+                } else {
+                    // First element of the list.
+                    ll.first = node.next;
+                }
+
+                if (node.next) |next_node| {
+                    // Intermediate node.
+                    next_node.prev = node.prev;
+                } else {
+                    // Last element of the list.
+                    if (caps.use_last) ll.last = node.prev;
+                }
+            }
+        }.remove else @compileError("linked list does not support remove");
     };
 }
