@@ -561,7 +561,7 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) linksection(".ram_t
 
 fn sweep_timer_queue() linksection(".ram_text") void {
     var now: TimerTicks = .now();
-    while (rtos_state.timer_queue.pop()) |node| {
+    while (rtos_state.timer_queue.pop_first()) |node| {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
         if (!task.state.alarm_set.is_reached_by(now)) {
             rtos_state.timer_queue.prepend(&task.node);
@@ -675,7 +675,7 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         const bucket = pq.lists.getPtr(prio);
 
         // We know there is at least one task ready.
-        const task: *Task = @alignCast(@fieldParentPtr("node", bucket.pop().?));
+        const task: *Task = @alignCast(@fieldParentPtr("node", bucket.pop_first().?));
 
         // If there aren't any more tasks inside the current bucket, unset the
         // ready bit.
@@ -778,7 +778,7 @@ pub const PriorityWaitQueue = struct {
 
     /// Must execute inside a critical section.
     pub fn wake_all(q: *PriorityWaitQueue) void {
-        while (q.list.popFirst()) |current_node| {
+        while (q.list.pop_first()) |current_node| {
             const current_waiter: *Waiter = @alignCast(@fieldParentPtr("node", current_node));
             make_ready(current_waiter.task);
         }
@@ -795,7 +795,7 @@ pub const PriorityWaitQueue = struct {
         while (it) |current_node| : (it = current_node.next) {
             const current_waiter: *Waiter = @alignCast(@fieldParentPtr("node", current_node));
             if (@intFromEnum(waiter.priority) > @intFromEnum(current_waiter.priority)) {
-                q.list.insertBefore(&current_waiter.node, &waiter.node);
+                q.list.insert_before(&current_waiter.node, &waiter.node);
                 break;
             }
         } else {
@@ -1203,7 +1203,7 @@ pub fn LinkedList(comptime caps: LinkedListCapabilities) type {
             ll.first = node;
         }
 
-        pub fn pop(ll: *Self) ?*LinkedListNode {
+        pub fn pop_first(ll: *Self) ?*LinkedListNode {
             if (ll.first) |first| {
                 ll.first = first.next;
                 if (caps.use_last) {
@@ -1295,7 +1295,7 @@ test "LinkedList.with_last" {
     try expect(n3.node.next == &n1.node);
 
     // 4. Test Pop (FIFO if we pop from head)
-    const p1 = list.pop();
+    const p1 = list.pop_first();
 
     // State: [1, 2]
     try expect(p1 == &n3.node);
@@ -1306,20 +1306,20 @@ test "LinkedList.with_last" {
         try expect(parent.data == 3);
     }
 
-    const p2 = list.pop();
+    const p2 = list.pop_first();
     // State: [2]
     try expect(p2 == &n1.node);
     try expect(list.first == &n2.node);
     try expect(list.last == &n2.node);
 
-    const p3 = list.pop();
+    const p3 = list.pop_first();
     // State: []
     try expect(p3 == &n2.node);
     try expect(list.first == null);
     try expect(list.last == null);
 
     // 5. Test Pop on empty
-    try expect(list.pop() == null);
+    try expect(list.pop_first() == null);
 }
 
 test "LinkedList.doubly_linked" {
