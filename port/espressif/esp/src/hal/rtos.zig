@@ -28,8 +28,6 @@ const systimer = @import("systimer.zig");
 // yield, tasks are required to have a minimum stack size available at all
 // times.
 
-// TODO: task joining and deletion
-//       - the idea is that tasks must return before they can be freed
 // TODO: trigger context switch if a higher priority is awaken in sync
 // primitives
 // TODO: stack overflow detection
@@ -226,6 +224,23 @@ pub fn spawn(
     return task;
 }
 
+/// Wait for a task to finish and free its memory. The allocator must be the
+/// same as the one used for spawning.
+pub fn join(allocator: std.mem.Allocator, task: *Task) void {
+    {
+        const cs = enter_critical_section();
+        defer cs.leave();
+        if (task.state != .exited) {
+            task.awaiter = rtos_state.current_task;
+            yield(.wait);
+        }
+    }
+    // alloc_size = stack_end - task
+    const alloc_size = @intFromPtr(task.stack[task.stack.len..].ptr) - @intFromPtr(task);
+    const alloc: []u8 = @as([*]u8, @ptrCast(task))[0..alloc_size];
+    allocator.free(alloc);
+}
+
 /// Must execute inside a critical section.
 pub fn make_ready(task: *Task) linksection(".ram_text") void {
     switch (task.state) {
@@ -278,6 +293,10 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
         .exit => {
             assert(current_task != &idle_task and current_task != &main_task);
             current_task.state = .exited;
+
+            if (current_task.awaiter) |awaiter| {
+                make_ready(awaiter);
+            }
         },
     }
 
@@ -496,7 +515,8 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
     }.handler_fn,
 };
 
-// Can't be preempted by a higher priority interrupt.
+// Can't be preempted by a higher priority interrupt so already in a "critical
+// section".
 fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) void {
     rtos_options.cpu_interrupt.set_pending(false);
 
@@ -620,15 +640,16 @@ pub const Task = struct {
     /// Node used for rtos internal lists.
     node: LinkedListNode = .{},
 
-    // data: union {
+    /// Ticks for when the task will be awaken.
     ticks: TimerTicks = undefined,
-    // awaiter: *Task,
-    // } = undefined,
+
+    /// Another task waiting for this task to exit.
+    awaiter: ?*Task = null,
 
     /// Task specific semaphore (required by the wifi driver)
     semaphore: Semaphore = .init(0, 1),
 
-    pub const State = union(enum) {
+    pub const State = enum {
         none,
         ready,
         running,
