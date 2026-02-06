@@ -5,7 +5,7 @@ const MicroBuild = microzig.MicroBuild(.{
     .ch32v = true,
 });
 
-pub fn build(b: *std.Build) void { // $ls root_id 30
+pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const maybe_example = b.option([]const u8, "example", "only build matching examples");
 
