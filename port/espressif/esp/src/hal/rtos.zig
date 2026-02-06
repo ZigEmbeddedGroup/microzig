@@ -87,10 +87,7 @@ var idle_task: Task = .{
 var rtos_state: RTOS_State = undefined;
 pub const RTOS_State = struct {
     ready_queue: ReadyPriorityQueue = .{},
-    timer_queue: LinkedList(.{
-        .use_last = true,
-        .use_prev = true,
-    }) = .{},
+    timer_queue: DoublyLinkedList = .{},
 
     /// The task in .running state. Safe to access outside of critical section
     /// as it is always the same for the currently executing task.
@@ -228,7 +225,7 @@ pub fn spawn(
 }
 
 /// Must execute inside a critical section.
-pub fn make_ready(task: *Task) void {
+pub fn make_ready(task: *Task) linksection(".ram_text") void {
     switch (task.state) {
         .ready, .running, .scheduled_for_deletion => return,
         .none, .suspended => {},
@@ -353,11 +350,11 @@ inline fn context_switch(prev_context: *Context, next_context: *Context) void {
         });
 }
 
-pub fn yield_from_isr() void {
+pub fn yield_from_isr() linksection(".ram_text") void {
     rtos_options.cpu_interrupt.set_pending(true);
 }
 
-pub fn is_a_higher_priority_task_ready() bool {
+pub fn is_a_higher_priority_task_ready() linksection(".ram_text") bool {
     const cs = enter_critical_section();
     defer cs.leave();
 
@@ -537,7 +534,7 @@ pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ 
 }.handler_fn };
 
 /// Must execute inside a critical section.
-fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
+fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) linksection(".ram_text") void {
     sleeping_task.state = .{ .alarm_set = ticks };
 
     var maybe_node = rtos_state.timer_queue.first;
@@ -562,7 +559,7 @@ fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) void {
     }
 }
 
-fn sweep_timer_queue() void {
+fn sweep_timer_queue() linksection(".ram_text") void {
     var now: TimerTicks = .now();
     while (rtos_state.timer_queue.pop()) |node| {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
@@ -694,7 +691,7 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         pq.ready.setPresent(new_task.priority, true);
     }
 } else struct {
-    inner: std.DoublyLinkedList = .{},
+    inner: DoublyLinkedList = .{},
 
     fn peek_top(pq: *ReadyPriorityQueue) ?*Task {
         if (pq.inner.first) |first_node| {
@@ -729,7 +726,7 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         while (maybe_node) |node| : (maybe_node = node.next) {
             const task: *Task = @alignCast(@fieldParentPtr("node", node));
             if (@intFromEnum(new_task.priority) > @intFromEnum(task.priority)) {
-                pq.inner.insertBefore(node, &new_task.node);
+                pq.inner.insert_before(node, &new_task.node);
                 break;
             }
         } else {
@@ -763,12 +760,12 @@ pub const TimerTicks = enum(u52) {
 pub const TimeoutError = error{Timeout};
 
 pub const PriorityWaitQueue = struct {
-    list: std.DoublyLinkedList = .{},
+    list: DoublyLinkedList = .{},
 
     pub const Waiter = struct {
         task: *Task,
         priority: Priority,
-        node: std.DoublyLinkedList.Node = .{},
+        node: LinkedListNode = .{},
     };
 
     /// Must execute inside a critical section.
@@ -1159,6 +1156,11 @@ pub const LinkedListNode = struct {
     prev: ?*LinkedListNode = null,
     next: ?*LinkedListNode = null,
 };
+
+pub const DoublyLinkedList = LinkedList(.{
+    .use_last = true,
+    .use_prev = true,
+});
 
 pub const LinkedListCapabilities = struct {
     use_last: bool = true,
