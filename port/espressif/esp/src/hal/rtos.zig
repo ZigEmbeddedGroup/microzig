@@ -1252,3 +1252,132 @@ pub fn LinkedList(comptime caps: LinkedListCapabilities) type {
         }.remove else @compileError("linked list does not support remove");
     };
 }
+
+test "LinkedList.with_last" {
+    const expect = std.testing.expect;
+    const TestNode = struct {
+        data: i32,
+        node: LinkedListNode = .{},
+    };
+
+    var list: LinkedList(.{
+        .use_prev = false,
+        .use_last = true,
+    }) = .{};
+
+    var n1: TestNode = .{ .data = 1 };
+    var n2: TestNode = .{ .data = 2 };
+    var n3: TestNode = .{ .data = 3 };
+
+    // 1. Test Append on empty
+    list.append(&n1.node);
+
+    // State: [1]
+    try expect(list.first == &n1.node);
+    try expect(list.last == &n1.node);
+    try expect(n1.node.next == null);
+
+    // 2. Test Append on existing
+    list.append(&n2.node);
+
+    // State: [1, 2]
+    try expect(list.first == &n1.node);
+    try expect(list.last == &n2.node);
+    try expect(n1.node.next == &n2.node);
+    try expect(n2.node.next == null);
+
+    // 3. Test Prepend
+    list.prepend(&n3.node);
+
+    // State: [3, 1, 2]
+    try expect(list.first == &n3.node);
+    try expect(list.last == &n2.node);
+    try expect(n3.node.next == &n1.node);
+
+    // 4. Test Pop (FIFO if we pop from head)
+    const p1 = list.pop();
+
+    // State: [1, 2]
+    try expect(p1 == &n3.node);
+    try expect(list.first == &n1.node);
+
+    if (p1) |node_ptr| {
+        const parent: *TestNode = @fieldParentPtr("node", node_ptr);
+        try expect(parent.data == 3);
+    }
+
+    const p2 = list.pop();
+    // State: [2]
+    try expect(p2 == &n1.node);
+    try expect(list.first == &n2.node);
+    try expect(list.last == &n2.node);
+
+    const p3 = list.pop();
+    // State: []
+    try expect(p3 == &n2.node);
+    try expect(list.first == null);
+    try expect(list.last == null);
+
+    // 5. Test Pop on empty
+    try expect(list.pop() == null);
+}
+
+test "LinkedList.doubly_linked" {
+    const expect = std.testing.expect;
+    const TestNode = struct {
+        data: i32,
+        node: LinkedListNode = .{},
+    };
+
+    var list: LinkedList(.{
+        .use_prev = true,
+        .use_last = true,
+    }) = .{};
+
+    var n1: TestNode = .{ .data = 10 };
+    var n2: TestNode = .{ .data = 20 };
+    var n3: TestNode = .{ .data = 30 };
+    var n4: TestNode = .{ .data = 40 };
+
+    // 1. Build List
+    list.append(&n1.node);
+    list.append(&n2.node);
+    list.append(&n3.node);
+
+    // State: [10, 20, 30]
+    try expect(list.first == &n1.node);
+    try expect(list.last == &n3.node);
+    try expect(n1.node.next == &n2.node);
+    try expect(n2.node.prev == &n1.node); // Backward link check
+
+    // 2. Remove Middle Node
+    list.remove(&n2.node);
+
+    // State: [10, 30]
+    try expect(n1.node.next == &n3.node); // 10 -> 30
+    try expect(n3.node.prev == &n1.node); // 30 <- 10
+    try expect(list.first == &n1.node);
+    try expect(list.last == &n3.node);
+
+    // 3. Insert Before Head
+    list.insert_before(&n1.node, &n4.node);
+
+    // State: [40, 10, 30]
+    try expect(list.first == &n4.node);
+    try expect(n4.node.next == &n1.node); // 40 -> 10
+    try expect(n1.node.prev == &n4.node); // 10 <- 40
+
+    // 4. Remove Tail
+    list.remove(&n3.node);
+
+    // State: [40, 10]
+    try expect(list.last == &n1.node);
+    try expect(n1.node.next == null);
+    try expect(list.first == &n4.node);
+
+    // 5. Check Parent Pointer
+    if (list.first) |node_ptr| {
+        const head_struct: *TestNode = @fieldParentPtr("node", node_ptr);
+        try expect(head_struct.data == 40);
+    }
+}

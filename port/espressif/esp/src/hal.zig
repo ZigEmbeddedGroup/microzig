@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 pub const esp_image = @import("esp_image");
@@ -23,8 +24,15 @@ pub const uart = @import("hal/uart.zig");
 pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 
 comptime {
-    // export atomic intrinsics
-    _ = @import("hal/atomic.zig");
+    if (!builtin.is_test) {
+        // export atomic intrinsics
+        _ = @import("hal/atomic.zig");
+
+        @export(&app_desc, .{
+            .name = "esp_app_desc",
+            .section = ".app_desc",
+        });
+    }
 }
 
 pub const HAL_Options = struct {
@@ -89,7 +97,7 @@ fn disable_watchdogs() void {
 
 // Don't change the name of this export, it is checked by espflash tool. Only
 // these fields are populated here. The others will be set by elf2image.
-export const esp_app_desc: esp_image.AppDesc linksection(".app_desc") = .{
+const app_desc: esp_image.AppDesc = .{
     .secure_version = microzig.options.hal.info.secure_version,
     .version = str(32, microzig.options.hal.info.version),
     .project_name = str(32, microzig.options.hal.info.project_name),
@@ -104,4 +112,8 @@ fn str(comptime l: usize, comptime s: []const u8) [l]u8 {
     var buf = std.mem.zeroes([l]u8);
     std.mem.copyForwards(u8, buf[0..s.len], s);
     return buf;
+}
+
+test {
+    _ = rtos;
 }
