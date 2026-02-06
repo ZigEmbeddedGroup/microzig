@@ -28,9 +28,11 @@ const systimer = @import("systimer.zig");
 // yield, tasks are required to have a minimum stack size available at all
 // times.
 
-// TODO: stack overflow detection
 // TODO: task joining and deletion
 //       - the idea is that tasks must return before they can be freed
+// TODO: trigger context switch if a higher priority is awaken in sync
+// primitives
+// TODO: stack overflow detection
 // TODO: direct task signaling
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
@@ -180,7 +182,7 @@ pub fn spawn(
                 @ptrFromInt(args_align.forward(@intFromPtr(rtos_state.current_task) + @sizeOf(Task)));
             @call(.auto, function, context_ptr.*);
             if (@typeInfo(@TypeOf(function)).@"fn".return_type.? != noreturn) {
-                yield(.delete);
+                yield(.exit);
                 unreachable;
             }
         }
@@ -227,7 +229,7 @@ pub fn spawn(
 /// Must execute inside a critical section.
 pub fn make_ready(task: *Task) linksection(".ram_text") void {
     switch (task.state) {
-        .ready, .running, .scheduled_for_deletion => return,
+        .ready, .running, .exited => return,
         .none, .suspended => {},
         .alarm_set => {
             rtos_state.timer_queue.remove(&task.node);
@@ -240,10 +242,9 @@ pub fn make_ready(task: *Task) linksection(".ram_text") void {
 
 pub const YieldAction = union(enum) {
     reschedule,
-    wait: struct {
-        timeout: ?TimerTicks = null,
-    },
-    delete,
+    timeout: TimerTicks,
+    wait,
+    exit,
 };
 
 pub inline fn yield(action: YieldAction) void {
@@ -263,26 +264,24 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
             current_task.state = .ready;
             rtos_state.ready_queue.put(current_task);
         },
-        .wait => |wait_action| {
+        .timeout => |timeout| {
             assert(current_task != &idle_task);
-
-            if (wait_action.timeout) |timeout| {
-                if (timeout.is_reached_by(.now())) {
-                    continue :action .reschedule;
-                }
-                schedule_wake_at(current_task, timeout);
-            } else {
-                current_task.state = .suspended;
+            if (timeout.is_reached_by(.now())) {
+                continue :action .reschedule;
             }
+            schedule_wake_at(current_task, timeout);
         },
-        .delete => {
+        .wait => {
+            assert(current_task != &idle_task);
+            current_task.state = .suspended;
+        },
+        .exit => {
             assert(current_task != &idle_task and current_task != &main_task);
-
-            current_task.state = .scheduled_for_deletion;
+            current_task.state = .exited;
         },
     }
 
-    const next_task: *Task = rtos_state.ready_queue.pop(null) orelse @panic("No task ready to run!");
+    const next_task: *Task = rtos_state.ready_queue.pop(null).?;
 
     next_task.state = .running;
     rtos_state.current_task = next_task;
@@ -293,7 +292,7 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
 pub fn sleep(duration: time.Duration) void {
     const timeout: TimerTicks = .after(duration);
     while (!timeout.is_reached_by(.now()))
-        yield(.{ .wait = .{ .timeout = timeout } });
+        yield(.{ .timeout = timeout });
 }
 
 inline fn context_switch(prev_context: *Context, next_context: *Context) void {
@@ -535,12 +534,13 @@ pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ 
 
 /// Must execute inside a critical section.
 fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) linksection(".ram_text") void {
-    sleeping_task.state = .{ .alarm_set = ticks };
+    sleeping_task.ticks = ticks;
+    sleeping_task.state = .alarm_set;
 
     var maybe_node = rtos_state.timer_queue.first;
     while (maybe_node) |node| : (maybe_node = node.next) {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (ticks.is_reached_by(task.state.alarm_set)) {
+        if (ticks.is_reached_by(task.ticks)) {
             rtos_state.timer_queue.insert_before(&task.node, &sleeping_task.node);
             break;
         }
@@ -563,12 +563,12 @@ fn sweep_timer_queue() linksection(".ram_text") void {
     var now: TimerTicks = .now();
     while (rtos_state.timer_queue.pop_first()) |node| {
         const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (!task.state.alarm_set.is_reached_by(now)) {
+        if (!task.ticks.is_reached_by(now)) {
             rtos_state.timer_queue.prepend(&task.node);
-            rtos_options.systimer_alarm.set_target(@intFromEnum(task.state.alarm_set));
+            rtos_options.systimer_alarm.set_target(@intFromEnum(task.ticks));
             rtos_options.systimer_alarm.set_enabled(true);
             now = .now();
-            if (task.state.alarm_set.is_reached_by(now))
+            if (task.ticks.is_reached_by(now))
                 continue
             else
                 break;
@@ -620,6 +620,11 @@ pub const Task = struct {
     /// Node used for rtos internal lists.
     node: LinkedListNode = .{},
 
+    // data: union {
+    ticks: TimerTicks = undefined,
+    // awaiter: *Task,
+    // } = undefined,
+
     /// Task specific semaphore (required by the wifi driver)
     semaphore: Semaphore = .init(0, 1),
 
@@ -627,9 +632,9 @@ pub const Task = struct {
         none,
         ready,
         running,
-        alarm_set: TimerTicks,
+        alarm_set,
         suspended,
-        scheduled_for_deletion,
+        exited,
     };
 };
 
@@ -802,9 +807,11 @@ pub const PriorityWaitQueue = struct {
             q.list.append(&waiter.node);
         }
 
-        yield(.{ .wait = .{
-            .timeout = maybe_timeout,
-        } });
+        if (maybe_timeout) |timeout| {
+            yield(.{ .timeout = timeout });
+        } else {
+            yield(.wait);
+        }
 
         q.list.remove(&waiter.node);
     }

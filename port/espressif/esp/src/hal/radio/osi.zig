@@ -673,7 +673,7 @@ pub fn task_delete(handle: ?*anyopaque) callconv(.c) void {
     if (handle != null) {
         @panic("task_delete(non-null): not implemented");
     }
-    rtos.yield(.delete);
+    rtos.yield(.exit);
 }
 
 pub fn task_delay(tick: u32) callconv(.c) void {
