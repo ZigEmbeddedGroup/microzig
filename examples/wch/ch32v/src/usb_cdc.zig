@@ -2,10 +2,10 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const hal = microzig.hal;
+const board = microzig.board;
 const time = hal.time;
 const gpio = hal.gpio;
 const usb = microzig.core.usb;
-const usbfs = hal.usbfs;
 const USB_Serial = usb.drivers.CDC;
 
 const RCC = microzig.chip.peripherals.RCC;
@@ -33,10 +33,10 @@ const USBController = usb.DeviceController(.{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
     .vendor = .{ .id = 0x2E8A, .str = "MicroZig" },
-    .product = .{ .id = 0x000A, .str = "ch32v307 Test Device" },
+    .product = .{ .id = 0x000A, .str = board.product_string },
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = 64,
+    .max_supported_packet_size = hal.usb.max_packet_size,
     .configurations = &.{.{
         .attributes = .{ .self_powered = false },
         .max_current_ma = 50,
@@ -46,46 +46,14 @@ const USBController = usb.DeviceController(.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});
 
-pub var usb_dev: usbfs.Polled(
-    .{ .prefer_high_speed = false },
+pub var usb_dev: hal.usb.Polled(
+    .{},
 ) = undefined;
 
 var usb_controller: USBController = .init;
 
-const pin_config = hal.pins.GlobalConfiguration{
-    .GPIOA = .{
-        .PIN10 = .{
-            .name = "func",
-            .mode = .{ .output = .general_purpose_push_pull },
-        },
-        .PIN14 = .{
-            .name = "tog",
-            .mode = .{ .output = .general_purpose_push_pull },
-        },
-    },
-};
-var pins: *hal.pins.Pins(pin_config) = undefined;
-
 pub fn main() !void {
-    // Enable peripheral clocks for USART1 and GPIOA
-    RCC.APB2PCENR.modify(.{
-        .IOPAEN = 1, // Enable GPIOA clock
-        .IOPCEN = 1,
-        .AFIOEN = 1, // Enable AFIO clock
-        .USART1EN = 1, // Enable USART1 clock
-    });
     // Board brings up clocks and time
-    var p = pin_config.apply();
-    pins = &p;
-    func_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-    tog_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-    mco_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
-
-    // RCC.CFGR0.modify(.{ .MCO = 0b0100 });
-
-    func_pin.put(0);
-    tog_pin.put(0);
-
     microzig.board.init();
     microzig.hal.init();
     // Enable peripheral clocks for USART1 and GPIOA
@@ -99,7 +67,7 @@ pub fn main() !void {
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     // Initialize USART1 at 115200 baud
-    usart.apply(.{ .baud_rate = 921600 });
+    usart.apply(.{ .baud_rate = 115200 });
 
     hal.usart.init_logger(usart);
     std.log.info("UART logging initialized.", .{});
@@ -112,16 +80,6 @@ pub fn main() !void {
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
-    // const pin: gpio.Pin = .{ .number = 8, .port = 0 };
-
-    tog_pin.put(1);
-    time.delay_us(1000);
-    time.delay_us(1500);
-    tog_pin.put(1);
-    tog_pin.put(0);
-    tog_pin.put(1);
-    time.delay_us(1000);
-    tog_pin.put(0);
     while (true) {
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
@@ -130,7 +88,7 @@ pub fn main() !void {
                 i += 1;
                 std.log.info("cdc test: {}", .{i});
 
-                usb_cdc_write(&drivers.serial, "This is very very very very very very very very long text sent from ch32v30x by USB CDC to your device: {}\r\n", .{i});
+                usb_cdc_write(&drivers.serial, "This is very very very long text sent from ch32v30x by USB CDC to your device: {}\r\n", .{i});
             }
 
             // read and print host command if present
@@ -139,13 +97,7 @@ pub fn main() !void {
                 usb_cdc_write(&drivers.serial, "Your message to me was: {s}\r\n", .{message});
             }
         }
-        // pins.tog.toggle();
-        // pins.tog.toggle();
-        // tog_pin.put(1);
         usb_dev.poll(false, &usb_controller);
-        // tog_pin.put(0);
-        // pins.tog.toggle();
-        // pins.tog.toggle();
     }
 }
 

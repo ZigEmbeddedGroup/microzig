@@ -11,6 +11,8 @@ const usb = microzig.core.usb;
 const types = usb.types;
 const descriptor = usb.descriptor;
 
+pub const max_packet_size: u11 = 512;
+
 pub const USBHD_MAX_ENDPOINTS_COUNT = 16;
 
 const max_buffer_pool_size = USBHD_MAX_ENDPOINTS_COUNT * 2 * 512 + 64;

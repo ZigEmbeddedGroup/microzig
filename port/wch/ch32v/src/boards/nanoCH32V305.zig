@@ -5,6 +5,8 @@ pub const chip = @import("chip");
 pub const microzig = @import("microzig");
 const ch32v = microzig.hal;
 
+pub const product_string = "nanoCH32v305";
+
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
     .source = .hsi,

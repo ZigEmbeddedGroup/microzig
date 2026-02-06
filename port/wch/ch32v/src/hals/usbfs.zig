@@ -4,17 +4,14 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_dev);
-const Pins = @import("pins.zig");
-const gpio = @import("gpio.zig");
-
-const func_pin = gpio.Pin.init(0, 10);
-const tog_pin = gpio.Pin.init(0, 14);
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const usb = microzig.core.usb;
 const types = usb.types;
 const descriptor = usb.descriptor;
+
+pub const max_packet_size: u11 = 64;
 
 pub const USB_MAX_ENDPOINTS_COUNT = 7;
 
@@ -23,13 +20,12 @@ const max_buffer_pool_size = USB_MAX_ENDPOINTS_COUNT * 2 * 64 + 64;
 pub const Config = struct {
     max_endpoints_count: comptime_int = USB_MAX_ENDPOINTS_COUNT,
 
-    prefer_high_speed: bool = true,
+    // setting this to true is a compile error for the USBFS peripheral
+    // Here for compatibility with the HS peripheral
+    prefer_high_speed: bool = false,
 
     /// Static buffer pool in SRAM, bump-allocated.
     buffer_bytes: comptime_int = max_buffer_pool_size,
-
-    /// Future seam only; not implemented in this initial version.
-    use_interrupts: bool = false,
 };
 
 const Regs = peripherals.USB_OTG_FS;
@@ -157,9 +153,6 @@ fn uep_rx_ctrl(ep: u4) *volatile RegCtrl {
 
 fn set_tx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
     // [1:0]=RES, [2]=TOG, [3]=AUTO
-    if (ep == 0) {
-        tog_pin.put(tog);
-    }
     const tx_ctrl: *volatile RegCtrl = uep_tx_ctrl(ep);
     tx_ctrl.write(.{
         .RES = res,
@@ -181,11 +174,7 @@ fn current_rx_tog(ep: u4) u1 {
     return uep_rx_ctrl(ep).read().TOG;
 }
 fn current_tx_tog(ep: u4) u1 {
-    const val = uep_tx_ctrl(ep).read().TOG;
-    if (ep == 0) {
-        tog_pin.put(val);
-    }
-    return val;
+    return uep_tx_ctrl(ep).read().TOG;
 }
 
 /// Polled USBHD device backend for microzig core USB controller.
@@ -352,7 +341,6 @@ pub fn Polled(comptime cfg: Config) type {
                 const mask = UIF_IS_NAK | UIF_SIE_FREE | UIF_TOG_OK;
                 const fg: u8 = Regs.R8_USB_INT_FG.raw & ~mask;
                 if (fg == 0) break;
-                func_pin.put(1);
 
                 if ((fg & UIF_HST_SOF) != 0) {
                     // acknowledge SOF but ignore
@@ -390,7 +378,6 @@ pub fn Polled(comptime cfg: Config) type {
                     Regs.R8_USB_INT_FG.raw = UIF_TRANSFER;
                 }
             }
-            func_pin.put(0);
         }
 
         fn handle_transfer(self: *Self, ep: u4, token: u2, controller: anytype) void {
@@ -403,13 +390,8 @@ pub fn Polled(comptime cfg: Config) type {
                 TOKEN_IN => self.handle_in(ep, controller),
                 TOKEN_SETUP => {
                     // OTG_FS peripheral doesn't have the SETUP_ACT interrupt, so we handle like so
-
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
-                    // log.debug("Setup: {any}", .{setup});
-                    // pin.toggle();
-                    // pin.toggle();
                     Regs.R8_UEP0_T_CTRL.modify(.{ .RB_UEP_T_TOG = TOG_DATA1 });
-                    // set_tx_ctrl(0, RES_NAK, TOG_DATA1, false);
                     set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
                     const st_in = self.st(.ep0, .In);
                     st_in.tx_busy = false;
@@ -442,7 +424,6 @@ pub fn Polled(comptime cfg: Config) type {
 
             // Only read if previously armed (ep_listen)
             if (!st_out.rx_armed) {
-                // set_rx_ctrl(ep, RES_NAK, TOG_DATA0, true);
                 return;
             }
 
@@ -546,7 +527,6 @@ pub fn Polled(comptime cfg: Config) type {
             if (ep_num == .ep0) {
                 const st0 = self.st(.ep0, .Out);
                 st0.rx_limit = @as(u16, @intCast(len));
-                // set_rx_ctrl(0, RES_ACK, TOG_DATA0, true);
                 return;
             }
 
