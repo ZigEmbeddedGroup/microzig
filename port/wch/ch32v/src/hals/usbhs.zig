@@ -356,8 +356,6 @@ pub fn Polled(comptime cfg: Config) type {
 
                 if ((fg & UIF_SETUP_ACT) != 0) {
                     log.info("SETUP received", .{});
-                    Regs.USB_INT_FG.raw = UIF_SETUP_ACT;
-
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
 
                     // After SETUP, EP0 IN data stage starts with DATA1.
@@ -365,15 +363,16 @@ pub fn Polled(comptime cfg: Config) type {
                     set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
 
                     controller.on_setup_req(&self.interface, &setup);
+                    Regs.USB_INT_FG.raw = UIF_SETUP_ACT;
                 }
 
                 if ((fg & UIF_TRANSFER) != 0) {
                     // clear transfer
-                    Regs.USB_INT_FG.raw = UIF_TRANSFER;
                     const stv = Regs.USB_INT_ST.read();
                     const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                     const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
                     self.handle_transfer(ep, token, controller);
+                    Regs.USB_INT_FG.raw = UIF_TRANSFER;
                 }
             }
         }

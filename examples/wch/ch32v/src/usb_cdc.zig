@@ -88,7 +88,7 @@ pub fn main() !void {
                 i += 1;
                 std.log.info("cdc test: {}", .{i});
 
-                usb_cdc_write(&drivers.serial, "This is very very very long text sent from ch32v30x by USB CDC to your device: {}\r\n", .{i});
+                usb_cdc_write(&drivers.serial, "This is very very very long text sent from ch32 by USB CDC to your device: {}\r\n", .{i});
             }
 
             // read and print host command if present
