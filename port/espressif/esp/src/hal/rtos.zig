@@ -226,7 +226,7 @@ pub fn spawn(
 
 /// Wait for a task to finish and free its memory. The allocator must be the
 /// same as the one used for spawning.
-pub fn join(allocator: std.mem.Allocator, task: *Task) void {
+pub fn wait_and_free(gpa: std.mem.Allocator, task: *Task) void {
     {
         const cs = enter_critical_section();
         defer cs.leave();
@@ -238,7 +238,7 @@ pub fn join(allocator: std.mem.Allocator, task: *Task) void {
     // alloc_size = stack_end - task
     const alloc_size = @intFromPtr(task.stack[task.stack.len..].ptr) - @intFromPtr(task);
     const alloc: []u8 = @as([*]u8, @ptrCast(task))[0..alloc_size];
-    allocator.free(alloc);
+    gpa.free(alloc);
 }
 
 /// Must execute inside a critical section.

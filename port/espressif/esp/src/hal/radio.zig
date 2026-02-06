@@ -81,7 +81,7 @@ pub fn deinit() void {
         return;
     }
 
-    timer.deinit();
+    timer.deinit(osi.gpa);
 }
 
 pub fn read_mac(iface: enum {
