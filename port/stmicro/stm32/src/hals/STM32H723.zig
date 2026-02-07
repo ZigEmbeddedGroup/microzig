@@ -6,6 +6,7 @@ pub const systick = @import("./common/systick.zig");
 pub const gpio = @import("./common/gpio_v2.zig");
 pub const pins = @import("./common/pins_v2.zig");
 pub const rcc = @import("./STM32H723/rcc.zig");
+pub const spi = @import("./common/spi_v3.zig");
 
 pub fn get_sys_clk() u32 {
     return @intFromFloat(rcc.current_clocks.SysCLKOutput);

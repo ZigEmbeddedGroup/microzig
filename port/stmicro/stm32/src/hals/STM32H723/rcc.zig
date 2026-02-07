@@ -56,7 +56,7 @@ const Config = ClockTree.Config;
 const ClockOutput = ClockTree.Clock_Output;
 const ConfigOutput = ClockTree.Config_Output;
 
-var current_clk: ClockOutput = blk: {
+pub var current_clocks: ClockOutput = blk: {
     const ret = ClockTree.get_clocks(.{}) catch unreachable;
     break :blk ret.clock;
 };
@@ -161,11 +161,11 @@ pub const ResetReason = enum {
 /// it is important that any external change (whether manual or caused by hardware events) to the clock tree be restored before calling this function
 pub fn apply(comptime config: Config) !ClockOutput {
     const clk = comptime ClockTree.get_clocks(config) catch unreachable;
-    current_clk = clk.clock;
+    current_clocks = clk.clock;
 
     //verify if we need to upscale or downscale
     const HSI_CLK = if (clk.clock.HSIDiv == 0) 64_000_000 else clk.clock.HSIDiv;
-    const secure_sys_upscale: bool = current_clk.CpuClockOutput >= HSI_CLK;
+    const secure_sys_upscale: bool = current_clocks.CpuClockOutput >= HSI_CLK;
     const target_sys_upscale: bool = clk.clock.CpuClockOutput >= HSI_CLK;
 
     const hsi_div: HSIDIV = if (clk.config.HSIDiv) |d| @as(HSIDIV, @enumFromInt(@as(u2, @intFromEnum(d)))) else .Div1;
@@ -1112,7 +1112,7 @@ pub fn config_d3_kernel_src(config: D3_KernelConfig) void {
 }
 
 inline fn calc_wait_ticks(val: usize) usize {
-    const sysclk: usize = @intFromFloat(current_clk.CpuClockOutput);
+    const sysclk: usize = @intFromFloat(current_clocks.CpuClockOutput);
     const ms_per_tick = sysclk / 1000;
     return ms_per_tick * val;
 }

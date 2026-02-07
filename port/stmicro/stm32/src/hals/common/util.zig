@@ -46,7 +46,7 @@ pub fn sub_peripheral_enum(comptime T: type, comptime keep_name: []const []const
     const enum_info = @typeInfo(T);
     var names_index = 0;
 
-    var names: [10]std.builtin.Type.EnumField = undefined;
+    var names: [15]std.builtin.Type.EnumField = undefined;
 
     @setEvalBranchQuota(10_000);
     switch (enum_info) {
