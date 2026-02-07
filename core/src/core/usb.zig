@@ -386,13 +386,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             // Create a tuple with the appropriate types
             const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
             var ep_handlers: Tuple(&ep_handlers_types) = undefined;
-            // For IN/OUT
+            // Iterate over all IN and OUT endpoints and bind the handler for any that are set.
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
-                // for each endpoint slot for this direction
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {
-                    // Bind the handler: If the type isn't void, then get the driver (e.g. .serial),
-                    // then for the handler name get that field in the driver, it's a function,
-                    // assign it as a callback
                     if (T != void)
                         ep_handlers[dir][ep] = @field(driver_fields[drv_id.?].type.handlers, name);
                 }
