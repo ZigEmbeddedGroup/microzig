@@ -73,9 +73,6 @@ pub const Descriptor = extern struct {
         itf_data: []const u8 = "",
     };
 
-    // GM: Why does this method return a DescriptorCreateResult of This?
-    // Couldn't the verification function instead have just make sure that
-    // those fields were present?
     /// This function is used during descriptor creation. Endpoint and interface numbers are
     /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
     /// by the user when creating the device controller type. If multiple instances of a driver

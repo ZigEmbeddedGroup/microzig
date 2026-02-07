@@ -104,6 +104,8 @@ pub fn Polled(config: Config) type {
         data_buffer: []align(64) u8,
         interface: usb.DeviceInterface,
 
+        /// Poll to see if the host has sent anything. Delegate to the appropriate handler in the
+        /// controller based on the interrupt field set.
         pub fn poll(self: *@This(), controller: anytype) void {
             comptime usb.validate_controller(@TypeOf(controller));
 
