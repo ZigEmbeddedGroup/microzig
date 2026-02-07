@@ -207,7 +207,7 @@ pub const Config = struct {
                 const params = @typeInfo(@TypeOf(fld.type.Descriptor.create)).@"fn".params;
                 // Ensure it takes 3 parameters
                 assert(params.len == 3);
-                // The first is a descriptor allocator?
+                // The first must be a DescriptorAllocator
                 assert(params[0].type == *DescriptorAllocator);
                 // The second is usb.types.Len
                 assert(params[1].type == types.Len);

@@ -223,7 +223,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
         .line_coding = .init,
         .notifi_ready = .init(true),
 
-        // OK so `init` provides a data buffer, which we split in half for rx and tx data.
+        // `init` provides a data buffer, which we split in half for rx and tx data.
         .rx_data = data[0..len_half],
         .rx_seek = 0,
         .rx_end = 0,
