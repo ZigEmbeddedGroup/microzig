@@ -138,10 +138,8 @@ pub const Descriptor = extern struct {
     }
 };
 
-// GM: Is 'notifi' just a typo? or does it mean something to USB.
-// These are supposed to be a map from endpoint descriptor field names to the handler.
-// IN and OUT make sense in USB parlance (they are transaction types), but I
-// don't know what concept that notify is supposed to map to.
+// These field names are matched (at comptime) to the field names in the descriptor returned from
+// `create` when binding the endpoints.
 pub const handlers: usb.DriverHandlers(@This()) = .{
     .ep_notifi = on_notifi_ready,
     .ep_out = on_rx,
@@ -238,9 +236,8 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
     device.ep_listen(desc.ep_out.endpoint.num, @intCast(self.rx_data.len));
 }
 
-// Is this basically a class-specific sort of message, e.g. CDC specific? how
-// does the USB 'ingress' know to route to this? Is it just anything on
-// endpoint 0?
+/// Handle class-specific SETUP requests where recipient=Interface
+/// Called by DeviceController when the interface number matches this driver.
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
     const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
     log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });

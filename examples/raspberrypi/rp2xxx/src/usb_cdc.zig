@@ -5,16 +5,16 @@ const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
+// Port-specific type which implements the DeviceInterface interface, used by the USB core to
+// read from/write to the peripheral.
 const USB_Device = rp2xxx.usb.Polled(.{});
+// USB class driver
 const USB_Serial = usb.drivers.CDC;
 
-// GM: This is just a handle to the usb peripheral in the USB HAL for this chip.
 var usb_device: USB_Device = undefined;
 
-// GM: This tells how to route packets to the appropriate driver? But how?
-// This is a type constructor, which takes a config and 'driver args'.
-// The driver args have fields that match the fields in the Drivers, so it must be a way for the
-// controller to know how to form calls to some handler for the driver?
+// Generate a device controller with descriptor and handlers setup for CDC (USB_Serial) and
+// picotool-controlled reset (ResetDriver).
 var usb_controller: usb.DeviceController(.{
     .bcd_usb = USB_Device.max_supported_bcd_usb,
     .device_triple = .unspecified,

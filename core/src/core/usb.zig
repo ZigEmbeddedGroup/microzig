@@ -319,28 +319,11 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 // Get the descriptor instance from the result.
                 const descriptors = result.descriptor;
 
-                // GM: If they have alloc_bytes, then we can get the name and stuff?
-                // CLAUDE: This builds the DriverAlloc struct. If a driver's create() returned
-                // alloc_bytes (like CDC requesting 2*max_packet_size), a field is added to
-                // DriverAlloc with that driver's name and an array of that size. Later in
-                // process_set_config, this memory is passed to the driver's init function.
-                // Drivers that don't need extra memory (like ResetDriver) return null and
-                // don't get a field in DriverAlloc.
-                // GM: I still don't understand what this does. A driver can request memory? what do
-                // these names matter, and where is the memory actually allocated?
-                // CLAUDE: Yes, drivers request working memory (e.g., CDC needs rx/tx buffers).
-                // The names matter because they become field names in the DriverAlloc struct.
-                // Memory is allocated HERE - at comptime! DriverAlloc becomes a struct like:
-                //   struct { serial: [128]u8 }
-                // The DeviceController has a `driver_alloc: DriverAlloc` field (line 499).
-                // When SetConfiguration happens (process_set_config), it passes a slice of
-                // this memory to the driver's init function. So it's statically allocated
-                // as part of the DeviceController instance, not heap allocated.
-                // GM: What is all this appending BS? what are the names, types, and attrs?
+                // If the driver requests memory, then collect the names, types, and attrs
                 if (result.alloc_bytes) |len| {
-                    driver_alloc_names = driver_alloc_names ++ &[1][:0]const u8{drv.name};
-                    driver_alloc_types = driver_alloc_types ++ &[1]type{[len]u8};
-                    driver_alloc_attrs = driver_alloc_attrs ++ &[1]StructFieldAttributes{.{ .@"align" = result.alloc_align }};
+                    driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{drv.name};
+                    driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]StructFieldAttributes{.{ .@"align" = result.alloc_align }};
                 } else {
                     assert(result.alloc_align == null);
                 }
@@ -348,35 +331,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 assert(@alignOf(Descriptors) == 1);
                 size += @sizeOf(Descriptors);
 
-                // GM: Go over all the different descriptors
-                // That is itf, ep_out, and ep_in for the EchoExample driver. It's a lot more for
-                // the CDC driver. What do these field? Are they events or something? transaction
-                // types?
-                // Wel,, they have types defined in usb, so they are a mix of things
-                // CLAUDE: These fields ARE USB descriptors - the actual data structures sent to the host
-                // during enumeration. They describe the device's capabilities:
-                // - Interface descriptors: logical groupings of endpoints (like "this is a serial port")
-                // - Endpoint descriptors: individual data pipes (IN/OUT, bulk/interrupt, max packet size)
-                // - CDC-specific descriptors: Header, ACM, Union, etc. for CDC class devices
-                // They're NOT events; they're static metadata the host reads to understand the device.
-                // GM: OK. That makes sense, but what are CDC specific descriptors for? as in, do
-                // they have endpoints? if not, what is their purpose? Do they just describe the
-                // features/configuration of the CDC device?
-                // CLAUDE: Correct - CDC descriptors describe features/configuration, they don't
-                // have endpoints themselves. They're "functional descriptors" that tell the host:
-                // - Header: "I speak CDC version 1.20"
-                // - CallManagement: "I don't handle call management, use data interface X"
-                // - ACM (Abstract Control Model): "I support line coding and break signals"
-                // - Union: "Interfaces 0 and 1 are grouped together as one CDC function"
-                // Without these, the host wouldn't know it's a serial device or how to use it.
-                // The actual data flows through the endpoints defined separately (ep_notifi,
-                // ep_in, ep_out). These CDC descriptors are like metadata about the device class.
-                // GM: So what does this do? It gets all the descriptors and collects something??
+                // Collect handler types, names, and drivers, to later be bound to the appropriate
+                // endpoints
                 for (@typeInfo(Descriptors).@"struct".fields, 0..) |fld, desc_num| {
                     const desc = @field(descriptors, fld.name);
 
-                    // For the first field ONLY
-                    // GM: Why is this a specia case
+                    // Determine which interface numbers this driver owns. If it is an
+                    // InterfaceAssociation, then use the interface count. If it is an Interface,
+                    // then the driver owns just that one interface.
                     if (desc_num == 0) {
                         const itf_start, const itf_count = switch (fld.type) {
                             descriptor.InterfaceAssociation => .{ desc.first_interface, desc.interface_count },
@@ -390,17 +352,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         };
                         if (itf_start != itf_handlers.len)
                             @compileError("interface numbering mismatch");
-                        itf_handlers = itf_handlers ++ &[1]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
+                        itf_handlers = itf_handlers ++ &[_]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
                     }
 
-                    // GM: Ok, here we have Endpoints and InterfaceAssociations. What about
-                    // Interfaces, Headers, etc?
-                    // CLAUDE: Interfaces, Headers, CDC descriptors fall into the "else => {}" case.
-                    // Only Endpoints need special handling here because we must register handlers
-                    // for them (to route IN/OUT traffic). InterfaceAssociation is checked only to
-                    // verify it's the first descriptor (USB spec requires IAD before interfaces).
-                    // The other descriptors are just included in the configuration descriptor blob
-                    // that gets sent to the host - no runtime routing needed for them.
                     switch (fld.type) {
                         // Register handler for endpoints
                         descriptor.Endpoint => {
@@ -413,22 +367,6 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                                     .{ ep_num, desc.endpoint.dir, ep_handler_drivers[ep_dir][ep_num], drv.name },
                                 ));
 
-                            // GM: I mostly get this: 2 directions, 16 endpoints each. For each
-                            // 'slot' we assign a few things. the drv_id is probably to lookup the
-                            // correct driver. The type is maybe so we can cast it later? no idea
-                            // why we store the name.
-                            // CLAUDE: Good understanding! The drv_id is for looking up the driver
-                            // instance. The type is stored because we need to build ep_handlers
-                            // as a Tuple of handler function types (line 427). Each slot in the
-                            // tuple has a different type (void if unused, fn(*CDC, Num) if used).
-                            // The name (e.g., "ep_out") is used to look up the handler function
-                            // from the driver's handlers struct at line 437:
-                            //   @field(driver_fields[drv_id].type.handlers, name)
-                            // So we map endpoint 1 OUT -> "ep_out" -> CDC.handlers.ep_out -> on_rx
-                            // GM: Bind the handler, driver, and name? for this direction,endpoint.
-                            // Why do we need these three things? especially the name. who gives a
-                            // shit? The name is used to get the struct field via @field. Is there a
-                            // better way?
                             ep_handler_types[ep_dir][ep_num] = EndpointHandler(drv.type);
                             ep_handler_drivers[ep_dir][ep_num] = drv_id;
                             ep_handler_names[ep_dir][ep_num] = fld.name;
@@ -443,38 +381,22 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
-            // GM: This is where the handlers are actually bound to the endpoints
-            // CLAUDE: Correct. The previous loop collected metadata (types, names, driver IDs).
-            // This loop actually fetches the handler functions from each driver's handlers struct
-            // and stores them in ep_handlers[dir][ep]. The result is a static lookup table.
             // Finally, bind the handler functions based on the data collected above.
             const Tuple = std.meta.Tuple;
+            // Create a tuple with the appropriate types
             const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
             var ep_handlers: Tuple(&ep_handlers_types) = undefined;
             // For IN/OUT
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
                 // for each endpoint slot for this direction
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {
-                    // Bind the handler: If the type isn't null, then get the driver (e.g. .serial),
+                    // Bind the handler: If the type isn't void, then get the driver (e.g. .serial),
                     // then for the handler name get that field in the driver, it's a function,
                     // assign it as a callback
                     if (T != void)
                         ep_handlers[dir][ep] = @field(driver_fields[drv_id.?].type.handlers, name);
                 }
             }
-            // GM: What's the point of the ep_handler_types? We don't actually use the stored type,
-            // right? We just check if it's null or not. Couldn't this just be a boolean field or
-            // smoething that signified that we had a handler for that endpoint? Hell, couldn't we
-            // just check if drv_id were null?
-            // CLAUDE: You're right that we check "T != void" like a boolean. But we DO use the
-            // type! Look at line 427-428: the ep_handler_types become the types of the Tuple.
-            // Each slot in ep_handlers has a different function pointer type because different
-            // drivers have different Self types (fn(*CDC, Num) vs fn(*HID, Num)). Zig's Tuple
-            // stores each element with its correct type. If we just stored booleans, we'd lose
-            // the type information needed to build the heterogeneous tuple. And yes, we could
-            // check drv_id != null instead of T != void - they're equivalent here. The type
-            // storage is primarily for building the Tuple, the null check is a side effect.
-            // I don't see the type being used at all except for in the test against void.
 
             const DriverConfig = Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
             const idx_in = @intFromEnum(types.Dir.In);
