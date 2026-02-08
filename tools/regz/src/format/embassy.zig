@@ -2,7 +2,6 @@ const std = @import("std");
 const Database = @import("../Database.zig");
 const Arch = @import("../arch.zig").Arch;
 const arm = @import("../arch/arm.zig");
-const FS_Directory = @import("../FS_Directory.zig");
 
 pub const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm0", "cortex_m0" },

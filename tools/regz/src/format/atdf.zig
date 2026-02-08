@@ -1,5 +1,4 @@
 const std = @import("std");
-const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
@@ -1083,7 +1082,6 @@ fn validate_attrs(node: xml.Node, attrs: []const []const u8) void {
     }
 }
 
-const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 

@@ -10,15 +10,6 @@ const time = microzig.drivers.time;
 const clocks = microzig.hal.clocks;
 const compatibility = microzig.hal.compatibility;
 
-const version: enum {
-    nrf51,
-    nrf52,
-} = switch (compatibility.chip) {
-    .nrf51 => .nrf51,
-    .nrf52, .nrf52833, .nrf52840 => .nrf52,
-    else => compatibility.unsupported_chip("time"),
-};
-
 const rtc = microzig.chip.peripherals.RTC0;
 const COMPARE_INDEX = 2;
 const TIMER_BITS = 23;

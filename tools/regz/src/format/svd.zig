@@ -1,7 +1,6 @@
 const std = @import("std");
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 
 const xml = @import("../xml.zig");
 const Arch = @import("../arch.zig").Arch;
@@ -10,7 +9,6 @@ const Database = @import("../Database.zig");
 const Access = Database.Access;
 const StructID = Database.StructID;
 const DeviceID = Database.DeviceID;
-const PeripheralID = Database.PeripheralID;
 const RegisterID = Database.RegisterID;
 const EnumID = Database.EnumID;
 
@@ -676,11 +674,6 @@ pub const DimableIdentifier = struct {
 
 /// pattern: [0-9]+\-[0-9]+|[A-Z]-[A-Z]|[_0-9a-zA-Z]+(,\s*[_0-9a-zA-Z]+)+
 pub const DimIndex = struct {};
-
-const DimType = enum {
-    array,
-    list,
-};
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;

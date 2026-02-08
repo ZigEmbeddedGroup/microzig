@@ -5,10 +5,8 @@ const peripherals = microzig.chip.peripherals;
 const UART0_reg = peripherals.UART0;
 const UART1_reg = peripherals.UART1;
 
-const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
 const dma = @import("dma.zig");
-const resets = @import("resets.zig");
 const time = @import("time.zig");
 
 const UartRegs = microzig.chip.types.peripherals.UART0;

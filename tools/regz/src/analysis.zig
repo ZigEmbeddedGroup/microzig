@@ -9,10 +9,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
 
-const zqlite = @import("zqlite");
-
-const log = std.log.scoped(.analysis);
-
 db: *Database,
 
 pub const EnumSignature = struct {

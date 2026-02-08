@@ -5,7 +5,6 @@
 //!
 //!
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const mdf = microzig.drivers;

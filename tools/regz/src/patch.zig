@@ -1,5 +1,4 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 

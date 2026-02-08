@@ -1,5 +1,3 @@
-const std = @import("std");
-
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const SIO = peripherals.SIO;
@@ -9,7 +7,6 @@ const hw = @import("hw.zig");
 
 const chip = @import("compatibility.zig").chip;
 
-const resets = @import("resets.zig");
 const NUM_BANK0_GPIOS = switch (chip) {
     .RP2040 => 30,
     .RP2350 => 48,

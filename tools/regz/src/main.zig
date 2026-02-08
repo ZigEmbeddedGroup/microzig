@@ -1,9 +1,8 @@
 const std = @import("std");
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 
-const clap = @import("clap");
+// const clap = @import("clap"); TODO: use clap
 const Database = @import("Database.zig");
 const FS_Directory = @import("FS_Directory.zig");
 const gen = @import("gen.zig");

@@ -1,5 +1,4 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
 pub fn OldMmio(comptime PackedT: type) type {
     const startsWith = std.mem.startsWith;

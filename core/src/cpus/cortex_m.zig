@@ -2,8 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
-const app = microzig.app;
-const shared = @import("cortex_m/shared_types.zig");
 const VectorTable = microzig.chip.VectorTable;
 
 const Core = enum {
