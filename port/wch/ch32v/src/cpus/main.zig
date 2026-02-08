@@ -310,7 +310,7 @@ pub const startup_logic = struct {
             \\    addi a1, a1, 4
             \\    blt a1, a2, clear_bss_loop
             \\clear_bss_done:
-        );
+            ::: .{ .x10 = true, .x11 = true, .x12 = true });
 
         // Copy .data from FLASH to RAM.
         asm volatile (
@@ -325,7 +325,7 @@ pub const startup_logic = struct {
             \\    addi a1, a1, 4
             \\    bne a1, a2, copy_data_loop
             \\copy_done:
-        );
+            ::: .{ .x10 = true, .x11 = true, .x12 = true, .x13 = true });
     }
 
     export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
