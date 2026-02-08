@@ -6,9 +6,9 @@ const shared = @import("shared_types.zig");
 pub const scb_base_offset = 0x0d00;
 
 pub const SystemControlBlock = extern struct {
-    /// CPUID Base Register
+    /// CPUID Base Register.
     CPUID: u32,
-    /// Interrupt Control and State Register
+    /// Interrupt Control and State Register.
     ICSR: mmio.OldMmio(packed struct(u32) {
         VECTACTIVE: u9,
         reserved0: u2 = 0,
@@ -25,9 +25,9 @@ pub const SystemControlBlock = extern struct {
         reserved3: u2 = 0,
         NMIPENDSET: u1,
     }),
-    /// Vector Table Offset Register
+    /// Vector Table Offset Register.
     VTOR: u32,
-    /// Application Interrupt and Reset Control Register
+    /// Application Interrupt and Reset Control Register.
     AIRCR: mmio.OldMmio(packed struct(u32) {
         /// Reserved for Debug use. Must be written as 0.
         VECTRESET: u1, // WO
@@ -46,7 +46,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// System Control Register
     SCR: u32,
-    /// Configuration Control Register
+    /// Configuration Control Register.
     CCR: mmio.OldMmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,

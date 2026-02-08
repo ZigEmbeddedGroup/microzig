@@ -195,7 +195,7 @@ pub const NestedVectorInterruptController = extern struct {
 };
 
 pub const MemoryProtectionUnit = extern struct {
-    /// MPU Type Register
+    /// MPU Type Register.
     TYPE: mmio.OldMmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
@@ -206,7 +206,7 @@ pub const MemoryProtectionUnit = extern struct {
         IREGION: u8,
         reserved1: u8 = 0,
     }),
-    /// MPU Control Register
+    /// MPU Control Register.
     CTRL: mmio.OldMmio(packed struct(u32) {
         /// Enables the MPU
         ENABLE: u1,
@@ -216,13 +216,13 @@ pub const MemoryProtectionUnit = extern struct {
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),
-    /// MPU Region Number Register
+    /// MPU Region Number Register.
     RNR: mmio.OldMmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
         reserved0: u24 = 0,
     }),
-    /// MPU Region Base Address Register
+    /// MPU Region Base Address Register.
     RBAR: mmio.OldMmio(packed struct(u32) {
         /// MPU region field.
         REGION: u4,
@@ -231,7 +231,7 @@ pub const MemoryProtectionUnit = extern struct {
         /// Region base address field.
         ADDR: u27,
     }),
-    /// MPU Attribute and Size Register
+    /// MPU Attribute and Size Register.
     RASR: mmio.OldMmio(packed struct(u32) {
         /// Region enable bit.
         ENABLE: u1,

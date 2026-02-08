@@ -1,6 +1,6 @@
 const microzig = @import("microzig");
-const builtin = @import("builtin");
 const mmio = microzig.mmio;
+
 const shared = @import("shared_types.zig");
 
 pub const scb_base_offset = 0x0d00;

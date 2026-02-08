@@ -36,7 +36,7 @@ pub const SystemControlBlock = extern struct {
         /// Interrupt pending flag, excluding NMI and Faults:
         /// 0 = interrupt not pending
         /// 1 = interrupt pending.
-        ISRPENDING: u1 = 0,
+        ISRPENDING: u1,
         /// Indicates whether a pending exception will be serviced on exit from debug
         /// halt state:
         /// 0 = will not be serviced
