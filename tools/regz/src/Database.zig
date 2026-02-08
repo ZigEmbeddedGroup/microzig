@@ -385,21 +385,41 @@ pub const DeviceProperty = struct {
 // not sure how to communicate the *_once values in generated code
 // besides adding it to documentation comments
 pub const Access = enum {
-    @"read-write",
-    @"read-only",
-    @"write-only",
+    read_write,
+    read_only,
+    write_only,
     writeonce,
-    @"read-writeonce",
-    // read normal, write 1 to clear
-    @"read/clear",
+    read_writeonce,
+    // Read normal, write 1 to clear
+    read_clear,
+    // Has one of known ambiguous names, needs a patch
+    ambiguous,
+
+    const names = .{
+        .read_write = .{"read-write"},
+        .read_only = .{"read-only"},
+        .write_only = .{"write-only"},
+        .writeonce = .{"writeonce"},
+        .read_writeonce = .{"read-writeonce"},
+        .read_clear = .{"read/clear"},
+        .ambiguous = .{"write"},
+    };
+
+    const names_short = .{
+        .read_write = .{ "RW", "R/W" },
+        .read_only = .{"R"},
+        .write_only = .{"W"},
+    };
 
     pub const BaseType = []const u8;
-    pub const default: @This() = .@"read-write";
+    pub const default: @This() = .read_write;
 
     pub fn try_parse(str: []const u8) ?@This() {
-        inline for (@typeInfo(Access).@"enum".fields) |field| {
-            if (std.ascii.eqlIgnoreCase(field.name, str))
-                return @field(@This(), field.name);
+        inline for (@typeInfo(@TypeOf(names)).@"struct".fields) |field| {
+            inline for (@field(names, field.name)) |name| {
+                if (std.ascii.eqlIgnoreCase(name, str))
+                    return @field(@This(), field.name);
+            }
         }
         return null;
     }
@@ -407,31 +427,38 @@ pub const Access = enum {
     pub fn parse(str: []const u8) @This() {
         return try_parse(str) orelse {
             const fmt = comptime blk: {
-                var ret: []const u8 = "Failed to parse access string '{s}', it must be one of ";
-                for (@typeInfo(Access).@"enum".fields) |field|
-                    ret = ret ++ "'" ++ field.name ++ "', ";
-                break :blk ret ++ "defaulting to '{t}'";
+                var ret: []const u8 = "Failed to parse access string '{s}', expected one of ";
+                for (@typeInfo(@TypeOf(names)).@"struct".fields) |field| {
+                    for (@field(names, field.name)) |name|
+                        ret = ret ++ "'" ++ name ++ "', ";
+                }
+                break :blk ret;
             };
-            log.warn(fmt, .{ str, default });
-            return default;
+            std.debug.panic(fmt, .{str});
         };
     }
 
     pub fn try_parse_short(str: []const u8) ?@This() {
-        return if (std.mem.eql(u8, str, "RW") or std.mem.eql(u8, str, "R/W"))
-            .@"read-write"
-        else if (std.mem.eql(u8, str, "R"))
-            .@"read-only"
-        else if (std.mem.eql(u8, str, "W"))
-            .@"write-only"
-        else
-            null;
+        inline for (@typeInfo(@TypeOf(names_short)).@"struct".fields) |field| {
+            inline for (@field(names_short, field.name)) |name| {
+                if (std.mem.eql(u8, name, str))
+                    return @field(@This(), field.name);
+            }
+        }
+        return null;
     }
 
     pub fn parse_short(str: []const u8) @This() {
         return try_parse_short(str) orelse {
-            log.info("unrecognized access string: '{s}', expected one of 'RW', 'R/W', 'R', 'W'", .{str});
-            return .default;
+            const fmt = comptime blk: {
+                var ret: []const u8 = "Failed to parse access string '{s}', expected one of ";
+                for (@typeInfo(@TypeOf(names_short)).@"struct".fields) |field| {
+                    for (@field(names_short, field.name)) |name|
+                        ret = ret ++ "'" ++ name ++ "', ";
+                }
+                break :blk ret;
+            };
+            std.debug.panic(fmt, .{str});
         };
     }
 

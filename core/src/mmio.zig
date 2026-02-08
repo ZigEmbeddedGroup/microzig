@@ -9,13 +9,12 @@ pub fn OldMmio(comptime PackedT: type) type {
         const read_only = startsWith(u8, fld.name, "reserved") or
             startsWith(u8, fld.name, "_reserved") or
             startsWith(u8, fld.name, "padding");
-        @field(access, fld.name) = if (read_only) .@"read-only" else .@"read-write";
+        @field(access, fld.name) = if (read_only) .read_only else .read_write;
     }
     return Mmio(PackedT, access);
 }
 
-/// Access type of a single field. Special and illegal have
-/// the same functionality, but display different error messages.
+/// Access type of a single field.
 pub const Access = struct {
     /// Effect of reading the field
     pub const Read = enum {
@@ -52,13 +51,15 @@ pub const Access = struct {
     write: Write,
 
     // Mapping of svd types
-    pub const @"read-only": @This() = .{ .read = .normal, .write = .ignored };
-    pub const @"read-write": @This() = .{ .read = .normal, .write = .normal };
-    pub const @"read-write-once": @This() = .@"read-write";
-    pub const @"write-only": @This() = .{ .read = .garbage, .write = .normal };
-    pub const @"write-once": @This() = .@"write-only";
-    pub const @"read/clear": @This() = .{ .read = .normal, .write = .clear_mask };
+    pub const read_only: @This() = .{ .read = .normal, .write = .ignored };
+    pub const read_write: @This() = .{ .read = .normal, .write = .normal };
+    pub const read_writeonce: @This() = .read_write;
+    pub const write_only: @This() = .{ .read = .garbage, .write = .normal };
+    pub const write_once: @This() = .write_only;
+    pub const read_clear: @This() = .{ .read = .normal, .write = .clear_mask };
     pub const reserved: @This() = .{ .read = .garbage, .write = .ignored };
+    /// SVD has one of known ambiguous register names, needs a patch.
+    pub const ambiguous: @This() = .{ .read = .illegal, .write = .illegal };
 };
 
 fn check_type_has_all_fields(T: type, fields: anytype) void {

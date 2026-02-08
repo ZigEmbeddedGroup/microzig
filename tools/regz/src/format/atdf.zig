@@ -1163,7 +1163,7 @@ test "atdf.register with bitfields and enum" {
     const ctrla = try db.get_register_by_name(allocator, struct_id, "CTRLA");
 
     // access is read-write, so its entry is omitted (we assume read-write by default)
-    try expectEqual(.@"read-write", ctrla.access);
+    try expectEqual(.read_write, ctrla.access);
 
     // check name and description
     try expectEqualStrings("CTRLA", ctrla.name);

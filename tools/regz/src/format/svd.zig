@@ -1030,7 +1030,7 @@ test "svd.device register properties" {
 
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
     try expectEqual(32, register.size_bits);
-    try expectEqual(.@"read-only", register.access);
+    try expectEqual(.read_only, register.access);
     try expectEqual(0, register.reset_value);
     try expectEqual(0xFFFFFFFF, register.reset_mask);
 }
@@ -1076,7 +1076,7 @@ test "svd.peripheral register properties" {
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
     try expectEqual(16, register.size_bits);
-    try expectEqual(.@"write-only", register.access);
+    try expectEqual(.write_only, register.access);
     try expectEqual(1, register.reset_value);
     try expectEqual(0xFFFF, register.reset_mask);
 }
@@ -1125,7 +1125,7 @@ test "svd.register register properties" {
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
     try expectEqual(8, register.size_bits);
-    try expectEqual(.@"read-write", register.access);
+    try expectEqual(.read_write, register.access);
     try expectEqual(2, register.reset_value);
     try expectEqual(0xFF, register.reset_mask);
 }
