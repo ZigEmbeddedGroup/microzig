@@ -208,7 +208,7 @@ pub fn spawn(
     const result_type_info = @typeInfo(@typeInfo(@TypeOf(function)).@"fn".return_type.?);
     switch (result_type_info) {
         .noreturn, .void => {},
-        else => @compileError("the return value of an rtos task must be noreturn or void"),
+        else => @compileError("the return type of an rtos task must be noreturn or void"),
     }
 
     const TypeErased = struct {
