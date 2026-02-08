@@ -1059,10 +1059,10 @@ fn get_patch_label(patch: regz.Patch, arena: Allocator) []const u8 {
     return switch (patch) {
         .override_arch => |p| std.fmt.allocPrint(arena, "override_arch: {s}", .{p.device_name}) catch "override_arch",
         .set_device_property => |p| std.fmt.allocPrint(arena, "set_device_property: {s}", .{p.key}) catch "set_device_property",
-        .add_enum => |p| std.fmt.allocPrint(arena, "add_enum: {s}", .{p.@"enum".name}) catch "add_enum",
+        .add_type => |p| std.fmt.allocPrint(arena, "add_type: {t} {s}", .{ p.type, p.type_name }) catch "add_type",
         .set_enum_type => |p| std.fmt.allocPrint(arena, "set_enum_type: {s}", .{p.of}) catch "set_enum_type",
         .add_interrupt => |p| std.fmt.allocPrint(arena, "add_interrupt: {s}", .{p.name}) catch "add_interrupt",
-        .add_type_and_apply => |p| std.fmt.allocPrint(arena, "add_type_and_apply: {s}", .{p.@"enum".name}) catch "add_type_and_apply",
+        .add_type_and_apply => |p| std.fmt.allocPrint(arena, "add_type_and_apply: {t} {s}", .{ p.type, p.type_name }) catch "add_type_and_apply",
     };
 }
 
@@ -1198,7 +1198,7 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
             switch (patch) {
                 .override_arch => |p| show_override_arch_widget(p),
                 .set_device_property => |p| show_set_device_property_widget(p),
-                .add_enum => |p| show_add_enum_widget(p, arena),
+                .add_type => |p| show_add_type_widget(p, arena),
                 .set_enum_type => |p| show_set_enum_type_widget(p),
                 .add_interrupt => |p| show_add_interrupt_widget(p),
                 .add_type_and_apply => |p| show_add_type_and_apply_widget(p, arena),
@@ -1702,80 +1702,82 @@ fn show_set_device_property_widget(p: anytype) void {
     if (p.description) |desc| labeled_field("Description", desc);
 }
 
-fn show_add_enum_widget(p: anytype, arena: Allocator) void {
+fn show_add_type_widget(p: anytype, arena: Allocator) void {
     labeled_field("Parent", p.parent);
-    show_enum_details(p.@"enum", arena);
+    show_type_details(p, arena);
 }
 
-fn show_enum_details(e: anytype, arena: Allocator) void {
-    labeled_field("Name", e.name);
-    if (e.description) |d| labeled_field("Description", d);
-    const bitsize_str = std.fmt.allocPrint(arena, "{d}", .{e.bitsize}) catch "?";
+fn show_type_details(p: anytype, arena: Allocator) void {
+    labeled_field("Name", p.type_name);
+    if (p.type.@"enum".description) |d| labeled_field("Description", d);
+    const bitsize_str = std.fmt.allocPrint(arena, "{d}", .{p.type.@"enum".bitsize}) catch "?";
     labeled_field("Bit Size", bitsize_str);
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
-    if (e.fields.len > 0) {
-        _ = dvui.label(@src(), "Fields:", .{}, .{
-            .font = .{ .weight = .bold },
-            .color_text = dvui.Color.fromHex("FBB829"),
-        });
+    switch (p.type) {
+        .@"enum" => |e| if (e.fields.len > 0) {
+            _ = dvui.label(@src(), "Fields:", .{}, .{
+                .font = .{ .weight = .bold },
+                .color_text = dvui.Color.fromHex("FBB829"),
+            });
 
-        _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 4 } });
+            _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 4 } });
 
-        // Table for enum fields
-        const header_style: dvui.GridWidget.CellStyle = .{
-            .cell_opts = .{
-                .border = .{ .y = 0, .h = 1, .x = 0, .w = 0 },
-            },
-        };
+            // Table for enum fields
+            const header_style: dvui.GridWidget.CellStyle = .{
+                .cell_opts = .{
+                    .border = .{ .y = 0, .h = 1, .x = 0, .w = 0 },
+                },
+            };
 
-        // Column widths: Name (120 fixed), Value (60 fixed), Description (proportional -1)
-        var col_widths: [3]f32 = .{ 0, 0, 0 };
-        var grid = dvui.grid(@src(), .{ .col_widths = &col_widths }, .{}, .{
-            .expand = .both,
-            .background = true,
-            .padding = dvui.Rect.all(4),
-        });
-        defer grid.deinit();
+            // Column widths: Name (120 fixed), Value (60 fixed), Description (proportional -1)
+            var col_widths: [3]f32 = .{ 0, 0, 0 };
+            var grid = dvui.grid(@src(), .{ .col_widths = &col_widths }, .{}, .{
+                .expand = .both,
+                .background = true,
+                .padding = dvui.Rect.all(4),
+            });
+            defer grid.deinit();
 
-        // Layout: fixed 120 for Name, fixed 60 for Value, rest for Description
-        dvui.columnLayoutProportional(&.{ 120, 60, -1 }, &col_widths, grid.data().contentRect().w);
+            // Layout: fixed 120 for Name, fixed 60 for Value, rest for Description
+            dvui.columnLayoutProportional(&.{ 120, 60, -1 }, &col_widths, grid.data().contentRect().w);
 
-        // Table headers
-        dvui.gridHeading(@src(), grid, 0, "Name", .fixed, header_style);
-        dvui.gridHeading(@src(), grid, 1, "Value", .fixed, header_style);
-        dvui.gridHeading(@src(), grid, 2, "Description", .fixed, header_style);
+            // Table headers
+            dvui.gridHeading(@src(), grid, 0, "Name", .fixed, header_style);
+            dvui.gridHeading(@src(), grid, 1, "Value", .fixed, header_style);
+            dvui.gridHeading(@src(), grid, 2, "Description", .fixed, header_style);
 
-        // Table rows
-        for (e.fields, 0..) |field, row_num| {
-            var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+            // Table rows
+            for (e.fields, 0..) |field, row_num| {
+                var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
 
-            // Name column
-            {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, .{});
-                defer cell.deinit();
-                dvui.labelNoFmt(@src(), field.name, .{}, .{});
+                // Name column
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, .{});
+                    defer cell.deinit();
+                    dvui.labelNoFmt(@src(), field.name, .{}, .{});
+                }
+
+                // Value column
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, .{});
+                    defer cell.deinit();
+                    const value_str = std.fmt.allocPrint(arena, "{d}", .{field.value}) catch "?";
+                    dvui.labelNoFmt(@src(), value_str, .{}, .{});
+                }
+
+                // Description column
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, .{});
+                    defer cell.deinit();
+                    dvui.labelNoFmt(@src(), field.description orelse "", .{}, .{});
+                }
             }
-
-            // Value column
-            {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, .{});
-                defer cell.deinit();
-                const value_str = std.fmt.allocPrint(arena, "{d}", .{field.value}) catch "?";
-                dvui.labelNoFmt(@src(), value_str, .{}, .{});
-            }
-
-            // Description column
-            {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, .{});
-                defer cell.deinit();
-                dvui.labelNoFmt(@src(), field.description orelse "", .{}, .{});
-            }
-        }
+        },
     }
 }
 
@@ -1795,7 +1797,7 @@ fn show_add_interrupt_widget(p: anytype) void {
 
 fn show_add_type_and_apply_widget(p: anytype, arena: Allocator) void {
     labeled_field("Parent", p.parent);
-    show_enum_details(p.@"enum", arena);
+    show_type_details(p, arena);
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
@@ -2302,7 +2304,7 @@ fn create_add_type_and_apply_patch(
 
     // Get the EnumField type from the Patch type using type introspection
     const AddEnumAndApply = std.meta.TagPayload(regz.Patch, .add_type_and_apply);
-    const EnumType = @TypeOf(@as(AddEnumAndApply, undefined).@"enum");
+    const EnumType = @TypeOf(@as(AddEnumAndApply, undefined).type.@"enum");
     const EnumFieldType = std.meta.Child(@TypeOf(@as(EnumType, undefined).fields));
 
     // Convert fields (note: Database.EnumField.value is u64, Patch.EnumField.value is u32)
@@ -2328,12 +2330,12 @@ fn create_add_type_and_apply_patch(
     return .{
         .add_type_and_apply = .{
             .parent = parent,
-            .@"enum" = .{
-                .name = try alloc.dupe(u8, enum_name),
+            .type_name = try alloc.dupe(u8, enum_name),
+            .type = .{ .@"enum" = .{
                 .description = if (group.description) |d| try alloc.dupe(u8, d) else null,
                 .bitsize = group.size_bits,
                 .fields = fields,
-            },
+            } },
             .apply_to = apply_to,
         },
     };
