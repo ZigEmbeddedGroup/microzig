@@ -5,11 +5,16 @@ const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
+// Port-specific type which implements the DeviceInterface interface, used by the USB core to
+// read from/write to the peripheral.
 const USB_Device = rp2xxx.usb.Polled(.{});
+// USB class driver
 const USB_Serial = usb.drivers.CDC;
 
 var usb_device: USB_Device = undefined;
 
+// Generate a device controller with descriptor and handlers setup for CDC (USB_Serial) and
+// picotool-controlled reset (ResetDriver).
 var usb_controller: usb.DeviceController(.{
     .bcd_usb = USB_Device.max_supported_bcd_usb,
     .device_triple = .unspecified,
@@ -71,6 +76,7 @@ pub fn main() !void {
         // You can now poll for USB events
         usb_device.poll(&usb_controller);
 
+        // Ensure that the host as finished enumerating our USB device
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {
@@ -93,8 +99,9 @@ pub fn main() !void {
 
 var usb_tx_buff: [1024]u8 = undefined;
 
-// Transfer data to host
-// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
+/// Transfer data to host
+/// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be
+/// handled
 pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
     var tx = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
@@ -109,11 +116,10 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
 
 var usb_rx_buff: [1024]u8 = undefined;
 
-// Receive data from host
-// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
-pub fn usb_cdc_read(
-    serial: *USB_Serial,
-) []const u8 {
+/// Receive data from host
+/// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every
+/// read operation
+pub fn usb_cdc_read(serial: *USB_Serial) []const u8 {
     var rx_len: usize = 0;
 
     while (true) {

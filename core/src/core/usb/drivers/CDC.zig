@@ -3,6 +3,7 @@ const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_cdc);
 
+/// CDC PSTN Subclass Management Element Requests
 pub const ManagementRequestType = enum(u8) {
     SetCommFeature = 0x02,
     GetCommFeature = 0x03,
@@ -27,6 +28,7 @@ pub const ManagementRequestType = enum(u8) {
     _,
 };
 
+/// Line coding structure for SetLineCoding/GetLineCoding requests
 pub const LineCoding = extern struct {
     pub const StopBits = enum(u8) { @"1" = 0, @"1.5" = 1, @"2" = 2, _ };
     pub const Parity = enum(u8) {
@@ -44,13 +46,14 @@ pub const LineCoding = extern struct {
     data_bits: u8,
 
     pub const init: @This() = .{
-        .bit_rate = 115200,
-        .stop_bits = 0,
-        .parity = 0,
+        .bit_rate = .from(115200),
+        .stop_bits = .@"1",
+        .parity = .none,
         .data_bits = 8,
     };
 };
 
+// This struct bundles all the descriptors CDC needs into one Configuration.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
 
@@ -70,6 +73,11 @@ pub const Descriptor = extern struct {
         itf_data: []const u8 = "",
     };
 
+    /// This function is used during descriptor creation. Endpoint and interface numbers are
+    /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
+    /// by the user when creating the device controller type. If multiple instances of a driver
+    /// are used, this function is called for each, with different arguments. Passing arguments
+    /// through this function is preferred to making the whole driver generic.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
         max_supported_packet_size: usb.types.Len,
@@ -130,6 +138,8 @@ pub const Descriptor = extern struct {
     }
 };
 
+// These field names are matched (at comptime) to the field names in the descriptor returned from
+// `create` when binding the endpoints.
 pub const handlers: usb.DriverHandlers(@This()) = .{
     .ep_notifi = on_notifi_ready,
     .ep_out = on_rx,
@@ -202,6 +212,7 @@ pub fn flush(self: *@This()) bool {
     return true;
 }
 
+// Called when the host selects a configuration.
 pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
     const len_half = @divExact(data.len, 2);
     assert(len_half == desc.ep_in.max_packet_size.into());
@@ -209,14 +220,10 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
     self.* = .{
         .device = device,
         .descriptor = desc,
-        .line_coding = .{
-            .bit_rate = .from(115200),
-            .stop_bits = .@"1",
-            .parity = .none,
-            .data_bits = 8,
-        },
+        .line_coding = .init,
         .notifi_ready = .init(true),
 
+        // `init` provides a data buffer, which we split in half for rx and tx data.
         .rx_data = data[0..len_half],
         .rx_seek = 0,
         .rx_end = 0,
@@ -229,6 +236,8 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
     device.ep_listen(desc.ep_out.endpoint.num, @intCast(self.rx_data.len));
 }
 
+/// Handle class-specific SETUP requests where recipient=Interface
+/// Called by DeviceController when the interface number matches this driver.
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
     const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
     log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });
