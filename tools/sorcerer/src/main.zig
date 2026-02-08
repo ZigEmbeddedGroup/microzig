@@ -1,7 +1,5 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const dvui = @import("dvui");
-const serial = @import("serial");
 const regz = @import("regz");
 const schemas = @import("schemas");
 const RegisterSchemaUsage = @import("RegisterSchemaUsage");
