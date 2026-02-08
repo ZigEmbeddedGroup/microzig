@@ -52,6 +52,7 @@ pub const Access = struct {
     pub const read_only: @This() = .{ .read = .normal, .write = .ignored };
     pub const read_write: @This() = .{ .read = .normal, .write = .normal };
     pub const write_only: @This() = .{ .read = .garbage, .write = .normal };
+    pub const rw1z: @This() = .{ .read = .normal, .write = .clear_mask };
     pub const reserved: @This() = .{ .read = .garbage, .write = .ignored };
 };
 

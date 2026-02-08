@@ -357,6 +357,8 @@ pub const Access = enum {
     write_only,
     write_once,
     read_write_once,
+    // read normal, write 1 to clear
+    rw1z,
 
     pub const BaseType = []const u8;
     pub const default = .read_write;

@@ -1364,6 +1364,7 @@ fn write_fields_and_access(
                 .read_write_once, .read_write => "read_write",
                 .read_only => "read_only",
                 .write_only, .write_once => "write_only",
+                .rw1z => "rw1z",
             };
             try writer.print(".{f} = .{s},\n", .{ std.zig.fmtId(data.name), access_str });
         },

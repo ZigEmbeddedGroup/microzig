@@ -1012,6 +1012,8 @@ fn parse_access(str: []const u8) !Access {
         Access.write_once
     else if (std.ascii.eqlIgnoreCase("read-writeOnce", str))
         Access.read_write_once
+    else if (std.ascii.eqlIgnoreCase("read/clear", str))
+        Access.rw1z
     else blk: {
         log.warn("invalid access type: '{s}'", .{str});
         break :blk error.UnknownAccessType;
