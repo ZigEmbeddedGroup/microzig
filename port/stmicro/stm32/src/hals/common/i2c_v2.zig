@@ -124,7 +124,7 @@ const I2C = struct {
 
         regs.CR1.modify(.{ .PE = 0 });
 
-        regs.TIMINGR.modify(i2c.timingr);
+        regs.TIMINGR.write(i2c.timingr);
 
         regs.CR1.modify(.{ .PE = 1 });
     }

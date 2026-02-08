@@ -11,7 +11,7 @@
             },
         } },
         .apply_to = .{
-            "types.peripherals.GPIO.PIN_CNF.PULL",
+            "types.peripherals.P0.PIN_CNF.PULL",
         },
     } },
     .{ .add_type_and_apply = .{
@@ -31,7 +31,7 @@
             },
         } },
         .apply_to = .{
-            "types.peripherals.GPIO.PIN_CNF.DRIVE",
+            "types.peripherals.P0.PIN_CNF.DRIVE",
         },
     } },
 }

@@ -90,7 +90,7 @@ pub const LP_UART = enum(u4) {
 
         stat.MSBF = if (config.bit_order == .lsb) .LSB_FIRST else .MSB_FIRST;
         stat.RXINV = if (config.rx_invert) .INVERTED else .NOT_INVERTED;
-        regs.STAT.modify(stat);
+        regs.STAT.write(stat);
 
         uart.set_enabled(config.enable_send, config.enable_receive);
 
