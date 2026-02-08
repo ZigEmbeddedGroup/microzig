@@ -44,7 +44,7 @@ pub const TickFrequency = enum(u32) {
     _,
 
     pub fn from_hz(v: u32) TickFrequency {
-        assert(v < 100_000); // frequency to high
+        assert(v < 100_000); // frequency too high
         return @enumFromInt(v);
     }
 
@@ -205,6 +205,12 @@ pub fn spawn(
     const Args = @TypeOf(args);
     const args_align: std.mem.Alignment = comptime .fromByteUnits(@alignOf(Args));
 
+    const result_type_info = @typeInfo(@typeInfo(@TypeOf(function)).@"fn".return_type.?);
+    switch (result_type_info) {
+        .noreturn, .void => {},
+        else => @compileError("the return value of an rtos task must be noreturn or void"),
+    }
+
     const TypeErased = struct {
         fn call() callconv(.c) void {
             // interrupts are initially disabled in new tasks
@@ -212,8 +218,10 @@ pub fn spawn(
 
             const context_ptr: *const Args =
                 @ptrFromInt(args_align.forward(@intFromPtr(rtos_state.current_task) + @sizeOf(Task)));
+
             @call(.auto, function, context_ptr.*);
-            if (@typeInfo(@TypeOf(function)).@"fn".return_type.? != noreturn) {
+
+            if (result_type_info != .noreturn) {
                 yield(.exit);
                 unreachable;
             }
@@ -680,7 +688,7 @@ pub const Task = struct {
     /// Node used for rtos internal lists.
     node: LinkedListNode = .{},
 
-    /// Ticks for when the task will be awaken.
+    /// Ticks for when the task will wake.
     ticks: u32 = 0,
 
     /// Another task waiting for this task to exit.
