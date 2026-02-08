@@ -3,24 +3,24 @@ const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 
-pub const Type = union(enum) {
-    pub const EnumField = struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        value: u32,
-    };
-
-    pub const Enum = struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        bitsize: u8,
-        fields: []const EnumField = &.{},
-    };
-
-    @"enum": Enum,
-};
-
 pub const Patch = union(enum) {
+    pub const Type = union(enum) {
+        pub const EnumField = struct {
+            name: []const u8,
+            description: ?[]const u8 = null,
+            value: u32,
+        };
+
+        pub const Enum = struct {
+            name: []const u8,
+            description: ?[]const u8 = null,
+            bitsize: u8,
+            fields: []const EnumField = &.{},
+        };
+
+        @"enum": Enum,
+    };
+
     override_arch: struct {
         device_name: []const u8,
         arch: Arch,
@@ -47,12 +47,12 @@ pub const Patch = union(enum) {
         of: []const u8,
         to: ?[]const u8,
     },
-    /// Creates a new enum type in the specified parent struct and applies it
+    /// Creates a new type in the specified parent struct and applies it
     /// to all the specified field references. This is a convenience patch that
-    /// combines `add_enum` with multiple `set_enum_type` operations.
-    add_enum_and_apply: struct {
+    /// combines `add_type` with multiple `set_enum_type` operations.
+    add_type_and_apply: struct {
         parent: []const u8,
-        @"enum": Type.Enum,
+        type: Type,
         apply_to: []const []const u8,
     },
 };

@@ -1,7 +1,7 @@
 .{
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Override",
             .bitsize = 2,
             .fields = .{
@@ -10,7 +10,7 @@
                 .{ .value = 2, .name = "low" },
                 .{ .value = 3, .name = "high" },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.IO_BANK0.GPIO0_CTRL.INOVER",
             "types.peripherals.IO_BANK0.GPIO0_CTRL.IRQOVER",
@@ -206,9 +206,9 @@
             "types.peripherals.IO_BANK0.GPIO47_CTRL.OUTOVER",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Function",
             .bitsize = 5,
             .fields = .{
@@ -230,7 +230,7 @@
                 .{ .value = 11, .name = "uart_alt" },
                 .{ .value = 0x1f, .name = "disabled" },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.IO_BANK0.GPIO0_CTRL.FUNCSEL",
             "types.peripherals.IO_BANK0.GPIO1_CTRL.FUNCSEL",

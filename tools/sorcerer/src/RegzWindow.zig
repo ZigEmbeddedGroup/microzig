@@ -1062,7 +1062,7 @@ fn get_patch_label(patch: regz.Patch, arena: Allocator) []const u8 {
         .add_enum => |p| std.fmt.allocPrint(arena, "add_enum: {s}", .{p.@"enum".name}) catch "add_enum",
         .set_enum_type => |p| std.fmt.allocPrint(arena, "set_enum_type: {s}", .{p.of}) catch "set_enum_type",
         .add_interrupt => |p| std.fmt.allocPrint(arena, "add_interrupt: {s}", .{p.name}) catch "add_interrupt",
-        .add_enum_and_apply => |p| std.fmt.allocPrint(arena, "add_enum_and_apply: {s}", .{p.@"enum".name}) catch "add_enum_and_apply",
+        .add_type_and_apply => |p| std.fmt.allocPrint(arena, "add_type_and_apply: {s}", .{p.@"enum".name}) catch "add_type_and_apply",
     };
 }
 
@@ -1201,7 +1201,7 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
                 .add_enum => |p| show_add_enum_widget(p, arena),
                 .set_enum_type => |p| show_set_enum_type_widget(p),
                 .add_interrupt => |p| show_add_interrupt_widget(p),
-                .add_enum_and_apply => |p| show_add_enum_and_apply_widget(p, arena),
+                .add_type_and_apply => |p| show_add_type_and_apply_widget(p, arena),
             }
         },
         .diff => {
@@ -1793,7 +1793,7 @@ fn show_add_interrupt_widget(p: anytype) void {
     if (p.description) |d| labeled_field("Description", d);
 }
 
-fn show_add_enum_and_apply_widget(p: anytype, arena: Allocator) void {
+fn show_add_type_and_apply_widget(p: anytype, arena: Allocator) void {
     labeled_field("Parent", p.parent);
     show_enum_details(p.@"enum", arena);
 
@@ -2170,8 +2170,8 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
     const enum_name = std.mem.sliceTo(&pending.enum_name_buffer, 0);
     if (enum_name.len == 0) return error.EmptyEnumName;
 
-    // Create the add_enum_and_apply patch
-    const patch = try create_add_enum_and_apply_patch(
+    // Create the add_type_and_apply patch
+    const patch = try create_add_type_and_apply_patch(
         w.arena.allocator(),
         pending.peripheral_name,
         enum_name,
@@ -2290,8 +2290,8 @@ fn on_database_changed(w: *RegzWindow) void {
     w.cached_diff = null;
 }
 
-/// Create an add_enum_and_apply patch from an equivalence group
-fn create_add_enum_and_apply_patch(
+/// Create an add_type_and_apply patch from an equivalence group
+fn create_add_type_and_apply_patch(
     alloc: Allocator,
     peripheral_name: []const u8,
     enum_name: []const u8,
@@ -2301,7 +2301,7 @@ fn create_add_enum_and_apply_patch(
     const parent = try std.fmt.allocPrint(alloc, "types.peripherals.{s}", .{peripheral_name});
 
     // Get the EnumField type from the Patch type using type introspection
-    const AddEnumAndApply = std.meta.TagPayload(regz.Patch, .add_enum_and_apply);
+    const AddEnumAndApply = std.meta.TagPayload(regz.Patch, .add_type_and_apply);
     const EnumType = @TypeOf(@as(AddEnumAndApply, undefined).@"enum");
     const EnumFieldType = std.meta.Child(@TypeOf(@as(EnumType, undefined).fields));
 
@@ -2326,7 +2326,7 @@ fn create_add_enum_and_apply_patch(
     }
 
     return .{
-        .add_enum_and_apply = .{
+        .add_type_and_apply = .{
             .parent = parent,
             .@"enum" = .{
                 .name = try alloc.dupe(u8, enum_name),

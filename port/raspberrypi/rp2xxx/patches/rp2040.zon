@@ -1,7 +1,7 @@
 .{
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Override",
             .bitsize = 2,
             .fields = .{
@@ -10,7 +10,7 @@
                 .{ .value = 2, .name = "low" },
                 .{ .value = 3, .name = "high" },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.IO_BANK0.GPIO0_CTRL.INOVER",
             "types.peripherals.IO_BANK0.GPIO0_CTRL.IRQOVER",
@@ -134,9 +134,9 @@
             "types.peripherals.IO_BANK0.GPIO29_CTRL.OUTOVER",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Function",
             .bitsize = 5,
             .fields = .{
@@ -152,7 +152,7 @@
                 .{ .value = 9, .name = "usb" },
                 .{ .value = 0x1f, .name = "disabled" },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.IO_BANK0.GPIO0_CTRL.FUNCSEL",
             "types.peripherals.IO_BANK0.GPIO1_CTRL.FUNCSEL",
@@ -186,9 +186,9 @@
             "types.peripherals.IO_BANK0.GPIO29_CTRL.FUNCSEL",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.USB_DPRAM",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "EndpointType",
             .bitsize = 2,
             .fields = .{
@@ -197,7 +197,7 @@
                 .{ .name = "bulk", .value = 2 },
                 .{ .name = "interrupt", .value = 3 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.USB_DPRAM.EP1_IN_CONTROL.ENDPOINT_TYPE",
             "types.peripherals.USB_DPRAM.EP1_OUT_CONTROL.ENDPOINT_TYPE",
@@ -231,9 +231,9 @@
             "types.peripherals.USB_DPRAM.EP15_OUT_CONTROL.ENDPOINT_TYPE",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.DMA",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "DataSize",
             .bitsize = 2,
             .fields = .{
@@ -241,7 +241,7 @@
                 .{ .name = "size_16", .value = 1 },
                 .{ .name = "size_32", .value = 2 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.DMA.CH0_CTRL_TRIG.DATA_SIZE",
             "types.peripherals.DMA.CH1_CTRL_TRIG.DATA_SIZE",
@@ -257,9 +257,9 @@
             "types.peripherals.DMA.CH11_CTRL_TRIG.DATA_SIZE",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.DMA",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Dreq",
             .bitsize = 6,
             .fields = .{
@@ -309,7 +309,7 @@
                 .{ .name = "timer3", .value = 62 },
                 .{ .name = "permanent", .value = 63 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.DMA.CH0_CTRL_TRIG.TREQ_SEL",
             "types.peripherals.DMA.CH1_CTRL_TRIG.TREQ_SEL",
@@ -325,9 +325,9 @@
             "types.peripherals.DMA.CH11_CTRL_TRIG.TREQ_SEL",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.USB_DPRAM",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "BufferOffset",
             .bitsize = 2,
             .fields = .{
@@ -336,7 +336,7 @@
                 .{ .name = "512", .value = 2 },
                 .{ .name = "1024", .value = 3 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL.DOUBLE_BUFFER_ISO_OFFSET",
             "types.peripherals.USB_DPRAM.EP0_OUT_BUFFER_CONTROL.DOUBLE_BUFFER_ISO_OFFSET",
@@ -372,18 +372,18 @@
             "types.peripherals.USB_DPRAM.EP15_OUT_BUFFER_CONTROL.DOUBLE_BUFFER_ISO_OFFSET",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.ROSC",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Password",
             .bitsize = 16,
             .fields = .{.{ .name = "PASS", .value = 38550 }},
-        },
+        } },
         .apply_to = .{ "types.peripherals.ROSC.FREQA.PASSWD", "types.peripherals.ROSC.FREQB.PASSWD" },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PWM",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "DivMode",
             .bitsize = 2,
             .fields = .{
@@ -408,7 +408,7 @@
                     .value = 3,
                 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.PWM.CH0_CSR.DIVMODE",
             "types.peripherals.PWM.CH1_CSR.DIVMODE",
@@ -420,9 +420,9 @@
             "types.peripherals.PWM.CH7_CSR.DIVMODE",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PIO0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "StatusSelect",
             .bitsize = 1,
             .fields = .{ .{
@@ -434,7 +434,7 @@
                 .description = "All-ones if RX FIFO level < N, otherwise all-zeroes",
                 .value = 1,
             } },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.PIO0.SM0_EXECCTRL.STATUS_SEL",
             "types.peripherals.PIO0.SM1_EXECCTRL.STATUS_SEL",
@@ -442,9 +442,9 @@
             "types.peripherals.PIO0.SM3_EXECCTRL.STATUS_SEL",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.I2C0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "RxUnderState",
             .bitsize = 1,
             .fields = .{ .{
@@ -456,16 +456,16 @@
                 .description = "RX_UNDER interrupt is active",
                 .value = 1,
             } },
-        },
+        } },
         .apply_to = .{ "types.peripherals.I2C0.IC_INTR_STAT.R_RX_UNDER", "types.peripherals.I2C0.IC_RAW_INTR_STAT.RX_UNDER" },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.DMA",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "RingSize",
             .bitsize = 4,
             .fields = .{.{ .name = "RING_NONE", .value = 0 }},
-        },
+        } },
         .apply_to = .{
             "types.peripherals.DMA.CH0_CTRL_TRIG.RING_SIZE",
             "types.peripherals.DMA.CH1_CTRL_TRIG.RING_SIZE",
@@ -481,9 +481,9 @@
             "types.peripherals.DMA.CH11_CTRL_TRIG.RING_SIZE",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.CLOCKS",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "AuxSrc",
             .bitsize = 4,
             .fields = .{
@@ -499,12 +499,12 @@
                 .{ .name = "clk_rtc", .value = 9 },
                 .{ .name = "clk_ref", .value = 10 },
             },
-        },
+        } },
         .apply_to = .{ "types.peripherals.CLOCKS.CLK_GPOUT0_CTRL.AUXSRC", "types.peripherals.CLOCKS.CLK_GPOUT1_CTRL.AUXSRC" },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.CLOCKS",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "AuxSrcPh",
             .bitsize = 4,
             .fields = .{
@@ -520,12 +520,12 @@
                 .{ .name = "clk_rtc", .value = 9 },
                 .{ .name = "clk_ref", .value = 10 },
             },
-        },
+        } },
         .apply_to = .{ "types.peripherals.CLOCKS.CLK_GPOUT2_CTRL.AUXSRC", "types.peripherals.CLOCKS.CLK_GPOUT3_CTRL.AUXSRC" },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.CLOCKS",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "AuxSrcExtra",
             .bitsize = 3,
             .fields = .{
@@ -536,16 +536,16 @@
                 .{ .name = "clksrc_gpin0", .value = 4 },
                 .{ .name = "clksrc_gpin1", .value = 5 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.CLOCKS.CLK_USB_CTRL.AUXSRC",
             "types.peripherals.CLOCKS.CLK_ADC_CTRL.AUXSRC",
             "types.peripherals.CLOCKS.CLK_RTC_CTRL.AUXSRC",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.BUSCTRL",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "PerfSelect",
             .bitsize = 5,
             .fields = .{
@@ -570,7 +570,7 @@
                 .{ .name = "rom_contested", .value = 18 },
                 .{ .name = "rom", .value = 19 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.BUSCTRL.PERFSEL0.PERFSEL0",
             "types.peripherals.BUSCTRL.PERFSEL1.PERFSEL1",
@@ -578,9 +578,9 @@
             "types.peripherals.BUSCTRL.PERFSEL3.PERFSEL3",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PADS_BANK0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "DriveStrength",
             .bitsize = 2,
             .fields = .{
@@ -589,7 +589,7 @@
                 .{ .name = "8mA", .value = 2 },
                 .{ .name = "12mA", .value = 3 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.PADS_BANK0.GPIO0.DRIVE",
             "types.peripherals.PADS_BANK0.GPIO1.DRIVE",
@@ -625,9 +625,9 @@
             "types.peripherals.PADS_BANK0.SWD.DRIVE",
         },
     } },
-    .{ .add_enum_and_apply = .{
+    .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PADS_QSPI",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "DriveStrength",
             .bitsize = 2,
             .fields = .{
@@ -636,7 +636,7 @@
                 .{ .name = "8mA", .value = 2 },
                 .{ .name = "12mA", .value = 3 },
             },
-        },
+        } },
         .apply_to = .{
             "types.peripherals.PADS_QSPI.GPIO_QSPI_SCLK.DRIVE",
             "types.peripherals.PADS_QSPI.GPIO_QSPI_SD0.DRIVE",

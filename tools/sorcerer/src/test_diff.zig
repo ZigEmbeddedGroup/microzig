@@ -290,9 +290,9 @@ const TestEnum = struct {
 };
 
 const TestPatch = union(enum) {
-    add_enum_and_apply: struct {
+    add_type_and_apply: struct {
         parent: []const u8,
-        @"enum": TestEnum,
+        type: union(enum) { @"enum": TestEnum },
         apply_to: []const []const u8,
     },
 };
@@ -302,9 +302,9 @@ test "zon serialize single patch - raw output" {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const patch = TestPatch{ .add_enum_and_apply = .{
+    const patch = TestPatch{ .add_type_and_apply = .{
         .parent = "types.peripherals.TEST",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "TestEnum",
             .description = null,
             .bitsize = 2,
@@ -312,7 +312,7 @@ test "zon serialize single patch - raw output" {
                 .{ .name = "val0", .description = null, .value = 0 },
                 .{ .name = "val1", .description = null, .value = 1 },
             },
-        },
+        } },
         .apply_to = &.{
             "types.peripherals.TEST.REG1.FIELD",
             "types.peripherals.TEST.REG2.FIELD",
@@ -328,7 +328,7 @@ test "zon serialize single patch - raw output" {
     std.debug.print("\n=== Raw ZON output (single patch) ===\n{s}\n=== End ===\n", .{output});
 
     // Check that the output contains expected content
-    try std.testing.expect(std.mem.indexOf(u8, output, "add_enum_and_apply") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output, "add_type_and_apply") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "TestEnum") != null);
 }
 
@@ -337,25 +337,25 @@ test "zon serialize multiple patches - raw output" {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const patch1 = TestPatch{ .add_enum_and_apply = .{
+    const patch1 = TestPatch{ .add_type_and_apply = .{
         .parent = "types.peripherals.TEST1",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Enum1",
             .description = null,
             .bitsize = 2,
             .fields = &.{},
-        },
+        } },
         .apply_to = &.{},
     } };
 
-    const patch2 = TestPatch{ .add_enum_and_apply = .{
+    const patch2 = TestPatch{ .add_type_and_apply = .{
         .parent = "types.peripherals.TEST2",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "Enum2",
             .description = null,
             .bitsize = 2,
             .fields = &.{},
-        },
+        } },
         .apply_to = &.{},
     } };
 

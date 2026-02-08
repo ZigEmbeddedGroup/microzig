@@ -2097,24 +2097,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
             },
             .add_type => |add_type| {
                 const struct_id = try db.get_struct_ref(add_type.parent);
-
-                switch (add_type.type) {
-                    .@"enum" => |info| {
-                        const enum_id = try db.create_enum(struct_id, .{
-                            .name = info.name,
-                            .description = info.description,
-                            .size_bits = info.bitsize,
-                        });
-
-                        for (info.fields) |enum_field| {
-                            try db.add_enum_field(enum_id, .{
-                                .name = enum_field.name,
-                                .description = enum_field.description,
-                                .value = enum_field.value,
-                            });
-                        }
-                    },
-                }
+                _ = try db.add_type_helper(struct_id, add_type.type.@"enum".name, add_type.type);
             },
             .set_enum_type => |set_enum_type| {
                 const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
@@ -2134,32 +2117,42 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     .idx = add_interrupt.idx,
                 });
             },
-            .add_enum_and_apply => |add_enum_patch| {
+            .add_type_and_apply => |add_type_patch| {
                 // First, create the enum (same as add_enum)
-                const struct_id = try db.get_struct_ref(add_enum_patch.parent);
+                const struct_id = try db.get_struct_ref(add_type_patch.parent);
 
-                const enum_id = try db.create_enum(struct_id, .{
-                    .name = add_enum_patch.@"enum".name,
-                    .description = add_enum_patch.@"enum".description,
-                    .size_bits = add_enum_patch.@"enum".bitsize,
-                });
-
-                for (add_enum_patch.@"enum".fields) |enum_field| {
-                    try db.add_enum_field(enum_id, .{
-                        .name = enum_field.name,
-                        .description = enum_field.description,
-                        .value = enum_field.value,
-                    });
-                }
+                const type_id = try db.add_type_helper(struct_id, add_type_patch.type.@"enum".name, add_type_patch.type);
 
                 // Then, apply to all specified fields (same as set_enum_type)
-                for (add_enum_patch.apply_to) |field_ref| {
+                for (add_type_patch.apply_to) |field_ref| {
                     const field_name, const register_ref = try get_ref_last_component(field_ref);
                     const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
-                    try db.set_register_field_enum_id(register_id, field_name, enum_id);
+                    try db.set_register_field_enum_id(register_id, field_name, type_id);
                 }
             },
         }
+    }
+}
+
+fn add_type_helper(db: *Database, parent: StructID, name: []const u8, @"type": Patch.Type) !EnumID {
+    switch (@"type") {
+        .@"enum" => |info| {
+            const enum_id = try db.create_enum(parent, .{
+                .name = name,
+                .description = info.description,
+                .size_bits = info.bitsize,
+            });
+
+            for (info.fields) |enum_field| {
+                try db.add_enum_field(enum_id, .{
+                    .name = enum_field.name,
+                    .description = enum_field.description,
+                    .value = enum_field.value,
+                });
+            }
+
+            return enum_id;
+        },
     }
 }
 
@@ -2177,7 +2170,7 @@ test "all" {
     _ = svd;
 }
 
-test "add_enum_and_apply patch creates enum and applies to fields" {
+test "add_type_and_apply patch creates enum and applies to fields" {
     const allocator = std.testing.allocator;
 
     var db = try Database.create(allocator);
@@ -2223,11 +2216,11 @@ test "add_enum_and_apply patch creates enum and applies to fields" {
         .offset_bits = 0,
     });
 
-    // Apply the add_enum_and_apply patch
+    // Apply the add_type_and_apply patch
     const patch_zon: [:0]const u8 =
         \\.{
         \\    .{
-        \\        .add_enum_and_apply = .{
+        \\        .add_type_and_apply = .{
         \\            .parent = "types.peripherals.TEST_PERIPHERAL",
         \\            .@"enum" = .{
         \\                .name = "TestMode",
@@ -2277,7 +2270,7 @@ test "add_enum_and_apply patch creates enum and applies to fields" {
     try std.testing.expectEqual(enum_info.id, fields2[0].enum_id.?);
 }
 
-test "add_enum_and_apply patch with empty apply_to list" {
+test "add_type_and_apply patch with empty apply_to list" {
     const allocator = std.testing.allocator;
 
     var db = try Database.create(allocator);
@@ -2293,7 +2286,7 @@ test "add_enum_and_apply patch with empty apply_to list" {
     const patch_zon: [:0]const u8 =
         \\.{
         \\    .{
-        \\        .add_enum_and_apply = .{
+        \\        .add_type_and_apply = .{
         \\            .parent = "types.peripherals.TEST_PERIPHERAL",
         \\            .@"enum" = .{
         \\                .name = "UnusedEnum",
@@ -2321,7 +2314,7 @@ test "add_enum_and_apply patch with empty apply_to list" {
     try std.testing.expectEqual(@as(u8, 4), enum_info.size_bits);
 }
 
-test "add_enum_and_apply patch with invalid field reference" {
+test "add_type_and_apply patch with invalid field reference" {
     const allocator = std.testing.allocator;
 
     var db = try Database.create(allocator);
@@ -2336,7 +2329,7 @@ test "add_enum_and_apply patch with invalid field reference" {
     const patch_zon: [:0]const u8 =
         \\.{
         \\    .{
-        \\        .add_enum_and_apply = .{
+        \\        .add_type_and_apply = .{
         \\            .parent = "types.peripherals.TEST_PERIPHERAL",
         \\            .@"enum" = .{
         \\                .name = "TestEnum",

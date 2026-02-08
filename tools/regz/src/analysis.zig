@@ -2,7 +2,7 @@
 //!
 //! This module provides analysis capabilities to identify and group anonymous
 //! enums that are equivalent (same fields, descriptions, and size) within a
-//! peripheral type. This enables suggesting `add_enum_and_apply` patches.
+//! peripheral type. This enables suggesting `add_type_and_apply` patches.
 const Analysis = @This();
 
 const std = @import("std");
