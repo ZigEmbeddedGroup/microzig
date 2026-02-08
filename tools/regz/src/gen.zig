@@ -1817,6 +1817,9 @@ test "gen.peripheral instantiation" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
             \\        TEST_FIELD: u1 = 0x1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -1824,8 +1827,6 @@ test "gen.peripheral instantiation" {
         },
     }, &vfs);
 }
-
-// TODO: Adapt tests to new Mmio
 
 test "gen.peripherals with a shared type" {
     var db = try tests.peripherals_with_shared_type(std.testing.allocator);
@@ -1903,6 +1904,9 @@ test "gen.peripherals with a shared type" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -1979,6 +1983,9 @@ test "gen.peripheral with modes" {
             \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\    TEST_MODE2: extern struct {
@@ -1988,6 +1995,9 @@ test "gen.peripheral with modes" {
             \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\};
@@ -2141,6 +2151,9 @@ test "gen.field with named enum" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: TEST_ENUM,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2194,6 +2207,9 @@ test "gen.field with named enum and named default" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: TEST_ENUM = .TEST_ENUM_FIELD2,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2247,6 +2263,9 @@ test "gen.field with named enum and unnamed default" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: TEST_ENUM = @enumFromInt(0xA),
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2298,6 +2317,9 @@ test "gen.field with anonymous enum" {
             \\            _,
             \\        },
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2349,6 +2371,9 @@ test "gen.field with anonymous enum and default" {
             \\            _,
             \\        } = .TEST_ENUM_FIELD2,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2863,6 +2888,9 @@ test "gen.register with count and fields" {
             \\    PORTB: [4]mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: u4,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\    /// offset: 0x04
             \\    DDRB: u8,
@@ -2919,6 +2947,14 @@ test "gen.field with count, width of one, offset, and padding" {
             \\        TEST_FIELD3: u1,
             \\        TEST_FIELD4: u1,
             \\        padding: u1 = 0,
+            \\    }, .{
+            \\        .reserved2 = .reserved,
+            \\        .TEST_FIELD0 = .read_write,
+            \\        .TEST_FIELD1 = .read_write,
+            \\        .TEST_FIELD2 = .read_write,
+            \\        .TEST_FIELD3 = .read_write,
+            \\        .TEST_FIELD4 = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2968,6 +3004,11 @@ test "gen.field with count, multi-bit width, offset, and padding" {
             \\        TEST_FIELD0: u2,
             \\        TEST_FIELD1: u2,
             \\        padding: u2 = 0,
+            \\    }, .{
+            \\        .reserved2 = .reserved,
+            \\        .TEST_FIELD0 = .read_write,
+            \\        .TEST_FIELD1 = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -3093,6 +3134,9 @@ test "gen.peripheral type with register and field" {
             \\        /// test field
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -3148,6 +3192,9 @@ test "gen.name collisions in enum name cause them to be anonymous" {
             \\            TEST_ENUM_FIELD2 = 0x1,
             \\            _,
             \\        },
+            \\    }, .{
+            \\        .TEST_FIELD1 = .read_write,
+            \\        .TEST_FIELD2 = .read_write,
             \\    }),
             \\};
             \\
@@ -3198,6 +3245,9 @@ test "gen.pick one enum field in value collisions" {
             \\            _,
             \\        },
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -3248,6 +3298,9 @@ test "gen.pick one enum field in value collisions" {
 //            \\            _,
 //            \\        },
 //            \\        padding: u4 = 0,
+//            \\    }, .{
+//            \\        .TEST_FIELD = .read_write,
+//            \\        .padding = .reserved,
 //            \\    }),
 //            \\};
 //            \\
@@ -3297,6 +3350,9 @@ test "gen.pick one enum field in value collisions" {
 //            \\        /// test field 1
 //            \\        TEST_FIELD: u1,
 //            \\        padding: u31 = 0,
+//            \\    }, .{
+//            \\        .TEST_FIELD = .read_write,
+//            \\        .padding = .reserved,
 //            \\    }),
 //            \\};
 //            \\
@@ -3350,6 +3406,9 @@ test "gen.nested struct field in a peripheral" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\};
@@ -3402,6 +3461,9 @@ test "gen.nested struct field in a peripheral that has a named type" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    };
             \\
@@ -3462,6 +3524,9 @@ test "gen.nested struct field in a peripheral with offset" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\};
@@ -3518,6 +3583,9 @@ test "gen.nested struct field in nested struct field" {
             \\                /// test field 1
             \\                TEST_FIELD: u1,
             \\                padding: u31 = 0,
+            \\            }, .{
+            \\                .TEST_FIELD = .read_write,
+            \\                .padding = .reserved,
             \\            }),
             \\        },
             \\    },
@@ -3571,6 +3639,9 @@ test "gen.nested struct field next to register" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    };
             \\
@@ -3583,6 +3654,9 @@ test "gen.nested struct field next to register" {
             \\        /// test field 1
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
