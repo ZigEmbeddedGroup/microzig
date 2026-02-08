@@ -32,6 +32,8 @@ pub const SPI = enum(u2) {
     _,
 
     pub const Config = struct {
+        const CLOCK = @FieldType(SPI_Regs, "CLOCK").underlying_type;
+
         clock_config: clocks.Config,
         baud_rate: u32,
         bit_order: BitOrder = .msb_first,
@@ -47,30 +49,18 @@ pub const SPI = enum(u2) {
         }
 
         // translated from esp-hal in rust
-        fn get_clock_config(self: Config) u32 {
-            // TODO: we can return directly the packed type if we add some patches
-            // to regz (not possible rn).
-            const Reg = packed struct(u32) {
-                CLKCNT_L: u6,
-                CLKCNT_H: u6,
-                CLKCNT_N: u6,
-                CLKDIV_PRE: u4,
-                reserved: u9 = 0,
-                CLK_EQU_SYSCLK: u1,
-            };
-
+        fn get_clock_config(self: Config) CLOCK {
             const source_freq = self.clock_config.apb_clk_freq;
 
             // Use APB directly if target frequency is high enough
-            if (self.baud_rate > ((source_freq / 4) * 3)) {
-                return @bitCast(@as(Reg, .{
+            if (self.baud_rate > ((source_freq / 4) * 3))
+                return .{
                     .CLKCNT_L = 0,
                     .CLKCNT_H = 0,
                     .CLKCNT_N = 0,
                     .CLKDIV_PRE = 0,
                     .CLK_EQU_SYSCLK = 1,
-                }));
-            }
+                };
 
             var bestn: i32 = -1;
             var bestpre: i32 = -1;
@@ -100,13 +90,13 @@ pub const SPI = enum(u2) {
             var h: i32 = @divFloor(128 * bestn + 127, 256);
             if (h <= 0) h = 1;
 
-            return @bitCast(@as(Reg, .{
+            return .{
                 .CLKCNT_L = @intCast(l - 1),
                 .CLKCNT_H = @intCast(h - 1),
                 .CLKCNT_N = @intCast(bestn - 1),
                 .CLKDIV_PRE = @intCast(bestpre - 1),
                 .CLK_EQU_SYSCLK = 0,
-            }));
+            };
         }
     };
 
@@ -147,7 +137,7 @@ pub const SPI = enum(u2) {
 
         regs.SLAVE.raw = 0;
 
-        regs.CLOCK.raw = config.get_clock_config();
+        regs.CLOCK.write(config.get_clock_config());
 
         regs.DMA_INT_CLR.modify(.{
             .TRANS_DONE_INT_CLR = 1,
