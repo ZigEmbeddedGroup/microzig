@@ -150,7 +150,6 @@ pub const SPI = enum(u2) {
         self.set_bit_order(config.bit_order);
     }
 
-    // TODO: not sure if this is the best way to do this
     pub inline fn connect_pins(_: SPI, pins: struct {
         data: union(enum) {
             single_one_wire: ?gpio.Pin,
@@ -178,7 +177,7 @@ pub const SPI = enum(u2) {
             },
             .single_two_wires => |maybe_pins| {
                 if (maybe_pins.mosi) |mosi| {
-                    mosi.connect_input_to_peripheral(.{ .signal = .fspid });
+                    mosi.connect_peripheral_to_output(.{ .signal = .fspid });
                 }
                 if (maybe_pins.miso) |miso| {
                     miso.connect_input_to_peripheral(.{ .signal = .fspiq });
@@ -212,6 +211,10 @@ pub const SPI = enum(u2) {
                     bit3.connect_peripheral_to_output(.{ .signal = .fspihd });
                 }
             },
+        }
+
+        if (pins.clk) |clk_pin| {
+            clk_pin.connect_peripheral_to_output(.{ .signal = .spiclk });
         }
     }
 
