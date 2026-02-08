@@ -1,4 +1,4 @@
-name: Unused Imports Check
+name: CI / Unused Imports Check
 
 on:
   pull_request:
