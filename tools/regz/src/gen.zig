@@ -1360,13 +1360,13 @@ fn write_fields_and_access(
 
     for (access.items) |it| switch (it) {
         .normal => |data| {
-            const access_str = switch (data.access orelse .read_write) {
-                .read_write_once, .read_write => "read_write",
-                .read_only => "read_only",
-                .write_only, .write_once => "write_only",
-                .rw1z => "rw1z",
-            };
-            try writer.print(".{f} = .{s},\n", .{ std.zig.fmtId(data.name), access_str });
+            try writer.print(
+                ".{f} = .{f},\n",
+                .{
+                    std.zig.fmtId(data.name),
+                    std.zig.fmtId(@tagName(data.access orelse Database.Access.default)),
+                },
+            );
         },
         .reserved => |num| try writer.print(".reserved{} = .reserved,\n", .{num}),
         .padding => try writer.writeAll(".padding = .reserved,\n"),
@@ -1506,7 +1506,7 @@ test "gen.StructFieldIterator.single register" {
         .name = "TEST_REGISTER",
         .size_bits = 32,
         .offset_bytes = 0,
-        .access = .read_write,
+        .access = .default,
         .reset_mask = 0xFF,
         .reset_value = 0xAA,
         .count = null,
@@ -1533,7 +1533,7 @@ test "gen.StructFieldIterator.two registers perfect overlap" {
             .name = "TEST_REGISTER1",
             .size_bits = 32,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .@"read-write",
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1545,7 +1545,7 @@ test "gen.StructFieldIterator.two registers perfect overlap" {
             .name = "TEST_REGISTER2",
             .size_bits = 32,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .@"read-write",
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1574,7 +1574,7 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .name = "TEST_REGISTER1",
             .size_bits = 32,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1586,7 +1586,7 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .name = "TEST_REGISTER2",
             .size_bits = 16,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1615,7 +1615,7 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .name = "TEST_REGISTER1",
             .size_bits = 32,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1627,7 +1627,7 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .name = "TEST_REGISTER2",
             .size_bits = 16,
             .offset_bytes = 2,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1678,7 +1678,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
         .name = "TEST_REGISTER",
         .size_bits = 32,
         .offset_bytes = 0,
-        .access = .read_write,
+        .access = .default,
         .reset_mask = 0xFF,
         .reset_value = 0xAA,
         .count = null,
@@ -1819,7 +1819,7 @@ test "gen.peripheral instantiation" {
             \\        TEST_FIELD: u1 = 0x1,
             \\        padding: u31 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -1906,7 +1906,7 @@ test "gen.peripherals with a shared type" {
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -1985,7 +1985,7 @@ test "gen.peripheral with modes" {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
             \\        }, .{
-            \\            .TEST_FIELD = .read_write,
+            \\            .TEST_FIELD = .@"read-write",
             \\            .padding = .reserved,
             \\        }),
             \\    },
@@ -1997,7 +1997,7 @@ test "gen.peripheral with modes" {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
             \\        }, .{
-            \\            .TEST_FIELD = .read_write,
+            \\            .TEST_FIELD = .@"read-write",
             \\            .padding = .reserved,
             \\        }),
             \\    },
@@ -2153,7 +2153,7 @@ test "gen.field with named enum" {
             \\        TEST_FIELD: TEST_ENUM,
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -2209,7 +2209,7 @@ test "gen.field with named enum and named default" {
             \\        TEST_FIELD: TEST_ENUM = .TEST_ENUM_FIELD2,
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -2265,7 +2265,7 @@ test "gen.field with named enum and unnamed default" {
             \\        TEST_FIELD: TEST_ENUM = @enumFromInt(0xA),
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -2319,7 +2319,7 @@ test "gen.field with anonymous enum" {
             \\        },
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -2373,7 +2373,7 @@ test "gen.field with anonymous enum and default" {
             \\        } = .TEST_ENUM_FIELD2,
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -2890,7 +2890,7 @@ test "gen.register with count and fields" {
             \\        TEST_FIELD: u4,
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\    /// offset: 0x04
@@ -2950,11 +2950,11 @@ test "gen.field with count, width of one, offset, and padding" {
             \\        padding: u1 = 0,
             \\    }, .{
             \\        .reserved2 = .reserved,
-            \\        .TEST_FIELD0 = .read_write,
-            \\        .TEST_FIELD1 = .read_write,
-            \\        .TEST_FIELD2 = .read_write,
-            \\        .TEST_FIELD3 = .read_write,
-            \\        .TEST_FIELD4 = .read_write,
+            \\        .TEST_FIELD0 = .@"read-write",
+            \\        .TEST_FIELD1 = .@"read-write",
+            \\        .TEST_FIELD2 = .@"read-write",
+            \\        .TEST_FIELD3 = .@"read-write",
+            \\        .TEST_FIELD4 = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -3007,8 +3007,8 @@ test "gen.field with count, multi-bit width, offset, and padding" {
             \\        padding: u2 = 0,
             \\    }, .{
             \\        .reserved2 = .reserved,
-            \\        .TEST_FIELD0 = .read_write,
-            \\        .TEST_FIELD1 = .read_write,
+            \\        .TEST_FIELD0 = .@"read-write",
+            \\        .TEST_FIELD1 = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -3136,7 +3136,7 @@ test "gen.peripheral type with register and field" {
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -3194,8 +3194,8 @@ test "gen.name collisions in enum name cause them to be anonymous" {
             \\            _,
             \\        },
             \\    }, .{
-            \\        .TEST_FIELD1 = .read_write,
-            \\        .TEST_FIELD2 = .read_write,
+            \\        .TEST_FIELD1 = .@"read-write",
+            \\        .TEST_FIELD2 = .@"read-write",
             \\    }),
             \\};
             \\
@@ -3247,7 +3247,7 @@ test "gen.pick one enum field in value collisions" {
             \\        },
             \\        padding: u4 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};
@@ -3300,7 +3300,7 @@ test "gen.pick one enum field in value collisions" {
 //            \\        },
 //            \\        padding: u4 = 0,
 //            \\    }, .{
-//            \\        .TEST_FIELD = .read_write,
+//            \\        .TEST_FIELD = .@"read-write",
 //            \\        .padding = .reserved,
 //            \\    }),
 //            \\};
@@ -3352,7 +3352,7 @@ test "gen.pick one enum field in value collisions" {
 //            \\        TEST_FIELD: u1,
 //            \\        padding: u31 = 0,
 //            \\    }, .{
-//            \\        .TEST_FIELD = .read_write,
+//            \\        .TEST_FIELD = .@"read-write",
 //            \\        .padding = .reserved,
 //            \\    }),
 //            \\};
@@ -3408,7 +3408,7 @@ test "gen.nested struct field in a peripheral" {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
             \\        }, .{
-            \\            .TEST_FIELD = .read_write,
+            \\            .TEST_FIELD = .@"read-write",
             \\            .padding = .reserved,
             \\        }),
             \\    },
@@ -3463,7 +3463,7 @@ test "gen.nested struct field in a peripheral that has a named type" {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
             \\        }, .{
-            \\            .TEST_FIELD = .read_write,
+            \\            .TEST_FIELD = .@"read-write",
             \\            .padding = .reserved,
             \\        }),
             \\    };
@@ -3526,7 +3526,7 @@ test "gen.nested struct field in a peripheral with offset" {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
             \\        }, .{
-            \\            .TEST_FIELD = .read_write,
+            \\            .TEST_FIELD = .@"read-write",
             \\            .padding = .reserved,
             \\        }),
             \\    },
@@ -3585,7 +3585,7 @@ test "gen.nested struct field in nested struct field" {
             \\                TEST_FIELD: u1,
             \\                padding: u31 = 0,
             \\            }, .{
-            \\                .TEST_FIELD = .read_write,
+            \\                .TEST_FIELD = .@"read-write",
             \\                .padding = .reserved,
             \\            }),
             \\        },
@@ -3641,7 +3641,7 @@ test "gen.nested struct field next to register" {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
             \\        }, .{
-            \\            .TEST_FIELD = .read_write,
+            \\            .TEST_FIELD = .@"read-write",
             \\            .padding = .reserved,
             \\        }),
             \\    };
@@ -3656,7 +3656,7 @@ test "gen.nested struct field next to register" {
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
             \\    }, .{
-            \\        .TEST_FIELD = .read_write,
+            \\        .TEST_FIELD = .@"read-write",
             \\        .padding = .reserved,
             \\    }),
             \\};

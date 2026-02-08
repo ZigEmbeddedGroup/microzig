@@ -602,9 +602,9 @@ fn load_register(
         else
             null,
         .access = if (node.get_attribute("rw")) |access_str|
-            try access_from_string(access_str)
+            Database.Access.try_parse_short(access_str) orelse return error.InvalidAccessStr
         else
-            .read_write,
+            .default,
     });
 
     if (node.get_attribute("modes")) |modes| {
@@ -673,7 +673,7 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
 
                 // FIXME: field specific r/w
                 //if (node.get_attribute("rw")) |access_str| blk: {
-                //    const access = access_from_string(access_str) catch break :blk;
+                //    const access = .try_parse_short(access_str) catch break :blk;
                 //    switch (access) {
                 //        .read_only, .write_only => try db.attrs.access.put(
                 //            db.gpa,
@@ -715,7 +715,7 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
 
         // FIXME: field based access
         //if (node.get_attribute("rw")) |access_str| blk: {
-        //    const access = access_from_string(access_str) catch break :blk;
+        //    const access = .try_parse_short(access_str) catch break :blk;
         //    switch (access) {
         //        .read_only, .write_only => try db.attrs.access.put(
         //            db.gpa,
@@ -758,17 +758,6 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
         // TODO: namespace the enum to the appropriate register, register_group, or peripheral
 
     }
-}
-
-fn access_from_string(str: []const u8) !Database.Access {
-    return if (std.mem.eql(u8, "RW", str))
-        .read_write
-    else if (std.mem.eql(u8, "R", str))
-        .read_only
-    else if (std.mem.eql(u8, "W", str))
-        .write_only
-    else
-        error.InvalidAccessStr;
 }
 
 fn load_enum(
@@ -1174,7 +1163,7 @@ test "atdf.register with bitfields and enum" {
     const ctrla = try db.get_register_by_name(allocator, struct_id, "CTRLA");
 
     // access is read-write, so its entry is omitted (we assume read-write by default)
-    try expectEqual(.read_write, ctrla.access);
+    try expectEqual(.@"read-write", ctrla.access);
 
     // check name and description
     try expectEqualStrings("CTRLA", ctrla.name);

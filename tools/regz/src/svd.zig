@@ -481,7 +481,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
             },
             .size_bits = size,
             .count = if (dim_elements.resolve() == .array) dim_elements.dim else null,
-            .access = register_props.access orelse .read_write,
+            .access = register_props.access orelse .default,
             .reset_mask = register_props.reset_mask,
             .reset_value = register_props.reset_value,
         });
@@ -514,7 +514,7 @@ fn load_single_register(ctx: *Context, node: xml.Node, parent: StructID) !void {
             return error.MissingRegisterOffset,
         .size_bits = size,
         .count = null,
-        .access = register_props.access orelse .read_write,
+        .access = register_props.access orelse .default,
         .reset_mask = register_props.reset_mask,
         .reset_value = register_props.reset_value,
     });
@@ -550,10 +550,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
         null;
 
     const access = if (node.get_value("access")) |access_str|
-        parse_access(access_str) catch blk: {
-            log.warn("Failed to parse access string '{s}', it must be one of 'read-value', 'write-only', 'read-write', 'writeOnce', or 'read-writeOnce', defaulting to 'read-write'", .{access_str});
-            break :blk .read_write;
-        }
+        Access.parse(access_str)
     else
         props.access;
 
@@ -978,12 +975,7 @@ const RegisterProperties = struct {
             else
                 null,
             .access = if (node.get_value("access")) |access_str|
-                parse_access(access_str) catch blk: {
-                    log.warn("Failed to parse access string '{s}', it must be one of 'read-only'," ++
-                        "'write-only', 'write', 'read-write', 'writeOnce', or 'read-writeOnce', " ++
-                        "defaulting to 'read-write'", .{access_str});
-                    break :blk .read_write;
-                }
+                Access.parse(access_str)
             else
                 null,
             .protection = null,
@@ -998,27 +990,6 @@ const RegisterProperties = struct {
         };
     }
 };
-
-fn parse_access(str: []const u8) !Access {
-    return if (std.ascii.eqlIgnoreCase("read-only", str))
-        Access.read_only
-    else if (std.ascii.eqlIgnoreCase("write-only", str))
-        Access.write_only
-    else if (std.ascii.eqlIgnoreCase("write", str))
-        Access.write_only
-    else if (std.ascii.eqlIgnoreCase("read-write", str))
-        Access.read_write
-    else if (std.ascii.eqlIgnoreCase("writeOnce", str))
-        Access.write_once
-    else if (std.ascii.eqlIgnoreCase("read-writeOnce", str))
-        Access.read_write_once
-    else if (std.ascii.eqlIgnoreCase("read/clear", str))
-        Access.rw1z
-    else blk: {
-        log.warn("invalid access type: '{s}'", .{str});
-        break :blk error.UnknownAccessType;
-    };
-}
 
 test "svd.device register properties" {
     const text =
@@ -1059,7 +1030,7 @@ test "svd.device register properties" {
 
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
     try expectEqual(32, register.size_bits);
-    try expectEqual(.read_only, register.access);
+    try expectEqual(.@"read-only", register.access);
     try expectEqual(0, register.reset_value);
     try expectEqual(0xFFFFFFFF, register.reset_mask);
 }
@@ -1105,7 +1076,7 @@ test "svd.peripheral register properties" {
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
     try expectEqual(16, register.size_bits);
-    try expectEqual(.write_only, register.access);
+    try expectEqual(.@"write-only", register.access);
     try expectEqual(1, register.reset_value);
     try expectEqual(0xFFFF, register.reset_mask);
 }
@@ -1154,7 +1125,7 @@ test "svd.register register properties" {
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
     try expectEqual(8, register.size_bits);
-    try expectEqual(.read_write, register.access);
+    try expectEqual(.@"read-write", register.access);
     try expectEqual(2, register.reset_value);
     try expectEqual(0xFF, register.reset_mask);
 }

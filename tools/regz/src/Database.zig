@@ -352,22 +352,58 @@ pub const DeviceProperty = struct {
 // not sure how to communicate the *_once values in generated code
 // besides adding it to documentation comments
 pub const Access = enum {
-    read_write,
-    read_only,
-    write_only,
-    write_once,
-    read_write_once,
+    @"read-write",
+    @"read-only",
+    @"write-only",
+    @"write-once",
+    @"read-write-once",
     // read normal, write 1 to clear
-    rw1z,
+    @"read/clear",
 
     pub const BaseType = []const u8;
-    pub const default = .read_write;
+    pub const default: @This() = .@"read-write";
 
-    pub fn to_string(access: Access) []const u8 {
-        return inline for (@typeInfo(Access).@"enum".fields) |field| {
-            if (@field(Access, field.name) == access)
-                break field.name;
-        } else unreachable;
+    pub fn try_parse(str: []const u8) ?@This() {
+        inline for (@typeInfo(Access).@"enum".fields) |field| {
+            if (std.ascii.eqlIgnoreCase(field.name, str))
+                return @field(@This(), field.name);
+        }
+        return null;
+    }
+
+    pub fn parse(str: []const u8) @This() {
+        return try_parse(str) orelse {
+            const fmt = comptime blk: {
+                var ret: []const u8 = "Failed to parse access string '{s}', it must be one of ";
+                for (@typeInfo(Access).@"enum".fields) |field|
+                    ret = ret ++ "'" ++ field.name ++ "', ";
+                break :blk ret ++ "defaulting to '{t}'";
+            };
+            log.warn(fmt, .{ str, default });
+            return default;
+        };
+    }
+
+    pub fn try_parse_short(str: []const u8) ?@This() {
+        return if (std.mem.eql(u8, str, "RW") or std.mem.eql(u8, str, "R/W"))
+            .@"read-write"
+        else if (std.mem.eql(u8, str, "R"))
+            .@"read-only"
+        else if (std.mem.eql(u8, str, "W"))
+            .@"write-only"
+        else
+            null;
+    }
+
+    pub fn parse_short(str: []const u8) @This() {
+        return try_parse_short(str) orelse {
+            log.info("unrecognized access string: '{s}', expected one of 'RW', 'R/W', 'R', 'W'", .{str});
+            return .default;
+        };
+    }
+
+    pub fn to_string(self: @This()) []const u8 {
+        return @tagName(self);
     }
 };
 
@@ -1713,7 +1749,7 @@ pub const CreateRegisterOptions = struct {
     size_bits: u64,
     /// count if there is an array
     count: ?u64 = null,
-    access: Access = .read_write,
+    access: Access = .default,
     reset_mask: ?u64 = null,
     reset_value: ?u64 = null,
 };

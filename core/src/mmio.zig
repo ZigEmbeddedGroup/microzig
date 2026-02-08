@@ -49,10 +49,13 @@ pub const Access = struct {
     read: Read,
     write: Write,
 
-    pub const read_only: @This() = .{ .read = .normal, .write = .ignored };
-    pub const read_write: @This() = .{ .read = .normal, .write = .normal };
-    pub const write_only: @This() = .{ .read = .garbage, .write = .normal };
-    pub const rw1z: @This() = .{ .read = .normal, .write = .clear_mask };
+    // Mapping of svd types
+    pub const @"read-only": @This() = .{ .read = .normal, .write = .ignored };
+    pub const @"read-write": @This() = .{ .read = .normal, .write = .normal };
+    pub const @"read-write-once": @This() = .@"read-write";
+    pub const @"write-only": @This() = .{ .read = .garbage, .write = .normal };
+    pub const @"write-once": @This() = .@"write-only";
+    pub const @"read/clear": @This() = .{ .read = .normal, .write = .clear_mask };
     pub const reserved: @This() = .{ .read = .garbage, .write = .ignored };
 };
 
