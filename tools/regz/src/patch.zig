@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 
-pub const Type = struct {
+pub const Type = union(enum) {
     pub const EnumField = struct {
         name: []const u8,
         description: ?[]const u8 = null,
@@ -16,6 +16,8 @@ pub const Type = struct {
         bitsize: u8,
         fields: []const EnumField = &.{},
     };
+
+    @"enum": Enum,
 };
 
 pub const Patch = union(enum) {
@@ -29,21 +31,21 @@ pub const Patch = union(enum) {
         value: []const u8,
         description: ?[]const u8 = null,
     },
-    add_enum: struct {
+    add_interrupt: struct {
+        device_name: []const u8,
+        idx: i32,
+        name: []const u8,
+        description: ?[]const u8 = null,
+    },
+    add_type: struct {
         parent: []const u8,
-        @"enum": Type.Enum,
+        type: Type,
     },
     /// The replaced type MUST be the same size. Bit or Byte size depends on the
     /// context
     set_enum_type: struct {
         of: []const u8,
         to: ?[]const u8,
-    },
-    add_interrupt: struct {
-        device_name: []const u8,
-        idx: i32,
-        name: []const u8,
-        description: ?[]const u8 = null,
     },
     /// Creates a new enum type in the specified parent struct and applies it
     /// to all the specified field references. This is a convenience patch that
@@ -53,17 +55,4 @@ pub const Patch = union(enum) {
         @"enum": Type.Enum,
         apply_to: []const []const u8,
     },
-
-    pub fn from_json_str(allocator: Allocator, json_str: []const u8) !std.json.Parsed(Patch) {
-        return std.json.parseFromSlice(Patch, allocator, json_str, .{});
-    }
-};
-
-/// List for assembling patches in build scripts
-pub const PatchList = struct {
-    entries: std.array_list.Managed(Patch),
-
-    pub fn append(list: *PatchList, patch: Patch) void {
-        list.append(patch) catch @panic("OOM");
-    }
 };

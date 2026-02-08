@@ -1,8 +1,8 @@
 .{
     .{
-        .add_enum = .{
+        .add_type = .{
             .parent = "types.peripherals.GPIO",
-            .@"enum" = .{
+            .type = .{ .@"enum" = .{
                 .name = "Pull",
                 .bitsize = 2,
                 .fields = .{
@@ -10,14 +10,14 @@
                     .{ .value = 0x1, .name = "down" },
                     .{ .value = 0x2, .name = "up" },
                 },
-            },
+            } },
         },
     },
     .{ .set_enum_type = .{ .of = "types.peripherals.GPIO.PIN_CNF.PULL", .to = "types.peripherals.GPIO.Pull" } },
     .{
-        .add_enum = .{
+        .add_type = .{
             .parent = "types.peripherals.GPIO",
-            .@"enum" = .{
+            .type = .{ .@"enum" = .{
                 .name = "DriveStrength",
                 .bitsize = 3,
                 .fields = .{
@@ -30,7 +30,7 @@
                     .{ .value = 0x6, .name = "SOD1" },
                     .{ .value = 0x7, .name = "HOD1" },
                 },
-            },
+            } },
         },
     },
     .{ .set_enum_type = .{ .of = "types.peripherals.GPIO.PIN_CNF.DRIVE", .to = "types.peripherals.GPIO.DriveStrength" } },

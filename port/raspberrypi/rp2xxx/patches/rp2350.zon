@@ -282,9 +282,9 @@
             "types.peripherals.IO_BANK0.GPIO47_CTRL.FUNCSEL",
         },
     } },
-    .{ .add_enum = .{
+    .{ .add_type = .{
         .parent = "types.peripherals.PADS_BANK0",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "DriveStrength",
             .bitsize = 2,
             .fields = .{
@@ -293,7 +293,7 @@
                 .{ .value = 0x2, .name = "8mA" },
                 .{ .value = 0x3, .name = "12mA" },
             },
-        },
+        } },
     } },
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO0.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO1.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
@@ -343,9 +343,9 @@
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO45.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO46.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO47.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
-    .{ .add_enum = .{
+    .{ .add_type = .{
         .parent = "types.peripherals.USB_DPRAM",
-        .@"enum" = .{
+        .type = .{ .@"enum" = .{
             .name = "EndpointType",
             .bitsize = 2,
             .fields = .{
@@ -354,7 +354,7 @@
                 .{ .value = 0x2, .name = "bulk" },
                 .{ .value = 0x3, .name = "interrupt" },
             },
-        },
+        } },
     } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP1_IN_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP1_OUT_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
@@ -387,9 +387,9 @@
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP15_IN_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP15_OUT_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{
-        .add_enum = .{
+        .add_type = .{
             .parent = "types.peripherals.DMA",
-            .@"enum" = .{
+            .type = .{ .@"enum" = .{
                 .name = "DataSize",
                 .bitsize = 2,
                 .fields = .{
@@ -397,7 +397,7 @@
                     .{ .value = 0x1, .name = "size_16" },
                     .{ .value = 0x2, .name = "size_32" },
                 },
-            },
+            } },
         },
     },
     .{ .set_enum_type = .{ .of = "types.peripherals.DMA.CH0_CTRL_TRIG.DATA_SIZE", .to = "types.peripherals.DMA.DataSize" } },
@@ -417,9 +417,9 @@
     .{ .set_enum_type = .{ .of = "types.peripherals.DMA.CH14_CTRL_TRIG.DATA_SIZE", .to = "types.peripherals.DMA.DataSize" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.DMA.CH15_CTRL_TRIG.DATA_SIZE", .to = "types.peripherals.DMA.DataSize" } },
     .{
-        .add_enum = .{
+        .add_type = .{
             .parent = "types.peripherals.DMA",
-            .@"enum" = .{
+            .type = .{ .@"enum" = .{
                 .name = "Dreq",
                 .bitsize = 6,
                 .fields = .{
@@ -484,7 +484,7 @@
                     .{ .value = 62, .name = "timer3" },
                     .{ .value = 63, .name = "permanent" },
                 },
-            },
+            } },
         },
     },
     .{ .set_enum_type = .{ .of = "types.peripherals.DMA.CH0_CTRL_TRIG.TREQ_SEL", .to = "types.peripherals.DMA.Dreq" } },

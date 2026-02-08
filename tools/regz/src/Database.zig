@@ -2095,21 +2095,25 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     set_prop.description,
                 });
             },
-            .add_enum => |add_enum| {
-                const struct_id = try db.get_struct_ref(add_enum.parent);
+            .add_type => |add_type| {
+                const struct_id = try db.get_struct_ref(add_type.parent);
 
-                const enum_id = try db.create_enum(struct_id, .{
-                    .name = add_enum.@"enum".name,
-                    .description = add_enum.@"enum".description,
-                    .size_bits = add_enum.@"enum".bitsize,
-                });
+                switch (add_type.type) {
+                    .@"enum" => |info| {
+                        const enum_id = try db.create_enum(struct_id, .{
+                            .name = info.name,
+                            .description = info.description,
+                            .size_bits = info.bitsize,
+                        });
 
-                for (add_enum.@"enum".fields) |enum_field| {
-                    try db.add_enum_field(enum_id, .{
-                        .name = enum_field.name,
-                        .description = enum_field.description,
-                        .value = enum_field.value,
-                    });
+                        for (info.fields) |enum_field| {
+                            try db.add_enum_field(enum_id, .{
+                                .name = enum_field.name,
+                                .description = enum_field.description,
+                                .value = enum_field.value,
+                            });
+                        }
+                    },
                 }
             },
             .set_enum_type => |set_enum_type| {
