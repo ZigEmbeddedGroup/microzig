@@ -3,10 +3,10 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const xml = @import("xml.zig");
-const Arch = @import("arch.zig").Arch;
+const xml = @import("../xml.zig");
+const Arch = @import("../arch.zig").Arch;
 
-const Database = @import("Database.zig");
+const Database = @import("../Database.zig");
 const Access = Database.Access;
 const StructID = Database.StructID;
 const DeviceID = Database.DeviceID;

@@ -10,18 +10,22 @@ pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const libxml2_dep = b.dependency("libxml2", .{
+    // Dependencies
+
+    const libxml2 = b.dependency("libxml2", .{
         .target = target,
         .optimize = .ReleaseSafe,
         .iconv = false,
-    });
+    })
+        .artifact("xml2");
 
-    const zqlite_dep = b.dependency("zqlite", .{
+    const zqlite = b.dependency("zqlite", .{
         .target = target,
-        .optimize = optimize,
-    });
+        .optimize = .ReleaseSafe,
+    })
+        .module("zqlite");
 
-    const zqlite = zqlite_dep.module("zqlite");
+    // Main executable
 
     const regz = b.addExecutable(.{
         .name = "regz",
@@ -29,41 +33,46 @@ pub fn build(b: *Build) !void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zqlite", .module = zqlite },
+            },
         }),
-        .use_llvm = true,
     });
-    regz.linkLibrary(libxml2_dep.artifact("xml2"));
-    regz.root_module.addImport("zqlite", zqlite);
-    b.installArtifact(regz);
+    regz.linkLibrary(libxml2);
 
-    const exported_module = b.addModule("regz", .{
-        .root_source_file = b.path("src/module.zig"),
-    });
-    exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
-    exported_module.addImport("zqlite", zqlite);
+    b.installArtifact(regz);
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
+    if (b.args) |args|
         run_cmd.addArgs(args);
-    }
+    b.step("run", "Run the app").dependOn(&run_cmd.step);
 
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    // Library
+
+    const exported_module = b.addModule("regz", .{
+        .root_source_file = b.path("src/root.zig"),
+        .imports = &.{
+            .{ .name = "zqlite", .module = zqlite },
+        },
+    });
+    exported_module.linkLibrary(libxml2);
+
+    // Tests
 
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/Database.zig"),
+            .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zqlite", .module = zqlite },
+            },
         }),
-        .use_llvm = true,
     });
-    tests.linkLibrary(libxml2_dep.artifact("xml2"));
-    tests.root_module.addImport("zqlite", zqlite);
+    tests.linkLibrary(libxml2);
     tests.step.dependOn(&regz.step);
 
     const run_tests = b.addRunArtifact(tests);
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_tests.step);
+    b.step("test", "Run unit tests").dependOn(&run_tests.step);
 }

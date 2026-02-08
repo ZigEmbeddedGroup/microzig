@@ -1,28 +1,24 @@
-gpa: Allocator,
-conn: zqlite.Conn,
-
-const Database = @This();
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
-
-const zqlite = @import("zqlite");
-const c = zqlite.c;
-
-const xml = @import("xml.zig");
-const svd = @import("svd.zig");
-const atdf = @import("atdf.zig");
-const embassy = @import("embassy.zig");
-const targetdb = @import("targetdb.zig");
-const gen = @import("gen.zig");
-const analysis = @import("analysis.zig");
-const Patch = @import("patch.zig").Patch;
-const SQL_Options = @import("SQL_Options.zig");
-const Arch = @import("arch.zig").Arch;
-pub const Directory = @import("Directory.zig");
-
 const log = std.log.scoped(.db);
+
 const file_size_max = 100 * 1024 * 1024;
+
+const Database = @This();
+
+const Arch = @import("arch.zig").Arch;
+const Patch = @import("patch.zig").Patch;
+const zqlite = @import("zqlite");
+
+const atdf = @import("format/atdf.zig");
+const embassy = @import("format/embassy.zig");
+const svd = @import("format/svd.zig");
+const targetdb = @import("format/targetdb.zig");
+const xml = @import("xml.zig");
+
+gpa: Allocator,
+conn: zqlite.Conn,
 
 // Actual instances will have "Instance" in the type name for the ID
 pub const DeviceID = ID(u32, "devices");
@@ -35,6 +31,43 @@ pub const EnumID = ID(u32, "enums");
 pub const RegisterID = ID(u32, "registers");
 pub const ModeID = ID(u32, "modes");
 pub const StructID = ID(u32, "structs");
+
+const SQL_Options = struct {
+    primary_key: ?PrimaryKey = null,
+    foreign_keys: []const ForeignKey = &.{},
+    unique_constraints: []const Unique = &.{},
+
+    pub const Unique = []const []const u8;
+
+    pub const PrimaryKey = struct {
+        name: []const u8,
+        autoincrement: bool = false,
+    };
+
+    pub const On = enum {
+        no_action,
+        restrict,
+        cascade,
+        set_null,
+        set_default,
+
+        pub fn to_string(on: On) []const u8 {
+            return switch (on) {
+                .no_action => "NO ACTION",
+                .restrict => "RESTRICT",
+                .cascade => "CASCADE",
+                .set_null => "SET NULL",
+                .set_default => "SET DEFAULT",
+            };
+        }
+    };
+
+    pub const ForeignKey = struct {
+        name: []const u8,
+        on_delete: On = .no_action,
+        on_update: On = .no_action,
+    };
+};
 
 pub const Device = struct {
     id: DeviceID,
@@ -355,8 +388,8 @@ pub const Access = enum {
     @"read-write",
     @"read-only",
     @"write-only",
-    @"write-once",
-    @"read-write-once",
+    writeonce,
+    @"read-writeonce",
     // read normal, write 1 to clear
     @"read/clear",
 
@@ -637,7 +670,7 @@ pub fn destroy(db: *Database) void {
 pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Database {
     var db = try Database.create(allocator);
     errdefer {
-        std.log.err("sqlite: {s}", .{db.conn.lastError()});
+        log.err("sqlite: {s}", .{db.conn.lastError()});
         db.destroy();
     }
 
@@ -655,7 +688,7 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, 
         .embassy => blk: {
             var db = try Database.create(allocator);
             errdefer {
-                std.log.err("sqlite: {s}", .{db.conn.lastError()});
+                log.err("sqlite: {s}", .{db.conn.lastError()});
                 db.destroy();
             }
 
@@ -665,7 +698,7 @@ pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, 
         .targetdb => blk: {
             var db = try Database.create(allocator);
             errdefer {
-                std.log.err("sqlite: {s}", .{db.conn.lastError()});
+                log.err("sqlite: {s}", .{db.conn.lastError()});
                 db.destroy();
             }
 
@@ -1020,7 +1053,7 @@ pub fn get_nested_struct_fields_with_calculated_size(
 
         var depth: u8 = 0;
         const size_bytes = try db.recursively_calculate_struct_size(&depth, &size_cache, gpa, nsf.struct_id);
-        std.log.debug("Calculated struct size: struct_id={f} size_bytes={}", .{ nsf.struct_id, size_bytes });
+        log.debug("Calculated struct size: struct_id={f} size_bytes={}", .{ nsf.struct_id, size_bytes });
         nsf.size_bytes = if (size_bytes > 0) size_bytes else continue;
         try ret.append(gpa, nsf.*);
     }
@@ -1207,10 +1240,10 @@ pub fn backup(db: *Database, path: [:0]const u8) !void {
     const backup_db = try zqlite.open(path, flags);
     defer backup_db.close();
 
-    const backup_step = c.sqlite3_backup_init(@ptrCast(backup_db.conn), "main", @ptrCast(db.conn.conn), "main");
+    const backup_step = zqlite.c.sqlite3_backup_init(@ptrCast(backup_db.conn), "main", @ptrCast(db.conn.conn), "main");
     if (backup_step != null) {
-        _ = c.sqlite3_backup_step(backup_step, -1);
-        _ = c.sqlite3_backup_finish(backup_step);
+        _ = zqlite.c.sqlite3_backup_step(backup_step, -1);
+        _ = zqlite.c.sqlite3_backup_finish(backup_step);
     }
 }
 
@@ -1635,7 +1668,7 @@ pub const CreatePeripheralOptions = struct {
 /// The code generated for a peripheral can be a struct itself, or a namespace
 /// containing structs. In the latter case, a peripheral
 pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !PeripheralID {
-    errdefer std.log.err("sqlite: {s}", .{db.conn.lastError()});
+    errdefer log.err("sqlite: {s}", .{db.conn.lastError()});
 
     try db.conn.transaction();
     errdefer db.conn.rollback();
@@ -1974,19 +2007,10 @@ pub fn struct_is_zero_sized(db: *Database, allocator: Allocator, struct_id: Stru
 /// Returns the last part of the reference, and the beginning part of the
 /// reference
 fn get_ref_last_component(ref: []const u8) !struct { []const u8, ?[]const u8 } {
-    var it = std.mem.splitScalar(u8, ref, '.');
-    var last: ?[]const u8 = null;
-    while (it.next()) |comp| {
-        last = comp;
-    }
-
-    return if (last) |l|
-        if (l.len == ref.len)
-            .{ l, null }
-        else
-            .{ l, ref[0 .. ref.len - l.len - 1] }
+    if (std.mem.lastIndexOfScalar(u8, ref, '.')) |pos|
+        return .{ ref[pos + 1 ..], ref[0..pos] }
     else
-        error.EmptyRef;
+        return .{ ref, null };
 }
 
 fn strip_ref_prefix(expected_prefix: []const u8, ref: []const u8) ![]const u8 {
@@ -2022,7 +2046,7 @@ fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
     const peripheral_name = it.first();
 
     const peripheral_id = try db.get_peripheral_by_name(peripheral_name) orelse {
-        std.log.warn("No peripheral named '{s}' found", .{peripheral_name});
+        log.warn("No peripheral named '{s}' found", .{peripheral_name});
         return error.NoPeripheral;
     };
 
@@ -2031,7 +2055,7 @@ fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
         if (std.mem.eql(u8, struct_name, peripheral_name))
             return struct_id
         else {
-            std.log.warn("Expected struct '{s}', got '{s}'", .{ struct_name, peripheral_name });
+            log.warn("Expected struct '{s}', got '{s}'", .{ struct_name, peripheral_name });
             return error.NoPeripheral;
         }
     }
@@ -2065,6 +2089,7 @@ fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
 
     const register_name, const struct_ref = try get_ref_last_component(ref);
     const struct_id = try db.get_struct_ref(struct_ref orelse return error.InvalidRef);
+
     const register = try db.get_register_by_name(arena.allocator(), struct_id, register_name);
     return register.id;
 }
@@ -2103,105 +2128,100 @@ fn cleanup_unused_enums(db: *Database) !void {
     , .{});
 }
 
-pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSlice([]const Patch, db.gpa, zon_text, diags, .{});
-    defer std.zon.parse.free(db.gpa, patches);
+pub fn apply_patch(db: *Database, patch: Patch) !void {
+    switch (patch) {
+        .override_arch => |override_arch| {
+            const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
+                return error.DeviceNotFound;
+            };
 
-    for (patches) |patch| {
-        switch (patch) {
-            .override_arch => |override_arch| {
-                const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
-                    return error.DeviceNotFound;
-                };
+            try db.conn.exec(
+                \\UPDATE devices
+                \\SET arch = ?
+                \\WHERE id = ?;
+            , .{
+                override_arch.arch.to_string(),
+                @intFromEnum(device_id),
+            });
+        },
+        .set_device_property => |set_prop| {
+            const device_id = try db.get_device_id_by_name(set_prop.device_name) orelse {
+                return error.DeviceNotFound;
+            };
 
-                try db.conn.exec(
-                    \\UPDATE devices
-                    \\SET arch = ?
-                    \\WHERE id = ?;
-                , .{
-                    override_arch.arch.to_string(),
-                    @intFromEnum(device_id),
-                });
-            },
-            .set_device_property => |set_prop| {
-                const device_id = try db.get_device_id_by_name(set_prop.device_name) orelse {
-                    return error.DeviceNotFound;
-                };
+            try db.conn.exec(
+                \\INSERT INTO device_properties
+                \\  (device_id, key, value, description)
+                \\VALUES
+                \\  (?, ?, ?, ?)
+                \\ON CONFLICT(device_id, key)
+                \\DO UPDATE SET
+                \\  value = excluded.value,
+                \\  description = excluded.description;
+            , .{
+                @intFromEnum(device_id),
+                set_prop.key,
+                set_prop.value,
+                set_prop.description,
+            });
+        },
+        .add_type => |add_type| {
+            const struct_id = try db.get_struct_ref(add_type.parent);
+            _ = try db.add_type_helper(struct_id, add_type.type_name, add_type.type);
+        },
+        .set_enum_type => |set_enum_type| {
+            const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
+            const field_name, const register_ref = try get_ref_last_component(set_enum_type.of);
+            const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
+            try db.set_register_field_enum_id(register_id, field_name, enum_id);
+            try db.cleanup_unused_enums();
+        },
+        .add_interrupt => |add_interrupt| {
+            const device_id = try db.get_device_id_by_name(add_interrupt.device_name) orelse {
+                return error.DeviceNotFound;
+            };
 
-                try db.conn.exec(
-                    \\INSERT INTO device_properties
-                    \\  (device_id, key, value, description)
-                    \\VALUES
-                    \\  (?, ?, ?, ?)
-                    \\ON CONFLICT(device_id, key)
-                    \\DO UPDATE SET
-                    \\  value = excluded.value,
-                    \\  description = excluded.description;
-                , .{
-                    @intFromEnum(device_id),
-                    set_prop.key,
-                    set_prop.value,
-                    set_prop.description,
-                });
-            },
-            .add_type => |add_type| {
-                const struct_id = try db.get_struct_ref(add_type.parent);
-                _ = try db.add_type_helper(struct_id, add_type.type_name, add_type.type);
-            },
-            .set_enum_type => |set_enum_type| {
-                const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
-                const field_name, const register_ref = try get_ref_last_component(set_enum_type.of);
+            _ = try db.create_interrupt(device_id, .{
+                .name = add_interrupt.name,
+                .description = add_interrupt.description,
+                .idx = add_interrupt.idx,
+            });
+        },
+        .add_type_and_apply => |add_type_patch| {
+            // First, create the enum (same as add_enum)
+            const struct_id = try db.get_struct_ref(add_type_patch.parent);
+
+            const type_id = try db.add_type_helper(struct_id, add_type_patch.type_name, add_type_patch.type);
+
+            // Then, apply to all specified fields (same as set_enum_type)
+            for (add_type_patch.apply_to) |field_ref| {
+                const field_name, const register_ref = try get_ref_last_component(field_ref);
                 const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
-                try db.set_register_field_enum_id(register_id, field_name, enum_id);
-                try db.cleanup_unused_enums();
-            },
-            .add_interrupt => |add_interrupt| {
-                const device_id = try db.get_device_id_by_name(add_interrupt.device_name) orelse {
-                    return error.DeviceNotFound;
-                };
+                try db.set_register_field_enum_id(register_id, field_name, type_id);
+            }
+        },
+        .add_struct_field => |opts| {
+            var arena = std.heap.ArenaAllocator.init(db.gpa);
+            defer arena.deinit();
 
-                _ = try db.create_interrupt(device_id, .{
-                    .name = add_interrupt.name,
-                    .description = add_interrupt.description,
-                    .idx = add_interrupt.idx,
-                });
-            },
-            .add_type_and_apply => |add_type_patch| {
-                // First, create the enum (same as add_enum)
-                const struct_id = try db.get_struct_ref(add_type_patch.parent);
-
-                const type_id = try db.add_type_helper(struct_id, add_type_patch.type_name, add_type_patch.type);
-
-                // Then, apply to all specified fields (same as set_enum_type)
-                for (add_type_patch.apply_to) |field_ref| {
-                    const field_name, const register_ref = try get_ref_last_component(field_ref);
-                    const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
-                    try db.set_register_field_enum_id(register_id, field_name, type_id);
-                }
-            },
-            .add_struct_field => |opts| {
-                var arena = std.heap.ArenaAllocator.init(db.gpa);
-                defer arena.deinit();
-
-                const enum_id, const size_bits = switch (opts.type) {
-                    .@"enum" => |ref| blk: {
-                        const id = try db.get_enum_ref(ref);
-                        const e = try db.get_enum(arena.allocator(), id);
-                        break :blk .{ id, e.size_bits };
-                    },
-                    .uint => |bits| .{ null, bits },
-                };
-                const reg_id = try db.get_register_ref(opts.parent);
-                try db.add_register_field(reg_id, .{
-                    .name = opts.name,
-                    .description = opts.description,
-                    .size_bits = size_bits,
-                    .offset_bits = opts.offset_bits,
-                    .enum_id = enum_id,
-                    .access = opts.access,
-                });
-            },
-        }
+            const enum_id, const size_bits = switch (opts.type) {
+                .@"enum" => |ref| blk: {
+                    const id = try db.get_enum_ref(ref);
+                    const e = try db.get_enum(arena.allocator(), id);
+                    break :blk .{ id, e.size_bits };
+                },
+                .uint => |bits| .{ null, bits },
+            };
+            const reg_id = try db.get_register_ref(opts.parent);
+            try db.add_register_field(reg_id, .{
+                .name = opts.name,
+                .description = opts.description,
+                .size_bits = size_bits,
+                .offset_bits = opts.offset_bits,
+                .enum_id = enum_id,
+                .access = opts.access,
+            });
+        },
     }
 }
 
@@ -2225,20 +2245,6 @@ fn add_type_helper(db: *Database, parent: StructID, name: []const u8, @"type": P
             return enum_id;
         },
     }
-}
-
-pub const ToZigOptions = gen.ToZigOptions;
-
-pub fn to_zig(db: *Database, output_dir: Directory, opts: ToZigOptions) !void {
-    try gen.to_zig(db, output_dir, opts);
-}
-
-test "all" {
-    @setEvalBranchQuota(2000);
-    _ = analysis;
-    _ = atdf;
-    _ = gen;
-    _ = svd;
 }
 
 test "add_type_and_apply patch creates enum and applies to fields" {
@@ -2288,7 +2294,7 @@ test "add_type_and_apply patch creates enum and applies to fields" {
     });
 
     // Apply the add_type_and_apply patch
-    const patch_zon: [:0]const u8 =
+    const patch_text: [:0]const u8 =
         \\.{
         \\    .{
         \\        .add_type_and_apply = .{
@@ -2316,7 +2322,11 @@ test "add_type_and_apply patch creates enum and applies to fields" {
     var diags: std.zon.parse.Diagnostics = .{};
     defer diags.deinit(allocator);
 
-    try db.apply_patch(patch_zon, &diags);
+    const patches = try std.zon.parse.fromSlice([]const Patch, allocator, patch_text, &diags, .{});
+    defer std.zon.parse.free(allocator, patches);
+
+    for (patches) |patch|
+        try db.apply_patch(patch);
 
     // Verify the enum was created
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -2354,7 +2364,7 @@ test "add_type_and_apply patch with empty apply_to list" {
     const struct_id = try db.get_peripheral_struct(peripheral_id);
 
     // Apply patch with empty apply_to list (just creates the enum)
-    const patch_zon: [:0]const u8 =
+    const patch_text: [:0]const u8 =
         \\.{
         \\    .{
         \\        .add_type_and_apply = .{
@@ -2376,7 +2386,11 @@ test "add_type_and_apply patch with empty apply_to list" {
     var diags: std.zon.parse.Diagnostics = .{};
     defer diags.deinit(allocator);
 
-    try db.apply_patch(patch_zon, &diags);
+    const patches = try std.zon.parse.fromSlice([]const Patch, allocator, patch_text, &diags, .{});
+    defer std.zon.parse.free(allocator, patches);
+
+    for (patches) |patch|
+        try db.apply_patch(patch);
 
     // Verify the enum was created
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -2397,7 +2411,7 @@ test "add_type_and_apply patch with invalid field reference" {
     });
 
     // Apply patch with invalid field reference
-    const patch_zon: [:0]const u8 =
+    const patch_text: [:0]const u8 =
         \\.{
         \\    .{
         \\        .add_type_and_apply = .{
@@ -2420,6 +2434,11 @@ test "add_type_and_apply patch with invalid field reference" {
     var diags: std.zon.parse.Diagnostics = .{};
     defer diags.deinit(allocator);
 
-    const result = db.apply_patch(patch_zon, &diags);
-    try std.testing.expectError(error.MissingEntity, result);
+    const patches = try std.zon.parse.fromSlice([]const Patch, allocator, patch_text, &diags, .{});
+    defer std.zon.parse.free(allocator, patches);
+
+    for (patches) |patch| {
+        const result = db.apply_patch(patch);
+        try std.testing.expectError(error.MissingEntity, result);
+    }
 }

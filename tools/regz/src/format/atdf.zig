@@ -3,7 +3,7 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const Database = @import("Database.zig");
+const Database = @import("../Database.zig");
 const DevicePeripheralID = Database.DevicePeripheralID;
 const PeripheralID = Database.PeripheralID;
 const EnumID = Database.EnumID;
@@ -11,8 +11,8 @@ const DeviceID = Database.DeviceID;
 const StructID = Database.StructID;
 const RegisterID = Database.RegisterID;
 
-const xml = @import("xml.zig");
-const Arch = @import("arch.zig").Arch;
+const xml = @import("../xml.zig");
+const Arch = @import("../arch.zig").Arch;
 
 const log = std.log.scoped(.atdf);
 

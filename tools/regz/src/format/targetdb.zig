@@ -1,13 +1,13 @@
 const std = @import("std");
-const xml = @import("xml.zig");
+const xml = @import("../xml.zig");
 
-const Database = @import("Database.zig");
+const Database = @import("../Database.zig");
 const DeviceID = Database.DeviceID;
 const PeripheralID = Database.PeripheralID;
 const RegisterID = Database.RegisterID;
 const StructID = Database.StructID;
 const EnumID = Database.EnumID;
-const Arch = @import("arch.zig").Arch;
+const Arch = @import("../arch.zig").Arch;
 
 const log = std.log.scoped(.target_db);
 
