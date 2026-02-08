@@ -283,7 +283,6 @@ const TestEnumField = struct {
 };
 
 const TestEnum = struct {
-    name: []const u8,
     description: ?[]const u8 = null,
     bitsize: u8,
     fields: []const TestEnumField = &.{},
@@ -292,6 +291,7 @@ const TestEnum = struct {
 const TestPatch = union(enum) {
     add_type_and_apply: struct {
         parent: []const u8,
+        type_name: []const u8,
         type: union(enum) { @"enum": TestEnum },
         apply_to: []const []const u8,
     },
@@ -304,8 +304,8 @@ test "zon serialize single patch - raw output" {
 
     const patch = TestPatch{ .add_type_and_apply = .{
         .parent = "types.peripherals.TEST",
+        .type_name = "TestEnum",
         .type = .{ .@"enum" = .{
-            .name = "TestEnum",
             .description = null,
             .bitsize = 2,
             .fields = &.{
@@ -339,8 +339,8 @@ test "zon serialize multiple patches - raw output" {
 
     const patch1 = TestPatch{ .add_type_and_apply = .{
         .parent = "types.peripherals.TEST1",
+        .type_name = "Enum1",
         .type = .{ .@"enum" = .{
-            .name = "Enum1",
             .description = null,
             .bitsize = 2,
             .fields = &.{},
@@ -350,8 +350,8 @@ test "zon serialize multiple patches - raw output" {
 
     const patch2 = TestPatch{ .add_type_and_apply = .{
         .parent = "types.peripherals.TEST2",
+        .type_name = "Enum2",
         .type = .{ .@"enum" = .{
-            .name = "Enum2",
             .description = null,
             .bitsize = 2,
             .fields = &.{},

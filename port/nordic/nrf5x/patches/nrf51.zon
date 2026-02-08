@@ -2,8 +2,8 @@
     .{
         .add_type = .{
             .parent = "types.peripherals.GPIO",
+            .type_name = "Pull",
             .type = .{ .@"enum" = .{
-                .name = "Pull",
                 .bitsize = 2,
                 .fields = .{
                     .{ .value = 0x0, .name = "disabled" },
@@ -17,8 +17,8 @@
     .{
         .add_type = .{
             .parent = "types.peripherals.GPIO",
+            .type_name = "DriveStrength",
             .type = .{ .@"enum" = .{
-                .name = "DriveStrength",
                 .bitsize = 3,
                 .fields = .{
                     .{ .value = 0x0, .name = "SOS1" },

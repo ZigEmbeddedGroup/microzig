@@ -2097,7 +2097,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
             },
             .add_type => |add_type| {
                 const struct_id = try db.get_struct_ref(add_type.parent);
-                _ = try db.add_type_helper(struct_id, add_type.type.@"enum".name, add_type.type);
+                _ = try db.add_type_helper(struct_id, add_type.type_name, add_type.type);
             },
             .set_enum_type => |set_enum_type| {
                 const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
@@ -2121,7 +2121,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                 // First, create the enum (same as add_enum)
                 const struct_id = try db.get_struct_ref(add_type_patch.parent);
 
-                const type_id = try db.add_type_helper(struct_id, add_type_patch.type.@"enum".name, add_type_patch.type);
+                const type_id = try db.add_type_helper(struct_id, add_type_patch.type_name, add_type_patch.type);
 
                 // Then, apply to all specified fields (same as set_enum_type)
                 for (add_type_patch.apply_to) |field_ref| {

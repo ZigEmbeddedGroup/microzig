@@ -1,8 +1,8 @@
 .{
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
+        .type_name = "Override",
         .type = .{ .@"enum" = .{
-            .name = "Override",
             .bitsize = 2,
             .fields = .{
                 .{ .value = 0, .name = "normal" },
@@ -136,8 +136,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
+        .type_name = "Function",
         .type = .{ .@"enum" = .{
-            .name = "Function",
             .bitsize = 5,
             .fields = .{
                 .{ .value = 0, .name = "xip" },
@@ -188,8 +188,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.USB_DPRAM",
+        .type_name = "EndpointType",
         .type = .{ .@"enum" = .{
-            .name = "EndpointType",
             .bitsize = 2,
             .fields = .{
                 .{ .name = "control", .value = 0 },
@@ -233,8 +233,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.DMA",
+        .type_name = "DataSize",
         .type = .{ .@"enum" = .{
-            .name = "DataSize",
             .bitsize = 2,
             .fields = .{
                 .{ .name = "size_8", .value = 0 },
@@ -259,8 +259,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.DMA",
+        .type_name = "Dreq",
         .type = .{ .@"enum" = .{
-            .name = "Dreq",
             .bitsize = 6,
             .fields = .{
                 .{ .name = "pio0_tx0", .value = 0 },
@@ -327,8 +327,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.USB_DPRAM",
+        .type_name = "BufferOffset",
         .type = .{ .@"enum" = .{
-            .name = "BufferOffset",
             .bitsize = 2,
             .fields = .{
                 .{ .name = "128", .value = 0 },
@@ -374,8 +374,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.ROSC",
+        .type_name = "Password",
         .type = .{ .@"enum" = .{
-            .name = "Password",
             .bitsize = 16,
             .fields = .{.{ .name = "PASS", .value = 38550 }},
         } },
@@ -383,8 +383,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PWM",
+        .type_name = "DivMode",
         .type = .{ .@"enum" = .{
-            .name = "DivMode",
             .bitsize = 2,
             .fields = .{
                 .{
@@ -422,8 +422,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PIO0",
+        .type_name = "StatusSelect",
         .type = .{ .@"enum" = .{
-            .name = "StatusSelect",
             .bitsize = 1,
             .fields = .{ .{
                 .name = "TXLEVEL",
@@ -444,8 +444,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.I2C0",
+        .type_name = "RxUnderState",
         .type = .{ .@"enum" = .{
-            .name = "RxUnderState",
             .bitsize = 1,
             .fields = .{ .{
                 .name = "INACTIVE",
@@ -461,8 +461,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.DMA",
+        .type_name = "RingSize",
         .type = .{ .@"enum" = .{
-            .name = "RingSize",
             .bitsize = 4,
             .fields = .{.{ .name = "RING_NONE", .value = 0 }},
         } },
@@ -483,8 +483,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.CLOCKS",
+        .type_name = "AuxSrc",
         .type = .{ .@"enum" = .{
-            .name = "AuxSrc",
             .bitsize = 4,
             .fields = .{
                 .{ .name = "clksrc_pll_sys", .value = 0 },
@@ -504,8 +504,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.CLOCKS",
+        .type_name = "AuxSrcPh",
         .type = .{ .@"enum" = .{
-            .name = "AuxSrcPh",
             .bitsize = 4,
             .fields = .{
                 .{ .name = "clksrc_pll_sys", .value = 0 },
@@ -525,8 +525,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.CLOCKS",
+        .type_name = "AuxSrcExtra",
         .type = .{ .@"enum" = .{
-            .name = "AuxSrcExtra",
             .bitsize = 3,
             .fields = .{
                 .{ .name = "clksrc_pll_usb", .value = 0 },
@@ -545,8 +545,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.BUSCTRL",
+        .type_name = "PerfSelect",
         .type = .{ .@"enum" = .{
-            .name = "PerfSelect",
             .bitsize = 5,
             .fields = .{
                 .{ .name = "apb_contested", .value = 0 },
@@ -580,8 +580,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PADS_BANK0",
+        .type_name = "DriveStrength",
         .type = .{ .@"enum" = .{
-            .name = "DriveStrength",
             .bitsize = 2,
             .fields = .{
                 .{ .name = "2mA", .value = 0 },
@@ -627,8 +627,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.PADS_QSPI",
+        .type_name = "DriveStrength",
         .type = .{ .@"enum" = .{
-            .name = "DriveStrength",
             .bitsize = 2,
             .fields = .{
                 .{ .name = "2mA", .value = 0 },

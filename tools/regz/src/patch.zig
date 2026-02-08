@@ -12,7 +12,6 @@ pub const Patch = union(enum) {
         };
 
         pub const Enum = struct {
-            name: []const u8,
             description: ?[]const u8 = null,
             bitsize: u8,
             fields: []const EnumField = &.{},
@@ -39,6 +38,7 @@ pub const Patch = union(enum) {
     },
     add_type: struct {
         parent: []const u8,
+        type_name: []const u8,
         type: Type,
     },
     /// The replaced type MUST be the same size. Bit or Byte size depends on the
@@ -52,6 +52,7 @@ pub const Patch = union(enum) {
     /// combines `add_type` with multiple `set_enum_type` operations.
     add_type_and_apply: struct {
         parent: []const u8,
+        type_name: []const u8,
         type: Type,
         apply_to: []const []const u8,
     },

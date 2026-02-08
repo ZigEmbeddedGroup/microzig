@@ -1,8 +1,8 @@
 .{
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
+        .type_name = "Override",
         .type = .{ .@"enum" = .{
-            .name = "Override",
             .bitsize = 2,
             .fields = .{
                 .{ .value = 0, .name = "normal" },
@@ -208,8 +208,8 @@
     } },
     .{ .add_type_and_apply = .{
         .parent = "types.peripherals.IO_BANK0",
+        .type_name = "Function",
         .type = .{ .@"enum" = .{
-            .name = "Function",
             .bitsize = 5,
             .fields = .{
                 .{ .value = 0, .name = "hstx" },
@@ -284,8 +284,8 @@
     } },
     .{ .add_type = .{
         .parent = "types.peripherals.PADS_BANK0",
+        .type_name = "DriveStrength",
         .type = .{ .@"enum" = .{
-            .name = "DriveStrength",
             .bitsize = 2,
             .fields = .{
                 .{ .value = 0x0, .name = "2mA" },
@@ -345,8 +345,8 @@
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO47.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
     .{ .add_type = .{
         .parent = "types.peripherals.USB_DPRAM",
+        .type_name = "EndpointType",
         .type = .{ .@"enum" = .{
-            .name = "EndpointType",
             .bitsize = 2,
             .fields = .{
                 .{ .value = 0x0, .name = "control" },
@@ -389,8 +389,8 @@
     .{
         .add_type = .{
             .parent = "types.peripherals.DMA",
+            .type_name = "DataSize",
             .type = .{ .@"enum" = .{
-                .name = "DataSize",
                 .bitsize = 2,
                 .fields = .{
                     .{ .value = 0x0, .name = "size_8" },
@@ -419,8 +419,8 @@
     .{
         .add_type = .{
             .parent = "types.peripherals.DMA",
+            .type_name = "Dreq",
             .type = .{ .@"enum" = .{
-                .name = "Dreq",
                 .bitsize = 6,
                 .fields = .{
                     .{ .value = 0, .name = "pio0_tx0" },
