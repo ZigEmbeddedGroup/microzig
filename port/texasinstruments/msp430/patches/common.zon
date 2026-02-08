@@ -1,0 +1,10 @@
+.{
+    .{ .add_struct_field = .{
+        .parent = "types.peripherals.Watchdog_Timer.WDTCTL",
+        .name = "WDTPW",
+        .size_bits = 8,
+        .offset_bits = 8,
+        .access = .@"write-only",
+        .type = .{ .uint = 8 },
+    } },
+}

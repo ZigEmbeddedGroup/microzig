@@ -56,4 +56,16 @@ pub const Patch = union(enum) {
         type: Type,
         apply_to: []const []const u8,
     },
+    add_struct_field: struct {
+        parent: []const u8,
+        name: []const u8,
+        description: ?[]const u8 = null,
+        size_bits: u8,
+        offset_bits: u8,
+        access: Database.Access = .default,
+        type: union(enum) {
+            uint: u8,
+            @"enum": []const u8,
+        },
+    },
 };

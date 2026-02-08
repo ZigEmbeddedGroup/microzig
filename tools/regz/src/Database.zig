@@ -2010,30 +2010,41 @@ fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
 
     const base_ref = try strip_ref_prefix("types.peripherals", ref);
     const struct_name, const rest_ref = try get_ref_last_component(base_ref);
-    return if (rest_ref) |rest| blk: {
-        var it = std.mem.splitScalar(u8, rest, '.');
-        const peripheral_name = it.next() orelse return error.NoPeripheral;
-        const peripheral_id = try db.get_peripheral_by_name(peripheral_name) orelse return error.NoPeripheral;
-        var struct_id = try db.get_peripheral_struct(peripheral_id);
-        if (it.index == null) {
-            return if (std.mem.eql(u8, struct_name, peripheral_name))
-                struct_id
-            else
-                error.NoPeripheral;
-        }
 
-        break :blk while (it.next()) |name| {
-            const struct_decl = try db.get_struct_decl_by_name(arena.allocator(), struct_id, name);
-            if (it.index == null and std.mem.eql(u8, struct_name, struct_decl.name))
-                break struct_decl.struct_id;
-
-            struct_id = struct_decl.struct_id;
-        } else error.RefNotFound;
-    } else blk: {
+    const rest = rest_ref orelse {
         // just getting a peripheral
-        const peripheral_id = try db.get_peripheral_by_name(struct_name) orelse return error.NoPeripheral;
-        break :blk try db.get_peripheral_struct(peripheral_id);
+        const peripheral_id = try db.get_peripheral_by_name(struct_name) orelse
+            return error.NoPeripheral;
+        return try db.get_peripheral_struct(peripheral_id);
     };
+
+    var it = std.mem.splitScalar(u8, rest, '.');
+    const peripheral_name = it.first();
+
+    const peripheral_id = try db.get_peripheral_by_name(peripheral_name) orelse {
+        std.log.warn("No peripheral named '{s}' found", .{peripheral_name});
+        return error.NoPeripheral;
+    };
+
+    var struct_id = try db.get_peripheral_struct(peripheral_id);
+    if (it.index == null) {
+        if (std.mem.eql(u8, struct_name, peripheral_name))
+            return struct_id
+        else {
+            std.log.warn("Expected struct '{s}', got '{s}'", .{ struct_name, peripheral_name });
+            return error.NoPeripheral;
+        }
+    }
+
+    while (it.next()) |name| {
+        const struct_decl = try db.get_struct_decl_by_name(arena.allocator(), struct_id, name);
+        struct_id = struct_decl.struct_id;
+
+        if (it.index == null and std.mem.eql(u8, struct_name, struct_decl.name))
+            return struct_id;
+    }
+
+    return error.RefNotFound;
 }
 
 fn get_enum_ref(db: *Database, ref: []const u8) !EnumID {
@@ -2167,6 +2178,28 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
                     try db.set_register_field_enum_id(register_id, field_name, type_id);
                 }
+            },
+            .add_struct_field => |opts| {
+                var arena = std.heap.ArenaAllocator.init(db.gpa);
+                defer arena.deinit();
+
+                const enum_id, const size_bits = switch (opts.type) {
+                    .@"enum" => |ref| blk: {
+                        const id = try db.get_enum_ref(ref);
+                        const e = try db.get_enum(arena.allocator(), id);
+                        break :blk .{ id, e.size_bits };
+                    },
+                    .uint => |bits| .{ null, bits },
+                };
+                const reg_id = try db.get_register_ref(opts.parent);
+                try db.add_register_field(reg_id, .{
+                    .name = opts.name,
+                    .description = opts.description,
+                    .size_bits = size_bits,
+                    .offset_bits = opts.offset_bits,
+                    .enum_id = enum_id,
+                    .access = opts.access,
+                });
             },
         }
     }

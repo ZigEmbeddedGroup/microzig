@@ -41,6 +41,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .ram, .offset = 0x2400, .length = 0x2000, .access = .rwx },
                 .{ .name = "isr_vector", .tag = .none, .offset = 0xFF80, .length = 0x80, .access = .rx },
             },
+            .patch_files = &.{
+                b.path("patches/common.zon"),
+            },
         },
         .bundle_compiler_rt = false,
         .bundle_ubsan_rt = false,
@@ -72,6 +75,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .tag = .flash, .offset = 0xC000, .length = 0x3FDE, .access = .rx },
                 .{ .tag = .ram, .offset = 0x200, .length = 0x200, .access = .rwx },
                 .{ .name = "isr_vector", .tag = .none, .offset = 0xFFE0, .length = 0x20, .access = .rx },
+            },
+            .patch_files = &.{
+                b.path("patches/common.zon"),
             },
         },
         .bundle_compiler_rt = false,
