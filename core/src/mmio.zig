@@ -6,8 +6,10 @@ pub fn OldMmio(comptime PackedT: type) type {
 
     var access: MmioAccess(PackedT) = undefined;
     for (@typeInfo(PackedT).@"struct".fields) |fld| {
-        const read_only = startsWith(u8, fld.name, "reserved") or startsWith(u8, fld.name, "padding");
-        @field(access, fld.name) = if (read_only) .read_only else .read_write;
+        const read_only = startsWith(u8, fld.name, "reserved") or
+            startsWith(u8, fld.name, "_reserved") or
+            startsWith(u8, fld.name, "padding");
+        @field(access, fld.name) = if (read_only) .@"read-only" else .@"read-write";
     }
     return Mmio(PackedT, access);
 }
