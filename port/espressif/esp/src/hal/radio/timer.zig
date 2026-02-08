@@ -150,11 +150,11 @@ fn task_fn() void {
             callback(arg);
         }
 
-        const sleep_duration = blk: {
+        const sleep_duration: ?rtos.Duration = blk: {
             mutex.lock();
             defer mutex.unlock();
             break :blk if (find_next_wake_absolute()) |next_wake_absolute|
-                next_wake_absolute.diff(now)
+                .from_us(@truncate(next_wake_absolute.diff(now).to_us()))
             else
                 null;
         };

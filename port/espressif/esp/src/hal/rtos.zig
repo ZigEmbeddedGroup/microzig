@@ -11,7 +11,6 @@ const TrapFrame = microzig.cpu.TrapFrame;
 const SYSTEM = microzig.chip.peripherals.SYSTEM;
 const time = microzig.drivers.time;
 const rtos_options = microzig.options.hal.rtos;
-pub const Priority = rtos_options.Priority;
 
 const get_time_since_boot = @import("time.zig").get_time_since_boot;
 const system = @import("system.zig");
@@ -30,6 +29,8 @@ const systimer = @import("systimer.zig");
 
 // TODO: trigger context switch if a higher priority is awaken in sync
 // primitives
+// TODO: low power mode where tick interrupt is only triggered when necessary
+// TODO: investigate tick interrupt assembly and improve generated code
 // TODO: stack overflow detection
 // TODO: direct task signaling
 // TODO: implement std.Io
@@ -39,22 +40,38 @@ const systimer = @import("systimer.zig");
 const STACK_ALIGN: std.mem.Alignment = .@"16";
 const EXTRA_STACK_SIZE = @max(@sizeOf(TrapFrame), 32 * @sizeOf(usize));
 
+pub const TickFrequency = enum(u32) {
+    _,
+
+    pub fn from_hz(v: u32) TickFrequency {
+        assert(v < 100_000); // frequency to high
+        return @enumFromInt(v);
+    }
+
+    pub fn from_khz(v: u32) TickFrequency {
+        return .from_hz(v * 1_000);
+    }
+
+    fn to_us(comptime freq: TickFrequency) u24 {
+        return @intFromFloat(1_000_000.0 / @as(f32, @floatFromInt(@intFromEnum(freq))));
+    }
+};
+
 pub const Options = struct {
     enable: bool = false,
-    /// The priority enum to be used by the RTOS. Must define idle, lowest and
-    /// highest priorities.
-    Priority: type = enum(u5) {
-        idle = 0,
-        lowest = 1,
-        _,
 
-        pub const highest: @This() = @enumFromInt(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type));
-    },
-    general_purpose_interrupt: microzig.cpu.Interrupt = .interrupt30,
+    /// How many bits to be used for priority. Highly recommended to be kept
+    /// less than or equal to 5 to benefit from the use of buckets for the
+    /// ready task queue.
+    priority_bits: u5 = 3,
+
+    tick_interrupt: microzig.cpu.Interrupt = .interrupt31,
+    tick_freq: TickFrequency = .from_khz(1),
     systimer_unit: systimer.Unit = .unit0,
     systimer_alarm: systimer.Alarm = .alarm0,
     cpu_interrupt: system.CPU_Interrupt = .cpu_interrupt_0,
-    yield_interrupt: microzig.cpu.Interrupt = .interrupt31,
+
+    preempt_same_priority_tasks_on_tick: bool = false,
 
     paint_stack_byte: ?u8 = null,
     /// Disable the use of buckets (one linked list per priority) for the ready
@@ -62,6 +79,21 @@ pub const Options = struct {
     /// Buckets are disabled automatically if there are more than 32 priorities
     /// (the priority enum has a tag type bigger than u5).
     ready_queue_force_no_buckets: bool = false,
+};
+
+pub const Priority = enum(@Type(.{ .int = .{
+    .bits = rtos_options.priority_bits,
+    .signedness = .unsigned,
+} })) {
+    idle = 0,
+    lowest = 1,
+    _,
+
+    pub const highest: @This() = @enumFromInt(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type));
+
+    pub fn next_higher(prio: Priority) Priority {
+        return @enumFromInt(@intFromEnum(prio) +| 1);
+    }
 };
 
 const ready_queue_use_buckets = !rtos_options.ready_queue_force_no_buckets and @bitSizeOf(@typeInfo(Priority).@"enum".tag_type) <= 5;
@@ -87,11 +119,19 @@ var idle_task: Task = .{
 var rtos_state: RTOS_State = undefined;
 pub const RTOS_State = struct {
     ready_queue: ReadyPriorityQueue = .{},
-    timer_queue: DoublyLinkedList = .{},
+    sleep_queues: [2]DoublyLinkedList = @splat(.{}),
+
+    current_sleep_queue: *DoublyLinkedList,
+    overflow_sleep_queue: *DoublyLinkedList,
 
     /// The task in .running state. Safe to access outside of critical section
     /// as it is always the same for the currently executing task.
     current_task: *Task,
+
+    current_ticks: u32 = 0,
+    overflow_count: u32 = 0,
+
+    just_switched_tasks_cooperatively: bool = false,
 };
 
 /// Automatically called inside hal startup sequence if it the rtos is enabled
@@ -100,11 +140,7 @@ pub fn init() void {
     comptime {
         if (!microzig.options.cpu.interrupt_stack.enable)
             @compileError("rtos requires the interrupt stack cpu option to be enabled");
-        if (@typeInfo(rtos_options.Priority).@"enum".is_exhaustive)
-            @compileError("rtos priority enum must be non-exhaustive");
-
-        microzig.cpu.interrupt.expect_handler(rtos_options.general_purpose_interrupt, general_purpose_interrupt_handler);
-        microzig.cpu.interrupt.expect_handler(rtos_options.yield_interrupt, yield_interrupt_handler);
+        microzig.cpu.interrupt.expect_handler(rtos_options.tick_interrupt, tick_interrupt_handler);
     }
 
     const cs = enter_critical_section();
@@ -112,33 +148,31 @@ pub fn init() void {
 
     rtos_state = .{
         .current_task = &main_task,
+        .current_sleep_queue = &rtos_state.sleep_queues[0],
+        .overflow_sleep_queue = &rtos_state.sleep_queues[1],
     };
     if (rtos_options.paint_stack_byte) |paint_byte| {
         @memset(&idle_stack, paint_byte);
     }
     make_ready(&idle_task);
 
-    microzig.cpu.interrupt.map(rtos_options.cpu_interrupt.source(), rtos_options.yield_interrupt);
-    microzig.cpu.interrupt.set_type(rtos_options.yield_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(rtos_options.yield_interrupt, .lowest);
-    microzig.cpu.interrupt.enable(rtos_options.yield_interrupt);
-
     // unit0 is already enabled as it is used by `hal.time`.
     if (rtos_options.systimer_unit != .unit0) {
         rtos_options.systimer_unit.apply(.enabled);
     }
     rtos_options.systimer_alarm.set_unit(rtos_options.systimer_unit);
-    rtos_options.systimer_alarm.set_mode(.target);
-    rtos_options.systimer_alarm.set_enabled(false);
+    rtos_options.systimer_alarm.set_mode(.period);
+    rtos_options.systimer_alarm.set_period(comptime @intCast(systimer.ticks_per_us() * rtos_options.tick_freq.to_us()));
     rtos_options.systimer_alarm.set_interrupt_enabled(true);
+    rtos_options.systimer_alarm.set_enabled(true);
 
-    microzig.cpu.interrupt.map(rtos_options.systimer_alarm.interrupt_source(), rtos_options.general_purpose_interrupt);
-    microzig.cpu.interrupt.set_type(rtos_options.general_purpose_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(rtos_options.general_purpose_interrupt, .lowest);
-    microzig.cpu.interrupt.enable(rtos_options.general_purpose_interrupt);
+    microzig.cpu.interrupt.map(rtos_options.cpu_interrupt.source(), rtos_options.tick_interrupt);
+    microzig.cpu.interrupt.map(rtos_options.systimer_alarm.interrupt_source(), rtos_options.tick_interrupt);
+
+    microzig.cpu.interrupt.set_type(rtos_options.tick_interrupt, .level);
+    microzig.cpu.interrupt.set_priority(rtos_options.tick_interrupt, .lowest);
+    microzig.cpu.interrupt.enable(rtos_options.tick_interrupt);
 }
-
-// TODO: deinit
 
 fn idle() linksection(".ram_text") callconv(.naked) void {
     // interrupts are initially disabled in new tasks
@@ -246,8 +280,11 @@ pub fn make_ready(task: *Task) linksection(".ram_text") void {
     switch (task.state) {
         .ready, .running, .exited => return,
         .none, .suspended => {},
-        .alarm_set => {
-            rtos_state.timer_queue.remove(&task.node);
+        .sleep_queue_0 => {
+            rtos_state.sleep_queues[0].remove(&task.node);
+        },
+        .sleep_queue_1 => {
+            rtos_state.sleep_queues[1].remove(&task.node);
         },
     }
 
@@ -257,7 +294,7 @@ pub fn make_ready(task: *Task) linksection(".ram_text") void {
 
 pub const YieldAction = union(enum) {
     reschedule,
-    timeout: TimerTicks,
+    sleep: Duration,
     wait,
     exit,
 };
@@ -279,12 +316,37 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
             current_task.state = .ready;
             rtos_state.ready_queue.put(current_task);
         },
-        .timeout => |timeout| {
+        .sleep => |sleep_duration| {
             assert(current_task != &idle_task);
-            if (timeout.is_reached_by(.now())) {
+
+            const sleep_ticks = sleep_duration.to_ticks();
+            if (sleep_ticks == 0) {
                 continue :action .reschedule;
             }
-            schedule_wake_at(current_task, timeout);
+
+            const expire_ticks, const overflow = @addWithOverflow(rtos_state.current_ticks, sleep_ticks);
+
+            const sleep_queue = if (overflow == 0)
+                rtos_state.current_sleep_queue
+            else
+                rtos_state.overflow_sleep_queue;
+
+            current_task.ticks = expire_ticks;
+            current_task.state = if (sleep_queue == &rtos_state.sleep_queues[0])
+                .sleep_queue_0
+            else
+                .sleep_queue_1;
+
+            var it = sleep_queue.first;
+            while (it) |node| : (it = node.next) {
+                const task: *Task = @alignCast(@fieldParentPtr("node", node));
+                if (expire_ticks < task.ticks) {
+                    sleep_queue.insert_before(&task.node, &current_task.node);
+                    break;
+                }
+            } else {
+                sleep_queue.append(&current_task.node);
+            }
         },
         .wait => {
             assert(current_task != &idle_task);
@@ -300,18 +362,22 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
         },
     }
 
-    const next_task: *Task = rtos_state.ready_queue.pop(null).?;
-
+    const next_task: *Task = rtos_state.ready_queue.pop(.none).?;
     next_task.state = .running;
+
     rtos_state.current_task = next_task;
+
+    if (rtos_options.preempt_same_priority_tasks_on_tick) {
+        // Set flag that we already yielded. Don't preempt to an equal priority
+        // task on the next tick.
+        rtos_state.just_switched_tasks_cooperatively = true;
+    }
 
     return .{ current_task, next_task };
 }
 
-pub fn sleep(duration: time.Duration) void {
-    const timeout: TimerTicks = .after(duration);
-    while (!timeout.is_reached_by(.now()))
-        yield(.{ .timeout = timeout });
+pub fn sleep(duration: Duration) void {
+    yield(.{ .sleep = duration });
 }
 
 inline fn context_switch(prev_context: *Context, next_context: *Context) void {
@@ -379,7 +445,7 @@ pub fn is_a_higher_priority_task_ready() linksection(".ram_text") bool {
     return @intFromEnum(rtos_state.ready_queue.max_ready_priority() orelse .idle) > @intFromEnum(rtos_state.current_task.priority);
 }
 
-pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
+pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
     .naked = struct {
         pub fn handler_fn() linksection(".ram_vectors") callconv(.naked) void {
             comptime {
@@ -424,8 +490,8 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\csrr a0, mepc
                 \\sw a0, 29*4(sp)
                 \\
-                \\csrr a0, mstatus
-                \\sw a0, 30*4(sp)
+                \\csrr a1, mstatus
+                \\sw a1, 30*4(sp)
                 \\
                 // save sp for later
                 \\mv a2, sp
@@ -444,7 +510,7 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 // first parameter is a pointer to context
                 \\mv a0, sp
-                \\jal %[schedule_in_isr]
+                \\jal %[tick_handler]
                 \\
                 // load next task context
                 \\lw a1, 0(sp)
@@ -460,8 +526,8 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 // ensure interrupts are disabled after mret (when a normal
                 // context switch occured)
-                \\li a0, 0x80
-                \\csrc mstatus, a0
+                \\li a2, 0x80
+                \\csrc mstatus, a2
                 \\
                 // jump to new task
                 \\csrw mepc, a1
@@ -469,8 +535,8 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 \\1:
                 \\
-                \\lw a0, 30*4(sp)
-                \\csrw mstatus, a0
+                \\lw a1, 30*4(sp)
+                \\csrw mstatus, a1
                 \\
                 \\lw a0, 29*4(sp)
                 \\csrw mepc, a0
@@ -508,7 +574,7 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\addi sp, sp, 32*4
                 \\mret
                 :
-                : [schedule_in_isr] "i" (&schedule_in_isr),
+                : [tick_handler] "i" (&tick_handler),
                   [interrupt_stack_top] "i" (microzig.cpu.interrupt_stack[microzig.cpu.interrupt_stack.len..].ptr),
             );
         }
@@ -517,11 +583,51 @@ pub const yield_interrupt_handler: microzig.cpu.InterruptHandler = .{
 
 // Can't be preempted by a higher priority interrupt so already in a "critical
 // section".
-fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) void {
-    rtos_options.cpu_interrupt.set_pending(false);
+fn tick_handler(context: *Context) linksection(".ram_vectors") callconv(.c) void {
+    const status: microzig.cpu.interrupt.Status = .init();
+    if (status.is_set(rtos_options.systimer_alarm.interrupt_source())) {
+        rtos_options.systimer_alarm.clear_interrupt();
+
+        rtos_state.current_ticks +%= 1;
+
+        // if overflow
+        if (rtos_state.current_ticks == 0) {
+            @branchHint(.unlikely);
+
+            assert(rtos_state.current_sleep_queue.first == null); // the current sleep queue should be empty on an overflow
+            rtos_state.overflow_count += 1;
+            std.mem.swap(*DoublyLinkedList, &rtos_state.current_sleep_queue, &rtos_state.overflow_sleep_queue);
+        }
+
+        while (rtos_state.current_sleep_queue.first) |node| {
+            const task: *Task = @alignCast(@fieldParentPtr("node", node));
+            if (task.ticks > rtos_state.current_ticks) {
+                break;
+            }
+            _ = rtos_state.current_sleep_queue.pop_first().?;
+            task.state = .ready;
+            rtos_state.ready_queue.put(task);
+        }
+    }
+
+    if (status.is_set(rtos_options.cpu_interrupt.source())) {
+        rtos_options.cpu_interrupt.set_pending(false);
+    }
 
     const current_task = rtos_state.current_task;
-    const ready_task = rtos_state.ready_queue.pop(rtos_state.current_task.priority) orelse return;
+
+    // if there is a higher priority task ready switch to it
+    // if preempt if there is an equal priority task switch to it
+    const ready_task_constraint: ReadyTaskConstraint =
+        if (rtos_options.preempt_same_priority_tasks_on_tick and !rtos_state.just_switched_tasks_cooperatively) blk: {
+            break :blk .{ .at_least_prio = current_task.priority };
+        } else .{ .more_than_prio = current_task.priority };
+
+    if (rtos_options.preempt_same_priority_tasks_on_tick) {
+        rtos_state.just_switched_tasks_cooperatively = false;
+    }
+
+    const ready_task = rtos_state.ready_queue.pop(ready_task_constraint) orelse return;
 
     // swap contexts
     current_task.context = context.*;
@@ -532,72 +638,6 @@ fn schedule_in_isr(context: *Context) linksection(".ram_vectors") callconv(.c) v
 
     ready_task.state = .running;
     rtos_state.current_task = ready_task;
-}
-
-pub const general_purpose_interrupt_handler: microzig.cpu.InterruptHandler = .{ .c = struct {
-    pub fn handler_fn(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
-        var status: microzig.cpu.interrupt.Status = .init();
-        if (status.is_set(rtos_options.systimer_alarm.interrupt_source())) {
-            const cs = enter_critical_section();
-            defer cs.leave();
-
-            rtos_options.systimer_alarm.clear_interrupt();
-
-            sweep_timer_queue();
-        }
-
-        if (is_a_higher_priority_task_ready()) {
-            yield_from_isr();
-        }
-    }
-}.handler_fn };
-
-/// Must execute inside a critical section.
-fn schedule_wake_at(sleeping_task: *Task, ticks: TimerTicks) linksection(".ram_text") void {
-    sleeping_task.ticks = ticks;
-    sleeping_task.state = .alarm_set;
-
-    var maybe_node = rtos_state.timer_queue.first;
-    while (maybe_node) |node| : (maybe_node = node.next) {
-        const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (ticks.is_reached_by(task.ticks)) {
-            rtos_state.timer_queue.insert_before(&task.node, &sleeping_task.node);
-            break;
-        }
-    } else {
-        rtos_state.timer_queue.append(&sleeping_task.node);
-    }
-
-    // If we updated the first element of the list, it means that we have to
-    // reschedule the timer
-    if (rtos_state.timer_queue.first == &sleeping_task.node) {
-        rtos_options.systimer_alarm.set_target(@intFromEnum(ticks));
-        rtos_options.systimer_alarm.set_enabled(true);
-        if (ticks.is_reached_by(.now())) {
-            sweep_timer_queue();
-        }
-    }
-}
-
-fn sweep_timer_queue() linksection(".ram_text") void {
-    var now: TimerTicks = .now();
-    while (rtos_state.timer_queue.pop_first()) |node| {
-        const task: *Task = @alignCast(@fieldParentPtr("node", node));
-        if (!task.ticks.is_reached_by(now)) {
-            rtos_state.timer_queue.prepend(&task.node);
-            rtos_options.systimer_alarm.set_target(@intFromEnum(task.ticks));
-            rtos_options.systimer_alarm.set_enabled(true);
-            now = .now();
-            if (task.ticks.is_reached_by(now))
-                continue
-            else
-                break;
-        }
-        task.state = .ready;
-        rtos_state.ready_queue.put(task);
-    } else {
-        rtos_options.systimer_alarm.set_enabled(false);
-    }
 }
 
 pub fn log_task_info(task: *Task) void {
@@ -641,7 +681,7 @@ pub const Task = struct {
     node: LinkedListNode = .{},
 
     /// Ticks for when the task will be awaken.
-    ticks: TimerTicks = undefined,
+    ticks: u32 = 0,
 
     /// Another task waiting for this task to exit.
     awaiter: ?*Task = null,
@@ -653,7 +693,8 @@ pub const Task = struct {
         none,
         ready,
         running,
-        alarm_set,
+        sleep_queue_0,
+        sleep_queue_1,
         suspended,
         exited,
     };
@@ -676,6 +717,12 @@ pub const Context = extern struct {
     }
 };
 
+pub const ReadyTaskConstraint = union(enum) {
+    none,
+    at_least_prio: Priority,
+    more_than_prio: Priority,
+};
+
 pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
     const ReadySet = std.EnumSet(Priority);
 
@@ -690,12 +737,17 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         return ReadySet.Indexer.keyForIndex(raw_prio);
     }
 
-    pub fn pop(pq: *ReadyPriorityQueue, maybe_more_than_prio: ?Priority) ?*Task {
+    pub fn pop(pq: *ReadyPriorityQueue, constraint: ReadyTaskConstraint) ?*Task {
         const prio = pq.max_ready_priority() orelse return null;
-        if (maybe_more_than_prio) |more_than_prio| {
-            if (@intFromEnum(prio) <= @intFromEnum(more_than_prio)) {
-                return null;
-            }
+        switch (constraint) {
+            .none => {},
+            inline else => |constraint_priority, tag| {
+                if ((tag == .at_least_prio and @intFromEnum(prio) < @intFromEnum(constraint_priority)) or
+                    (tag == .more_than_prio and @intFromEnum(prio) <= @intFromEnum(constraint_priority)))
+                {
+                    return null;
+                }
+            },
         }
 
         const bucket = pq.lists.getPtr(prio);
@@ -761,25 +813,45 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
     }
 };
 
-pub const TimerTicks = enum(u52) {
+pub const Duration = enum(u32) {
     _,
 
-    pub fn now() TimerTicks {
-        return @enumFromInt(rtos_options.systimer_unit.read());
+    pub const us_per_tick = rtos_options.tick_freq.to_us();
+    pub const ms_per_tick = @max(1, us_per_tick / 1_000);
+
+    pub fn from_us(v: u32) Duration {
+        return @enumFromInt(v / us_per_tick);
     }
 
-    pub fn after(duration: time.Duration) TimerTicks {
-        return TimerTicks.now().add_duration(duration);
+    pub fn from_ms(v: u32) Duration {
+        return @enumFromInt(v / ms_per_tick);
     }
 
-    pub fn is_reached_by(a: TimerTicks, b: TimerTicks) bool {
-        const _a = @intFromEnum(a);
-        const _b = @intFromEnum(b);
-        return _b -% _a <= std.math.maxInt(u51);
+    pub fn from_ticks(v: u32) Duration {
+        return @enumFromInt(v);
     }
 
-    pub fn add_duration(ticks: TimerTicks, duration: time.Duration) TimerTicks {
-        return @enumFromInt(@intFromEnum(ticks) +% @as(u52, @intCast(duration.to_us())) * systimer.ticks_per_us());
+    pub fn to_ticks(duration: Duration) u32 {
+        return @intFromEnum(duration);
+    }
+};
+
+/// Must be used only from a critical section.
+pub const Timeout = struct {
+    end_ticks: u64,
+
+    pub fn after(duration: Duration) Timeout {
+        const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
+        return .{
+            .end_ticks = current_ticks + duration.to_ticks(),
+        };
+    }
+
+    pub fn get_remaining_sleep_duration(timeout: Timeout) ?Duration {
+        const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
+        const remaining = timeout.end_ticks -| current_ticks;
+        if (remaining == 0) return null;
+        return .from_ticks(@truncate(remaining));
     }
 };
 
@@ -811,7 +883,7 @@ pub const PriorityWaitQueue = struct {
     }
 
     /// Must execute inside a critical section.
-    pub fn wait(q: *PriorityWaitQueue, task: *Task, maybe_timeout: ?TimerTicks) void {
+    pub fn wait(q: *PriorityWaitQueue, task: *Task, maybe_timeout_duration: ?Duration) void {
         var waiter: Waiter = .{
             .task = task,
             .priority = task.priority,
@@ -828,8 +900,8 @@ pub const PriorityWaitQueue = struct {
             q.list.append(&waiter.node);
         }
 
-        if (maybe_timeout) |timeout| {
-            yield(.{ .timeout = timeout });
+        if (maybe_timeout_duration) |duration| {
+            yield(.{ .sleep = duration });
         } else {
             yield(.wait);
         }
@@ -847,23 +919,24 @@ pub const Mutex = struct {
         mutex.lock_with_timeout(null) catch unreachable;
     }
 
-    pub fn lock_with_timeout(mutex: *Mutex, maybe_timeout: ?time.Duration) TimeoutError!void {
+    pub fn lock_with_timeout(mutex: *Mutex, maybe_timeout_after: ?Duration) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
         const current_task = get_current_task();
 
-        const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
-            .after(timeout)
+        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
+            .after(duration)
         else
             null;
 
         assert(mutex.locked != current_task);
 
         while (mutex.locked) |owning_task| {
-            if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached_by(.now()))
-                    return error.Timeout;
+            const maybe_remaining_duration = if (maybe_timeout) |timeout|
+                timeout.get_remaining_sleep_duration() orelse return error.Timeout
+            else
+                null;
 
             // Owning task inherits the priority of the current task if it the
             // current task has a bigger priority.
@@ -874,7 +947,7 @@ pub const Mutex = struct {
                 make_ready(owning_task);
             }
 
-            mutex.wait_queue.wait(current_task, maybe_timeout_ticks);
+            mutex.wait_queue.wait(current_task, maybe_remaining_duration);
         }
 
         mutex.locked = current_task;
@@ -947,21 +1020,21 @@ pub const Semaphore = struct {
         sem.take_with_timeout(null) catch unreachable;
     }
 
-    pub fn take_with_timeout(sem: *Semaphore, maybe_timeout: ?time.Duration) TimeoutError!void {
+    pub fn take_with_timeout(sem: *Semaphore, maybe_timeout_after: ?Duration) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
-            .after(timeout)
+        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
+            .after(duration)
         else
             null;
 
         while (sem.current_value <= 0) {
-            if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached_by(.now()))
-                    return error.Timeout;
-
-            sem.wait_queue.wait(rtos_state.current_task, maybe_timeout_ticks);
+            const maybe_remaining_duration = if (maybe_timeout) |timeout|
+                timeout.get_remaining_sleep_duration() orelse return error.Timeout
+            else
+                null;
+            sem.wait_queue.wait(rtos_state.current_task, maybe_remaining_duration);
         }
 
         sem.current_value -= 1;
@@ -1003,13 +1076,13 @@ pub const TypeErasedQueue = struct {
         q: *TypeErasedQueue,
         elements: []const u8,
         min: usize,
-        maybe_timeout: ?time.Duration,
+        maybe_timeout_after: ?Duration,
     ) usize {
         assert(elements.len >= min);
         if (elements.len == 0) return 0;
 
-        const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
-            .after(timeout)
+        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
+            .after(duration)
         else
             null;
 
@@ -1022,11 +1095,11 @@ pub const TypeErasedQueue = struct {
             n += q.put_non_blocking_from_cs(elements[n..]);
             if (n >= min) return n;
 
-            if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached_by(.now()))
-                    return n;
-
-            q.putters.wait(rtos_state.current_task, maybe_timeout_ticks);
+            const maybe_remaining_duration = if (maybe_timeout) |timeout|
+                timeout.get_remaining_sleep_duration() orelse return n
+            else
+                null;
+            q.putters.wait(rtos_state.current_task, maybe_remaining_duration);
         }
     }
 
@@ -1065,13 +1138,13 @@ pub const TypeErasedQueue = struct {
         q: *TypeErasedQueue,
         buffer: []u8,
         min: usize,
-        maybe_timeout: ?time.Duration,
+        maybe_timeout_after: ?Duration,
     ) usize {
         assert(buffer.len >= min);
         if (buffer.len == 0) return 0;
 
-        const maybe_timeout_ticks: ?TimerTicks = if (maybe_timeout) |timeout|
-            .after(timeout)
+        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
+            .after(duration)
         else
             null;
 
@@ -1084,11 +1157,11 @@ pub const TypeErasedQueue = struct {
             n += q.get_non_blocking_from_cs(buffer[n..]);
             if (n >= min) return n;
 
-            if (maybe_timeout_ticks) |timeout_ticks|
-                if (timeout_ticks.is_reached_by(.now()))
-                    return n;
-
-            q.getters.wait(rtos_state.current_task, maybe_timeout_ticks);
+            const maybe_remaining_duration = if (maybe_timeout) |timeout|
+                timeout.get_remaining_sleep_duration() orelse return n
+            else
+                null;
+            q.getters.wait(rtos_state.current_task, maybe_remaining_duration);
         }
     }
 
@@ -1132,16 +1205,16 @@ pub fn Queue(Elem: type) type {
             return .{ .type_erased = .init(@ptrCast(buffer)) };
         }
 
-        pub fn put(q: *Self, elements: []const Elem, min: usize, timeout: ?time.Duration) usize {
+        pub fn put(q: *Self, elements: []const Elem, min: usize, timeout: ?Duration) usize {
             return @divExact(q.type_erased.put(@ptrCast(elements), min * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn put_all(q: *Self, elements: []const Elem, timeout: ?time.Duration) TimeoutError!void {
+        pub fn put_all(q: *Self, elements: []const Elem, timeout: ?Duration) TimeoutError!void {
             if (q.put(elements, elements.len, timeout) != elements.len)
                 return error.Timeout;
         }
 
-        pub fn put_one(q: *Self, item: Elem, timeout: ?time.Duration) TimeoutError!void {
+        pub fn put_one(q: *Self, item: Elem, timeout: ?Duration) TimeoutError!void {
             if (q.put(&.{item}, 1, timeout) != 1)
                 return error.Timeout;
         }
@@ -1154,11 +1227,11 @@ pub fn Queue(Elem: type) type {
             return q.put_non_blocking(@ptrCast(&item)) == 1;
         }
 
-        pub fn get(q: *Self, buffer: []Elem, target: usize, timeout: ?time.Duration) usize {
+        pub fn get(q: *Self, buffer: []Elem, target: usize, timeout: ?Duration) usize {
             return @divExact(q.type_erased.get(@ptrCast(buffer), target * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn get_one(q: *Self, timeout: ?time.Duration) TimeoutError!Elem {
+        pub fn get_one(q: *Self, timeout: ?Duration) TimeoutError!Elem {
             var buf: [1]Elem = undefined;
             if (q.get(&buf, 1, timeout) != 1)
                 return error.Timeout;
@@ -1207,7 +1280,6 @@ pub fn LinkedList(comptime caps: LinkedListCapabilities) type {
                 if (caps.use_prev) node.prev = ll.last;
                 node.next = null;
                 if (ll.last) |last| {
-                    if (caps.use_prev) node.prev = last;
                     last.next = node;
                     ll.last = node;
                 } else {
@@ -1237,6 +1309,11 @@ pub fn LinkedList(comptime caps: LinkedListCapabilities) type {
                 if (caps.use_last) {
                     if (ll.last == first) {
                         ll.last = null;
+                    }
+                }
+                if (caps.use_prev) {
+                    if (ll.first) |new_first| {
+                        new_first.prev = null;
                     }
                 }
                 return first;
@@ -1401,6 +1478,16 @@ test "LinkedList.doubly_linked" {
     // State: [40, 10]
     try expect(list.last == &n1.node);
     try expect(n1.node.next == null);
+    try expect(list.first == &n4.node);
+
+    const n4_popped = list.pop_first().?;
+    try expect(n1.node.prev == null);
+    try expect(n1.node.next == null);
+    try expect(list.first == &n1.node);
+    try expect(list.last == &n1.node);
+
+    list.insert_before(&n1.node, n4_popped);
+
     try expect(list.first == &n4.node);
 
     // 5. Check Parent Pointer
