@@ -16,29 +16,12 @@ const version: enum {
 
 pub const hfxo = struct {
     pub fn start() void {
-        // Consider patching the svd
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_HFCLKSTART = 1;
-                while (CLOCK.EVENTS_HFCLKSTARTED == 0) {}
-            },
-            .nrf52 => {
-                CLOCK.TASKS_HFCLKSTART.raw = 1;
-                while (CLOCK.EVENTS_HFCLKSTARTED.raw == 0) {}
-            },
-        }
+        CLOCK.TASKS_HFCLKSTART.raw = 1;
+        while (CLOCK.EVENTS_HFCLKSTARTED.raw == 0) {}
     }
 
     pub fn stop() void {
-        // Consider patching the svd
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_HFCLKSTOP = 1;
-            },
-            .nrf52 => {
-                CLOCK.TASKS_HFCLKSTOP.raw = 1;
-            },
-        }
+        CLOCK.TASKS_HFCLKSTOP.raw = 1;
     }
 };
 
@@ -65,17 +48,8 @@ pub const lfclk = struct {
     };
 
     pub fn calibrate() void {
-        // Consider patching the svd
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_CAL = 1;
-                while (CLOCK.EVENTS_DONE == 0) {}
-            },
-            .nrf52 => {
-                CLOCK.TASKS_CAL.raw = 1;
-                while (CLOCK.EVENTS_DONE.raw == 0) {}
-            },
-        }
+        CLOCK.TASKS_CAL.raw = 1;
+        while (CLOCK.EVENTS_DONE.raw == 0) {}
     }
 
     pub fn set_source(comptime source: Source) void {
@@ -134,28 +108,11 @@ pub const lfclk = struct {
     }
 
     pub fn start() void {
-        // Consider patching the svd
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_LFCLKSTART = 1;
-                while (CLOCK.EVENTS_LFCLKSTARTED == 0) {}
-            },
-            .nrf52 => {
-                CLOCK.TASKS_LFCLKSTART.raw = 1;
-                while (CLOCK.EVENTS_LFCLKSTARTED.raw == 0) {}
-            },
-        }
+        CLOCK.TASKS_LFCLKSTART.raw = 1;
+        while (CLOCK.EVENTS_LFCLKSTARTED.raw == 0) {}
     }
 
     pub fn stop() void {
-        // Consider patching the svd
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_LFCLKSTOP = 1;
-            },
-            .nrf52 => {
-                CLOCK.TASKS_LFCLKSTOP.raw = 1;
-            },
-        }
+        CLOCK.TASKS_LFCLKSTOP.raw = 1;
     }
 };

@@ -70,17 +70,23 @@ fn check_type_has_all_fields(T: type, fields: anytype) void {
 
 pub fn MmioAccess(comptime PackedT: type) type {
     @setEvalBranchQuota(20_000);
-    const info = @typeInfo(PackedT).@"struct";
-    var field_names: [info.fields.len][:0]const u8 = undefined;
-    for (&field_names, info.fields) |*dst, src|
-        dst.* = src.name;
-    return @import("../src/core/usb.zig").Struct(
-        .auto,
-        null,
-        &field_names,
-        &@splat(Access),
-        &@splat(.{}),
-    );
+    switch (@typeInfo(PackedT)) {
+        .@"struct" => |info| {
+            var field_names: [info.fields.len][:0]const u8 = undefined;
+            for (&field_names, info.fields) |*dst, src|
+                dst.* = src.name;
+            return @import("../src/core/usb.zig").Struct(
+                .auto,
+                null,
+                &field_names,
+                &@splat(Access),
+                &@splat(.{}),
+            );
+        },
+        .int => return Access,
+        else => {},
+    }
+    @compileError("Type " ++ @typeName(PackedT) ++ " cannot be used in Mmio");
 }
 
 pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
@@ -91,6 +97,7 @@ pub fn Mmio(comptime PackedT: type, access_type: MmioAccess(PackedT)) type {
             .@"packed" => info.backing_integer.?,
             else => @compileError("Struct must be packed"),
         }, info.fields },
+        .int => .{ PackedT, null },
         else => @compileError("Unsupported type: " ++ @typeName(PackedT)),
     };
 

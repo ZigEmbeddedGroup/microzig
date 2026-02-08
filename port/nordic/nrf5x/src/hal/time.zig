@@ -51,17 +51,8 @@ pub fn init() void {
     rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
-    // Consider patching the svd
-    switch (version) {
-        .nrf51 => {
-            rtc.TASKS_CLEAR = 1;
-            rtc.TASKS_START = 1;
-        },
-        .nrf52 => {
-            rtc.TASKS_CLEAR.raw = 1;
-            rtc.TASKS_START.raw = 1;
-        },
-    }
+    rtc.TASKS_CLEAR.raw = 1;
+    rtc.TASKS_START.raw = 1;
 
     // Wait for clear
     while (rtc.COUNTER.read().COUNTER != 0) {}
@@ -70,30 +61,14 @@ pub fn init() void {
 /// Handle both overflow and compare interrupts. Update the period which acts as the high bits of
 /// the elapsed time.
 pub fn rtc_interrupt() callconv(.c) void {
-    switch (version) {
-        // Consider patching the svd
-        .nrf51 => {
-            if (rtc.EVENTS_OVRFLW == 1) {
-                rtc.EVENTS_OVRFLW = 0;
-                next_period();
-            }
+    if (rtc.EVENTS_OVRFLW.raw == 1) {
+        rtc.EVENTS_OVRFLW.raw = 0;
+        next_period();
+    }
 
-            if (rtc.EVENTS_COMPARE[COMPARE_INDEX] == 1) {
-                rtc.EVENTS_COMPARE[COMPARE_INDEX] = 0;
-                next_period();
-            }
-        },
-        .nrf52 => {
-            if (rtc.EVENTS_OVRFLW.raw == 1) {
-                rtc.EVENTS_OVRFLW.raw = 0;
-                next_period();
-            }
-
-            if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
-                rtc.EVENTS_COMPARE[COMPARE_INDEX].raw = 0;
-                next_period();
-            }
-        },
+    if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
+        rtc.EVENTS_COMPARE[COMPARE_INDEX].raw = 0;
+        next_period();
     }
 }
 
