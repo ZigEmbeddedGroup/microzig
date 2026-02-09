@@ -268,7 +268,7 @@ pub fn create(
         .register_schema_usages = register_schema_usages,
     };
 
-    try db.to_zig(window.vfs.dir(), .{});
+    try regz.gen.to_zig(db, window.vfs.dir(), .{});
 
     count += 1;
 
@@ -941,7 +941,7 @@ fn load_patch_files(w: *RegzWindow) void {
 
         // Apply patches to the database so analysis reflects them
         for (patches) |patch| {
-            apply_single_patch(w.db, alloc, patch) catch continue;
+            w.db.apply_patch(patch) catch continue;
         }
 
         const owned_path = alloc.dupe(u8, path) catch continue;
@@ -1062,6 +1062,7 @@ fn get_patch_label(patch: regz.Patch, arena: Allocator) []const u8 {
         .set_enum_type => |p| std.fmt.allocPrint(arena, "set_enum_type: {s}", .{p.of}) catch "set_enum_type",
         .add_interrupt => |p| std.fmt.allocPrint(arena, "add_interrupt: {s}", .{p.name}) catch "add_interrupt",
         .add_type_and_apply => |p| std.fmt.allocPrint(arena, "add_type_and_apply: {t} {s}", .{ p.type, p.type_name }) catch "add_type_and_apply",
+        .add_struct_field => |p| std.fmt.allocPrint(arena, "add_struct_field: {t} {s}", .{ p.type, p.name }) catch "add_struct_field",
     };
 }
 
@@ -1201,15 +1202,16 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
                 .set_enum_type => |p| show_set_enum_type_widget(p),
                 .add_interrupt => |p| show_add_interrupt_widget(p),
                 .add_type_and_apply => |p| show_add_type_and_apply_widget(p, arena),
+                .add_struct_field => |p| show_add_struct_field_widget(p),
             }
         },
         .diff => {
-            w.show_patch_diff(arena, sel, patch);
+            w.show_patch_diff(sel, patch);
         },
     }
 }
 
-fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+fn show_patch_diff(w: *RegzWindow, sel: SelectedPatch, patch: regz.Patch) void {
     // Check if cache is valid
     if (w.cached_diff) |cached| {
         if (cached.file_index == sel.file_index and cached.patch_index == sel.patch_index) {
@@ -1227,7 +1229,7 @@ fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: 
     }
 
     // Compute new diff
-    w.compute_patch_diff(arena, sel, patch);
+    w.compute_patch_diff(sel, patch);
 
     // Display the newly computed diff
     if (w.cached_diff) |cached| {
@@ -1343,7 +1345,7 @@ fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch
     }
 }
 
-fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+fn compute_patch_diff(w: *RegzWindow, sel: SelectedPatch, patch: regz.Patch) void {
     _ = patch; // We'll get the patch from the loaded patches instead
     // Use window's persistent arena for cached data
     const arena = w.arena.allocator();
@@ -1395,23 +1397,17 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
                 const is_selected_or_before = (file_idx < sel.file_index) or
                     (file_idx == sel.file_index and patch_idx <= sel.patch_index);
 
-                // Serialize this patch
-                var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
-                const patch_array: []const regz.Patch = &.{p};
-                std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer) catch continue;
-                const zon_text = temp_arena.dupeZ(u8, zon_buf.written()) catch continue;
-
                 var diags: std.zon.parse.Diagnostics = .{};
 
                 // Apply to before_db if this patch comes before the selected one
                 if (is_before_selected) {
-                    before_db.apply_patch(zon_text, &diags) catch continue;
+                    before_db.apply_patch(p) catch continue;
                 }
 
                 // Apply to after_db if this patch is the selected one or comes before it
                 if (is_selected_or_before) {
                     diags = .{};
-                    after_db.apply_patch(zon_text, &diags) catch continue;
+                    after_db.apply_patch(p) catch continue;
                 }
             }
         }
@@ -1425,23 +1421,14 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
             const is_selected_or_before = (file_idx < sel.file_index) or
                 (file_idx == sel.file_index and full_idx <= sel.patch_index);
 
-            // Serialize this patch
-            var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
-            const patch_array: []const regz.Patch = &.{p};
-            std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer) catch continue;
-            const zon_text = temp_arena.dupeZ(u8, zon_buf.written()) catch continue;
-
-            var diags: std.zon.parse.Diagnostics = .{};
-
             // Apply to before_db if this patch comes before the selected one
             if (is_before_selected) {
-                before_db.apply_patch(zon_text, &diags) catch continue;
+                before_db.apply_patch(p) catch continue;
             }
 
             // Apply to after_db if this patch is the selected one or comes before it
             if (is_selected_or_before) {
-                diags = .{};
-                after_db.apply_patch(zon_text, &diags) catch continue;
+                after_db.apply_patch(p) catch continue;
             }
         }
     }
@@ -1450,7 +1437,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     var before_vfs: VirtualFilesystem = .init(w.gpa);
     defer before_vfs.deinit();
 
-    before_db.to_zig(before_vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(before_db, before_vfs.dir(), .{}) catch |err| {
         w.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1464,7 +1451,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     var after_vfs: VirtualFilesystem = .init(w.gpa);
     defer after_vfs.deinit();
 
-    after_db.to_zig(after_vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(after_db, after_vfs.dir(), .{}) catch |err| {
         w.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1812,6 +1799,12 @@ fn show_add_type_and_apply_widget(p: anytype, arena: Allocator) void {
     }
 }
 
+fn show_add_struct_field_widget(p: anytype) void {
+    labeled_field("Parent", p.parent);
+    labeled_field("Name", p.name);
+    // TODO: more
+}
+
 fn labeled_field(label_text: []const u8, value: []const u8) void {
     // Use hash of label text as unique ID to avoid duplicate widget IDs
     const label_hash = std.hash.Wyhash.hash(0, label_text);
@@ -2135,7 +2128,7 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
             .color_text = if (can_create) dvui.Color.fromHex("1C1B19") else dvui.Color.fromHex("918175"),
         }) and can_create) {
             // Create the patch
-            w.create_patch_from_group(arena, pending.*) catch |err| {
+            w.create_patch_from_group(pending.*) catch |err| {
                 w.validation_error_message = std.fmt.allocPrint(w.arena.allocator(), "Failed to create patch: {s}", .{@errorName(err)}) catch "Failed to create patch";
                 w.show_validation_error = true;
             };
@@ -2146,7 +2139,7 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
 }
 
 /// Create a patch from an equivalence group
-fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPatchCreation) !void {
+fn create_patch_from_group(w: *RegzWindow, pending: PendingPatchCreation) !void {
     // Get the cached analysis result
     const cached = w.cached_analysis orelse return error.NoAnalysis;
 
@@ -2192,7 +2185,7 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
     w.has_unsaved_patches = true;
 
     // Apply the patch to the database so analysis reflects the change
-    try apply_single_patch(w.db, arena, patch);
+    try w.db.apply_patch(patch);
 
     // Refresh all views that depend on the database
     w.on_database_changed();
@@ -2248,21 +2241,17 @@ fn rebuild_database_with_patches(w: *RegzWindow) void {
         return;
     };
 
-    const alloc = w.arena.allocator();
-
     // Reapply all non-deleted patches from all files
     for (w.loaded_patches.values()) |loaded| {
         if (loaded.patches) |patches| {
             for (patches, 0..) |patch, idx| {
-                if (!loaded.is_patch_deleted(idx)) {
-                    apply_single_patch(w.db, alloc, patch) catch continue;
-                }
+                if (!loaded.is_patch_deleted(idx))
+                    w.db.apply_patch(patch) catch continue;
             }
         }
         // Reapply pending patches
-        for (loaded.pending_patches.items) |patch| {
-            apply_single_patch(w.db, alloc, patch) catch continue;
-        }
+        for (loaded.pending_patches.items) |patch|
+            w.db.apply_patch(patch) catch continue;
     }
 
     // Refresh all views that depend on the database
@@ -2276,7 +2265,7 @@ fn on_database_changed(w: *RegzWindow) void {
     // Deinit old VFS and create new one
     w.vfs.deinit();
     w.vfs = .init(w.gpa);
-    w.db.to_zig(w.vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(w.db, w.vfs.dir(), .{}) catch |err| {
         std.log.err("Failed to regenerate code: {}", .{err});
     };
 
@@ -2561,27 +2550,14 @@ fn validate_patch_file(w: *RegzWindow, arena: Allocator, patch_path: []const u8,
     // Apply original patches (excluding deleted ones)
     if (loaded.patches) |patches| {
         for (patches, 0..) |patch, idx| {
-            if (!loaded.is_patch_deleted(idx)) {
-                try apply_single_patch(db, arena, patch);
-            }
+            if (!loaded.is_patch_deleted(idx))
+                try db.apply_patch(patch);
         }
     }
 
     // Apply pending patches
-    for (loaded.pending_patches.items) |patch| {
-        try apply_single_patch(db, arena, patch);
-    }
-}
-
-/// Apply a single patch to a database
-fn apply_single_patch(db: *regz.Database, arena: Allocator, patch: regz.Patch) !void {
-    var zon_buf: std.Io.Writer.Allocating = .init(arena);
-    const patch_array: []const regz.Patch = &.{patch};
-    try std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer);
-    const zon_text = try arena.dupeZ(u8, zon_buf.written());
-
-    var diags: std.zon.parse.Diagnostics = .{};
-    try db.apply_patch(zon_text, &diags);
+    for (loaded.pending_patches.items) |patch|
+        try db.apply_patch(patch);
 }
 
 /// Write a patch file combining original (non-deleted) and pending patches

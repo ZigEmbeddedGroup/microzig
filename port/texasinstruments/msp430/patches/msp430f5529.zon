@@ -4,7 +4,7 @@
         .name = "WDTPW",
         .size_bits = 8,
         .offset_bits = 8,
-        .access = .@"write-only",
+        .access = .write_only,
         .type = .{ .uint = 8 },
     } },
 }

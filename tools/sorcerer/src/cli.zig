@@ -365,7 +365,7 @@ fn generate_code(
     var vfs = regz.VirtualFilesystem.init(allocator);
     defer vfs.deinit();
 
-    db.to_zig(vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(db, vfs.dir(), .{}) catch |err| {
         try stderr.print("Error generating Zig code: {}\n", .{err});
         try stderr.flush();
         return error.Explained;
