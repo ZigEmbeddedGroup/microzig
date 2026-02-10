@@ -1,8 +1,6 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const interrupt = microzig.cpu.interrupt;
 const hal = microzig.hal;
 const rtos = hal.rtos;
 const radio = hal.radio;
