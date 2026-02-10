@@ -27,8 +27,8 @@ Quickly check that you have Zig `0.15.1` installed by running `zig version`.
 Assuming you've initialized a zig project with `zig init`, or have set one up
 yourself, you can add microzig as a dependency with the following command:
 
-```sh
-zig fetch --save https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.15.0/microzig.tar.gz
+```sh 
+zig fetch --save https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.15.1/microzig.tar.gz
 ```
 
 Then in your `build.zig`:
