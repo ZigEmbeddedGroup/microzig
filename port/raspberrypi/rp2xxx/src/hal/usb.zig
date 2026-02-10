@@ -26,8 +26,10 @@ const HardwareEndpointData = struct {
 };
 
 const rp2xxx_buffers = struct {
-    // Address 0x100-0xfff (3840 bytes) can be used for data buffers
-    const USB_DPRAM_DATA_BUFFER_BASE = 0x50100100;
+    // Address 0x100-0xfff (3840 bytes) can be used for data buffers.
+    // The first 0x100 bytes are registers (last one at offset 0xfc), the rest is available for
+    // endpoint data buffers.
+    const USB_DPRAM_DATA_BUFFER_BASE = @intFromPtr(peripherals.USB_DPRAM) + 0x100;
 
     const CTRL_EP_BUFFER_SIZE = 64;
 
@@ -66,8 +68,8 @@ fn PerEndpoint(T: type) type {
 const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
 const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
-const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMimo) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
+const EndpointControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Code
@@ -102,6 +104,8 @@ pub fn Polled(config: Config) type {
         data_buffer: []align(64) u8,
         interface: usb.DeviceInterface,
 
+        /// Poll to see if the host has sent anything. Delegate to the appropriate handler in the
+        /// controller based on the interrupt field set.
         pub fn poll(self: *@This(), controller: anytype) void {
             comptime usb.validate_controller(@TypeOf(controller));
 
@@ -117,13 +121,13 @@ pub fn Polled(config: Config) type {
                 // Clear the status flag (write-one-to-clear)
                 peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
-                // The PAC models this buffer as two 32-bit registers.
+                // The SVD exposes this buffer as two 32-bit registers.
                 const setup: usb.types.SetupPacket = @bitCast([2]u32{
                     peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
                     peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
                 });
 
-                log.debug("setup  {any}", .{setup});
+                log.debug("setup {any}", .{setup});
                 controller.on_setup_req(&self.interface, &setup);
             }
 
@@ -239,8 +243,9 @@ pub fn Polled(config: Config) type {
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
-            ep_open(&self.interface, &.control(.in(.ep0), max_supported_packet_size));
-            ep_open(&self.interface, &.control(.out(.ep0), max_supported_packet_size));
+            // Set up endpoints.
+            self.interface.ep_open(&.control(.in(.ep0), max_supported_packet_size));
+            self.interface.ep_open(&.control(.out(.ep0), max_supported_packet_size));
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
