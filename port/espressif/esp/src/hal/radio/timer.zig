@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
 const c = @import("esp-wifi-driver");
@@ -21,20 +22,36 @@ pub const Timer = struct {
     node: std.SinglyLinkedList.Node = .{},
 };
 
+var timer_task: ?*rtos.Task = null;
+var exit_flag: std.atomic.Value(bool) = .init(false);
 var reload_semaphore: rtos.Semaphore = .init(0, 1);
 var mutex: rtos.Mutex = .{};
 var timer_list: std.SinglyLinkedList = .{};
 
 pub fn init(gpa: Allocator) Allocator.Error!void {
-    _ = try rtos.spawn(gpa, task_fn, .{}, .{
+    exit_flag.store(false, .monotonic);
+
+    assert(timer_task == null);
+    timer_task = try rtos.spawn(gpa, task_fn, .{}, .{
         .name = "radio_timer",
         .priority = .lowest, // TODO: what should the priority be?
         .stack_size = 4096,
     });
 }
 
-pub fn deinit() void {
-    // TODO: exit mechanism
+pub fn deinit(gpa: Allocator) void {
+    exit_flag.store(true, .monotonic);
+    reload_semaphore.give();
+
+    if (timer_task) |task| {
+        rtos.wait_and_free(gpa, task);
+        timer_task = null;
+    }
+
+    while (timer_list.popFirst()) |node| {
+        const timer: *Timer = @alignCast(@fieldParentPtr("node", node));
+        gpa.destroy(timer);
+    }
 }
 
 pub fn setfn(
@@ -112,6 +129,9 @@ pub fn done(gpa: std.mem.Allocator, ets_timer: *c.ets_timer) void {
 
 fn task_fn() void {
     while (true) {
+        if (exit_flag.load(.monotonic))
+            return;
+
         const now = get_time_since_boot();
         while (true) {
             const callback, const arg = blk: {
@@ -130,11 +150,11 @@ fn task_fn() void {
             callback(arg);
         }
 
-        const sleep_duration = blk: {
+        const sleep_duration: ?rtos.Duration = blk: {
             mutex.lock();
             defer mutex.unlock();
             break :blk if (find_next_wake_absolute()) |next_wake_absolute|
-                next_wake_absolute.diff(now)
+                .from_us(@truncate(next_wake_absolute.diff(now).to_us()))
             else
                 null;
         };

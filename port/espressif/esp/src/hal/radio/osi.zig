@@ -148,7 +148,7 @@ pub fn usleep(time_us: u32) callconv(.c) c_int {
 }
 
 pub fn vTaskDelay(ticks: u32) callconv(.c) void {
-    rtos.sleep(.from_us(ticks));
+    rtos.sleep(.from_ticks(ticks));
 }
 
 pub var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
@@ -321,8 +321,8 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
     log.debug("semphr_take {?} {}", .{ ptr, tick });
 
     const sem: *rtos.Semaphore = @ptrCast(@alignCast(ptr));
-    const maybe_timeout: ?time.Duration = if (tick == c.OSI_FUNCS_TIME_BLOCKING)
-        .from_us(tick)
+    const maybe_timeout: ?rtos.Duration = if (tick == c.OSI_FUNCS_TIME_BLOCKING)
+        .from_ticks(tick)
     else
         null;
     sem.take_with_timeout(maybe_timeout) catch {
@@ -512,8 +512,8 @@ pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
         else => queue.inner.put(
             item[0..queue.item_len],
             1,
-            if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
-                .from_us(block_time_tick)
+            if (block_time_tick != c.OSI_FUNCS_TIME_BLOCKING)
+                .from_ticks(block_time_tick)
             else
                 null,
         ),
@@ -553,8 +553,8 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
         else => queue.inner.get(
             item[0..queue.item_len],
             queue.item_len,
-            if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
-                .from_us(block_time_tick)
+            if (block_time_tick != c.OSI_FUNCS_TIME_BLOCKING)
+                .from_ticks(block_time_tick)
             else
                 null,
         ),
@@ -673,17 +673,17 @@ pub fn task_delete(handle: ?*anyopaque) callconv(.c) void {
     if (handle != null) {
         @panic("task_delete(non-null): not implemented");
     }
-    rtos.yield(.delete);
+    rtos.yield(.exit);
 }
 
 pub fn task_delay(tick: u32) callconv(.c) void {
     log.debug("task_delay {}", .{tick});
 
-    rtos.sleep(.from_us(tick));
+    rtos.sleep(.from_ticks(tick));
 }
 
 pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
-    return @intCast(ms * 1_000);
+    return @intCast(rtos.Duration.from_ms(ms).to_ticks());
 }
 
 pub fn task_get_current_task() callconv(.c) ?*anyopaque {

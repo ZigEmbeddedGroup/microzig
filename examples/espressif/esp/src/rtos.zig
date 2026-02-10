@@ -12,8 +12,7 @@ const rtos = esp.rtos;
 pub const microzig_options: microzig.Options = .{
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
-        .interrupt30 = rtos.general_purpose_interrupt_handler,
-        .interrupt31 = rtos.yield_interrupt_handler,
+        .interrupt31 = rtos.tick_interrupt_handler,
     },
     .log_level = .debug,
     .cpu = .{
@@ -29,8 +28,6 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-var heap_buf: [10 * 1024]u8 = undefined;
-
 fn task1(queue: *rtos.Queue(u32)) void {
     for (0..5) |i| {
         queue.put_one(i, null) catch unreachable;
@@ -39,7 +36,7 @@ fn task1(queue: *rtos.Queue(u32)) void {
 }
 
 pub fn main() !void {
-    var heap = try microzig.Allocator.init_with_buffer(&heap_buf);
+    var heap = try microzig.Allocator.init_with_heap(4096);
     const gpa = heap.allocator();
 
     var buffer: [1]u32 = undefined;
@@ -47,7 +44,8 @@ pub fn main() !void {
 
     esp.time.sleep_ms(1000);
 
-    _ = try rtos.spawn(gpa, task1, .{&queue}, .{});
+    const task = try rtos.spawn(gpa, task1, .{&queue}, .{});
+    defer rtos.wait_and_free(gpa, task);
 
     while (true) {
         const item = try queue.get_one(.from_ms(1000));

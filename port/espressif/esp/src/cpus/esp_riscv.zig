@@ -615,11 +615,11 @@ pub const csr = struct {
     pub const tdata1 = riscv32_common.csr.tdata1;
     pub const tdata2 = riscv32_common.csr.tdata2;
     pub const tcontrol = Csr(0x7A5, packed struct {
-        reserved0: u3,
-        mte: u1,
-        reserved1: u3,
-        mpte: u1,
-        reserved2: u24,
+        reserved0: u3 = 0,
+        mte: u1 = 0,
+        reserved1: u3 = 0,
+        mpte: u1 = 0,
+        reserved2: u24 = 0,
     });
 
     pub const dcsr = riscv32_common.csr.dcsr;
@@ -628,23 +628,23 @@ pub const csr = struct {
     pub const dscratch1 = riscv32_common.csr.dscratch1;
 
     pub const mpcer = Csr(0x7E0, packed struct {
-        cycle: u1,
-        inst: u1,
-        ld_hazard: u1,
-        jmp_hazard: u1,
-        idle: u1,
-        load: u1,
-        store: u1,
-        jmp_uncond: u1,
-        branch: u1,
-        branch_taken: u1,
-        inst_comp: u1,
-        reserved0: u21,
+        cycle: u1 = 0,
+        inst: u1 = 0,
+        ld_hazard: u1 = 0,
+        jmp_hazard: u1 = 0,
+        idle: u1 = 0,
+        load: u1 = 0,
+        store: u1 = 0,
+        jmp_uncond: u1 = 0,
+        branch: u1 = 0,
+        branch_taken: u1 = 0,
+        inst_comp: u1 = 0,
+        reserved0: u21 = 0,
     });
     pub const mpcmr = Csr(0x7E1, packed struct {
-        count_en: u1,
-        count_sat: u1,
-        reserved0: u30,
+        count_en: u1 = 0,
+        count_sat: u1 = 0,
+        reserved0: u30 = 0,
     });
     pub const mpccr = Csr(0x7E2, u32);
 

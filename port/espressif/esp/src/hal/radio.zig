@@ -22,7 +22,7 @@ pub const wifi = @import("radio/wifi.zig");
 const log = std.log.scoped(.esp_radio);
 
 pub const Options = struct {
-    interrupt: microzig.cpu.Interrupt = .interrupt29,
+    interrupt: microzig.cpu.Interrupt = .interrupt30,
     wifi: wifi.Options = .{},
 };
 
@@ -81,7 +81,7 @@ pub fn deinit() void {
         return;
     }
 
-    timer.deinit();
+    timer.deinit(osi.gpa);
 }
 
 pub fn read_mac(iface: enum {

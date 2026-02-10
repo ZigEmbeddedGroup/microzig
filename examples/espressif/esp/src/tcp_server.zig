@@ -25,9 +25,8 @@ pub const microzig_options: microzig.Options = .{
     },
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
-        .interrupt29 = radio.interrupt_handler,
-        .interrupt30 = rtos.general_purpose_interrupt_handler,
-        .interrupt31 = rtos.yield_interrupt_handler,
+        .interrupt30 = radio.interrupt_handler,
+        .interrupt31 = rtos.tick_interrupt_handler,
     },
     .cpu = .{
         .interrupt_stack = .{
