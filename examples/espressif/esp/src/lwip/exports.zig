@@ -1,7 +1,6 @@
 /// Platform dependent exports required by lwip
 ///
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const esp = microzig.hal;

@@ -1,8 +1,6 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const esp = microzig.hal;
-const time = esp.time;
 const gpio = esp.gpio;
 
 pub fn main() !void {
