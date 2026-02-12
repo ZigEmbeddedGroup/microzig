@@ -13,7 +13,7 @@ const Allocator = std.mem.Allocator;
 const Map = std.AutoArrayHashMapUnmanaged;
 const assert = std.debug.assert;
 
-const Directory = @import("Database.zig").Directory;
+const Directory = @import("Directory.zig");
 
 pub const Kind = enum {
     file,

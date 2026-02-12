@@ -65,12 +65,12 @@ pub const Channel = struct {
         });
 
         if (config.mem_address) |address| {
-            self.reg_channel.MAR = address;
+            self.reg_channel.MAR.raw = address;
         }
         if (config.transfer_count) |count| {
             self.reg_channel.NDTR.modify_one("NDT", count);
         }
-        self.reg_channel.PAR = config.periph_address;
+        self.reg_channel.PAR.raw = config.periph_address;
     }
 
     pub fn start(self: *Self) void {
@@ -106,7 +106,7 @@ pub const Channel = struct {
         @memcpy(self.dma_buffer[0..buffer.len], buffer);
 
         self.reg_channel.NDTR.modify_one("NDT", @as(u16, @intCast(buffer.len)));
-        self.reg_channel.MAR = @intFromPtr(self.dma_buffer.ptr);
+        self.reg_channel.MAR.raw = @intFromPtr(self.dma_buffer.ptr);
     }
 
     /// Reads the number of remaining transfers.

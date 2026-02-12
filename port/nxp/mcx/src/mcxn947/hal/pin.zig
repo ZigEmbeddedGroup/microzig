@@ -36,7 +36,7 @@ pub const Pin = enum(u8) {
         const base = @intFromPtr(&pin.get_port().get_regs().PCR0);
         const reg: PinTy = @ptrFromInt(base + pin.get_n() * @as(u32, 4));
 
-        reg.write_raw(@as(u16, @bitCast(config)));
+        reg.raw = @as(u16, @bitCast(config));
     }
 
     /// Returns the pin configurator (essentially a builder).

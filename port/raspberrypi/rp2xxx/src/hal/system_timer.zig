@@ -43,13 +43,13 @@ pub const Timer = enum(u1) {
     /// Enables or disables the interrupt for the given alarm.
     pub fn set_interrupt_enabled(timer: Timer, alarm: Alarm, enable: bool) void {
         const regs = timer.get_regs();
-        regs.INTE.write_raw(@as(u4, @intFromBool(enable)) << @intFromEnum(alarm));
+        regs.INTE.raw = @as(u4, @intFromBool(enable)) << @intFromEnum(alarm);
     }
 
     /// Clears the interrupt flag for the given alarm.
     pub fn clear_interrupt(timer: Timer, alarm: Alarm) void {
         const regs = timer.get_regs();
-        regs.INTR.write_raw(@as(u4, 1) << @intFromEnum(alarm));
+        regs.INTR.raw = @as(u4, 1) << @intFromEnum(alarm);
     }
 
     /// Schedules an alarm to be triggered when the low word of the timer

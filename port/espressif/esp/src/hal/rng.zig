@@ -3,7 +3,7 @@ const microzig = @import("microzig");
 const RNG = microzig.chip.peripherals.RNG;
 
 pub fn random_u32() u32 {
-    return RNG.DATA;
+    return RNG.DATA.raw;
 }
 
 pub fn read(buf: []u8) void {

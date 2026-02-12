@@ -242,7 +242,7 @@ pub const USART = enum(u2) {
         const fraction = ((fraction_part * 16 + 50) / 100) & 0x0F;
 
         const brr_value = (mantissa << 4) | fraction;
-        regs.BRR.write_raw(@intCast(brr_value));
+        regs.BRR.raw = @intCast(brr_value);
     }
 
     /// Check if transmit data register is empty (can write)
@@ -262,7 +262,7 @@ pub const USART = enum(u2) {
 
     /// Write a single byte (non-blocking)
     pub inline fn write_byte(usart: USART, byte: u8) void {
-        usart.get_regs().DATAR.write_raw(byte);
+        usart.get_regs().DATAR.raw = byte;
     }
 
     /// Read a single byte (non-blocking)

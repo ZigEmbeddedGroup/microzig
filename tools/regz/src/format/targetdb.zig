@@ -1,13 +1,13 @@
 const std = @import("std");
-const xml = @import("xml.zig");
+const xml = @import("../xml.zig");
 
-const Database = @import("Database.zig");
+const Database = @import("../Database.zig");
 const DeviceID = Database.DeviceID;
 const PeripheralID = Database.PeripheralID;
 const RegisterID = Database.RegisterID;
 const StructID = Database.StructID;
 const EnumID = Database.EnumID;
-const Arch = @import("arch.zig").Arch;
+const Arch = @import("../arch.zig").Arch;
 
 const log = std.log.scoped(.target_db);
 
@@ -277,21 +277,7 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
     const end_bit = try std.fmt.parseInt(u8, end_str, 0);
 
     const access_str = node.get_attribute("rwaccess");
-    const access: Database.Access = if (access_str) |str|
-        if (std.mem.eql(u8, str, "RW"))
-            .read_write
-        else if (std.mem.eql(u8, str, "R/W"))
-            .read_write
-        else if (std.mem.eql(u8, str, "R"))
-            .read_only
-        else if (std.mem.eql(u8, str, "W"))
-            .write_only
-        else blk: {
-            log.info("unrecognized access string: '{s}'", .{str});
-            break :blk .read_write;
-        }
-    else
-        .read_write;
+    const access: Database.Access = if (access_str) |str| .parse_short(str) else .default;
 
     const enum_id: ?EnumID = if (node.find_child(&.{"bitenum"}) != null) blk: {
         const enum_id = try db.create_enum(null, .{

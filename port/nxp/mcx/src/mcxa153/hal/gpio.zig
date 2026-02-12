@@ -27,7 +27,7 @@ pub const GPIO = enum(u7) {
         const old: u32 = regs.PDOR.raw;
         const new = @as(u32, output) << gpio.get_pin();
 
-        regs.PDOR.write_raw(old & ~gpio.get_mask() | new);
+        regs.PDOR.raw = old & ~gpio.get_mask() | new;
     }
 
     pub fn get(gpio: GPIO) bool {
@@ -40,7 +40,7 @@ pub const GPIO = enum(u7) {
         const regs = gpio.get_regs();
         const old: u32 = regs.PTOR.raw;
 
-        regs.PTOR.write_raw(old | gpio.get_mask());
+        regs.PTOR.raw = old | gpio.get_mask();
     }
 
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
@@ -48,7 +48,7 @@ pub const GPIO = enum(u7) {
         const old: u32 = regs.PDDR.raw;
         const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
 
-        regs.PDDR.write_raw(old & ~gpio.get_mask() | new);
+        regs.PDDR.raw = old & ~gpio.get_mask() | new;
     }
 
     pub fn set_interrupt_config(gpio: GPIO, trigger: InterruptConfig) void {
@@ -56,7 +56,7 @@ pub const GPIO = enum(u7) {
         const irqc = @as(u32, @intFromEnum(trigger)) << 16;
         const isf = @as(u32, 1) << 24;
 
-        regs.ICR[gpio.get_pin()].write_raw(irqc | isf);
+        regs.ICR[gpio.get_pin()].raw = irqc | isf;
     }
 
     pub fn get_interrupt_flag(gpio: GPIO) bool {
@@ -69,7 +69,7 @@ pub const GPIO = enum(u7) {
         const regs = gpio.get_regs();
         const old: u32 = regs.ISFR0.raw;
 
-        regs.ISFR0.write_raw(old | gpio.get_mask());
+        regs.ISFR0.raw = old | gpio.get_mask();
     }
 
     fn get_regs(gpio: GPIO) *volatile chip.types.peripherals.GPIO0 {

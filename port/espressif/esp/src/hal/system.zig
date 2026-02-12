@@ -85,16 +85,16 @@ pub fn init() void {
 pub fn clocks_enable_set(mask: PeripheralMask) void {
     var current_mask: u64 = @bitCast(@as(u64, SYSTEM.PERIP_CLK_EN0.raw) | ((@as(u64, SYSTEM.PERIP_CLK_EN1.raw) << 32)));
     current_mask |= @as(u43, @bitCast(mask));
-    SYSTEM.PERIP_CLK_EN0.write_raw(@intCast(current_mask & 0xffff_ffff));
-    SYSTEM.PERIP_CLK_EN1.write_raw(@intCast(current_mask >> 32));
+    SYSTEM.PERIP_CLK_EN0.raw = @intCast(current_mask & 0xffff_ffff);
+    SYSTEM.PERIP_CLK_EN1.raw = @intCast(current_mask >> 32);
 }
 
 /// Clears the bits in the mask of the PERIP_CLK_ENx registers.
 pub fn clocks_enable_clear(mask: PeripheralMask) void {
     var current_mask: u64 = @bitCast(@as(u64, SYSTEM.PERIP_CLK_EN0.raw) | ((@as(u64, SYSTEM.PERIP_CLK_EN1.raw) << 32)));
     current_mask &= ~@as(u43, @bitCast(mask));
-    SYSTEM.PERIP_CLK_EN0.write_raw(@intCast(current_mask & 0xffff_ffff));
-    SYSTEM.PERIP_CLK_EN1.write_raw(@intCast(current_mask >> 32));
+    SYSTEM.PERIP_CLK_EN0.raw = @intCast(current_mask & 0xffff_ffff);
+    SYSTEM.PERIP_CLK_EN1.raw = @intCast(current_mask >> 32);
 }
 
 /// Sets and clears the bits in the mask of the PERIP_RST_ENx registers. Resets the peripherals.
@@ -107,16 +107,16 @@ pub fn peripheral_reset(mask: PeripheralMask) void {
 pub fn peripheral_reset_set(mask: PeripheralMask) void {
     var current_mask: u64 = @bitCast(@as(u64, SYSTEM.PERIP_RST_EN0.raw) | ((@as(u64, SYSTEM.PERIP_RST_EN1.raw) << 32)));
     current_mask |= @as(u43, @bitCast(mask));
-    SYSTEM.PERIP_RST_EN0.write_raw(@intCast(current_mask & 0xffff_ffff));
-    SYSTEM.PERIP_RST_EN1.write_raw(@intCast(current_mask >> 32));
+    SYSTEM.PERIP_RST_EN0.raw = @intCast(current_mask & 0xffff_ffff);
+    SYSTEM.PERIP_RST_EN1.raw = @intCast(current_mask >> 32);
 }
 
 /// Clears the bits in the mask of the PERIP_RST_ENx registers.
 pub fn peripheral_reset_clear(mask: PeripheralMask) void {
     var current_mask: u64 = @bitCast(@as(u64, SYSTEM.PERIP_RST_EN0.raw) | ((@as(u64, SYSTEM.PERIP_RST_EN1.raw) << 32)));
     current_mask &= ~@as(u43, @bitCast(mask));
-    SYSTEM.PERIP_RST_EN0.write_raw(@intCast(current_mask & 0xffff_ffff));
-    SYSTEM.PERIP_RST_EN1.write_raw(@intCast(current_mask >> 32));
+    SYSTEM.PERIP_RST_EN0.raw = @intCast(current_mask & 0xffff_ffff);
+    SYSTEM.PERIP_RST_EN1.raw = @intCast(current_mask >> 32);
 }
 
 /// Enable clocks and release peripherals from reset.

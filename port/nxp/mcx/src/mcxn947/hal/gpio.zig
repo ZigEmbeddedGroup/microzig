@@ -33,9 +33,9 @@ pub const GPIO = enum(u8) {
 
         const new: u32 = @as(u32, 1) << gpio.get_pin();
         if (output == 1)
-            regs.PSOR.write_raw(new)
+            regs.PSOR.raw = new
         else
-            regs.PCOR.write_raw(new);
+            regs.PCOR.raw = new;
     }
 
     /// Returns the logical input of the GPIO.
@@ -49,7 +49,7 @@ pub const GPIO = enum(u8) {
     pub fn toggle(gpio: GPIO) void {
         const regs = gpio.get_regs();
 
-        regs.PTOR.write_raw(gpio.get_mask());
+        regs.PTOR.raw = gpio.get_mask();
     }
 
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
@@ -57,7 +57,7 @@ pub const GPIO = enum(u8) {
         const old: u32 = regs.PDDR.raw;
         const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
 
-        regs.PDDR.write_raw((old & ~gpio.get_mask()) | new);
+        regs.PDDR.raw = (old & ~gpio.get_mask()) | new;
     }
 
     /// Returns the gpio's control register

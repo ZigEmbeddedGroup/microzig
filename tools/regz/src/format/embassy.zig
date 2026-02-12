@@ -1,3 +1,8 @@
+const std = @import("std");
+const Database = @import("../Database.zig");
+const Arch = @import("../arch.zig").Arch;
+const arm = @import("../arch/arm.zig");
+
 pub const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm0", "cortex_m0" },
     .{ "cm0p", "cortex_m0plus" },
@@ -598,9 +603,3 @@ fn get_section(child_full_name: []const u8) []const u8 {
     }
     @panic("Unhandled extends Type");
 }
-
-const std = @import("std");
-const Database = @import("Database.zig");
-const Arch = @import("arch.zig").Arch;
-const arm = @import("arch/arm.zig");
-const FS_Directory = @import("FS_Directory.zig");

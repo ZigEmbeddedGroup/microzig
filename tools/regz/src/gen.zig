@@ -1147,24 +1147,26 @@ fn write_register(
             register.size_bits,
         });
 
-        try write_fields(db, arena, fields, register.size_bits, register_reset, writer);
+        try write_fields_and_access(db, arena, fields, register.size_bits, register_reset, writer);
         try writer.writeAll("}),\n");
     } else if (array_prefix.len != 0) {
-        try writer.print("{f}: {s}u{},\n", .{
+        try writer.print("{f}: {s}mmio.Mmio(u{}, .{f}),\n", .{
             std.zig.fmtId(register.name),
             array_prefix,
             register.size_bits,
+            std.zig.fmtId(@tagName(register.access)),
         });
     } else {
-        try writer.print("{f}: u{}", .{
+        try writer.print("{f}: mmio.Mmio(u{}, .{f})", .{
             std.zig.fmtId(register.name),
             register.size_bits,
+            std.zig.fmtId(@tagName(register.access)),
         });
 
         // Just assume non-masked areas are zero I guess
         if (register_reset) |rr| {
             const mask = (@as(u64, 1) << @intCast(register.size_bits)) - 1;
-            try writer.print(" = 0x{X}", .{rr.value & mask});
+            try writer.print(" = .{{ .raw = 0x{X} }}", .{rr.value & mask});
         }
 
         try writer.writeAll(",\n");
@@ -1193,7 +1195,7 @@ fn get_field_default(field: Database.StructField, maybe_register_reset: ?Registe
     return (register_reset.value & field_mask) >> @intCast(field.offset_bits);
 }
 
-fn write_fields(
+fn write_fields_and_access(
     db: *Database,
     arena: Allocator,
     fields: []const Database.StructField,
@@ -1235,6 +1237,17 @@ fn write_fields(
 
     var offset: u64 = 0;
 
+    const RegAndAccess = union(enum) {
+        normal: struct {
+            name: []const u8,
+            access: ?Database.Access,
+        },
+        reserved: u8,
+        padding,
+    };
+
+    var access: std.ArrayList(RegAndAccess) = .empty;
+
     for (expanded_fields.items) |field| {
         log.debug("next field: offset={} field.offset_bits={}", .{ offset, field.offset_bits });
         if (offset > field.offset_bits) {
@@ -1260,6 +1273,7 @@ fn write_fields(
         if (offset < field.offset_bits) {
             try writer.print("reserved{}: u{} = 0,\n", .{ field.offset_bits, field.offset_bits - offset });
             offset = field.offset_bits;
+            try access.append(arena, .{ .reserved = field.offset_bits });
         }
         assert(offset == field.offset_bits);
 
@@ -1330,6 +1344,8 @@ fn write_fields(
 
         log.debug("adding size bits to offset: offset={} field.size_bits={}", .{ offset, field.size_bits });
         offset += field.size_bits;
+
+        try access.append(arena, .{ .normal = .{ .name = field.name, .access = field.access } });
     }
 
     log.debug("before padding: offset={} register_size_bits={}", .{ offset, register_size_bits });
@@ -1337,9 +1353,26 @@ fn write_fields(
     if (offset < register_size_bits) {
         log.debug("writing padding", .{});
         try writer.print("padding: u{} = 0,\n", .{register_size_bits - offset});
+        try access.append(arena, .padding);
     } else {
         log.debug("No padding", .{});
     }
+
+    try writer.writeAll("}, .{\n");
+
+    for (access.items) |it| switch (it) {
+        .normal => |data| {
+            try writer.print(
+                ".{f} = .{f},\n",
+                .{
+                    std.zig.fmtId(data.name),
+                    std.zig.fmtId(@tagName(data.access orelse Database.Access.default)),
+                },
+            );
+        },
+        .reserved => |num| try writer.print(".reserved{} = .reserved,\n", .{num}),
+        .padding => try writer.writeAll(".padding = .reserved,\n"),
+    };
 
     try out_writer.writeAll(buf.written());
 }
@@ -1475,7 +1508,7 @@ test "gen.StructFieldIterator.single register" {
         .name = "TEST_REGISTER",
         .size_bits = 32,
         .offset_bytes = 0,
-        .access = .read_write,
+        .access = .default,
         .reset_mask = 0xFF,
         .reset_value = 0xAA,
         .count = null,
@@ -1543,7 +1576,7 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .name = "TEST_REGISTER1",
             .size_bits = 32,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1555,7 +1588,7 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .name = "TEST_REGISTER2",
             .size_bits = 16,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1584,7 +1617,7 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .name = "TEST_REGISTER1",
             .size_bits = 32,
             .offset_bytes = 0,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1596,7 +1629,7 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .name = "TEST_REGISTER2",
             .size_bits = 16,
             .offset_bytes = 2,
-            .access = .read_write,
+            .access = .default,
             .reset_mask = 0xFF,
             .reset_value = 0xAA,
             .count = null,
@@ -1647,7 +1680,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
         .name = "TEST_REGISTER",
         .size_bits = 32,
         .offset_bytes = 0,
-        .access = .read_write,
+        .access = .default,
         .reset_mask = 0xFF,
         .reset_value = 0xAA,
         .count = null,
@@ -1722,7 +1755,7 @@ test "gen.peripheral instantiation" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "TEST_DEVICE.zig",
@@ -1762,17 +1795,11 @@ test "gen.peripheral instantiation" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -1787,6 +1814,9 @@ test "gen.peripheral instantiation" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
             \\        TEST_FIELD: u1 = 0x1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -1805,7 +1835,7 @@ test "gen.peripherals with a shared type" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "TEST_DEVICE.zig",
@@ -1846,17 +1876,11 @@ test "gen.peripherals with a shared type" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -1871,6 +1895,9 @@ test "gen.peripherals with a shared type" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -1889,21 +1916,15 @@ test "gen.peripheral with modes" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -1942,20 +1963,26 @@ test "gen.peripheral with modes" {
             \\
             \\    TEST_MODE1: extern struct {
             \\        /// offset: 0x00
-            \\        TEST_REGISTER1: u32,
+            \\        TEST_REGISTER1: mmio.Mmio(u32, .read_write),
             \\        /// offset: 0x04
             \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\    TEST_MODE2: extern struct {
             \\        /// offset: 0x00
-            \\        TEST_REGISTER2: u32,
+            \\        TEST_REGISTER2: mmio.Mmio(u32, .read_write),
             \\        /// offset: 0x04
             \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\};
@@ -1975,21 +2002,15 @@ test "gen.peripheral with enum" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2007,7 +2028,7 @@ test "gen.peripheral with enum" {
             \\    };
             \\
             \\    /// offset: 0x00
-            \\    TEST_REGISTER: u8,
+            \\    TEST_REGISTER: mmio.Mmio(u8, .read_write),
             \\};
             \\
             ,
@@ -2025,21 +2046,15 @@ test "gen.peripheral with enum, enum is exhausted of values" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2056,7 +2071,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
             \\    };
             \\
             \\    /// offset: 0x00
-            \\    TEST_REGISTER: u8,
+            \\    TEST_REGISTER: mmio.Mmio(u8, .read_write),
             \\};
             \\
             ,
@@ -2074,21 +2089,15 @@ test "gen.field with named enum" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2109,6 +2118,9 @@ test "gen.field with named enum" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: TEST_ENUM,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2127,21 +2139,15 @@ test "gen.field with named enum and named default" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2162,6 +2168,9 @@ test "gen.field with named enum and named default" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: TEST_ENUM = .TEST_ENUM_FIELD2,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2180,21 +2189,15 @@ test "gen.field with named enum and unnamed default" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2215,6 +2218,9 @@ test "gen.field with named enum and unnamed default" {
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: TEST_ENUM = @enumFromInt(0xA),
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2233,21 +2239,15 @@ test "gen.field with anonymous enum" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2266,6 +2266,9 @@ test "gen.field with anonymous enum" {
             \\            _,
             \\        },
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2284,21 +2287,15 @@ test "gen.field with anonymous enum and default" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -2317,6 +2314,9 @@ test "gen.field with anonymous enum and default" {
             \\            _,
             \\        } = .TEST_ENUM_FIELD2,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2335,7 +2335,7 @@ test "gen.namespaced register groups" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2376,17 +2376,11 @@ test "gen.namespaced register groups" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORT = @import("peripherals/PORT.zig");
-            \\
-            ,
+            .content = "pub const PORT = @import(\"peripherals/PORT.zig\");\n",
         },
         .{
             .path = "peripherals/PORT.zig",
@@ -2398,20 +2392,20 @@ test "gen.namespaced register groups" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u8,
+            \\    PORTB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x01
-            \\    DDRB: u8,
+            \\    DDRB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x02
-            \\    PINB: u8,
+            \\    PINB: mmio.Mmio(u8, .read_write),
             \\};
             \\
             \\pub const PORTC = extern struct {
             \\    /// offset: 0x00
-            \\    PORTC: u8,
+            \\    PORTC: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x01
-            \\    DDRC: u8,
+            \\    DDRC: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x02
-            \\    PINC: u8,
+            \\    PINC: mmio.Mmio(u8, .read_write),
             \\};
             \\
             ,
@@ -2429,7 +2423,7 @@ test "gen.peripheral with reserved register" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2469,17 +2463,11 @@ test "gen.peripheral with reserved register" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2491,11 +2479,11 @@ test "gen.peripheral with reserved register" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u32,
+            \\    PORTB: mmio.Mmio(u32, .read_write),
             \\    /// offset: 0x04
             \\    reserved4: [4]u8,
             \\    /// offset: 0x08
-            \\    PINB: u32,
+            \\    PINB: mmio.Mmio(u32, .read_write),
             \\};
             \\
             ,
@@ -2513,7 +2501,7 @@ test "gen.peripheral with count" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2553,17 +2541,11 @@ test "gen.peripheral with count" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2575,11 +2557,11 @@ test "gen.peripheral with count" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u8,
+            \\    PORTB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x01
-            \\    DDRB: u8,
+            \\    DDRB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x02
-            \\    PINB: u8,
+            \\    PINB: mmio.Mmio(u8, .read_write),
             \\};
             \\
             ,
@@ -2597,7 +2579,7 @@ test "gen.peripheral with count, padding required" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2637,17 +2619,11 @@ test "gen.peripheral with count, padding required" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2659,11 +2635,11 @@ test "gen.peripheral with count, padding required" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u8,
+            \\    PORTB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x01
-            \\    DDRB: u8,
+            \\    DDRB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x02
-            \\    PINB: u8,
+            \\    PINB: mmio.Mmio(u8, .read_write),
             \\    padding: [1]u8,
             \\};
             \\
@@ -2682,7 +2658,7 @@ test "gen.register with count" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2722,17 +2698,11 @@ test "gen.register with count" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2744,11 +2714,11 @@ test "gen.register with count" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: [4]u8,
+            \\    PORTB: [4]mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x04
-            \\    DDRB: u8,
+            \\    DDRB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x05
-            \\    PINB: u8,
+            \\    PINB: mmio.Mmio(u8, .read_write),
             \\};
             \\
             ,
@@ -2766,7 +2736,7 @@ test "gen.register with count and fields" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2806,17 +2776,11 @@ test "gen.register with count and fields" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2831,11 +2795,14 @@ test "gen.register with count and fields" {
             \\    PORTB: [4]mmio.Mmio(packed struct(u8) {
             \\        TEST_FIELD: u4,
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\    /// offset: 0x04
-            \\    DDRB: u8,
+            \\    DDRB: mmio.Mmio(u8, .read_write),
             \\    /// offset: 0x05
-            \\    PINB: u8,
+            \\    PINB: mmio.Mmio(u8, .read_write),
             \\};
             \\
             ,
@@ -2853,21 +2820,15 @@ test "gen.field with count, width of one, offset, and padding" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2887,6 +2848,14 @@ test "gen.field with count, width of one, offset, and padding" {
             \\        TEST_FIELD3: u1,
             \\        TEST_FIELD4: u1,
             \\        padding: u1 = 0,
+            \\    }, .{
+            \\        .reserved2 = .reserved,
+            \\        .TEST_FIELD0 = .read_write,
+            \\        .TEST_FIELD1 = .read_write,
+            \\        .TEST_FIELD2 = .read_write,
+            \\        .TEST_FIELD3 = .read_write,
+            \\        .TEST_FIELD4 = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2905,21 +2874,15 @@ test "gen.field with count, multi-bit width, offset, and padding" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
-            \\
-            ,
+            .content = "pub const PORTB = @import(\"peripherals/PORTB.zig\").PORTB;\n",
         },
         .{
             .path = "peripherals/PORTB.zig",
@@ -2936,6 +2899,11 @@ test "gen.field with count, multi-bit width, offset, and padding" {
             \\        TEST_FIELD0: u2,
             \\        TEST_FIELD1: u2,
             \\        padding: u2 = 0,
+            \\    }, .{
+            \\        .reserved2 = .reserved,
+            \\        .TEST_FIELD0 = .read_write,
+            \\        .TEST_FIELD1 = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -2954,7 +2922,7 @@ test "gen.interrupts.avr" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -3005,16 +2973,11 @@ test "gen.interrupts.avr" {
         },
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\
-            ,
+            .content = "",
         },
     }, &vfs);
 }
@@ -3029,21 +2992,15 @@ test "gen.peripheral type with register and field" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3061,6 +3018,9 @@ test "gen.peripheral type with register and field" {
             \\        /// test field
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -3079,21 +3039,15 @@ test "gen.name collisions in enum name cause them to be anonymous" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3116,6 +3070,9 @@ test "gen.name collisions in enum name cause them to be anonymous" {
             \\            TEST_ENUM_FIELD2 = 0x1,
             \\            _,
             \\        },
+            \\    }, .{
+            \\        .TEST_FIELD1 = .read_write,
+            \\        .TEST_FIELD2 = .read_write,
             \\    }),
             \\};
             \\
@@ -3134,21 +3091,15 @@ test "gen.pick one enum field in value collisions" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3166,6 +3117,9 @@ test "gen.pick one enum field in value collisions" {
             \\            _,
             \\        },
             \\        padding: u4 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\
@@ -3184,7 +3138,7 @@ test "gen.pick one enum field in value collisions" {
 //    var vfs: VirtualFilesystem = .init(std.testing.allocator);
 //    defer vfs.deinit();
 //
-//    try db.to_zig(vfs.dir(), .{});
+//    try to_zig(db, vfs.dir(), .{});
 //    try expect_output(&.{
 //        .{
 //            .path = "types.zig",
@@ -3216,6 +3170,9 @@ test "gen.pick one enum field in value collisions" {
 //            \\            _,
 //            \\        },
 //            \\        padding: u4 = 0,
+//            \\    }, .{
+//            \\        .TEST_FIELD = .read_write,
+//            \\        .padding = .reserved,
 //            \\    }),
 //            \\};
 //            \\
@@ -3234,7 +3191,7 @@ test "gen.pick one enum field in value collisions" {
 //    var vfs: VirtualFilesystem = .init(std.testing.allocator);
 //    defer vfs.deinit();
 //
-//    try db.to_zig(vfs.dir(), .{});
+//    try to_zig(db, vfs.dir(), .{});
 //    try expect_output(&.{
 //        .{
 //            .path = "types.zig",
@@ -3265,6 +3222,9 @@ test "gen.pick one enum field in value collisions" {
 //            \\        /// test field 1
 //            \\        TEST_FIELD: u1,
 //            \\        padding: u31 = 0,
+//            \\    }, .{
+//            \\        .TEST_FIELD = .read_write,
+//            \\        .padding = .reserved,
 //            \\    }),
 //            \\};
 //            \\
@@ -3283,21 +3243,15 @@ test "gen.nested struct field in a peripheral" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3318,6 +3272,9 @@ test "gen.nested struct field in a peripheral" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\};
@@ -3337,21 +3294,15 @@ test "gen.nested struct field in a peripheral that has a named type" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3370,6 +3321,9 @@ test "gen.nested struct field in a peripheral that has a named type" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    };
             \\
@@ -3393,21 +3347,15 @@ test "gen.nested struct field in a peripheral with offset" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3430,6 +3378,9 @@ test "gen.nested struct field in a peripheral with offset" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    },
             \\};
@@ -3449,21 +3400,15 @@ test "gen.nested struct field in nested struct field" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3486,6 +3431,9 @@ test "gen.nested struct field in nested struct field" {
             \\                /// test field 1
             \\                TEST_FIELD: u1,
             \\                padding: u31 = 0,
+            \\            }, .{
+            \\                .TEST_FIELD = .read_write,
+            \\                .padding = .reserved,
             \\            }),
             \\        },
             \\    },
@@ -3506,21 +3454,15 @@ test "gen.nested struct field next to register" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try to_zig(db, vfs.dir(), .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
-            .content =
-            \\pub const peripherals = @import("types/peripherals.zig");
-            \\
-            ,
+            .content = "pub const peripherals = @import(\"types/peripherals.zig\");\n",
         },
         .{
             .path = "peripherals.zig",
-            .content =
-            \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
-            \\
-            ,
+            .content = "pub const TEST_PERIPHERAL = @import(\"peripherals/TEST_PERIPHERAL.zig\").TEST_PERIPHERAL;\n",
         },
         .{
             .path = "peripherals/TEST_PERIPHERAL.zig",
@@ -3539,6 +3481,9 @@ test "gen.nested struct field next to register" {
             \\            /// test field 1
             \\            TEST_FIELD: u1,
             \\            padding: u31 = 0,
+            \\        }, .{
+            \\            .TEST_FIELD = .read_write,
+            \\            .padding = .reserved,
             \\        }),
             \\    };
             \\
@@ -3551,6 +3496,9 @@ test "gen.nested struct field next to register" {
             \\        /// test field 1
             \\        TEST_FIELD: u1,
             \\        padding: u31 = 0,
+            \\    }, .{
+            \\        .TEST_FIELD = .read_write,
+            \\        .padding = .reserved,
             \\    }),
             \\};
             \\

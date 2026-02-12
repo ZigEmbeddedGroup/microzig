@@ -268,7 +268,7 @@ pub fn create(
         .register_schema_usages = register_schema_usages,
     };
 
-    try db.to_zig(window.vfs.dir(), .{});
+    try regz.gen.to_zig(db, window.vfs.dir(), .{});
 
     count += 1;
 
@@ -941,7 +941,7 @@ fn load_patch_files(w: *RegzWindow) void {
 
         // Apply patches to the database so analysis reflects them
         for (patches) |patch| {
-            apply_single_patch(w.db, alloc, patch) catch continue;
+            w.db.apply_patch(patch) catch continue;
         }
 
         const owned_path = alloc.dupe(u8, path) catch continue;
@@ -1058,10 +1058,11 @@ fn get_patch_label(patch: regz.Patch, arena: Allocator) []const u8 {
     return switch (patch) {
         .override_arch => |p| std.fmt.allocPrint(arena, "override_arch: {s}", .{p.device_name}) catch "override_arch",
         .set_device_property => |p| std.fmt.allocPrint(arena, "set_device_property: {s}", .{p.key}) catch "set_device_property",
-        .add_enum => |p| std.fmt.allocPrint(arena, "add_enum: {s}", .{p.@"enum".name}) catch "add_enum",
+        .add_type => |p| std.fmt.allocPrint(arena, "add_type: {t} {s}", .{ p.type, p.type_name }) catch "add_type",
         .set_enum_type => |p| std.fmt.allocPrint(arena, "set_enum_type: {s}", .{p.of}) catch "set_enum_type",
         .add_interrupt => |p| std.fmt.allocPrint(arena, "add_interrupt: {s}", .{p.name}) catch "add_interrupt",
-        .add_enum_and_apply => |p| std.fmt.allocPrint(arena, "add_enum_and_apply: {s}", .{p.@"enum".name}) catch "add_enum_and_apply",
+        .add_type_and_apply => |p| std.fmt.allocPrint(arena, "add_type_and_apply: {t} {s}", .{ p.type, p.type_name }) catch "add_type_and_apply",
+        .add_struct_field => |p| std.fmt.allocPrint(arena, "add_struct_field: {t} {s}", .{ p.type, p.name }) catch "add_struct_field",
     };
 }
 
@@ -1197,19 +1198,20 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
             switch (patch) {
                 .override_arch => |p| show_override_arch_widget(p),
                 .set_device_property => |p| show_set_device_property_widget(p),
-                .add_enum => |p| show_add_enum_widget(p, arena),
+                .add_type => |p| show_add_type_widget(p, arena),
                 .set_enum_type => |p| show_set_enum_type_widget(p),
                 .add_interrupt => |p| show_add_interrupt_widget(p),
-                .add_enum_and_apply => |p| show_add_enum_and_apply_widget(p, arena),
+                .add_type_and_apply => |p| show_add_type_and_apply_widget(p, arena),
+                .add_struct_field => |p| show_add_struct_field_widget(p),
             }
         },
         .diff => {
-            w.show_patch_diff(arena, sel, patch);
+            w.show_patch_diff(sel, patch);
         },
     }
 }
 
-fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+fn show_patch_diff(w: *RegzWindow, sel: SelectedPatch, patch: regz.Patch) void {
     // Check if cache is valid
     if (w.cached_diff) |cached| {
         if (cached.file_index == sel.file_index and cached.patch_index == sel.patch_index) {
@@ -1227,7 +1229,7 @@ fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: 
     }
 
     // Compute new diff
-    w.compute_patch_diff(arena, sel, patch);
+    w.compute_patch_diff(sel, patch);
 
     // Display the newly computed diff
     if (w.cached_diff) |cached| {
@@ -1343,7 +1345,7 @@ fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch
     }
 }
 
-fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+fn compute_patch_diff(w: *RegzWindow, sel: SelectedPatch, patch: regz.Patch) void {
     _ = patch; // We'll get the patch from the loaded patches instead
     // Use window's persistent arena for cached data
     const arena = w.arena.allocator();
@@ -1395,23 +1397,17 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
                 const is_selected_or_before = (file_idx < sel.file_index) or
                     (file_idx == sel.file_index and patch_idx <= sel.patch_index);
 
-                // Serialize this patch
-                var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
-                const patch_array: []const regz.Patch = &.{p};
-                std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer) catch continue;
-                const zon_text = temp_arena.dupeZ(u8, zon_buf.written()) catch continue;
-
                 var diags: std.zon.parse.Diagnostics = .{};
 
                 // Apply to before_db if this patch comes before the selected one
                 if (is_before_selected) {
-                    before_db.apply_patch(zon_text, &diags) catch continue;
+                    before_db.apply_patch(p) catch continue;
                 }
 
                 // Apply to after_db if this patch is the selected one or comes before it
                 if (is_selected_or_before) {
                     diags = .{};
-                    after_db.apply_patch(zon_text, &diags) catch continue;
+                    after_db.apply_patch(p) catch continue;
                 }
             }
         }
@@ -1425,23 +1421,14 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
             const is_selected_or_before = (file_idx < sel.file_index) or
                 (file_idx == sel.file_index and full_idx <= sel.patch_index);
 
-            // Serialize this patch
-            var zon_buf: std.Io.Writer.Allocating = .init(temp_arena);
-            const patch_array: []const regz.Patch = &.{p};
-            std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer) catch continue;
-            const zon_text = temp_arena.dupeZ(u8, zon_buf.written()) catch continue;
-
-            var diags: std.zon.parse.Diagnostics = .{};
-
             // Apply to before_db if this patch comes before the selected one
             if (is_before_selected) {
-                before_db.apply_patch(zon_text, &diags) catch continue;
+                before_db.apply_patch(p) catch continue;
             }
 
             // Apply to after_db if this patch is the selected one or comes before it
             if (is_selected_or_before) {
-                diags = .{};
-                after_db.apply_patch(zon_text, &diags) catch continue;
+                after_db.apply_patch(p) catch continue;
             }
         }
     }
@@ -1450,7 +1437,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     var before_vfs: VirtualFilesystem = .init(w.gpa);
     defer before_vfs.deinit();
 
-    before_db.to_zig(before_vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(before_db, before_vfs.dir(), .{}) catch |err| {
         w.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1464,7 +1451,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     var after_vfs: VirtualFilesystem = .init(w.gpa);
     defer after_vfs.deinit();
 
-    after_db.to_zig(after_vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(after_db, after_vfs.dir(), .{}) catch |err| {
         w.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1701,80 +1688,82 @@ fn show_set_device_property_widget(p: anytype) void {
     if (p.description) |desc| labeled_field("Description", desc);
 }
 
-fn show_add_enum_widget(p: anytype, arena: Allocator) void {
+fn show_add_type_widget(p: anytype, arena: Allocator) void {
     labeled_field("Parent", p.parent);
-    show_enum_details(p.@"enum", arena);
+    show_type_details(p, arena);
 }
 
-fn show_enum_details(e: anytype, arena: Allocator) void {
-    labeled_field("Name", e.name);
-    if (e.description) |d| labeled_field("Description", d);
-    const bitsize_str = std.fmt.allocPrint(arena, "{d}", .{e.bitsize}) catch "?";
+fn show_type_details(p: anytype, arena: Allocator) void {
+    labeled_field("Name", p.type_name);
+    if (p.type.@"enum".description) |d| labeled_field("Description", d);
+    const bitsize_str = std.fmt.allocPrint(arena, "{d}", .{p.type.@"enum".bitsize}) catch "?";
     labeled_field("Bit Size", bitsize_str);
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
-    if (e.fields.len > 0) {
-        _ = dvui.label(@src(), "Fields:", .{}, .{
-            .font = .{ .weight = .bold },
-            .color_text = dvui.Color.fromHex("FBB829"),
-        });
+    switch (p.type) {
+        .@"enum" => |e| if (e.fields.len > 0) {
+            _ = dvui.label(@src(), "Fields:", .{}, .{
+                .font = .{ .weight = .bold },
+                .color_text = dvui.Color.fromHex("FBB829"),
+            });
 
-        _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 4 } });
+            _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 4 } });
 
-        // Table for enum fields
-        const header_style: dvui.GridWidget.CellStyle = .{
-            .cell_opts = .{
-                .border = .{ .y = 0, .h = 1, .x = 0, .w = 0 },
-            },
-        };
+            // Table for enum fields
+            const header_style: dvui.GridWidget.CellStyle = .{
+                .cell_opts = .{
+                    .border = .{ .y = 0, .h = 1, .x = 0, .w = 0 },
+                },
+            };
 
-        // Column widths: Name (120 fixed), Value (60 fixed), Description (proportional -1)
-        var col_widths: [3]f32 = .{ 0, 0, 0 };
-        var grid = dvui.grid(@src(), .{ .col_widths = &col_widths }, .{}, .{
-            .expand = .both,
-            .background = true,
-            .padding = dvui.Rect.all(4),
-        });
-        defer grid.deinit();
+            // Column widths: Name (120 fixed), Value (60 fixed), Description (proportional -1)
+            var col_widths: [3]f32 = .{ 0, 0, 0 };
+            var grid = dvui.grid(@src(), .{ .col_widths = &col_widths }, .{}, .{
+                .expand = .both,
+                .background = true,
+                .padding = dvui.Rect.all(4),
+            });
+            defer grid.deinit();
 
-        // Layout: fixed 120 for Name, fixed 60 for Value, rest for Description
-        dvui.columnLayoutProportional(&.{ 120, 60, -1 }, &col_widths, grid.data().contentRect().w);
+            // Layout: fixed 120 for Name, fixed 60 for Value, rest for Description
+            dvui.columnLayoutProportional(&.{ 120, 60, -1 }, &col_widths, grid.data().contentRect().w);
 
-        // Table headers
-        dvui.gridHeading(@src(), grid, 0, "Name", .fixed, header_style);
-        dvui.gridHeading(@src(), grid, 1, "Value", .fixed, header_style);
-        dvui.gridHeading(@src(), grid, 2, "Description", .fixed, header_style);
+            // Table headers
+            dvui.gridHeading(@src(), grid, 0, "Name", .fixed, header_style);
+            dvui.gridHeading(@src(), grid, 1, "Value", .fixed, header_style);
+            dvui.gridHeading(@src(), grid, 2, "Description", .fixed, header_style);
 
-        // Table rows
-        for (e.fields, 0..) |field, row_num| {
-            var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+            // Table rows
+            for (e.fields, 0..) |field, row_num| {
+                var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
 
-            // Name column
-            {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, .{});
-                defer cell.deinit();
-                dvui.labelNoFmt(@src(), field.name, .{}, .{});
+                // Name column
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, .{});
+                    defer cell.deinit();
+                    dvui.labelNoFmt(@src(), field.name, .{}, .{});
+                }
+
+                // Value column
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, .{});
+                    defer cell.deinit();
+                    const value_str = std.fmt.allocPrint(arena, "{d}", .{field.value}) catch "?";
+                    dvui.labelNoFmt(@src(), value_str, .{}, .{});
+                }
+
+                // Description column
+                {
+                    defer cell_num.col_num += 1;
+                    var cell = grid.bodyCell(@src(), cell_num, .{});
+                    defer cell.deinit();
+                    dvui.labelNoFmt(@src(), field.description orelse "", .{}, .{});
+                }
             }
-
-            // Value column
-            {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, .{});
-                defer cell.deinit();
-                const value_str = std.fmt.allocPrint(arena, "{d}", .{field.value}) catch "?";
-                dvui.labelNoFmt(@src(), value_str, .{}, .{});
-            }
-
-            // Description column
-            {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, .{});
-                defer cell.deinit();
-                dvui.labelNoFmt(@src(), field.description orelse "", .{}, .{});
-            }
-        }
+        },
     }
 }
 
@@ -1792,9 +1781,9 @@ fn show_add_interrupt_widget(p: anytype) void {
     if (p.description) |d| labeled_field("Description", d);
 }
 
-fn show_add_enum_and_apply_widget(p: anytype, arena: Allocator) void {
+fn show_add_type_and_apply_widget(p: anytype, arena: Allocator) void {
     labeled_field("Parent", p.parent);
-    show_enum_details(p.@"enum", arena);
+    show_type_details(p, arena);
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
@@ -1808,6 +1797,12 @@ fn show_add_enum_and_apply_widget(p: anytype, arena: Allocator) void {
             _ = dvui.label(@src(), "  {s}", .{target}, .{ .id_extra = i });
         }
     }
+}
+
+fn show_add_struct_field_widget(p: anytype) void {
+    labeled_field("Parent", p.parent);
+    labeled_field("Name", p.name);
+    // TODO: more
 }
 
 fn labeled_field(label_text: []const u8, value: []const u8) void {
@@ -2133,7 +2128,7 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
             .color_text = if (can_create) dvui.Color.fromHex("1C1B19") else dvui.Color.fromHex("918175"),
         }) and can_create) {
             // Create the patch
-            w.create_patch_from_group(arena, pending.*) catch |err| {
+            w.create_patch_from_group(pending.*) catch |err| {
                 w.validation_error_message = std.fmt.allocPrint(w.arena.allocator(), "Failed to create patch: {s}", .{@errorName(err)}) catch "Failed to create patch";
                 w.show_validation_error = true;
             };
@@ -2144,7 +2139,7 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
 }
 
 /// Create a patch from an equivalence group
-fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPatchCreation) !void {
+fn create_patch_from_group(w: *RegzWindow, pending: PendingPatchCreation) !void {
     // Get the cached analysis result
     const cached = w.cached_analysis orelse return error.NoAnalysis;
 
@@ -2169,8 +2164,8 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
     const enum_name = std.mem.sliceTo(&pending.enum_name_buffer, 0);
     if (enum_name.len == 0) return error.EmptyEnumName;
 
-    // Create the add_enum_and_apply patch
-    const patch = try create_add_enum_and_apply_patch(
+    // Create the add_type_and_apply patch
+    const patch = try create_add_type_and_apply_patch(
         w.arena.allocator(),
         pending.peripheral_name,
         enum_name,
@@ -2190,7 +2185,7 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
     w.has_unsaved_patches = true;
 
     // Apply the patch to the database so analysis reflects the change
-    try apply_single_patch(w.db, arena, patch);
+    try w.db.apply_patch(patch);
 
     // Refresh all views that depend on the database
     w.on_database_changed();
@@ -2246,21 +2241,17 @@ fn rebuild_database_with_patches(w: *RegzWindow) void {
         return;
     };
 
-    const alloc = w.arena.allocator();
-
     // Reapply all non-deleted patches from all files
     for (w.loaded_patches.values()) |loaded| {
         if (loaded.patches) |patches| {
             for (patches, 0..) |patch, idx| {
-                if (!loaded.is_patch_deleted(idx)) {
-                    apply_single_patch(w.db, alloc, patch) catch continue;
-                }
+                if (!loaded.is_patch_deleted(idx))
+                    w.db.apply_patch(patch) catch continue;
             }
         }
         // Reapply pending patches
-        for (loaded.pending_patches.items) |patch| {
-            apply_single_patch(w.db, alloc, patch) catch continue;
-        }
+        for (loaded.pending_patches.items) |patch|
+            w.db.apply_patch(patch) catch continue;
     }
 
     // Refresh all views that depend on the database
@@ -2274,7 +2265,7 @@ fn on_database_changed(w: *RegzWindow) void {
     // Deinit old VFS and create new one
     w.vfs.deinit();
     w.vfs = .init(w.gpa);
-    w.db.to_zig(w.vfs.dir(), .{}) catch |err| {
+    regz.gen.to_zig(w.db, w.vfs.dir(), .{}) catch |err| {
         std.log.err("Failed to regenerate code: {}", .{err});
     };
 
@@ -2289,8 +2280,8 @@ fn on_database_changed(w: *RegzWindow) void {
     w.cached_diff = null;
 }
 
-/// Create an add_enum_and_apply patch from an equivalence group
-fn create_add_enum_and_apply_patch(
+/// Create an add_type_and_apply patch from an equivalence group
+fn create_add_type_and_apply_patch(
     alloc: Allocator,
     peripheral_name: []const u8,
     enum_name: []const u8,
@@ -2300,8 +2291,8 @@ fn create_add_enum_and_apply_patch(
     const parent = try std.fmt.allocPrint(alloc, "types.peripherals.{s}", .{peripheral_name});
 
     // Get the EnumField type from the Patch type using type introspection
-    const AddEnumAndApply = std.meta.TagPayload(regz.Patch, .add_enum_and_apply);
-    const EnumType = @TypeOf(@as(AddEnumAndApply, undefined).@"enum");
+    const AddEnumAndApply = std.meta.TagPayload(regz.Patch, .add_type_and_apply);
+    const EnumType = @TypeOf(@as(AddEnumAndApply, undefined).type.@"enum");
     const EnumFieldType = std.meta.Child(@TypeOf(@as(EnumType, undefined).fields));
 
     // Convert fields (note: Database.EnumField.value is u64, Patch.EnumField.value is u32)
@@ -2325,14 +2316,14 @@ fn create_add_enum_and_apply_patch(
     }
 
     return .{
-        .add_enum_and_apply = .{
+        .add_type_and_apply = .{
             .parent = parent,
-            .@"enum" = .{
-                .name = try alloc.dupe(u8, enum_name),
+            .type_name = try alloc.dupe(u8, enum_name),
+            .type = .{ .@"enum" = .{
                 .description = if (group.description) |d| try alloc.dupe(u8, d) else null,
                 .bitsize = group.size_bits,
                 .fields = fields,
-            },
+            } },
             .apply_to = apply_to,
         },
     };
@@ -2559,27 +2550,14 @@ fn validate_patch_file(w: *RegzWindow, arena: Allocator, patch_path: []const u8,
     // Apply original patches (excluding deleted ones)
     if (loaded.patches) |patches| {
         for (patches, 0..) |patch, idx| {
-            if (!loaded.is_patch_deleted(idx)) {
-                try apply_single_patch(db, arena, patch);
-            }
+            if (!loaded.is_patch_deleted(idx))
+                try db.apply_patch(patch);
         }
     }
 
     // Apply pending patches
-    for (loaded.pending_patches.items) |patch| {
-        try apply_single_patch(db, arena, patch);
-    }
-}
-
-/// Apply a single patch to a database
-fn apply_single_patch(db: *regz.Database, arena: Allocator, patch: regz.Patch) !void {
-    var zon_buf: std.Io.Writer.Allocating = .init(arena);
-    const patch_array: []const regz.Patch = &.{patch};
-    try std.zon.stringify.serialize(patch_array, .{}, &zon_buf.writer);
-    const zon_text = try arena.dupeZ(u8, zon_buf.written());
-
-    var diags: std.zon.parse.Diagnostics = .{};
-    try db.apply_patch(zon_text, &diags);
+    for (loaded.pending_patches.items) |patch|
+        try db.apply_patch(patch);
 }
 
 /// Write a patch file combining original (non-deleted) and pending patches

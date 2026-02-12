@@ -9,7 +9,7 @@ pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
-    ICSR: mmio.Mmio(packed struct(u32) {
+    ICSR: mmio.OldMmio(packed struct(u32) {
         VECTACTIVE: u9,
         reserved0: u2 = 0,
         RETTOBASE: u1,
@@ -28,7 +28,7 @@ pub const SystemControlBlock = extern struct {
     /// Vector Table Offset Register.
     VTOR: u32,
     /// Application Interrupt and Reset Control Register.
-    AIRCR: mmio.Mmio(packed struct {
+    AIRCR: mmio.OldMmio(packed struct {
         VECTRESET: u1,
         VECTCLRACTIVE: u1,
         SYSRESETREQ: u1,
@@ -39,7 +39,7 @@ pub const SystemControlBlock = extern struct {
         VECTKEY: u16,
     }),
     /// System Control Register.
-    SCR: mmio.Mmio(packed struct {
+    SCR: mmio.OldMmio(packed struct {
         reserved0: u1 = 0,
         SLEEPONEXIT: u1,
         SLEEPDEEP: u1,
@@ -48,7 +48,7 @@ pub const SystemControlBlock = extern struct {
         reserved2: u27 = 0,
     }),
     /// Configuration Control Register.
-    CCR: mmio.Mmio(packed struct(u32) {
+    CCR: mmio.OldMmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,
         reserved0: u1 = 0,
@@ -62,9 +62,9 @@ pub const SystemControlBlock = extern struct {
     /// System Handlers Priority Registers.
     SHPR: [3]u32,
     /// System Handler Control and State Register.
-    SHCSR: mmio.Mmio(shared.scb.SHCSR),
+    SHCSR: mmio.OldMmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
-    CFSR: mmio.Mmio(packed struct(u32) {
+    CFSR: mmio.OldMmio(packed struct(u32) {
         /// MemManage Fault Register.
         MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
@@ -73,7 +73,7 @@ pub const SystemControlBlock = extern struct {
         UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: mmio.Mmio(shared.scb.HFSR),
+    HFSR: mmio.OldMmio(shared.scb.HFSR),
     reserved1: u32 = 0,
     /// MemManage Fault Address Register.
     MMFAR: u32,
@@ -108,7 +108,7 @@ pub const NestedVectorInterruptController = extern struct {
 
 pub const MemoryProtectionUnit = extern struct {
     /// MPU Type Register
-    TYPE: mmio.Mmio(packed struct(u32) {
+    TYPE: mmio.OldMmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
         reserved0: u7 = 0,
@@ -119,7 +119,7 @@ pub const MemoryProtectionUnit = extern struct {
         reserved1: u8 = 0,
     }),
     /// MPU Control Register
-    CTRL: mmio.Mmio(packed struct(u32) {
+    CTRL: mmio.OldMmio(packed struct(u32) {
         /// Enables the MPU
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
@@ -129,7 +129,7 @@ pub const MemoryProtectionUnit = extern struct {
         reserved0: u29 = 0,
     }),
     /// MPU Region Number Register
-    RNR: mmio.Mmio(packed struct(u32) {
+    RNR: mmio.OldMmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
         reserved0: u24 = 0,
@@ -151,7 +151,7 @@ pub const MemoryProtectionUnit = extern struct {
     /// MPU Alias 3 Region Attribute and Size Register
     RASR_A3: RASR_Register,
 
-    pub const RBAR_Register = mmio.Mmio(packed struct(u32) {
+    pub const RBAR_Register = mmio.OldMmio(packed struct(u32) {
         /// MPU region field.
         REGION: u4,
         /// MPU region number valid bit.
@@ -160,7 +160,7 @@ pub const MemoryProtectionUnit = extern struct {
         ADDR: u27,
     });
 
-    pub const RASR_Register = mmio.Mmio(packed struct(u32) {
+    pub const RASR_Register = mmio.OldMmio(packed struct(u32) {
         /// Region enable bit.
         ENABLE: u1,
         /// Specifies the size of the MPU protection region.

@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const enums = @import("enums.zig");
-const periferals = microzig.chip.peripherals;
 
 const TIM_GP16 = microzig.chip.types.peripherals.timer_v1.TIM_GP16;
 const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
@@ -188,7 +187,7 @@ pub const GPTimer = struct {
         //disable timer before configuring
         self.clear_configs();
         self.set_update_event(false); //disable update event to prevent unwanted updates
-        regs.PSC = config.prescaler;
+        regs.PSC.raw = config.prescaler;
         regs.ARR.modify(.{ .ARR = config.auto_reload });
         regs.CR1.modify(.{
             .CKD = config.clock_division,

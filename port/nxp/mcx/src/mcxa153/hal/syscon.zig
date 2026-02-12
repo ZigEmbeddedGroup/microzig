@@ -15,12 +15,11 @@ pub fn enable_clock(comptime peripheral: Peripheral) void {
     defer freeze_clock_configuration();
 
     switch (peripheral.cc()) {
-        0 => chip.peripherals.MRCC0.MRCC_GLB_CC0_SET.write_raw(
+        0 => chip.peripherals.MRCC0.MRCC_GLB_CC0_SET.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_CC0_SET)) | peripheral.mask(),
-        ),
-        1 => chip.peripherals.MRCC0.MRCC_GLB_CC1_SET.write_raw(
+
+        1 => chip.peripherals.MRCC0.MRCC_GLB_CC1_SET.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_CC1_SET)) | peripheral.mask(),
-        ),
     }
 }
 
@@ -29,12 +28,11 @@ pub fn disable_clock(comptime peripheral: Peripheral) void {
     defer freeze_clock_configuration();
 
     switch (peripheral.cc()) {
-        0 => chip.peripherals.MRCC0.MRCC_GLB_CC0_CLR.write_raw(
+        0 => chip.peripherals.MRCC0.MRCC_GLB_CC0_CLR.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_CC0_CLR)) | peripheral.mask(),
-        ),
-        1 => chip.peripherals.MRCC0.MRCC_GLB_CC1_CLR.write_raw(
+
+        1 => chip.peripherals.MRCC0.MRCC_GLB_CC1_CLR.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_CC1_CLR)) | peripheral.mask(),
-        ),
     }
 }
 
@@ -43,12 +41,11 @@ pub fn reset_release(comptime peripheral: Peripheral) void {
     defer freeze_clock_configuration();
 
     switch (peripheral.cc()) {
-        0 => chip.peripherals.MRCC0.MRCC_GLB_RST0_SET.write_raw(
+        0 => chip.peripherals.MRCC0.MRCC_GLB_RST0_SET.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_RST0_SET)) | peripheral.mask(),
-        ),
-        1 => chip.peripherals.MRCC0.MRCC_GLB_RST1_SET.write_raw(
+
+        1 => chip.peripherals.MRCC0.MRCC_GLB_RST1_SET.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_RST1_SET)) | peripheral.mask(),
-        ),
     }
 }
 
@@ -57,12 +54,11 @@ pub fn reset_assert(comptime peripheral: Peripheral) void {
     defer freeze_clock_configuration();
 
     switch (peripheral.cc()) {
-        0 => chip.peripherals.MRCC0.MRCC_GLB_RST0_CLR.write_raw(
+        0 => chip.peripherals.MRCC0.MRCC_GLB_RST0_CLR.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_RST0_CLR)) | peripheral.mask(),
-        ),
-        1 => chip.peripherals.MRCC0.MRCC_GLB_RST1_CLR.write_raw(
+
+        1 => chip.peripherals.MRCC0.MRCC_GLB_RST1_CLR.raw =
             @as(u32, @bitCast(chip.peripherals.MRCC0.MRCC_GLB_RST1_CLR)) | peripheral.mask(),
-        ),
     }
 }
 

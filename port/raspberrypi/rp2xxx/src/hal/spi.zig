@@ -6,8 +6,6 @@ const SPI1_reg = peripherals.SPI1;
 
 const clocks = @import("clocks.zig");
 const dma = @import("dma.zig");
-const resets = @import("resets.zig");
-const time = @import("time.zig");
 const hw = @import("hw.zig");
 
 const SpiRegs = microzig.chip.types.peripherals.SPI0;
@@ -213,7 +211,7 @@ pub const SPI = enum(u1) {
         var count: usize = 0;
         while (spi.is_writable()) {
             const element = src_iter.next_element() orelse break;
-            spi_regs.SSPDR.write_raw(element.value);
+            spi_regs.SSPDR.raw = element.value;
             count += 1;
         }
         spi_regs.SSPCR1.modify(.{
@@ -230,7 +228,7 @@ pub const SPI = enum(u1) {
         });
         var tx_remaining = repeat_count;
         while (tx_remaining > 0 and spi.is_writable()) {
-            spi_regs.SSPDR.write_raw(repeated_byte);
+            spi_regs.SSPDR.raw = repeated_byte;
             tx_remaining -= 1;
         }
         spi_regs.SSPCR1.modify(.{
@@ -279,7 +277,7 @@ pub const SPI = enum(u1) {
         while (rx_remaining > 0 or tx_remaining > 0) {
             if (tx_remaining > 0 and spi.is_writable() and rx_remaining < tx_remaining + fifo_depth) {
                 const element = src_iter.next_element() orelse unreachable;
-                spi_regs.SSPDR.write_raw(element.value);
+                spi_regs.SSPDR.raw = element.value;
                 tx_remaining -= 1;
             }
             if (rx_remaining > 0 and spi.is_readable()) {
@@ -330,7 +328,7 @@ pub const SPI = enum(u1) {
             while (!spi.is_writable()) {
                 hw.tight_loop_contents();
             }
-            spi_regs.SSPDR.write_raw(element.value);
+            spi_regs.SSPDR.raw = element.value;
         }
 
         // Drain RX FIFO, then wait for shifting to finish (which may be *after*
@@ -387,7 +385,7 @@ pub const SPI = enum(u1) {
         tx_remaining -= spi.prime_tx_fifo_repeated(PacketType, repeated_tx_data, tx_remaining);
         while (rx_remaining > 0 or tx_remaining > 0) {
             if (tx_remaining > 0 and spi.is_writable() and rx_remaining < tx_remaining + fifo_depth) {
-                spi_regs.SSPDR.write_raw(repeated_tx_data);
+                spi_regs.SSPDR.raw = repeated_tx_data;
                 tx_remaining -= 1;
             }
             if (rx_remaining > 0 and spi.is_readable()) {
