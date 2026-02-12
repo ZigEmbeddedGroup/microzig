@@ -7,7 +7,6 @@ const wifi_options = microzig.options.hal.radio.wifi;
 const time = microzig.drivers.time;
 
 const radio = @import("../radio.zig");
-const rtos = @import("../rtos.zig");
 const osi = @import("osi.zig");
 
 const log = std.log.scoped(.esp_radio_wifi);
@@ -429,10 +428,12 @@ pub fn set_inactive_time(interface: Interface, inactive_time: u32) InternalError
     ));
 }
 
+/// Non-blocking.
 pub fn start() InternalError!void {
     try c_err(c.esp_wifi_start());
 }
 
+/// Non-blocking.
 pub fn stop() InternalError!void {
     try c_err(c.esp_wifi_stop());
 }
@@ -442,28 +443,9 @@ pub fn connect() InternalError!void {
     try c_err(c.esp_wifi_connect_internal());
 }
 
+/// Non-blocking.
 pub fn disconnect() InternalError!void {
     try c_err(c.esp_wifi_disconnect_internal());
-}
-
-pub fn start_blocking() InternalError!void {
-    const mode = try get_mode();
-    var events: EventSet = .initEmpty();
-    if (mode.is_sta()) events.setPresent(.StaStart, true);
-    if (mode.is_ap()) events.setPresent(.ApStart, true);
-    clear_events(events);
-    try start();
-    wait_for_all_events(events);
-}
-
-pub const ConnectError = error{FailedToConnect} || InternalError;
-
-pub fn connect_blocking() ConnectError!void {
-    const events: EventSet = .initMany(&.{ .StaConnected, .StaDisconnected });
-    clear_events(events);
-    try connect();
-    if (wait_for_any_event(events).contains(.StaDisconnected))
-        return error.FailedToConnect;
 }
 
 pub const EventType = enum(i32) {
@@ -678,61 +660,13 @@ pub const Event = union(EventType) {
     StaNeighborRep: c.wifi_event_neighbor_report_t,
 };
 
-pub const EventSet = std.EnumSet(EventType);
-
-var event_mutex: rtos.Mutex = .{};
-var event_condition: rtos.Condition = .{};
-var active_events: EventSet = .{};
-
-pub fn wait_for_any_event(events: EventSet) EventSet {
-    event_mutex.lock();
-    defer event_mutex.unlock();
-
-    while (true) {
-        const intersection = active_events.intersectWith(events);
-        if (intersection.count() > 0) return intersection;
-        event_condition.wait(&event_mutex);
-    }
-}
-
-pub fn wait_for_all_events(events: EventSet) void {
-    event_mutex.lock();
-    defer event_mutex.unlock();
-
-    while (!active_events.supersetOf(events)) {
-        event_condition.wait(&event_mutex);
-    }
-}
-
-pub fn wait_for_event(event: EventType) void {
-    event_mutex.lock();
-    defer event_mutex.unlock();
-
-    while (!active_events.contains(event)) {
-        event_condition.wait(&event_mutex);
-    }
-}
-
-pub fn clear_events(events: EventSet) void {
-    event_mutex.lock();
-    defer event_mutex.unlock();
-
-    active_events = active_events.differenceWith(events);
-}
-
 /// Internal function. Called by osi layer.
 pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
     const event_type: EventType = @enumFromInt(id);
     log.debug("event received: {t}", .{event_type});
 
     update_sta_state(event_type);
-
-    {
-        event_mutex.lock();
-        defer event_mutex.unlock();
-        active_events.setPresent(event_type, true);
-    }
-    event_condition.broadcast();
+    update_ap_state(event_type);
 
     const event = switch (event_type) {
         inline else => |tag| blk: {
@@ -768,17 +702,33 @@ pub const StaState = enum(u32) {
     }
 };
 
+pub const ApState = enum(u32) {
+    none,
+    started,
+    stopped,
+};
+
 var sta_state: std.atomic.Value(StaState) = .init(.none);
+var ap_state: std.atomic.Value(ApState) = .init(.none);
 
 fn update_sta_state(event: EventType) void {
     const new_sta_state: StaState = switch (event) {
         .StaStart => .started,
-        .StaConnected => .connected,
-        .StaDisconnected => .disconnected,
+        .StaConnected, .ApStaconnected => .connected,
+        .StaDisconnected, .ApStadisconnected => .disconnected,
         .StaStop => .stopped,
         else => return,
     };
     sta_state.store(new_sta_state, .monotonic);
+}
+
+fn update_ap_state(event: EventType) void {
+    const new_ap_state: ApState = switch (event) {
+        .ApStart => .started,
+        .StaStop => .stopped,
+        else => return,
+    };
+    ap_state.store(new_ap_state, .monotonic);
 }
 
 pub fn get_sta_state() StaState {

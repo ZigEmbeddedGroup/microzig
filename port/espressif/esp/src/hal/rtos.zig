@@ -20,13 +20,13 @@ const systimer = @import("systimer.zig");
 // task that was interrupted by force and vice versa. Because of the forced
 // yield, tasks are required to have a minimum stack size available at all
 // times.
+//
+// `hptw` stands for "high priority task woken".
 
-// TODO: trigger context switch if a higher priority is awaken in sync
-// primitives
+// TODO: reimplement TypeErasedQueue to store item_len
 // TODO: low power mode where tick interrupt is only triggered when necessary
 // TODO: investigate tick interrupt assembly and improve generated code
 // TODO: stack overflow detection
-// TODO: direct task signaling
 // TODO: implement std.Io
 // TODO: use @stackUpperBound when implemented
 // TODO: support SMP for other esp32 chips with multicore (far future)
@@ -84,10 +84,6 @@ pub const Priority = enum(@Type(.{ .int = .{
     _,
 
     pub const highest: @This() = @enumFromInt(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type));
-
-    pub fn next_higher(prio: Priority) Priority {
-        return @enumFromInt(@intFromEnum(prio) +| 1);
-    }
 };
 
 const ready_queue_use_buckets = !rtos_options.ready_queue_force_no_buckets and @bitSizeOf(@typeInfo(Priority).@"enum".tag_type) <= 5;
@@ -148,7 +144,9 @@ pub fn init() void {
     if (rtos_options.paint_stack_byte) |paint_byte| {
         @memset(&idle_stack, paint_byte);
     }
-    make_ready(&idle_task);
+
+    var _hptw = false;
+    make_ready(&idle_task, &_hptw);
 
     // unit0 is already enabled as it is used by `hal.time`.
     if (rtos_options.systimer_unit != .unit0) {
@@ -255,7 +253,9 @@ pub fn spawn(
     const cs = enter_critical_section();
     defer cs.leave();
 
-    make_ready(task);
+    var hptw = false;
+    make_ready(task, &hptw);
+    if (hptw) yield_from_cs(.reschedule);
 
     return task;
 }
@@ -268,7 +268,7 @@ pub fn wait_and_free(gpa: std.mem.Allocator, task: *Task) void {
         defer cs.leave();
         if (task.state != .exited) {
             task.awaiter = rtos_state.current_task;
-            yield(.wait);
+            yield_from_cs(.wait);
         }
     }
     // alloc_size = stack_end - task
@@ -278,7 +278,7 @@ pub fn wait_and_free(gpa: std.mem.Allocator, task: *Task) void {
 }
 
 /// Must execute inside a critical section.
-pub fn make_ready(task: *Task) linksection(".ram_text") void {
+pub fn make_ready(task: *Task, hptw: *bool) linksection(".ram_text") void {
     switch (task.state) {
         .ready, .running, .exited => return,
         .none, .suspended => {},
@@ -292,6 +292,17 @@ pub fn make_ready(task: *Task) linksection(".ram_text") void {
 
     task.state = .ready;
     rtos_state.ready_queue.put(task);
+    hptw.* |= @intFromEnum(task.priority) > @intFromEnum(rtos_state.current_task.priority);
+}
+
+pub fn change_priority(task: *Task, new_priority: Priority) void {
+    if (task.state == .ready) {
+        rtos_state.ready_queue.remove(task);
+    }
+    task.priority = new_priority;
+    if (task.state == .ready) {
+        rtos_state.ready_queue.put(task);
+    }
 }
 
 pub const YieldAction = union(enum) {
@@ -304,13 +315,16 @@ pub const YieldAction = union(enum) {
 pub inline fn yield(action: YieldAction) void {
     const cs = enter_critical_section();
     defer cs.leave();
+    yield_from_cs(action);
+}
 
+pub inline fn yield_from_cs(action: YieldAction) void {
     const current_task, const next_task = yield_inner(action);
     context_switch(&current_task.context, &next_task.context);
 }
 
 fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Task } {
-    assert(microzig.cpu.csr.mscratch.read_raw() == 0);
+    assert(!in_isr());
 
     const current_task = rtos_state.current_task;
     action: switch (action) {
@@ -359,7 +373,8 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
             current_task.state = .exited;
 
             if (current_task.awaiter) |awaiter| {
-                make_ready(awaiter);
+                awaiter.state = .ready;
+                rtos_state.ready_queue.put(awaiter);
             }
         },
     }
@@ -438,13 +453,6 @@ inline fn context_switch(prev_context: *Context, next_context: *Context) void {
 
 pub fn yield_from_isr() linksection(".ram_text") void {
     rtos_options.cpu_interrupt.set_pending(true);
-}
-
-pub fn is_a_higher_priority_task_ready() linksection(".ram_text") bool {
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    return @intFromEnum(rtos_state.ready_queue.max_ready_priority() orelse .idle) > @intFromEnum(rtos_state.current_task.priority);
 }
 
 pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
@@ -669,6 +677,10 @@ pub fn log_task_info(task: *Task) void {
     }
 }
 
+inline fn in_isr() bool {
+    return microzig.cpu.csr.mscratch.read_raw() != 0;
+}
+
 pub const Task = struct {
     name: ?[]const u8 = null,
 
@@ -680,7 +692,7 @@ pub const Task = struct {
     state: State = .none,
 
     /// Node used for rtos internal lists.
-    node: LinkedListNode = .{},
+    node: DoublyLinkedList.Node = .{},
 
     /// Ticks for when the task will wake.
     ticks: u32 = 0,
@@ -723,16 +735,27 @@ pub const ReadyTaskConstraint = union(enum) {
     none,
     at_least_prio: Priority,
     more_than_prio: Priority,
+
+    pub fn check(constraint: ReadyTaskConstraint, prio: Priority) bool {
+        switch (constraint) {
+            .none => {},
+            inline else => |constraint_priority, tag| {
+                if ((tag == .at_least_prio and @intFromEnum(prio) < @intFromEnum(constraint_priority)) or
+                    (tag == .more_than_prio and @intFromEnum(prio) <= @intFromEnum(constraint_priority)))
+                {
+                    return false;
+                }
+            },
+        }
+        return true;
+    }
 };
 
 pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
     const ReadySet = std.EnumSet(Priority);
 
     ready: ReadySet = .initEmpty(),
-    lists: std.EnumArray(Priority, LinkedList(.{
-        .use_last = true,
-        .use_prev = false,
-    })) = .initFill(.{}),
+    lists: std.EnumArray(Priority, DoublyLinkedList) = .initFill(.{}),
 
     pub fn max_ready_priority(pq: *ReadyPriorityQueue) ?Priority {
         const raw_prio = pq.ready.bits.findLastSet() orelse return null;
@@ -741,16 +764,8 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
 
     pub fn pop(pq: *ReadyPriorityQueue, constraint: ReadyTaskConstraint) ?*Task {
         const prio = pq.max_ready_priority() orelse return null;
-        switch (constraint) {
-            .none => {},
-            inline else => |constraint_priority, tag| {
-                if ((tag == .at_least_prio and @intFromEnum(prio) < @intFromEnum(constraint_priority)) or
-                    (tag == .more_than_prio and @intFromEnum(prio) <= @intFromEnum(constraint_priority)))
-                {
-                    return null;
-                }
-            },
-        }
+        if (!constraint.check(prio))
+            return null;
 
         const bucket = pq.lists.getPtr(prio);
 
@@ -770,6 +785,14 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         pq.lists.getPtr(new_task.priority).append(&new_task.node);
         pq.ready.setPresent(new_task.priority, true);
     }
+
+    pub fn remove(pq: *ReadyPriorityQueue, task: *Task) void {
+        const bucket = pq.lists.getPtr(task.priority);
+        bucket.remove(&task.node);
+        if (bucket.first == null) {
+            pq.ready.remove(task.priority);
+        }
+    }
 } else struct {
     inner: DoublyLinkedList = .{},
 
@@ -788,13 +811,10 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
             null;
     }
 
-    pub fn pop(pq: *ReadyPriorityQueue, maybe_more_than_prio: ?Priority) ?*Task {
+    pub fn pop(pq: *ReadyPriorityQueue, constraint: ReadyTaskConstraint) ?*Task {
         if (pq.peek_top()) |task| {
-            if (maybe_more_than_prio) |more_than_prio| {
-                if (@intFromEnum(task.priority) <= @intFromEnum(more_than_prio)) {
-                    return null;
-                }
-            }
+            if (!constraint.check(task.priority))
+                return null;
             pq.inner.remove(&task.node);
             return task;
         }
@@ -812,6 +832,10 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         } else {
             pq.inner.append(&new_task.node);
         }
+    }
+
+    pub fn remove(pq: *ReadyPriorityQueue, task: *Task) void {
+        pq.inner.remove(&task.node);
     }
 };
 
@@ -838,54 +862,36 @@ pub const Duration = enum(u32) {
     }
 };
 
-/// Must be used only from a critical section.
-pub const Timeout = struct {
-    end_ticks: u64,
-
-    pub fn after(duration: Duration) Timeout {
-        const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-        return .{
-            .end_ticks = current_ticks + duration.to_ticks(),
-        };
-    }
-
-    pub fn get_remaining_sleep_duration(timeout: Timeout) ?Duration {
-        const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-        const remaining = timeout.end_ticks -| current_ticks;
-        if (remaining == 0) return null;
-        return .from_ticks(@truncate(remaining));
-    }
-};
-
-pub const TimeoutError = error{Timeout};
-
 pub const PriorityWaitQueue = struct {
     list: DoublyLinkedList = .{},
 
     pub const Waiter = struct {
         task: *Task,
         priority: Priority,
-        node: LinkedListNode = .{},
+        node: DoublyLinkedList.Node = .{},
     };
 
-    /// Must execute inside a critical section.
-    pub fn wake_one(q: *PriorityWaitQueue) void {
+    /// Wakes one waiting task. Must execute inside a critical section.
+    pub fn wake_one(q: *PriorityWaitQueue, hptw: *bool) void {
         if (q.list.first) |first_node| {
             const waiter: *Waiter = @alignCast(@fieldParentPtr("node", first_node));
-            make_ready(waiter.task);
+            make_ready(waiter.task, hptw);
         }
     }
 
-    /// Must execute inside a critical section.
-    pub fn wake_all(q: *PriorityWaitQueue) void {
+    /// Wakes all waiting tasks. Must execute inside a critical section.
+    pub fn wake_all(q: *PriorityWaitQueue, hptw: *bool) void {
         while (q.list.pop_first()) |current_node| {
             const current_waiter: *Waiter = @alignCast(@fieldParentPtr("node", current_node));
-            make_ready(current_waiter.task);
+            make_ready(current_waiter.task, hptw);
         }
     }
 
-    /// Must execute inside a critical section.
-    pub fn wait(q: *PriorityWaitQueue, task: *Task, maybe_timeout_duration: ?Duration) void {
+    /// Puts the task to sleep. Must execute inside a critical section.
+    pub fn wait(q: *PriorityWaitQueue, maybe_timeout_duration: ?Duration) void {
+        assert(!in_isr());
+
+        const task = get_current_task();
         var waiter: Waiter = .{
             .task = task,
             .priority = task.priority,
@@ -903,12 +909,51 @@ pub const PriorityWaitQueue = struct {
         }
 
         if (maybe_timeout_duration) |duration| {
-            yield(.{ .sleep = duration });
+            yield_from_cs(.{ .sleep = duration });
         } else {
-            yield(.wait);
+            yield_from_cs(.wait);
         }
 
         q.list.remove(&waiter.node);
+    }
+};
+
+pub const TimeoutError = error{Timeout};
+
+pub const Timeout = union(enum) {
+    never,
+    after: Duration,
+    non_blocking,
+};
+
+/// Must be used only from a critical section.
+pub const ResolvedTimeout = enum(u64) {
+    non_blocking = std.math.maxInt(u64) - 1,
+    never = std.math.maxInt(u64),
+    _,
+
+    pub fn init(timeout: Timeout) ResolvedTimeout {
+        return switch (timeout) {
+            .non_blocking => .non_blocking,
+            .never => .never,
+            .after => |duration| blk: {
+                const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
+                break :blk @enumFromInt(current_ticks + duration.to_ticks());
+            },
+        };
+    }
+
+    pub fn tick(resolved_timeout: ResolvedTimeout) TimeoutError!?Duration {
+        return switch (resolved_timeout) {
+            .non_blocking => error.Timeout,
+            .never => null,
+            else => {
+                const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
+                const remaining = @intFromEnum(resolved_timeout) -| current_ticks;
+                if (remaining == 0) return error.Timeout;
+                return .from_ticks(@truncate(remaining));
+            },
+        };
     }
 };
 
@@ -918,38 +963,29 @@ pub const Mutex = struct {
     wait_queue: PriorityWaitQueue = .{},
 
     pub fn lock(mutex: *Mutex) void {
-        mutex.lock_with_timeout(null) catch unreachable;
+        mutex.lock_with_timeout(.never) catch unreachable;
     }
 
-    pub fn lock_with_timeout(mutex: *Mutex, maybe_timeout_after: ?Duration) TimeoutError!void {
+    pub fn lock_with_timeout(mutex: *Mutex, timeout: Timeout) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
         const current_task = get_current_task();
-
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
 
         assert(mutex.locked != current_task);
-
         while (mutex.locked) |owning_task| {
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return error.Timeout
-            else
-                null;
+            const maybe_remaining_duration = try resolved_timeout.tick();
 
             // Owning task inherits the priority of the current task if it the
             // current task has a bigger priority.
             if (@intFromEnum(current_task.priority) > @intFromEnum(owning_task.priority)) {
                 if (mutex.prev_priority == null)
                     mutex.prev_priority = owning_task.priority;
-                owning_task.priority = current_task.priority;
-                make_ready(owning_task);
+                change_priority(owning_task, current_task.priority);
             }
 
-            mutex.wait_queue.wait(current_task, maybe_remaining_duration);
+            mutex.wait_queue.wait(maybe_remaining_duration);
         }
 
         mutex.locked = current_task;
@@ -964,42 +1000,19 @@ pub const Mutex = struct {
 
     fn unlock_impl(mutex: *Mutex) void {
         const owning_task = mutex.locked.?;
+        assert(owning_task == get_current_task());
 
         // Restore the priority of the task
         if (mutex.prev_priority) |prev_priority| {
-            owning_task.priority = prev_priority;
+            change_priority(owning_task, prev_priority);
             mutex.prev_priority = null;
         }
 
         mutex.locked = null;
-        mutex.wait_queue.wake_one();
-    }
-};
 
-pub const Condition = struct {
-    wait_queue: PriorityWaitQueue = .{},
-
-    pub fn wait(cond: *Condition, mutex: *Mutex) void {
-        {
-            const cs = enter_critical_section();
-            defer cs.leave();
-            mutex.unlock_impl();
-            cond.wait_queue.wait(get_current_task(), null);
-        }
-
-        mutex.lock();
-    }
-
-    pub fn signal(cond: *Condition) void {
-        const cs = enter_critical_section();
-        defer cs.leave();
-        cond.wait_queue.wake_one();
-    }
-
-    pub fn broadcast(cond: *Condition) void {
-        const cs = enter_critical_section();
-        defer cs.leave();
-        cond.wait_queue.wake_all();
+        var hptw = false;
+        mutex.wait_queue.wake_one(&hptw);
+        if (hptw) yield_from_cs(.reschedule);
     }
 };
 
@@ -1019,24 +1032,17 @@ pub const Semaphore = struct {
     }
 
     pub fn take(sem: *Semaphore) void {
-        sem.take_with_timeout(null) catch unreachable;
+        sem.take_with_timeout(.never) catch unreachable;
     }
 
-    pub fn take_with_timeout(sem: *Semaphore, maybe_timeout_after: ?Duration) TimeoutError!void {
+    pub fn take_with_timeout(sem: *Semaphore, timeout: Timeout) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
-
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
         while (sem.current_value <= 0) {
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return error.Timeout
-            else
-                null;
-            sem.wait_queue.wait(rtos_state.current_task, maybe_remaining_duration);
+            const maybe_remaining_duration = try resolved_timeout.tick();
+            sem.wait_queue.wait(maybe_remaining_duration);
         }
 
         sem.current_value -= 1;
@@ -1046,31 +1052,40 @@ pub const Semaphore = struct {
         const cs = enter_critical_section();
         defer cs.leave();
 
+        var hptw = false;
+        sem.give_impl(&hptw);
+        if (hptw) yield_from_cs(.reschedule);
+    }
+
+    pub fn give_from_isr(sem: *Semaphore, hptw: *bool) void {
+        const cs = enter_critical_section();
+        defer cs.leave();
+
+        sem.give_impl(&hptw);
+    }
+
+    fn give_impl(sem: *Semaphore, hptw: *bool) void {
         sem.current_value += 1;
         if (sem.current_value > sem.max_value) {
             sem.current_value = sem.max_value;
         } else {
-            sem.wait_queue.wake_one();
+            sem.wait_queue.wake_one(hptw);
         }
     }
 };
 
 pub const TypeErasedQueue = struct {
     buffer: []u8,
-    start: usize,
-    len: usize,
+    start: usize = 0,
+    len: usize = 0,
 
-    putters: PriorityWaitQueue,
-    getters: PriorityWaitQueue,
+    putters: PriorityWaitQueue = .{},
+    getters: PriorityWaitQueue = .{},
 
     pub fn init(buffer: []u8) TypeErasedQueue {
         assert(buffer.len != 0); // buffer len must be greater than 0
         return .{
             .buffer = buffer,
-            .start = 0,
-            .len = 0,
-            .putters = .{},
-            .getters = .{},
         };
     }
 
@@ -1078,41 +1093,36 @@ pub const TypeErasedQueue = struct {
         q: *TypeErasedQueue,
         elements: []const u8,
         min: usize,
-        maybe_timeout_after: ?Duration,
+        timeout: Timeout,
     ) usize {
         assert(elements.len >= min);
         if (elements.len == 0) return 0;
 
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
-
-        var n: usize = 0;
-
         const cs = enter_critical_section();
         defer cs.leave();
 
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
+
+        var n: usize = 0;
         while (true) {
-            n += q.put_non_blocking_from_cs(elements[n..]);
+            var hptw = false;
+            n += q.put_non_blocking_from_cs(elements[n..], &hptw);
+            if (hptw) yield_from_cs(.reschedule);
+
             if (n >= min) return n;
 
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return n
-            else
-                null;
-            q.putters.wait(rtos_state.current_task, maybe_remaining_duration);
+            const maybe_remaining_duration = resolved_timeout.tick() catch return n;
+            q.putters.wait(maybe_remaining_duration);
         }
     }
 
-    pub fn put_non_blocking(q: *TypeErasedQueue, elements: []const u8) usize {
+    pub fn put_from_isr(q: *TypeErasedQueue, elements: []const u8, hptw: *bool) usize {
         const cs = enter_critical_section();
         defer cs.leave();
-
-        return q.put_non_blocking_from_cs(elements);
+        return q.put_non_blocking_from_cs(elements, hptw);
     }
 
-    fn put_non_blocking_from_cs(q: *TypeErasedQueue, elements: []const u8) usize {
+    fn put_non_blocking_from_cs(q: *TypeErasedQueue, elements: []const u8, hptw: *bool) usize {
         var n: usize = 0;
         while (q.puttable_slice()) |slice| {
             const copy_len = @min(slice.len, elements.len - n);
@@ -1122,7 +1132,7 @@ pub const TypeErasedQueue = struct {
             n += copy_len;
             if (n == elements.len) break;
         }
-        if (n > 0) q.getters.wake_one();
+        if (n > 0) q.getters.wake_one(hptw);
         return n;
     }
 
@@ -1140,41 +1150,30 @@ pub const TypeErasedQueue = struct {
         q: *TypeErasedQueue,
         buffer: []u8,
         min: usize,
-        maybe_timeout_after: ?Duration,
+        timeout: Timeout,
     ) usize {
         assert(buffer.len >= min);
         if (buffer.len == 0) return 0;
 
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
-
-        var n: usize = 0;
-
         const cs = enter_critical_section();
         defer cs.leave();
 
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
+
+        var n: usize = 0;
         while (true) {
-            n += q.get_non_blocking_from_cs(buffer[n..]);
+            var hptw = false;
+            n += q.get_non_blocking_from_cs(buffer[n..], &hptw);
+            if (hptw) yield_from_cs(.reschedule);
+
             if (n >= min) return n;
 
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return n
-            else
-                null;
-            q.getters.wait(rtos_state.current_task, maybe_remaining_duration);
+            const maybe_remaining_duration = resolved_timeout.tick() catch return n;
+            q.getters.wait(maybe_remaining_duration);
         }
     }
 
-    pub fn get_non_blocking(q: *TypeErasedQueue, buffer: []u8) usize {
-        const cs = enter_critical_section();
-        defer cs.leave();
-
-        return q.get_non_blocking_from_cs(buffer);
-    }
-
-    fn get_non_blocking_from_cs(q: *TypeErasedQueue, buffer: []u8) usize {
+    fn get_non_blocking_from_cs(q: *TypeErasedQueue, buffer: []u8, hptw: *bool) usize {
         var n: usize = 0;
         while (q.gettable_slice()) |slice| {
             const copy_len = @min(slice.len, buffer.len - n);
@@ -1186,7 +1185,7 @@ pub const TypeErasedQueue = struct {
             n += copy_len;
             if (n == buffer.len) break;
         }
-        if (n > 0) q.putters.wake_one();
+        if (n > 0) q.putters.wake_one(hptw);
         return n;
     }
 
@@ -1207,46 +1206,37 @@ pub fn Queue(Elem: type) type {
             return .{ .type_erased = .init(@ptrCast(buffer)) };
         }
 
-        pub fn put(q: *Self, elements: []const Elem, min: usize, timeout: ?Duration) usize {
+        pub fn put(q: *Self, elements: []const Elem, min: usize, timeout: Timeout) usize {
             return @divExact(q.type_erased.put(@ptrCast(elements), min * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn put_all(q: *Self, elements: []const Elem, timeout: ?Duration) TimeoutError!void {
+        pub fn put_from_isr(q: *Self, elements: []const Elem, hptw: *bool) usize {
+            return @divExact(q.type_erased.put_from_isr(@ptrCast(elements), hptw), @sizeOf(Elem));
+        }
+
+        pub fn put_all(q: *Self, elements: []const Elem, timeout: Timeout) TimeoutError!void {
             if (q.put(elements, elements.len, timeout) != elements.len)
                 return error.Timeout;
         }
 
-        pub fn put_one(q: *Self, item: Elem, timeout: ?Duration) TimeoutError!void {
+        pub fn put_one(q: *Self, item: Elem, timeout: Timeout) TimeoutError!void {
             if (q.put(&.{item}, 1, timeout) != 1)
                 return error.Timeout;
         }
 
-        pub fn put_non_blocking(q: *Self, elements: []const Elem) usize {
-            return @divExact(q.type_erased.put_non_blocking(@ptrCast(elements)), @sizeOf(Elem));
+        pub fn put_one_from_isr(q: *Self, item: Elem, hptw: *bool) bool {
+            return q.put_from_isr(&.{item}, hptw) == 1;
         }
 
-        pub fn put_one_non_blocking(q: *Self, item: Elem) bool {
-            return q.put_non_blocking(@ptrCast(&item)) == 1;
-        }
-
-        pub fn get(q: *Self, buffer: []Elem, target: usize, timeout: ?Duration) usize {
+        pub fn get(q: *Self, buffer: []Elem, target: usize, timeout: Timeout) usize {
             return @divExact(q.type_erased.get(@ptrCast(buffer), target * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn get_one(q: *Self, timeout: ?Duration) TimeoutError!Elem {
+        pub fn get_one(q: *Self, timeout: Timeout) TimeoutError!Elem {
             var buf: [1]Elem = undefined;
             if (q.get(&buf, 1, timeout) != 1)
                 return error.Timeout;
             return buf[0];
-        }
-
-        pub fn get_one_non_blocking(q: *Self) ?Elem {
-            var buf: [1]Elem = undefined;
-            if (q.type_erased.get_non_blocking(@ptrCast(&buf)) == 1) {
-                return buf[0];
-            } else {
-                return null;
-            }
         }
 
         pub fn capacity(q: *const Self) usize {
@@ -1255,191 +1245,159 @@ pub fn Queue(Elem: type) type {
     };
 }
 
-pub const LinkedListNode = struct {
-    prev: ?*LinkedListNode = null,
-    next: ?*LinkedListNode = null,
-};
-
-pub const DoublyLinkedList = LinkedList(.{
-    .use_last = true,
-    .use_prev = true,
-});
-
-pub const LinkedListCapabilities = struct {
-    use_last: bool = true,
-    use_prev: bool = true,
-};
-
-pub fn LinkedList(comptime caps: LinkedListCapabilities) type {
+pub fn Signal(T: type) type {
     return struct {
         const Self = @This();
 
-        first: ?*LinkedListNode = null,
-        last: if (caps.use_last) ?*LinkedListNode else noreturn = null,
+        value: ?T = null,
+        awaiter: ?*Task = null,
 
-        pub const append = if (caps.use_last) struct {
-            fn append(ll: *Self, node: *LinkedListNode) void {
-                if (caps.use_prev) node.prev = ll.last;
-                node.next = null;
-                if (ll.last) |last| {
-                    last.next = node;
-                    ll.last = node;
-                } else {
-                    ll.first = node;
-                    ll.last = node;
-                }
-            }
-        }.append else @compileError("linked list does not support append");
+        pub fn put(s: *Self, value: T) void {
+            const cs = enter_critical_section();
+            defer cs.leave();
 
-        pub fn prepend(ll: *Self, node: *LinkedListNode) void {
-            if (caps.use_prev) {
-                node.prev = null;
-                if (ll.first) |first| {
-                    first.prev = node;
-                }
-            }
-            node.next = ll.first;
-            if (caps.use_last and ll.first == null) {
-                ll.last = node;
-            }
-            ll.first = node;
+            var hptw = false;
+            s.put_impl(value, &hptw);
+            if (hptw) yield_from_cs(.reschedule);
         }
 
-        pub fn pop_first(ll: *Self) ?*LinkedListNode {
-            if (ll.first) |first| {
-                ll.first = first.next;
-                if (caps.use_last) {
-                    if (ll.last == first) {
-                        ll.last = null;
-                    }
-                }
-                if (caps.use_prev) {
-                    if (ll.first) |new_first| {
-                        new_first.prev = null;
-                    }
-                }
-                return first;
-            } else return null;
+        pub fn put_from_isr(s: *Self, value: T, hptw: *bool) void {
+            const cs = enter_critical_section();
+            defer cs.leave();
+
+            s.put_impl(value, hptw);
         }
 
-        pub const insert_before = if (caps.use_prev) struct {
-            pub fn insert_before(ll: *Self, existing_node: *LinkedListNode, new_node: *LinkedListNode) void {
-                new_node.next = existing_node;
-                if (existing_node.prev) |prev_node| {
-                    // Intermediate node.
-                    new_node.prev = prev_node;
-                    prev_node.next = new_node;
-                } else {
-                    // First element of the list.
-                    new_node.prev = null;
-                    ll.first = new_node;
-                }
-                existing_node.prev = new_node;
+        fn put_impl(s: *Self, value: T, hptw: *bool) void {
+            s.value = value;
+            if (s.awaiter) |awaiter| {
+                make_ready(awaiter, hptw);
             }
-        }.insert_before else @compileError("linked list does not support insert_before");
+        }
 
-        pub const remove = if (caps.use_prev) struct {
-            pub fn remove(ll: *Self, node: *LinkedListNode) void {
-                if (node.prev) |prev_node| {
-                    // Intermediate node.
-                    prev_node.next = node.next;
-                } else {
-                    // First element of the list.
-                    ll.first = node.next;
-                }
+        pub fn clear(s: *Self) void {
+            const cs = enter_critical_section();
+            defer cs.leave();
+            s.value = null;
+        }
 
-                if (node.next) |next_node| {
-                    // Intermediate node.
-                    next_node.prev = node.prev;
+        pub fn wait(s: *Self) T {
+            return s.wait_with_timeout(.never) catch unreachable;
+        }
+
+        pub fn wait_with_timeout(s: *Self, timeout: Timeout) TimeoutError!T {
+            assert(s.awaiter == null);
+
+            const cs = enter_critical_section();
+            defer cs.leave();
+
+            const resolved_timeout: ResolvedTimeout = .init(timeout);
+
+            s.awaiter = get_current_task();
+            while (s.value == null) {
+                const maybe_remaining_duration = try resolved_timeout.tick();
+                if (maybe_remaining_duration) |remaining_duration| {
+                    yield_from_cs(.{ .sleep = remaining_duration });
                 } else {
-                    // Last element of the list.
-                    if (caps.use_last) ll.last = node.prev;
+                    yield_from_cs(.wait);
                 }
             }
-        }.remove else @compileError("linked list does not support remove");
+
+            const value = s.value.?;
+            s.value = null;
+            s.awaiter = null;
+            return value;
+        }
     };
 }
 
-test "LinkedList.with_last" {
-    const expect = std.testing.expect;
-    const TestNode = struct {
-        data: i32,
-        node: LinkedListNode = .{},
+pub const DoublyLinkedList = struct {
+    first: ?*Node = null,
+    last: ?*Node = null,
+
+    pub const Node = struct {
+        prev: ?*Node = null,
+        next: ?*Node = null,
     };
 
-    var list: LinkedList(.{
-        .use_prev = false,
-        .use_last = true,
-    }) = .{};
-
-    var n1: TestNode = .{ .data = 1 };
-    var n2: TestNode = .{ .data = 2 };
-    var n3: TestNode = .{ .data = 3 };
-
-    // 1. Test Append on empty
-    list.append(&n1.node);
-
-    // State: [1]
-    try expect(list.first == &n1.node);
-    try expect(list.last == &n1.node);
-    try expect(n1.node.next == null);
-
-    // 2. Test Append on existing
-    list.append(&n2.node);
-
-    // State: [1, 2]
-    try expect(list.first == &n1.node);
-    try expect(list.last == &n2.node);
-    try expect(n1.node.next == &n2.node);
-    try expect(n2.node.next == null);
-
-    // 3. Test Prepend
-    list.prepend(&n3.node);
-
-    // State: [3, 1, 2]
-    try expect(list.first == &n3.node);
-    try expect(list.last == &n2.node);
-    try expect(n3.node.next == &n1.node);
-
-    // 4. Test Pop (FIFO if we pop from head)
-    const p1 = list.pop_first();
-
-    // State: [1, 2]
-    try expect(p1 == &n3.node);
-    try expect(list.first == &n1.node);
-
-    if (p1) |node_ptr| {
-        const parent: *TestNode = @fieldParentPtr("node", node_ptr);
-        try expect(parent.data == 3);
+    pub fn append(ll: *DoublyLinkedList, node: *Node) void {
+        node.prev = ll.last;
+        node.next = null;
+        if (ll.last) |last| {
+            last.next = node;
+            ll.last = node;
+        } else {
+            ll.first = node;
+            ll.last = node;
+        }
     }
 
-    const p2 = list.pop_first();
-    // State: [2]
-    try expect(p2 == &n1.node);
-    try expect(list.first == &n2.node);
-    try expect(list.last == &n2.node);
+    pub fn prepend(ll: *DoublyLinkedList, node: *Node) void {
+        node.prev = null;
+        if (ll.first) |first| {
+            first.prev = node;
+        }
+        node.next = ll.first;
+        if (ll.first == null) {
+            ll.last = node;
+        }
+        ll.first = node;
+    }
 
-    const p3 = list.pop_first();
-    // State: []
-    try expect(p3 == &n2.node);
-    try expect(list.first == null);
-    try expect(list.last == null);
+    pub fn pop_first(ll: *DoublyLinkedList) ?*Node {
+        if (ll.first) |first| {
+            ll.first = first.next;
+            if (ll.last == first) {
+                ll.last = null;
+            }
+            if (ll.first) |new_first| {
+                new_first.prev = null;
+            }
+            return first;
+        } else return null;
+    }
 
-    // 5. Test Pop on empty
-    try expect(list.pop_first() == null);
-}
+    pub fn insert_before(ll: *DoublyLinkedList, existing_node: *Node, new_node: *Node) void {
+        new_node.next = existing_node;
+        if (existing_node.prev) |prev_node| {
+            // Intermediate node.
+            new_node.prev = prev_node;
+            prev_node.next = new_node;
+        } else {
+            // First element of the list.
+            new_node.prev = null;
+            ll.first = new_node;
+        }
+        existing_node.prev = new_node;
+    }
+
+    pub fn remove(ll: *DoublyLinkedList, node: *Node) void {
+        if (node.prev) |prev_node| {
+            // Intermediate node.
+            prev_node.next = node.next;
+        } else {
+            // First element of the list.
+            ll.first = node.next;
+        }
+
+        if (node.next) |next_node| {
+            // Intermediate node.
+            next_node.prev = node.prev;
+        } else {
+            // Last element of the list.
+            ll.last = node.prev;
+        }
+    }
+};
 
 test "LinkedList.doubly_linked" {
     const expect = std.testing.expect;
     const TestNode = struct {
         data: i32,
-        node: LinkedListNode = .{},
+        node: DoublyLinkedList.Node = .{},
     };
 
-    var list: LinkedList(.{
-        .use_prev = true,
-        .use_last = true,
-    }) = .{};
+    var list: DoublyLinkedList = .{};
 
     var n1: TestNode = .{ .data = 10 };
     var n2: TestNode = .{ .data = 20 };

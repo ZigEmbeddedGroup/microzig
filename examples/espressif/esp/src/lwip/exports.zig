@@ -113,16 +113,13 @@ export fn sys_mbox_set_invalid(ptr: *c.sys_mbox_t) void {
 
 export fn sys_mbox_post(ptr: *c.sys_mbox_t, element: MailboxElement) void {
     const mailbox: *Mailbox = @ptrCast(@alignCast(ptr.*));
-    mailbox.put_one(element, null) catch unreachable;
+    mailbox.put_one(element, .never) catch unreachable;
 }
 
 export fn sys_mbox_trypost(ptr: *c.sys_mbox_t, element: MailboxElement) c.err_t {
     const mailbox: *Mailbox = @ptrCast(@alignCast(ptr.*));
-    if (mailbox.put_one_non_blocking(element)) {
-        return c.ERR_OK;
-    } else {
-        return c.ERR_MEM;
-    }
+    mailbox.put_one(element, .non_blocking) catch return c.ERR_MEM;
+    return c.ERR_OK;
 }
 
 comptime {
@@ -132,7 +129,7 @@ comptime {
 export fn sys_arch_mbox_fetch(ptr: *c.sys_mbox_t, element_ptr: *MailboxElement, timeout: u32) u32 {
     const mailbox: *Mailbox = @ptrCast(@alignCast(ptr.*));
     const now = esp.time.get_time_since_boot();
-    element_ptr.* = mailbox.get_one(if (timeout != 0) .from_ms(timeout) else null) catch {
+    element_ptr.* = mailbox.get_one(if (timeout != 0) .{ .after = .from_ms(timeout) } else .never) catch {
         return c.SYS_ARCH_TIMEOUT;
     };
     // returns waiting time in ms
@@ -141,12 +138,9 @@ export fn sys_arch_mbox_fetch(ptr: *c.sys_mbox_t, element_ptr: *MailboxElement, 
 
 export fn sys_arch_mbox_tryfetch(ptr: *c.sys_mbox_t, element_ptr: *MailboxElement) u32 {
     const mailbox: *Mailbox = @ptrCast(@alignCast(ptr.*));
-    if (mailbox.get_one_non_blocking()) |element| {
-        element_ptr.* = element;
-        return 0;
-    } else {
-        return c.SYS_MBOX_EMPTY;
-    }
+    const element = mailbox.get_one(.non_blocking) catch return c.SYS_MBOX_EMPTY;
+    element_ptr.* = element;
+    return 0;
 }
 
 export fn sys_sem_new(ptr: *c.sys_sem_t, count: u8) c.err_t {
@@ -172,7 +166,7 @@ export fn sys_sem_signal(ptr: *c.sys_sem_t) void {
 export fn sys_arch_sem_wait(ptr: *c.sys_sem_t, timeout: u32) u32 {
     const sem: *rtos.Semaphore = @ptrCast(@alignCast(ptr.*));
     const now = esp.time.get_time_since_boot();
-    sem.take_with_timeout(if (timeout != 0) .from_ms(timeout) else null) catch {
+    sem.take_with_timeout(if (timeout != 0) .{ .after = .from_ms(timeout) } else .never) catch {
         return c.SYS_ARCH_TIMEOUT;
     };
     // returns waiting time in ms

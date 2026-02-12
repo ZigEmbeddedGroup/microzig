@@ -26,7 +26,7 @@ pub const microzig_options: microzig.Options = .{
 
 fn task1(queue: *rtos.Queue(u32)) void {
     for (0..5) |i| {
-        queue.put_one(i, null) catch unreachable;
+        queue.put_one(i, .never) catch unreachable;
         rtos.sleep(.from_ms(500));
     }
 }
@@ -44,7 +44,7 @@ pub fn main() !void {
     defer rtos.wait_and_free(gpa, task);
 
     while (true) {
-        const item = try queue.get_one(.from_ms(1000));
+        const item = try queue.get_one(.{ .after = .from_ms(1000) });
         std.log.info("got item: {}", .{item});
     }
 }
