@@ -306,32 +306,52 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
             });
 
             for (obj.object.get("items").?.array.items) |item| {
+                var register_ids: std.ArrayList(Database.RegisterID) = .empty;
+                defer register_ids.deinit(allocator);
                 const register_name = item.object.get("name").?.string;
                 const description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
-                const byte_offset = item.object.get("byte_offset").?.integer;
+                const byte_offset: u64 = @intCast(item.object.get("byte_offset").?.integer);
                 const item_bit_size = if (item.object.get("bit_size")) |v| v.integer else 32;
-
-                const register_id = try db.create_register(group_id, .{
-                    .name = register_name,
-                    .description = description,
-                    .offset_bytes = @intCast(byte_offset),
-                    .size_bits = @intCast(item_bit_size),
-                    .count = if (item.object.get("array")) |array| blk: {
-                        if (array.object.get("len")) |count| {
-                            // ensure stride is always 4 for now, assuming that
-                            // it's in bytes
-                            const stride = array.object.get("stride").?.integer;
-                            if (stride != 4) {
-                                std.log.warn("ignoring register array with unsupported stride: {} != 4 for register {s} in {s} in {s}", .{ stride, register_name, key["block/".len..], name });
-                                break :blk null;
+                const maybe_count: ?u64, const maybe_stride: ?u64 = if (item.object.get("array")) |array| blk: {
+                    if (array.object.get("len")) |count| {
+                        if (array.object.get("stride")) |stride| {
+                            if (stride.integer > 4) {
+                                break :blk .{ @intCast(count.integer), @intCast(stride.integer) };
                             }
-
-                            break :blk @intCast(count.integer);
                         }
+                        break :blk .{ @intCast(count.integer), null };
+                    }
 
-                        break :blk null;
-                    } else null,
-                });
+                    break :blk .{ null, null };
+                } else .{ null, null };
+
+                if (maybe_stride) |stride| {
+                    if (maybe_count) |count| {
+                        for (0..count) |id| {
+                            const register_part_name = try std.fmt.allocPrint(allocator, "{s}[{d}]", .{
+                                register_name,
+                                id,
+                            });
+                            const register_id = try db.create_register(group_id, .{
+                                .name = register_part_name,
+                                .description = description,
+                                .offset_bytes = byte_offset + (id * stride),
+                                .size_bits = @intCast(item_bit_size),
+                                .count = null,
+                            });
+                            try register_ids.append(allocator, register_id);
+                        }
+                    }
+                } else {
+                    const register_id = try db.create_register(group_id, .{
+                        .name = register_name,
+                        .description = description,
+                        .offset_bytes = @intCast(byte_offset),
+                        .size_bits = @intCast(item_bit_size),
+                        .count = maybe_count,
+                    });
+                    try register_ids.append(allocator, register_id);
+                }
 
                 if (item.object.get("fieldset")) |fieldset| blk: {
                     const fieldset_key = try std.fmt.allocPrint(allocator, "fieldset/{s}", .{fieldset.string});
@@ -356,7 +376,7 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
                                     // these are evenly spaced and much nicer to work with.
 
                                     array_count = if (object_map.get("len")) |len| @intCast(len.integer) else null;
-                                    array_stride = if (object_map.get("stride")) |stride| @intCast(stride.integer) else null;
+                                    array_stride = if (object_map.get("stride")) |field_stride| @intCast(field_stride.integer) else null;
 
                                     // This category where there is an array of items, but it is given by
                                     // individual offsets as opposed to a count + stride. This is used when strides are
@@ -365,30 +385,32 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
                                     if (object_map.get("offsets")) |positions| {
                                         for (positions.array.items, 0..) |position, idx| {
                                             const field_name_irregular_stride = try std.fmt.allocPrint(allocator, "{s}[{}]", .{ field_name, idx });
-
-                                            try db.add_register_field(register_id, .{
-                                                .name = field_name_irregular_stride,
-                                                .description = field_description,
-                                                .offset_bits = @intCast(position.integer + bit_offset),
-                                                .size_bits = @intCast(bit_size),
-                                                .enum_id = enum_id,
-                                                .count = null,
-                                                .stride = null,
-                                            });
+                                            for (register_ids.items) |register_id| {
+                                                try db.add_register_field(register_id, .{
+                                                    .name = field_name_irregular_stride,
+                                                    .description = field_description,
+                                                    .offset_bits = @intCast(position.integer + bit_offset),
+                                                    .size_bits = @intCast(bit_size),
+                                                    .enum_id = enum_id,
+                                                    .count = null,
+                                                    .stride = null,
+                                                });
+                                            }
                                         }
                                         continue :next_field;
                                     }
                                 }
-
-                                try db.add_register_field(register_id, .{
-                                    .name = field_name,
-                                    .description = field_description,
-                                    .offset_bits = @intCast(bit_offset),
-                                    .size_bits = @intCast(bit_size),
-                                    .enum_id = enum_id,
-                                    .count = array_count,
-                                    .stride = array_stride,
-                                });
+                                for (register_ids.items) |register_id| {
+                                    try db.add_register_field(register_id, .{
+                                        .name = field_name,
+                                        .description = field_description,
+                                        .offset_bits = @intCast(bit_offset),
+                                        .size_bits = @intCast(bit_size),
+                                        .enum_id = enum_id,
+                                        .count = array_count,
+                                        .stride = array_stride,
+                                    });
+                                }
                             },
                             .array => |arr| {
                                 // This case is for discontinuous fields where the first few bits are
@@ -411,18 +433,19 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
                                     var array_stride: ?u8 = null;
                                     if (field.object.get("array")) |array| {
                                         array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
-                                        array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
+                                        array_stride = if (array.object.get("stride")) |field_stride| @intCast(field_stride.integer) else null;
                                     }
-
-                                    try db.add_register_field(register_id, .{
-                                        .name = non_contiguous_field_name,
-                                        .description = field_description,
-                                        .offset_bits = @intCast(bit_offset),
-                                        .size_bits = @intCast(bit_size),
-                                        .enum_id = enum_id,
-                                        .count = array_count,
-                                        .stride = array_stride,
-                                    });
+                                    for (register_ids.items) |register_id| {
+                                        try db.add_register_field(register_id, .{
+                                            .name = non_contiguous_field_name,
+                                            .description = field_description,
+                                            .offset_bits = @intCast(bit_offset),
+                                            .size_bits = @intCast(bit_size),
+                                            .enum_id = enum_id,
+                                            .count = array_count,
+                                            .stride = array_stride,
+                                        });
+                                    }
                                 }
                             },
                             else => |val| {
@@ -603,4 +626,3 @@ const std = @import("std");
 const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 const arm = @import("arch/arm.zig");
-const FS_Directory = @import("FS_Directory.zig");
