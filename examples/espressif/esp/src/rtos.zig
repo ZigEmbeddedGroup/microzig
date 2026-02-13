@@ -1,11 +1,7 @@
 const std = @import("std");
-const log = std.log;
 
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
 const esp = microzig.hal;
-const gpio = esp.gpio;
-const systimer = esp.systimer;
 const usb_serial_jtag = esp.usb_serial_jtag;
 const rtos = esp.rtos;
 

@@ -1,18 +1,12 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const Allocator = std.mem.Allocator;
 const log = std.log.scoped(.rtos);
-const builtin = @import("builtin");
 
 const microzig = @import("microzig");
-const CriticalSection = microzig.interrupt.CriticalSection;
 const enter_critical_section = microzig.interrupt.enter_critical_section;
 const TrapFrame = microzig.cpu.TrapFrame;
-const SYSTEM = microzig.chip.peripherals.SYSTEM;
-const time = microzig.drivers.time;
 const rtos_options = microzig.options.hal.rtos;
 
-const get_time_since_boot = @import("time.zig").get_time_since_boot;
 const system = @import("system.zig");
 const systimer = @import("systimer.zig");
 
