@@ -28,7 +28,7 @@ export fn lwip_assert_core_locked() void {
     if (c.lock_tcpip_core == null) return;
 
     const mutex: *rtos.Mutex = @ptrCast(@alignCast(c.lock_tcpip_core));
-    assert(mutex.locked != null);
+    std.debug.assert(mutex.locked != null);
 }
 
 export fn lwip_rand() u32 {
