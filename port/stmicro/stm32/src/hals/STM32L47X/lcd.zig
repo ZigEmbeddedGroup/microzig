@@ -23,8 +23,8 @@ const LCD_RAM = extern struct {
 };
 
 // LCD RAM is not correctly defined in the stm32-data from embassy
-// The high segments are inside a reserved space.
-const ram: *volatile LCD_RAM = @ptrCast(&LCD.@"RAM_COM[0]");
+// The high segments occupy the full 32 bit but is limited a few lsb.
+const ram: *volatile LCD_RAM = @ptrCast(&LCD.RAM_COM);
 
 pub fn init_lcd() void {
     LCD.CR.modify(.{

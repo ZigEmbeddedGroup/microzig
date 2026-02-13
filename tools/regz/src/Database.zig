@@ -130,6 +130,7 @@ pub const Register = struct {
     struct_id: ?StructID,
     name: []const u8,
     description: ?[]const u8,
+    ref_type: ?[]const u8,
     size_bits: u64,
     offset_bytes: u64,
     count: ?u64,
@@ -147,17 +148,19 @@ pub const Register = struct {
     pub fn from_row(allocator: Allocator, row: zqlite.Row) !Register {
         const name = try allocator.dupe(u8, row.text(2));
         const description: ?[]const u8 = if (row.nullableText(3)) |text| try allocator.dupe(u8, text) else null;
+        const ref_type: ?[]const u8 = if (row.nullableText(4)) |text| try allocator.dupe(u8, text) else null;
         return Register{
             .id = @enumFromInt(row.int(0)),
             .struct_id = if (row.nullableInt(1)) |value| @enumFromInt(value) else null,
             .name = name,
             .description = description,
-            .size_bits = @intCast(row.int(4)),
-            .offset_bytes = @intCast(row.int(5)),
-            .count = if (row.nullableInt(6)) |value| @intCast(value) else null,
-            .access = std.meta.stringToEnum(Access, row.text(7)) orelse return error.InvalidAccess,
-            .reset_mask = if (row.nullableInt(8)) |value| @intCast(value) else null,
-            .reset_value = if (row.nullableInt(9)) |value| @intCast(value) else null,
+            .ref_type = ref_type,
+            .size_bits = @intCast(row.int(5)),
+            .offset_bytes = @intCast(row.int(6)),
+            .count = if (row.nullableInt(7)) |value| @intCast(value) else null,
+            .access = std.meta.stringToEnum(Access, row.text(8)) orelse return error.InvalidAccess,
+            .reset_mask = if (row.nullableInt(9)) |value| @intCast(value) else null,
+            .reset_value = if (row.nullableInt(10)) |value| @intCast(value) else null,
         };
     }
 
@@ -1705,6 +1708,7 @@ pub const CreateRegisterOptions = struct {
     // make name required for now
     name: []const u8,
     description: ?[]const u8 = null,
+    ref_type: ?[]const u8 = null,
     /// offset is in bytes
     offset_bytes: u64,
     /// size is in bits
@@ -1736,13 +1740,14 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
     const register_id: RegisterID = blk: {
         const row = try db.conn.row(
             \\INSERT INTO registers
-            \\  (name, description, offset_bytes, size_bits, count, access, reset_mask, reset_value)
+            \\  (name, description, ref_type, offset_bytes, size_bits, count, access, reset_mask, reset_value)
             \\VALUES
-            \\  (?, ?, ?, ?, ?, ?, ?, ?)
+            \\  (?, ?, ?, ?, ?, ?, ?, ?, ?)
             \\RETURNING id
         , .{
             opts.name,
             opts.description,
+            opts.ref_type,
             opts.offset_bytes,
             opts.size_bits,
             opts.count,

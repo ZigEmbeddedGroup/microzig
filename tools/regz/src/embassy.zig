@@ -314,6 +314,7 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
                 const item_bit_size = if (item.object.get("bit_size")) |v| v.integer else 32;
                 const maybe_count: ?u64, const maybe_stride: ?u64 = if (item.object.get("array")) |array| blk: {
                     if (array.object.get("len")) |count| {
+                        if (count.integer == 1) break :blk .{ null, null };
                         if (array.object.get("stride")) |stride| {
                             if (stride.integer > 4) {
                                 break :blk .{ @intCast(count.integer), @intCast(stride.integer) };
@@ -325,8 +326,77 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
                     break :blk .{ null, null };
                 } else .{ null, null };
 
+                // This register can be a cluster. In this case we can reference its type only.
+                // We still need to handle the stride. This is the reason we need to compute size
+                // of cluster.
+                if (item.object.get("block")) |block| {
+                    const ref_type = block.string;
+                    const block_key = try std.fmt.allocPrint(allocator, "block/{s}", .{ref_type});
+                    const block_value = (register_file.value.object.get(block_key) orelse continue).object;
+                    var max_bytes: u64 = 0;
+                    for (block_value.get("items").?.array.items) |nested_item| {
+                        // Let's assume we do not recurse on block
+                        const offset: u64 = @intCast(nested_item.object.get("byte_offset").?.integer);
+                        if (nested_item.object.get("array")) |array| {
+                            if (array.object.get("len")) |count| {
+                                if (array.object.get("stride")) |stride| {
+                                    max_bytes = @max(offset + 4 + @as(u64, @intCast(stride.integer * (count.integer - 1))), max_bytes);
+                                    continue;
+                                }
+                            }
+                        }
+                        max_bytes = @max(offset + 4, max_bytes);
+                    }
+
+                    if (maybe_stride == max_bytes) {
+                        // We have a contiguous cluster array
+                        _ = try db.create_register(group_id, .{
+                            .name = register_name,
+                            .description = description,
+                            .ref_type = ref_type,
+                            .offset_bytes = @intCast(byte_offset),
+                            .size_bits = max_bytes * 8,
+                            .count = maybe_count,
+                        });
+                        continue;
+                    } else if (maybe_stride) |stride| {
+                        // We have spread cluster
+                        for (0..maybe_count.?) |id| {
+                            const register_part_name = try std.fmt.allocPrint(allocator, "{s}[{d}]", .{
+                                register_name,
+                                id,
+                            });
+                            _ = try db.create_register(group_id, .{
+                                .name = register_part_name,
+                                .description = description,
+                                .ref_type = ref_type,
+                                .offset_bytes = byte_offset + (id * stride),
+                                .size_bits = max_bytes * 8,
+                                .count = null,
+                            });
+                        }
+                        continue;
+                    } else if (maybe_stride == null) {
+                        // We have a single cluster
+                        _ = try db.create_register(group_id, .{
+                            .name = register_name,
+                            .description = description,
+                            .ref_type = ref_type,
+                            .offset_bytes = @intCast(byte_offset),
+                            .size_bits = max_bytes * 8,
+                            .count = null,
+                        });
+                        continue;
+                    }
+                    // No match default to u32
+                    // At this point it should be unreachable.
+                    // I leave this comment as a placeholder for other special cases.
+                }
+
+                // Not a cluster but a fieldset
                 if (maybe_stride) |stride| {
                     if (maybe_count) |count| {
+                        // We spread the register as it jumps over other registers
                         for (0..count) |id| {
                             const register_part_name = try std.fmt.allocPrint(allocator, "{s}[{d}]", .{
                                 register_name,
