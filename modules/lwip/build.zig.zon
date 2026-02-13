@@ -7,9 +7,9 @@
     },
     .dependencies = .{
         .lwip = .{
-            //.url = "https://download.savannah.nongnu.org/releases/lwip/lwip-2.1.3.zip",
-            .url = "https://github.com/Ashet-Technologies/deps/raw/refs/heads/main/lwip-2.1.3.zip",
-            .hash = "N-V-__8AAKCP6ADEah-rtpC4uEsB_-GFFCqsNInUAJY7bH3S",
+            // .url = "https://download.savannah.nongnu.org/releases/lwip/lwip-2.2.1.zip",
+            .url = "https://github.com/lwip-tcpip/lwip/archive/refs/tags/STABLE-2_2_1_RELEASE.zip",
+            .hash = "N-V-__8AAGSTdQCcOKeNITCRoYez502saFXZqz4ucBJ4xTa9",
         },
     },
 }

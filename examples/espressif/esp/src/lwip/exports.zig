@@ -24,6 +24,13 @@ export fn lwip_unlock_core_mutex() void {
     core_mutex.unlock();
 }
 
+export fn lwip_assert_core_locked() void {
+    if (c.lock_tcpip_core == null) return;
+
+    const mutex: *rtos.Mutex = @ptrCast(@alignCast(c.lock_tcpip_core));
+    std.debug.assert(mutex.locked != null);
+}
+
 export fn lwip_rand() u32 {
     return esp.rng.random_u32();
 }
