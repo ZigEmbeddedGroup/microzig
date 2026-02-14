@@ -20,9 +20,11 @@ const systimer = @import("systimer.zig");
 // task that was interrupted by force and vice versa. Because of the forced
 // yield, tasks are required to have a minimum stack size available at all
 // times.
+//
+// `hptw` stands for "high priority task woken".
 
-// TODO: trigger context switch if a higher priority is awaken in sync
-// primitives
+// TODO: remove Condition
+// TODO: reimplement TypeErasedQueue to store item_len
 // TODO: low power mode where tick interrupt is only triggered when necessary
 // TODO: investigate tick interrupt assembly and improve generated code
 // TODO: stack overflow detection
@@ -148,7 +150,9 @@ pub fn init() void {
     if (rtos_options.paint_stack_byte) |paint_byte| {
         @memset(&idle_stack, paint_byte);
     }
-    make_ready(&idle_task);
+
+    var _hptw = false;
+    make_ready(&idle_task, &_hptw);
 
     // unit0 is already enabled as it is used by `hal.time`.
     if (rtos_options.systimer_unit != .unit0) {
@@ -255,7 +259,9 @@ pub fn spawn(
     const cs = enter_critical_section();
     defer cs.leave();
 
-    make_ready(task);
+    var hptw = false;
+    make_ready(task, &hptw);
+    if (hptw) yield_from_cs(.reschedule);
 
     return task;
 }
@@ -268,7 +274,7 @@ pub fn wait_and_free(gpa: std.mem.Allocator, task: *Task) void {
         defer cs.leave();
         if (task.state != .exited) {
             task.awaiter = rtos_state.current_task;
-            yield(.wait);
+            yield_from_cs(.wait);
         }
     }
     // alloc_size = stack_end - task
@@ -278,7 +284,7 @@ pub fn wait_and_free(gpa: std.mem.Allocator, task: *Task) void {
 }
 
 /// Must execute inside a critical section.
-pub fn make_ready(task: *Task) linksection(".ram_text") void {
+pub fn make_ready(task: *Task, hptw: *bool) linksection(".ram_text") void {
     switch (task.state) {
         .ready, .running, .exited => return,
         .none, .suspended => {},
@@ -292,6 +298,7 @@ pub fn make_ready(task: *Task) linksection(".ram_text") void {
 
     task.state = .ready;
     rtos_state.ready_queue.put(task);
+    hptw.* |= @intFromEnum(task.priority) > @intFromEnum(rtos_state.current_task.priority);
 }
 
 pub const YieldAction = union(enum) {
@@ -304,13 +311,16 @@ pub const YieldAction = union(enum) {
 pub inline fn yield(action: YieldAction) void {
     const cs = enter_critical_section();
     defer cs.leave();
+    yield_from_cs(action);
+}
 
+pub inline fn yield_from_cs(action: YieldAction) void {
     const current_task, const next_task = yield_inner(action);
     context_switch(&current_task.context, &next_task.context);
 }
 
 fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Task } {
-    assert(microzig.cpu.csr.mscratch.read_raw() == 0);
+    assert(!in_isr());
 
     const current_task = rtos_state.current_task;
     action: switch (action) {
@@ -359,7 +369,8 @@ fn yield_inner(action: YieldAction) linksection(".ram_text") struct { *Task, *Ta
             current_task.state = .exited;
 
             if (current_task.awaiter) |awaiter| {
-                make_ready(awaiter);
+                awaiter.state = .ready;
+                rtos_state.ready_queue.put(awaiter);
             }
         },
     }
@@ -438,13 +449,6 @@ inline fn context_switch(prev_context: *Context, next_context: *Context) void {
 
 pub fn yield_from_isr() linksection(".ram_text") void {
     rtos_options.cpu_interrupt.set_pending(true);
-}
-
-pub fn is_a_higher_priority_task_ready() linksection(".ram_text") bool {
-    const cs = enter_critical_section();
-    defer cs.leave();
-
-    return @intFromEnum(rtos_state.ready_queue.max_ready_priority() orelse .idle) > @intFromEnum(rtos_state.current_task.priority);
 }
 
 pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
@@ -669,6 +673,10 @@ pub fn log_task_info(task: *Task) void {
     }
 }
 
+inline fn in_isr() bool {
+    return microzig.cpu.csr.mscratch.read_raw() != 0;
+}
+
 pub const Task = struct {
     name: ?[]const u8 = null,
 
@@ -838,27 +846,6 @@ pub const Duration = enum(u32) {
     }
 };
 
-/// Must be used only from a critical section.
-pub const Timeout = struct {
-    end_ticks: u64,
-
-    pub fn after(duration: Duration) Timeout {
-        const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-        return .{
-            .end_ticks = current_ticks + duration.to_ticks(),
-        };
-    }
-
-    pub fn get_remaining_sleep_duration(timeout: Timeout) ?Duration {
-        const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-        const remaining = timeout.end_ticks -| current_ticks;
-        if (remaining == 0) return null;
-        return .from_ticks(@truncate(remaining));
-    }
-};
-
-pub const TimeoutError = error{Timeout};
-
 pub const PriorityWaitQueue = struct {
     list: DoublyLinkedList = .{},
 
@@ -868,24 +855,27 @@ pub const PriorityWaitQueue = struct {
         node: LinkedListNode = .{},
     };
 
-    /// Must execute inside a critical section.
-    pub fn wake_one(q: *PriorityWaitQueue) void {
+    /// Wakes one waiting task. Must execute inside a critical section.
+    pub fn wake_one(q: *PriorityWaitQueue, hptw: *bool) void {
         if (q.list.first) |first_node| {
             const waiter: *Waiter = @alignCast(@fieldParentPtr("node", first_node));
-            make_ready(waiter.task);
+            make_ready(waiter.task, hptw);
         }
     }
 
-    /// Must execute inside a critical section.
-    pub fn wake_all(q: *PriorityWaitQueue) void {
+    /// Wakes all waiting tasks. Must execute inside a critical section.
+    pub fn wake_all(q: *PriorityWaitQueue, hptw: *bool) void {
         while (q.list.pop_first()) |current_node| {
             const current_waiter: *Waiter = @alignCast(@fieldParentPtr("node", current_node));
-            make_ready(current_waiter.task);
+            make_ready(current_waiter.task, hptw);
         }
     }
 
-    /// Must execute inside a critical section.
-    pub fn wait(q: *PriorityWaitQueue, task: *Task, maybe_timeout_duration: ?Duration) void {
+    /// Puts the task to sleep. Must execute inside a critical section.
+    pub fn wait(q: *PriorityWaitQueue, maybe_timeout_duration: ?Duration) void {
+        assert(!in_isr());
+
+        const task = get_current_task();
         var waiter: Waiter = .{
             .task = task,
             .priority = task.priority,
@@ -903,12 +893,51 @@ pub const PriorityWaitQueue = struct {
         }
 
         if (maybe_timeout_duration) |duration| {
-            yield(.{ .sleep = duration });
+            yield_from_cs(.{ .sleep = duration });
         } else {
-            yield(.wait);
+            yield_from_cs(.wait);
         }
 
         q.list.remove(&waiter.node);
+    }
+};
+
+pub const TimeoutError = error{Timeout};
+
+pub const Timeout = union(enum) {
+    never,
+    after: Duration,
+    non_blocking,
+};
+
+/// Must be used only from a critical section.
+pub const ResolvedTimeout = enum(u64) {
+    non_blocking = std.math.maxInt(u64) - 1,
+    never = std.math.maxInt(u64),
+    _,
+
+    pub fn init(timeout: Timeout) ResolvedTimeout {
+        return switch (timeout) {
+            .non_blocking => .non_blocking,
+            .never => .never,
+            .after => |duration| blk: {
+                const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
+                break :blk @enumFromInt(current_ticks + duration.to_ticks());
+            },
+        };
+    }
+
+    pub fn tick(resolved_timeout: ResolvedTimeout) TimeoutError!?Duration {
+        return switch (resolved_timeout) {
+            .non_blocking => error.Timeout,
+            .never => null,
+            else => {
+                const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
+                const remaining = @intFromEnum(resolved_timeout) -| current_ticks;
+                if (remaining == 0) return error.Timeout;
+                return .from_ticks(@truncate(remaining));
+            },
+        };
     }
 };
 
@@ -918,27 +947,19 @@ pub const Mutex = struct {
     wait_queue: PriorityWaitQueue = .{},
 
     pub fn lock(mutex: *Mutex) void {
-        mutex.lock_with_timeout(null) catch unreachable;
+        mutex.lock_with_timeout(.never) catch unreachable;
     }
 
-    pub fn lock_with_timeout(mutex: *Mutex, maybe_timeout_after: ?Duration) TimeoutError!void {
+    pub fn lock_with_timeout(mutex: *Mutex, timeout: Timeout) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
         const current_task = get_current_task();
-
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
 
         assert(mutex.locked != current_task);
-
         while (mutex.locked) |owning_task| {
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return error.Timeout
-            else
-                null;
+            const maybe_remaining_duration = try resolved_timeout.tick();
 
             // Owning task inherits the priority of the current task if it the
             // current task has a bigger priority.
@@ -946,10 +967,12 @@ pub const Mutex = struct {
                 if (mutex.prev_priority == null)
                     mutex.prev_priority = owning_task.priority;
                 owning_task.priority = current_task.priority;
-                make_ready(owning_task);
+
+                var _hptw = false;
+                make_ready(owning_task, &_hptw);
             }
 
-            mutex.wait_queue.wait(current_task, maybe_remaining_duration);
+            mutex.wait_queue.wait(maybe_remaining_duration);
         }
 
         mutex.locked = current_task;
@@ -964,6 +987,7 @@ pub const Mutex = struct {
 
     fn unlock_impl(mutex: *Mutex) void {
         const owning_task = mutex.locked.?;
+        assert(owning_task == get_current_task());
 
         // Restore the priority of the task
         if (mutex.prev_priority) |prev_priority| {
@@ -972,7 +996,10 @@ pub const Mutex = struct {
         }
 
         mutex.locked = null;
-        mutex.wait_queue.wake_one();
+
+        var hptw = false;
+        mutex.wait_queue.wake_one(&hptw);
+        if (hptw) yield_from_cs(.reschedule);
     }
 };
 
@@ -980,26 +1007,27 @@ pub const Condition = struct {
     wait_queue: PriorityWaitQueue = .{},
 
     pub fn wait(cond: *Condition, mutex: *Mutex) void {
-        {
-            const cs = enter_critical_section();
-            defer cs.leave();
-            mutex.unlock_impl();
-            cond.wait_queue.wait(get_current_task(), null);
-        }
-
+        const cs = enter_critical_section();
+        defer cs.leave();
+        mutex.unlock_impl();
+        cond.wait_queue.wait(null);
         mutex.lock();
     }
 
     pub fn signal(cond: *Condition) void {
         const cs = enter_critical_section();
         defer cs.leave();
-        cond.wait_queue.wake_one();
+        var hptw = false;
+        cond.wait_queue.wake_one(&hptw);
+        if (hptw) yield_from_cs(.reschedule);
     }
 
     pub fn broadcast(cond: *Condition) void {
         const cs = enter_critical_section();
         defer cs.leave();
-        cond.wait_queue.wake_all();
+        var hptw = false;
+        cond.wait_queue.wake_all(&hptw);
+        if (hptw) yield_from_cs(.reschedule);
     }
 };
 
@@ -1019,24 +1047,17 @@ pub const Semaphore = struct {
     }
 
     pub fn take(sem: *Semaphore) void {
-        sem.take_with_timeout(null) catch unreachable;
+        sem.take_with_timeout(.never) catch unreachable;
     }
 
-    pub fn take_with_timeout(sem: *Semaphore, maybe_timeout_after: ?Duration) TimeoutError!void {
+    pub fn take_with_timeout(sem: *Semaphore, timeout: Timeout) TimeoutError!void {
         const cs = enter_critical_section();
         defer cs.leave();
 
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
-
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
         while (sem.current_value <= 0) {
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return error.Timeout
-            else
-                null;
-            sem.wait_queue.wait(rtos_state.current_task, maybe_remaining_duration);
+            const maybe_remaining_duration = try resolved_timeout.tick();
+            sem.wait_queue.wait(maybe_remaining_duration);
         }
 
         sem.current_value -= 1;
@@ -1046,31 +1067,40 @@ pub const Semaphore = struct {
         const cs = enter_critical_section();
         defer cs.leave();
 
+        var hptw = false;
+        sem.give_impl(&hptw);
+        if (hptw) yield_from_cs(.reschedule);
+    }
+
+    pub fn give_from_isr(sem: *Semaphore, hptw: *bool) void {
+        const cs = enter_critical_section();
+        defer cs.leave();
+
+        sem.give_impl(&hptw);
+    }
+
+    fn give_impl(sem: *Semaphore, hptw: *bool) void {
         sem.current_value += 1;
         if (sem.current_value > sem.max_value) {
             sem.current_value = sem.max_value;
         } else {
-            sem.wait_queue.wake_one();
+            sem.wait_queue.wake_one(hptw);
         }
     }
 };
 
 pub const TypeErasedQueue = struct {
     buffer: []u8,
-    start: usize,
-    len: usize,
+    start: usize = 0,
+    len: usize = 0,
 
-    putters: PriorityWaitQueue,
-    getters: PriorityWaitQueue,
+    putters: PriorityWaitQueue = .{},
+    getters: PriorityWaitQueue = .{},
 
     pub fn init(buffer: []u8) TypeErasedQueue {
         assert(buffer.len != 0); // buffer len must be greater than 0
         return .{
             .buffer = buffer,
-            .start = 0,
-            .len = 0,
-            .putters = .{},
-            .getters = .{},
         };
     }
 
@@ -1078,41 +1108,36 @@ pub const TypeErasedQueue = struct {
         q: *TypeErasedQueue,
         elements: []const u8,
         min: usize,
-        maybe_timeout_after: ?Duration,
+        timeout: Timeout,
     ) usize {
         assert(elements.len >= min);
         if (elements.len == 0) return 0;
 
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
-
-        var n: usize = 0;
-
         const cs = enter_critical_section();
         defer cs.leave();
 
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
+
+        var n: usize = 0;
         while (true) {
-            n += q.put_non_blocking_from_cs(elements[n..]);
+            var hptw = false;
+            n += q.put_non_blocking_from_cs(elements[n..], &hptw);
+            if (hptw) yield_from_cs(.reschedule);
+
             if (n >= min) return n;
 
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return n
-            else
-                null;
-            q.putters.wait(rtos_state.current_task, maybe_remaining_duration);
+            const maybe_remaining_duration = resolved_timeout.tick() catch return n;
+            q.putters.wait(maybe_remaining_duration);
         }
     }
 
-    pub fn put_non_blocking(q: *TypeErasedQueue, elements: []const u8) usize {
+    pub fn put_from_isr(q: *TypeErasedQueue, elements: []const u8, hptw: *bool) usize {
         const cs = enter_critical_section();
         defer cs.leave();
-
-        return q.put_non_blocking_from_cs(elements);
+        return q.put_non_blocking_from_cs(elements, hptw);
     }
 
-    fn put_non_blocking_from_cs(q: *TypeErasedQueue, elements: []const u8) usize {
+    fn put_non_blocking_from_cs(q: *TypeErasedQueue, elements: []const u8, hptw: *bool) usize {
         var n: usize = 0;
         while (q.puttable_slice()) |slice| {
             const copy_len = @min(slice.len, elements.len - n);
@@ -1122,7 +1147,7 @@ pub const TypeErasedQueue = struct {
             n += copy_len;
             if (n == elements.len) break;
         }
-        if (n > 0) q.getters.wake_one();
+        if (n > 0) q.getters.wake_one(hptw);
         return n;
     }
 
@@ -1140,41 +1165,30 @@ pub const TypeErasedQueue = struct {
         q: *TypeErasedQueue,
         buffer: []u8,
         min: usize,
-        maybe_timeout_after: ?Duration,
+        timeout: Timeout,
     ) usize {
         assert(buffer.len >= min);
         if (buffer.len == 0) return 0;
 
-        const maybe_timeout: ?Timeout = if (maybe_timeout_after) |duration|
-            .after(duration)
-        else
-            null;
-
-        var n: usize = 0;
-
         const cs = enter_critical_section();
         defer cs.leave();
 
+        const resolved_timeout: ResolvedTimeout = .init(timeout);
+
+        var n: usize = 0;
         while (true) {
-            n += q.get_non_blocking_from_cs(buffer[n..]);
+            var hptw = false;
+            n += q.get_non_blocking_from_cs(buffer[n..], &hptw);
+            if (hptw) yield_from_cs(.reschedule);
+
             if (n >= min) return n;
 
-            const maybe_remaining_duration = if (maybe_timeout) |timeout|
-                timeout.get_remaining_sleep_duration() orelse return n
-            else
-                null;
-            q.getters.wait(rtos_state.current_task, maybe_remaining_duration);
+            const maybe_remaining_duration = resolved_timeout.tick() catch return n;
+            q.getters.wait(maybe_remaining_duration);
         }
     }
 
-    pub fn get_non_blocking(q: *TypeErasedQueue, buffer: []u8) usize {
-        const cs = enter_critical_section();
-        defer cs.leave();
-
-        return q.get_non_blocking_from_cs(buffer);
-    }
-
-    fn get_non_blocking_from_cs(q: *TypeErasedQueue, buffer: []u8) usize {
+    fn get_non_blocking_from_cs(q: *TypeErasedQueue, buffer: []u8, hptw: *bool) usize {
         var n: usize = 0;
         while (q.gettable_slice()) |slice| {
             const copy_len = @min(slice.len, buffer.len - n);
@@ -1186,7 +1200,7 @@ pub const TypeErasedQueue = struct {
             n += copy_len;
             if (n == buffer.len) break;
         }
-        if (n > 0) q.putters.wake_one();
+        if (n > 0) q.putters.wake_one(hptw);
         return n;
     }
 
@@ -1207,50 +1221,101 @@ pub fn Queue(Elem: type) type {
             return .{ .type_erased = .init(@ptrCast(buffer)) };
         }
 
-        pub fn put(q: *Self, elements: []const Elem, min: usize, timeout: ?Duration) usize {
+        pub fn put(q: *Self, elements: []const Elem, min: usize, timeout: Timeout) usize {
             return @divExact(q.type_erased.put(@ptrCast(elements), min * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn put_all(q: *Self, elements: []const Elem, timeout: ?Duration) TimeoutError!void {
+        pub fn put_from_isr(q: *Self, elements: []const Elem, hptw: *bool) usize {
+            return @divExact(q.type_erased.put_from_isr(@ptrCast(elements), hptw), @sizeOf(Elem));
+        }
+
+        pub fn put_all(q: *Self, elements: []const Elem, timeout: Timeout) TimeoutError!void {
             if (q.put(elements, elements.len, timeout) != elements.len)
                 return error.Timeout;
         }
 
-        pub fn put_one(q: *Self, item: Elem, timeout: ?Duration) TimeoutError!void {
+        pub fn put_one(q: *Self, item: Elem, timeout: Timeout) TimeoutError!void {
             if (q.put(&.{item}, 1, timeout) != 1)
                 return error.Timeout;
         }
 
-        pub fn put_non_blocking(q: *Self, elements: []const Elem) usize {
-            return @divExact(q.type_erased.put_non_blocking(@ptrCast(elements)), @sizeOf(Elem));
+        pub fn put_one_from_isr(q: *Self, item: Elem, hptw: *bool) bool {
+            return q.put_from_isr(&.{item}, hptw) == 1;
         }
 
-        pub fn put_one_non_blocking(q: *Self, item: Elem) bool {
-            return q.put_non_blocking(@ptrCast(&item)) == 1;
-        }
-
-        pub fn get(q: *Self, buffer: []Elem, target: usize, timeout: ?Duration) usize {
+        pub fn get(q: *Self, buffer: []Elem, target: usize, timeout: Timeout) usize {
             return @divExact(q.type_erased.get(@ptrCast(buffer), target * @sizeOf(Elem), timeout), @sizeOf(Elem));
         }
 
-        pub fn get_one(q: *Self, timeout: ?Duration) TimeoutError!Elem {
+        pub fn get_one(q: *Self, timeout: Timeout) TimeoutError!Elem {
             var buf: [1]Elem = undefined;
             if (q.get(&buf, 1, timeout) != 1)
                 return error.Timeout;
             return buf[0];
         }
 
-        pub fn get_one_non_blocking(q: *Self) ?Elem {
-            var buf: [1]Elem = undefined;
-            if (q.type_erased.get_non_blocking(@ptrCast(&buf)) == 1) {
-                return buf[0];
-            } else {
-                return null;
+        pub fn capacity(q: *const Self) usize {
+            return @divExact(q.type_erased.buffer.len, @sizeOf(Elem));
+        }
+    };
+}
+
+pub fn Signal(T: type) type {
+    return struct {
+        const Self = @This();
+
+        value: ?T = null,
+        awaiter: ?*Task = null,
+
+        pub fn put(s: *Self, value: T) void {
+            const cs = enter_critical_section();
+            defer cs.leave();
+
+            var hptw = false;
+            s.put_impl(value, &hptw);
+            if (hptw) yield_from_cs(.reschedule);
+        }
+
+        pub fn put_from_isr(s: *Self, value: T, hptw: *bool) void {
+            const cs = enter_critical_section();
+            defer cs.leave();
+
+            s.put_impl(value, hptw);
+        }
+
+        fn put_impl(s: *Self, value: T, hptw: *bool) void {
+            s.value = value;
+            if (s.awaiter) |awaiter| {
+                make_ready(awaiter, hptw);
             }
         }
 
-        pub fn capacity(q: *const Self) usize {
-            return @divExact(q.type_erased.buffer.len, @sizeOf(Elem));
+        pub fn wait(s: *Self) T {
+            return s.wait_with_timeout(.never) catch unreachable;
+        }
+
+        pub fn wait_with_timeout(s: *Self, timeout: Timeout) TimeoutError!T {
+            assert(s.awaiter == null);
+
+            const cs = enter_critical_section();
+            defer cs.leave();
+
+            const resolved_timeout: ResolvedTimeout = .init(timeout);
+
+            s.awaiter = get_current_task();
+            while (s.value == null) {
+                const maybe_remaining_duration = try resolved_timeout.tick();
+                if (maybe_remaining_duration) |remaining_duration| {
+                    yield_from_cs(.{ .sleep = remaining_duration });
+                } else {
+                    yield_from_cs(.wait);
+                }
+            }
+
+            const value = s.value.?;
+            s.value = null;
+            s.awaiter = null;
+            return value;
         }
     };
 }
