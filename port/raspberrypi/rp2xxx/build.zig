@@ -171,7 +171,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .adafruit = .{
                 .feather_rp2350 = chip_rp2350_arm.derive(.{
                     .board = .{
-                        .name = "Adafruit Faether RP2350",
+                        .name = "Adafruit Feather RP2350",
                         .url = "https://www.adafruit.com/product/6000",
                         .root_source_file = b.path("src/boards/adafruit_feather_rp2350.zig"),
                     },
