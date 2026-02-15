@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
 

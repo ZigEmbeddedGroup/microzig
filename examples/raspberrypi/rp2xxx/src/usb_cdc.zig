@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 // Port-specific type which implements the DeviceInterface interface, used by the USB core to
 // read from/write to the peripheral.
