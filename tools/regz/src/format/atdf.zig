@@ -1,9 +1,8 @@
 const std = @import("std");
-const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const Database = @import("Database.zig");
+const Database = @import("../Database.zig");
 const DevicePeripheralID = Database.DevicePeripheralID;
 const PeripheralID = Database.PeripheralID;
 const EnumID = Database.EnumID;
@@ -11,8 +10,8 @@ const DeviceID = Database.DeviceID;
 const StructID = Database.StructID;
 const RegisterID = Database.RegisterID;
 
-const xml = @import("xml.zig");
-const Arch = @import("arch.zig").Arch;
+const xml = @import("../xml.zig");
+const Arch = @import("../arch.zig").Arch;
 
 const log = std.log.scoped(.atdf);
 
@@ -602,9 +601,9 @@ fn load_register(
         else
             null,
         .access = if (node.get_attribute("rw")) |access_str|
-            try access_from_string(access_str)
+            Database.Access.try_parse_short(access_str) orelse return error.InvalidAccessStr
         else
-            .read_write,
+            .default,
     });
 
     if (node.get_attribute("modes")) |modes| {
@@ -673,7 +672,7 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
 
                 // FIXME: field specific r/w
                 //if (node.get_attribute("rw")) |access_str| blk: {
-                //    const access = access_from_string(access_str) catch break :blk;
+                //    const access = .try_parse_short(access_str) catch break :blk;
                 //    switch (access) {
                 //        .read_only, .write_only => try db.attrs.access.put(
                 //            db.gpa,
@@ -715,7 +714,7 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
 
         // FIXME: field based access
         //if (node.get_attribute("rw")) |access_str| blk: {
-        //    const access = access_from_string(access_str) catch break :blk;
+        //    const access = .try_parse_short(access_str) catch break :blk;
         //    switch (access) {
         //        .read_only, .write_only => try db.attrs.access.put(
         //            db.gpa,
@@ -758,17 +757,6 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
         // TODO: namespace the enum to the appropriate register, register_group, or peripheral
 
     }
-}
-
-fn access_from_string(str: []const u8) !Database.Access {
-    return if (std.mem.eql(u8, "RW", str))
-        .read_write
-    else if (std.mem.eql(u8, "R", str))
-        .read_only
-    else if (std.mem.eql(u8, "W", str))
-        .write_only
-    else
-        error.InvalidAccessStr;
 }
 
 fn load_enum(
@@ -1094,7 +1082,6 @@ fn validate_attrs(node: xml.Node, attrs: []const []const u8) void {
     }
 }
 
-const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 

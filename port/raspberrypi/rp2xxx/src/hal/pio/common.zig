@@ -12,7 +12,6 @@ pub const PIO1 = microzig.chip.peripherals.PIO1;
 pub const assembler = @import("assembler.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
-const hw = @import("../hw.zig");
 
 pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
@@ -217,7 +216,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             const mask = @as(u32, 1) << index;
             var val = self.get_regs().INPUT_SYNC_BYPASS.raw;
             val |= mask;
-            self.get_regs().INPUT_SYNC_BYPASS.write_raw(val);
+            self.get_regs().INPUT_SYNC_BYPASS.raw = val;
         }
 
         pub fn get_sm_regs(self: EnumType, sm: StateMachine) *volatile StateMachine.Regs {

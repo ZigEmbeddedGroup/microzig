@@ -2,11 +2,11 @@ const microzig = @import("microzig");
 
 const LCD = microzig.chip.peripherals.LCD;
 
-const LCD_COM_L = microzig.mmio.Mmio(packed struct(u32) {
+const LCD_COM_L = microzig.mmio.OldMmio(packed struct(u32) {
     SEG0T31: u32,
 });
 
-const LCD_COM_H = microzig.mmio.Mmio(packed struct(u32) {
+const LCD_COM_H = microzig.mmio.OldMmio(packed struct(u32) {
     SEG32T44: u12,
     reserved: u20,
 });

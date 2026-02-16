@@ -136,7 +136,7 @@ pub const Pin = enum(usize) {
         const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
         const modMask: u32 = gpio.mask_2bit();
 
-        port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(bias)) << (pin << 1));
+        port.PUPDR.raw = (port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(bias)) << (pin << 1);
     }
 
     pub inline fn set_speed(gpio: Pin, speed: OSPEEDR) void {
@@ -144,7 +144,7 @@ pub const Pin = enum(usize) {
         const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
         const modMask: u32 = gpio.mask_2bit();
 
-        port.OSPEEDR.write_raw((port.OSPEEDR.raw & ~modMask) | @as(u32, @intFromEnum(speed)) << (pin << 1));
+        port.OSPEEDR.raw = (port.OSPEEDR.raw & ~modMask) | @as(u32, @intFromEnum(speed)) << (pin << 1);
     }
 
     pub inline fn set_moder(gpio: Pin, moder: MODER) void {
@@ -152,14 +152,14 @@ pub const Pin = enum(usize) {
         const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
         const modMask: u32 = gpio.mask_2bit();
 
-        port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(moder)) << (pin << 1));
+        port.MODER.raw = (port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(moder)) << (pin << 1);
     }
 
     pub inline fn set_output_type(gpio: Pin, otype: OT) void {
         const port = gpio.get_port();
         const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
 
-        port.OTYPER.write_raw((port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(otype)) << pin);
+        port.OTYPER.raw = (port.OTYPER.raw & ~gpio.mask()) | @as(u32, @intFromEnum(otype)) << pin;
     }
 
     pub inline fn set_alternate_function(gpio: Pin, afr: AF) void {
@@ -167,7 +167,7 @@ pub const Pin = enum(usize) {
         const pin: u5 = @intCast(@intFromEnum(gpio) % 16);
         const afrMask: u32 = @as(u32, 0b1111) << ((pin % 8) << 2);
         const register = if (pin > 7) &port.AFR[1] else &port.AFR[0];
-        register.write_raw((register.raw & ~afrMask) | @as(u32, @intFromEnum(afr)) << ((pin % 8) << 2));
+        register.raw = (register.raw & ~afrMask) | @as(u32, @intFromEnum(afr)) << ((pin % 8) << 2);
     }
 
     pub fn from_port(port: Port, pin: u4) Pin {

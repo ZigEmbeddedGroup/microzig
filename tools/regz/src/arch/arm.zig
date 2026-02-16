@@ -10,7 +10,7 @@ const DeviceID = Database.DeviceID;
 const gen = @import("../gen.zig");
 const Interrupt = @import("Interrupt.zig");
 
-const svd = @import("../svd.zig");
+const parse_bool = @import("../format/svd.zig").parse_bool;
 
 const log = std.log.scoped(.@"gen.arm");
 
@@ -75,7 +75,7 @@ pub fn load_system_interrupts(db: *Database, device_id: DeviceID, arch: Arch) !v
     const vendor_systick_config = if (try db.get_device_property(db.gpa, device_id, "cpu.vendorSystickConfig")) |str| blk: {
         defer db.gpa.free(str);
 
-        break :blk try svd.parse_bool(str);
+        break :blk try parse_bool(str);
     } else false;
 
     if (!vendor_systick_config) {

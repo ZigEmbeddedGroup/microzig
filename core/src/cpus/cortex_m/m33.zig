@@ -18,7 +18,7 @@ pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
-    ICSR: mmio.Mmio(packed struct(u32) {
+    ICSR: mmio.OldMmio(packed struct(u32) {
         /// Contains the active exception number:
         /// 0 = Thread mode
         /// Nonzero = The exception number[a] of the currently active exception.
@@ -36,7 +36,7 @@ pub const SystemControlBlock = extern struct {
         /// Interrupt pending flag, excluding NMI and Faults:
         /// 0 = interrupt not pending
         /// 1 = interrupt pending.
-        ISRPENDING: u1 = 0,
+        ISRPENDING: u1,
         /// Indicates whether a pending exception will be serviced on exit from debug
         /// halt state:
         /// 0 = will not be serviced
@@ -109,7 +109,7 @@ pub const SystemControlBlock = extern struct {
     /// Vector Table Offset Register.
     VTOR: u32,
     /// Application Interrupt and Reset Control Register.
-    AIRCR: mmio.Mmio(packed struct {
+    AIRCR: mmio.OldMmio(packed struct {
         reserved0: u1 = 0,
         /// Reserved for debug use. This bit reads as 0. When writing to the register you must
         /// write 0 to this bit, otherwise behavior is Unpredictable.
@@ -160,7 +160,7 @@ pub const SystemControlBlock = extern struct {
         VECTKEY: u16,
     }),
     /// System Control Register.
-    SCR: mmio.Mmio(packed struct(u32) {
+    SCR: mmio.OldMmio(packed struct(u32) {
         reserved0: u1 = 0,
         /// Indicates sleep-on-exit when returning from Handler mode to Thread mode:
         /// 0 = do not sleep when returning to Thread mode.
@@ -192,7 +192,7 @@ pub const SystemControlBlock = extern struct {
         reserved1: u27 = 0,
     }),
     /// Configuration and Control Register.
-    CCR: mmio.Mmio(packed struct(u32) {
+    CCR: mmio.OldMmio(packed struct(u32) {
         reserved0: u1 = 0,
         /// User set pending determines if unpriviledged access to the STIR generates a fault.
         USERSETMPEND: u1,
@@ -219,9 +219,9 @@ pub const SystemControlBlock = extern struct {
     /// System Handler Priority Registers.
     SHPR: [12]u8,
     /// System Handler Control and State Register.
-    SHCSR: mmio.Mmio(shared.scb.SHCSR),
+    SHCSR: mmio.OldMmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
-    CFSR: mmio.Mmio(packed struct(u32) {
+    CFSR: mmio.OldMmio(packed struct(u32) {
         /// MemManage Fault Register.
         MMFSR: shared.scb.MMFSR,
         /// BusFault Status Register.
@@ -230,7 +230,7 @@ pub const SystemControlBlock = extern struct {
         UFSR: shared.scb.UFSR,
     }),
     /// HardFault Status Register.
-    HFSR: mmio.Mmio(shared.scb.HFSR),
+    HFSR: mmio.OldMmio(shared.scb.HFSR),
     reserved0: u32 = 0,
     /// MemManage Fault Address Register.
     MMFAR: u32,
@@ -240,7 +240,7 @@ pub const SystemControlBlock = extern struct {
     _AFSR: u32,
     reserved1: [18]u32,
     /// Coprocessor Access Control Register.
-    CPACR: mmio.Mmio(packed struct(u32) {
+    CPACR: mmio.OldMmio(packed struct(u32) {
         CP0: Privilege,
         CP1: Privilege,
         CP2: Privilege,
@@ -269,7 +269,7 @@ pub const SystemControlBlock = extern struct {
 };
 
 pub const FloatingPointUnit = extern struct {
-    FPCCR: mmio.Mmio(packed struct(u32) {
+    FPCCR: mmio.OldMmio(packed struct(u32) {
         LSPACT: u1,
         USER: u1,
         S: u1,
@@ -382,7 +382,7 @@ pub const SecurityAttributionUnit = extern struct {
 
 pub const MemoryProtectionUnit = extern struct {
     /// MPU Type Register.
-    TYPE: mmio.Mmio(packed struct(u32) {
+    TYPE: mmio.OldMmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
         reserved0: u7 = 0,
@@ -391,7 +391,7 @@ pub const MemoryProtectionUnit = extern struct {
         reserved1: u16 = 0,
     }),
     /// MPU Control Register.
-    CTRL: mmio.Mmio(packed struct(u32) {
+    CTRL: mmio.OldMmio(packed struct(u32) {
         /// Enables the MPU
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
@@ -401,7 +401,7 @@ pub const MemoryProtectionUnit = extern struct {
         reserved0: u29 = 0,
     }),
     /// MPU Region Number Register.
-    RNR: mmio.Mmio(packed struct(u32) {
+    RNR: mmio.OldMmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
         reserved0: u24 = 0,
@@ -429,7 +429,7 @@ pub const MemoryProtectionUnit = extern struct {
     MPU_MAIR1: u32,
 
     /// MPU Region Address Register format.
-    pub const RBAR_Register = mmio.Mmio(packed struct(u32) {
+    pub const RBAR_Register = mmio.OldMmio(packed struct(u32) {
         /// Execute Never defines if code can be executed from this region.
         XN: u1,
         /// Access permissions.
@@ -442,7 +442,7 @@ pub const MemoryProtectionUnit = extern struct {
     });
 
     /// MPU Region Limit Address Register format.
-    pub const RLAR_Register = mmio.Mmio(packed struct(u32) {
+    pub const RLAR_Register = mmio.OldMmio(packed struct(u32) {
         /// Enable the region.
         EN: u1,
         /// Attribue Index associates a set of attributes in the MPU MAIR0 and MPU MAIR1 fields.

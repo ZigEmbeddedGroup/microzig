@@ -1,24 +1,24 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 
-pub const Type = struct {
-    pub const EnumField = struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        value: u32,
-    };
-
-    pub const Enum = struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        bitsize: u8,
-        fields: []const EnumField = &.{},
-    };
-};
-
 pub const Patch = union(enum) {
+    pub const Type = union(enum) {
+        pub const EnumField = struct {
+            name: []const u8,
+            description: ?[]const u8 = null,
+            value: u32,
+        };
+
+        pub const Enum = struct {
+            description: ?[]const u8 = null,
+            bitsize: u8,
+            fields: []const EnumField = &.{},
+        };
+
+        @"enum": Enum,
+    };
+
     override_arch: struct {
         device_name: []const u8,
         arch: Arch,
@@ -29,9 +29,16 @@ pub const Patch = union(enum) {
         value: []const u8,
         description: ?[]const u8 = null,
     },
-    add_enum: struct {
+    add_interrupt: struct {
+        device_name: []const u8,
+        idx: i32,
+        name: []const u8,
+        description: ?[]const u8 = null,
+    },
+    add_type: struct {
         parent: []const u8,
-        @"enum": Type.Enum,
+        type_name: []const u8,
+        type: Type,
     },
     /// The replaced type MUST be the same size. Bit or Byte size depends on the
     /// context
@@ -39,31 +46,25 @@ pub const Patch = union(enum) {
         of: []const u8,
         to: ?[]const u8,
     },
-    add_interrupt: struct {
-        device_name: []const u8,
-        idx: i32,
-        name: []const u8,
-        description: ?[]const u8 = null,
-    },
-    /// Creates a new enum type in the specified parent struct and applies it
+    /// Creates a new type in the specified parent struct and applies it
     /// to all the specified field references. This is a convenience patch that
-    /// combines `add_enum` with multiple `set_enum_type` operations.
-    add_enum_and_apply: struct {
+    /// combines `add_type` with multiple `set_enum_type` operations.
+    add_type_and_apply: struct {
         parent: []const u8,
-        @"enum": Type.Enum,
+        type_name: []const u8,
+        type: Type,
         apply_to: []const []const u8,
     },
-
-    pub fn from_json_str(allocator: Allocator, json_str: []const u8) !std.json.Parsed(Patch) {
-        return std.json.parseFromSlice(Patch, allocator, json_str, .{});
-    }
-};
-
-/// List for assembling patches in build scripts
-pub const PatchList = struct {
-    entries: std.array_list.Managed(Patch),
-
-    pub fn append(list: *PatchList, patch: Patch) void {
-        list.append(patch) catch @panic("OOM");
-    }
+    add_struct_field: struct {
+        parent: []const u8,
+        name: []const u8,
+        description: ?[]const u8 = null,
+        size_bits: u8,
+        offset_bits: u8,
+        access: Database.Access = .default,
+        type: union(enum) {
+            uint: u8,
+            @"enum": []const u8,
+        },
+    },
 };

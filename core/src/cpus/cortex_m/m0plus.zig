@@ -1,15 +1,13 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const shared = @import("shared_types.zig");
-
 pub const scb_base_offset = 0x0d00;
 
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
-    ICSR: mmio.Mmio(packed struct(u32) {
+    ICSR: mmio.OldMmio(packed struct(u32) {
         /// Contains the active exception number:
         /// 0 = Thread mode
         /// Nonzero = The exception number[a] of the currently active exception.
@@ -80,7 +78,7 @@ pub const SystemControlBlock = extern struct {
     /// Vector Table Offset Register.
     VTOR: u32,
     /// Application Interrupt and Reset Control Register.
-    AIRCR: mmio.Mmio(packed struct {
+    AIRCR: mmio.OldMmio(packed struct {
         reserved0: u1 = 0,
         /// Reserved for debug use. This bit reads as 0. When writing to the register you must
         /// write 0 to this bit, otherwise behavior is Unpredictable.
@@ -102,7 +100,7 @@ pub const SystemControlBlock = extern struct {
         VECTKEY: u16,
     }),
     /// System Control Register.
-    SCR: mmio.Mmio(packed struct(u32) {
+    SCR: mmio.OldMmio(packed struct(u32) {
         reserved0: u1 = 0,
         /// Indicates sleep-on-exit when returning from Handler mode to Thread mode:
         /// 0 = do not sleep when returning to Thread mode.
@@ -131,7 +129,7 @@ pub const SystemControlBlock = extern struct {
         reserved2: u27 = 0,
     }),
     /// Configuration Control Register.
-    CCR: mmio.Mmio(packed struct(u32) {
+    CCR: mmio.OldMmio(packed struct(u32) {
         reserved0: u3 = 0,
         /// Always reads as one, indicates that all unaligned accesses generate a HardFault.
         UNALIGN_TRP: u1,
@@ -195,8 +193,8 @@ pub const NestedVectorInterruptController = extern struct {
 };
 
 pub const MemoryProtectionUnit = extern struct {
-    /// MPU Type Register
-    TYPE: mmio.Mmio(packed struct(u32) {
+    /// MPU Type Register.
+    TYPE: mmio.OldMmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
         reserved0: u7 = 0,
@@ -206,8 +204,8 @@ pub const MemoryProtectionUnit = extern struct {
         IREGION: u8,
         reserved1: u8 = 0,
     }),
-    /// MPU Control Register
-    CTRL: mmio.Mmio(packed struct(u32) {
+    /// MPU Control Register.
+    CTRL: mmio.OldMmio(packed struct(u32) {
         /// Enables the MPU
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
@@ -216,14 +214,14 @@ pub const MemoryProtectionUnit = extern struct {
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),
-    /// MPU Region Number Register
-    RNR: mmio.Mmio(packed struct(u32) {
+    /// MPU Region Number Register.
+    RNR: mmio.OldMmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
         reserved0: u24 = 0,
     }),
-    /// MPU Region Base Address Register
-    RBAR: mmio.Mmio(packed struct(u32) {
+    /// MPU Region Base Address Register.
+    RBAR: mmio.OldMmio(packed struct(u32) {
         /// MPU region field.
         REGION: u4,
         /// MPU region number valid bit.
@@ -231,8 +229,8 @@ pub const MemoryProtectionUnit = extern struct {
         /// Region base address field.
         ADDR: u27,
     }),
-    /// MPU Attribute and Size Register
-    RASR: mmio.Mmio(packed struct(u32) {
+    /// MPU Attribute and Size Register.
+    RASR: mmio.OldMmio(packed struct(u32) {
         /// Region enable bit.
         ENABLE: u1,
         /// Specifies the size of the MPU region. The minimum permitted value is 7 (b00111).

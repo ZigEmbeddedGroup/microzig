@@ -153,9 +153,10 @@ fn switch_to_xtal(div: u10) void {
 }
 
 fn apb_freq_update(freq: u32) void {
+    // Why not just use the underlying register fields?
     const value = ((freq >> 12) & @as(u32, std.math.maxInt(u16))) |
         (((freq >> 12) & @as(u32, std.math.maxInt(u16))) << 16);
-    RTC_CNTL.STORE5.write_raw(value);
+    RTC_CNTL.STORE5.raw = value;
 }
 
 fn rom_cpu_frequency_update(freq: u32) void {
@@ -240,7 +241,7 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
 }
 
 const I2C_ANA_MST_TYPE = extern struct {
-    ANA_CONF0: microzig.mmio.Mmio(packed struct {
+    ANA_CONF0: microzig.mmio.OldMmio(packed struct {
         reserved0: u2,
         BBPLL_STOP_FORCE_HIGH: u1,
         BBPLL_STOP_FORCE_LOW: u1,

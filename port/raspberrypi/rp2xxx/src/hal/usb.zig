@@ -65,10 +65,10 @@ fn PerEndpoint(T: type) type {
 }
 
 // It would be nice to instead generate those arrays automatically with a regz patch.
-const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
+const BufferControlMmio = @TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const EndpointControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const EndpointControlMmio = @TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL);
 const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -182,17 +182,17 @@ pub fn Polled(config: Config) type {
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
-            peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
-            peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
+            peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw = 0;
+            peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw = 0;
 
             for (1..config.max_endpoints_count) |i| {
-                endpoint_control[i - 1].in.write_raw(0);
-                endpoint_control[i - 1].out.write_raw(0);
+                endpoint_control[i - 1].in.raw = 0;
+                endpoint_control[i - 1].out.raw = 0;
             }
 
             for (0..config.max_endpoints_count) |i| {
-                buffer_control[i].in.write_raw(0);
-                buffer_control[i].out.write_raw(0);
+                buffer_control[i].in.raw = 0;
+                buffer_control[i].out.raw = 0;
             }
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are

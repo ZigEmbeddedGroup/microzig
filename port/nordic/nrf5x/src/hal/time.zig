@@ -10,15 +10,6 @@ const time = microzig.drivers.time;
 const clocks = microzig.hal.clocks;
 const compatibility = microzig.hal.compatibility;
 
-const version: enum {
-    nrf51,
-    nrf52,
-} = switch (compatibility.chip) {
-    .nrf51 => .nrf51,
-    .nrf52, .nrf52833, .nrf52840 => .nrf52,
-    else => compatibility.unsupported_chip("time"),
-};
-
 const rtc = microzig.chip.peripherals.RTC0;
 const COMPARE_INDEX = 2;
 const TIMER_BITS = 23;
@@ -51,16 +42,8 @@ pub fn init() void {
     rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
-    switch (version) {
-        .nrf51 => {
-            rtc.TASKS_CLEAR = 1;
-            rtc.TASKS_START = 1;
-        },
-        .nrf52 => {
-            rtc.TASKS_CLEAR.write_raw(1);
-            rtc.TASKS_START.write_raw(1);
-        },
-    }
+    rtc.TASKS_CLEAR.raw = 1;
+    rtc.TASKS_START.raw = 1;
 
     // Wait for clear
     while (rtc.COUNTER.read().COUNTER != 0) {}
@@ -69,29 +52,14 @@ pub fn init() void {
 /// Handle both overflow and compare interrupts. Update the period which acts as the high bits of
 /// the elapsed time.
 pub fn rtc_interrupt() callconv(.c) void {
-    switch (version) {
-        .nrf51 => {
-            if (rtc.EVENTS_OVRFLW == 1) {
-                rtc.EVENTS_OVRFLW = 0;
-                next_period();
-            }
+    if (rtc.EVENTS_OVRFLW.raw == 1) {
+        rtc.EVENTS_OVRFLW.raw = 0;
+        next_period();
+    }
 
-            if (rtc.EVENTS_COMPARE[COMPARE_INDEX] == 1) {
-                rtc.EVENTS_COMPARE[COMPARE_INDEX] = 0;
-                next_period();
-            }
-        },
-        .nrf52 => {
-            if (rtc.EVENTS_OVRFLW.raw == 1) {
-                rtc.EVENTS_OVRFLW.write_raw(0);
-                next_period();
-            }
-
-            if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
-                rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
-                next_period();
-            }
-        },
+    if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
+        rtc.EVENTS_COMPARE[COMPARE_INDEX].raw = 0;
+        next_period();
     }
 }
 

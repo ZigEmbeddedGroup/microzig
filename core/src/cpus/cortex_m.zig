@@ -2,8 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
-const app = microzig.app;
-const shared = @import("cortex_m/shared_types.zig");
 const VectorTable = microzig.chip.VectorTable;
 
 const Core = enum {
@@ -1155,7 +1153,7 @@ pub const types = struct {
         /// System Timer (SysTick).
         pub const SysTick = extern struct {
             /// Control and Status Register.
-            CTRL: mmio.Mmio(packed struct(u32) {
+            CTRL: mmio.OldMmio(packed struct(u32) {
                 /// Enables the counter:
                 /// 0 = counter disabled.
                 /// 1 = counter enabled.
@@ -1176,20 +1174,20 @@ pub const types = struct {
                 reserved1: u15 = 0,
             }),
             /// Reload Value Register.
-            LOAD: mmio.Mmio(packed struct(u32) {
+            LOAD: mmio.OldMmio(packed struct(u32) {
                 /// Value to load into the VAL register when the counter is enabled and when it reaches 0.
                 RELOAD: u24,
                 reserved0: u8 = 0,
             }),
             /// Current Value Register.
-            VAL: mmio.Mmio(packed struct(u32) {
+            VAL: mmio.OldMmio(packed struct(u32) {
                 /// Reads return the current value of the SysTick counter.
                 /// A write of any value clears the field to 0, and also clears the CTRL.COUNTFLAG bit to 0.
                 CURRENT: u24,
                 reserved0: u8 = 0,
             }),
             /// Calibration Register.
-            CALIB: mmio.Mmio(packed struct(u32) {
+            CALIB: mmio.OldMmio(packed struct(u32) {
                 /// Reload value for 10ms (100Hz) timing, subject to system clock skew errors. If the value
                 /// reads as zero, the calibration value is not known.
                 TENMS: u24,

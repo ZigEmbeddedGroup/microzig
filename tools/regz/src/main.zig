@@ -1,12 +1,13 @@
 const std = @import("std");
-const clap = @import("clap");
-const xml = @import("xml.zig");
-const Database = @import("Database.zig");
-const FS_Directory = @import("FS_Directory.zig");
-
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
+
+// const clap = @import("clap"); TODO: use clap
+const Database = @import("Database.zig");
+const FS_Directory = @import("FS_Directory.zig");
+const gen = @import("gen.zig");
+const Patch = @import("patch.zig").Patch;
+const xml = @import("xml.zig");
 
 pub const std_options = std.Options{
     .log_level = .warn,
@@ -150,19 +151,20 @@ fn main_impl() anyerror!void {
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {
-        const patch = try std.fs.cwd().readFileAllocOptions(allocator, patch_path, std.math.maxInt(u64), null, .@"1", 0);
-        defer allocator.free(patch);
+        const patch_text = try std.fs.cwd().readFileAllocOptions(allocator, patch_path, std.math.maxInt(u64), null, .@"1", 0);
+        defer allocator.free(patch_text);
 
         var diags: std.zon.parse.Diagnostics = .{};
-        defer diags.deinit(db.gpa);
+        defer diags.deinit(allocator);
 
-        db.apply_patch(patch, &diags) catch |err| {
-            if (err == error.ParseZon) {
-                std.log.err("Failed to parse zon patch file '{s}': {f}", .{ patch_path, diags });
-            }
-
+        const patches = std.zon.parse.fromSlice([]const Patch, allocator, patch_text, &diags, .{}) catch |err| {
+            std.log.err("Failed to parse zon patch file '{s}': {f}", .{ patch_path, diags });
             return err;
         };
+        defer std.zon.parse.free(allocator, patches);
+
+        for (patches) |patch|
+            try db.apply_patch(patch);
     }
 
     // arch dependent stuff
@@ -186,5 +188,15 @@ fn main_impl() anyerror!void {
     defer output_dir.close();
 
     var fs = FS_Directory.init(output_dir);
-    try db.to_zig(fs.directory(), .{});
+    try gen.to_zig(db, fs.directory(), .{});
+}
+
+test "all" {
+    @setEvalBranchQuota(2000);
+    _ = @import("analysis.zig");
+    _ = @import("format/atdf.zig");
+    _ = Database;
+    _ = @import("gen.zig");
+    _ = @import("format/svd.zig");
+    _ = @import("VirtualFilesystem.zig");
 }

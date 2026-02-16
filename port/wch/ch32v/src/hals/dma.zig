@@ -5,7 +5,6 @@
 //!
 //!
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
@@ -227,7 +226,7 @@ pub const Channel = enum(u3) {
         // Clear all interrupt flags for this channel. There are four interrupts per channel, so we
         // shift by 4 * (channel - 1). Channel enum is 1-indexed, so subtract 1 for bit position.
         const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
-        regs.INTFCR.write_raw(@as(u32, 0b1111) << flag_shift);
+        regs.INTFCR.raw = @as(u32, 0b1111) << flag_shift;
 
         // NOTE: DIR bit affects transfer direction even in MEM2MEM mode (undocumented behavior):
         // - Always place the peripheral address in PADDR when a peripheral is involved.
@@ -239,14 +238,14 @@ pub const Channel = enum(u3) {
         //     Periph→Mem:  PADDR=read (periph),  MADDR=write (memory), DIR=0
         //     Mem→Mem:     PADDR=read (source),  MADDR=write (dest),   DIR=0
         if (H.is_peripheral(WriteType)) {
-            regs.MADDR.write_raw(read_addr);
-            regs.PADDR.write_raw(write_addr);
+            regs.MADDR.raw = read_addr;
+            regs.PADDR.raw = write_addr;
         } else {
-            regs.MADDR.write_raw(write_addr);
-            regs.PADDR.write_raw(read_addr);
+            regs.MADDR.raw = write_addr;
+            regs.PADDR.raw = read_addr;
         }
         // Set the amount of data to transfer
-        regs.CNTR.write_raw(count);
+        regs.CNTR.raw = count;
         // Set the priority
         regs.CFGR.modify(.{ .PL = @intFromEnum(config.priority) });
         // Set the rest of the config
@@ -323,7 +322,8 @@ pub const Channel = enum(u3) {
     pub fn clear_complete_flag(comptime chan: Channel) void {
         const regs = chan.get_regs();
         const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
-        regs.INTFCR.write_raw(@as(u32, 0b0010) << flag_shift); // Clear only TCIF
+        // Why not use the underlying struct?
+        regs.INTFCR.raw = @as(u32, 0b0010) << flag_shift; // Clear only TCIF
     }
 
     pub fn get_remaining_count(comptime chan: Channel) u16 {

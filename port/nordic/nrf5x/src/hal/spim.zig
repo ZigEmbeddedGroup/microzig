@@ -22,8 +22,8 @@ const version: enum {
 
 const SPIM0 = peripherals.SPIM0;
 const SPIM1 = peripherals.SPIM1;
-const SPIM2 = peripherals.SPIM2;
-const SPIM3 = peripherals.SPIM3;
+// const SPIM2 = peripherals.SPIM2;
+// const SPIM3 = peripherals.SPIM3;
 
 const SpimRegs = microzig.chip.types.peripherals.SPIM0;
 
@@ -174,7 +174,7 @@ pub const SPIM = enum(u1) {
         }
 
         regs.ENABLE.write(.{ .ENABLE = .Enabled });
-        regs.INTENCLR.write_raw(0xFFFFFFFF);
+        regs.INTENCLR.raw = 0xFFFF_FFFF;
     }
 
     pub fn write_blocking(spi: SPIM, data: []const u8, timeout: ?Duration) TransactionError!void {
@@ -240,10 +240,10 @@ pub const SPIM = enum(u1) {
 
     fn prepare_dma_transfer(spi: SPIM, tx: []const u8, rx: []u8) TransactionError!void {
         const regs = spi.get_regs();
-        regs.RXD.PTR.write_raw(@intFromPtr(rx.ptr));
+        regs.RXD.PTR.raw = @intFromPtr(rx.ptr);
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(rx.len) });
 
-        regs.TXD.PTR.write_raw(@intFromPtr(tx.ptr));
+        regs.TXD.PTR.raw = @intFromPtr(tx.ptr);
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(tx.len) });
 
         regs.EVENTS_END.write(.{ .EVENTS_END = .NotGenerated });

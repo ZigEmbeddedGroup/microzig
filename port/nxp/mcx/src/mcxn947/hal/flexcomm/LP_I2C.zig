@@ -147,7 +147,7 @@ pub const LP_I2C = enum(u4) {
     }
 
     pub fn clear_flags(i2c: LP_I2C) void {
-        i2c.get_regs().MSR.write_raw(0);
+        i2c.get_regs().MSR.raw = 0;
     }
 
     fn reset_fifos(i2c: LP_I2C) void {
@@ -369,7 +369,8 @@ pub const LP_I2C = enum(u4) {
             flags = i2c.get_regs().MSR.read();
             try i2c.check_flags();
         }
-        i2c.get_regs().MSR.write_raw(1 << 9);
+        // Why nut use the underlying struct?
+        i2c.get_regs().MSR.raw = 1 << 9;
     }
 
     fn wait_for_tx_space(i2c: LP_I2C) Error!void {

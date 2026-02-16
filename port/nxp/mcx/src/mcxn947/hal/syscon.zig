@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const chip = microzig.chip;
 
@@ -18,7 +17,7 @@ pub fn module_enable_clock(module: Module) void {
     if (!module.can_control_clock()) return;
 
     const reg = &chip.peripherals.SYSCON0.AHBCLKCTRLSET[module.cc()];
-    reg.write_raw(@as(u32, 1) << module.offset());
+    reg.raw = @as(u32, 1) << module.offset();
 }
 
 /// Disables the module's clock.
@@ -27,7 +26,7 @@ pub fn module_disable_clock(module: Module) void {
     if (!module.can_control_clock()) return;
 
     const reg = &chip.peripherals.SYSCON0.AHBCLKCTRLCLR[module.cc()];
-    reg.write_raw(@as(u32, 1) << module.offset());
+    reg.raw = @as(u32, 1) << module.offset();
 }
 
 // same as for `module_enable_clock`
@@ -38,7 +37,7 @@ pub fn module_reset_assert(module: Module) void {
     if (!module.can_reset()) return;
 
     const reg = &chip.peripherals.SYSCON0.PRESETCTRLSET[module.cc()];
-    reg.write_raw(@as(u32, 1) << module.offset());
+    reg.raw = @as(u32, 1) << module.offset();
 }
 
 /// Release the module's reset.
@@ -47,7 +46,7 @@ pub fn module_reset_release(module: Module) void {
     if (!module.can_reset()) return;
 
     const reg = &chip.peripherals.SYSCON0.PRESETCTRLCLR[module.cc()];
-    reg.write_raw(@as(u32, 1) << module.offset());
+    reg.raw = @as(u32, 1) << module.offset();
 }
 
 // This enum can be automatically generated using `generate.zig`,
