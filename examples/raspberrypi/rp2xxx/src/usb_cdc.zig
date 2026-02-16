@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 // Port-specific type which implements the DeviceInterface interface, used by the USB core to
 // read from/write to the peripheral.
@@ -79,7 +78,7 @@ pub fn main() !void {
         // Ensure that the host as finished enumerating our USB device
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
-            if (new - old > 500000) {
+            if (new - old > 500_000) {
                 old = new;
                 pins.led.toggle();
                 i += 1;

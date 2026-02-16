@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
 
@@ -171,17 +170,16 @@ pub fn main() !void {
 
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
-            const time_since_last = new - old;
-            if (time_since_last < 2_000_000) {
+            if (new - old > 2_000_000) {
+                old = new;
+                idx = 0;
+            } else {
                 idx += @intFromBool(if (idx & 1 == 0 and idx < 2 * message.len)
                     drivers.keyboard.send_report(
                         &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ .{.reserved} ** 5 },
                     )
                 else
                     drivers.keyboard.send_report(&.empty));
-            } else {
-                old = new;
-                idx = 0;
             }
 
             if (drivers.keyboard.receive_report()) |report|
