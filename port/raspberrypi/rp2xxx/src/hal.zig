@@ -39,6 +39,7 @@ pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
+pub const sections = @import("hal/sections.zig");
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
@@ -143,6 +144,8 @@ pub inline fn enable_dcp() void {
 pub fn get_cpu_id() u32 {
     return SIO.CPUID.read().CPUID;
 }
+
+pub const extra_ram_load_sections = .{ "scratch_x", "scratch_y" };
 
 test "hal tests" {
     _ = pio;

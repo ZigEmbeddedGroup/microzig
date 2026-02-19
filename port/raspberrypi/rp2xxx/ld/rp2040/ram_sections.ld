@@ -1,14 +1,4 @@
 SECTIONS {
-  .bootmeta :
-  {
-    __bootmeta_start__ = .;
-    KEEP(*(.bootmeta))
-    __bootmeta_end__ = .;
-  } > RAM
-}
-INSERT AFTER .ram_start;
-
-SECTIONS {
   .scratch_x : {
       microzig_scratch_x_start = .;
       *(.scratch_x.*)
