@@ -4,7 +4,6 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const flash = rp2xxx.flash;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
@@ -15,10 +14,11 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     while (true) {}
 }
 
-pub const std_options = struct {
-    pub const log_level = .debug;
-    pub const logFn = rp2xxx.uart.log;
+pub const microzig_options = microzig.Options{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
 };
+const log = std.log.scoped(.main);
 
 pub fn main() !void {
     // init uart logging
@@ -29,9 +29,7 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     while (true) {
-        const serial_number = flash.id();
-        const hex_serial_number = std.fmt.bytesToHex(&serial_number, .lower);
-        std.log.info("serial number: {s}", .{hex_serial_number});
+        log.info("unique board id: {x}", .{rp2xxx.get_board_id()});
         time.sleep_ms(1000);
     }
 }
