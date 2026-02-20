@@ -6,11 +6,8 @@
 //! that would otherwise have to take up space in most user binaries.
 
 const std = @import("std");
-const microzig = @import("microzig");
 const compatibility = @import("compatibility.zig");
-const arch = compatibility.arch;
 const chip = compatibility.chip;
-const options = microzig.options.hal;
 
 /// Returns the ROM version number.
 pub inline fn get_version_number() u8 {
