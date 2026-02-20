@@ -213,7 +213,7 @@ pub fn reset_to_usb_boot() void {
 
 pub fn get_sys_info(out_buffer: [*]u32, out_buffer_word_size: u32, flags: u32) void {
     switch (chip) {
-        .RP2040 => unreachable,
+        .RP2040 => @compileError("not supported on this chip"),
         .RP2350 => {
             const f: *const signatures.get_sys_info = @ptrCast(@alignCast(lookup_function(.get_sys_info)));
             const rc = f(out_buffer, out_buffer_word_size, flags);
