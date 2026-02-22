@@ -6,11 +6,8 @@
 //! that would otherwise have to take up space in most user binaries.
 
 const std = @import("std");
-const microzig = @import("microzig");
 const compatibility = @import("compatibility.zig");
-const arch = compatibility.arch;
 const chip = compatibility.chip;
-const options = microzig.options.hal;
 
 /// Returns the ROM version number.
 pub inline fn get_version_number() u8 {
@@ -212,4 +209,25 @@ pub fn reset_to_usb_boot() void {
             unreachable;
         },
     }
+}
+
+pub fn get_sys_info(out_buffer: [*]u32, out_buffer_word_size: u32, flags: u32) void {
+    switch (chip) {
+        .RP2040 => @compileError("not supported on this chip"),
+        .RP2350 => {
+            const f: *const signatures.get_sys_info = @ptrCast(@alignCast(lookup_function(.get_sys_info)));
+            const rc = f(out_buffer, out_buffer_word_size, flags);
+            std.debug.assert(rc == 4);
+        },
+    }
+}
+
+pub fn get_board_id() [8]u8 {
+    var out: [9]u32 = @splat(0);
+    get_sys_info(&out, out.len, 0x001);
+    var buf: [8]u8 = undefined;
+    for (std.mem.asBytes(out[2..])[0..8], 1..) |b, i| {
+        buf[8 - i] = b;
+    }
+    return buf;
 }
