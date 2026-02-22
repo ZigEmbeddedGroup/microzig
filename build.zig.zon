@@ -2,7 +2,7 @@
     .name = .microzig,
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
-    .version = "0.15.1",
+    .version = "0.15.2",
     .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
@@ -10,12 +10,16 @@
         .drivers = .{ .path = "drivers" },
 
         // tools
+        .@"tools/esp-image" = .{ .path = "tools/esp-image" },
+        .@"tools/printer" = .{ .path = "tools/printer" },
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
-        .@"tools/esp-image" = .{ .path = "tools/esp-image" },
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
+        .@"modules/freertos" = .{ .path = "modules/freertos" },
+        .@"modules/lwip" = .{ .path = "modules/lwip" },
+        .@"modules/network" = .{ .path = "modules/network" },
         .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
         .@"modules/rtt" = .{ .path = "modules/rtt" },
 
