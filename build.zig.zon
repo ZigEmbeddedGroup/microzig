@@ -10,9 +10,12 @@
         .drivers = .{ .path = "drivers" },
 
         // tools
-        .@"tools/regz" = .{ .path = "tools/regz" },
-        .@"tools/uf2" = .{ .path = "tools/uf2" },
         .@"tools/esp-image" = .{ .path = "tools/esp-image" },
+        .@"tools/linter" = .{ .path = "tools/linter" },
+        .@"tools/printer" = .{ .path = "tools/printer" },
+        .@"tools/regz" = .{ .path = "tools/regz" },
+        .@"tools/sorcerer" = .{ .path = "tools/sorcerer" },
+        .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
