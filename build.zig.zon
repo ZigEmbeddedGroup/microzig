@@ -2,7 +2,7 @@
     .name = .microzig,
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
-    .version = "0.15.1",
+    .version = "0.15.2",
     .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
@@ -11,10 +11,8 @@
 
         // tools
         .@"tools/esp-image" = .{ .path = "tools/esp-image" },
-        .@"tools/linter" = .{ .path = "tools/linter" },
         .@"tools/printer" = .{ .path = "tools/printer" },
         .@"tools/regz" = .{ .path = "tools/regz" },
-        .@"tools/sorcerer" = .{ .path = "tools/sorcerer" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // modules

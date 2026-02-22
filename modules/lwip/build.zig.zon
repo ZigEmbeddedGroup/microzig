@@ -1,5 +1,6 @@
 .{
-    .name = "lwip",
+    .name = .lwip,
+    .fingerprint = 0xe53048a052fbebad,
     .version = "0.1.0",
     .paths = .{
         "build.zig",
