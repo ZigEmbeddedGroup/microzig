@@ -44,12 +44,14 @@ pub fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
     return std.mem.len(s);
 }
 
-pub fn strnlen(str: ?[*:0]const u8, _: usize) callconv(.c) usize {
-    // const s = str orelse return 0;
-    // return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index + 1 else n;
+pub fn strnlen(str: ?[*:0]const u8, n: usize) callconv(.c) usize {
     const s = str orelse return 0;
+    return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index else n;
+}
 
-    return std.mem.len(s);
+test "strnlen" {
+    try std.testing.expect(strnlen(&.{ 10, 20, 30, 0 }, 4) == 3);
+    try std.testing.expect(strnlen(&.{ 10, 20, 30, 0, 10, 20, 30 }, 7) == 3);
 }
 
 pub fn strrchr(str: ?[*:0]const u8, chr: u32) callconv(.c) ?[*:0]const u8 {
