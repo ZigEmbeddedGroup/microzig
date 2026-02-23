@@ -24,7 +24,7 @@ pub const microzig_options: microzig.Options = .{
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
         .interrupt30 = radio.interrupt_handler,
-        .interrupt31 = rtos.tick_interrupt_handler,
+        .interrupt31 = rtos.interrupt_handler,
     },
     .cpu = .{
         .interrupt_stack = .{
@@ -52,8 +52,7 @@ const SERVER_PORT = 3333;
 
 var maybe_netif: ?*lwip.c.netif = null;
 
-var ip_ready_semaphore: rtos.Semaphore = .init(0, 1);
-var ip: lwip.c.ip_addr_t = undefined;
+var wifi_ready_signal: rtos.Signal(void) = .{};
 
 extern fn netconn_new_with_proto_and_callback(t: lwip.c.enum_netconn_type, proto: lwip.c.u8_t, callback: ?*const anyopaque) [*c]lwip.c.struct_netconn;
 pub fn main() !void {
@@ -86,7 +85,11 @@ pub fn main() !void {
             .auth_method = AUTH_METHOD,
         },
     });
-    try radio.wifi.start_blocking();
+
+    try radio.wifi.start();
+    while (!radio.wifi.get_sta_state().is_started()) {
+        rtos.sleep(.from_ms(100));
+    }
 
     {
         std.log.info("Scanning for access points...", .{});
@@ -102,10 +105,14 @@ pub fn main() !void {
         }
     }
 
-    try radio.wifi.connect_blocking();
-    try lwip.c_err(lwip.c.netifapi_netif_common(&netif, lwip.c.netif_set_link_up, null));
+    try radio.wifi.connect();
+    while (radio.wifi.get_sta_state() != .connected) {
+        rtos.sleep(.from_ms(100));
+    }
+    _ = lwip.c.netifapi_netif_common(maybe_netif.?, lwip.c.netif_set_link_up, null);
 
-    ip_ready_semaphore.take();
+    wifi_ready_signal.wait();
+
     std.log.info("Listening on {f}:{}", .{ IP_Formatter.init(netif.ip_addr), SERVER_PORT });
 
     const server_conn = netconn_new_with_proto_and_callback(lwip.c.NETCONN_TCP, 0, null) orelse {
@@ -164,6 +171,13 @@ fn handle_client(conn: ?*lwip.c.netconn) !void {
     }
 }
 
+fn netif_status_callback(netif_ptr: [*c]lwip.c.netif) callconv(.c) void {
+    const netif = &netif_ptr[0];
+    if (netif.ip_addr.u_addr.ip4.addr != 0) {
+        wifi_ready_signal.put({});
+    }
+}
+
 fn on_packet_received(comptime _: radio.wifi.Interface, data: []const u8) void {
     const pbuf: *lwip.c.struct_pbuf = lwip.c.pbuf_alloc(lwip.c.PBUF_RAW, @intCast(data.len), lwip.c.PBUF_POOL) orelse {
         std.log.err("failed to allocate receive pbuf", .{});
@@ -195,14 +209,6 @@ fn netif_init(netif_ptr: [*c]lwip.c.struct_netif) callconv(.c) lwip.c.err_t {
     lwip.c.netif_set_default(netif);
     lwip.c.netif_set_up(netif);
     return lwip.c.ERR_OK;
-}
-
-fn netif_status_callback(netif_ptr: [*c]lwip.c.netif) callconv(.c) void {
-    const netif = &netif_ptr[0];
-    if (netif.ip_addr.u_addr.ip4.addr != 0) {
-        ip = netif.ip_addr;
-        ip_ready_semaphore.give();
-    }
 }
 
 var packet_buf: [1600]u8 = undefined;

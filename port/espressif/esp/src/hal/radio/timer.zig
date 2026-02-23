@@ -150,16 +150,16 @@ fn task_fn() void {
             callback(arg);
         }
 
-        const sleep_duration: ?rtos.Duration = blk: {
+        const timeout: rtos.Timeout = blk: {
             mutex.lock();
             defer mutex.unlock();
             break :blk if (find_next_wake_absolute()) |next_wake_absolute|
-                .from_us(@truncate(next_wake_absolute.diff(now).to_us()))
+                .{ .after = .from_us(@truncate(next_wake_absolute.diff(now).to_us())) }
             else
-                null;
+                .never;
         };
 
-        reload_semaphore.take_with_timeout(sleep_duration) catch {};
+        reload_semaphore.take_with_timeout(timeout) catch {};
     }
 }
 

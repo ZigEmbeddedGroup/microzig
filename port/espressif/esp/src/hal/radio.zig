@@ -166,3 +166,7 @@ pub const interrupt_handler: microzig.cpu.InterruptHandler = .{
         }
     }.handler_fn,
 };
+
+test {
+    _ = osi;
+}
