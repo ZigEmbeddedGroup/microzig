@@ -59,7 +59,7 @@ pub const Options = struct {
     /// ready task queue.
     priority_bits: u5 = 3,
 
-    tick_interrupt: microzig.cpu.Interrupt = .interrupt31,
+    interrupt: microzig.cpu.Interrupt = .interrupt31,
     tick_freq: TickFrequency = .from_khz(1),
     systimer_unit: systimer.Unit = .unit0,
     systimer_alarm: systimer.Alarm = .alarm0,
@@ -68,6 +68,7 @@ pub const Options = struct {
     preempt_same_priority_tasks_on_tick: bool = false,
 
     paint_stack_byte: ?u8 = null,
+
     /// Disable the use of buckets (one linked list per priority) for the ready
     /// queue. Buckets use a maximum of 260 bytes, but offer a massive speedup.
     /// Buckets are disabled automatically if there are more than 32 priorities
@@ -130,7 +131,7 @@ pub fn init() void {
     comptime {
         if (!microzig.options.cpu.interrupt_stack.enable)
             @compileError("rtos requires the interrupt stack cpu option to be enabled");
-        microzig.cpu.interrupt.expect_handler(rtos_options.tick_interrupt, tick_interrupt_handler);
+        microzig.cpu.interrupt.expect_handler(rtos_options.interrupt, interrupt_handler);
     }
 
     const cs = enter_critical_section();
@@ -158,12 +159,12 @@ pub fn init() void {
     rtos_options.systimer_alarm.set_interrupt_enabled(true);
     rtos_options.systimer_alarm.set_enabled(true);
 
-    microzig.cpu.interrupt.map(rtos_options.cpu_interrupt.source(), rtos_options.tick_interrupt);
-    microzig.cpu.interrupt.map(rtos_options.systimer_alarm.interrupt_source(), rtos_options.tick_interrupt);
+    microzig.cpu.interrupt.map(rtos_options.cpu_interrupt.source(), rtos_options.interrupt);
+    microzig.cpu.interrupt.map(rtos_options.systimer_alarm.interrupt_source(), rtos_options.interrupt);
 
-    microzig.cpu.interrupt.set_type(rtos_options.tick_interrupt, .level);
-    microzig.cpu.interrupt.set_priority(rtos_options.tick_interrupt, .lowest);
-    microzig.cpu.interrupt.enable(rtos_options.tick_interrupt);
+    microzig.cpu.interrupt.set_type(rtos_options.interrupt, .level);
+    microzig.cpu.interrupt.set_priority(rtos_options.interrupt, .lowest);
+    microzig.cpu.interrupt.enable(rtos_options.interrupt);
 }
 
 fn idle() linksection(".ram_text") callconv(.naked) void {
@@ -455,7 +456,7 @@ pub fn yield_from_isr() linksection(".ram_text") void {
     rtos_options.cpu_interrupt.set_pending(true);
 }
 
-pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
+pub const interrupt_handler: microzig.cpu.InterruptHandler = .{
     .naked = struct {
         pub fn handler_fn() linksection(".ram_vectors") callconv(.naked) void {
             comptime {
@@ -520,7 +521,7 @@ pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\
                 // first parameter is a pointer to context
                 \\mv a0, sp
-                \\jal %[tick_handler]
+                \\jal %[interrupt_handler_c]
                 \\
                 // load next task context
                 \\lw a1, 0(sp)
@@ -584,7 +585,7 @@ pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\addi sp, sp, 32*4
                 \\mret
                 :
-                : [tick_handler] "i" (&tick_handler),
+                : [interrupt_handler_c] "i" (&interrupt_handler_c),
                   [interrupt_stack_top] "i" (microzig.cpu.interrupt_stack[microzig.cpu.interrupt_stack.len..].ptr),
             );
         }
@@ -593,7 +594,7 @@ pub const tick_interrupt_handler: microzig.cpu.InterruptHandler = .{
 
 // Can't be preempted by a higher priority interrupt so already in a "critical
 // section".
-fn tick_handler(context: *Context) linksection(".ram_vectors") callconv(.c) void {
+fn interrupt_handler_c(context: *Context) linksection(".ram_vectors") callconv(.c) void {
     const status: microzig.cpu.interrupt.Status = .init();
     if (status.is_set(rtos_options.systimer_alarm.interrupt_source())) {
         rtos_options.systimer_alarm.clear_interrupt();

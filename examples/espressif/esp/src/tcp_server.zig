@@ -24,7 +24,7 @@ pub const microzig_options: microzig.Options = .{
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
         .interrupt30 = radio.interrupt_handler,
-        .interrupt31 = rtos.tick_interrupt_handler,
+        .interrupt31 = rtos.interrupt_handler,
     },
     .cpu = .{
         .interrupt_stack = .{
@@ -107,7 +107,6 @@ pub fn main() !void {
 
     try radio.wifi.connect();
     while (radio.wifi.get_sta_state() != .connected) {
-        std.log.info("still waiting", .{});
         rtos.sleep(.from_ms(100));
     }
     _ = lwip.c.netifapi_netif_common(maybe_netif.?, lwip.c.netif_set_link_up, null);
