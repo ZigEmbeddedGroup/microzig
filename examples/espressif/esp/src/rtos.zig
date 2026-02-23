@@ -8,7 +8,7 @@ const rtos = esp.rtos;
 pub const microzig_options: microzig.Options = .{
     .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
-        .interrupt31 = rtos.tick_interrupt_handler,
+        .interrupt31 = rtos.interrupt_handler,
     },
     .log_level = .debug,
     .cpu = .{
