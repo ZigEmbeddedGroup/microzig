@@ -1,0 +1,10 @@
+.{
+    .name = .mz_tools_dfu,
+    .fingerprint = 0x4efc005d2395ba30,
+    .version = "0.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
