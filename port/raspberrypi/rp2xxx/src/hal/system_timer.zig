@@ -43,7 +43,12 @@ pub const Timer = enum(u1) {
     /// Enables or disables the interrupt for the given alarm.
     pub fn set_interrupt_enabled(timer: Timer, alarm: Alarm, enable: bool) void {
         const regs = timer.get_regs();
-        regs.INTE.write_raw(@as(u4, @intFromBool(enable)) << @intFromEnum(alarm));
+        switch (alarm) {
+            .alarm0 => regs.INTE.modify(.{ .ALARM_0 = @intFromBool(enable) }),
+            .alarm1 => regs.INTE.modify(.{ .ALARM_1 = @intFromBool(enable) }),
+            .alarm2 => regs.INTE.modify(.{ .ALARM_2 = @intFromBool(enable) }),
+            .alarm3 => regs.INTE.modify(.{ .ALARM_3 = @intFromBool(enable) }),
+        }
     }
 
     /// Clears the interrupt flag for the given alarm.
