@@ -678,7 +678,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             options,
                         ),
 
-                        .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
+                        .dfu => |options| @import("tools/dfu").from_elf(
+                            fw.mb.dep.builder.dependency("tools/dfu", .{
+                                .optimize = .ReleaseSafe,
+                            }),
+                            elf_file,
+                            options,
+                        ),
 
                         .esp => |options| @import("tools/esp-image").from_elf(
                             fw.mb.dep.builder.dependency("tools/esp-image", .{
