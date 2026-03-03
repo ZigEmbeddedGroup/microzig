@@ -91,7 +91,7 @@ pub fn main() !void {
     const dest_file = try std.fs.cwd().createFile(output_path, .{});
     defer dest_file.close();
 
-    // Unbuffered because dfu uses an hashed writer, which suggests
+    // Unbuffered because dfu uses a hashed writer, which suggests
     // using an unbuffered underlying writer
     var writer = dest_file.writer(&.{});
     try dfuse.from_elf(gpa.allocator(), &elf_reader, &writer.interface, opts);
