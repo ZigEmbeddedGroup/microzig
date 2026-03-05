@@ -44,6 +44,11 @@ export fn strlen(str: ?[*:0]const c_char) usize {
     return std.mem.len(s);
 }
 
+export fn strnlen(str: ?[*:0]const u8, n: usize) usize {
+    const s = str orelse return 0;
+    return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index else n;
+}
+
 /// https://en.cppreference.com/w/c/string/byte/strncmp
 export fn strncmp(lhs: ?[*:0]const c_char, rhs: ?[*:0]const c_char, count: usize) c_int {
     const lhs_s: [*:0]const u8 = @ptrCast(lhs orelse return if (rhs != null) 1 else 0);

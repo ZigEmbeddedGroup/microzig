@@ -15,6 +15,7 @@ char * strcpy(char * restrict s1, char const * restrict s2);
 size_t strcspn(char const * s1, char const * s2);
 char * strerror(int errnum);
 size_t strlen(char const * str);
+size_t strnlen(char const * str, size_t n);
 char * strncat(char * restrict s1, char const * restrict s2, size_t n);
 int    strncmp(char const * lhs, char const * rhs, size_t count);
 char * strncpy(char * restrict s1, char const * restrict s2, size_t n);

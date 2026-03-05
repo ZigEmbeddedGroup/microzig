@@ -116,4 +116,5 @@ fn str(comptime l: usize, comptime s: []const u8) [l]u8 {
 
 test {
     _ = rtos;
+    _ = radio;
 }
