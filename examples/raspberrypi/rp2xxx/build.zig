@@ -94,6 +94,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "allocator", .file = "src/allocator.zig" },
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
         .{ .name = "mlx90640-image", .file = "src/mlx90640_image.zig" },
+        .{ .name = "mlx90640-hottest-point", .file = "src/mlx90640_hottest_point.zig" },
         .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },

@@ -47,47 +47,54 @@ pub fn main() !void {
     var image: [768]f32 = undefined;
 
     while (true) {
-        camera.image(&image) catch |err| {
+        camera.temperature(&image) catch |err| {
             std.log.err("unable to read image: {}", .{err});
             time.sleep_ms(100);
             continue;
         };
 
-        const min_max = min_max_temp(&image);
-        const threshold = min_max.min + (min_max.max - min_max.min) * 0.5;
+        const hot = find_hottest_pixel(&image);
+        const pos = camera_to_display(hot.row, hot.col);
 
         fb.clear(.black);
-        scale_128_x_64(&fb, &image, threshold);
+        draw_crosshair(&fb, pos.x, pos.y);
 
         try lcd.write_full_display(fb.bit_stream());
         time.sleep_ms(100);
     }
 }
 
-fn min_max_temp(image: *const [768]f32) struct { min: f32, max: f32 } {
-    var min: f32 = image[0];
-    var max: f32 = image[0];
+inline fn camera_to_display(row: usize, col: usize) struct { x: i16, y: i16 } {
+    return .{
+        .x = @intCast(col * 128 / 32 + 2),
+        .y = @intCast(row * 64 / 24 + 1),
+    };
+}
+
+inline fn find_hottest_pixel(image: *const [768]f32) struct { row: usize, col: usize, temp: f32 } {
+    var max_temp: f32 = image[0];
+    var hot_row: usize = 0;
+    var hot_col: usize = 0;
     for (0..24) |row| {
         for (0..32) |col| {
             const temp = image[row * 32 + col];
-            if (temp < min) min = temp;
-            if (temp > max) max = temp;
-        }
-    }
-    return .{ .min = min, .max = max };
-}
-
-// Scale 24×32 thermal image to 128×64 framebuffer
-fn scale_128_x_64(fb: *display.ssd1306.Framebuffer, image: *const [768]f32, threshold: f32) void {
-    for (0..64) |y| {
-        const cam_row: usize = y * 24 / 64;
-        for (0..128) |x| {
-            const cam_col: usize = x * 32 / 128;
-            const temp = image[cam_row * 32 + cam_col];
-            if (temp >= threshold) {
-                fb.set_pixel(@intCast(x), @intCast(y), .white);
+            if (temp > max_temp) {
+                max_temp = temp;
+                hot_row = row;
+                hot_col = col;
             }
         }
+    }
+    return .{ .row = hot_row, .col = hot_col, .temp = max_temp };
+}
+
+inline fn draw_crosshair(fb: *display.ssd1306.Framebuffer, cx: i16, cy: i16) void {
+    for (0..10) |d| {
+        const offset: i16 = @as(i16, @intCast(d)) - 5;
+        const hx = cx + offset;
+        const vy = cy + offset;
+        if (hx >= 0 and hx < 128) fb.set_pixel(@intCast(hx), @intCast(@as(u7, @intCast(cy))), .white);
+        if (vy >= 0 and vy < 64) fb.set_pixel(@intCast(@as(u7, @intCast(cx))), @intCast(vy), .white);
     }
 }
 
