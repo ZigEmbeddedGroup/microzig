@@ -239,7 +239,8 @@ pub const SPI = enum(u2) {
         var remaining = vec.size();
 
         while (remaining > 0) {
-            const transfer_len = @min(remaining, fifo_byte_len);
+            const transfer_len: u18 = @min(remaining, fifo_byte_len);
+
             self.fill_fifo(&iter, transfer_len);
 
             self.start_transfer_generic(
@@ -248,6 +249,7 @@ pub const SPI = enum(u2) {
                 transfer_len * 8,
                 bit_mode,
             );
+
             self.wait_for_transfer_blocking();
 
             remaining -= transfer_len;
@@ -278,7 +280,7 @@ pub const SPI = enum(u2) {
         var remaining = total_len;
 
         while (remaining > 0) {
-            const transfer_len = @min(remaining, fifo_byte_len);
+            const transfer_len: u18 = @min(remaining, fifo_byte_len);
 
             self.start_transfer_generic(
                 false,
