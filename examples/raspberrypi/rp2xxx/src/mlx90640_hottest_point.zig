@@ -34,9 +34,6 @@ pub fn main() !void {
         .clock = rp2xxx.drivers.clock_device(),
     });
 
-    const sn = try camera.serial_number();
-    std.log.info("camera serial number: 0x{x}", .{sn});
-
     try camera.set_refresh_rate(0b011);
 
     const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
@@ -108,8 +105,6 @@ fn init() !void {
 
     rp2xxx.uart.init_logger(uart);
     _ = pin_config.apply();
-
-    std.log.info("Hello from mlx90640", .{});
 
     const scl_pin = gpio.num(5);
     const sda_pin = gpio.num(4);
