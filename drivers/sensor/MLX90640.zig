@@ -291,6 +291,81 @@ pub const MLX90640 = struct {
         }
     }
 
+    pub fn image(self: *Self, result: []f32) !void {
+        try self.loadFrame();
+
+        const subPage: u16 = self.frame[833] & 0x0001;
+        const vdd = self.getVdd();
+        const ta = self.getTa(vdd);
+
+        var gain: f32 = @floatFromInt(self.frame[778]);
+        if (gain > 32767) {
+            gain = gain - 65536;
+        }
+
+        const gee: f32 = @floatFromInt(self.params.gainEE);
+        gain = gee / gain;
+
+        const mode: f32 = @floatFromInt((self.frame[832] & 0x1000) >> 5);
+        const cmee: f32 = @floatFromInt(self.params.calibrationModeEE);
+
+        var irDataCP = [2]f32{
+            @floatFromInt(self.frame[776]),
+            @floatFromInt(self.frame[808]),
+        };
+
+        for (0..2) |i| {
+            if (irDataCP[i] > 32767) {
+                irDataCP[i] = irDataCP[i] - 65536;
+            }
+            irDataCP[i] = irDataCP[i] * gain;
+        }
+
+        var cpo: f32 = @floatFromInt(self.params.cpOffset[0]);
+        irDataCP[0] = irDataCP[0] - cpo * (1 + self.params.cpKta * (ta - 25)) * (1 + self.params.cpKv * (vdd - 3.3));
+
+        cpo = @floatFromInt(self.params.cpOffset[1]);
+        if (mode == cmee) {
+            irDataCP[1] = irDataCP[1] - cpo * (1 + self.params.cpKta * (ta - 25)) * (1 + self.params.cpKv * (vdd - 3.3));
+        } else {
+            irDataCP[1] = irDataCP[1] - (cpo + self.params.ilChessC[0]) * (1 + self.params.cpKta * (ta - 25)) * (1 + self.params.cpKv * (vdd - 3.3));
+        }
+
+        const ktaScale: f32 = @floatFromInt(std.math.pow(u16, 2, self.params.ktaScale));
+        const kvScale: f32 = @floatFromInt(std.math.pow(u16, 2, self.params.kvScale));
+
+        var pixelNumber: i32 = 0;
+        for (0..768) |i| {
+            pixelNumber = @intCast(i);
+            const ilPattern: i32 = @divTrunc(pixelNumber, 32) - @divTrunc(pixelNumber, 64) * 2;
+            const conversionPattern: i32 = (@divTrunc((pixelNumber + 2), 4) - @divTrunc((pixelNumber + 3), 4) + @divTrunc((pixelNumber + 1), 4) - @divTrunc(pixelNumber, 4)) * (1 - 2 * ilPattern);
+
+            var irData: f32 = @floatFromInt(self.frame[i]);
+            if (irData > 32767) {
+                irData = irData - 65536;
+            }
+
+            irData = irData * gain;
+
+            const ktax: f32 = @floatFromInt(self.params.kta[i]);
+            const kta: f32 = ktax / ktaScale;
+            const kvx: f32 = @floatFromInt(self.params.kv[i]);
+            const kv: f32 = kvx / kvScale;
+            const offsetx: f32 = @floatFromInt(self.params.offset[i]);
+            irData = irData - offsetx * (1 + kta * (ta - 25)) * (1 + kv * (vdd - 3.3));
+
+            if (mode != cmee) {
+                const x: f32 = @floatFromInt(ilPattern);
+                const y: f32 = @floatFromInt(conversionPattern);
+                irData = irData + self.params.ilChessC[2] * (2 * x - 1) - self.params.ilChessC[1] * y;
+            }
+
+            irData = irData - self.params.tgc * irDataCP[subPage];
+
+            result[i] = irData;
+        }
+    }
+
     pub fn load_frame(self: *Self) !void {
         var ready: bool = false;
         for (frame_loop) |i| {
