@@ -292,6 +292,13 @@ pub const MLX90640 = struct {
     }
 
     pub fn image(self: *Self, result: []f32) !void {
+        if (self.params.kVdd == 0) {
+            try self.extract_parameters();
+
+            // the initial frame load results in bad data upon restart, so get that bad data out of the way
+            try self.load_frame();
+        }
+
         try self.load_frame();
 
         const subPage: u16 = self.frame[833] & 0x0001;
