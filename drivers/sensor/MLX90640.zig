@@ -292,11 +292,11 @@ pub const MLX90640 = struct {
     }
 
     pub fn image(self: *Self, result: []f32) !void {
-        try self.loadFrame();
+        try self.load_frame();
 
         const subPage: u16 = self.frame[833] & 0x0001;
-        const vdd = self.getVdd();
-        const ta = self.getTa(vdd);
+        const vdd = self.get_vdd();
+        const ta = self.get_ta(vdd);
 
         var gain: f32 = @floatFromInt(self.frame[778]);
         if (gain > 32767) {
