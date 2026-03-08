@@ -13,6 +13,7 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
 var i2c0 = i2c.instance.num(0);
+var i2c1 = i2c.instance.num(1);
 
 const pin_config = rp2xxx.pins.GlobalConfiguration{
     .GPIO0 = .{ .name = "gpio0", .function = .UART0_TX },
@@ -34,9 +35,9 @@ pub fn main() !void {
         .clock = rp2xxx.drivers.clock_device(),
     });
 
-    try camera.set_refresh_rate(0b100);
+    try camera.set_refresh_rate(0b101);
 
-    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c1, @enumFromInt(0x3C), null);
     const lcd = try display.ssd1306.init(.i2c, i2c_dd, null);
     try lcd.clear_screen(false);
 
@@ -57,7 +58,7 @@ pub fn main() !void {
         draw_crosshair(&fb, pos.x, pos.y);
 
         try lcd.write_full_display(fb.bit_stream());
-        time.sleep_ms(100);
+        time.sleep_ms(50);
     }
 }
 
@@ -102,13 +103,24 @@ fn init() !void {
     });
 
     i2c0.apply(i2c.Config{ .clock_config = rp2xxx.clock_config });
+    i2c1.apply(i2c.Config{ .clock_config = rp2xxx.clock_config });
 
     rp2xxx.uart.init_logger(uart);
     _ = pin_config.apply();
 
-    const scl_pin = gpio.num(5);
-    const sda_pin = gpio.num(4);
-    inline for (&.{ scl_pin, sda_pin }) |pin| {
+    // i2c0: camera (GPIO4=SDA, GPIO5=SCL)
+    const i2c0_scl = gpio.num(5);
+    const i2c0_sda = gpio.num(4);
+    inline for (&.{ i2c0_scl, i2c0_sda }) |pin| {
+        pin.set_slew_rate(.slow);
+        pin.set_schmitt_trigger_enabled(true);
+        pin.set_function(.i2c);
+    }
+
+    // i2c1: display (GPIO2=SDA, GPIO3=SCL)
+    const i2c1_scl = gpio.num(3);
+    const i2c1_sda = gpio.num(2);
+    inline for (&.{ i2c1_scl, i2c1_sda }) |pin| {
         pin.set_slew_rate(.slow);
         pin.set_schmitt_trigger_enabled(true);
         pin.set_function(.i2c);
