@@ -27,7 +27,7 @@ pub const microzig_options = microzig.Options{
 pub fn main() !void {
     try init();
 
-    var i2c_device = I2C_Device.init(i2c0, null);
+    var i2c_device = I2C_Device.init(i2c1, null);
 
     var camera = try MLX90640.init(.{
         .i2c = i2c_device.i2c_device(),
@@ -37,7 +37,7 @@ pub fn main() !void {
 
     try camera.set_refresh_rate(0b101);
 
-    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c1, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
     const lcd = try display.ssd1306.init(.i2c, i2c_dd, null);
     try lcd.clear_screen(false);
 
