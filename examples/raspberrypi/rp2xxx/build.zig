@@ -25,10 +25,14 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_board_blinky", .file = "src/board_blinky.zig" },
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
