@@ -69,12 +69,11 @@ pub fn build(b: *std.Build) void {
         freertos_lib.addIncludePath(freertos_kernel_community_dep.path("./GCC/RP2350_ARM_NTZ/non_secure/"));
     }
 
-    // Add some Pico SDK glue code
-    // TODO: maybe we should use Pico source files directly?
-    // but current way - we know what is internaly used by FreeRTOS port
+    // Pico SDK glue code: partial re-implementations of SDK functions that
+    // the FreeRTOS port references but MicroZig does not provide.
     freertos_lib.addCSourceFiles(.{
         .root = b.path("."),
-        .files = &[_][]const u8{ "src/picosdk_irq.c", "src/picosdk_exception.c" },
+        .files = &[_][]const u8{ "src/picosdk_irq.c", "src/picosdk_exception.c", "src/picosdk_stubs.c" },
         .flags = &flags,
     });
 
