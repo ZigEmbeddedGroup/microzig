@@ -80,7 +80,7 @@ fn scale_128_x_64(fb: *display.ssd1306.Framebuffer, image: *const [768]f32, thre
     for (0..64) |y| {
         const cam_row: usize = y * 24 / 64;
         for (0..128) |x| {
-            const cam_col: usize = x * 32 / 128;
+            const cam_col: usize = 31 - (x * 32 / 128);
             const temp = image[cam_row * 32 + cam_col];
             if (temp >= threshold) {
                 fb.set_pixel(@intCast(x), @intCast(y), .white);

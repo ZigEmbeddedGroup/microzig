@@ -64,7 +64,7 @@ pub fn main() !void {
 
 inline fn camera_to_display(row: usize, col: usize) struct { x: i16, y: i16 } {
     return .{
-        .x = @intCast(col * 128 / 32 + 2),
+        .x = @intCast((31 - col) * 128 / 32 + 2),
         .y = @intCast(row * 64 / 24 + 1),
     };
 }
