@@ -174,7 +174,8 @@ pub fn get_count() u32 {
 
 // ── Scheduler Control ───────────────────────────────────────────────────
 
-/// Start the FreeRTOS scheduler. This function never returns on success.
+/// Start the FreeRTOS scheduler. This call hands control to FreeRTOS and
+/// **never returns** — all subsequent execution happens inside tasks or ISRs.
 pub fn start_scheduler() noreturn {
     c.vTaskStartScheduler();
     unreachable;

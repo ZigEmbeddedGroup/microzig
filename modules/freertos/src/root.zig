@@ -8,9 +8,6 @@
 //!
 //! // Create a task
 //! const handle = try freertos.task.create(my_task, "demo", 512, null, 1);
-//!
-//! // Start the scheduler (never returns)
-//! freertos.task.start_scheduler();
 //! ```
 //!
 //! For direct access to the underlying C API, use `freertos.c.*`.
@@ -59,14 +56,13 @@ pub const notification = @import("notification.zig");
 // They are exported so the vector table (RAM or flash) can reference them.
 
 /// PendSV interrupt handler — used by the FreeRTOS port for context switching
-/// between tasks. Exported so the vector table can reference it.
+/// between tasks.
 pub extern fn isr_pendsv() callconv(.naked) void;
 /// SVCall interrupt handler — used by FreeRTOS to start the first task when
-/// the scheduler begins. Exported so the vector table can reference it.
+/// the scheduler begins.
 pub extern fn isr_svcall() callconv(.c) void;
 /// SysTick interrupt handler — used by FreeRTOS for tick counting and
-/// time-slicing. Fires at `configTICK_RATE_HZ`. Exported so the vector
-/// table can reference it.
+/// time-slicing. Fires at `configTICK_RATE_HZ`.
 pub extern fn isr_systick() callconv(.c) void;
 
 // ── Pico SDK Stubs ──────────────────────────────────────────────────────
@@ -81,41 +77,3 @@ pub extern fn isr_systick() callconv(.c) void;
 export fn vApplicationStackOverflowHook(_: config.TaskHandle, _: [*c]u8) void {
     @trap();
 }
-
-// ── Backward Compatibility ──────────────────────────────────────────────
-
-/// Deprecated: use `freertos.task` and `freertos.config` instead.
-/// Preserved for backward compatibility with existing code.
-pub const OS = struct {
-    pub const MINIMAL_STACK_SIZE: usize = config.minimal_stack_size;
-    pub const MAX_PRIORITIES: usize = config.max_priorities;
-
-    /// Deprecated: use `freertos.task.start_scheduler` instead.
-    pub fn vTaskStartScheduler() noreturn {
-        task.start_scheduler();
-    }
-
-    /// Deprecated: use `freertos.task.delay` instead.
-    pub fn vTaskDelay(ticks: c.TickType_t) void {
-        task.delay(ticks);
-    }
-
-    /// Deprecated: use `freertos.task.create` instead.
-    pub fn xTaskCreate(
-        task_function: c.TaskFunction_t,
-        name: [*:0]const u8,
-        stack_depth: u16,
-        parameters: ?*anyopaque,
-        priority: u32,
-        task_handle: ?*c.TaskHandle_t,
-    ) c.BaseType_t {
-        return c.xTaskCreate(
-            task_function,
-            name,
-            stack_depth,
-            parameters,
-            priority,
-            task_handle,
-        );
-    }
-};
