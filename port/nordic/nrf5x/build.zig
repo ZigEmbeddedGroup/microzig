@@ -3,6 +3,15 @@ const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 
+const SoftDeviceProfile = struct {
+    name: []const u8,
+    flash_start: u64,
+    ram_start: u64,
+    hex_path: std.Build.LazyPath,
+};
+
+dep: *std.Build.Dependency,
+
 chips: struct {
     nrf51822: *const microzig.Target,
     nrf52832: *const microzig.Target,
@@ -22,10 +31,35 @@ boards: struct {
     },
 },
 
+softdevice: struct {
+    files: struct {
+        s132: std.Build.LazyPath,
+        s140: std.Build.LazyPath,
+    },
+
+    chips: struct {
+        nrf52832_s132: *const microzig.Target,
+        nrf52833_s140: *const microzig.Target,
+        nrf52840_s140: *const microzig.Target,
+    },
+
+    boards: struct {
+        nordic: struct {
+            pca10040_s132: *const microzig.Target,
+            nrf52840_dongle_s140: *const microzig.Target,
+            nrf52840_mdk_s140: *const microzig.Target,
+        },
+        bbc: struct {
+            microbit_v2_s140: *const microzig.Target,
+        },
+    },
+},
+
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const nrfx = b.dependency("nrfx", .{});
+    const softdevice_dep = b.dependency("nrf5-sdk", .{});
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
@@ -142,30 +176,68 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal,
     };
 
+    const profile_s132: SoftDeviceProfile = .{
+        .name = "s132-7.2.0",
+        .flash_start = 0x00026000,
+        .ram_start = 0x20002800,
+        .hex_path = softdevice_dep.path("components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex"),
+    };
+
+    const profile_s140: SoftDeviceProfile = .{
+        .name = "s140-7.2.0",
+        .flash_start = 0x00027000,
+        .ram_start = 0x20002800,
+        .hex_path = softdevice_dep.path("components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex"),
+    };
+
+    const resolved_chip_nrf51822 = chip_nrf51822.derive(.{});
+    const resolved_chip_nrf52832 = chip_nrf52832.derive(.{});
+    const resolved_chip_nrf52833 = chip_nrf52833.derive(.{});
+    const resolved_chip_nrf52840 = chip_nrf52840.derive(.{});
+
+    const resolved_chip_nrf52832_s132 = derive_with_softdevice_memory(
+        resolved_chip_nrf52832,
+        dep,
+        profile_s132,
+    );
+
+    const resolved_chip_nrf52833_s140 = derive_with_softdevice_memory(
+        resolved_chip_nrf52833,
+        dep,
+        profile_s140,
+    );
+
+    const resolved_chip_nrf52840_s140 = derive_with_softdevice_memory(
+        resolved_chip_nrf52840,
+        dep,
+        profile_s140,
+    );
+
     return .{
+        .dep = dep,
         .chips = .{
-            .nrf51822 = chip_nrf51822.derive(.{}),
-            .nrf52832 = chip_nrf52832.derive(.{}),
-            .nrf52833 = chip_nrf52833.derive(.{}),
-            .nrf52840 = chip_nrf52840.derive(.{}),
+            .nrf51822 = resolved_chip_nrf51822,
+            .nrf52832 = resolved_chip_nrf52832,
+            .nrf52833 = resolved_chip_nrf52833,
+            .nrf52840 = resolved_chip_nrf52840,
         },
         .boards = .{
             .nordic = .{
-                .nrf52840_dongle = chip_nrf52840.derive(.{
+                .nrf52840_dongle = resolved_chip_nrf52840.derive(.{
                     .board = .{
                         .name = "nRF52840 Dongle",
                         .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
                         .root_source_file = b.path("src/boards/nrf52840-dongle.zig"),
                     },
                 }),
-                .nrf52840_mdk = chip_nrf52840.derive(.{
+                .nrf52840_mdk = resolved_chip_nrf52840.derive(.{
                     .board = .{
                         .name = "nRF52840 MDK USB Dongle",
                         .url = "https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle",
                         .root_source_file = b.path("src/boards/nrf52840-mdk.zig"),
                     },
                 }),
-                .pca10040 = chip_nrf52832.derive(.{
+                .pca10040 = resolved_chip_nrf52832.derive(.{
                     .board = .{
                         .name = "PCA10040",
                         .url = "https://www.nordicsemi.com/Products/Development-hardware/nRF52-DK",
@@ -174,7 +246,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 }),
             },
             .bbc = .{
-                .microbit_v1 = chip_nrf51822.derive(.{
+                .microbit_v1 = resolved_chip_nrf51822.derive(.{
                     .preferred_binary_format = .hex,
                     .board = .{
                         .name = "micro:bit v1",
@@ -182,7 +254,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .root_source_file = b.path("src/boards/microbit.zig"),
                     },
                 }),
-                .microbit_v2 = chip_nrf52833.derive(.{
+                .microbit_v2 = resolved_chip_nrf52833.derive(.{
                     .preferred_binary_format = .hex,
                     .board = .{
                         .name = "micro:bit v2",
@@ -192,7 +264,115 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 }),
             },
         },
+        .softdevice = .{
+            .files = .{
+                .s132 = profile_s132.hex_path,
+                .s140 = profile_s140.hex_path,
+            },
+            .chips = .{
+                .nrf52832_s132 = resolved_chip_nrf52832_s132,
+                .nrf52833_s140 = resolved_chip_nrf52833_s140,
+                .nrf52840_s140 = resolved_chip_nrf52840_s140,
+            },
+            .boards = .{
+                .nordic = .{
+                    .pca10040_s132 = resolved_chip_nrf52832_s132.derive(.{
+                        .board = .{
+                            .name = "PCA10040 (SoftDevice s132 7.2.0)",
+                            .url = "https://www.nordicsemi.com/Products/Development-hardware/nRF52-DK",
+                            .root_source_file = b.path("src/boards/pca10040.zig"),
+                        },
+                    }),
+                    .nrf52840_dongle_s140 = resolved_chip_nrf52840_s140.derive(.{
+                        .board = .{
+                            .name = "nRF52840 Dongle (SoftDevice s140 7.2.0)",
+                            .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
+                            .root_source_file = b.path("src/boards/nrf52840-dongle.zig"),
+                        },
+                    }),
+                    .nrf52840_mdk_s140 = resolved_chip_nrf52840_s140.derive(.{
+                        .board = .{
+                            .name = "nRF52840 MDK USB Dongle (SoftDevice s140 7.2.0)",
+                            .url = "https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle",
+                            .root_source_file = b.path("src/boards/nrf52840-mdk.zig"),
+                        },
+                    }),
+                },
+                .bbc = .{
+                    .microbit_v2_s140 = resolved_chip_nrf52833_s140.derive(.{
+                        .preferred_binary_format = .hex,
+                        .board = .{
+                            .name = "micro:bit v2 (SoftDevice s140 7.2.0)",
+                            .url = "https://tech.microbit.org/hardware/2-2-revision",
+                            .root_source_file = b.path("src/boards/microbit.zig"),
+                        },
+                    }),
+                },
+            },
+        },
     };
+}
+
+pub fn merge_hex(self: *const Self, lower_hex: std.Build.LazyPath, upper_hex: std.Build.LazyPath, output_name: []const u8) std.Build.LazyPath {
+    const run = self.dep.builder.addRunArtifact(self.dep.artifact("nrf5x-mergehex"));
+    run.addFileArg(lower_hex);
+    run.addFileArg(upper_hex);
+    return run.addOutputFileArg(output_name);
+}
+
+fn derive_with_softdevice_memory(
+    base: *const microzig.Target,
+    dep: *std.Build.Dependency,
+    profile: SoftDeviceProfile,
+) *const microzig.Target {
+    const allocator = dep.builder.allocator;
+    var filtered_regions = std.array_list.Managed(microzig.MemoryRegion).init(allocator);
+
+    var found_flash = false;
+    var found_ram = false;
+
+    for (base.chip.memory_regions) |region| {
+        if (region.tag == .flash) {
+            if (found_flash) continue;
+            var updated_region = region;
+            const end = region.offset + region.length;
+            if (profile.flash_start >= end) @panic("softdevice flash start is outside of flash memory");
+            updated_region.length = end - profile.flash_start;
+            updated_region.offset = profile.flash_start;
+            filtered_regions.append(updated_region) catch @panic("OOM");
+            found_flash = true;
+            continue;
+        }
+
+        if (region.tag == .ram) {
+            if (found_ram) continue;
+            var updated_region = region;
+            const end = region.offset + region.length;
+            if (profile.ram_start >= end) @panic("softdevice ram start is outside of ram memory");
+            updated_region.length = end - profile.ram_start;
+            updated_region.offset = profile.ram_start;
+            filtered_regions.append(updated_region) catch @panic("OOM");
+            found_ram = true;
+            continue;
+        }
+
+        filtered_regions.append(region) catch @panic("OOM");
+    }
+
+    if (!found_flash) @panic("target has no flash memory region");
+    if (!found_ram) @panic("target has no ram memory region");
+
+    const regions = filtered_regions.toOwnedSlice() catch @panic("OOM");
+
+    const chip: microzig.Chip = .{
+        .name = base.chip.name,
+        .url = base.chip.url,
+        .register_definition = base.chip.register_definition,
+        .memory_regions = regions,
+        .patch_files = base.chip.patch_files,
+    };
+
+    return base.derive(.{ .chip = chip });
 }
 
 pub fn build(b: *std.Build) void {
@@ -210,4 +390,14 @@ pub fn build(b: *std.Build) void {
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
     test_step.dependOn(&unit_tests_run.step);
+
+    const mergehex_exe = b.addExecutable(.{
+        .name = "nrf5x-mergehex",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tools/mergehex.zig"),
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+        }),
+    });
+    b.installArtifact(mergehex_exe);
 }
