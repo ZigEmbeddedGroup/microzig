@@ -36,6 +36,9 @@ boards: struct {
 
 softdevice: struct {
     files: struct {
+        s112: std.Build.LazyPath,
+        s113: std.Build.LazyPath,
+        s122: std.Build.LazyPath,
         s132: std.Build.LazyPath,
         s140: std.Build.LazyPath,
     },
@@ -271,8 +274,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .softdevice = .{
             .files = .{
-                .s132 = profile_s132.hex_path,
-                .s140 = profile_s140.hex_path,
+                .s112 = softdevice_dep.path("components/softdevice/s112/hex/s112_nrf52_7.2.0_softdevice.hex"),
+                .s113 = softdevice_dep.path("components/softdevice/s113/hex/s113_nrf52_7.2.0_softdevice.hex"),
+                .s122 = softdevice_dep.path("components/softdevice/s122/hex/s122_nrf52_8.0.0_softdevice.hex"),
+                .s132 = softdevice_dep.path("components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex"),
+                .s140 = softdevice_dep.path("components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex"),
             },
             .chips = .{
                 .nrf52832_s132 = resolved_chip_nrf52832_s132,

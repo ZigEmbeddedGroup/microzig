@@ -21,6 +21,19 @@ pub fn build(b: *std.Build) void {
     const nrf52840_dongle_s140 = mb.ports.nrf5x.softdevice.boards.nordic.nrf52840_dongle_s140;
     const nrf52840_mdk_s140 = mb.ports.nrf5x.softdevice.boards.nordic.nrf52840_mdk_s140;
 
+    // Install SoftDevice hex files into zig-out/firmware/ for easy flashing.
+    const install_step = b.getInstallStep();
+    const sd_files = mb.ports.nrf5x.softdevice.files;
+    inline for (.{
+        .{ sd_files.s112, "s112_nrf52_7.2.0_softdevice.hex" },
+        .{ sd_files.s113, "s113_nrf52_7.2.0_softdevice.hex" },
+        .{ sd_files.s122, "s122_nrf52_8.0.0_softdevice.hex" },
+        .{ sd_files.s132, "s132_nrf52_7.2.0_softdevice.hex" },
+        .{ sd_files.s140, "s140_nrf52_7.2.0_softdevice.hex" },
+    }) |entry| {
+        install_step.dependOn(&b.addInstallFileWithDir(entry[0], .{ .custom = "firmware" }, entry[1]).step);
+    }
+
     const available_examples = [_]Example{
         .{ .target = nrf52840_dongle, .name = "nrf52840_dongle_blinky", .file = "src/blinky.zig", .softdevice_hex = null },
 
