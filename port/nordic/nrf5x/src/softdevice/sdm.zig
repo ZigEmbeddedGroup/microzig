@@ -44,7 +44,7 @@ pub const FaultId = enum(u32) {
     _,
 };
 
-pub const FaultHandler = *const fn (id: FaultId, pc: u32, info: u32) callconv(.C) void;
+pub const FaultHandler = *const fn (id: FaultId, pc: u32, info: u32) callconv(.c) void;
 
 pub fn enable(cfg: ?*const ClockLfCfg, handler: FaultHandler) Error!void {
     return err.check(svc.svcall2(

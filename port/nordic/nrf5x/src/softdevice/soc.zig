@@ -128,7 +128,7 @@ pub const RadioSignalCallbackReturnParam = extern struct {
     },
 };
 
-pub const RadioSignalCallback = *const fn (signal_type: RadioCallbackSignalType) callconv(.C) *RadioSignalCallbackReturnParam;
+pub const RadioSignalCallback = *const fn (signal_type: RadioCallbackSignalType) callconv(.c) *RadioSignalCallbackReturnParam;
 
 pub const EcbData = extern struct {
     key: [ecb_key_length]u8,

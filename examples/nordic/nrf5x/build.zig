@@ -61,6 +61,23 @@ pub fn build(b: *std.Build) void {
             .is_softdevice = true,
         },
 
+        // SoftDevice API examples for PCA10040 (nRF52832 + S132).
+        // The softdevice module is automatically wired via the HAL.
+        .{
+            .target = pca10040_s132,
+            .name = "pca10040_softdevice_init",
+            .file = "src/softdevice_init.zig",
+            .softdevice_hex = null,
+            .is_softdevice = true,
+        },
+        .{
+            .target = pca10040_s132,
+            .name = "pca10040_softdevice_beacon",
+            .file = "src/softdevice_beacon.zig",
+            .softdevice_hex = null,
+            .is_softdevice = true,
+        },
+
         .{ .target = pca10040, .name = "pca10040_blinky", .file = "src/blinky.zig", .softdevice_hex = null },
         .{ .target = pca10040, .name = "pca10040_uart", .file = "src/uart.zig", .softdevice_hex = null },
         .{ .target = pca10040, .name = "pca10040_i2c_bus_scan", .file = "src/i2c_bus_scan.zig", .softdevice_hex = null },

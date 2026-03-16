@@ -8,6 +8,9 @@ const SoftDeviceProfile = struct {
     flash_start: u64,
     ram_start: u64,
     hex_path: std.Build.LazyPath,
+    /// Variant root file (e.g. "src/softdevice/s132.zig") — single source of
+    /// truth for which SoftDevice variant a target uses.
+    variant_root: std.Build.LazyPath,
 };
 
 dep: *std.Build.Dependency,
@@ -181,6 +184,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .flash_start = 0x00026000,
         .ram_start = 0x20002800,
         .hex_path = softdevice_dep.path("components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex"),
+        .variant_root = b.path("src/softdevice/s132.zig"),
     };
 
     const profile_s140: SoftDeviceProfile = .{
@@ -188,6 +192,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .flash_start = 0x00027000,
         .ram_start = 0x20002800,
         .hex_path = softdevice_dep.path("components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex"),
+        .variant_root = b.path("src/softdevice/s140.zig"),
     };
 
     const resolved_chip_nrf51822 = chip_nrf51822.derive(.{});
@@ -325,7 +330,8 @@ fn derive_with_softdevice_memory(
     dep: *std.Build.Dependency,
     profile: SoftDeviceProfile,
 ) *const microzig.Target {
-    const allocator = dep.builder.allocator;
+    const b = dep.builder;
+    const allocator = b.allocator;
     var filtered_regions = std.array_list.Managed(microzig.MemoryRegion).init(allocator);
 
     var found_flash = false;
@@ -372,7 +378,20 @@ fn derive_with_softdevice_memory(
         .patch_files = base.chip.patch_files,
     };
 
-    return base.derive(.{ .chip = chip });
+    // Create a softdevice-aware HAL that re-exports the standard HAL plus
+    // the variant-specific SoftDevice module (single source of truth).
+    const sd_mod = b.createModule(.{
+        .root_source_file = profile.variant_root,
+    });
+
+    const hal_sd: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hal_softdevice.zig"),
+        .imports = allocator.dupe(std.Build.Module.Import, &.{
+            .{ .name = "softdevice", .module = sd_mod },
+        }) catch @panic("OOM"),
+    };
+
+    return base.derive(.{ .chip = chip, .hal = hal_sd });
 }
 
 pub fn build(b: *std.Build) void {
