@@ -51,8 +51,8 @@ pub fn main() !void {
             continue;
         };
 
-        const hot = find_hottest_pixel(&image);
-        const pos = camera_to_display(hot.row, hot.col);
+        const centroid = find_hottest_cluster_centroid(&image);
+        const pos = camera_to_display(centroid.row, centroid.col);
 
         fb.clear(.black);
         draw_crosshair(&fb, pos.x, pos.y);
@@ -62,28 +62,90 @@ pub fn main() !void {
     }
 }
 
-inline fn camera_to_display(row: usize, col: usize) struct { x: i16, y: i16 } {
+inline fn camera_to_display(row: f32, col: f32) struct { x: i16, y: i16 } {
     return .{
-        .x = @intCast((31 - col) * 128 / 32 + 2),
-        .y = @intCast(row * 64 / 24 + 1),
+        .x = @intFromFloat((31.0 - col) * 128.0 / 32.0 + 2.0),
+        .y = @intFromFloat(row * 64.0 / 24.0 + 1.0),
     };
 }
 
-inline fn find_hottest_pixel(image: *const [768]f32) struct { row: usize, col: usize, temp: f32 } {
+inline fn find_hottest_cluster_centroid(image: *const [768]f32) struct { row: f32, col: f32 } {
     var max_temp: f32 = image[0];
-    var hot_row: usize = 0;
-    var hot_col: usize = 0;
-    for (0..24) |row| {
-        for (0..32) |col| {
-            const temp = image[row * 32 + col];
-            if (temp > max_temp) {
-                max_temp = temp;
-                hot_row = row;
-                hot_col = col;
+    for (image) |temp| {
+        if (temp > max_temp) max_temp = temp;
+    }
+
+    const threshold = max_temp - 2.0;
+
+    var hot: [768]bool = undefined;
+    for (0..768) |i| {
+        hot[i] = image[i] >= threshold;
+    }
+
+    var visited: [768]bool = .{false} ** 768;
+    var queue: [768]u16 = undefined;
+
+    var best_sum_row: f32 = 0;
+    var best_sum_col: f32 = 0;
+    var best_sum_weight: f32 = 0;
+    var best_count: usize = 0;
+
+    for (0..768) |start| {
+        if (!hot[start] or visited[start]) continue;
+
+        var sum_row: f32 = 0;
+        var sum_col: f32 = 0;
+        var sum_weight: f32 = 0;
+        var count: usize = 0;
+        var head: usize = 0;
+        var tail: usize = 0;
+
+        queue[tail] = @intCast(start);
+        tail += 1;
+        visited[start] = true;
+
+        while (head < tail) {
+            const cur = queue[head];
+            head += 1;
+            const r: i32 = @intCast(cur / 32);
+            const c: i32 = @intCast(cur % 32);
+            const weight = image[cur];
+            sum_row += @as(f32, @floatFromInt(r)) * weight;
+            sum_col += @as(f32, @floatFromInt(c)) * weight;
+            sum_weight += weight;
+            count += 1;
+
+            const deltas = [_][2]i32{ .{ 0, 1 }, .{ 0, -1 }, .{ 1, 0 }, .{ -1, 0 } };
+            for (deltas) |d| {
+                const nr = r + d[0];
+                const nc = c + d[1];
+                if (nr >= 0 and nr < 24 and nc >= 0 and nc < 32) {
+                    const ni: usize = @intCast(@as(u32, @intCast(nr)) * 32 + @as(u32, @intCast(nc)));
+                    if (hot[ni] and !visited[ni]) {
+                        visited[ni] = true;
+                        queue[tail] = @intCast(ni);
+                        tail += 1;
+                    }
+                }
             }
         }
+
+        if (count > best_count) {
+            best_count = count;
+            best_sum_row = sum_row;
+            best_sum_col = sum_col;
+            best_sum_weight = sum_weight;
+        }
     }
-    return .{ .row = hot_row, .col = hot_col, .temp = max_temp };
+
+    if (best_sum_weight > 0) {
+        return .{
+            .row = best_sum_row / best_sum_weight,
+            .col = best_sum_col / best_sum_weight,
+        };
+    } else {
+        return .{ .row = 12.0, .col = 16.0 };
+    }
 }
 
 inline fn draw_crosshair(fb: *display.ssd1306.Framebuffer, cx: i16, cy: i16) void {
