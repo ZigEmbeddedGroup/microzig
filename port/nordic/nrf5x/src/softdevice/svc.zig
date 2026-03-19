@@ -14,16 +14,14 @@ pub inline fn svcall0(comptime num: u32) u32 {
     return asm volatile ("svc " ++ comptime_num(num)
         : [ret] "={r0}" (-> u32),
         :
-        : .{ .memory = true }
-    );
+        : .{ .memory = true });
 }
 
 pub inline fn svcall1(comptime num: u32, p0: usize) u32 {
     return asm volatile ("svc " ++ comptime_num(num)
         : [ret] "={r0}" (-> u32),
         : [p0] "{r0}" (p0),
-        : .{ .memory = true }
-    );
+        : .{ .memory = true });
 }
 
 pub inline fn svcall2(comptime num: u32, p0: usize, p1: usize) u32 {
@@ -31,8 +29,7 @@ pub inline fn svcall2(comptime num: u32, p0: usize, p1: usize) u32 {
         : [ret] "={r0}" (-> u32),
         : [p0] "{r0}" (p0),
           [p1] "{r1}" (p1),
-        : .{ .memory = true }
-    );
+        : .{ .memory = true });
 }
 
 pub inline fn svcall3(comptime num: u32, p0: usize, p1: usize, p2: usize) u32 {
@@ -41,8 +38,7 @@ pub inline fn svcall3(comptime num: u32, p0: usize, p1: usize, p2: usize) u32 {
         : [p0] "{r0}" (p0),
           [p1] "{r1}" (p1),
           [p2] "{r2}" (p2),
-        : .{ .memory = true }
-    );
+        : .{ .memory = true });
 }
 
 pub inline fn svcall4(comptime num: u32, p0: usize, p1: usize, p2: usize, p3: usize) u32 {
@@ -52,6 +48,5 @@ pub inline fn svcall4(comptime num: u32, p0: usize, p1: usize, p2: usize, p3: us
           [p1] "{r1}" (p1),
           [p2] "{r2}" (p2),
           [p3] "{r3}" (p3),
-        : .{ .memory = true }
-    );
+        : .{ .memory = true });
 }
