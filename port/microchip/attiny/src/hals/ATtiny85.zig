@@ -1,6 +1,4 @@
-const std = @import("std");
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
 const cpu = microzig.cpu;
 
 pub const gpio = struct {
