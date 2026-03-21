@@ -1,0 +1,18 @@
+.{
+    .name = .mz_port_microchip_attiny,
+    .fingerprint = 0x6455fe5728af26e9,
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .atpack = .{
+            .url = "https://atpack.microzig.tech/Atmel.ATtiny_DFP.2.0.368.atpack",
+            .hash = "N-V-__8AAChkfwZp4ZmDp0teMCY8Q-2clc9GmzWHeh7xiKnO",
+        },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
