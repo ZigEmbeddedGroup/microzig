@@ -47,11 +47,7 @@ pub const Pin = enum {
 pub const InputGPIO = struct {
     pin: gpio.Pin,
     pub inline fn read(self: @This()) u1 {
-        const port = self.pin.get_port();
-        return if (port.IDR.raw & self.pin.mask() != 0)
-            1
-        else
-            0;
+        return self.pin.read();
     }
 };
 
@@ -59,11 +55,7 @@ pub const OutputGPIO = struct {
     pin: gpio.Pin,
 
     pub inline fn put(self: @This(), value: u1) void {
-        var port = self.pin.get_port();
-        switch (value) {
-            0 => port.BSRR.raw = @intCast(self.pin.mask() << 16),
-            1 => port.BSRR.raw = self.pin.mask(),
-        }
+        self.pin.put(value);
     }
 
     pub inline fn low(self: @This()) void {
@@ -75,8 +67,7 @@ pub const OutputGPIO = struct {
     }
 
     pub inline fn toggle(self: @This()) void {
-        var port = self.pin.get_port();
-        port.ODR.raw ^= self.pin.mask();
+        self.pin.toggle();
     }
 };
 
@@ -114,19 +105,12 @@ pub const Digital_IO_Pin = struct {
     }
     pub fn write_fn(ptr: *anyopaque, state: State) WriteError!void {
         const self: *@This() = @ptrCast(@alignCast(ptr));
-        var port = self.pin.get_port();
-        switch (state) {
-            .low => port.BSRR.raw = @intCast(self.pin.mask() << 16),
-            .high => port.BSRR.raw = self.pin.mask(),
-        }
+        self.pin.put(@intFromEnum(state));
     }
+
     pub fn read_fn(ptr: *anyopaque) ReadError!State {
         const self: *@This() = @ptrCast(@alignCast(ptr));
-        const port = self.pin.get_port();
-        return if (port.IDR.raw & self.pin.mask() != 0)
-            .high
-        else
-            .low;
+        return @as(State, @enumFromInt(self.pin.read()));
     }
 
     pub fn digital_io(ptr: *@This()) Digital_IO {
@@ -194,6 +178,10 @@ pub const Port = enum {
     GPIOE,
     GPIOF,
     GPIOG,
+    GPIOH,
+    GPIOI,
+    GPIOJ,
+    GPIOK,
     pub const Configuration = struct {
         PIN0: ?Pin.Configuration = null,
         PIN1: ?Pin.Configuration = null,
@@ -229,6 +217,10 @@ pub const GlobalConfiguration = struct {
     GPIOE: ?Port.Configuration = null,
     GPIOF: ?Port.Configuration = null,
     GPIOG: ?Port.Configuration = null,
+    GPIOH: ?Port.Configuration = null,
+    GPIOI: ?Port.Configuration = null,
+    GPIOJ: ?Port.Configuration = null,
+    GPIOK: ?Port.Configuration = null,
 
     comptime {
         const port_field_count = @typeInfo(Port).@"enum".fields.len;
