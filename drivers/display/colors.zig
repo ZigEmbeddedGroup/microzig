@@ -11,10 +11,9 @@ pub const BlackWhite = enum(u1) {
     white = 1,
 };
 
-pub fn RGB565_Generic(comptime storage_endian: std.builtin.Endian) type {
+pub fn RGB565_Generic(comptime desired_endianness: std.builtin.Endian) type {
     return struct {
         const Self = @This();
-        const native_endian = builtin.target.cpu.arch.endian();
 
         value: u16,
 
@@ -32,13 +31,9 @@ pub fn RGB565_Generic(comptime storage_endian: std.builtin.Endian) type {
             const g6: u16 = @as(u16, g) >> 2;
             const b5: u16 = @as(u16, b) >> 3;
 
-            var v: u16 = (r5 << 11) | (g6 << 5) | b5;
+            const v: u16 = (r5 << 11) | (g6 << 5) | b5;
 
-            if (comptime storage_endian != native_endian) {
-                v = @byteSwap(v);
-            }
-
-            return .{ .value = v };
+            return .{ .value = std.mem.nativeTo(u16, v, desired_endianness) };
         }
     };
 }
