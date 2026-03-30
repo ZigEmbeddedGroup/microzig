@@ -111,7 +111,7 @@ pub const Display_Config = struct {
     };
 };
 
-pub fn ST77xx_Generic(comptime driver_cfg: Driver_Config, comptime display_cfg: Display_Config) type {
+pub fn ST77xx_Generic(driver_cfg: Driver_Config, display_cfg: Display_Config) type {
     return struct {
         const Self = @This();
         const Datagram_Device = driver_cfg.Datagram_Device;
