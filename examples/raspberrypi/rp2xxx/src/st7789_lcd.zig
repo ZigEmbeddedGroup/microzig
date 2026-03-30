@@ -14,7 +14,6 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const lvgl = @import("lvgl");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
