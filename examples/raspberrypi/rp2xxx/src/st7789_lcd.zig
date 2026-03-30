@@ -1,6 +1,6 @@
 //! ST7789 Driver Demo — using WaveShare 1.3inch LCD Display Module
 //!
-//! WaveShare 1.3inch LCD Display Module is based on ST7789 driver and has a 240x240 pixel resultion.
+//! WaveShare 1.3inch LCD Display Module is based on ST7789 driver and has a 240x240 pixel resolution.
 //! This example demonstrates how to interface with the display using SPI and GPIO,
 //! and includes basic drawing operations like clearing the screen and setting pixels.
 //!

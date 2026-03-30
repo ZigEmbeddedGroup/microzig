@@ -10,13 +10,13 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
-pub fn ST7735(comptime display_cfg: Display_Config) type {
+pub fn ST7735(display_cfg: Display_Config) type {
     return ST77xx_Generic(.{
         .device = .st7735,
     }, display_cfg);
 }
 
-pub fn ST7789(comptime display_cfg: Display_Config) type {
+pub fn ST7789(display_cfg: Display_Config) type {
     return ST77xx_Generic(.{
         .device = .st7789,
     }, display_cfg);
@@ -279,8 +279,7 @@ pub fn ST77xx_Generic(comptime driver_cfg: Driver_Config, comptime display_cfg: 
                     dri.x_offset = display_cfg.x_offset;
                     dri.y_offset = display_cfg.y_offset;
                 },
-                .deg90,
-                => {
+                .deg90 => {
                     dri.madctl.addr = MemoryDataAccessControl.AddressOrder.from_rotation(rotation);
                     dri.resolution.width = display_cfg.resolution.height;
                     dri.resolution.height = display_cfg.resolution.width;

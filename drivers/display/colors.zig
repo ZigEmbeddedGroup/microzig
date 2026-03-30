@@ -2,7 +2,6 @@
 //! This file provides common color types found on the supported displays.
 //!
 //!
-const builtin = @import("builtin");
 const std = @import("std");
 
 /// A color type encoding only black and white.
@@ -11,7 +10,7 @@ pub const BlackWhite = enum(u1) {
     white = 1,
 };
 
-pub fn RGB565_Generic(comptime desired_endianness: std.builtin.Endian) type {
+pub fn RGB565_Generic(desired_endianness: std.builtin.Endian) type {
     return struct {
         const Self = @This();
 
