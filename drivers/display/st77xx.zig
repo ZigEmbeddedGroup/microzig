@@ -179,17 +179,20 @@ pub fn ST77xx_Generic(driver_cfg: Driver_Config, display_cfg: Display_Config) ty
         }
 
         fn init_sequence_st7735(dri: *Self, delay_ms: *const fn (ms: u32) void) !void {
+            // Reset the controller and exit sleep mode.
             try dri.write_command(.swreset, &.{});
             delay_ms(150);
             try dri.write_command(.slpout, &.{});
             delay_ms(500);
 
+            // Configure frame rate and inversion behaviour for stable scanning.
             try dri.write_command(.frmctr1, &.{ 0x01, 0x2C, 0x2D });
             try dri.write_command(.frmctr2, &.{ 0x01, 0x2C, 0x2D });
             try dri.write_command(.frmctr3, &.{ 0x01, 0x2C, 0x2D, 0x01, 0x2C, 0x2D });
 
             try dri.write_command(.invctr, &.{0x07});
 
+            // Power control and VCOM tuning values from common reference init tables.
             try dri.write_command(.pwmctr1, &.{ 0xA2, 0x02, 0x84 });
             try dri.write_command(.pwmctr2, &.{0xC5});
             try dri.write_command(.pwmctr3, &.{ 0x0A, 0x00 });
@@ -198,16 +201,21 @@ pub fn ST77xx_Generic(driver_cfg: Driver_Config, display_cfg: Display_Config) ty
 
             try dri.write_command(.vmctr1, &.{0x0E});
             try dri.write_command(.invoff, &.{});
+
+            // Select 16-bit pixel format and apply orientation / color order.
             try dri.write_command(.madctl, &.{@bitCast(dri.madctl)});
             try dri.write_command(.colmod, &.{0x05});
 
+            // Expose the full configured panel area as the initial drawing window.
             try dri.write_command(.caset, &range_to_bigendian_bytes(0, display_cfg.resolution.width - 1));
             try dri.write_command(.raset, &range_to_bigendian_bytes(0, display_cfg.resolution.height - 1));
 
+            // Some modules require display inversion for correct colours / contrast.
             if (comptime display_cfg.display_inversion) {
                 try dri.write_command(.invon, &.{});
             }
 
+            // Positive and negative gamma correction curves.
             try dri.write_command(.gmctrp1, &.{
                 0x02, 0x1c, 0x07, 0x12, 0x37, 0x32, 0x29, 0x2d,
                 0x29, 0x25, 0x2B, 0x39, 0x00, 0x01, 0x03, 0x10,
@@ -218,6 +226,7 @@ pub fn ST77xx_Generic(driver_cfg: Driver_Config, display_cfg: Display_Config) ty
                 0x2E, 0x2E, 0x37, 0x3F, 0x00, 0x00, 0x02, 0x10,
             });
 
+            // Switch to normal mode and enable display output.
             try dri.write_command(.noron, &.{});
             delay_ms(10);
             try dri.write_command(.dispon, &.{});
@@ -225,21 +234,28 @@ pub fn ST77xx_Generic(driver_cfg: Driver_Config, display_cfg: Display_Config) ty
         }
 
         fn init_sequence_st7789(dri: *Self, delay_ms: *const fn (ms: u32) void) !void {
+            // Reset the controller and exit sleep mode.
             try dri.write_command(.swreset, &.{});
             delay_ms(150);
             try dri.write_command(.slpout, &.{});
             delay_ms(10);
+
+            // Select 16-bit pixel format and apply orientation / color order.
             try dri.write_command(.colmod, &.{0x55});
             delay_ms(10);
             try dri.write_command(.madctl, &.{@bitCast(dri.madctl)});
+
+            // Expose the full configured panel area as the initial drawing window.
             try dri.write_command(.caset, &range_to_bigendian_bytes(0, display_cfg.resolution.width - 1));
             try dri.write_command(.raset, &range_to_bigendian_bytes(0, display_cfg.resolution.height - 1));
 
+            // Some modules require display inversion for correct colours / contrast.
             if (comptime display_cfg.display_inversion) {
                 try dri.write_command(.invon, &.{});
                 delay_ms(10);
             }
 
+            // Switch to normal mode and enable display output.
             try dri.write_command(.noron, &.{});
             delay_ms(10);
             try dri.write_command(.dispon, &.{});
