@@ -12,7 +12,6 @@
 //! - RST: GPIO 12
 //! - Backlight: GPIO 13 (PWM for brightness control)
 
-const std = @import("std");
 const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
