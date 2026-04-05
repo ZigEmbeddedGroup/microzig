@@ -79,16 +79,14 @@ pub fn get_time_since_boot() u64 {
     while (true) {
         const ticks = @as(u64, @intCast(reload - systick.VAL.read().CURRENT));
         const high_after = microzig.cpu.atomic.load(u32, &accumulated_ticks, .acquire);
-        
+
         // ensure that 'high' and 'ticks' belong to the same
         // RELOAD..0 count down cycle
         if (high_before == high_after) {
             const all_ticks = (@as(u64, high_after) << 24) | ticks;
             const ns = all_ticks * ns_per_ticks;
             return ns >> 10;
-        }
-        else
-        {
+        } else {
             high_before = high_after;
         }
     }
