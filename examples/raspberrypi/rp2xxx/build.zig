@@ -100,6 +100,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },
+        .{ .name = "st7789", .file = "src/st7789_lcd.zig" },
         .{ .name = "net-pong", .file = "src/net/pong.zig" },
         .{ .name = "net-irq", .file = "src/net/irq.zig" },
         .{ .name = "net-scan", .file = "src/net/scan.zig" },
