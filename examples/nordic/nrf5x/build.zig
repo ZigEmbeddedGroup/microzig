@@ -17,29 +17,88 @@ pub fn build(b: *std.Build) void {
     const pca10040 = mb.ports.nrf5x.boards.nordic.pca10040;
     const microbit_v1 = mb.ports.nrf5x.boards.bbc.microbit_v1;
     const microbit_v2 = mb.ports.nrf5x.boards.bbc.microbit_v2;
+    const pca10040_s132 = mb.ports.nrf5x.softdevice.boards.nordic.pca10040_s132;
+    const nrf52840_dongle_s140 = mb.ports.nrf5x.softdevice.boards.nordic.nrf52840_dongle_s140;
+    const nrf52840_mdk_s140 = mb.ports.nrf5x.softdevice.boards.nordic.nrf52840_mdk_s140;
+
+    // Install SoftDevice hex files into zig-out/firmware/ for easy flashing.
+    const install_step = b.getInstallStep();
+    const sd_files = mb.ports.nrf5x.softdevice.files;
+    inline for (.{
+        .{ sd_files.s112, "s112_nrf52_7.2.0_softdevice.hex" },
+        .{ sd_files.s113, "s113_nrf52_7.2.0_softdevice.hex" },
+        .{ sd_files.s122, "s122_nrf52_8.0.0_softdevice.hex" },
+        .{ sd_files.s132, "s132_nrf52_7.2.0_softdevice.hex" },
+        .{ sd_files.s140, "s140_nrf52_7.2.0_softdevice.hex" },
+    }) |entry| {
+        install_step.dependOn(&b.addInstallFileWithDir(entry[0], .{ .custom = "firmware" }, entry[1]).step);
+    }
 
     const available_examples = [_]Example{
-        .{ .target = nrf52840_dongle, .name = "nrf52840_dongle_blinky", .file = "src/blinky.zig" },
+        .{ .target = nrf52840_dongle, .name = "nrf52840_dongle_blinky", .file = "src/blinky.zig", .softdevice_hex = null },
 
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_blinky", .file = "src/blinky.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_uart", .file = "src/uart.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_accel", .file = "src/i2c_accel.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_hall_effect", .file = "src/i2c_hall_effect.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_position_sensor", .file = "src/i2c_position_sensor.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_temp", .file = "src/i2c_temp.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_rtt_log", .file = "src/rtt_log.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_semihosting", .file = "src/semihosting.zig" },
-        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_spi_master", .file = "src/spi_master.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_blinky", .file = "src/blinky.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_uart", .file = "src/uart.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_bus_scan", .file = "src/i2c_bus_scan.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_accel", .file = "src/i2c_accel.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_hall_effect", .file = "src/i2c_hall_effect.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_position_sensor", .file = "src/i2c_position_sensor.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_i2c_temp", .file = "src/i2c_temp.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_rtt_log", .file = "src/rtt_log.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_semihosting", .file = "src/semihosting.zig", .softdevice_hex = null },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_spi_master", .file = "src/spi_master.zig", .softdevice_hex = null },
 
-        .{ .target = pca10040, .name = "pca10040_blinky", .file = "src/blinky.zig" },
-        .{ .target = pca10040, .name = "pca10040_uart", .file = "src/uart.zig" },
-        .{ .target = pca10040, .name = "pca10040_i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
-        .{ .target = pca10040, .name = "pca10040_i2c_temp", .file = "src/i2c_temp.zig" },
-        .{ .target = pca10040, .name = "pca10040_spi_master", .file = "src/spi_master.zig" },
+        // SoftDevice examples: the app code is identical — the difference is in
+        // how the SoftDevice binary gets onto the chip. "preflashed" assumes the
+        // SoftDevice is already on the device; "merged" produces a single hex
+        // containing both the SoftDevice and the app.
+        .{
+            .target = pca10040_s132,
+            .name = "pca10040_softdevice_preflashed_blinky",
+            .file = "src/softdevice_preflashed_blinky.zig",
+            .softdevice_hex = null,
+            .is_softdevice = true,
+        },
+        .{
+            .target = nrf52840_mdk_s140,
+            .name = "nrf52840_mdk_softdevice_merged_blinky",
+            .file = "src/softdevice_merged_blinky.zig",
+            .softdevice_hex = mb.ports.nrf5x.softdevice.files.s140,
+            .is_softdevice = true,
+        },
+        .{
+            .target = nrf52840_dongle_s140,
+            .name = "nrf52840_dongle_softdevice_merged_blinky",
+            .file = "src/softdevice_merged_blinky.zig",
+            .softdevice_hex = mb.ports.nrf5x.softdevice.files.s140,
+            .is_softdevice = true,
+        },
 
-        .{ .target = microbit_v1, .name = "microbit_v1_display", .file = "src/microbit/display.zig" },
-        .{ .target = microbit_v2, .name = "microbit_v2_display", .file = "src/microbit/display.zig" },
+        // SoftDevice API examples for PCA10040 (nRF52832 + S132).
+        // The softdevice module is automatically wired via the HAL.
+        .{
+            .target = pca10040_s132,
+            .name = "pca10040_softdevice_init",
+            .file = "src/softdevice_init.zig",
+            .softdevice_hex = null,
+            .is_softdevice = true,
+        },
+        .{
+            .target = pca10040_s132,
+            .name = "pca10040_softdevice_beacon",
+            .file = "src/softdevice_beacon.zig",
+            .softdevice_hex = null,
+            .is_softdevice = true,
+        },
+
+        .{ .target = pca10040, .name = "pca10040_blinky", .file = "src/blinky.zig", .softdevice_hex = null },
+        .{ .target = pca10040, .name = "pca10040_uart", .file = "src/uart.zig", .softdevice_hex = null },
+        .{ .target = pca10040, .name = "pca10040_i2c_bus_scan", .file = "src/i2c_bus_scan.zig", .softdevice_hex = null },
+        .{ .target = pca10040, .name = "pca10040_i2c_temp", .file = "src/i2c_temp.zig", .softdevice_hex = null },
+        .{ .target = pca10040, .name = "pca10040_spi_master", .file = "src/spi_master.zig", .softdevice_hex = null },
+
+        .{ .target = microbit_v1, .name = "microbit_v1_display", .file = "src/microbit/display.zig", .softdevice_hex = null },
+        .{ .target = microbit_v2, .name = "microbit_v2_display", .file = "src/microbit/display.zig", .softdevice_hex = null },
     };
 
     for (available_examples) |example| {
@@ -68,6 +127,27 @@ pub fn build(b: *std.Build) void {
 
         // For debugging, we also always install the firmware as an ELF file
         mb.install_firmware(fw, .{ .format = .elf });
+
+        // For preflashed SoftDevice targets, also emit a .hex so users can
+        // flash the app via nrfjprog or a J-Link probe.
+        if (example.softdevice_hex == null and example.is_softdevice) {
+            mb.install_firmware(fw, .{ .format = .hex });
+        }
+
+        if (example.softdevice_hex) |softdevice_hex| {
+            const app_hex = fw.get_emitted_bin(.hex);
+            const merged_hex = mb.ports.nrf5x.merge_hex(
+                app_hex,
+                softdevice_hex,
+                b.fmt("{s}_merged.hex", .{example.name}),
+            );
+            const install_merged = b.addInstallFileWithDir(
+                merged_hex,
+                .{ .custom = "firmware" },
+                b.fmt("{s}_merged.hex", .{example.name}),
+            );
+            b.getInstallStep().dependOn(&install_merged.step);
+        }
     }
 }
 
@@ -75,4 +155,6 @@ const Example = struct {
     target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
+    softdevice_hex: ?std.Build.LazyPath,
+    is_softdevice: bool = false,
 };
