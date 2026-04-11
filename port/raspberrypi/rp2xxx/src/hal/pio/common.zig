@@ -426,7 +426,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             const regs = self.get_regs();
             const levels = regs.FLEVEL.raw;
 
-            return @as(u4, @truncate(levels >> (@as(u5, 4) * snum) + offset));
+            return @as(u4, @truncate(levels >> (@as(u5, 8) * snum) + offset));
         }
 
         fn interrupt_bit_pos(
