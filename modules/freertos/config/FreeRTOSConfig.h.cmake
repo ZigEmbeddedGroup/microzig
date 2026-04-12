@@ -43,7 +43,7 @@
  /* Scheduler Related */
  #define configUSE_PREEMPTION                    1
  #define configUSE_TICKLESS_IDLE                 0
-// FIXME: must be without indent to work, remove after Zig 0.16 release: https://codeberg.org/ziglang/zig/issues/31164
+// FIXME: must be without indent to work, please fix (add indent) after Zig 0.16 release: https://codeberg.org/ziglang/zig/issues/31164
 #cmakedefine01 configUSE_IDLE_HOOK
 #cmakedefine01 configUSE_TICK_HOOK
  #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
