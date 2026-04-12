@@ -1,12 +1,12 @@
 const std = @import("std");
 
-const FreeRTOSPort = enum {
+const FreeRTOS_Port = enum {
     RP2040,
     RP2350_ARM,
     RP2350_RISCV,
 };
 
-const FreeRTOSConfig = struct {
+const FreeRTOS_Config = struct {
     // Scheduler related
     configUSE_IDLE_HOOK: bool = false,
     configUSE_TICK_HOOK: bool = false,
@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
 
     // Configurable options
     const port_name = b.option(
-        FreeRTOSPort,
+        FreeRTOS_Port,
         "port_name",
         "FreeRTOS port to use",
     ) orelse .RP2040;
@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
     }
 
     // In future this config might be validated against port-specific capabilities
-    const config = FreeRTOSConfig{
+    const config = FreeRTOS_Config{
         .configUSE_IDLE_HOOK = cfg_idle_hook,
         .configUSE_TICK_HOOK = cfg_tick_hook,
     };
