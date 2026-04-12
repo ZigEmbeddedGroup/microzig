@@ -43,8 +43,9 @@
  /* Scheduler Related */
  #define configUSE_PREEMPTION                    1
  #define configUSE_TICKLESS_IDLE                 0
- #define configUSE_IDLE_HOOK                     0
- #define configUSE_TICK_HOOK                     0
+// FIXME: must be without indent to work, please fix (add indent) after Zig 0.16 release: https://codeberg.org/ziglang/zig/issues/31164
+#cmakedefine01 configUSE_IDLE_HOOK
+#cmakedefine01 configUSE_TICK_HOOK
  #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
  #define configMAX_PRIORITIES                    32
  #define configMINIMAL_STACK_SIZE                ( uint32_t ) 256
@@ -118,7 +119,7 @@
  #define configSUPPORT_PICO_SYNC_INTEROP         0
  #define configSUPPORT_PICO_TIME_INTEROP         0
  
- /* RP2350 required */
+ /* Dependent on processor */
  #define configENABLE_FPU                        1
  #define configENABLE_MPU                        0
  #define configENABLE_TRUSTZONE                  0
