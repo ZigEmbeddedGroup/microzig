@@ -109,15 +109,19 @@ pub const UART = struct {
         }
     }
 
-    //the only difference between UART 4 ​​and 5 and USARTs in asynchronous mode is
-    // the lack of hardware control flow
-    //NOTE: most devices don't have UART 4/5, should we drop support for them?
+    // The only difference between UART 4 and 5 and USARTs in asynchronous mode is the lack of
+    // hardware control flow
+    // NOTE: Most devices don't have UART 4/5, should we drop support for them?
     fn validate_config(uart: *const UART, config: Config) ConfigError!void {
         const uart_num = @intFromPtr(uart.regs);
-        //check for the base address of the UARTx
+        // Check for the base address of the UARTx
         if ((uart_num == 0x40005000) or (uart_num == 0x40004c00)) {
             if ((config.flow_control != .none)) {
-                return comptime_fail_or_error("UART 4/5 does no have Hardware control flow", .{}, ConfigError.UnsupportedFlowControl);
+                return comptime_fail_or_error(
+                    "UART 4/5 does no have Hardware control flow",
+                    .{},
+                    ConfigError.UnsupportedFlowControl,
+                );
             }
         }
     }
@@ -314,12 +318,12 @@ pub const UART = struct {
 
 var uart_logger: ?UART.Writer = null;
 
-///Set a specific uart instance to be used for logging.
+/// Set a specific uart instance to be used for logging.
 ///
-///Allows system logging over uart via:
-///pub const microzig_options = .{
-///    .logFn = hal.uart.log,
-///};
+/// Allows system logging over uart via:
+/// pub const microzig_options = .{
+///     .logFn = hal.uart.log,
+/// };
 pub fn init_logger(uart: *const UART) void {
     uart_logger = uart.writer();
     if (uart_logger) |logger| {
@@ -327,7 +331,7 @@ pub fn init_logger(uart: *const UART) void {
     }
 }
 
-///Disables logging via the uart instance.
+/// Disable logging via the UART instance.
 pub fn deinit_logger() void {
     uart_logger = null;
 }

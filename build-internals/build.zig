@@ -8,6 +8,7 @@ pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
 pub const FamilyId = uf2.FamilyId;
 const esp_image = @import("esp-image");
+const dfu = @import("dfu");
 
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{
@@ -100,23 +101,13 @@ pub const Target = struct {
             from.chip.copy(allocator);
 
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
-        ret.* = .{
-            .dep = from.dep,
-            .preferred_binary_format = options.preferred_binary_format orelse from.preferred_binary_format,
-            .zig_target = options.zig_target orelse from.zig_target,
-            .cpu = options.cpu orelse from.cpu,
-            .chip = chip,
-            .single_threaded = options.single_threaded orelse from.single_threaded,
-            .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
-            .bundle_ubsan_rt = options.bundle_ubsan_rt orelse from.bundle_ubsan_rt,
-            .ram_image = options.ram_image orelse from.ram_image,
-            .hal = options.hal orelse from.hal,
-            .board = options.board orelse from.board,
-            .linker_script = options.linker_script orelse from.linker_script,
-            .stack = options.stack orelse from.stack,
-            .entry = options.entry orelse from.entry,
-            .patch_elf = options.patch_elf orelse from.patch_elf,
-        };
+        ret.* = from.*;
+
+        inline for (std.meta.fields(DeriveOptions)) |field| {
+            const value = @field(options, field.name);
+            if (value) |val| @field(ret, field.name) = val;
+        }
+        ret.chip = chip;
         return ret;
     }
 };
@@ -152,8 +143,11 @@ pub const Chip = struct {
         /// Use the provided file directly as the chip file.
         zig: LazyPath,
 
-        /// Path to embassy stm32-data directory
-        embassy: LazyPath,
+        /// Path to embassy stm32-data directory with optional device filter
+        embassy: struct {
+            path: LazyPath,
+            device: ?[]const u8 = null,
+        },
 
         /// Single device from TI targetdb
         targetdb: struct {
@@ -223,7 +217,8 @@ pub const BinaryFormat = union(enum) {
     hex,
 
     /// A [Device Firmware Upgrade](https://www.usb.org/sites/default/files/DFU_1.1.pdf) file.
-    dfu,
+    /// ST MicroElectronics [DfuSe](https://rc.fdr.hu/UM0391.pdf) format is also supported.
+    dfu: dfu.Options,
 
     /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
     uf2: uf2.Options,

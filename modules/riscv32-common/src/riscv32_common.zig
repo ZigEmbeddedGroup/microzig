@@ -140,9 +140,38 @@ pub const csr = struct {
     pub const mconfigptr = Csr(0xF15, u32);
 
     pub const mstatus = Csr(0x300, packed struct {
-        reserved0: u3,
-        mie: u1,
-        reserved1: u28,
+        pub const XS = enum(u2) {
+            /// Extension unit status
+            off = 0b00,
+            initial = 0b01,
+            clean = 0b10,
+            dirty = 0b11,
+        };
+        pub const FS = XS;
+        pub const VS = XS;
+        pub const MPP = enum(u2) {
+            user = 0b00,
+            supervisor = 0b01,
+            hypervisor = 0b10,
+            machine = 0b11,
+        };
+
+        reserved0: u1 = 0,
+        sie: u1 = 0,
+        reserved2: u1 = 0,
+        mie: u1 = 0,
+        reserved4: u1 = 0,
+        spie: u1 = 0,
+        ube: u1 = 0,
+        mpie: u1 = 0,
+        spp: u1 = 0,
+        vs: VS = @enumFromInt(0),
+        mpp: MPP = @enumFromInt(0),
+        fs: FS = @enumFromInt(0),
+        xs: XS = @enumFromInt(0),
+        mprv: u1 = 0,
+        reserved18: u13 = 0,
+        sd: u1 = 0,
     });
     pub const misa = Csr(0x301, u32);
     pub const medeleg = Csr(0x302, u32);
@@ -154,8 +183,8 @@ pub const csr = struct {
             vectored = 0b01,
         };
 
-        mode: Mode,
-        base: u30,
+        mode: Mode = .direct,
+        base: u30 = 0,
     });
     pub const mcounteren = Csr(0x306, u32);
     pub const mstatush = Csr(0x310, u32);
@@ -388,6 +417,15 @@ pub const csr = struct {
         return struct {
             const Self = @This();
 
+            /// Convert from basic types to CSR packed struct
+            pub inline fn from_val(val: anytype) T {
+                switch (@typeInfo(@TypeOf(val))) {
+                    .comptime_int => return @bitCast(@as(u32, val)),
+                    .int => return @bitCast(val),
+                    else => @compileError("unsupported type"),
+                }
+            }
+
             pub inline fn read_raw() u32 {
                 return asm volatile ("csrr %[value], " ++ ident
                     : [value] "=r" (-> u32),
@@ -398,11 +436,18 @@ pub const csr = struct {
                 return @bitCast(read_raw());
             }
 
-            pub inline fn write_raw(value: u32) void {
-                asm volatile ("csrw " ++ ident ++ ", %[value]"
-                    :
-                    : [value] "r" (value),
-                );
+            pub inline fn write_raw(bits: u32) void {
+                if (is_comptime(bits) and comptime (bits & std.math.maxInt(u5) == bits)) {
+                    asm volatile ("csrwi " ++ ident ++ ", %[bits]"
+                        :
+                        : [bits] "i" (bits),
+                    );
+                } else {
+                    asm volatile ("csrw " ++ ident ++ ", %[bits]"
+                        :
+                        : [bits] "r" (bits),
+                    );
+                }
             }
 
             pub inline fn write(value: T) void {
@@ -424,25 +469,39 @@ pub const csr = struct {
             }
 
             pub inline fn set_raw(bits: u32) void {
-                asm volatile ("csrs " ++ ident ++ ", %[bits]"
-                    :
-                    : [bits] "r" (bits),
-                );
+                if (is_comptime(bits) and comptime (bits & std.math.maxInt(u5) == bits)) {
+                    asm volatile ("csrsi " ++ ident ++ ", %[bits]"
+                        :
+                        : [bits] "i" (bits),
+                    );
+                } else {
+                    asm volatile ("csrs " ++ ident ++ ", %[bits]"
+                        :
+                        : [bits] "r" (bits),
+                    );
+                }
             }
 
-            pub inline fn set(fields: anytype) void {
-                set_raw(get_bits(fields));
+            pub inline fn set(fields: T) void {
+                set_raw(@bitCast(fields));
             }
 
             pub inline fn clear_raw(bits: u32) void {
-                asm volatile ("csrc " ++ ident ++ ", %[bits]"
-                    :
-                    : [bits] "r" (bits),
-                );
+                if (is_comptime(bits) and comptime (bits & std.math.maxInt(u5) == bits)) {
+                    asm volatile ("csrci " ++ ident ++ ", %[bits]"
+                        :
+                        : [bits] "i" (bits),
+                    );
+                } else {
+                    asm volatile ("csrc " ++ ident ++ ", %[bits]"
+                        :
+                        : [bits] "r" (bits),
+                    );
+                }
             }
 
-            pub inline fn clear(fields: anytype) void {
-                clear_raw(get_bits(fields));
+            pub inline fn clear(fields: T) void {
+                clear_raw(@bitCast(fields));
             }
 
             pub inline fn read_set_raw(bits: u32) u32 {
@@ -478,6 +537,17 @@ pub const csr = struct {
                     },
                     .int => fields,
                     else => @compileError("unsupported type"),
+                };
+            }
+
+            inline fn is_comptime(x: anytype) bool {
+                // Voodoo to determine whether x is comptime known
+                return comptime check: {
+                    // For anonymous tuple types,
+                    // if the value of a field is comptime known,
+                    // then the corresponding field in that tuple's type is comptime.
+                    const field = @typeInfo(@TypeOf(.{x})).@"struct".fields[0];
+                    break :check field.is_comptime;
                 };
             }
         };

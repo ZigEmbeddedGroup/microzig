@@ -14,8 +14,8 @@ pub fn build(b: *std.Build) void {
     const stm32 = mb.ports.stm32;
 
     const available_examples = [_]Example{
-        .{ .target = stm32.boards.stm32f303nucleo, .name = "stm32f303nucleo_Blinky", .file = "src/blinky.zig" },
-        .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
+        .{ .target = stm32.boards.stm32f303nucleo, .name = "STM32F303nucleo_Blinky", .file = "src/blinky.zig" },
+        .{ .target = stm32.boards.stm32f3discovery, .name = "STM32F3discovery", .file = "src/blinky.zig" },
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
         // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f429zit6u, .name = "stm32f429zit6u", .file = "src/blinky.zig" },

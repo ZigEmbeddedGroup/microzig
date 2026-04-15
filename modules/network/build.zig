@@ -64,15 +64,22 @@ pub fn build(b: *std.Build) void {
     lwip_lib.root_module.linkLibrary(foundation_dep.artifact("foundation"));
     net_mod.linkLibrary(lwip_lib);
 
+    const lwip_mod = lwip_lib.root_module;
     // MEM_ALIGNMENT of 4 bytes allows us to use packet buffers in u32 dma.
-    net_mod.addCMacro("MEM_ALIGNMENT", "4");
-    net_mod.addCMacro("MEM_SIZE", to_s(&buf, mem_size));
-    net_mod.addCMacro("PBUF_POOL_SIZE", to_s(&buf, pbuf_pool_size));
-    net_mod.addCMacro("PBUF_LINK_HLEN", to_s(&buf, ethernet_header));
-    net_mod.addCMacro("PBUF_POOL_BUFSIZE", to_s(&buf, pbuf_length));
-    net_mod.addCMacro("PBUF_LINK_ENCAPSULATION_HLEN", to_s(&buf, pbuf_header_length));
+    lwip_mod.addCMacro("MEM_ALIGNMENT", "4");
+    lwip_mod.addCMacro("MEM_SIZE", to_s(&buf, mem_size));
+    lwip_mod.addCMacro("PBUF_POOL_SIZE", to_s(&buf, pbuf_pool_size));
+    lwip_mod.addCMacro("PBUF_LINK_HLEN", to_s(&buf, ethernet_header));
+    lwip_mod.addCMacro("PBUF_POOL_BUFSIZE", to_s(&buf, pbuf_length));
+    lwip_mod.addCMacro("PBUF_LINK_ENCAPSULATION_HLEN", to_s(&buf, pbuf_header_length));
     // 40 bytes IPv6 header, 20 bytes TCP header
-    net_mod.addCMacro("TCP_MSS", to_s(&buf, mtu - 40 - 20));
+    lwip_mod.addCMacro("TCP_MSS", to_s(&buf, mtu - 40 - 20));
+
+    // Copy macros from lwip to net, so we have same values when calling
+    // translate-c from cImport.
+    for (lwip_mod.c_macros.items) |m| {
+        net_mod.c_macros.append(b.allocator, m) catch @panic("out of memory");
+    }
 
     const options = b.addOptions();
     options.addOption(u16, "mtu", mtu);

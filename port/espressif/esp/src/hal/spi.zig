@@ -160,7 +160,6 @@ pub const SPI = enum(u2) {
         self.set_bit_order(config.bit_order);
     }
 
-    // TODO: not sure if this is the best way to do this
     pub inline fn connect_pins(_: SPI, pins: struct {
         data: union(enum) {
             single_one_wire: ?gpio.Pin,
@@ -188,7 +187,7 @@ pub const SPI = enum(u2) {
             },
             .single_two_wires => |maybe_pins| {
                 if (maybe_pins.mosi) |mosi| {
-                    mosi.connect_input_to_peripheral(.{ .signal = .fspid });
+                    mosi.connect_peripheral_to_output(.{ .signal = .fspid });
                 }
                 if (maybe_pins.miso) |miso| {
                     miso.connect_input_to_peripheral(.{ .signal = .fspiq });
@@ -223,6 +222,10 @@ pub const SPI = enum(u2) {
                 }
             },
         }
+
+        if (pins.clk) |clk_pin| {
+            clk_pin.connect_peripheral_to_output(.{ .signal = .spiclk });
+        }
     }
 
     pub fn writev_blocking(
@@ -236,7 +239,8 @@ pub const SPI = enum(u2) {
         var remaining = vec.size();
 
         while (remaining > 0) {
-            const transfer_len = @min(remaining, fifo_byte_len);
+            const transfer_len: u18 = @min(remaining, fifo_byte_len);
+
             self.fill_fifo(&iter, transfer_len);
 
             self.start_transfer_generic(
@@ -245,6 +249,7 @@ pub const SPI = enum(u2) {
                 transfer_len * 8,
                 bit_mode,
             );
+
             self.wait_for_transfer_blocking();
 
             remaining -= transfer_len;
@@ -275,7 +280,7 @@ pub const SPI = enum(u2) {
         var remaining = total_len;
 
         while (remaining > 0) {
-            const transfer_len = @min(remaining, fifo_byte_len);
+            const transfer_len: u18 = @min(remaining, fifo_byte_len);
 
             self.start_transfer_generic(
                 false,

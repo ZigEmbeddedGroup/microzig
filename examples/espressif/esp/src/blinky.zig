@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 const usb_serial_jtag = hal.usb_serial_jtag;

@@ -1,7 +1,10 @@
 const microzig = @import("microzig");
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
+const clock_tree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
 
+//expose only configurations structs
+pub const Config = clock_tree.Config;
 pub const Peripherals = enums.Peripherals;
 const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
@@ -20,18 +23,8 @@ const ICSW = enum(u2) {
 };
 const pins = microzig.hal.pins;
 
-pub const Clock = struct {
-    sys_clk: u32 = 4_000_000,
-    h_clk: u32 = 4_000_000,
-    p1_clk: u32 = 4_000_000,
-    p2_clk: u32 = 4_000_000,
-    hse: u32 = 0,
-    hsi: u32 = 4_000_000,
-    pllout: u32 = 0,
-    usart1_clk: u32 = 4_000_000,
-};
-
-pub var current_clock: Clock = .{};
+// The current running clock
+pub const current_clocks: clock_tree.Tree_Output = clock_tree.get_clocks(microzig.options.hal.rcc_clock_config) catch unreachable;
 
 pub fn enable_rtc_lcd() void {
     RCC.APB1ENR1.modify(.{
@@ -61,6 +54,35 @@ pub fn enable_rtc_lcd() void {
     });
 }
 
+pub fn get_clock(comptime source: Peripherals) u32 {
+    const peri_name = @tagName(source);
+
+    if (comptime util.match_name(peri_name, &.{
+        "USART",
+        "UART",
+        "I2C",
+    })) {
+        return @intFromFloat(@field(current_clocks.clock, peri_name ++ "output"));
+    }
+    if (comptime util.match_name(peri_name, &.{
+        "SPI1",
+    })) {
+        return @intFromFloat(current_clocks.clock.APB2Prescaler);
+    }
+    if (comptime util.match_name(peri_name, &.{
+        "SPI2",
+        "SPI3",
+    })) {
+        return @intFromFloat(current_clocks.clock.APB1Prescaler);
+    }
+    if (comptime util.match_name(peri_name, &.{
+        "USB",
+    })) {
+        return @intFromFloat(current_clocks.clock.USBoutput);
+    }
+
+    @panic("Unknown clock for peripheral");
+}
 pub fn set_clock(comptime peri: Peripherals, state: u1) void {
     const peri_name = @tagName(peri);
     if (util.match_name(peri_name, &.{"RTC"})) {

@@ -73,7 +73,7 @@ const system_clock_cfg: GlobalConfig = val: {
             .integer_divisor = 1,
         },
 
-        // Change peri to also run off XOSC, not neccessarily reccomended, but interesting!
+        // Change peri to also run off XOSC, not necessarily reccomended, but interesting!
         .peri = .{
             .input = .{
                 .source = .src_xosc,

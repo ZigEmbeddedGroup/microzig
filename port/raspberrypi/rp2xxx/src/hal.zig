@@ -1,5 +1,4 @@
 const builtin = @import("builtin");
-const std = @import("std");
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
@@ -142,6 +141,24 @@ pub inline fn enable_dcp() void {
 
 pub fn get_cpu_id() u32 {
     return SIO.CPUID.read().CPUID;
+}
+
+var board_id: ?[8]u8 = null;
+
+/// Unique board identifier.
+/// On an RP2040-based board, the unique identifier is retrieved from the
+/// external NOR flash device
+/// On an RP2350-based board, the unique identifier is retrieved from OTP
+/// memory.
+pub fn get_board_id() [8]u8 {
+    if (board_id) |b| {
+        return b;
+    }
+    board_id = switch (compatibility.chip) {
+        .RP2040 => flash.id(),
+        .RP2350 => rom.get_board_id(),
+    };
+    return board_id.?;
 }
 
 test "hal tests" {

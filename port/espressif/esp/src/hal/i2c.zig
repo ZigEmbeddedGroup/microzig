@@ -6,7 +6,6 @@ const peripherals = microzig.chip.peripherals;
 pub const I2C0 = peripherals.I2C0;
 
 const gpio = @import("gpio.zig");
-const clocks = @import("clocks.zig");
 const time = @import("time.zig");
 
 // TODO: How and why. Is this xtal? That clock is 40_000_000 according to the hal

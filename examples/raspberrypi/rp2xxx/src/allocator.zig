@@ -71,7 +71,7 @@ pub fn main() !void {
     const Allocator = microzig.Allocator;
 
     // Create an instance of that type.
-    var heap_allocator = Allocator.init_with_heap(1024);
+    var heap_allocator = try Allocator.init_with_heap(1024);
 
     // Get an std.mem.Allocator from the heap allocator.
     const allocator = heap_allocator.allocator();

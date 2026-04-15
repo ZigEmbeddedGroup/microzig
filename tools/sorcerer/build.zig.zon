@@ -6,12 +6,24 @@
             .path = "../..",
         },
         .dvui = .{
-            .url = "git+https://github.com/david-vanderson/dvui#7cdcf937f41490b70e96f4abe80d8e61a858ec96",
-            .hash = "dvui-0.4.0-dev-AQFJmUCT1QAYkkYKaevIYepio5OH9VNUa4_8Cpp1qPkV",
+            .url = "git+https://github.com/david-vanderson/dvui#0ca4d5c7a7915ee53a7f69c7facb8b48b7807f40",
+            .hash = "dvui-0.4.0-dev-AQFJmc3h2gBHoPtLm2KO1NEWuqV-kPm1cusWeY6OkHKf",
         },
         .serial = .{
             .url = "git+https://github.com/ZigEmbeddedGroup/serial#fbd7389ff8bbc9fa362aa74081588755b5d028a0",
             .hash = "serial-0.0.1-PoeRzF60AAAN8Iu0yXTIX-t3DVzsnmN7vWHKM2HA2Zbq",
+        },
+        .tree_sitter_zig = .{
+            .url = "git+https://github.com/tree-sitter-grammars/tree-sitter-zig#6479aa13f32f701c383083d8b28360ebd682fb7d",
+            .hash = "tree_sitter_zig-1.1.2-AAAAAJ57XACsD_XBHC4i6G6rnCsZ1dZj7CLRTC09toEB",
+        },
+        .tree_sitter_diff = .{
+            .url = "git+https://github.com/tree-sitter-grammars/tree-sitter-diff#2520c3f934b3179bb540d23e0ef45f75304b5fed",
+            .hash = "N-V-__8AAAULEwDDBPj9cGOTHPT1iE6oZabnwo70bstgVEf_",
+        },
+        .diffz = .{
+            .url = "git+https://github.com/ziglibs/diffz#a20dd1f11b10819a6f570f98b42e1c91e3704357",
+            .hash = "diffz-0.0.1-G2tlIQrOAQCfH15jdyaLyrMgV8eGPouFhkCeYFTmJaLk",
         },
     },
     .minimum_zig_version = "0.15.2",

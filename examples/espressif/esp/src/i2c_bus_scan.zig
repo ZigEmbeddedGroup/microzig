@@ -5,7 +5,6 @@ const time = microzig.drivers.time;
 const esp = microzig.hal;
 const i2c = esp.i2c;
 const gpio = esp.gpio;
-const peripherals = microzig.chip.peripherals;
 
 var i2c0 = i2c.instance.num(0);
 

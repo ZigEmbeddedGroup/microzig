@@ -69,37 +69,37 @@ pub fn set_line(line: u4, port: gpio.Port) void {
 pub fn set_line_edge(line: u5, edge: TriggerEdge) void {
     switch (edge) {
         .None => {
-            EXTI.RTSR.raw &= ~(@as(u32, 1) << line);
-            EXTI.FTSR.raw &= ~(@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".raw &= ~(@as(u32, 1) << line);
+            EXTI.@"FTSR[0]".raw &= ~(@as(u32, 1) << line);
         },
         .rising => {
-            EXTI.RTSR.raw |= (@as(u32, 1) << line);
-            EXTI.FTSR.raw &= ~(@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".raw |= (@as(u32, 1) << line);
+            EXTI.@"FTSR[0]".raw &= ~(@as(u32, 1) << line);
         },
         .falling => {
-            EXTI.RTSR.raw &= ~(@as(u32, 1) << line);
-            EXTI.FTSR.raw |= (@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".raw &= ~(@as(u32, 1) << line);
+            EXTI.@"FTSR[0]".raw |= (@as(u32, 1) << line);
         },
         .both => {
-            EXTI.RTSR.raw |= (@as(u32, 1) << line);
-            EXTI.FTSR.raw |= (@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".raw |= (@as(u32, 1) << line);
+            EXTI.@"FTSR[0]".raw |= (@as(u32, 1) << line);
         },
     }
 }
 
 pub fn set_event(line: u5, enable: bool) void {
     if (enable) {
-        EXTI.EMR.raw |= (@as(u32, 1) << line);
+        EXTI.@"EMR[0]".raw |= (@as(u32, 1) << line);
     } else {
-        EXTI.EMR.raw &= ~(@as(u32, 1) << line);
+        EXTI.@"EMR[0]".raw &= ~(@as(u32, 1) << line);
     }
 }
 
 pub fn set_interrupt(line: u5, enable: bool) void {
     if (enable) {
-        EXTI.IMR.raw |= (@as(u32, 1) << line);
+        EXTI.@"IMR[0]".raw |= (@as(u32, 1) << line);
     } else {
-        EXTI.IMR.raw &= ~(@as(u32, 1) << line);
+        EXTI.@"IMR[0]".raw &= ~(@as(u32, 1) << line);
     }
 }
 
@@ -111,9 +111,9 @@ pub inline fn software_trigger(line: u5) void {
 
 ///check for pending lines (for both events and interrupts)
 pub inline fn pending() pendingLine {
-    return @bitCast(@as(u20, @intCast(EXTI.PR.raw)));
+    return @bitCast(@as(u20, @intCast(EXTI.@"PR[0]".raw)));
 }
 ///clears all pending lines returned by: `pending()`.
 pub inline fn clear_pending(pendings: pendingLine) void {
-    EXTI.PR.raw = @as(u20, @bitCast(pendings));
+    EXTI.@"PR[0]".raw = @as(u20, @bitCast(pendings));
 }

@@ -7,7 +7,7 @@ const CLOCKS = peripherals.CLOCKS;
 const XOSC = peripherals.XOSC;
 
 /// The current HAL requires XOSC configuration with the RP2xxx chip, although this isn't
-/// strictly neccessary as the system could be driven from an external clock.
+/// strictly necessary as the system could be driven from an external clock.
 /// TODO: Find a way to allow this to be "null" as it's not explicitly required as long
 ///       as a user isn't using XOSC functionality in their clock setup.
 pub const xosc_freq = microzig.board.xosc_freq;

@@ -18,16 +18,21 @@ pub fn build(b: *std.Build) void {
         // RaspberryPi Boards:
         .{ .target = raspberrypi.pico, .name = "pico_board_blinky", .file = "src/board_blinky.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
+        .{ .target = raspberrypi.pico, .name = "pico_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_board_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
+        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
@@ -46,6 +51,8 @@ pub fn build(b: *std.Build) void {
         // Adafruit boards
         .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_blinky", .file = "src/board_blinky.zig" },
         .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_multicore", .file = "src/blinky_core1.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_usb-cdc", .file = "src/usb_cdc.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.adafruit.feather_rp2350, .name = "adafruit_feather_rp2350_usb-hid", .file = "src/usb_hid.zig" },
         .{ .target = mb.ports.rp2xxx.boards.adafruit.metro_rp2350, .name = "adafruit_metro_rp2350_blinky", .file = "src/board_blinky.zig" },
 
         // WaveShare Boards:
@@ -93,10 +100,14 @@ pub fn build(b: *std.Build) void {
         .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
             .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
         } },
+        .{ .name = "st7789", .file = "src/st7789_lcd.zig" },
         .{ .name = "net-pong", .file = "src/net/pong.zig" },
+        .{ .name = "net-irq", .file = "src/net/irq.zig" },
+        .{ .name = "net-scan", .file = "src/net/scan.zig" },
         .{ .name = "net-udp", .file = "src/net/udp.zig" },
         .{ .name = "net-tcp_client", .file = "src/net/tcp_client.zig" },
         .{ .name = "net-tcp_server", .file = "src/net/tcp_server.zig" },
+        .{ .name = "board-id", .file = "src/board_id.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
@@ -158,6 +169,27 @@ pub fn build(b: *std.Build) void {
             });
             const net_mod = net_dep.module("net");
             firmware.app_mod.addImport("net", net_mod);
+        }
+
+        // Import freertos module for some examples, kind of a hack
+        // probably list of required modules should be specified in each example independently
+        if (std.mem.indexOf(u8, example.name, "_freertos-") != null) {
+            var port_name: []const u8 = "Unknown";
+
+            // FIXME: hacky way to select port based on target name (it doesn't take RP2350_RISCV into account)
+            if (std.mem.eql(u8, firmware.target.chip.name, "RP2040")) {
+                port_name = "RP2040";
+            } else {
+                port_name = "RP2350_ARM";
+            }
+
+            const freertos_dep = b.dependency("freertos", .{
+                .target = b.resolveTargetQuery(firmware.target.zig_target),
+                .optimize = optimize,
+                .port_name = port_name,
+            });
+            const freertos_mod = freertos_dep.module("freertos");
+            firmware.app_mod.addImport("freertos", freertos_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`

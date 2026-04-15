@@ -1,12 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const TMP117 = microzig.drivers.sensor.TMP117;
 
 const esp = microzig.hal;
 const i2c = esp.i2c;
 const gpio = esp.gpio;
-const peripherals = microzig.chip.peripherals;
 const I2C_Device = esp.drivers.I2C_Device;
 const sleep_ms = esp.time.sleep_ms;
 

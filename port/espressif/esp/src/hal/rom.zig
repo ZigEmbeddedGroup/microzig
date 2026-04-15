@@ -1,5 +1,3 @@
-const microzig = @import("microzig");
-
 const compatibility = @import("compatibility.zig");
 
 /// Microsecond delay using rom function.

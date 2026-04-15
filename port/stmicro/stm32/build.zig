@@ -38,6 +38,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 },
                 .hal = microzig.HardwareAbstractionLayer{
                     .root_source_file = b.path("src/hals/STM32F303.zig"),
+                    .imports = hal_imports,
                 },
                 .stack = .{ .ram_region_name = "CCMRAM" },
             }),
@@ -54,6 +55,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 },
                 .hal = microzig.HardwareAbstractionLayer{
                     .root_source_file = b.path("src/hals/STM32F303.zig"),
+                    .imports = hal_imports,
                 },
                 .stack = .{ .ram_region_name = "CCMRAM" },
             }),

@@ -72,6 +72,7 @@ const files = [_][]const u8{
     "core/ipv4/ip4_addr.c",
     "core/ipv4/igmp.c",
     "core/ipv4/icmp.c",
+    "core/ipv4/acd.c",
 
     // IPv6 implementation:
     "core/ipv6/icmp6.c",

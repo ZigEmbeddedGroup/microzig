@@ -15,6 +15,7 @@ const atdf = @import("atdf.zig");
 const embassy = @import("embassy.zig");
 const targetdb = @import("targetdb.zig");
 const gen = @import("gen.zig");
+const analysis = @import("analysis.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
 const Arch = @import("arch.zig").Arch;
@@ -129,6 +130,7 @@ pub const Register = struct {
     struct_id: ?StructID,
     name: []const u8,
     description: ?[]const u8,
+    ref_type: ?[]const u8,
     size_bits: u64,
     offset_bytes: u64,
     count: ?u64,
@@ -146,17 +148,19 @@ pub const Register = struct {
     pub fn from_row(allocator: Allocator, row: zqlite.Row) !Register {
         const name = try allocator.dupe(u8, row.text(2));
         const description: ?[]const u8 = if (row.nullableText(3)) |text| try allocator.dupe(u8, text) else null;
+        const ref_type: ?[]const u8 = if (row.nullableText(4)) |text| try allocator.dupe(u8, text) else null;
         return Register{
             .id = @enumFromInt(row.int(0)),
             .struct_id = if (row.nullableInt(1)) |value| @enumFromInt(value) else null,
             .name = name,
             .description = description,
-            .size_bits = @intCast(row.int(4)),
-            .offset_bytes = @intCast(row.int(5)),
-            .count = if (row.nullableInt(6)) |value| @intCast(value) else null,
-            .access = std.meta.stringToEnum(Access, row.text(7)) orelse return error.InvalidAccess,
-            .reset_mask = if (row.nullableInt(8)) |value| @intCast(value) else null,
-            .reset_value = if (row.nullableInt(9)) |value| @intCast(value) else null,
+            .ref_type = ref_type,
+            .size_bits = @intCast(row.int(5)),
+            .offset_bytes = @intCast(row.int(6)),
+            .count = if (row.nullableInt(7)) |value| @intCast(value) else null,
+            .access = std.meta.stringToEnum(Access, row.text(8)) orelse return error.InvalidAccess,
+            .reset_mask = if (row.nullableInt(9)) |value| @intCast(value) else null,
+            .reset_value = if (row.nullableInt(10)) |value| @intCast(value) else null,
         };
     }
 
@@ -620,7 +624,7 @@ pub fn create_from_path(io: std.Io, allocator: Allocator, format: Format, path: 
                 db.destroy();
             }
 
-            try embassy.load_into_db(io, db, path);
+            try embassy.load_into_db(io, db, path, device);
             break :blk db;
         },
         .targetdb => blk: {
@@ -1704,6 +1708,7 @@ pub const CreateRegisterOptions = struct {
     // make name required for now
     name: []const u8,
     description: ?[]const u8 = null,
+    ref_type: ?[]const u8 = null,
     /// offset is in bytes
     offset_bytes: u64,
     /// size is in bits
@@ -1735,13 +1740,14 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
     const register_id: RegisterID = blk: {
         const row = try db.conn.row(
             \\INSERT INTO registers
-            \\  (name, description, offset_bytes, size_bits, count, access, reset_mask, reset_value)
+            \\  (name, description, ref_type, offset_bytes, size_bits, count, access, reset_mask, reset_value)
             \\VALUES
-            \\  (?, ?, ?, ?, ?, ?, ?, ?)
+            \\  (?, ?, ?, ?, ?, ?, ?, ?, ?)
             \\RETURNING id
         , .{
             opts.name,
             opts.description,
+            opts.ref_type,
             opts.offset_bytes,
             opts.size_bits,
             opts.count,
@@ -2129,6 +2135,31 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     .idx = add_interrupt.idx,
                 });
             },
+            .add_enum_and_apply => |add_enum_patch| {
+                // First, create the enum (same as add_enum)
+                const struct_id = try db.get_struct_ref(add_enum_patch.parent);
+
+                const enum_id = try db.create_enum(struct_id, .{
+                    .name = add_enum_patch.@"enum".name,
+                    .description = add_enum_patch.@"enum".description,
+                    .size_bits = add_enum_patch.@"enum".bitsize,
+                });
+
+                for (add_enum_patch.@"enum".fields) |enum_field| {
+                    try db.add_enum_field(enum_id, .{
+                        .name = enum_field.name,
+                        .description = enum_field.description,
+                        .value = enum_field.value,
+                    });
+                }
+
+                // Then, apply to all specified fields (same as set_enum_type)
+                for (add_enum_patch.apply_to) |field_ref| {
+                    const field_name, const register_ref = try get_ref_last_component(field_ref);
+                    const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
+                    try db.set_register_field_enum_id(register_id, field_name, enum_id);
+                }
+            },
         }
     }
 }
@@ -2141,7 +2172,191 @@ pub fn to_zig(db: *Database, output_dir: Directory, opts: ToZigOptions) !void {
 
 test "all" {
     @setEvalBranchQuota(2000);
+    _ = analysis;
     _ = atdf;
     _ = gen;
     _ = svd;
+}
+
+test "add_enum_and_apply patch creates enum and applies to fields" {
+    const allocator = std.testing.allocator;
+
+    var db = try Database.create(allocator);
+    defer db.destroy();
+
+    // Create a peripheral with registers and fields
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // Create multiple registers with fields that will share an enum
+    const register0_id = try db.create_register(struct_id, .{
+        .name = "REG0",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+    try db.add_register_field(register0_id, .{
+        .name = "MODE",
+        .size_bits = 2,
+        .offset_bits = 0,
+    });
+
+    const register1_id = try db.create_register(struct_id, .{
+        .name = "REG1",
+        .size_bits = 32,
+        .offset_bytes = 4,
+    });
+    try db.add_register_field(register1_id, .{
+        .name = "MODE",
+        .size_bits = 2,
+        .offset_bits = 0,
+    });
+
+    const register2_id = try db.create_register(struct_id, .{
+        .name = "REG2",
+        .size_bits = 32,
+        .offset_bytes = 8,
+    });
+    try db.add_register_field(register2_id, .{
+        .name = "MODE",
+        .size_bits = 2,
+        .offset_bits = 0,
+    });
+
+    // Apply the add_enum_and_apply patch
+    const patch_zon: [:0]const u8 =
+        \\.{
+        \\    .{
+        \\        .add_enum_and_apply = .{
+        \\            .parent = "types.peripherals.TEST_PERIPHERAL",
+        \\            .@"enum" = .{
+        \\                .name = "TestMode",
+        \\                .bitsize = 2,
+        \\                .fields = .{
+        \\                    .{ .value = 0x0, .name = "mode_a" },
+        \\                    .{ .value = 0x1, .name = "mode_b" },
+        \\                    .{ .value = 0x2, .name = "mode_c" },
+        \\                    .{ .value = 0x3, .name = "mode_d" },
+        \\                },
+        \\            },
+        \\            .apply_to = .{
+        \\                "types.peripherals.TEST_PERIPHERAL.REG0.MODE",
+        \\                "types.peripherals.TEST_PERIPHERAL.REG1.MODE",
+        \\                "types.peripherals.TEST_PERIPHERAL.REG2.MODE",
+        \\            },
+        \\        },
+        \\    },
+        \\}
+    ;
+
+    var diags: std.zon.parse.Diagnostics = .{};
+    defer diags.deinit(allocator);
+
+    try db.apply_patch(patch_zon, &diags);
+
+    // Verify the enum was created
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const enum_info = try db.get_enum_by_name(arena.allocator(), struct_id, "TestMode");
+    try std.testing.expectEqual(@as(u8, 2), enum_info.size_bits);
+
+    // Verify all three fields have the enum assigned
+    const fields0 = try db.get_register_fields(arena.allocator(), register0_id, .{});
+    try std.testing.expectEqual(@as(usize, 1), fields0.len);
+    try std.testing.expect(fields0[0].enum_id != null);
+    try std.testing.expectEqual(enum_info.id, fields0[0].enum_id.?);
+
+    const fields1 = try db.get_register_fields(arena.allocator(), register1_id, .{});
+    try std.testing.expectEqual(@as(usize, 1), fields1.len);
+    try std.testing.expect(fields1[0].enum_id != null);
+    try std.testing.expectEqual(enum_info.id, fields1[0].enum_id.?);
+
+    const fields2 = try db.get_register_fields(arena.allocator(), register2_id, .{});
+    try std.testing.expectEqual(@as(usize, 1), fields2.len);
+    try std.testing.expect(fields2[0].enum_id != null);
+    try std.testing.expectEqual(enum_info.id, fields2[0].enum_id.?);
+}
+
+test "add_enum_and_apply patch with empty apply_to list" {
+    const allocator = std.testing.allocator;
+
+    var db = try Database.create(allocator);
+    defer db.destroy();
+
+    // Create a peripheral
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // Apply patch with empty apply_to list (just creates the enum)
+    const patch_zon: [:0]const u8 =
+        \\.{
+        \\    .{
+        \\        .add_enum_and_apply = .{
+        \\            .parent = "types.peripherals.TEST_PERIPHERAL",
+        \\            .@"enum" = .{
+        \\                .name = "UnusedEnum",
+        \\                .bitsize = 4,
+        \\                .fields = .{
+        \\                    .{ .value = 0, .name = "value0" },
+        \\                    .{ .value = 1, .name = "value1" },
+        \\                },
+        \\            },
+        \\            .apply_to = .{},
+        \\        },
+        \\    },
+        \\}
+    ;
+
+    var diags: std.zon.parse.Diagnostics = .{};
+    defer diags.deinit(allocator);
+
+    try db.apply_patch(patch_zon, &diags);
+
+    // Verify the enum was created
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const enum_info = try db.get_enum_by_name(arena.allocator(), struct_id, "UnusedEnum");
+    try std.testing.expectEqual(@as(u8, 4), enum_info.size_bits);
+}
+
+test "add_enum_and_apply patch with invalid field reference" {
+    const allocator = std.testing.allocator;
+
+    var db = try Database.create(allocator);
+    defer db.destroy();
+
+    // Create a peripheral
+    _ = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    // Apply patch with invalid field reference
+    const patch_zon: [:0]const u8 =
+        \\.{
+        \\    .{
+        \\        .add_enum_and_apply = .{
+        \\            .parent = "types.peripherals.TEST_PERIPHERAL",
+        \\            .@"enum" = .{
+        \\                .name = "TestEnum",
+        \\                .bitsize = 2,
+        \\                .fields = .{
+        \\                    .{ .value = 0, .name = "value0" },
+        \\                },
+        \\            },
+        \\            .apply_to = .{
+        \\                "types.peripherals.TEST_PERIPHERAL.NONEXISTENT.FIELD",
+        \\            },
+        \\        },
+        \\    },
+        \\}
+    ;
+
+    var diags: std.zon.parse.Diagnostics = .{};
+    defer diags.deinit(allocator);
+
+    const result = db.apply_patch(patch_zon, &diags);
+    try std.testing.expectError(error.MissingEntity, result);
 }

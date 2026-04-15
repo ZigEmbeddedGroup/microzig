@@ -173,12 +173,15 @@ fn generate_chips_file(
             \\        .chip = .{{
             \\            .name = "{s}",
             \\            .register_definition = .{{
-            \\                .embassy = embassy,
+            \\                .embassy = .{{
+            \\                    .path = embassy,
+            \\                    .device = "{s}",
+            \\                }},
             \\            }},
             \\            .memory_regions = &.{{
             \\
         ,
-            .{chip_file.name},
+            .{ chip_file.name, chip_file.name },
         );
 
         {

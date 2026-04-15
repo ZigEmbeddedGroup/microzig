@@ -39,7 +39,7 @@ pub const VectorTable = extern struct {
 ```
 
 But this is not the case. Yes, microzig is in there by name, but one can import
-a module of their creation with the name `microzig`. All that's need are some
+a module of their creation with the name `microzig`. All that's needed are some
 declarations:
 
 - `mmio.Mmio`: compile-time wrapper for our MMIO abstraction.

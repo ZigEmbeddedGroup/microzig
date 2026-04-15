@@ -202,7 +202,7 @@ pub const Alarm = enum(u2) {
     pub fn clear_interrupt(self: Alarm) void {
         switch (self) {
             .alarm0 => SYSTIMER.INT_CLR.modify(.{ .TARGET0_INT_CLR = 1 }),
-            .alarm1 => SYSTIMER.INT_CLR.modify(.{ .TARGET2_INT_CLR = 1 }),
+            .alarm1 => SYSTIMER.INT_CLR.modify(.{ .TARGET1_INT_CLR = 1 }),
             .alarm2 => SYSTIMER.INT_CLR.modify(.{ .TARGET2_INT_CLR = 1 }),
         }
     }

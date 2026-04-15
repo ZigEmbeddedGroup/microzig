@@ -447,31 +447,31 @@ pub const csr = struct {
     pub const dpc = riscv32_common.csr.dpc;
 
     pub const meiea = Csr(0xbe0, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
+        index: u5 = 0,
+        reserved0: u11 = 0,
+        window: u16 = 0,
     });
     pub const meipa = Csr(0xbe1, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
+        index: u5 = 0,
+        reserved0: u11 = 0,
+        window: u16 = 0,
     });
     pub const meifa = Csr(0xbe2, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
+        index: u5 = 0,
+        reserved0: u11 = 0,
+        window: u16 = 0,
     });
     pub const meipra = Csr(0xbe3, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
+        index: u5 = 0,
+        reserved0: u11 = 0,
+        window: u16 = 0,
     });
     pub const meinext = Csr(0xbe4, packed struct {
-        update: u1,
-        reserved0: u1,
-        irq: u9,
-        reserved1: u20,
-        noirq: u1,
+        update: u1 = 0,
+        reserved0: u1 = 0,
+        irq: u9 = 0,
+        reserved1: u20 = 0,
+        noirq: u1 = 0,
     });
     pub const meicontext = Csr(0xbe5, u32);
 
