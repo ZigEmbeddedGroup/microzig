@@ -55,7 +55,7 @@ pub fn main() !void {
 
     // --- Set up Logger -----------------------------
 
-    hal.uart.init_logger(uart);
+    hal.uart.init_logger(uart, &.{});
 
     time.sleep_ms(1000);
 

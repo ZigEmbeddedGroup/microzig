@@ -22,7 +22,7 @@ pub fn main() !void {
     uart.apply(.{
         .clock_config = rp2xxx.clock_config,
     });
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     const sda_pin = gpio.num(4);
     const scl_pin = gpio.num(5);

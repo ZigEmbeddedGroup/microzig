@@ -28,20 +28,22 @@ pub fn writer(buffer: []u8) std.Io.Writer {
                 fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
                     const buffered = w.buffered();
                     if (buffered.len > 0) {
-                        const n = write_buf(buffered) catch return error.WriteFailed;
-                        _ = w.consume(n);
+                        write_buf(buffered) catch return error.WriteFailed;
+                        _ = w.consumeAll();
                     }
 
                     var n: usize = 0;
                     for (data[0 .. data.len - 1]) |buf| {
                         if (buf.len == 0) continue;
-                        n += write_buf(buffered) catch return error.WriteFailed;
+                        write_buf(buffered) catch return error.WriteFailed;
+                        n += buf.len;
                     }
 
                     const splat_buf = data[data.len - 1];
                     if (splat > 0 and splat_buf.len > 0) {
                         for (0..splat) |_| {
-                            n += write_buf(splat_buf) catch return error.WriteFailed;
+                            write_buf(splat_buf) catch return error.WriteFailed;
+                            n += splat_buf.len;
                         }
                     }
 
@@ -50,7 +52,7 @@ pub fn writer(buffer: []u8) std.Io.Writer {
 
                 var timed_out: bool = false;
 
-                fn write_buf(buf: []const u8) error{Timeout}!usize {
+                fn write_buf(buf: []const u8) error{Timeout}!void {
                     if (tx_fifo_full()) {
                         if (timed_out) {
                             return error.Timeout;
@@ -71,8 +73,6 @@ pub fn writer(buffer: []u8) std.Io.Writer {
                     }
 
                     tx_fifo_flush();
-
-                    return buf.len;
                 }
 
                 fn wait_for_flush() error{Timeout}!void {

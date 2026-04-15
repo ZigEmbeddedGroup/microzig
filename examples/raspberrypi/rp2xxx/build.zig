@@ -72,6 +72,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "pwm", .file = "src/pwm.zig" },
         .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
+        .{ .name = "uart-reader-writer", .file = "src/uart_reader_writer.zig" },
         .{ .name = "rtt-log", .file = "src/rtt_log.zig", .works_with_riscv = false },
         .{ .name = "spi-master", .file = "src/spi_master.zig" },
         .{ .name = "spi-slave", .file = "src/spi_slave.zig" },

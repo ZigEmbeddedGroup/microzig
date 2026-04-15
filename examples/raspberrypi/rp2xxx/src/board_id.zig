@@ -26,7 +26,7 @@ pub fn main() !void {
     uart.apply(.{
         .clock_config = rp2xxx.clock_config,
     });
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     while (true) {
         log.info("unique board id: {x}", .{rp2xxx.get_board_id()});

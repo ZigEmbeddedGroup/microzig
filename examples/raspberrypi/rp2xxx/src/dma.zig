@@ -37,7 +37,7 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     const channel = dma.claim_unused_channel().?;
 

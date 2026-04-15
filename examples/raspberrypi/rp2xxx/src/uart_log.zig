@@ -14,7 +14,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     while (true) {}
 }
 
-pub const microzig_options = microzig.Options{
+pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
 };
@@ -30,7 +30,7 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     var i: u32 = 0;
     while (true) : (i += 1) {

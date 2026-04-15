@@ -231,7 +231,7 @@ pub fn validate_controller(T: type) void {
 /// Responds to host requests and dispatches to the appropriate drivers.
 /// When this type is build (at comptime), it builds descriptor and handler tables based on the
 /// provided config.
-pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
+pub fn DeviceController(comptime config: Config, comptime driver_args: config.DriverArgs()) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
@@ -347,11 +347,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
-            // Finally, bind the handler functions based on the data collected above.
-            const Tuple = std.meta.Tuple;
             // Create a tuple with the appropriate types
-            const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
-            var ep_handlers: Tuple(&ep_handlers_types) = undefined;
+            const ep_handlers_types: [2]type = .{ @Tuple(&ep_handler_types[0]), @Tuple(&ep_handler_types[1]) };
+            var ep_handlers: @Tuple(&ep_handlers_types) = undefined;
             // Iterate over all IN and OUT endpoints and bind the handler for any that are set.
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {
@@ -363,10 +361,19 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             const DriverConfig = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
             const idx_in = @intFromEnum(types.Dir.In);
             const idx_out = @intFromEnum(types.Dir.Out);
+
+            const ConfigDescriptor = extern struct {
+                first: descriptor.Configuration,
+                drv: DriverConfig,
+            };
+            const Handlers_EP = struct {
+                In: ep_handlers_types[idx_in],
+                Out: ep_handlers_types[idx_out],
+            };
             break :blk .{
                 .device_descriptor = desc_device,
-                .config_descriptor = extern struct {
-                    first: descriptor.Configuration = .{
+                .config_descriptor = ConfigDescriptor{
+                    .first = .{
                         .total_length = .from(size),
                         .num_interfaces = alloc.next_itf_num,
                         .configuration_value = 1,
@@ -374,14 +381,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         .attributes = config0.attributes,
                         .max_current = .from_ma(config0.max_current_ma),
                     },
-                    drv: DriverConfig = .{},
-                }{},
+                    .drv = .{},
+                },
                 .string_descriptors = alloc.string_descriptors(config.language),
                 .handlers_itf = itf_handlers,
-                .handlers_ep = struct {
-                    In: ep_handlers_types[idx_in] = ep_handlers[idx_in],
-                    Out: ep_handlers_types[idx_out] = ep_handlers[idx_out],
-                }{},
+                .handlers_ep = Handlers_EP{
+                    .In = ep_handlers[idx_in],
+                    .Out = ep_handlers[idx_out],
+                },
                 .drivers_ep = ep_handler_drivers,
                 .DriverAlloc = @Struct(
                     .auto,

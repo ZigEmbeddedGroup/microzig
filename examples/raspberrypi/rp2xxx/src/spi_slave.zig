@@ -39,7 +39,7 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     std.log.info("Setting SPI as slave device", .{});
     spi.set_slave(true);

@@ -144,20 +144,12 @@ pub const instance = struct {
 pub const UART = enum(u1) {
     _,
 
-    pub const UART_With_Timeout = struct {
-        instance: UART,
-        deadline: mdf.time.Deadline,
-    };
-
-    pub const Writer = std.io.GenericWriter(UART_With_Timeout, TransmitError, generic_writer_fn);
-    pub const Reader = std.io.GenericReader(UART_With_Timeout, ReceiveError, generic_reader_fn);
-
-    pub fn writer(uart: UART, deadline: mdf.time.Deadline) Writer {
-        return .{ .context = .{ .instance = uart, .deadline = deadline } };
+    pub fn writer(uart: UART, buffer: []u8, deadline: mdf.time.Deadline) Writer {
+        return .init(uart, buffer, deadline);
     }
 
-    pub fn reader(uart: UART, deadline: mdf.time.Deadline) Reader {
-        return .{ .context = .{ .instance = uart, .deadline = deadline } };
+    pub fn reader(uart: UART, buffer: []u8, deadline: mdf.time.Deadline) Reader {
+        return .init(uart, buffer, deadline);
     }
 
     pub inline fn get_regs(uart: UART) *volatile UartRegs {
@@ -316,12 +308,6 @@ pub const UART = enum(u1) {
         }
     }
 
-    /// Wraps write_blocking() for use as a GenericWriter
-    fn generic_writer_fn(uart: UART_With_Timeout, buffer: []const u8) TransmitError!usize {
-        try uart.instance.write_blocking(buffer, uart.deadline);
-        return buffer.len;
-    }
-
     // TODO: Will potentially be modified in a future DMA overhaul
     pub fn dreq_tx(uart: UART) dma.Dreq {
         return switch (@intFromEnum(uart)) {
@@ -414,12 +400,6 @@ pub const UART = enum(u1) {
         return try uart.read_rx_fifo_with_error_check();
     }
 
-    /// Wraps read_blocking() for use as a GenericReader
-    fn generic_reader_fn(uart: UART_With_Timeout, buffer: []u8) ReceiveBlockingError!usize {
-        try uart.instance.read_blocking(buffer, uart.deadline);
-        return buffer.len;
-    }
-
     pub fn set_format(
         uart: UART,
         word_bits: WordBits,
@@ -490,17 +470,109 @@ pub const UART = enum(u1) {
     }
 };
 
-var uart_logger: ?UART.Writer = null;
+pub const Writer = struct {
+    uart: UART,
+    deadline: mdf.time.Deadline,
+    interface: std.Io.Writer,
+
+    pub fn init(uart: UART, buffer: []u8, deadline: mdf.time.Deadline) Writer {
+        return .{
+            .uart = uart,
+            .deadline = deadline,
+            .interface = .{
+                .vtable = comptime &.{
+                    .drain = drain,
+                },
+                .buffer = buffer,
+            },
+        };
+    }
+
+    fn drain(io_w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const writer: *Writer = @alignCast(@fieldParentPtr("interface", io_w));
+
+        const buffered = io_w.buffered();
+        if (buffered.len > 0) {
+            writer.uart.write_blocking(buffered, writer.deadline) catch unreachable;
+            _ = io_w.consumeAll();
+        }
+
+        var n: usize = 0;
+        for (data[0 .. data.len - 1]) |buf| {
+            if (buf.len == 0) continue;
+            writer.uart.write_blocking(buffered, writer.deadline) catch unreachable;
+            n += buf.len;
+        }
+
+        const splat_buf = data[data.len - 1];
+        if (splat > 0 and splat_buf.len > 0) {
+            for (0..splat) |_| {
+                writer.uart.write_blocking(splat_buf, writer.deadline) catch unreachable;
+                n += splat_buf.len;
+            }
+        }
+
+        return n;
+    }
+};
+
+pub const Reader = struct {
+    uart: UART,
+    deadline: mdf.time.Deadline,
+    errors: ErrorStates = .{},
+    interface: std.Io.Reader,
+
+    pub fn init(uart: UART, buffer: []u8, deadline: mdf.time.Deadline) Reader {
+        return .{
+            .uart = uart,
+            .deadline = deadline,
+            .interface = .{
+                .vtable = comptime &.{
+                    .stream = stream,
+                },
+                .buffer = buffer,
+                .seek = 0,
+                .end = 0,
+            },
+        };
+    }
+
+    fn stream(io_r: *std.Io.Reader, io_w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+        const reader: *Reader = @alignCast(@fieldParentPtr("interface", io_r));
+
+        // Clear errors from previous call (if any).
+        reader.errors = .{};
+
+        // If the deadline expired, return error.EndOfStream.
+        reader.deadline.check(time.get_time_since_boot()) catch return error.EndOfStream;
+
+        const dest = limit.slice(try io_w.writableSliceGreedy(1));
+
+        var i: usize = 0;
+        while (i < dest.len and reader.uart.is_readable()) : (i += 1) {
+            dest[i] = reader.uart.read_rx_fifo_with_error_check() catch {
+                reader.errors = reader.uart.get_errors();
+                reader.uart.clear_errors();
+                return error.ReadFailed;
+            };
+            io_w.advance(1);
+        }
+
+        return i;
+    }
+};
+
+var uart_logger: ?Writer = null;
 
 /// Set a specific uart instance to be used for logging.
 ///
 /// Allows system logging over uart via:
-/// pub const microzig_options = .{
+/// pub const microzig_options: microzig.Options = .{
 ///     .logFn = hal.uart.log,
 /// };
-pub fn init_logger(uart: UART) void {
-    uart_logger = uart.writer(.no_deadline);
-    uart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+pub fn init_logger(uart: UART, buffer: []u8) void {
+    uart_logger = .init(uart, buffer, .no_deadline);
+    uart_logger.?.interface.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
 /// Disables logging via the uart instance.
@@ -520,12 +592,13 @@ pub fn log(
         else => " (" ++ @tagName(scope) ++ "): ",
     };
 
-    if (uart_logger) |uart| {
+    if (uart_logger) |*uart| {
         const current_time = time.get_time_since_boot();
         const seconds = current_time.to_us() / std.time.us_per_s;
         const microseconds = current_time.to_us() % std.time.us_per_s;
 
-        uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        uart.interface.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        uart.interface.flush() catch {};
     }
 }
 

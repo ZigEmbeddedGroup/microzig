@@ -10,6 +10,7 @@
     },
     .dependencies = .{
         .libxml2 = .{
+            // .path = "../../../zig-build-libxml2",
             .url = "git+https://github.com/mattnite/zig-build-libxml2.git#0a410ac11a842e7f366dac13d0ca59adbc7b4c5e",
             .hash = "libxml2-0.0.0-Kr0Y1C44ngAn0qlZ5eZXiDDAnjbAk1TWMqRiuKyIMmUZ",
         },

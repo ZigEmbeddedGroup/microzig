@@ -24,7 +24,7 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     var in_buf: [BUF_LEN]u8 = .{ 'h', 'e', 'y', ' ', 'y', 'o', 'u', '!' } ** (BUF_LEN / 8);
     var out_buf = std.mem.zeroes([BUF_LEN]u8);

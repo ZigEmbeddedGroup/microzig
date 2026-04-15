@@ -4,7 +4,7 @@
     .fingerprint = 0xfc536f957aeaeb54,
     .dependencies = .{
         .args = .{
-            .url = "git+https://github.com/MasterQ32/zig-args#8ae26b44a884ff20dca98ee84c098e8f8e94902f",
+            .url = "git+https://github.com/ikskuh/zig-args#8ae26b44a884ff20dca98ee84c098e8f8e94902f",
             .hash = "N-V-__8AAIjRAACGzDRO7A9dw7kWSchNk29caJZkXuMCb0Cn",
         },
         .@"bounded-array" = .{ .path = "../../modules/bounded-array" },

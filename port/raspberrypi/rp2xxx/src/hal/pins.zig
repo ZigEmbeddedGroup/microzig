@@ -784,24 +784,22 @@ pub const GlobalConfiguration = struct {
         var idx: usize = 0;
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
-                field_names[idx] = pin_config.name orelse field.name;
                 field_types[idx] = if (pin_config.function == .SIO)
                     gpio.Pin
                 else if (pin_config.function.is_pwm())
                     pwm.Pwm
                 else if (pin_config.function.is_adc())
                     adc.Input
-                else {
+                else
                     continue;
-                };
-
+                field_names[idx] = pin_config.name orelse field.name;
                 field_attrs[idx] = .{};
 
                 idx += 1;
             }
         }
 
-        return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
+        return @Struct(.auto, null, field_names[0..idx], field_types[0..idx], field_attrs[0..idx]);
     }
 
     /// Populate and return the PinsType struct

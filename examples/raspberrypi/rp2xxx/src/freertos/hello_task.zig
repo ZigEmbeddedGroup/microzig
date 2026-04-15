@@ -40,7 +40,7 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     // Create a task using the new idiomatic API
     _ = try freertos.task.create(

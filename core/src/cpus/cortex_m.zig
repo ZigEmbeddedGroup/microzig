@@ -16,7 +16,9 @@ const Core = enum {
     cortex_m7,
 };
 
-const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
+const cortex_m = if (@hasField(Core, microzig.config.cpu_name))
+    @field(Core, microzig.config.cpu_name)
+else
     @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
 
 /// Segger's RTT support
@@ -81,7 +83,7 @@ pub const ExternalInterrupt = blk: {
         }
     }
 
-    break :blk @Enum(u8, .exhaustive, field_names, field_values);
+    break :blk @Enum(u8, .exhaustive, &field_names, &field_values);
 };
 
 /// Machine exceptions.

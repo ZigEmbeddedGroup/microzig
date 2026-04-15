@@ -31,7 +31,7 @@ pub fn main() !void {
         .clock_config = hal.clock_config,
     });
 
-    uart.init_logger(uart0);
+    uart.init_logger(uart0, &.{});
 
     std.log.info("Hello, World!", .{});
 

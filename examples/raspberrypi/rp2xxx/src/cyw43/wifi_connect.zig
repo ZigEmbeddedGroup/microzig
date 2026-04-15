@@ -26,7 +26,7 @@ const WIFI_AUTH = Security.wpa2_psk;
 pub fn main() !void {
     uart_tx_pin.set_function(.uart);
     uart.apply(.{ .clock_config = rp2xxx.clock_config });
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     std.log.info("Initializing CYW43...", .{});
 

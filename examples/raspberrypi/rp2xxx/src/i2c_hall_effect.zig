@@ -29,7 +29,7 @@ pub fn main() !void {
         .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     // Configure i2c peripheral
     const sda_pin = gpio.num(4);

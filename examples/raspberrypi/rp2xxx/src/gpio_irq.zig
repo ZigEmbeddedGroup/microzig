@@ -54,7 +54,7 @@ pub fn main() !void {
     uart.apply(.{
         .clock_config = rp2xxx.clock_config,
     });
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     // Initialize the loop
     var i: u32 = 0;

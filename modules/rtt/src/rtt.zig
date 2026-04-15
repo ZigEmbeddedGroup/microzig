@@ -91,7 +91,7 @@ pub const channel = struct {
             }
 
             fn mode(self: *Self) Mode {
-                return std.meta.intToEnum(Mode, self.flags & 3) catch unreachable;
+                return std.enums.fromInt(Mode, self.flags & 3) orelse unreachable;
             }
 
             fn set_mode(self: *Self, mode_: Mode) void {
@@ -441,7 +441,7 @@ fn BuildBufferStorageType(comptime up_channels: []const channel.Config, comptime
         field_attrs[idx + up_channels.len] = .{};
     }
 
-    return @Struct(.@"extern", null, field_names, field_types, field_attrs);
+    return @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
 }
 
 /// Creates a control block struct for the given channel configs. Buffer storage is also contained within this struct, although

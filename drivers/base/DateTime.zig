@@ -343,7 +343,7 @@ pub const Timezone = enum(i16) {
     /// * `separator` - An optional separator to add between  the hours and minutes
     ///                 defaults to ":" if null
     pub fn to_string(self: Timezone, out_string: []u8, separator: ?[]const u8) Error!usize {
-        if (out_string.len < 5 + (separator orelse ":").len) return error.NotEnoughSpace;
+        if (out_string.len < 5 + if (separator) |sep| sep.len else 1) return error.NotEnoughSpace;
 
         const minus = @intFromEnum(self) < 0;
 

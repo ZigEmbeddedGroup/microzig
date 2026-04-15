@@ -33,7 +33,7 @@ pub fn main() !void {
         .clock_config = rp2xxx.clock_config,
     });
 
-    rp2xxx.uart.init_logger(uart);
+    rp2xxx.uart.init_logger(uart, &.{});
 
     // Create a queue that holds up to 5 u32 values
     message_queue = try freertos.queue.create(u32, 5);

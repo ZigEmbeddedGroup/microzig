@@ -31,7 +31,6 @@ const DISPLAY_BACKLIGHT_PIN = 13;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
@@ -81,13 +80,11 @@ fn flush_display_buffer(display: *DisplayDriver, buffer: []DisplayDriver.Color) 
 }
 
 pub fn main() !void {
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
-
+    uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .clock_config = rp2xxx.clock_config,
     });
+    rp2xxx.uart.init_logger(uart, &.{});
 
     led.set_function(.pwm);
     led.set_direction(.out);

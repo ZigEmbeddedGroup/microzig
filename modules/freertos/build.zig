@@ -186,7 +186,7 @@ fn addAllIncludeDirs(
     subdir: []const u8,
 ) void {
     const allocator = b.allocator;
-    const full = std.fs.path.join(allocator, &.{ base.getPath(b), subdir }) catch @panic("join");
+    const full = std.Io.Dir.path.join(allocator, &.{ base.getPath(b), subdir }) catch @panic("join");
     defer allocator.free(full);
 
     var dir = std.Io.Dir.openDirAbsolute(b.graph.io, full, .{ .iterate = true }) catch return;
