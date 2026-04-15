@@ -1298,7 +1298,7 @@ pub const c_patched = struct {
         sae_h2e_identifier: [32]u8 = std.mem.zeroes([32]u8),
 
         // NOTE: maybe a little more imagination
-        pub const Packed1 = packed struct {
+        pub const Packed1 = packed struct(u32) {
             rm_enabled: bool,
             btm_enabled: bool,
             mbo_enabled: bool,
@@ -1308,7 +1308,7 @@ pub const c_patched = struct {
             reserved: u26,
         };
 
-        pub const Packed2 = packed struct {
+        pub const Packed2 = packed struct(u32) {
             he_dcm_set: u1,
             he_dcm_max_constellation_tx: u2,
             he_dcm_max_constellation_rx: u2,

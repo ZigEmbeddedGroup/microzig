@@ -746,7 +746,7 @@ const DimElements = struct {
         pattern: []const u8,
 
         fn expand(list: *const List, gpa: Allocator) ![]const []const u8 {
-            var ret: std.ArrayList([]const u8) = .{};
+            var ret: std.ArrayList([]const u8) = .empty;
             defer ret.deinit(gpa);
 
             if (std.mem.indexOf(u8, list.pattern, "-")) |dash_idx| {

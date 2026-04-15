@@ -136,7 +136,7 @@ pub fn main(init: std.process.Init) !void {
     var stderr_writer = stderr.writer(io, &.{});
 
     const args_slice = try init.minimal.args.toSlice(arena);
-    var args = Args.parse(args_slice) catch |err| {
+    const args = Args.parse(args_slice) catch |err| {
         try stderr_writer.interface.writeAll(help_message);
         try stderr_writer.interface.flush();
         return err;

@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const assert = std.debug.assert;
 
@@ -61,7 +62,7 @@ pub fn SliceVector(comptime Slice: type) type {
         @compileError("Slice must have a slice type!");
 
     const item_ptr_attrs: std.builtin.Type.Pointer.Attributes = .{
-        .@"align" = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
+        .@"align" = type_info.pointer.alignment,
         .@"addrspace" = type_info.pointer.address_space,
         .@"const" = type_info.pointer.is_const,
         .@"volatile" = type_info.pointer.is_volatile,
@@ -479,7 +480,7 @@ test "SliceVector.Iterator.next_chunk" {
     }
 }
 
-pub fn dump_stack_trace(trace: *std.builtin.StackTrace, start_index: usize) usize {
+pub fn dump_error_trace(trace: *std.builtin.StackTrace) usize {
     const frame_count = @min(trace.index, trace.instruction_addresses.len);
 
     var frame_index: usize = 0;
@@ -489,11 +490,170 @@ pub fn dump_stack_trace(trace: *std.builtin.StackTrace, start_index: usize) usiz
         frame_index = (frame_index + 1) % trace.instruction_addresses.len;
     }) {
         const address = trace.instruction_addresses[frame_index];
-        std.log.err("{d: >3}: 0x{X:0>8}", .{ start_index + frame_index, address });
+        dump_trace_line(frame_index, address);
     }
 
     return frame_count;
 }
+
+pub fn dump_trace_line(index: usize, address: usize) void {
+    std.log.err("{d: >3}: 0x{X:0>8}", .{ index, address });
+}
+
+pub const StackIterator = struct {
+    pub const can_use_fp_based_stack_trace = switch (fp_usability) {
+        .useless => false,
+        .unsafe, .safe => !builtin.omit_frame_pointer,
+        .ideal => true,
+    };
+
+    fp: usize,
+
+    pub fn next(it: *StackIterator) ?usize {
+        const fp = it.fp;
+
+        if (!can_use_fp_based_stack_trace and fp == 0) return null; // we reached the "sentinel" base pointer
+
+        const bp_addr = applyOffset(fp, fp_to_bp_offset) orelse return null;
+        const ra_addr = applyOffset(fp, fp_to_ra_offset) orelse return null;
+
+        if (bp_addr == 0 or !std.mem.isAligned(bp_addr, @alignOf(usize)) or
+            ra_addr == 0 or !std.mem.isAligned(ra_addr, @alignOf(usize)))
+        {
+            // This isn't valid, but it most likely indicates end of stack.
+            return null;
+        }
+
+        const bp_ptr: *const usize = @ptrFromInt(bp_addr);
+        const ra_ptr: *const usize = @ptrFromInt(ra_addr);
+        const bp = applyOffset(bp_ptr.*, stack_bias) orelse return null;
+
+        // If the stack grows downwards, `bp > fp` should always hold; conversely, if it
+        // grows upwards, `bp < fp` should always hold. If that is not the case, this
+        // frame is invalid, so we'll treat it as though we reached end of stack. The
+        // exception is address 0, which is a graceful end-of-stack signal, in which case
+        // *this* return address is valid and the *next* iteration will be the last.
+        if (bp != 0 and switch (comptime builtin.target.stackGrowth()) {
+            .down => bp <= fp,
+            .up => bp >= fp,
+        }) return null;
+
+        it.fp = bp;
+        const ra = std.debug.stripInstructionPtrAuthCode(ra_ptr.*);
+        if (ra <= 1) return null;
+        return ra;
+    }
+
+    const native_arch = builtin.cpu.arch;
+
+    const FpUsability = enum {
+        /// FP unwinding is impractical on this target. For example, due to its very silly ABI
+        /// design decisions, it's not possible to do generic FP unwinding on MIPS without a
+        /// complicated code scanning algorithm.
+        useless,
+        /// FP unwinding is unsafe on this target; we may crash when doing so. We will only perform
+        /// FP unwinding in the case of crashes/panics, or if the user opts in.
+        unsafe,
+        /// FP unwinding is guaranteed to be safe on this target. We will do so if unwinding with
+        /// debug info does not work, and if this compilation has frame pointers enabled.
+        safe,
+        /// FP unwinding is the best option on this target. This is usually because the ABI requires
+        /// a backchain pointer, thus making it always available, safe, and fast.
+        ideal,
+    };
+
+    const fp_usability: FpUsability = switch (native_arch) {
+        .alpha,
+        .avr,
+        .csky,
+        .microblaze,
+        .microblazeel,
+        .mips,
+        .mipsel,
+        .mips64,
+        .mips64el,
+        .msp430,
+        .sh,
+        .sheb,
+        .xcore,
+        => .useless,
+        .hexagon,
+        // The PowerPC ABIs don't actually strictly require a backchain pointer; they allow omitting
+        // it when full unwind info is present. Despite this, both GCC and Clang always enforce the
+        // presence of the backchain pointer no matter what options they are given. This seems to be
+        // a case of "the spec is only a polite suggestion", except it works in our favor this time!
+        .powerpc,
+        .powerpcle,
+        .powerpc64,
+        .powerpc64le,
+        .sparc,
+        .sparc64,
+        => .ideal,
+        // https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Respect-the-purpose-of-specific-CPU-registers
+        .aarch64 => if (builtin.target.os.tag.isDarwin()) .safe else .unsafe,
+        else => .unsafe,
+    };
+
+    /// Offset of the saved base pointer (previous frame pointer) wrt the frame pointer.
+    const fp_to_bp_offset = off: {
+        // On 32-bit PA-RISC, the base pointer is the final word of the frame marker.
+        if (native_arch == .hppa) break :off -1 * @sizeOf(usize);
+        // On 64-bit PA-RISC, the frame marker was shrunk significantly; now there's just the return
+        // address followed by the base pointer.
+        if (native_arch == .hppa64) break :off -1 * @sizeOf(usize);
+        // On LoongArch and RISC-V, the frame pointer points to the top of the saved register area,
+        // in which the base pointer is the first word.
+        if (native_arch.isLoongArch() or native_arch.isRISCV()) break :off -2 * @sizeOf(usize);
+        // On OpenRISC, the frame pointer is stored below the return address.
+        if (native_arch == .or1k) break :off -2 * @sizeOf(usize);
+        // On SPARC, the frame pointer points to the save area which holds 16 slots for the local
+        // and incoming registers. The base pointer (i6) is stored in its customary save slot.
+        if (native_arch.isSPARC()) break :off 14 * @sizeOf(usize);
+        // Everywhere else, the frame pointer points directly to the location of the base pointer.
+        break :off 0;
+    };
+
+    /// Offset of the saved return address wrt the frame pointer.
+    const fp_to_ra_offset = off: {
+        // On 32-bit PA-RISC, the return address sits in the middle-ish of the frame marker.
+        if (native_arch == .hppa) break :off -5 * @sizeOf(usize);
+        // On 64-bit PA-RISC, the frame marker was shrunk significantly; now there's just the return
+        // address followed by the base pointer.
+        if (native_arch == .hppa64) break :off -2 * @sizeOf(usize);
+        // On LoongArch and RISC-V, the frame pointer points to the top of the saved register area,
+        // in which the return address is the second word.
+        if (native_arch.isLoongArch() or native_arch.isRISCV()) break :off -1 * @sizeOf(usize);
+        // On OpenRISC, the return address is stored below the stack parameter area.
+        if (native_arch == .or1k) break :off -1 * @sizeOf(usize);
+        if (native_arch.isPowerPC64()) break :off 2 * @sizeOf(usize);
+        // On s390x, r14 is the link register and we need to grab it from its customary slot in the
+        // register save area (ELF ABI s390x Supplement §1.2.2.2).
+        if (native_arch == .s390x) break :off 14 * @sizeOf(usize);
+        // On SPARC, the frame pointer points to the save area which holds 16 slots for the local
+        // and incoming registers. The return address (i7) is stored in its customary save slot.
+        if (native_arch.isSPARC()) break :off 15 * @sizeOf(usize);
+        break :off @sizeOf(usize);
+    };
+
+    /// Value to add to the stack pointer and frame/base pointers to get the real location being
+    /// pointed to. Yes, SPARC really does this.
+    const stack_bias = bias: {
+        if (native_arch == .sparc64) break :bias 2047;
+        break :bias 0;
+    };
+
+    /// On some oddball architectures, a return address points to the call instruction rather than
+    /// the instruction following it.
+    const ra_call_offset = off: {
+        if (native_arch.isSPARC()) break :off 0;
+        break :off 1;
+    };
+
+    fn applyOffset(addr: usize, comptime off: comptime_int) ?usize {
+        if (off >= 0) return std.math.add(usize, addr, off) catch return null;
+        return std.math.sub(usize, addr, -off) catch return null;
+    }
+};
 
 pub fn get_end_of_stack() *const anyopaque {
     if (microzig.config.end_of_stack.address) |address| {

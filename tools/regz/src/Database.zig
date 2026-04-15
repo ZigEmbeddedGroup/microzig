@@ -807,7 +807,7 @@ fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: A
     var rows = try db.conn.rows(query, args);
     defer rows.deinit();
 
-    var list: std.ArrayList(T) = .{};
+    var list: std.ArrayList(T) = .empty;
     while (rows.next()) |row| {
         try list.append(allocator, try scan_row(T, allocator, row));
     }
@@ -915,7 +915,7 @@ fn get_nested_struct_fields(
 fn recursively_calculate_struct_size(
     db: *Database,
     depth: *u8,
-    cache: *std.AutoArrayHashMap(StructID, u64),
+    cache: *std.AutoArrayHashMapUnmanaged(StructID, u64),
     allocator: Allocator,
     struct_id: StructID,
 ) !u64 {
@@ -970,8 +970,8 @@ pub fn get_nested_struct_fields_with_calculated_size(
 
     log.debug("nested_struct_fields.len={} struct_id={f}", .{ nested_struct_fields.len, struct_id });
 
-    var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(gpa);
-    defer size_cache.deinit();
+    var size_cache: std.AutoArrayHashMapUnmanaged(StructID, u64) = .empty;
+    defer size_cache.deinit(gpa);
 
     for (nested_struct_fields) |*nsf| {
         if (nsf.size_bytes != null) {

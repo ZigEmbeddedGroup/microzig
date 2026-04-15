@@ -163,12 +163,12 @@ pub fn load_into_db(io: std.Io, db: *Database, path: []const u8) !void {
         chip_files.deinit(allocator);
     }
 
-    var register_files = std.StringArrayHashMap(std.json.Parsed(std.json.Value)).init(allocator);
+    var register_files: std.StringArrayHashMapUnmanaged(std.json.Parsed(std.json.Value)) = .empty;
     defer {
         for (register_files.values()) |*value|
             value.deinit();
 
-        register_files.deinit();
+        register_files.deinit(allocator);
     }
 
     var chips_dir = try data_dir.openDir(io, "chips", .{ .iterate = true });
@@ -236,7 +236,7 @@ pub fn load_into_db(io: std.Io, db: *Database, path: []const u8) !void {
         try handle_extends(allocator, extends_list_allocator, &register_file.value);
 
         const register_name = try allocator.dupe(u8, entry.name[0 .. entry.name.len - std.fs.path.extension(entry.name).len]);
-        try register_files.put(register_name, register_file);
+        try register_files.put(allocator, register_name, register_file);
     }
 
     // sort to try to keep things somewhat in order
@@ -247,8 +247,8 @@ pub fn load_into_db(io: std.Io, db: *Database, path: []const u8) !void {
             .name = name,
         });
 
-        var enums = std.StringArrayHashMap(Database.EnumID).init(allocator);
-        defer enums.deinit();
+        var enums: std.StringArrayHashMapUnmanaged(Database.EnumID) = .empty;
+        defer enums.deinit(allocator);
 
         for (register_file.value.object.keys(), register_file.value.object.values()) |key, obj| {
             if (!std.mem.startsWith(u8, key, "enum/"))
@@ -264,7 +264,7 @@ pub fn load_into_db(io: std.Io, db: *Database, path: []const u8) !void {
                 .size_bits = @intCast(size),
             });
 
-            try enums.put(key["enum/".len..], enum_id);
+            try enums.put(allocator, key["enum/".len..], enum_id);
 
             for (obj.object.get("variants").?.array.items) |item| {
                 const enum_field_name = item.object.get("name").?.string;
@@ -494,8 +494,8 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
         if (item_value.*.object.contains("extends")) {
 
             // This Collects unique items from the ancestors.
-            var arr: std.json.ObjectMap = std.json.ObjectMap.init(allocator);
-            defer arr.deinit();
+            var arr: std.json.ObjectMap = .empty;
+            defer arr.deinit(allocator);
 
             // Get child value and kind holder of inherting items
             var child = root_json.object.get(item_name).?;
@@ -504,7 +504,7 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
             // Add child items to dictionary so they are not overwritten.
             for (child.object.get(list_name).?.array.items) |child_item| {
                 const child_item_name = child_item.object.get("name").?.string;
-                try arr.put(child_item_name, child_item);
+                try arr.put(allocator, child_item_name, child_item);
             }
 
             // Handle all parents and grandparents of the current child.
@@ -515,7 +515,7 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
             for (arr.values()) |value| {
                 try new_list.append(value);
             }
-            try child.object.put(list_name, std.json.Value{ .array = new_list });
+            try child.object.put(allocator, list_name, std.json.Value{ .array = new_list });
         }
     }
 }
@@ -537,7 +537,7 @@ fn resolve_inheritance_recursively(allocator: std.mem.Allocator, json_data: *std
         for (parent_section_array.items) |parent_element| {
             const parent_element_name = if (parent_element.object.get("name")) |name| name.string else @panic("No Name exist in array properties");
             if (!accumulator.contains(parent_element_name)) {
-                try accumulator.put(parent_element_name, parent_element);
+                try accumulator.put(allocator, parent_element_name, parent_element);
             }
         }
 

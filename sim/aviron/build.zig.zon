@@ -5,7 +5,7 @@
     .dependencies = .{
         .args = .{
             .url = "git+https://github.com/MasterQ32/zig-args#8ae26b44a884ff20dca98ee84c098e8f8e94902f",
-            .hash = "args-0.0.0-CiLiqojRAACGzDRO7A9dw7kWSchNk29caJZkXuMCb0Cn",
+            .hash = "N-V-__8AAIjRAACGzDRO7A9dw7kWSchNk29caJZkXuMCb0Cn",
         },
         .@"bounded-array" = .{ .path = "../../modules/bounded-array" },
         .ihex = .{

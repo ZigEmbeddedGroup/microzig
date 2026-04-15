@@ -42,15 +42,18 @@ pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
         std.log.err("panic: {s}", .{message});
 
-        var error_trace_count: usize = 0;
-        if (@errorReturnTrace()) |trace| error_trace_count = utilities.dump_stack_trace(trace, 0);
+        var trace_index: usize = 0;
+        if (@errorReturnTrace()) |trace| trace_index = utilities.dump_error_trace(trace);
 
-        var addr_buf: [20]usize = undefined;
-        var stacktrace = std.debug.captureCurrentStackTrace(.{
-            .first_address = first_trace_address orelse @returnAddress(),
-            .allow_unsafe_unwind = true,
-        }, &addr_buf);
-        _ = utilities.dump_stack_trace(&stacktrace, error_trace_count);
+        // Skip if we can't use fp based stack tracing.
+        if (options.panic_stack_trace and utilities.StackIterator.can_use_fp_based_stack_trace) {
+            var it: utilities.StackIterator = .{
+                .fp = first_trace_address orelse @frameAddress(),
+            };
+            while (it.next()) |address| : (trace_index += 1) {
+                utilities.dump_trace_line(trace_index, address);
+            }
+        }
 
         // Attach a breakpoint. this might trigger another panic internally, so
         // only do that if requested.
@@ -103,6 +106,9 @@ pub const Options = struct {
     /// reduce code size as the string literals for error names no longer have to
     /// be included in the executable.
     simple_panic_if_main_errors: bool = false,
+
+    /// Enable panic stack traces.
+    panic_stack_trace: bool = true,
 };
 
 pub const options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};

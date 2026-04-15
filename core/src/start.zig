@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const microzig = @import("microzig");
 const app = @import("app");
-const failing = @import("failing.zig");
 
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
@@ -17,7 +16,10 @@ pub const std_options: std.Options = .{
     .logFn = microzig.options.logFn,
 };
 
-pub const std_options_debug_io: std.Io = failing.io;
+pub const std_options_debug_io: std.Io = if (@hasDecl(microzig.app, "microzig_options_debug_io"))
+    microzig.app.microzig_options_debug_io
+else
+    .failing;
 
 // Startup logic:
 comptime {

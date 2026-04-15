@@ -317,6 +317,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Dwarf format option for the firmware executable.
             dwarf_format: ?std.dwarf.Format = null,
+
+            /// Whether to omit the stack frame pointer.
+            omit_frame_pointer: ?bool = null,
         };
 
         /// Creates a new firmware for a given target.
@@ -399,7 +402,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
-            const regz_exe = b.dependency("tools/regz", .{ .optimize = .Debug }).artifact("regz");
+            const regz_exe = b.dependency("tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
                 .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
@@ -505,6 +508,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         .unwind_tables = options.unwind_tables,
                         .error_tracing = options.error_tracing,
                         .dwarf_format = options.dwarf_format,
+                        .omit_frame_pointer = options.omit_frame_pointer,
                     }),
                     .linkage = .static,
                 }),

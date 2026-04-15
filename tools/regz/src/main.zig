@@ -8,10 +8,9 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-pub const std_options = std.Options{
-    .log_level = .debug,
-};
-
+// pub const std_options = std.Options{
+//     .log_level = .debug,
+// };
 
 pub fn main(init: std.process.Init) !void {
     main_impl(init) catch |err| switch (err) {
@@ -28,7 +27,7 @@ const Arguments = struct {
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
     device: ?[]const u8 = null,
-    patch_paths: std.ArrayList([]const u8) = .{},
+    patch_paths: std.ArrayList([]const u8) = .empty,
     dump_path: ?[:0]const u8 = null,
     help: bool = false,
 
