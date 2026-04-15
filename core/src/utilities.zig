@@ -510,12 +510,14 @@ pub const StackIterator = struct {
     fp: usize,
 
     pub fn next(it: *StackIterator) ?usize {
+        if (!can_use_fp_based_stack_trace) return null;
+
         const fp = it.fp;
 
-        if (!can_use_fp_based_stack_trace and fp == 0) return null; // we reached the "sentinel" base pointer
+        if (fp == 0) return null; // we reached the "sentinel" base pointer
 
-        const bp_addr = applyOffset(fp, fp_to_bp_offset) orelse return null;
-        const ra_addr = applyOffset(fp, fp_to_ra_offset) orelse return null;
+        const bp_addr = apply_offset(fp, fp_to_bp_offset) orelse return null;
+        const ra_addr = apply_offset(fp, fp_to_ra_offset) orelse return null;
 
         if (bp_addr == 0 or !std.mem.isAligned(bp_addr, @alignOf(usize)) or
             ra_addr == 0 or !std.mem.isAligned(ra_addr, @alignOf(usize)))
@@ -526,7 +528,7 @@ pub const StackIterator = struct {
 
         const bp_ptr: *const usize = @ptrFromInt(bp_addr);
         const ra_ptr: *const usize = @ptrFromInt(ra_addr);
-        const bp = applyOffset(bp_ptr.*, stack_bias) orelse return null;
+        const bp = apply_offset(bp_ptr.*, stack_bias) orelse return null;
 
         // If the stack grows downwards, `bp > fp` should always hold; conversely, if it
         // grows upwards, `bp < fp` should always hold. If that is not the case, this
@@ -649,7 +651,7 @@ pub const StackIterator = struct {
         break :off 1;
     };
 
-    fn applyOffset(addr: usize, comptime off: comptime_int) ?usize {
+    fn apply_offset(addr: usize, comptime off: comptime_int) ?usize {
         if (off >= 0) return std.math.add(usize, addr, off) catch return null;
         return std.math.sub(usize, addr, -off) catch return null;
     }
