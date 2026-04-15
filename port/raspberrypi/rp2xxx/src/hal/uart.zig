@@ -519,7 +519,8 @@ pub const Writer = struct {
 pub const Reader = struct {
     uart: UART,
     deadline: mdf.time.Deadline,
-    errors: ErrorStates = .{},
+    err: ?ReceiveError = null,
+    error_states: ErrorStates = .{},
     interface: std.Io.Reader,
 
     pub fn init(uart: UART, buffer: []u8, deadline: mdf.time.Deadline) Reader {
@@ -541,17 +542,22 @@ pub const Reader = struct {
         const reader: *Reader = @alignCast(@fieldParentPtr("interface", io_r));
 
         // Clear errors from previous call (if any).
-        reader.errors = .{};
+        reader.error_states = .{};
+        reader.err = null;
 
         // If the deadline expired, return error.EndOfStream.
-        reader.deadline.check(time.get_time_since_boot()) catch return error.EndOfStream;
+        reader.deadline.check(time.get_time_since_boot()) catch {
+            reader.err = error.Timeout;
+            return error.ReadFailed;
+        };
 
         const dest = limit.slice(try io_w.writableSliceGreedy(1));
 
         var i: usize = 0;
         while (i < dest.len and reader.uart.is_readable()) : (i += 1) {
-            dest[i] = reader.uart.read_rx_fifo_with_error_check() catch {
-                reader.errors = reader.uart.get_errors();
+            dest[i] = reader.uart.read_rx_fifo_with_error_check() catch |err| {
+                reader.err = err;
+                reader.error_states = reader.uart.get_errors();
                 reader.uart.clear_errors();
                 return error.ReadFailed;
             };
