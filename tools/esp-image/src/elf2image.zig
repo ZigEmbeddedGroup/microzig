@@ -110,7 +110,6 @@ const Args = struct {
     }
 };
 
-
 const help_message =
     \\--help                                     Show this message
     \\--output <str>                             Path to save the generated file
