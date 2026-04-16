@@ -1,5 +1,4 @@
 /// Based on https://github.com/raspberrypi/pico-sdk/blob/a1438dff1d38bd9c65dbd693f0e5db4b9ae91779/src/rp2_common/hardware_flash/flash.c#L41
-
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const IO_QSPI = peripherals.IO_QSPI;
@@ -80,7 +79,6 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
             .riscv => 0,
         };
         @as(*const fn () callconv(.c) void, @ptrFromInt(@intFromPtr(&copyout) + thumb_bit))();
-
     }
 } else struct {
     // no op
@@ -97,7 +95,7 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
 ///
 /// The offset must be aligned to a 4096-byte sector, and count must be a
 /// multiple of 4096 bytes!
-pub inline fn range_erase(offset: u32, count: u32) void {
+pub inline fn range_erase(offset: u33, count: u32) void {
     // Do not inline `_range_erase`!
     @call(.never_inline, _range_erase, .{ offset, count });
 }
