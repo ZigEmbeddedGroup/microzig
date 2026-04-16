@@ -1,11 +1,10 @@
-//! See [rp2040 docs](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf), page 136.
-const rom = @import("rom.zig");
-
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
-
 const IO_QSPI = peripherals.IO_QSPI;
 const XIP_SSI = peripherals.SSI;
+
+const rom = @import("rom.zig");
+const compatibility = @import("compatibility.zig");
 
 pub const Command = enum(u8) {
     block_erase = 0xd8,
@@ -18,6 +17,10 @@ pub const BLOCK_SIZE = 65536;
 
 /// Bus reads to a 16MB memory window start at this address
 pub const XIP_BASE = 0x10000000;
+
+/// After the bootrom enters the user application, it contains also a copy of
+/// the flash XIP setup function.
+pub const BOOTRAM_BASE = 0x400e0000;
 
 /// Flash code related to the second stage boot loader
 pub const boot2 = if (!microzig.config.ram_image) struct {
@@ -46,24 +49,23 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
     /// setup XIP via the second stage bootloader.
     pub export fn flash_init() linksection(".ram_text") void {
         if (copyout_valid) return;
-        const bootloader = @as([*]u32, @ptrFromInt(XIP_BASE));
+        const bootloader = @as([*]u32, @ptrFromInt(switch (compatibility.chip) {
+            .RP2040 => XIP_BASE,
+            .RP2350 => BOOTRAM_BASE,
+        }));
         var i: usize = 0;
         while (i < BOOT2_SIZE_WORDS) : (i += 1) {
             copyout[i] = bootloader[i];
         }
+        asm volatile ("" ::: .{ .memory = true }); // memory barrier
         copyout_valid = true;
     }
 
     /// Configure the SSI and the external flash for XIP by calling the second
     /// stage bootloader that was copied out to `copyout`.
     pub export fn flash_enable_xip() linksection(".ram_text") void {
-        // The bootloader is in thumb mode
-        asm volatile (
-            \\adds r0, #1
-            \\blx r0
-            :
-            : [copyout] "{r0}" (@intFromPtr(&copyout)),
-            : .{ .r0 = true, .r14 = true });
+        const f: *const fn () callconv(.c) void = @ptrCast(&copyout);
+        f();
     }
 } else struct {
     // no op
@@ -72,13 +74,12 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
     /// Configure the SSI and the external flash for XIP by calling the second
     /// stage bootloader embedded into RAM.
     pub inline fn flash_enable_xip() linksection(".ram_text") void {
-        // The bootloader is in thumb mode
-        asm volatile (
-            \\adds r0, #1
-            \\blx r0
-            :
-            : [copyout] "{r0}" (@intFromPtr(microzig.board.bootrom.stage2_rom.ptr)),
-            : .{ .r0 = true, .r14 = true });
+        if (compatibility.chip == .RP2040 and @hasDecl(microzig.board, "bootrom")) {
+            const f: *const fn () callconv(.c) void = @ptrCast(microzig.board.bootrom.stage2_rom.ptr);
+            f();
+        } else {
+            rom.flash_enter_cmd_xip();
+        }
     }
 };
 
