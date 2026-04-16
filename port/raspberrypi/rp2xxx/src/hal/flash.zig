@@ -15,38 +15,23 @@ pub const PAGE_SIZE = 256;
 pub const SECTOR_SIZE = 4096;
 pub const BLOCK_SIZE = 65536;
 
-/// Bus reads to a 16MB memory window start at this address
+/// Bus reads to a 16MB memory window start at this address.
 pub const XIP_BASE = 0x10000000;
 
-/// After the bootrom enters the user application, it contains also a copy of
-/// the flash XIP setup function.
+/// After the bootrom enters the user application, a copy of the flash XIP
+/// setup function is found here on RP2350.
 pub const BOOTRAM_BASE = 0x400e0000;
 
-/// Flash code related to the second stage boot loader
-pub const boot2 = if (!microzig.config.ram_image) struct {
-    /// Size of the second stage bootloader in words
+/// Infrastructure for reentering XIP mode after exiting for programming.
+pub const boot2 = if (!microzig.config.ram_image and compatibility.arch == .arm) struct {
     const BOOT2_SIZE_WORDS = 64;
 
-    /// Buffer for the second stage bootloader
-    ///
-    /// The only job of the second stage bootloader is to configure the SSI and
-    /// the external flash for the best possible execute-in-place (XIP)
-    /// performance. Until the SSI is correctly configured for the attached
-    /// flash device, it's not possible to access flash via the XIP address
-    /// window, i.e., we have to copy the bootloader into sram before calling
-    /// `rom.flash_exit_xip`. This is required if we want to erase and/or write
-    /// to flash.
-    ///
-    /// At the end we can then just make a subroutine call to copyout, to
-    /// configure the SSI and flash. The second stage bootloader will return to
-    /// the calling function if a return address is provided in `lr`.
     var copyout: [BOOT2_SIZE_WORDS]u32 = undefined;
     var copyout_valid: bool = false;
 
-    /// Copy the 2nd stage bootloader into memory
-    ///
-    /// This is required by `_range_erase` and `_range_program` so we can later
-    /// setup XIP via the second stage bootloader.
+    /// Copies the XIP setup function into RAM:
+    /// - On RP2040 this *is* the second stage bootloader
+    /// - On RP2350 it is found at BOOTRAM_BASE.
     pub export fn flash_init() linksection(".ram_text") void {
         if (copyout_valid) return;
         const bootloader = @as([*]u32, @ptrFromInt(switch (compatibility.chip) {
@@ -61,25 +46,23 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
         copyout_valid = true;
     }
 
-    /// Configure the SSI and the external flash for XIP by calling the second
-    /// stage bootloader that was copied out to `copyout`.
+    /// Configure the SSI and the external flash for XIP using the XIP setup
+    /// function that was copied out to `copyout`.
     pub export fn flash_enable_xip() linksection(".ram_text") void {
-        const f: *const fn () callconv(.c) void = @ptrCast(&copyout);
-        f();
+
+        // Calling boot2 as a function works because it accepts a return vector in
+        // LR (and doesn't trash r4-r7). Bootrom passes NULL in LR, instructing
+        // boot2 to enter flash vector table's reset handler.
+        @as(*const fn () callconv(.c) void, @ptrFromInt(@intFromPtr(&copyout) + 1))();
     }
 } else struct {
     // no op
     pub inline fn flash_init() linksection(".ram_text") void {}
 
-    /// Configure the SSI and the external flash for XIP by calling the second
-    /// stage bootloader embedded into RAM.
+    // Fallback. This is a very slow XIP configuration, but is very widely
+    // supported.
     pub inline fn flash_enable_xip() linksection(".ram_text") void {
-        if (compatibility.chip == .RP2040 and @hasDecl(microzig.board, "bootrom")) {
-            const f: *const fn () callconv(.c) void = @ptrCast(microzig.board.bootrom.stage2_rom.ptr);
-            f();
-        } else {
-            rom.flash_enter_cmd_xip();
-        }
+        rom.flash_enter_cmd_xip();
     }
 };
 
