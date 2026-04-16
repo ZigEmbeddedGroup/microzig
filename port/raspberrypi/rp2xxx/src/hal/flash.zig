@@ -1,3 +1,5 @@
+/// Based on https://github.com/raspberrypi/pico-sdk/blob/a1438dff1d38bd9c65dbd693f0e5db4b9ae91779/src/rp2_common/hardware_flash/flash.c#L41
+
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const IO_QSPI = peripherals.IO_QSPI;
@@ -23,6 +25,7 @@ pub const XIP_BASE = 0x10000000;
 pub const BOOTRAM_BASE = 0x400e0000;
 
 /// Infrastructure for reentering XIP mode after exiting for programming.
+///
 pub const boot2 = if (!microzig.config.ram_image and compatibility.arch == .arm) struct {
     const BOOT2_SIZE_WORDS = 64;
 
@@ -30,8 +33,26 @@ pub const boot2 = if (!microzig.config.ram_image and compatibility.arch == .arm)
     var copyout_valid: bool = false;
 
     /// Copies the XIP setup function into RAM:
+    ///
     /// - On RP2040 this *is* the second stage bootloader
+    ///
+    /// The only job of the second stage bootloader is to configure the SSI and
+    /// the external flash for the best possible execute-in-place (XIP)
+    /// performance. Until the SSI is correctly configured for the attached
+    /// flash device, it's not possible to access flash via the XIP address
+    /// window, i.e., we have to copy the bootloader into sram before calling
+    /// `rom.flash_exit_xip`. This is required if we want to erase and/or write
+    /// to flash.
+    ///
     /// - On RP2350 it is found at BOOTRAM_BASE.
+    ///
+    /// ** From RP2350 datasheet section 4.3 **
+    /// It is physically impossible to execute code from boot RAM, regardless
+    /// of MPU configuration, as it is on the APB peripheral bus segment, which
+    /// is not wired to the processor instruction fetch ports.
+    ///
+    /// Therefore, we must make a copy of it first.
+    ///
     pub export fn flash_init() linksection(".ram_text") void {
         if (copyout_valid) return;
         const bootloader = @as([*]u32, @ptrFromInt(switch (compatibility.chip) {
