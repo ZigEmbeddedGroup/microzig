@@ -26,7 +26,7 @@ pub const BOOTRAM_BASE = 0x400e0000;
 
 /// Infrastructure for reentering XIP mode after exiting for programming.
 ///
-pub const boot2 = if (!microzig.config.ram_image and compatibility.arch == .arm) struct {
+pub const boot2 = if (!microzig.config.ram_image) struct {
     const BOOT2_SIZE_WORDS = 64;
 
     var copyout: [BOOT2_SIZE_WORDS]u32 = undefined;
@@ -74,7 +74,13 @@ pub const boot2 = if (!microzig.config.ram_image and compatibility.arch == .arm)
         // Calling boot2 as a function works because it accepts a return vector in
         // LR (and doesn't trash r4-r7). Bootrom passes NULL in LR, instructing
         // boot2 to enter flash vector table's reset handler.
-        @as(*const fn () callconv(.c) void, @ptrFromInt(@intFromPtr(&copyout) + 1))();
+
+        const thumb_bit = switch (compatibility.arch) {
+            .arm => 1,
+            .riscv => 0,
+        };
+        @as(*const fn () callconv(.c) void, @ptrFromInt(@intFromPtr(&copyout) + thumb_bit))();
+
     }
 } else struct {
     // no op
