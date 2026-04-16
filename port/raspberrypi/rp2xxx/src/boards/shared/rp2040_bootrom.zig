@@ -9,7 +9,7 @@ comptime {
 }
 
 /// Raw stage2 bootrom
-pub const stage2_rom: []const u8 = @embedFile("bootloader");
+pub const stage2_rom: []align(2) const u8 = @embedFile("bootloader");
 
 pub export const bootloader_data: [256]u8 linksection(".boot2") = blk: {
     @setEvalBranchQuota(10_000);
