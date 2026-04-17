@@ -2,6 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
+pub const ClockTree = @import("ClockTree");
 
 //Instances
 const Peripherals = enums.Peripherals;
@@ -51,13 +52,13 @@ const SPDIFRXSEL = microzig.chip.types.peripherals.rcc_h7.SPDIFRXSEL;
 const SPI45SEL = microzig.chip.types.peripherals.rcc_h7.SPI45SEL;
 
 //clocktree type shortcuts
-const ClockTree = @field(@import("ClockTree"), microzig.config.chip_name);
-const Config = ClockTree.Config;
-const ClockOutput = ClockTree.Clock_Output;
-const ConfigOutput = ClockTree.Config_Output;
+const Target = @field(ClockTree, microzig.config.chip_name);
+const Config = Target.Config;
+const ClockOutput = Target.ClockOutput;
+const ConfigOutput = Target.OutputConfig;
 
 pub var current_clocks: ClockOutput = blk: {
-    const ret = ClockTree.get_clocks(.{}) catch unreachable;
+    const ret = Target.get_clocks(.{}) catch unreachable;
     break :blk ret.clock;
 };
 
@@ -160,7 +161,7 @@ pub const ResetReason = enum {
 /// NOTE: this function expects the current clock to be in a valid state and free of glitches in the flash and PWR domains
 /// it is important that any external change (whether manual or caused by hardware events) to the clock tree be restored before calling this function
 pub fn apply(comptime config: Config) !ClockOutput {
-    const clk = comptime ClockTree.get_clocks(config) catch unreachable;
+    const clk = comptime Target.get_clocks(config) catch unreachable;
     current_clocks = clk.clock;
 
     //verify if we need to upscale or downscale
@@ -168,8 +169,8 @@ pub fn apply(comptime config: Config) !ClockOutput {
     const secure_sys_upscale: bool = current_clocks.CpuClockOutput >= HSI_CLK;
     const target_sys_upscale: bool = clk.clock.CpuClockOutput >= HSI_CLK;
 
-    const hsi_div: HSIDIV = if (clk.config.HSIDiv) |d| @as(HSIDIV, @enumFromInt(@as(u2, @intFromEnum(d)))) else .Div1;
-    const trim = if (clk.config.HSICalibrationValue) |v| @as(u7, @intCast(@as(u32, @intFromFloat(v)))) else null;
+    const hsi_div: HSIDIV = @as(HSIDIV, @enumFromInt(@as(u2, @intFromEnum(clk.config.HSIDiv))));
+    const trim = @as(u7, @intCast(clk.config.HSICalibrationValue));
     secure_enable(secure_sys_upscale, hsi_div, trim); //force sysclk into secure state
 
     try apply_internal(clk.config, target_sys_upscale);
@@ -220,148 +221,67 @@ fn secure_enable(upscale: bool, hsi_div: HSIDIV, trim: ?u7) void {
 fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
     const actual_state = RCC.CR.read();
 
-    const d1_core_pre: HPRE = blk: {
-        if (config.D1CPRE) |p| {
-            break :blk switch (p) {
-                .RCC_SYSCLK_DIV1 => HPRE.Div1,
-                .RCC_SYSCLK_DIV2 => HPRE.Div2,
-                .RCC_SYSCLK_DIV4 => HPRE.Div4,
-                .RCC_SYSCLK_DIV8 => HPRE.Div8,
-                .RCC_SYSCLK_DIV16 => HPRE.Div16,
-                .RCC_SYSCLK_DIV64 => HPRE.Div64,
-                .RCC_SYSCLK_DIV128 => HPRE.Div128,
-                .RCC_SYSCLK_DIV256 => HPRE.Div256,
-                .RCC_SYSCLK_DIV512 => HPRE.Div512,
-            };
-        }
-        break :blk HPRE.Div1; //default reset
+    const d1_core_pre: HPRE = switch (config.D1CPRE) {
+        .RCC_SYSCLK_DIV1 => HPRE.Div1,
+        .RCC_SYSCLK_DIV2 => HPRE.Div2,
+        .RCC_SYSCLK_DIV4 => HPRE.Div4,
+        .RCC_SYSCLK_DIV8 => HPRE.Div8,
+        .RCC_SYSCLK_DIV16 => HPRE.Div16,
+        .RCC_SYSCLK_DIV64 => HPRE.Div64,
+        .RCC_SYSCLK_DIV128 => HPRE.Div128,
+        .RCC_SYSCLK_DIV256 => HPRE.Div256,
+        .RCC_SYSCLK_DIV512 => HPRE.Div512,
     };
+    const d1_ahb_pre: HPRE = @enumFromInt(@intFromEnum(config.HPRE));
+    const d1_apb_pre: PPRE = @enumFromInt(@intFromEnum(config.D1PPRE));
+    const d2_apb1: PPRE = @enumFromInt(@intFromEnum(config.D2PPRE1));
+    const d2_apb2: PPRE = @enumFromInt(@intFromEnum(config.D2PPRE2));
+    const d3_apb1: PPRE = @enumFromInt(@intFromEnum(config.D3PPRE));
 
-    const d1_ahb_pre: HPRE = blk: {
-        if (config.HPRE) |p| {
-            break :blk switch (p) {
-                .RCC_HCLK_DIV1 => HPRE.Div1,
-                .RCC_HCLK_DIV2 => HPRE.Div2,
-                .RCC_HCLK_DIV4 => HPRE.Div4,
-                .RCC_HCLK_DIV8 => HPRE.Div8,
-                .RCC_HCLK_DIV16 => HPRE.Div16,
-                .RCC_HCLK_DIV64 => HPRE.Div64,
-                .RCC_HCLK_DIV128 => HPRE.Div128,
-                .RCC_HCLK_DIV256 => HPRE.Div256,
-                .RCC_HCLK_DIV512 => HPRE.Div512,
-            };
-        }
-        break :blk HPRE.Div1; //default reset
-
-    };
-
-    const d1_apb_pre: PPRE = blk: {
-        if (config.D1PPRE) |p| {
-            break :blk switch (p) {
-                .RCC_APB3_DIV1 => PPRE.Div1,
-                .RCC_APB3_DIV2 => PPRE.Div2,
-                .RCC_APB3_DIV4 => PPRE.Div4,
-                .RCC_APB3_DIV8 => PPRE.Div8,
-                .RCC_APB3_DIV16 => PPRE.Div16,
-            };
-        }
-        break :blk PPRE.Div1; //default reset
-
-    };
-
-    const d2_apb1: PPRE = blk: {
-        if (config.D2PPRE1) |p| {
-            break :blk switch (p) {
-                .RCC_APB1_DIV1 => PPRE.Div1,
-                .RCC_APB1_DIV2 => PPRE.Div2,
-                .RCC_APB1_DIV4 => PPRE.Div4,
-                .RCC_APB1_DIV8 => PPRE.Div8,
-                .RCC_APB1_DIV16 => PPRE.Div16,
-            };
-        }
-        break :blk PPRE.Div1; //default reset
-
-    };
-
-    const d2_apb2: PPRE = blk: {
-        if (config.D2PPRE2) |p| {
-            break :blk switch (p) {
-                .RCC_APB2_DIV1 => PPRE.Div1,
-                .RCC_APB2_DIV2 => PPRE.Div2,
-                .RCC_APB2_DIV4 => PPRE.Div4,
-                .RCC_APB2_DIV8 => PPRE.Div8,
-                .RCC_APB2_DIV16 => PPRE.Div16,
-            };
-        }
-        break :blk PPRE.Div1; //default reset
-
-    };
-
-    const d3_apb1: PPRE = blk: {
-        if (config.D3PPRE) |p| {
-            break :blk switch (p) {
-                .RCC_APB4_DIV1 => PPRE.Div1,
-                .RCC_APB4_DIV2 => PPRE.Div2,
-                .RCC_APB4_DIV4 => PPRE.Div4,
-                .RCC_APB4_DIV8 => PPRE.Div8,
-                .RCC_APB4_DIV16 => PPRE.Div16,
-            };
-        }
-        break :blk PPRE.Div1; //default reset
-
-    };
-
-    const tim_pre: TIMPRE = if (config.RCC_TIM_PRescaler_Selection.? == .RCC_TIMPRES_ACTIVATED) TIMPRE.DefaultX4 else TIMPRE.DefaultX2;
+    const tim_pre: TIMPRE = @enumFromInt(@intFromEnum(config.RCC_TIM_PRescaler_Selection));
 
     //sys main
-    const vos: VOS = switch (config.PWR_Regulator_Voltage_Scale.?) {
-        .PWR_REGULATOR_VOLTAGE_SCALE3 => VOS.Scale3,
-        .PWR_REGULATOR_VOLTAGE_SCALE2 => VOS.Scale2,
-        .PWR_REGULATOR_VOLTAGE_SCALE1 => VOS.Scale1,
-        .PWR_REGULATOR_VOLTAGE_SCALE0 => VOS.Scale0,
-    };
+    const vos: VOS = @enumFromInt(@intFromEnum(config.PWR_Regulator_Voltage_Scale));
+
     // NOTE: the system does not validate correct WRHIGHFREQ + flash latency configurations,
     // so CubeMX always sets them to the closest recommended values.
     // Manual changes can be made without affecting the clock tree
-    const flantency: u2 = @intFromEnum(config.FLatency.?); // the same value is valid for WRHIGHFREQ and flash latency
+    const flantency: u2 = @intFromEnum(config.FLatency); // the same value is valid for WRHIGHFREQ and flash latency
 
-    const sysclk: SW = @enumFromInt(@as(u3, @intFromEnum(config.SYSCLKSource.?)));
+    const sysclk: SW = @enumFromInt(@intFromEnum(config.SYSCLKSource));
 
     //D1 kernel clocks
-    const fmc_src: FMCSEL = @enumFromInt(@as(u2, @intFromEnum(config.FMCCLockSelection.?)));
-    const ospi_src: FMCSEL = if (config.flags.OCTOSPIEnable) @enumFromInt(@as(u2, @intFromEnum(config.QSPICLockSelection.?))) else FMCSEL.HCLK3;
-    const mmc_src: SDMMCSEL = @enumFromInt(@as(u1, @intFromEnum(config.SDMMC1CLockSelection.?)));
-    const presel_src: PERSEL = @enumFromInt(@as(u1, @intFromEnum(config.CKPERSourceSelection.?)));
+    const fmc_src: FMCSEL = @enumFromInt(@intFromEnum(config.FMCCLockSelection));
+    const ospi_src: FMCSEL = @enumFromInt(@intFromEnum(config.QSPICLockSelection));
+    const mmc_src: SDMMCSEL = @enumFromInt(@intFromEnum(config.SDMMC1CLockSelection));
+    const presel_src: PERSEL = @enumFromInt(@intFromEnum(config.CKPERSourceSelection));
 
     //D2 kernel clocks
-    const sai1_src: SAISEL = @enumFromInt(@as(u3, @intFromEnum(config.SAI1CLockSelection.?)));
-    const spi123_src: SAISEL = @enumFromInt(@as(u3, @intFromEnum(config.SPI123CLockSelection.?)));
-    const spi45_src: SPI45SEL = @enumFromInt(@as(u3, @intFromEnum(config.Spi45ClockSelection.?)));
-    const spdifrx_src: SPDIFRXSEL = @enumFromInt(@as(u3, @intFromEnum(config.SPDIFCLockSelection.?)));
-    const dfsdm_src: DFSDMSEL = @enumFromInt(@as(u1, @intFromEnum(config.DFSDMCLockSelection.?)));
-    const fdcan_src: FDCANSEL = @enumFromInt(@as(u2, @intFromEnum(config.FDCANCLockSelection.?)));
-    const swpmi: SWPMMISEL = @enumFromInt(@as(u1, @intFromEnum(config.SWPCLockSelection.?)));
-    const usart234578_src: USART234578SEL = @enumFromInt(@as(u3, @intFromEnum(config.USART234578CLockSelection.?)));
-    const usart16910_src: USART16910SEL = @enumFromInt(@as(u3, @intFromEnum(config.USART16CLockSelection.?)));
-    const rng_src: RNGSEL = @enumFromInt(@as(u2, @intFromEnum(config.RNGCLockSelection.?)));
-    const i2c1235_src: I2C1235SEL = @enumFromInt(@as(u2, @intFromEnum(config.I2C123CLockSelection.?)));
-    const usb_src: USBSEL = if (config.flags.USBEnable)
-        @enumFromInt(@as(u3, @intFromEnum(config.USBCLockSelection.?)) + 1)
-    else
-        USBSEL.DISABLE;
+    const sai1_src: SAISEL = @enumFromInt(@intFromEnum(config.SAI1CLockSelection));
+    const spi123_src: SAISEL = @enumFromInt(@intFromEnum(config.SPI123CLockSelection));
+    const spi45_src: SPI45SEL = @enumFromInt(@intFromEnum(config.Spi45ClockSelection));
+    const spdifrx_src: SPDIFRXSEL = @enumFromInt(@intFromEnum(config.SPDIFCLockSelection));
+    const dfsdm_src: DFSDMSEL = @enumFromInt(@intFromEnum(config.DFSDMCLockSelection));
+    const fdcan_src: FDCANSEL = @enumFromInt(@intFromEnum(config.FDCANCLockSelection));
+    const swpmi: SWPMMISEL = @enumFromInt(@intFromEnum(config.SWPCLockSelection));
+    const usart234578_src: USART234578SEL = @enumFromInt(@intFromEnum(config.USART234578CLockSelection));
+    const usart16910_src: USART16910SEL = @enumFromInt(@intFromEnum(config.USART16CLockSelection));
+    const rng_src: RNGSEL = @enumFromInt(@intFromEnum(config.RNGCLockSelection));
+    const i2c1235_src: I2C1235SEL = @enumFromInt(@intFromEnum(config.I2C123CLockSelection));
+    const usb_src: USBSEL = if (config.flags.USBEnable) @enumFromInt(@intFromEnum(config.USBCLockSelection)) else USBSEL.DISABLE;
 
-    const cec_src: CECSEL = @enumFromInt(@as(u2, @intFromEnum(config.CECCLockSelection.?)));
-    const tim1_src: LPTIMSEL = @enumFromInt(@as(u3, @intFromEnum(config.LPTIM1CLockSelection.?)));
+    const cec_src: CECSEL = @enumFromInt(@intFromEnum(config.CECCLockSelection));
+    const tim1_src: LPTIMSEL = @enumFromInt(@intFromEnum(config.LPTIM1CLockSelection));
 
     //D3 kernel clocks
-    const lpuart1_src: LPUARTSEL = @enumFromInt(@as(u3, @intFromEnum(config.LPUART1CLockSelection.?)));
-    const i2c4_src: I2C4SEL = @enumFromInt(@as(u2, @intFromEnum(config.I2C4CLockSelection.?)));
-    const lptim2_src: LPTIM2SEL = @enumFromInt(@as(u3, @intFromEnum(config.LPTIM2CLockSelection.?)));
-    const lptim34_src: LPTIM2SEL = @enumFromInt(@as(u3, @intFromEnum(config.LPTIM345CLockSelection.?)));
-    const adc_src: ADCSEL = @enumFromInt(@as(u2, @intFromEnum(config.ADCCLockSelection.?)));
-    const sai4a_src: SAIASEL = @enumFromInt(@as(u3, @intFromEnum(config.SAI4ACLockSelection.?)));
-    const sai4b_src: SAIASEL = @enumFromInt(@as(u3, @intFromEnum(config.SAI4BCLockSelection.?)));
-    const spi6_src: SPI6SEL = @enumFromInt(@as(u3, @intFromEnum(config.SPI6CLockSelection.?)));
+    const lpuart1_src: LPUARTSEL = @enumFromInt(@intFromEnum(config.LPUART1CLockSelection));
+    const i2c4_src: I2C4SEL = @enumFromInt(@intFromEnum(config.I2C4CLockSelection));
+    const lptim2_src: LPTIM2SEL = @enumFromInt(@intFromEnum(config.LPTIM2CLockSelection));
+    const lptim34_src: LPTIM2SEL = @enumFromInt(@intFromEnum(config.LPTIM345CLockSelection));
+    const adc_src: ADCSEL = @enumFromInt(@intFromEnum(config.ADCCLockSelection));
+    const sai4a_src: SAIASEL = @enumFromInt(@intFromEnum(config.SAI4ACLockSelection));
+    const sai4b_src: SAIASEL = @enumFromInt(@intFromEnum(config.SAI4BCLockSelection));
+    const spi6_src: SPI6SEL = @enumFromInt(@intFromEnum(config.SPI6CLockSelection));
 
     PWR.CR1.modify_one("DBP", 1); //enable access to backup domain
     defer PWR.CR1.modify_one("DBP", 0);
@@ -381,7 +301,7 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
     }
 
     if (config.flags.CSIUsed) {
-        const trim = if (config.CSICalibrationValue) |v| @as(u6, @intCast(@as(u32, @intFromFloat(v)))) else null;
+        const trim: u6 = @intCast(config.CSICalibrationValue);
         enable_csi(trim);
     } else {
         defer disable_csi();
@@ -396,7 +316,7 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
     if (config.flags.EnableHSE) {
         const css = config.flags.EnbaleCSS;
         const bypass = config.flags.HSEByPass;
-        const timeout = if (config.HSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+        const timeout: usize = @intCast(config.HSE_Timout);
         try enable_hse(css, bypass, timeout);
     } else {
         defer disable_hse();
@@ -409,7 +329,7 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
         const css = config.flags.EnableCSSLSE;
         const driver: LSEDRV = blk: {
             if (config.LSE_Drive_Capability) |drv| {
-                break :blk @as(LSEDRV, @enumFromInt(@as(u2, @intFromEnum(drv))));
+                break :blk @as(LSEDRV, @enumFromInt(@intFromEnum(drv)));
             } else break :blk LSEDRV.MediumLow;
         };
 
@@ -427,50 +347,21 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
     disable_PLL2();
     disable_PLL3();
 
-    if (config.PLLSource) |s| {
-        const src: PLLSRC = @enumFromInt(@intFromEnum(s));
-        set_plls_source(src);
-    }
+    const src: PLLSRC = @enumFromInt(@intFromEnum(config.PLLSourceVirtual));
+    set_plls_source(src);
 
     if (config.flags.PLLUsed) {
         // if a PLL is active and valid, these values will never be null
-        const divm: PLLM = @enumFromInt(@as(u6, @intFromFloat(config.DIVM1.?)));
-        const divn: PLLN = @enumFromInt(@as(u9, @intFromFloat(config.DIVN1.?)) - 1);
-        const vci: PLLRGE = @enumFromInt(@intFromEnum(config.PLL1_VCI_Range.?));
-        const vco: PLLVCOSEL = switch (config.PLL1_VCO_SEL.?) {
-            .RCC_PLL1VCOMEDIUM => PLLVCOSEL.MediumVCO,
-            .RCC_PLL1VCOWIDE => PLLVCOSEL.WideVCO,
-        };
+        const divm: PLLM = @enumFromInt(config.DIVM1);
+        const divn: PLLN = @enumFromInt(config.DIVN1 - 1);
+        const vci: PLLRGE = @enumFromInt(@intFromEnum(config.PLL1_VCI_Range));
+        const vco: PLLVCOSEL = @enumFromInt(@intFromEnum(config.PLL1_VCO_SEL));
 
         // these values are optional
-        const frac = if (config.PLLFRACN) |f| @as(u13, @intCast(@as(u32, @intFromFloat(f)))) else null;
-        const divq: ?PLLDIV = blk: {
-            if (config.flags.DIVQ1Enable) {
-                if (config.DIVQ1) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
-
-        // DIVP1 does not have an enable flag in CubeMX, therefore there is no flag to check here
-        const divp: ?PLLDIV = blk: {
-            if (config.DIVP1) |d| {
-                const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                break :blk @enumFromInt(v);
-            }
-            break :blk null;
-        };
-        const divr: ?PLLDIV = blk: {
-            if (config.flags.DIVR1Enable) {
-                if (config.DIVR1) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
+        const frac = @as(u13, @intCast(config.PLLFRACN));
+        const divq: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVQ1 - 1)));
+        const divp: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVP1 - 1)));
+        const divr: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVR1 - 1)));
 
         enable_PLL1(PLL_Config{
             .DIVM = divm,
@@ -490,45 +381,16 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
 
     if (config.flags.PLL2Used) {
         // if a PLL is active and valid, these values will never be null
-        const divm: PLLM = @enumFromInt(@as(u6, @intFromFloat(config.DIVM2.?)));
-        const divn: PLLN = @enumFromInt(@as(u9, @intFromFloat(config.DIVN2.?)) - 1);
-        const vci: PLLRGE = @enumFromInt(@intFromEnum(config.PLL2_VCI_Range.?));
-        const vco: PLLVCOSEL = switch (config.PLL2_VCO_SEL.?) {
-            .RCC_PLL2VCOMEDIUM => PLLVCOSEL.MediumVCO,
-            .RCC_PLL2VCOWIDE => PLLVCOSEL.WideVCO,
-        };
+        const divm: PLLM = @enumFromInt(@intFromEnum(config.DIVM2));
+        const divn: PLLN = @enumFromInt(@intFromEnum(config.DIVN2 - 1));
+        const vci: PLLRGE = @enumFromInt(@intFromEnum(config.PLL2_VCI_Range));
+        const vco: PLLVCOSEL = @enumFromInt(@intFromEnum(config.PLL2_VCO_SEL));
 
         // these values are optional
-        const frac = if (config.PLL2FRACN) |f| @as(u13, @intCast(@as(u32, @intFromFloat(f)))) else null;
-        const divq: ?PLLDIV = blk: {
-            if (config.flags.DIVQ2Enable) {
-                if (config.DIVQ2) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
-
-        const divp: ?PLLDIV = blk: {
-            if (config.flags.DIVP2Enable) {
-                if (config.DIVP2) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
-
-        const divr: ?PLLDIV = blk: {
-            if (config.flags.DIVR2Enable) {
-                if (config.DIVR2) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
+        const frac = @as(u13, @intCast(config.PLLFRACN2));
+        const divq: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVQ2 - 1)));
+        const divp: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVP2 - 1)));
+        const divr: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVR2 - 1)));
 
         enable_PLL2(PLL_Config{
             .DIVM = divm,
@@ -548,45 +410,16 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
 
     if (config.flags.PLL3Used) {
         // if a PLL is active and valid, these values will never be null
-        const divm: PLLM = @enumFromInt(@as(u6, @intFromFloat(config.DIVM3.?)));
-        const divn: PLLN = @enumFromInt(@as(u9, @intFromFloat(config.DIVN3.?)) - 1);
-        const vci: PLLRGE = @enumFromInt(@intFromEnum(config.PLL3_VCI_Range.?));
-        const vco: PLLVCOSEL = switch (config.PLL3_VCO_SEL.?) {
-            .RCC_PLL3VCOMEDIUM => PLLVCOSEL.MediumVCO,
-            .RCC_PLL3VCOWIDE => PLLVCOSEL.WideVCO,
-        };
+        const divm: PLLM = @enumFromInt(config.DIVM3);
+        const divn: PLLN = @enumFromInt(config.DIVN3 - 1);
+        const vci: PLLRGE = @enumFromInt(@intFromEnum(config.PLL3_VCI_Range));
+        const vco: PLLVCOSEL = @enumFromInt(@intFromEnum(config.PLL3_VCO_SEL));
 
         // these values are optional
-        const frac = if (config.PLL3FRACN) |f| @as(u13, @intCast(@as(u32, @intFromFloat(f)))) else null;
-        const divq: ?PLLDIV = blk: {
-            if (config.flags.DIVQ3Enable) {
-                if (config.DIVQ3) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
-
-        const divp: ?PLLDIV = blk: {
-            if (config.flags.DIVP3Enable) {
-                if (config.DIVP3) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
-
-        const divr: ?PLLDIV = blk: {
-            if (config.flags.DIVR3Enable) {
-                if (config.DIVR3) |d| {
-                    const v: u7 = @intCast(@as(u32, @intFromFloat(d)) - 1);
-                    break :blk @enumFromInt(v);
-                }
-            }
-            break :blk null;
-        };
+        const frac = @as(u13, @intCast(config.PLLFRACN3));
+        const divq: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVQ3 - 1)));
+        const divp: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVP3 - 1)));
+        const divr: PLLDIV = @enumFromInt(@as(u7, @intCast(config.DIVR3 - 1)));
 
         enable_PLL3(PLL_Config{
             .DIVM = divm,
@@ -622,56 +455,23 @@ fn apply_internal(comptime config: ConfigOutput, upscale: bool) !void {
     });
 
     if (config.flags.MCO1OutPutEnable) {
-        const src: MCO1SEL = switch (config.RCC_MCO1Source.?) {
-            .RCC_MCO1SOURCE_LSE => MCO1SEL.LSE,
-            .RCC_MCO1SOURCE_HSE => MCO1SEL.HSE,
-            .RCC_MCO1SOURCE_HSI => MCO1SEL.HSI,
-            .RCC_MCO1SOURCE_HSI48 => MCO1SEL.HSI48,
-            .RCC_MCO1SOURCE_PLL1QCLK => MCO1SEL.PLL1_Q,
-        };
+        const m_src: MCO1SEL = @enumFromInt(@intFromEnum(config.RCC_MCO1Source));
+        const mco1_pre: MCOPRE = @enumFromInt(@intFromEnum(config.RCC_MCODiv1));
 
-        const mco1_pre: MCOPRE = blk: {
-            if (config.RCC_MCODiv1) |p| {
-                const n: u4 = @intFromEnum(p);
-                break :blk @enumFromInt(n + 1);
-            }
-            break :blk MCOPRE.Div1;
-        };
-
-        set_mco1_params(src, mco1_pre);
+        set_mco1_params(m_src, mco1_pre);
     }
 
     if (config.flags.MCO2OutPutEnable) {
-        const src: MCO2SEL = switch (config.RCC_MCO2Source.?) {
-            .RCC_MCO2SOURCE_SYSCLK => MCO2SEL.SYS,
-            .RCC_MCO2SOURCE_PLL2PCLK => MCO2SEL.PLL2_P,
-            .RCC_MCO2SOURCE_HSE => MCO2SEL.HSE,
-            .RCC_MCO2SOURCE_PLLCLK => MCO2SEL.PLL1_P,
-            .RCC_MCO2SOURCE_CSICLK => MCO2SEL.CSI,
-            .RCC_MCO2SOURCE_LSICLK => MCO2SEL.LSI,
-        };
+        const m_src: MCO2SEL = @enumFromInt(@intFromEnum(config.RCC_MCO2Source));
+        const mco2_pre: MCOPRE = @enumFromInt(@intFromEnum(config.RCC_MCODiv2));
 
-        const mco2_pre: MCOPRE = blk: {
-            if (config.RCC_MCODiv2) |p| {
-                const n: u4 = @intFromEnum(p);
-                break :blk @enumFromInt(n + 1);
-            }
-            break :blk MCOPRE.Div1;
-        };
-
-        set_mco2_params(src, mco2_pre);
+        set_mco2_params(m_src, mco2_pre);
     }
 
     if (config.flags.RTCEnable) {
-        const pre: u6 = if (config.RCC_RTC_Clock_Source_FROM_HSE) |d| @intCast(@as(u32, @intFromFloat(d.get()))) else 0;
-        const src: RTCSEL = blk: {
-            break :blk switch (config.RTCClockSelection.?) {
-                .HSERTCDevisor => RTCSEL.HSE,
-                .RCC_RTCCLKSOURCE_LSE => RTCSEL.LSE,
-                .RCC_RTCCLKSOURCE_LSI => RTCSEL.LSI,
-            };
-        };
-        set_RTC_params(src, pre);
+        const pre: u6 = @intCast(@as(u32, @intFromFloat(try config.RCC_RTC_Clock_Source_FROM_HSE.get())));
+        const rtc_src: RTCSEL = @enumFromInt(@intFromEnum(config.RTCClockSelection));
+        set_RTC_params(rtc_src, pre);
     } else {
         set_RTC_params(.DISABLE, 63);
     }
@@ -1112,7 +912,7 @@ pub fn config_d3_kernel_src(config: D3_KernelConfig) void {
 }
 
 inline fn calc_wait_ticks(val: usize) usize {
-    const sysclk: usize = @intFromFloat(current_clocks.CpuClockOutput);
+    const sysclk: usize = current_clocks.CpuClockOutput;
     const ms_per_tick = sysclk / 1000;
     return ms_per_tick * val;
 }

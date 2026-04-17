@@ -38,28 +38,30 @@ pub fn main() !void {
         .SDEN = 1,
     });
 
-    //configure cpu clock to 550 Mhz
+    //configure cpu clock to 500 Mhz
     _ = try rcc.apply(.{
         .HSE_VALUE = 25_000_000,
-        .PLLSource = .RCC_PLLSOURCE_HSE,
-        .DIVM1 = 5,
-        .DIVN1 = 110,
+        .PLLSourceVirtual = .HSE,
+        .DIVM1 = 25,
+        .DIVN1 = 500,
         .DIVP1 = 1,
         .DIVQ1 = 10,
-        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-        .RCC_MCO1Source = .RCC_MCO1SOURCE_PLL1QCLK,
-        .RCC_MCO2Source = .RCC_MCO2SOURCE_LSICLK,
-        .RCC_MCODiv2 = .RCC_MCODIV_10,
-        .RCC_MCODiv1 = .RCC_MCODIV_10,
-        .D2PPRE2 = .RCC_APB2_DIV2,
-        .D2PPRE1 = .RCC_APB1_DIV2,
-        .D3PPRE = .RCC_APB4_DIV2,
-        .D1PPRE = .RCC_APB3_DIV2,
-        .HPRE = .RCC_HCLK_DIV2,
+        .SYSCLKSource = .PLL1_P,
+        .RCC_MCO1Source = .PLL1_Q,
+        .RCC_MCO2Source = .SYS,
+        .RCC_MCODiv2 = .Div15,
+        .RCC_MCODiv1 = .Div10,
+        .D2PPRE2 = .Div2,
+        .D2PPRE1 = .Div2,
+        .D3PPRE = .Div2,
+        .D1PPRE = .Div2,
+        //.D1CPRE = .RCC_SYSCLK_DIV2,
+        .HPRE = .Div2,
         .flags = .{
             .MCO1Config = true,
             .MCO2Config = true,
             .HSEOscillator = true,
+            .RCC_MCO1SOURCE_PLL1QCLK = true,
         },
     });
 
