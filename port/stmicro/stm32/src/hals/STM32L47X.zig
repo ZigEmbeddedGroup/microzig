@@ -9,11 +9,11 @@ pub const i2c = @import("./STM32L47X/i2c.zig");
 pub const dma = @import("./STM32L47X/dma.zig");
 
 pub fn get_sys_clk() u32 {
-    return @intFromFloat(rcc.current_clocks.clock.HCLKOutput);
+    return @intCast(rcc.current_clocks.clock.HCLKOutput);
 }
 
 pub fn get_systick_clk() u32 {
-    return @as(u32, @intFromFloat(rcc.current_clocks.clock.HCLKOutput)) / 8;
+    return @as(u32, @intCast(rcc.current_clocks.clock.HCLKOutput)) / 8;
 }
 
 pub const HAL_Options = struct {
