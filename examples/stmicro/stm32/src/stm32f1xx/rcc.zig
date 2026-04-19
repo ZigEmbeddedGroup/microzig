@@ -15,12 +15,12 @@ pub const microzig_options = microzig.Options{
 };
 
 const clk_config = rcc.Config{
-    .PLLSource = .RCC_PLLSOURCE_HSE,
-    .HSEDivPLL = .RCC_HSE_PREDIV_DIV1,
-    .PLLMUL = .RCC_PLL_MUL2,
-    .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-    .APB1CLKDivider = .RCC_HCLK_DIV2,
-    .RCC_MCOSource = .RCC_MCO1SOURCE_SYSCLK,
+    .PLLSourceVirtual = .HSE_Div_PREDIV,
+    .HSEDivPLL = .Div2,
+    .PLLMUL = .Mul2,
+    .SYSCLKSource = .PLL1_P,
+    .APB1CLKDivider = .Div2,
+    .RCC_MCOSource = .SYS,
     .flags = .{
         .HSEOscillator = true,
         .MCOUsed_ForRCC = true,

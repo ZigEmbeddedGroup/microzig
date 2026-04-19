@@ -28,7 +28,7 @@ pub fn main() !void {
 
     //use HSE as system clock source, more stable than HSI
     _ = try rcc.apply(.{
-        .SYSCLKSource = .RCC_SYSCLKSOURCE_HSE,
+        .SYSCLKSource = .HSE,
         .flags = .{ .HSEOscillator = true },
     });
 

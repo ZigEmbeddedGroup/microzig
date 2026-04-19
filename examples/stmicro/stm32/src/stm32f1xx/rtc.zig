@@ -31,7 +31,7 @@ pub fn main() !void {
     //If it is not running, we will configure it and enable it.
     if (fresh_start()) {
         _ = try rcc.apply(.{
-            .RTCClockSelection = .RCC_RTCCLKSOURCE_LSE,
+            .RTCClockSelection = .LSI,
             .flags = .{ .RTCUsed_ForRCC = true, .LSEOscillator = true },
         });
         rcc.enable_clock(.PWR);

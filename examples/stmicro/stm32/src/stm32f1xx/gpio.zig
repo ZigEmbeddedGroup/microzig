@@ -8,11 +8,11 @@ const time = stm32.time;
 
 pub fn main() !void {
     _ = try rcc.apply(.{
-        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-        .PLLSource = .RCC_PLLSOURCE_HSE,
-        .PLLMUL = .RCC_PLL_MUL9,
-        .APB1CLKDivider = .RCC_HCLK_DIV2,
-        .RTCClockSelection = .RCC_RTCCLKSOURCE_LSI,
+        .SYSCLKSource = .PLL1_P,
+        .PLLSourceVirtual = .HSE_Div_PREDIV,
+        .PLLMUL = .Mul9,
+        .APB1CLKDivider = .Div2,
+        .RTCClockSelection = .LSI,
         .flags = .{
             .RTCUsed_ForRCC = true,
             .HSEOscillator = true,
