@@ -49,7 +49,7 @@ fn adc_to_temp(val: usize) f32 {
 
 pub fn main() !void {
     _ = try rcc.apply(.{
-        .ADCPresc = .RCC_ADCPCLK2_DIV2,
+        .ADCPresc = .Div2,
         .flags = .{
             .USE_ADC1 = true,
         },

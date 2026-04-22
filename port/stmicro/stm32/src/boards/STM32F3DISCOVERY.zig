@@ -7,11 +7,11 @@ pub const hal = microzig.hal;
 const rcc = hal.rcc;
 
 pub const rcc_high_speed: rcc.Config = .{
-    .PRESCALERUSB = .RCC_USBCLKSOURCE_PLL_DIV1_5,
-    .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-    .APB1CLKDivider = .RCC_HCLK_DIV2,
-    .PLLSource = .RCC_PLLSOURCE_HSE,
-    .PLLMUL = .RCC_PLL_MUL9,
+    .PRESCALERUSB = .Div1_5,
+    .SYSCLKSourceVirtual = .PLL1_P,
+    .APB1CLKDivider = .Div2,
+    .PLLSourceVirtual = .HSE_Div_PREDIV,
+    .PLLMUL = .Mul9,
     .flags = .{
         .HSEByPass = true,
         .HSEOscillator = true,
@@ -21,10 +21,10 @@ pub const rcc_high_speed: rcc.Config = .{
 };
 
 pub const rcc_medium_speed: rcc.Config = .{
-    .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-    .APB1CLKDivider = .RCC_HCLK_DIV2,
-    .PLLSource = .RCC_PLLSOURCE_HSE,
-    .PLLMUL = .RCC_PLL_MUL6,
+    .SYSCLKSourceVirtual = .PLL1_P,
+    .APB1CLKDivider = .Div2,
+    .PLLSourceVirtual = .HSE_Div_PREDIV,
+    .PLLMUL = .Mul6,
     .flags = .{
         .HSEByPass = true,
         .HSEOscillator = true,
