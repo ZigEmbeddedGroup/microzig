@@ -20,6 +20,10 @@ pub const Port = enum {
     E,
     F,
     G,
+    H,
+    I,
+    J,
+    K,
 };
 
 pub const Mode = union(enum) {
@@ -127,7 +131,11 @@ pub const Pin = enum(usize) {
             4 => return if (@hasDecl(peripherals, "GPIOE")) peripherals.GPIOE else @panic("Invalid Pin"),
             5 => return if (@hasDecl(peripherals, "GPIOF")) peripherals.GPIOF else @panic("Invalid Pin"),
             6 => return if (@hasDecl(peripherals, "GPIOG")) peripherals.GPIOG else @panic("Invalid Pin"),
-            else => @panic("The STM32 only has ports 0..6 (A..G)"),
+            7 => return if (@hasDecl(peripherals, "GPIOH")) peripherals.GPIOH else @panic("Invalid Pin"),
+            8 => return if (@hasDecl(peripherals, "GPIOI")) peripherals.GPIOI else @panic("Invalid Pin"),
+            9 => return if (@hasDecl(peripherals, "GPIOJ")) peripherals.GPIOJ else @panic("Invalid Pin"),
+            10 => return if (@hasDecl(peripherals, "GPIOK")) peripherals.GPIOK else @panic("Invalid Pin"),
+            else => @panic("The STM32 GPIO_v2 only has ports 0..10 (A..K)"),
         }
     }
 
@@ -173,5 +181,31 @@ pub const Pin = enum(usize) {
     pub fn from_port(port: Port, pin: u4) Pin {
         const value: usize = pin + (@as(usize, 16) * @intFromEnum(port));
         return @enumFromInt(value);
+    }
+
+    pub inline fn put(self: Pin, value: u1) void {
+        var port = self.get_port();
+        switch (value) {
+            0 => port.BSRR.raw = @intCast(self.mask() << 16),
+            1 => port.BSRR.raw = self.mask(),
+        }
+    }
+
+    pub inline fn low(self: @This()) void {
+        self.put(0);
+    }
+
+    pub inline fn high(self: @This()) void {
+        self.put(1);
+    }
+
+    pub inline fn toggle(self: Pin) void {
+        var port = self.get_port();
+        port.ODR.raw ^= self.mask();
+    }
+
+    pub inline fn read(self: Pin) u1 {
+        const port = self.get_port();
+        return @intFromBool((port.IDR.raw & self.mask() != 0));
     }
 };
