@@ -11,6 +11,14 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
     .GPIO25 = .{ .name = "led", .function = .PWM4_B },
 };
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     const pins = pin_config.apply();
     pins.led.slice().set_wrap(100);

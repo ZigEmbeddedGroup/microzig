@@ -16,6 +16,14 @@ const EpControl = usb_ll.EpControl;
 
 const interrupt = microzig.interrupt;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler },

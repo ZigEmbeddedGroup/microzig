@@ -16,10 +16,16 @@ const AS5600 = microzig.drivers.sensor.AS5600;
 
 const sleep_ms = nrf.time.sleep_ms;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = nrf.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     board.init();

@@ -8,6 +8,14 @@ const Pin = rp2xxx.gpio.Pin;
 
 const gpout0_pin = gpio.num(21);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     // Don't forget to bring a blinky!
     const led_gpio = rp2xxx.gpio.num(25);

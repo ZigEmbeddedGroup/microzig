@@ -13,10 +13,16 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const i2c0 = i2c.instance.num(0);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .info,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const sleep_ms = rp2xxx.time.sleep_ms;
 

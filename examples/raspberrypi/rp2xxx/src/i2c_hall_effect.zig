@@ -17,10 +17,16 @@ const TLV493D = microzig.drivers.sensor.TLV493D;
 
 const sleep_ms = rp2xxx.time.sleep_ms;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     // init uart logging

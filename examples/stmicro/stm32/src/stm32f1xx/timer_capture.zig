@@ -20,8 +20,17 @@ const ch1 = gpio.Pin.from_port(.A, 0);
 const uart = stm32.uart.UART.init(.USART1);
 const TX = gpio.Pin.from_port(.A, 9);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .TIM2 = .{ .c = isr_tim2 } },
     .overwrite_hal_interrupts = true,
 };

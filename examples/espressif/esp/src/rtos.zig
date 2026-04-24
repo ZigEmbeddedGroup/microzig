@@ -5,12 +5,21 @@ const esp = microzig.hal;
 const usb_serial_jtag = esp.usb_serial_jtag;
 const rtos = esp.rtos;
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = usb_serial_jtag.logger.log,
+    .log_level = .debug,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .interrupt31 = rtos.interrupt_handler,
     },
-    .log_level = .debug,
     .cpu = .{
         .interrupt_stack = .{
             .enable = true,

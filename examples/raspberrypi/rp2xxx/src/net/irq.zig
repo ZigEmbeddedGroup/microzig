@@ -20,6 +20,14 @@ const chip = rp2xxx.compatibility.chip;
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const rp2040_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,

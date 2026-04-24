@@ -19,16 +19,22 @@ fn transfer_from_slices(channel: dma.Channel, write_buf: []u8, read_buf: []const
     });
 }
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
     @breakpoint();
     while (true) {}
 }
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
-};
 
 pub fn main() !void {
     uart_tx_pin.set_function(.uart);

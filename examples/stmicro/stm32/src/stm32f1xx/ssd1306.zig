@@ -25,9 +25,15 @@ const config = I2C.Config{
     .mode = .standard,
 };
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const i2c_device = I2C_Datagram_Device.init(i2c, I2C.Address.new(0x3c), null);
 
