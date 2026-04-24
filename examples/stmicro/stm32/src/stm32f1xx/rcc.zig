@@ -10,9 +10,15 @@ const MCO = gpio.Pin.from_port(.A, 8);
 const uart = stm32.uart.UART.init(.USART1);
 const TX = gpio.Pin.from_port(.A, 9);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const clk_config = rcc.Config{
     .PLLSource = .RCC_PLLSOURCE_HSE,

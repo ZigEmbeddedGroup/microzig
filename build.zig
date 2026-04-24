@@ -485,13 +485,24 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 core_mod.addImport("board", board_mod);
             }
 
+            // The user's main.zig is the executable's root module. The
+            // application opts into microzig's startup via
+            //     comptime { _ = microzig.export_startup(); }
+            // in its root source file, and re-exports microzig's `panic`.
+            // microzig's core module reads the root via `@import("root")`,
+            // so there's no "app" import to wire.
             const app_mod = mb.builder.createModule(.{
                 .root_source_file = options.root_source_file,
                 .imports = options.imports,
                 .target = zig_resolved_target,
+                .optimize = options.optimize,
+                .single_threaded = options.single_threaded orelse target.single_threaded,
+                .strip = options.strip,
+                .unwind_tables = options.unwind_tables,
+                .error_tracing = options.error_tracing,
+                .dwarf_format = options.dwarf_format,
             });
             app_mod.addImport("microzig", core_mod);
-            core_mod.addImport("app", app_mod);
 
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{
@@ -499,16 +510,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .core_mod = core_mod,
                 .artifact = mb.builder.addExecutable(.{
                     .name = options.name,
-                    .root_module = b.createModule(.{
-                        .optimize = options.optimize,
-                        .target = zig_resolved_target,
-                        .root_source_file = mb.core_dep.path("src/start.zig"),
-                        .single_threaded = options.single_threaded orelse target.single_threaded,
-                        .strip = options.strip,
-                        .unwind_tables = options.unwind_tables,
-                        .error_tracing = options.error_tracing,
-                        .dwarf_format = options.dwarf_format,
-                    }),
+                    .root_module = app_mod,
                     .linkage = .static,
                 }),
                 .app_mod = app_mod,
@@ -523,9 +525,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.link_function_sections = options.strip_unused_symbols;
             fw.artifact.link_data_sections = options.strip_unused_symbols;
             fw.artifact.entry = options.entry orelse target.entry orelse .default;
-
-            fw.artifact.root_module.addImport("microzig", core_mod);
-            fw.artifact.root_module.addImport("app", app_mod);
 
             const linker_script_options = options.linker_script orelse target.linker_script;
             const linker_script = blk: {

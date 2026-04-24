@@ -6,6 +6,14 @@ const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const time = stm32.time;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     _ = try rcc.apply(.{
         .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,

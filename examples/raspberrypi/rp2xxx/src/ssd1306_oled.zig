@@ -10,6 +10,14 @@ const i2c0 = i2c.instance.num(0);
 const empty_row: []const u8 = " " ** 16;
 const four_rows = empty_row ** 4;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     // Safe buffer size for rp2xxx to allocate, value can change for other chips
     const buffer_size = 200 * 1024; // 200 KB

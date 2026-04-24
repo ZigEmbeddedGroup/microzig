@@ -14,6 +14,14 @@ const MOSI = gpio.Pin.from_port(.B, 15);
 const MISO = gpio.Pin.from_port(.B, 14);
 const SCK = gpio.Pin.from_port(.B, 13);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     rcc.enable_clock(.GPIOB);
     rcc.enable_clock(.SPI2);

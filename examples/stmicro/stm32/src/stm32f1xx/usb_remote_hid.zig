@@ -24,6 +24,14 @@ const IR_pin = gpio.Pin.from_port(.B, 0);
 const peri = microzig.chip.peripherals;
 const t_types = microzig.chip.types.peripherals.timer_v1;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler },

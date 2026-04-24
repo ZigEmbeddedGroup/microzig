@@ -9,7 +9,6 @@ const Clock_Device = microzig.drivers.base.Clock_Device;
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
 const clock_tree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
-const app = microzig.app;
 
 pub const RCC_Peripheral = @This();
 

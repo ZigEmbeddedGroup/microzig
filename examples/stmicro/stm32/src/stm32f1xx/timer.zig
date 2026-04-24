@@ -10,10 +10,7 @@ const gpio = stm32.gpio;
 const GPTimer = stm32.timer.GPTimer;
 const time = stm32.time;
 
-//pub const microzig_options: microzig.Options = .{
-//    .interrupts = .{ .TIM3 = .{ .c = time.TIM_handler } },
-//};
-
+//
 //gpios
 const ch1 = gpio.Pin.from_port(.A, 0);
 const ch2 = gpio.Pin.from_port(.A, 1);
@@ -22,6 +19,14 @@ const ch4 = gpio.Pin.from_port(.A, 3);
 
 //timers
 const pwm = GPTimer.init(.TIM2).into_pwm_mode();
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
 
     //first we need to enable the clocks for the GPIO and TIM peripherals

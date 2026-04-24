@@ -13,10 +13,16 @@ const Runner = cyw43.Runner;
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .info,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 // WiFi credentials - change these for your network
 const WIFI_SSID = "YOUR_SSID";

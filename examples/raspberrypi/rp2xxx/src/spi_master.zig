@@ -17,6 +17,14 @@ const SCK_PIN = 18;
 const TX_PIN = 19;
 
 // Communicate with another RP2040 over spi
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     // Set pin functions for CS, SCK, RX
     const csn = rp2xxx.gpio.num(CS_PIN);

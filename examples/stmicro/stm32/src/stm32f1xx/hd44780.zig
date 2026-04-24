@@ -31,6 +31,14 @@ fn delay_us(delay: u32) void {
     time.sleep_us(delay);
 }
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     rcc.enable_clock(.GPIOB);
     rcc.enable_clock(.GPIOC);
