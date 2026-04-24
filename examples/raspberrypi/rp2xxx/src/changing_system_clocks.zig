@@ -21,6 +21,14 @@ const system_clock_cfg = clocks.config.preset.system(
 );
 
 // Have to override init() so we can apply our own custom pre-main startup procedure
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn init() void {
     // The default init_sequence works fine here, we just want to swap in our own clock config
     rp2xxx.init_sequence(system_clock_cfg);

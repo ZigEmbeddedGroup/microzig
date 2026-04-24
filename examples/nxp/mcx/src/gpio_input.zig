@@ -1,7 +1,15 @@
 const microzig = @import("microzig");
 const hal = microzig.hal;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .GPIO3 = .{ .c = gpio3_irq_handler } },
 };
 

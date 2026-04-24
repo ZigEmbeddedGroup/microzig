@@ -11,6 +11,14 @@ fn delay() void {
     }
 }
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn init() void {
     hal.rcc.enable_rtc_lcd();
 }

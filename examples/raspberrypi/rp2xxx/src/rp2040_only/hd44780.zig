@@ -16,6 +16,14 @@ const i2c0 = i2c.instance.num(0);
 
 const i2c_device = I2C_Device.init(i2c0, null);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn delay_us(time_delay: u32) void {
     timer.sleep_us(time_delay);
 }

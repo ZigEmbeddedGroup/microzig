@@ -52,6 +52,17 @@ const rtt_instance = rtt.RTT(.{});
 var rtt_logger: ?rtt_instance.Writer = null;
 // var rtt_write_buffer: [64]u8 = undefined;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .logFn = log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn log(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
@@ -73,11 +84,6 @@ pub fn log(
         writer.interface.flush() catch unreachable;
     }
 }
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = log,
-};
 
 pub fn main() !void {
 

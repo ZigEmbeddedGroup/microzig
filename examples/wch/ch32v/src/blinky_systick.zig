@@ -9,6 +9,14 @@ const led = if (cpu.cpu_name == .@"qingkev2-rv32ec")
 else
     hal.gpio.Pin.init(0, 3); // PA3
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const microzig_options: microzig.Options = .{
     .overwrite_hal_interrupts = true,
     .interrupts = .{

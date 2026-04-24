@@ -15,6 +15,14 @@ const i2c0 = i2c.instance.num(0);
 
 const i2c_device = I2C_Device.init(i2c0, null);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     const scl_pin = gpio.num(5);
     const sda_pin = gpio.num(4);

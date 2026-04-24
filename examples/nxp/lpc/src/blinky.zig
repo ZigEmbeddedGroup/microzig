@@ -19,6 +19,14 @@ const led_mask = [4]u32{
 };
 const all_mask = led_mask[0] | led_mask[1] | led_mask[2] | led_mask[3];
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     conn.PINSEL3.modify(.{
         .P1_18 = .GPIO_P1,

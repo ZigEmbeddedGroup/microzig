@@ -5,9 +5,15 @@ const gpio = hal.gpio;
 const usb_serial_jtag = hal.usb_serial_jtag;
 const time = hal.time;
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = usb_serial_jtag.logger.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     const pin_config: gpio.Pin.Config = .{

@@ -2,6 +2,14 @@ const std = @import("std");
 const microzig = @import("microzig");
 const semihosting = microzig.core.arm_semihosting;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     const path = "";
     const file_name = path ++ "foo.txt";

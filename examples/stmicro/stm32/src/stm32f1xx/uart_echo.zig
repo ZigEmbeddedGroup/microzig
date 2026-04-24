@@ -11,6 +11,14 @@ const gpio = stm32.gpio;
 const TX = gpio.Pin.from_port(.A, 9);
 const RX = gpio.Pin.from_port(.A, 10);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.TIM2);

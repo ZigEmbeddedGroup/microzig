@@ -17,6 +17,14 @@ const pin_config = hal.pins.GlobalConfiguration{
     },
 };
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     const pins = pin_config.apply();
 

@@ -5,6 +5,14 @@ const cpu = microzig.cpu;
 
 // Taken from https://github.com/robinjanssens/WCH-Toolchain
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     // Board brings up clocks and time
     board.init();
