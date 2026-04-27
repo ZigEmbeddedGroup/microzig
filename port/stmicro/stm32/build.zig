@@ -77,7 +77,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .root_source_file = b.path("src/boards/STM32F429IDISCOVERY.zig"),
                 },
                 .hal = microzig.HardwareAbstractionLayer{
-                    .root_source_file = b.path("src/hals/STM32F303.zig"),
+                    .root_source_file = b.path("src/hals/STM32F429.zig"),
                     .imports = hal_imports,
                 },
             }),
