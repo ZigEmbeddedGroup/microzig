@@ -4,7 +4,6 @@ const watchdog = microzig.hal.watchdog;
 const launchpad = microzig.board;
 const green_led = launchpad.green_led;
 
-
 pub const std_options = microzig.std_options(.{});
 
 comptime {
