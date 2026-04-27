@@ -14,8 +14,6 @@ const uart_tx_pin = gpio.num(0);
 const flash_target_offset: u32 = 256 * 1024;
 const flash_target_contents = @as([*]const u8, @ptrFromInt(rp2xxx.flash.XIP_BASE + flash_target_offset));
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,

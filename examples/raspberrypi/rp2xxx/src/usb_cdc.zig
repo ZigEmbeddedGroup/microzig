@@ -32,8 +32,6 @@ var usb_controller: usb.DeviceController(.{
     .reset = "",
 }}) = .init;
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .log_scope_levels = &.{
