@@ -26,6 +26,10 @@ const mmio = microzig.mmio;
 const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
+const Digital_IO = microzig.drivers.base.Digital_IO;
+
+const State = Digital_IO.State;
+
 pub const clock = struct {
     pub const Domain = enum {
         cpu,
@@ -77,8 +81,9 @@ pub const gpio = struct {
 
     pub fn set_input(comptime pin: type) void {
         const AHB1ENR: *volatile @TypeOf(RCC.AHB1ENR) = &RCC.AHB1ENR;
+        const MODER: *volatile @TypeOf(@field(pin.gpio_port, "MODER")) = &@field(pin.gpio_port, "MODER");
         set_reg_field(AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER[" ++ pin.suffix ++ "]", .Input);
+        set_reg_field(MODER, "MODER[" ++ pin.suffix ++ "]", .Input);
     }
 
     pub fn read(comptime pin: type) microzig.gpio.State {
@@ -87,10 +92,11 @@ pub const gpio = struct {
         return @as(microzig.gpio.State, @enumFromInt(reg_value));
     }
 
-    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
+    pub fn write(comptime pin: type, state: State) void {
+        const BSRR: *volatile @TypeOf(pin.gpio_port.BSRR) = &pin.gpio_port.BSRR;
         switch (state) {
-            .low => set_reg_field(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
-            .high => set_reg_field(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
+            .low => set_reg_field(BSRR, "BR[" ++ pin.suffix ++ "]", 1),
+            .high => set_reg_field(BSRR, "BS[" ++ pin.suffix ++ "]", 1),
         }
     }
 };
