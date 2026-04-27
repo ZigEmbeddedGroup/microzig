@@ -6,14 +6,14 @@
 //! default AHB prescaler = /1 (= values 0..7):
 //!
 //! ```
-//! RCC.CFGR.modify(.{ .HPRE = 0 });
+//! RCC.CFGR.modify(.{ .HPRE = .Div1 });
 //! ```
 //!
 //! so also HCLK = 16 MHz.
 //! And with the default APB1 prescaler = /1:
 //!
 //! ```
-//! RCC.CFGR.modify(.{ .PPRE1 = 0 });
+//! RCC.CFGR.modify(.{ .PPRE1 = .Div1 });
 //! ```
 //!
 //! results in PCLK1 = 16 MHz.
@@ -22,7 +22,7 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const peripherals = microzig.peripherals;
+const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
 pub const clock = struct {
