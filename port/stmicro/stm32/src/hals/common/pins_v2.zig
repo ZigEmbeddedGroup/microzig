@@ -1,272 +1,102 @@
-const std = @import("std");
-const assert = std.debug.assert;
-const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.Type.StructField;
+//! For now we keep all clock settings on the chip defaults.
+//! This code should work with all the STM32F42xx line
+//!
+//! Specifically, TIM6 is running on a 16 MHz clock,
+//! HSI = 16 MHz is the SYSCLK after reset
+//! default AHB prescaler = /1 (= values 0..7):
+//!
+//! ```
+//! RCC.CFGR.modify(.{ .HPRE = .Div1 });
+//! ```
+//!
+//! so also HCLK = 16 MHz.
+//! And with the default APB1 prescaler = /1:
+//!
+//! ```
+//! RCC.CFGR.modify(.{ .PPRE1 = .Div1 });
+//! ```
+//!
+//! results in PCLK1 = 16 MHz.
+//!
+//! TODO: add more clock calculations when adding Uart
 
+const std = @import("std");
 const microzig = @import("microzig");
-const enums = @import("../common/enums.zig");
+const mmio = microzig.mmio;
+const peripherals = microzig.chip.peripherals;
+const RCC = peripherals.RCC;
 
 const Digital_IO = microzig.drivers.base.Digital_IO;
-const Direction = Digital_IO.Direction;
-const SetDirError = Digital_IO.SetDirError;
-const SetBiasError = Digital_IO.SetBiasError;
-const WriteError = Digital_IO.WriteError;
-const ReadError = Digital_IO.ReadError;
 
 const State = Digital_IO.State;
 
-const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
-const PUPDR = gpio_v2.PUPDR;
-const rcc = microzig.hal.rcc;
-
-const gpio = @import("gpio_v2.zig");
-
-pub const Pin = enum {
-    PIN0,
-    PIN1,
-    PIN2,
-    PIN3,
-    PIN4,
-    PIN5,
-    PIN6,
-    PIN7,
-    PIN8,
-    PIN9,
-    PIN10,
-    PIN11,
-    PIN12,
-    PIN13,
-    PIN14,
-    PIN15,
-    pub const Configuration = struct {
-        name: ?[:0]const u8 = null,
-        mode: ?gpio.Mode = null,
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+        ahb,
+        apb1,
+        apb2,
     };
 };
 
-pub const InputGPIO = struct {
-    pin: gpio.Pin,
-    pub inline fn read(self: @This()) u1 {
-        const port = self.pin.get_port();
-        return if (port.IDR.raw & self.pin.mask() != 0)
-            1
-        else
-            0;
-    }
+// Default clock frequencies after reset, see top comment for calculation
+pub const clock_frequencies = .{
+    .cpu = 16_000_000,
+    .ahb = 16_000_000,
+    .apb1 = 16_000_000,
+    .apb2 = 16_000_000,
 };
 
-pub const OutputGPIO = struct {
-    pin: gpio.Pin,
+pub fn parse_pin(comptime spec: []const u8) type {
+    const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
-    pub inline fn put(self: @This(), value: u1) void {
-        var port = self.pin.get_port();
-        switch (value) {
-            0 => port.BSRR.raw = @intCast(self.pin.mask() << 16),
-            1 => port.BSRR.raw = self.pin.mask(),
-        }
-    }
+    if (spec[0] != 'P')
+        @compileError(invalid_format_msg);
+    if (spec[1] < 'A' or spec[1] > 'K')
+        @compileError(invalid_format_msg);
 
-    pub inline fn low(self: @This()) void {
-        self.put(0);
-    }
+    const pin_number: comptime_int = std.fmt.parseInt(u4, spec[2..], 10) catch @compileError(invalid_format_msg);
 
-    pub inline fn high(self: @This()) void {
-        self.put(1);
-    }
-
-    pub inline fn toggle(self: @This()) void {
-        var port = self.pin.get_port();
-        port.ODR.raw ^= self.pin.mask();
-    }
-};
-
-pub const AlternateFunction = struct {
-    // Empty on perpose it should not be used as a GPIO.
-};
-
-const Analog = struct {
-    pin: gpio.Pin,
-};
-
-pub const Digital_IO_Pin = struct {
-    pin: gpio.Pin,
-    const vtable: Digital_IO.VTable = .{
-        .set_direction_fn = Digital_IO_Pin.set_direction_fn,
-        .set_bias_fn = Digital_IO_Pin.set_bias_fn,
-        .write_fn = Digital_IO_Pin.write_fn,
-        .read_fn = Digital_IO_Pin.read_fn,
+    return struct {
+        /// 'A'...'K'
+        const gpio_port_name = spec[1..2];
+        const gpio_port = @field(peripherals, "GPIO" ++ gpio_port_name);
+        const suffix = std.fmt.comptimePrint("{d}", .{pin_number});
     };
-    pub fn set_direction_fn(ptr: *anyopaque, dir: Direction) SetDirError!void {
-        const self: *@This() = @ptrCast(@alignCast(ptr));
-        switch (dir) {
-            .input => self.pin.set_moder(.Input),
-            .output => self.pin.set_moder(.Output),
-        }
-    }
-    pub fn set_bias_fn(ptr: *anyopaque, maybe_bias: ?State) SetBiasError!void {
-        const self: *@This() = @ptrCast(@alignCast(ptr));
+}
 
-        const pupdr: PUPDR = if (maybe_bias) |bias| switch (bias) {
-            .low => .PullDown,
-            .high => .PullUp,
-        } else .Floating;
-        self.pin.set_bias(pupdr);
+fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) void {
+    var temp = reg.read();
+    @field(temp, field_name) = value;
+    reg.write(temp);
+}
+
+pub const gpio = struct {
+    pub fn set_output(comptime pin: type) void {
+        const AHB1ENR: *volatile @TypeOf(RCC.AHB1ENR) = &RCC.AHB1ENR;
+        const MODER: *volatile @TypeOf(@field(pin.gpio_port, "MODER")) = &@field(pin.gpio_port, "MODER");
+        set_reg_field(AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        set_reg_field(MODER, "MODER[" ++ pin.suffix ++ "]", .Output);
     }
-    pub fn write_fn(ptr: *anyopaque, state: State) WriteError!void {
-        const self: *@This() = @ptrCast(@alignCast(ptr));
-        var port = self.pin.get_port();
+
+    pub fn set_input(comptime pin: type) void {
+        const AHB1ENR: *volatile @TypeOf(RCC.AHB1ENR) = &RCC.AHB1ENR;
+        const MODER: *volatile @TypeOf(@field(pin.gpio_port, "MODER")) = &@field(pin.gpio_port, "MODER");
+        set_reg_field(AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        set_reg_field(MODER, "MODER[" ++ pin.suffix ++ "]", .Input);
+    }
+
+    pub fn read(comptime pin: type) microzig.gpio.State {
+        const idr_reg = pin.gpio_port.IDR;
+        const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
+        return @as(microzig.gpio.State, @enumFromInt(reg_value));
+    }
+
+    pub fn write(comptime pin: type, state: State) void {
+        const BSRR: *volatile @TypeOf(pin.gpio_port.BSRR) = &pin.gpio_port.BSRR;
         switch (state) {
-            .low => port.BSRR.raw = @intCast(self.pin.mask() << 16),
-            .high => port.BSRR.raw = self.pin.mask(),
+            .low => set_reg_field(BSRR, "BR[" ++ pin.suffix ++ "]", 1),
+            .high => set_reg_field(BSRR, "BS[" ++ pin.suffix ++ "]", 1),
         }
-    }
-    pub fn read_fn(ptr: *anyopaque) ReadError!State {
-        const self: *@This() = @ptrCast(@alignCast(ptr));
-        const port = self.pin.get_port();
-        return if (port.IDR.raw & self.pin.mask() != 0)
-            .high
-        else
-            .low;
-    }
-
-    pub fn digital_io(ptr: *@This()) Digital_IO {
-        return .{
-            .ptr = ptr,
-            .vtable = &vtable,
-        };
-    }
-};
-
-pub fn GPIO(comptime mode: gpio.Mode) type {
-    return switch (mode) {
-        .input => InputGPIO,
-        .output => OutputGPIO,
-        .alternate_function => AlternateFunction,
-        .analog => Analog,
-        .digital_io => Digital_IO_Pin,
-    };
-}
-
-pub fn Pins(comptime config: GlobalConfiguration) type {
-    comptime {
-        var fields: []const StructField = &.{};
-        for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |port_config| {
-                for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                    if (@field(port_config, field.name)) |pin_config| {
-                        var pin_field = StructField{
-                            .is_comptime = false,
-                            .default_value_ptr = null,
-
-                            // initialized below:
-                            .name = undefined,
-                            .type = undefined,
-                            .alignment = undefined,
-                        };
-
-                        const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
-                        pin_field.name = pin_config.name orelse default_name;
-                        pin_field.type = GPIO(pin_config.mode orelse .{ .input = .{.floating} });
-                        pin_field.alignment = @alignOf(field.type);
-
-                        fields = fields ++ &[_]StructField{pin_field};
-                    }
-                }
-            }
-        }
-
-        return @Type(.{
-            .@"struct" = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
-    }
-}
-
-pub const Port = enum {
-    GPIOA,
-    GPIOB,
-    GPIOC,
-    GPIOD,
-    GPIOE,
-    GPIOF,
-    GPIOG,
-    pub const Configuration = struct {
-        PIN0: ?Pin.Configuration = null,
-        PIN1: ?Pin.Configuration = null,
-        PIN2: ?Pin.Configuration = null,
-        PIN3: ?Pin.Configuration = null,
-        PIN4: ?Pin.Configuration = null,
-        PIN5: ?Pin.Configuration = null,
-        PIN6: ?Pin.Configuration = null,
-        PIN7: ?Pin.Configuration = null,
-        PIN8: ?Pin.Configuration = null,
-        PIN9: ?Pin.Configuration = null,
-        PIN10: ?Pin.Configuration = null,
-        PIN11: ?Pin.Configuration = null,
-        PIN12: ?Pin.Configuration = null,
-        PIN13: ?Pin.Configuration = null,
-        PIN14: ?Pin.Configuration = null,
-        PIN15: ?Pin.Configuration = null,
-
-        comptime {
-            const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
-            const config_field_count = @typeInfo(Configuration).@"struct".fields.len;
-            if (pin_field_count != config_field_count)
-                @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
-        }
-    };
-};
-
-pub const GlobalConfiguration = struct {
-    GPIOA: ?Port.Configuration = null,
-    GPIOB: ?Port.Configuration = null,
-    GPIOC: ?Port.Configuration = null,
-    GPIOD: ?Port.Configuration = null,
-    GPIOE: ?Port.Configuration = null,
-    GPIOF: ?Port.Configuration = null,
-    GPIOG: ?Port.Configuration = null,
-
-    comptime {
-        const port_field_count = @typeInfo(Port).@"enum".fields.len;
-        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".fields.len;
-        if (port_field_count != config_field_count)
-            @compileError(comptimePrint("{} {}", .{ port_field_count, config_field_count }));
-    }
-
-    pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
-        var ret: Pins(config) = undefined;
-
-        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |_| {
-                rcc.enable_clock(@field(enums.Peripherals, port_field.name));
-            }
-        }
-
-        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |port_config| {
-                inline for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                    if (@field(port_config, field.name)) |pin_config| {
-                        const port = @intFromEnum(@field(Port, port_field.name));
-                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
-                        pin.write_pin_config(pin_config.mode.?);
-                        const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
-
-                        switch (pin_config.mode orelse .input) {
-                            .input => @field(ret, pin_config.name orelse default_name) = InputGPIO{ .pin = pin },
-                            .output => @field(ret, pin_config.name orelse default_name) = OutputGPIO{ .pin = pin },
-                            .analog => @field(ret, pin_config.name orelse default_name) = Analog{},
-                            .alternate_function => @field(ret, pin_config.name orelse default_name) = AlternateFunction{},
-                            .digital_io => @field(ret, pin_config.name orelse default_name) = Digital_IO_Pin{ .pin = pin },
-                        }
-                    }
-                }
-            }
-        }
-
-        return ret;
     }
 };
