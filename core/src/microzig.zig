@@ -120,7 +120,7 @@ pub const StdOptions = struct {
     log_scope_levels: []const std.log.ScopeLevel = &.{},
     logFn: fn (
         comptime message_level: std.log.Level,
-        comptime scope: @EnumLiteral(),
+        comptime scope: @TypeOf(.enum_literal),
         comptime format: []const u8,
         args: anytype,
     ) void = no_op_log,
@@ -141,7 +141,7 @@ pub fn std_options(comptime overrides: StdOptions) std.Options {
 
 fn no_op_log(
     comptime _: std.log.Level,
-    comptime _: @EnumLiteral(),
+    comptime _: @TypeOf(.enum_literal),
     comptime _: []const u8,
     _: anytype,
 ) void {}
