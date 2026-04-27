@@ -22,23 +22,22 @@ const uart_tx_pin = gpio.num(0);
 
 pub const panic = microzig.panic;
 
-pub const std_options = microzig.std_options(.{});
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
+});
 
 comptime {
     _ = microzig.export_startup();
 }
 
 pub const rp2040_options: microzig.Options = .{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
     .interrupts = .{
         .IO_IRQ_BANK0 = .{ .c = gpio_interrupt },
         .TIMER_IRQ_0 = .{ .c = timer_interrupt },
     },
 };
 pub const rp2350_options: microzig.Options = .{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
     .interrupts = .{
         .IO_IRQ_BANK0 = .{ .c = gpio_interrupt },
         .TIMER0_IRQ_0 = .{ .c = timer_interrupt },

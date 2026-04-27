@@ -19,8 +19,6 @@ fn transfer_from_slices(channel: dma.Channel, write_buf: []u8, read_buf: []const
     });
 }
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,

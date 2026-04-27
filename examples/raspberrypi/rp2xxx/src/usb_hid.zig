@@ -6,8 +6,6 @@ const time = rp2xxx.time;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .log_scope_levels = &.{
