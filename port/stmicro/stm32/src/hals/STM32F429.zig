@@ -22,6 +22,7 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
+const mmio = microzig.mmio;
 const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
@@ -68,13 +69,16 @@ fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) voi
 
 pub const gpio = struct {
     pub fn set_output(comptime pin: type) void {
-        set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
+        const AHB1ENR: *volatile @TypeOf(RCC.AHB1ENR) = &RCC.AHB1ENR;
+        const MODER: *volatile @TypeOf(@field(pin.gpio_port, "MODER")) = &@field(pin.gpio_port, "MODER");
+        set_reg_field(AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        set_reg_field(MODER, "MODER[" ++ pin.suffix ++ "]", .Output);
     }
 
     pub fn set_input(comptime pin: type) void {
-        set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
+        const AHB1ENR: *volatile @TypeOf(RCC.AHB1ENR) = &RCC.AHB1ENR;
+        set_reg_field(AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER[" ++ pin.suffix ++ "]", .Input);
     }
 
     pub fn read(comptime pin: type) microzig.gpio.State {
